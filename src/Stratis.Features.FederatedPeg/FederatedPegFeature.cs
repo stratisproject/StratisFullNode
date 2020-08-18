@@ -411,7 +411,7 @@ namespace Stratis.Features.FederatedPeg
             return fullNodeBuilder;
         }
 
-        public static IFullNodeBuilder UseFederatedPegPoAMining(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseFederatedPegPoAMining(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -442,7 +442,7 @@ namespace Stratis.Features.FederatedPeg
                 .AddFeature<ConsensusFeature>()
                 .FeatureServices(services =>
                 {
-                    services.AddSingleton<DBreezeCoinView>();
+                    AddCoindbImplementation(services, coindbType);
                     services.AddSingleton<ICoinView, CachedCoinView>();
                     services.AddSingleton<IChainState, ChainState>();
                     services.AddSingleton<ConsensusQuery>()
@@ -462,6 +462,18 @@ namespace Stratis.Features.FederatedPeg
             });
 
             return fullNodeBuilder;
+        }
+
+        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        {
+            if (coindbType == DbType.Dbreeze)
+                services.AddSingleton<ICoindb, DBreezeCoindb>();
+
+            if (coindbType == DbType.Leveldb)
+                services.AddSingleton<ICoindb, LeveldbCoindb>();
+
+            if (coindbType == DbType.Faster)
+                services.AddSingleton<ICoindb, FasterCoindb>();
         }
     }
 }

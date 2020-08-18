@@ -802,6 +802,11 @@ namespace NBitcoin
         {
             return new Coin(this);
         }
+
+        public OutPoint ToOutPoint()
+        {
+            return new OutPoint(this.Transaction, this.N);
+        }
     }
 
     public class TxOutList : UnsignedList<TxOut>

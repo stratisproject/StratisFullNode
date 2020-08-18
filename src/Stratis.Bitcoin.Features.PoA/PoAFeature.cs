@@ -155,7 +155,7 @@ namespace Stratis.Bitcoin.Features.PoA
     public static class FullNodeBuilderConsensusExtension
     {
         /// <summary>This is mandatory for all PoA networks.</summary>
-        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -181,7 +181,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     .AddFeature<ConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<DBreezeCoinView>();
+                        AddCoindbImplementation(services, coindbType);
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
                         services.AddSingleton<IChainState, ChainState>();
@@ -198,6 +198,18 @@ namespace Stratis.Bitcoin.Features.PoA
             });
 
             return fullNodeBuilder;
+        }
+
+        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        {
+            if (coindbType == DbType.Dbreeze)
+                services.AddSingleton<ICoindb, DBreezeCoindb>();
+
+            if (coindbType == DbType.Leveldb)
+                services.AddSingleton<ICoindb, LeveldbCoindb>();
+
+            if (coindbType == DbType.Faster)
+                services.AddSingleton<ICoindb, FasterCoindb>();
         }
     }
 }

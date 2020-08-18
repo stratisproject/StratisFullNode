@@ -53,14 +53,13 @@ namespace Stratis.Bitcoin.Tests.Common
                 chainIndexer = new ChainIndexer(network);
 
             if (inMemoryCoinView == null)
-                inMemoryCoinView = new InMemoryCoinView(chainIndexer.Tip.HashBlock);
+                inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chainIndexer.Tip));
 
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
             var connectionSettings = new ConnectionManagerSettings(nodeSettings);
             var selfEndpointTracker = new SelfEndpointTracker(loggerFactory, connectionSettings);
             var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, selfEndpointTracker);
-
             var networkPeerFactory = new NetworkPeerFactory(network,
                 dateTimeProvider,
                 loggerFactory, new PayloadProvider().DiscoverPayloads(),

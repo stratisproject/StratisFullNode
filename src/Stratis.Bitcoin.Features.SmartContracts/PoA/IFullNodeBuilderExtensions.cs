@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         /// <summary>
         /// Configures the node with the smart contract proof of authority consensus model.
         /// </summary>
-        public static IFullNodeBuilder UseSmartContractPoAConsensus(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseSmartContractPoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
             LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
 
@@ -28,7 +28,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     .DependOn<SmartContractFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<DBreezeCoinView>();
+                        AddCoindbImplementation(services, coindbType);
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<VotingManager>();
                         services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
@@ -46,6 +46,18 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
             });
 
             return fullNodeBuilder;
+        }
+
+        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        {
+            if (coindbType == DbType.Dbreeze)
+                services.AddSingleton<ICoindb, DBreezeCoindb>();
+
+            if (coindbType == DbType.Leveldb)
+                services.AddSingleton<ICoindb, LeveldbCoindb>();
+
+            if (coindbType == DbType.Faster)
+                services.AddSingleton<ICoindb, FasterCoindb>();
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
@@ -39,6 +40,8 @@ namespace Stratis.Bitcoin.Features.Miner
 
         /// <summary>The current network.</summary>
         protected readonly Network Network;
+
+        private readonly NodeDeployments nodeDeployments;
 
         /// <summary>Assembler options specific to the assembler e.g. <see cref="BlockDefinitionOptions.BlockMaxSize"/>.</summary>
         protected BlockDefinitionOptions Options;
@@ -116,7 +119,8 @@ namespace Stratis.Bitcoin.Features.Miner
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             MinerSettings minerSettings,
-            Network network)
+            Network network,
+            NodeDeployments nodeDeployments)
         {
             this.ConsensusManager = consensusManager;
             this.DateTimeProvider = dateTimeProvider;
@@ -124,6 +128,7 @@ namespace Stratis.Bitcoin.Features.Miner
             this.Mempool = mempool;
             this.MempoolLock = mempoolLock;
             this.Network = network;
+            this.nodeDeployments = nodeDeployments;
 
             this.Options = minerSettings.BlockDefinitionOptions;
             this.BlockMinFeeRate = this.Options.BlockMinFeeRate;
@@ -234,6 +239,28 @@ namespace Stratis.Bitcoin.Features.Miner
             this.logger.LogDebug("Serialized size is {0} bytes, block weight is {1}, number of txs is {2}, tx fees are {3}, number of sigops is {4}.", nSerializeSize, this.block.GetBlockWeight(this.Network.Consensus), this.BlockTx, this.fees, this.BlockSigOpsCost);
 
             this.UpdateHeaders();
+        }
+
+        /// <summary>
+        /// Adds the coinbase commitment to the coinbase transaction according to  https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki.
+        /// </summary>
+        /// <param name="block">The new block that is being mined.</param>
+        /// <seealso cref="https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp"/>
+        //public void AddOrUpdateCoinbaseCommitmentToBlock(Block block)
+        //{
+        //    WitnessCommitmentsRule.ClearWitnessCommitment(this.Network, block);
+        //    WitnessCommitmentsRule.CreateWitnessCommitment(this.Network, block);
+        //}
+
+        public virtual void BlockModified(ChainedHeader chainTip, Block block)
+        {
+            // TODO: Add segwit next
+            //if (this.IncludeWitness)
+            //{
+            //    this.AddOrUpdateCoinbaseCommitmentToBlock(block);
+            //}
+
+            block.UpdateMerkleRoot();
         }
 
         /// <summary>

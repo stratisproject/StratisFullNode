@@ -125,6 +125,16 @@ namespace Stratis.Benchmark.Infrastructure.Faster
         {
         }
 
+        bool IFunctions<CacheKey, CacheValue, CacheInput, CacheOutput, Empty>.InPlaceUpdater(ref CacheKey key, ref CacheInput input, ref CacheValue value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CheckpointCompletionCallback(string sessionId, CommitPoint commitPoint)
+        {
+            throw new NotImplementedException();
+        }
+
         public void InitialUpdater(ref CacheKey key, ref CacheInput input, ref CacheValue value)
         {
         }
@@ -145,6 +155,11 @@ namespace Stratis.Benchmark.Infrastructure.Faster
         {
         }
 
+        public void DeleteCompletionCallback(ref CacheKey key, Empty ctx)
+        {
+            throw new NotImplementedException();
+        }
+
         public void SingleReader(ref CacheKey key, ref CacheInput input, ref CacheValue value, ref CacheOutput dst)
         {
             dst.Value = value;
@@ -153,6 +168,11 @@ namespace Stratis.Benchmark.Infrastructure.Faster
         public void SingleWriter(ref CacheKey key, ref CacheValue src, ref CacheValue dst)
         {
             dst = src;
+        }
+
+        bool IFunctions<CacheKey, CacheValue, CacheInput, CacheOutput, Empty>.ConcurrentWriter(ref CacheKey key, ref CacheValue src, ref CacheValue dst)
+        {
+            throw new NotImplementedException();
         }
 
         public void UpsertCompletionCallback(ref CacheKey key, ref CacheValue value, Empty ctx)

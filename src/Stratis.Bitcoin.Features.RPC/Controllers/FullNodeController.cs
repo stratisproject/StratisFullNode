@@ -221,16 +221,17 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             if (!uint256.TryParse(txid, out trxid))
                 throw new ArgumentException(nameof(txid));
 
-            UnspentOutputs unspentOutputs = null;
+            UnspentOutput unspentOutput = null;
+            var outPoint = new OutPoint(trxid, vout);
 
             if (includeMemPool && this.pooledGetUnspentTransaction != null)
-                unspentOutputs = await this.pooledGetUnspentTransaction.GetUnspentTransactionAsync(trxid).ConfigureAwait(false);
+                unspentOutput = await this.pooledGetUnspentTransaction.GetUnspentTransactionAsync(outPoint).ConfigureAwait(false);
 
             if (!includeMemPool && this.getUnspentTransaction != null)
-                unspentOutputs = await this.getUnspentTransaction.GetUnspentTransactionAsync(trxid).ConfigureAwait(false);
+                unspentOutput = await this.getUnspentTransaction.GetUnspentTransactionAsync(outPoint).ConfigureAwait(false);
 
-            if (unspentOutputs != null)
-                return new GetTxOutModel(unspentOutputs, vout, this.Network, this.ChainIndexer.Tip);
+            if (unspentOutput != null)
+                return new GetTxOutModel(unspentOutput, this.Network, this.ChainIndexer.Tip);
 
             return null;
         }
