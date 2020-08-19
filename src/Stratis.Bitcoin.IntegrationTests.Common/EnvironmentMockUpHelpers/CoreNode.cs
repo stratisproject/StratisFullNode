@@ -22,6 +22,7 @@ using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -224,6 +225,14 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             // Extract the zipped blockchain data to the node's DataFolder.
             ZipFile.ExtractToDirectory(Path.GetFullPath(readyDataName), this.DataFolder, true);
 
+            // Import whole wallets to DB.
+            this.startActions.Add(() =>
+            {
+                var walletManager = ((WalletManager)this.FullNode?.NodeService<IWalletManager>(true));
+                if (walletManager != null)
+                    walletManager.ExcludeTransactionsFromWalletImports = false;
+            });
+
             return this;
         }
 
@@ -278,6 +287,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
                 return this.runner.FullNode.NodeService<IAsyncProvider>();
         }
 
+        List<Action> startActions = new List<Action>();
+        List<Action> runActions = new List<Action>();
+
         public CoreNode Start(Action startAction = null)
         {
             lock (this.lockObject)
@@ -290,7 +302,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
                     this.DisableValidation();
 
                 this.runner.BuildNode();
+
                 startAction?.Invoke();
+                foreach (Action action in this.startActions)
+                    action.Invoke();
+
                 this.runner.Start();
                 this.State = CoreNodeState.Starting;
             }
@@ -301,6 +317,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
                 StartStratisRunner();
 
             this.State = CoreNodeState.Running;
+
+            foreach (Action runAction in this.runActions)
+                runAction.Invoke();
 
             return this;
         }
@@ -388,7 +407,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
 
             if (this.builderWithWallet)
             {
-                this.Mnemonic = this.FullNode.WalletManager().CreateWallet(
+                (_, this.Mnemonic) = this.FullNode.WalletManager().CreateWallet(
                     this.builderWalletPassword,
                     this.builderWalletName,
                     this.builderWalletPassphrase,

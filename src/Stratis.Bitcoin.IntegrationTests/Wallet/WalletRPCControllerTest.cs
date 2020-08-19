@@ -224,6 +224,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 uint256 txId = buildTransactionModel.TransactionId;
 
+                // Wait for the transaction to appear in the receiving node's wallet.
                 TestBase.WaitLoop(() =>
                 {
                     WalletHistoryModel history = $"http://localhost:{receivingNode.ApiPort}/api"
@@ -235,6 +236,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     return history.AccountsHistoryModel.First().TransactionsHistory.Any(h => h.Id == txId);
                 });
 
+                // Wait for the transaction to appear in the sending node's wallet.
                 TestBase.WaitLoop(() =>
                 {
                     WalletHistoryModel history = $"http://localhost:{sendingNode.ApiPort}/api"

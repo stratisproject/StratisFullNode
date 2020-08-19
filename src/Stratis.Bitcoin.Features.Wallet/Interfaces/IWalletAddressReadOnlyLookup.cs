@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
 
-namespace Stratis.Features.SQLiteWalletRepository.External
+namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
     public interface IWalletAddressReadOnlyLookup
     {

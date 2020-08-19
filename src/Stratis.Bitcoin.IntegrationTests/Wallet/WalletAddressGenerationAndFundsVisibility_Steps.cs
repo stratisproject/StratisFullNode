@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Wallet;
@@ -14,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace Stratis.Bitcoin.IntegrationTests.Wallet
 {
-    public partial class Wallet_address_generation_and_funds_visibility : BddSpecification
+    public partial class WalletAddressBuffer : BddSpecification
     {
         private const string WalletName = "mywallet";
         private const string WalletPassword = "password";
@@ -41,7 +42,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             this.nodeBuilder.Dispose();
         }
 
-        public Wallet_address_generation_and_funds_visibility(ITestOutputHelper output) : base(output)
+        public WalletAddressBuffer(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -74,7 +75,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             this.MineSpendableCoins();
         }
 
-        private void a_wallet_with_funds_at_index_20_which_is_beyond_default_gap_limit()
+        private async Task a_wallet_with_funds_at_index_20_which_is_beyond_default_gap_limit()
         {
             ExtPubKey xPublicKey = this.GetExtendedPublicKey(this.receivingStratisBitcoinNode);
             var recipientAddressBeyondGapLimit = xPublicKey.Derive(new KeyPath("0/20")).PubKey.GetAddress(KnownNetworks.RegTest);
@@ -95,8 +96,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var transaction = this.sendingStratisBitcoinNode.FullNode.WalletTransactionHandler()
                  .BuildTransaction(transactionBuildContext);
 
-            this.sendingStratisBitcoinNode.FullNode.NodeController<WalletController>()
+            await this.sendingStratisBitcoinNode.FullNode.NodeController<WalletController>()
                 .SendTransaction(new SendTransactionRequest(transaction.ToHex()));
+                
 
             TestHelper.MineBlocks(this.sendingStratisBitcoinNode, 1);
         }

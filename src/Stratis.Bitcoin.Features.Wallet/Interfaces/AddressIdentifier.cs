@@ -1,4 +1,4 @@
-﻿namespace Stratis.Features.SQLiteWalletRepository.External
+﻿namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
     public class AddressIdentifier
     {
@@ -7,6 +7,7 @@
         public int? AddressType { get; set; }
         public int? AddressIndex { get; set; }
         public string ScriptPubKey { get; set; }
+        public string PubKeyScript;
 
         public override bool Equals(object obj)
         {

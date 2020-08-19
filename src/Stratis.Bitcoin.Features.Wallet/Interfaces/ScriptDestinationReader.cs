@@ -4,7 +4,7 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Interfaces;
 
-namespace Stratis.Features.SQLiteWalletRepository.External
+namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
     public interface IScriptDestinationReader : IScriptAddressReader
     {

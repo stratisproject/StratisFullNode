@@ -16,6 +16,7 @@ using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 {
@@ -45,7 +46,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .SetCounterChainNetwork(this.counterChainNetwork)
                 .UseSmartContractPoAConsensus()
                 .UseSmartContractCollateralPoAMining()
-                .CheckForPoAMembersCollateral()
+                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -57,6 +58,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .MockIBD()
                 .ReplaceTimeProvider(this.timeProvider)
                 .AddFastMiningCapability();

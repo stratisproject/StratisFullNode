@@ -154,7 +154,6 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var nodeSettings = new NodeSettings(this.network, args: new string[] { "-checkpoints" });
                 var consensusSettings = new ConsensusSettings(nodeSettings);
-                var connectionSettings = new ConnectionManagerSettings(nodeSettings);
 
                 var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(this.ChainIndexer.Tip));
                 var nodeStats = new NodeStats(dateTimeProvider, loggerFactory);
@@ -163,6 +162,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var signals = new Signals.Signals(loggerFactory, null);
                 var asyncProvider = new AsyncProvider(loggerFactory, signals, new NodeLifetime());
 
+                var connectionSettings = new ConnectionManagerSettings(nodeSettings);
                 var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, new SelfEndpointTracker(loggerFactory, connectionSettings));
                 var networkPeerFactory = new NetworkPeerFactory(this.network, dateTimeProvider, loggerFactory, new PayloadProvider().DiscoverPayloads(), new SelfEndpointTracker(loggerFactory, connectionSettings), new Mock<IInitialBlockDownloadState>().Object, new ConnectionManagerSettings(nodeSettings), asyncProvider, peerAddressManager);
 
@@ -183,8 +183,9 @@ namespace Stratis.Bitcoin.IntegrationTests
                 };
 
                 var consensusRulesContainer = new ConsensusRulesContainer();
-                foreach (var ruleType in network.Consensus.ConsensusRules.HeaderValidationRules)
+                foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)
                     consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
+
                 foreach (var ruleType in network.Consensus.ConsensusRules.FullValidationRules)
                 {
                     FullValidationConsensusRule rule = null;

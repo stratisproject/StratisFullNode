@@ -239,23 +239,18 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (!context.Sign)
                 return;
 
-            Wallet wallet = this.walletManager.GetWalletByName(context.AccountReference.WalletName);
-            ExtKey seedExtKey = this.walletManager.GetExtKey(context.AccountReference, context.WalletPassword, context.CacheSecret);
+            Wallet wallet = this.walletManager.GetWallet(context.AccountReference.WalletName);
+            ExtKey seedExtKey = this.walletManager.GetExtKey(context.AccountReference, context.WalletPassword);
 
             var signingKeys = new HashSet<ISecret>();
-            var added = new HashSet<HdAddress>();
-            foreach (Coin coinSpent in coinsSpent)
+            Dictionary<OutPoint,UnspentOutputReference> outpointLookup = context.UnspentOutputs.ToDictionary(o => o.ToOutPoint(), o => o);
+            IEnumerable<string> uniqueHdPaths = coinsSpent.Select(s => s.Outpoint).Select(o => outpointLookup[o].Address.HdPath).Distinct();
+
+            foreach (string hdPath in uniqueHdPaths)
             {
-                //obtain the address relative to this coin (must be improved)
-                HdAddress address = context.UnspentOutputs.First(output => output.ToOutPoint() == coinSpent.Outpoint).Address;
-
-                if (added.Contains(address))
-                    continue;
-
-                ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(address.HdPath));
+                ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(hdPath));
                 BitcoinExtKey addressPrivateKey = addressExtKey.GetWif(wallet.Network);
                 signingKeys.Add(addressPrivateKey);
-                added.Add(address);
             }
 
             context.TransactionBuilder.AddKeys(signingKeys.ToArray());
@@ -442,7 +437,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.SelectedInputs = new List<OutPoint>();
             this.AllowOtherInputs = false;
             this.Sign = true;
-            this.CacheSecret = true;
         }
 
         /// <summary>
@@ -538,11 +532,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// Whether the transaction should be signed or not.
         /// </summary>
         public bool Sign { get; set; }
-
-        /// <summary>
-        /// Whether the secret should be cached for 5 mins after it is used or not.
-        /// </summary>
-        public bool CacheSecret { get; set; }
 
         /// <summary>
         /// The timestamp to set on the transaction.

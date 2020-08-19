@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
-using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.SQLiteWalletRepository.External;
 
-namespace Stratis.Features.SQLiteWalletRepository
+namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
     /// <summary>
     /// Defines the required interface of a wallet repository.
@@ -134,13 +132,20 @@ namespace Stratis.Features.SQLiteWalletRepository
         IEnumerable<HdAddress> GetUnusedAddresses(WalletAccountReference accountReference, int count, bool isChange = false);
 
         /// <summary>
-        /// Gets up to the specified number of used addresses.
+        /// Getss all the unused addresses in the account.
         /// </summary>
         /// <param name="accountReference">The account to get used addresses for.</param>
-        /// <param name="count">The maximum number of addresses to return.</param>
         /// <param name="isChange">The type of addresses to return.</param>
-        /// <returns>A list of used addresses.</returns>
-        IEnumerable<HdAddress> GetUsedAddresses(WalletAccountReference accountReference, int count, bool isChange = false);
+        /// <returns>A list of used addresses with their balances.</returns>
+        IEnumerable<(HdAddress address, Money confirmed, Money total)> GetUsedAddresses(WalletAccountReference accountReference, bool isChange = false);
+
+        /// <summary>
+        /// Gets all the unused addresses in the account.
+        /// </summary>
+        /// <param name="accountReference">The account to get unused addresses for.</param>
+        /// <param name="isChange">The type of addresses to return.</param>
+        /// <returns>A list of unused addresses.</returns>
+        IEnumerable<HdAddress> GetUnusedAddresses(WalletAccountReference accountReference, bool isChange = false);
 
         /// <summary>
         /// Gets all spendable transactions in the wallet with the given number of confirmation.
@@ -160,9 +165,10 @@ namespace Stratis.Features.SQLiteWalletRepository
         /// <param name="currentChainHeight">The current chain height.</param>
         /// <param name="confirmations">The minimum number of confirmations for a transactions to be regarded spendable.</param>
         /// <param name="coinBaseMaturity">Can be used to override <see cref="Network.Consensus.CoinbaseMaturity"/>.</param>
+        /// <param name="address">Filter the results to only include this address.</param>
         /// <returns>The account's total balance and confirmed balance amounts.</returns>
         /// <remarks>For coinbase transactions <see cref="Network.Consensus.CoinbaseMaturity" /> will be used in addition to <paramref name="confirmations"/>.</remarks>
-        (Money totalAmount, Money confirmedAmount, Money spendableAmount) GetAccountBalance(WalletAccountReference walletAccountReference, int currentChainHeight, int confirmations = 0, int? coinBaseMaturity = null);
+        (Money totalAmount, Money confirmedAmount, Money spendableAmount) GetAccountBalance(WalletAccountReference walletAccountReference, int currentChainHeight, int confirmations = 0, int? coinBaseMaturity = null, (int, int)? address = null);
 
         /// <summary>
         /// Returns a history of all transactions in the wallet.
@@ -214,24 +220,33 @@ namespace Stratis.Features.SQLiteWalletRepository
         /// <summary>
         /// Gets the wallet's <see cref="TransactionData"/> records. Records are sorted by transaction creation time and output index.
         /// </summary>
-        /// <param name="addressIdentifier">The HD Path (can be partial) of the transactions to get.</param>
+        /// <param name="hdAddress">The address for which to retrieve transactions.</param>
         /// <param name="limit">The maximum number of records to return.</param>
         /// <param name="prev">The record preceding the first record to be returned. Can be <c>null</c> to return the first record.</param>
         /// <param name="descending">The default is descending. Set to <c>false</c> to return records in ascending order.</param>
-        /// <param name="includePayments">Set this to include payment information.</param>
         /// <returns>The wallet's <see cref="TransactionData"/> records.</returns>
         /// <remarks>Spending details are not included.</remarks>
-        IEnumerable<TransactionData> GetAllTransactions(AddressIdentifier addressIdentifier, int limit = int.MaxValue, TransactionData prev = null, bool descending = true, bool includePayments = false);
+        IEnumerable<TransactionData> GetAllTransactions(HdAddress hdAddress, int limit = int.MaxValue, TransactionData prev = null, bool descending = true);
 
         /// <summary>
         /// Returns <see cref="TransactionData"/> records in the wallet acting as inputs to the given transaction.
         /// </summary>
-        /// <param name="walletName">The name of the wallet.</param>
+        /// <param name="account">The account.</param>
         /// <param name="transactionTime">The transaction creation time.</param>
         /// <param name="transactionId">The transaction id.</param>
         /// <param name="includePayments">Set to <c>true</c> to include payment details.</param>
         /// <returns><see cref="TransactionData"/> records in the wallet acting as inputs to the given transaction.</returns>
-        IEnumerable<TransactionData> GetTransactionInputs(string walletName, DateTimeOffset? transactionTime, uint256 transactionId = null, bool includePayments = false);
+        IEnumerable<TransactionData> GetTransactionInputs(HdAccount account, DateTimeOffset? transactionTime, uint256 transactionId, bool includePayments = false);
+
+        /// <summary>
+        /// Returns <see cref="TransactionData"/> records in the wallet acting as outputs to the given transaction.
+        /// </summary>
+        /// <param name="account">The account.</param>
+        /// <param name="transactionTime">The transaction creation time.</param>
+        /// <param name="transactionId">The transaction id.</param>
+        /// <param name="includePayments">Set to <c>true</c> to include payment details.</param>
+        /// <returns><see cref="TransactionData"/> records in the wallet acting as inputs to the given transaction.</returns>
+        IEnumerable<TransactionData> GetTransactionOutputs(HdAccount account, DateTimeOffset? transactionTime, uint256 transactionId, bool includePayments = false);
 
         /// <summary>
         /// Determines address groupings.
@@ -243,10 +258,10 @@ namespace Stratis.Features.SQLiteWalletRepository
         /// <summary>
         /// Get the accounts in the wallet.
         /// </summary>
-        /// <param name="walletName">The name of the wallet to get the accounts for.</param>
+        /// <param name="hdWallet">The wallet to get the accounts for.</param>
         /// <param name="accountName">Specifies a specific account to return.</param>
         /// <returns>The accounts in the wallet.</returns>
-        IEnumerable<HdAccount> GetAccounts(string walletName, string accountName = null);
+        IEnumerable<HdAccount> GetAccounts(Wallet hdWallet, string accountName = null);
 
         /// <summary>
         /// Get the names of the wallets in the repository.
@@ -288,6 +303,15 @@ namespace Stratis.Features.SQLiteWalletRepository
         IEnumerable<HdAddress> GetAccountAddresses(WalletAccountReference accountReference, int addressType, int count);
 
         /// <summary>
+        /// Gets the payment details of a transaction.
+        /// </summary>
+        /// <param name="walletName">The name of the wallet.</param>
+        /// <param name="transactionData">The transaction to get the payment details for.</param>
+        /// <param name="isChange">Whether to get payment or change details.</param>
+        /// <returns>Returns the payment or change details.</returns>
+        IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, TransactionData transactionData, bool isChange);
+
+        /// <summary>
         /// Adds watch-only addresses.
         /// </summary>
         /// <param name="walletName">Name of the wallet to add the addresses to.</param>
@@ -298,8 +322,26 @@ namespace Stratis.Features.SQLiteWalletRepository
         void AddWatchOnlyAddresses(string walletName, string accountName, int addressType, List<HdAddress> addresses, bool force = false);
 
         /// <summary>
+        /// Adds watch-only transactions data.
+        /// </summary>
+        /// <param name="walletName">Name of the wallet to add the transaction data for.</param>
+        /// <param name="accountName">The account to add the transaction data for.</param>
+        /// <param name="address">The address for which transaction data is being added.</param>
+        /// <param name="transactions">The transaction data to add to the address.</param>
+        /// <param name="force">Adds the transactions even if this is not a watch-only wallet. The caller must ensure the transactions are valid.</param>
+        void AddWatchOnlyTransactions(string walletName, string accountName, HdAddress address, ICollection<TransactionData> transactions, bool force = false);
+
+        /// <summary>
         /// Provides a default for the "force" flag when calling <see cref="AddWatchOnlyAddresses"/> or <see cref="AddWatchOnlyTransactions"/>.
         /// </summary>
         bool TestMode { get; set; }
+
+        /// <summary>
+        /// Returns the Transaction Count for the specified Wallet and Account
+        /// </summary>
+        /// <param name="walletName">The Wallet Name to Query</param>
+        /// <param name="accountName">The Account Name to Query</param>
+        /// <returns>The Transaction Count</returns>
+        int GetTransactionCount(string walletName, string accountName = null);
     }
 }

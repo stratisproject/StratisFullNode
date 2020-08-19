@@ -23,6 +23,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg;
+using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusPegD
@@ -101,6 +102,7 @@ namespace Stratis.CirrusPegD
                 .AddRPC()
                 .UsePosConsensus()
                 .UseWallet()
+                .AddSQLiteWalletRepository()
                 .AddPowPosMining()
                 .Build();
 
@@ -124,7 +126,7 @@ namespace Stratis.CirrusPegD
                 .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseFederatedPegPoAMining()
                 .AddFederatedPeg(fedPegOptions)
-                .CheckForPoAMembersCollateral()
+                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -136,6 +138,7 @@ namespace Stratis.CirrusPegD
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .Build();
 
             return node;

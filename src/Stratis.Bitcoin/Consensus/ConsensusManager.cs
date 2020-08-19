@@ -80,6 +80,9 @@ namespace Stratis.Bitcoin.Consensus
         public ChainedHeader Tip { get; private set; }
 
         /// <inheritdoc />
+        public int? HeaderTip => this.chainedHeaderTree.GetBestPeerTip()?.Height ?? this.Tip.Height;
+
+        /// <inheritdoc />
         public IConsensusRuleEngine ConsensusRules { get; private set; }
 
         /// <summary>
@@ -805,9 +808,9 @@ namespace Stratis.Bitcoin.Consensus
                     this.signals.Publish(new BlockConnected(blockToConnect));
                 }
 
-                this.logger.LogInformation("New tip = {0}-{1} : time  = {2} ml : size = {3} mb : trx count = {4}",
+                this.logger.LogInformation("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
                     blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
-                    dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToMegaBytes(), blockToConnect.Block.Transactions.Count());
+                    dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
             }
 
             // After successfully connecting all blocks set the tree tip and claim the branch.

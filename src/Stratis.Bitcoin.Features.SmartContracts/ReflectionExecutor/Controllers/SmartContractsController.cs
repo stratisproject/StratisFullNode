@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Connection;
+using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet;
@@ -32,7 +33,6 @@ using Stratis.SmartContracts.Core.State;
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
     [ApiVersion("1")]
-    [Route("api/[controller]")]
     public class SmartContractsController : Controller
     {
         /// <summary>
@@ -192,6 +192,41 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         }
 
         /// <summary>
+        /// Test
+        /// </summary>
+        /// <returns></returns>
+        [ActionName("getreceipt")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [ActionDescription("Gets the receipt for this transaction hash.")]
+        public ReceiptResponse GetReceipt(string txHash)
+        {
+            uint256 txHashNum = new uint256(txHash);
+            Receipt receipt = this.receiptRepository.Retrieve(txHashNum);
+
+            if (receipt == null)
+            {
+                return null;
+            }
+
+            uint160 address = receipt.NewContractAddress ?? receipt.To;
+
+            if (!receipt.Logs.Any())
+            {
+                return new ReceiptResponse(receipt, new List<LogResponse>(), this.network);
+            }
+
+            byte[] contractCode = this.stateRoot.GetCode(address);
+
+            Assembly assembly = Assembly.Load(contractCode);
+
+            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network);
+
+            List<LogResponse> logResponses = this.MapLogResponses(receipt, assembly, deserializer);
+
+            return new ReceiptResponse(receipt, logResponses, this.network);
+        }
+
+        /// <summary>
         /// Gets a smart contract transaction receipt. Receipts contain information about how a smart contract transaction was executed.
         /// This includes the value returned from a smart contract call and how much gas was used.  
         /// </summary>
@@ -205,12 +240,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetReceipt([FromQuery] string txHash)
+        public IActionResult GetReceiptAPI([FromQuery] string txHash)
         {
-            uint256 txHashNum = new uint256(txHash);
-            Receipt receipt = this.receiptRepository.Retrieve(txHashNum);
+            ReceiptResponse receiptResponse = this.GetReceipt(txHash);
 
-            if (receipt == null)
+            if (receiptResponse == null)
             {
                 this.logger.LogTrace("(-)[RECEIPT_NOT_FOUND]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest,
@@ -218,52 +252,22 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                     "No stored transaction could be found for the supplied hash.");
             }
 
-            uint160 address = receipt.NewContractAddress ?? receipt.To;
-
-            if (!receipt.Logs.Any())
-            {
-                return this.Json(new ReceiptResponse(receipt, new List<LogResponse>(), this.network));
-            }
-
-            byte[] contractCode = this.stateRoot.GetCode(address);
-
-            Assembly assembly = Assembly.Load(contractCode);
-
-            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network);
-
-            List<LogResponse> logResponses = this.MapLogResponses(receipt, assembly, deserializer);
-
-            var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
-
             return this.Json(receiptResponse);
         }
 
-        // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
-        // a web3-like library. For now the following method serves as a very basic example of how we can query the block
-        // bloom filters to retrieve events.
-
-
         /// <summary>
-        /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
-        /// is capable of storing C# structs, and structs are used to store information about different events occurring 
-        /// on the smart contract. For example, a "TransferLog" struct could contain "From" and "To" fields and be used to log
-        /// when a smart contract makes a transfer of funds from one wallet to another. The log entries are held inside the smart contract,
-        /// indexed using the name of the struct, and are linked to individual transaction receipts.
-        /// Therefore, it is possible to return a smart contract's transaction receipts
-        /// which match a specific event (as defined by the struct name).  
+        /// Searches for receipts that match the given filter criteria. Filter criteria are ANDed together.
         /// </summary>
-        /// 
-        /// <param name="contractAddress">The address of the smart contract to retrieve the receipts for.</param>
-        /// <param name="eventName">The name of the event struct to retrieve matching receipts for.</param>
-        /// 
-        /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
-        /// <response code="200">Returns requested receipts</response>
-        /// <response code="500">Contract does not exist</response>
-        [Route("receipt-search")]
-        [HttpGet]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> ReceiptSearch([FromQuery] string contractAddress, [FromQuery] string eventName)
+        /// <param name="contractAddress">The contract address from which events were raised.</param>
+        /// <param name="eventName">The name of the event raised.</param>
+        /// <param name="topics">The topics to search. All specified topics must be present.</param>
+        /// <param name="fromBlock">The block number from which to start searching.</param>
+        /// <param name="toBlock">The block number where searching finishes.</param>
+        /// <returns>A list of all matching receipts.</returns>
+        [ActionName("searchreceipts")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [ActionDescription("Searches for receipts matching the filter criteria.")]
+        public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
         {
             uint160 address = contractAddress.ToUint160(this.network);
 
@@ -271,14 +275,18 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             if (contractCode == null || !contractCode.Any())
             {
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.InternalServerError, "No code exists", $"No contract execution code exists at {address}");
+                return null;
             }
+
+            IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
 
             Assembly assembly = Assembly.Load(contractCode);
 
             var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network);
 
-            List<Receipt> receipts = this.SearchReceipts(contractAddress, eventName);
+            var receiptSearcher = new ReceiptSearcher(this.chainIndexer, this.blockStore, this.receiptRepository, this.network);
+
+            List<Receipt> receipts = receiptSearcher.SearchReceipts(contractAddress, eventName, fromBlock, toBlock, topicsBytes);
 
             var result = new List<ReceiptResponse>();
 
@@ -289,6 +297,41 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
 
                 result.Add(receiptResponse);
+            }
+
+            return result;
+        }
+
+        // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
+        // a web3-like library. For now the following method serves as a very basic example of how we can query the block
+        // bloom filters to retrieve events.
+        
+        /// <summary>
+        /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
+        /// is capable of storing C# structs, and structs are used to store information about different events occurring 
+        /// on the smart contract. For example, a "TransferLog" struct could contain "From" and "To" fields and be used to log
+        /// when a smart contract makes a transfer of funds from one wallet to another. The log entries are held inside the smart contract,
+        /// indexed using the name of the struct, and are linked to individual transaction receipts.
+        /// Therefore, it is possible to return a smart contract's transaction receipts
+        /// which match a specific event (as defined by the struct name).  
+        /// </summary>
+        /// 
+        /// <param name="contractAddress">The contract address from which events were raised.</param>
+        /// <param name="eventName">The name of the event raised.</param>
+        /// <param name="topics">The topics to search. All specified topics must be present.</param>
+        /// <param name="fromBlock">The block number from which to start searching.</param>
+        /// <param name="toBlock">The block number where searching finishes.</param>
+        /// 
+        /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
+        [Route("receipt-search")]
+        [HttpGet]
+        public async Task<IActionResult> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
+        {
+            List<ReceiptResponse> result = this.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+
+            if (result == null)
+            {
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.InternalServerError, "No code exists", $"No contract execution code exists at {contractAddress}");
             }
 
             return this.Json(result);
@@ -326,51 +369,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             }
 
             return logResponses;
-        }
-
-        private List<Receipt> SearchReceipts(string contractAddress, string eventName)
-        {
-            // Build the bytes we can use to check for this event.
-            uint160 addressUint160 = contractAddress.ToUint160(this.network);
-            byte[] addressBytes = addressUint160.ToBytes();
-            byte[] eventBytes = Encoding.UTF8.GetBytes(eventName);
-
-            // Loop through all headers and check bloom.
-            IEnumerable<ChainedHeader> blockHeaders = this.chainIndexer.EnumerateToTip(this.chainIndexer.Genesis);
-            List<ChainedHeader> matches = new List<ChainedHeader>();
-            foreach (ChainedHeader chainedHeader in blockHeaders)
-            {
-                var scHeader = (ISmartContractBlockHeader)chainedHeader.Header;
-                if (scHeader.LogsBloom.Test(addressBytes) && scHeader.LogsBloom.Test(eventBytes)) // TODO: This is really inefficient, should build bloom for query and then compare.
-                    matches.Add(chainedHeader);
-            }
-
-            // For all matching headers, get the block from local db.
-            List<NBitcoin.Block> blocks = new List<NBitcoin.Block>();
-            foreach (ChainedHeader chainedHeader in matches)
-            {
-                blocks.Add(this.blockStore.GetBlock(chainedHeader.HashBlock));
-            }
-
-            // For each block, get all receipts, and if they match, add to list to return.
-            List<Receipt> receiptResponses = new List<Receipt>();
-
-            foreach (NBitcoin.Block block in blocks)
-            {
-                foreach (Transaction transaction in block.Transactions)
-                {
-                    Receipt storedReceipt = this.receiptRepository.Retrieve(transaction.GetHash());
-                    if (storedReceipt == null) // not a smart contract transaction. Move to next transaction.
-                        continue;
-
-                    // Check if address and first topic (event name) match.
-                    if (storedReceipt.Logs.Any(x =>
-                        x.Address == addressUint160 && Enumerable.SequenceEqual(x.Topics[0], eventBytes)))
-                        receiptResponses.Add(storedReceipt);
-                }
-            }
-
-            return receiptResponses;
         }
 
         /// <summary>

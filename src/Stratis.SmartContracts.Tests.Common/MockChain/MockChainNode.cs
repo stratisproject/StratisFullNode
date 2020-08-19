@@ -85,9 +85,10 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             this.chain = chain;
 
             // Set up address and mining
-            this.CoreNode.FullNode.WalletManager().CreateWallet(this.Password, this.WalletName, this.Passphrase, mnemonic);
-            this.MinerAddress = this.CoreNode.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(this.WalletName, this.AccountName));
-            Wallet wallet = this.CoreNode.FullNode.WalletManager().GetWalletByName(this.WalletName);
+            (Wallet wallet, _) = this.CoreNode.FullNode.WalletManager().CreateWallet(this.Password, this.WalletName, this.Passphrase, mnemonic);
+            HdAccount account = wallet.GetAccount(this.AccountName);
+            this.MinerAddress = account.GetFirstUnusedReceivingAddress();
+
             Key key = wallet.GetExtendedPrivateKeyForAddress(this.Password, this.MinerAddress).PrivateKey;
             this.CoreNode.SetMinerSecret(new BitcoinSecret(key, this.CoreNode.FullNode.Network));
 
@@ -250,13 +251,13 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
         /// </summary>
         public IList<ReceiptResponse> GetReceipts(string contractAddress, string eventName)
         {
-            JsonResult response = (JsonResult)this.smartContractsController.ReceiptSearch(contractAddress, eventName).Result;
+            JsonResult response = (JsonResult)this.smartContractsController.ReceiptSearchAPI(contractAddress, eventName).Result;
             return (IList<ReceiptResponse>)response.Value;
         }
 
         public ReceiptResponse GetReceipt(string txHash)
         {
-            JsonResult response = (JsonResult)this.smartContractsController.GetReceipt(txHash);
+            JsonResult response = (JsonResult)this.smartContractsController.GetReceiptAPI(txHash);
             return (ReceiptResponse)response.Value;
         }
 

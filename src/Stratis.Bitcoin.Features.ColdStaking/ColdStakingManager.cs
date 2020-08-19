@@ -80,6 +80,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             IScriptAddressReader scriptAddressReader,
             ILoggerFactory loggerFactory,
             IDateTimeProvider dateTimeProvider,
+            IWalletRepository walletRepository,
             IBroadcasterManager broadcasterManager = null) : base(
                 loggerFactory,
                 network,
@@ -91,6 +92,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 nodeLifeTime,
                 dateTimeProvider,
                 scriptAddressReader,
+                walletRepository,
                 broadcasterManager
                 )
         {
@@ -143,7 +145,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <returns>A <see cref="Models.GetColdStakingInfoResponse"/> object containing the information.</returns>
         internal Models.GetColdStakingInfoResponse GetColdStakingInfo(string walletName)
         {
-            Wallet.Wallet wallet = this.GetWalletByName(walletName);
+            Wallet.Wallet wallet = this.GetWallet(walletName);
 
             var response = new Models.GetColdStakingInfoResponse()
             {
@@ -201,7 +203,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <returns>The new or existing cold staking account.</returns>
         internal HdAccount GetOrCreateColdStakingAccount(string walletName, bool isColdWalletAccount, string walletPassword)
         {
-            Wallet.Wallet wallet = this.GetWalletByName(walletName);
+            Wallet.Wallet wallet = this.GetWallet(walletName);
 
             HdAccount account = this.GetColdStakingAccount(wallet, isColdWalletAccount);
             if (account != null)
@@ -226,14 +228,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 accountName = HotWalletAccountName;
             }
 
-            account = wallet.AddNewAccount(walletPassword, this.dateTimeProvider.GetTimeOffset(), accountIndex, accountName);
-
-            // Maintain at least one unused address at all times. This will ensure that wallet recovery will also work.
-            IEnumerable<HdAddress> newAddresses = account.CreateAddresses(wallet.Network, 1, false);
-            this.UpdateKeysLookupLocked(newAddresses);
-
-            // Save the changes to the file.
-            this.SaveWallet(wallet);
+            account = wallet.AddNewAccount(walletPassword,  accountIndex, accountName, this.dateTimeProvider.GetTimeOffset());
 
             this.logger.LogTrace("(-):'{0}'", account.Name);
             return account;
@@ -249,7 +244,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         {
             Guard.NotNull(walletName, nameof(walletName));
 
-            Wallet.Wallet wallet = this.GetWalletByName(walletName);
+            Wallet.Wallet wallet = this.GetWallet(walletName);
             HdAccount account = this.GetColdStakingAccount(wallet, isColdWalletAddress);
             if (account == null)
             {
@@ -261,9 +256,12 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             if (address == null)
             {
                 this.logger.LogDebug("No unused address exists on account '{0}'. Adding new address.", account.Name);
+                // TODO:
+                /*
                 IEnumerable<HdAddress> newAddresses = account.CreateAddresses(wallet.Network, 1);
                 this.UpdateKeysLookupLocked(newAddresses);
                 address = newAddresses.First();
+                */
             }
 
             this.logger.LogTrace("(-):'{0}'", address.Address);
@@ -306,7 +304,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Guard.NotNull(amount, nameof(amount));
             Guard.NotNull(feeAmount, nameof(feeAmount));
 
-            Wallet.Wallet wallet = this.GetWalletByName(walletName);
+            Wallet.Wallet wallet = this.GetWallet(walletName);
 
             // Get/create the cold staking accounts.
             HdAccount coldAccount = this.GetOrCreateColdStakingAccount(walletName, true, walletPassword);
@@ -384,7 +382,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Guard.NotNull(amount, nameof(amount));
             Guard.NotNull(feeAmount, nameof(feeAmount));
 
-            Wallet.Wallet wallet = this.GetWalletByName(walletName);
+            Wallet.Wallet wallet = this.GetWallet(walletName);
 
             // Get the cold staking account.
             HdAccount coldAccount = this.GetColdStakingAccount(wallet, true);
@@ -474,7 +472,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         {
             Guard.NotEmpty(walletName, nameof(walletName));
 
-            Wallet.Wallet wallet = this.GetWalletByName(walletName);
+            Wallet.Wallet wallet = this.GetWallet(walletName);
             UnspentOutputReference[] res = null;
             lock (this.lockObject)
             {
@@ -484,24 +482,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
             this.logger.LogTrace("(-):*.Count={0}", res.Count());
             return res;
-        }
-
-        /// <summary>
-        /// Checks if the script contains a cold staking address and if so maintains the buffer.
-        /// </summary>
-        /// <param name="script">The script (possibly a cold staking script) to check.</param>
-        /// <param name="accountFilter">The account filter.</param>
-        public override void TransactionFoundInternal(Script script, Func<HdAccount, bool> accountFilter = null)
-        {
-            if (ColdStakingScriptTemplate.Instance.ExtractScriptPubKeyParameters(script, out KeyId hotPubKeyHash, out KeyId coldPubKeyHash))
-            {
-                base.TransactionFoundInternal(hotPubKeyHash.ScriptPubKey, a => a.Index == HotWalletAccountIndex);
-                base.TransactionFoundInternal(coldPubKeyHash.ScriptPubKey, a => a.Index == ColdWalletAccountIndex);
-            }
-            else
-            {
-                base.TransactionFoundInternal(script, accountFilter);
-            }
         }
     }
 }

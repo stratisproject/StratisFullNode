@@ -22,6 +22,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusMinerD
@@ -79,7 +80,7 @@ namespace Stratis.CirrusMinerD
                 .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseSmartContractPoAConsensus()
                 .UseSmartContractCollateralPoAMining()
-                .CheckForPoAMembersCollateral()
+                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -91,6 +92,7 @@ namespace Stratis.CirrusMinerD
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .Build();
 
             return node;
@@ -118,6 +120,7 @@ namespace Stratis.CirrusMinerD
                 .AddRPC()
                 .UsePosConsensus()
                 .UseWallet()
+                .AddSQLiteWalletRepository()
                 .AddPowPosMining()
                 .Build();
 

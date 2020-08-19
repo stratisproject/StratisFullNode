@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Stratis.Features.SQLiteWalletRepository.External
+namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 {
     public interface ITransactionContext : IDisposable
     {

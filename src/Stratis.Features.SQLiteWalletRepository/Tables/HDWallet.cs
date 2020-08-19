@@ -65,19 +65,21 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             ,       BlockLocator
             ,       CreationTime
             )
-            VALUES ('{this.Name}'
-            ,       {this.LastBlockSyncedHeight}
-            ,       '{this.LastBlockSyncedHash}'
-            ,       {this.IsExtPubKeyWallet}
-            ,       '{this.EncryptedSeed}'
-            ,       '{this.ChainCode}'
-            ,       '{this.BlockLocator}'
-            ,       {this.CreationTime})");
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            this.Name,
+            this.LastBlockSyncedHeight,
+            this.LastBlockSyncedHash,
+            this.IsExtPubKeyWallet,
+            this.EncryptedSeed,
+            this.ChainCode,
+            this.BlockLocator,
+            this.CreationTime);
 
             this.WalletId = conn.ExecuteScalar<int>($@"
             SELECT  WalletId
             FROM    HDWallet
-            WHERE   Name = '{this.Name}'");
+            WHERE   Name = ?",
+            this.Name);
         }
 
         internal static HDWallet GetByName(SQLiteConnection conn, string walletName)
@@ -109,27 +111,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             internal string Hash { get; set; }
         }
 
-        /*
-        internal static HeightHashPair GreatestBlockHeightBeforeOrAt(SQLiteConnection conn, int walletId, int height)
-        {
-            return conn.FindWithQuery<HeightHashPair>($@"
-                SELECT  OutputBlockHeight BlockHeight
-                ,       OutputBlockHash BlockHash
-                FROM    HDTransactionData
-                WHERE   WalletId = { walletId }
-                AND     OutputBlockHeight <= { height }
-                UNION   ALL
-                SELECT  SpendBlockHeight BlockHeight
-                ,       SpendBlockHash BlockHash
-                FROM    HDTransactionData
-                WHERE   WalletId = { walletId }
-                AND     SpendBlockHeight <= { height }
-                ORDER   BY BlockHeight desc
-                LIMIT   1");
-        }
-        */
-
-        internal static void AdvanceTip(SQLiteConnection conn, HDWallet wallet, ChainedHeader newTip, uint256 prevTipHash)
+        internal static void AdvanceTip(DBConnection conn, HDWallet wallet, ChainedHeader newTip, uint256 prevTipHash)
         {
             uint256 lastBlockSyncedHash = newTip?.HashBlock ?? uint256.Zero;
             int lastBlockSyncedHeight = newTip?.Height ?? -1;
@@ -139,13 +121,17 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
             conn.Execute($@"
                     UPDATE HDWallet
-                    SET    LastBlockSyncedHash = '{lastBlockSyncedHash}',
-                           LastBlockSyncedHeight = {lastBlockSyncedHeight},
-                           BlockLocator = '{blockLocator}'
-                    WHERE  LastBlockSyncedHash = '{prevTipHash}' {
+                    SET    LastBlockSyncedHash = ?,
+                           LastBlockSyncedHeight = ?,
+                           BlockLocator = ?
+                    WHERE  LastBlockSyncedHash = ? {
                     // Respect the wallet name if provided.
                     ((wallet?.Name != null) ? $@"
-                    AND    Name = '{wallet?.Name}'" : "")}");
+                    AND    Name = {DBParameter.Create(wallet?.Name)}" : "")}",
+                    lastBlockSyncedHash.ToString(),
+                    lastBlockSyncedHeight,
+                    blockLocator,
+                    prevTipHash.ToString());
         }
 
         internal void SetLastBlockSynced(HashHeightPair lastBlockSynced, BlockLocator blockLocator, Network network)
@@ -166,23 +152,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
         internal ChainedHeader GetFork(ChainedHeader chainTip)
         {
-            if (chainTip == null)
+            if (chainTip == null || this.LastBlockSyncedHeight < 0)
                 return null;
 
-            if (chainTip.Height > this.LastBlockSyncedHeight)
+            if (chainTip.Height >= this.LastBlockSyncedHeight)
             {
-                if (this.LastBlockSyncedHeight < 0)
-                    return null;
-
-                chainTip = chainTip.GetAncestor(this.LastBlockSyncedHeight);
-            }
-
-            if (chainTip.Height == this.LastBlockSyncedHeight)
-            {
-                if (chainTip.HashBlock == uint256.Parse(this.LastBlockSyncedHash))
-                    return chainTip;
-                else
-                    return null;
+                ChainedHeader fork = (chainTip.Height == this.LastBlockSyncedHeight) ? chainTip : chainTip.GetAncestor(this.LastBlockSyncedHeight);
+                if (fork.HashBlock == uint256.Parse(this.LastBlockSyncedHash))
+                    return fork;
             }
 
             var blockLocator = new BlockLocator()
@@ -192,10 +169,13 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
             List<int> locatorHeights = ChainedHeaderExt.GetLocatorHeights(this.LastBlockSyncedHeight);
 
+            // Find a locator block at or below the chain tip.
             for (int i = 0; i < locatorHeights.Count; i++)
             {
-                if (chainTip.Height > locatorHeights[i])
-                    chainTip = chainTip.GetAncestor(locatorHeights[i]);
+                if (chainTip.Height < locatorHeights[i])
+                    continue;
+
+                chainTip = chainTip.GetAncestor(locatorHeights[i]);
 
                 if (chainTip.HashBlock == blockLocator.Blocks[i])
                     return chainTip;
