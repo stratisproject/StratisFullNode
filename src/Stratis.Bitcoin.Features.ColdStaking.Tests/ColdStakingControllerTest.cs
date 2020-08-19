@@ -28,6 +28,7 @@ using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -217,15 +218,18 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             var scriptDestinationReader = new ColdStakingDestinationReader(new ScriptAddressReader());
 
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.loggerFactory, this.nodeSettings.DataFolder, this.Network, DateTimeProvider.Default, scriptDestinationReader);
-            walletRepository.TestMode = true;
+            IWalletRepository walletRepository = new SQLiteWalletRepository(this.loggerFactory, this.nodeSettings.DataFolder, this.Network, DateTimeProvider.Default, scriptDestinationReader)
+            {
+                TestMode = true
+            };
 
             this.coldStakingManager = new ColdStakingManager(this.Network, new ChainIndexer(this.Network), walletSettings, this.nodeSettings.DataFolder,
                 new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), scriptDestinationReader,
                 this.loggerFactory, DateTimeProvider.Default, walletRepository);
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager,
-                new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network));
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
 
             this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler);
 
@@ -280,9 +284,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, false, walletPassword);
             this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, true, walletPassword);
             this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, false, walletPassword);
-
-            var wallet1 = this.coldStakingManager.GetWallet(walletName1);
-            var wallet2 = this.coldStakingManager.GetWallet(walletName2);
 
             HdAddress coldAddress1 = this.coldStakingManager.GetFirstUnusedColdStakingAddress(walletName1, true);
             HdAddress hotAddress1 = this.coldStakingManager.GetFirstUnusedColdStakingAddress(walletName1, false);

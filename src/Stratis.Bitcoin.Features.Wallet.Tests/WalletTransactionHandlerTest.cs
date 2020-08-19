@@ -11,7 +11,9 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Tests.Wallet.Common;
 using Stratis.Bitcoin.Utilities;
@@ -44,7 +46,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             Assert.Throws<WalletException>(() =>
             {
-                var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, new Mock<IWalletManager>().Object, new Mock<IWalletFeePolicy>().Object, this.Network, this.standardTransactionPolicy);
+                var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+                var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, new Mock<IWalletManager>().Object, new Mock<IWalletFeePolicy>().Object, this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
                 Transaction result = walletTransactionHandler.BuildTransaction(CreateContext(this.Network, new WalletAccountReference(), "password", new Script(), Money.Zero, FeeType.Medium, 2));
             });
@@ -300,7 +304,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             walletManager.Start();
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy);
+            var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
             Wallet wallet = WalletTestsHelpers.CreateWallet("wallet1", walletRepository);
             HdAccount account = wallet.AddNewAccount((ExtPubKey)null, accountName: "account 1");
@@ -324,7 +330,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             walletManager.Start();
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy);
+            var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
             Wallet wallet = WalletTestsHelpers.CreateWallet("wallet1", walletRepository);
             HdAccount account = wallet.AddNewAccount((ExtPubKey)null, accountName: "account 1");
@@ -355,7 +363,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new ChainIndexer(this.Network), new WalletSettings(NodeSettings.Default(this.Network)),
                 dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, this.scriptAddressReader, walletRepository);
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy);
+            var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
             walletManager.Start();
 
@@ -393,7 +403,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             walletManager.Start();
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy);
+            var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
             Wallet wallet = WalletTestsHelpers.CreateWallet("wallet1", walletRepository);
             HdAccount account = wallet.AddNewAccount((ExtPubKey)null, accountName: "account 1");
@@ -425,7 +437,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             walletManager.Start();
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy);
+            var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, It.IsAny<WalletFeePolicy>(), this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
             Wallet wallet = WalletTestsHelpers.CreateWallet("wallet1", walletRepository);
             HdAccount account = wallet.AddNewAccount((ExtPubKey)null, accountName: "account 1");
@@ -541,8 +555,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             DataFolder dataFolder = CreateDataFolder(this);
 
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
-            walletRepository.TestMode = true;
+            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader())
+            {
+                TestMode = true
+            };
 
             var walletFeePolicy = new Mock<IWalletFeePolicy>();
             walletFeePolicy.Setup(w => w.GetFeeRate(FeeType.Low.ToConfirmations()))
@@ -553,8 +569,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain,
                 new WalletSettings(NodeSettings.Default(this.Network)), dataFolder,
                 walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, this.scriptAddressReader, walletRepository);
-            var walletTransactionHandler =
-                new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy);
+
+            var reserveUtxoService = new ReserveUtxoService(this.LoggerFactory.Object, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy, reserveUtxoService);
 
             walletManager.Start();
 

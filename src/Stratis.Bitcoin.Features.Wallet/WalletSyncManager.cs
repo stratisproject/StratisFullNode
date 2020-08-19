@@ -25,14 +25,13 @@ namespace Stratis.Bitcoin.Features.Wallet
         private readonly StoreSettings storeSettings;
         private readonly ISignals signals;
         private readonly IAsyncProvider asyncProvider;
-        private List<(string name, ChainedHeader tipHeader)> wallets = new List<(string name, ChainedHeader tipHeader)>();
         private readonly INodeLifetime nodeLifetime;
         private IAsyncLoop walletSynchronisationLoop;
         private SubscriptionToken transactionAddedSubscription;
         private SubscriptionToken transactionRemovedSubscription;
         private SubscriptionToken blockConnectedSubscription;
         private CancellationTokenSource syncCancellationToken;
-        private object lockObject;
+        private readonly object lockObject;
         private readonly MempoolManager mempoolManager;
 
         public ChainedHeader WalletTip => this.walletManager.WalletCommonTip(this.chainIndexer.Tip);
@@ -111,7 +110,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private void OnTransactionRemoved(TransactionRemovedFromMemoryPool transactionRemovedFromMempool)
         {
-            this.logger.LogDebug("Transaction '{0}' was removed from the mempool. RemovedForBlock={1}", 
+            this.logger.LogDebug("Transaction '{0}' was removed from the mempool. RemovedForBlock={1}",
                 transactionRemovedFromMempool.RemovedTransaction.GetHash(), transactionRemovedFromMempool.RemovedForBlock);
 
             // If the transaction was removed from the mempool because it's part of a block, we don't want to remove it.

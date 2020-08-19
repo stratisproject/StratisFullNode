@@ -16,9 +16,9 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Bitcoin.Features.Wallet.Services;
 
 namespace Stratis.Bitcoin.Features.Wallet
 {
@@ -32,14 +32,12 @@ namespace Stratis.Bitcoin.Features.Wallet
     /// <summary>
     /// Wallet feature for the full node.
     /// </summary>
-    /// <seealso cref="Stratis.Bitcoin.Builder.Feature.FullNodeFeature" />
+    /// <seealso cref="FullNodeFeature" />
     public class WalletFeature : BaseWalletFeature
     {
         private readonly IWalletSyncManager walletSyncManager;
 
         private readonly IWalletManager walletManager;
-
-        private readonly Signals.ISignals signals;
 
         private readonly IConnectionManager connectionManager;
 
@@ -55,14 +53,12 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <param name="walletSyncManager">The synchronization manager for the wallet, tasked with keeping the wallet synced with the network.</param>
         /// <param name="walletManager">The wallet manager.</param>
         /// <param name="addressBookManager">The address book manager.</param>
-        /// <param name="signals">The signals responsible for receiving blocks and transactions from the network.</param>
         /// <param name="connectionManager">The connection manager.</param>
         /// <param name="broadcasterBehavior">The broadcaster behavior.</param>
         public WalletFeature(
             IWalletSyncManager walletSyncManager,
             IWalletManager walletManager,
             IAddressBookManager addressBookManager,
-            Signals.ISignals signals,
             IConnectionManager connectionManager,
             BroadcasterBehavior broadcasterBehavior,
             INodeStats nodeStats,
@@ -71,7 +67,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.walletSyncManager = walletSyncManager;
             this.walletManager = walletManager;
             this.addressBookManager = addressBookManager;
-            this.signals = signals;
             this.connectionManager = connectionManager;
             this.broadcasterBehavior = broadcasterBehavior;
             this.walletRepository = walletRepository;
@@ -170,18 +165,19 @@ namespace Stratis.Bitcoin.Features.Wallet
                 .DependOn<RPCFeature>()
                 .FeatureServices(services =>
                 {
-                        services.AddSingleton<IWalletService, WalletService>();
-                        services.AddSingleton<IWalletSyncManager, WalletSyncManager>();
-                        services.AddSingleton<IWalletTransactionHandler, WalletTransactionHandler>();
-                        services.AddSingleton<IWalletManager, WalletManager>();
-                        services.AddSingleton<IWalletFeePolicy, WalletFeePolicy>();
-                        services.AddSingleton<IBroadcasterManager, FullNodeBroadcasterManager>();
-                        services.AddSingleton<BroadcasterBehavior>();
-                        services.AddSingleton<WalletSettings>();
-                        services.AddSingleton<IScriptAddressReader>(new ScriptAddressReader());
-                        services.AddSingleton<StandardTransactionPolicy>();
-                        services.AddSingleton<IAddressBookManager, AddressBookManager>();
-                    });
+                    services.AddSingleton<IWalletService, WalletService>();
+                    services.AddSingleton<IWalletSyncManager, WalletSyncManager>();
+                    services.AddSingleton<IWalletTransactionHandler, WalletTransactionHandler>();
+                    services.AddSingleton<IWalletManager, WalletManager>();
+                    services.AddSingleton<IWalletFeePolicy, WalletFeePolicy>();
+                    services.AddSingleton<IBroadcasterManager, FullNodeBroadcasterManager>();
+                    services.AddSingleton<BroadcasterBehavior>();
+                    services.AddSingleton<WalletSettings>();
+                    services.AddSingleton<IScriptAddressReader>(new ScriptAddressReader());
+                    services.AddSingleton<StandardTransactionPolicy>();
+                    services.AddSingleton<IAddressBookManager, AddressBookManager>();
+                    services.AddSingleton<IReserveUtxoService, ReserveUtxoService>();
+                });
             });
 
             return fullNodeBuilder;

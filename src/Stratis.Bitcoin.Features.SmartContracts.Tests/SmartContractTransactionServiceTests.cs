@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using CSharpFunctionalExtensions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
@@ -8,7 +9,8 @@ using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
-using Stratis.Sidechains.Networks;
+using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Signals;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.State;
@@ -113,18 +115,21 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             this.walletManager.Setup(x => x.GetWallet(request.WalletName))
                 .Returns(wallet);
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
 
-            this.walletTransactionHandler.Verify(x=>x.BuildTransaction(It.Is<TransactionBuildContext>(y =>y.SelectedInputs.Count == 1)));
+            this.walletTransactionHandler.Verify(x => x.BuildTransaction(It.Is<TransactionBuildContext>(y => y.SelectedInputs.Count == 1)));
         }
 
         [Fact]
@@ -193,14 +198,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                     }
                 });
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
             Assert.False(result.Success);
@@ -274,23 +282,26 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             var wallet = new Features.Wallet.Wallet();
             wallet.AccountsRoot.Add(new AccountRoot(wallet));
-            var account0 = new HdAccount(wallet.AccountsRoot.First().Accounts) { Name = request.AccountName };;
+            var account0 = new HdAccount(wallet.AccountsRoot.First().Accounts) { Name = request.AccountName }; ;
             account0.ExternalAddresses.Add(new HdAddress() { Address = senderAddress });
 
             this.walletManager.Setup(x => x.GetWallet(request.WalletName))
                 .Returns(wallet);
 
             this.callDataSerializer.Setup(x => x.Deserialize(It.IsAny<byte[]>()))
-                .Returns(Result.Ok(new ContractTxData(1, 100, (Gas) 100_000, new byte[0])));
+                .Returns(Result.Ok(new ContractTxData(1, 100, (Gas)100_000, new byte[0])));
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             BuildCreateContractTransactionResponse result = service.BuildCreateTx(request);
 
@@ -302,14 +313,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             var request = new BuildContractTransactionRequest
             {
@@ -339,14 +353,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             var request = new BuildContractTransactionRequest
             {
@@ -376,14 +393,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             var request = new BuildContractTransactionRequest
             {
@@ -420,14 +440,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
             string recipientAddress = uint160.One.ToBase58Address(this.network);
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             var request = new BuildContractTransactionRequest
             {
@@ -635,14 +658,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 }
             };
 
-            SmartContractTransactionService service = new SmartContractTransactionService(
+            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
                 this.network,
                 this.walletManager.Object,
                 this.walletTransactionHandler.Object,
                 this.stringSerializer.Object,
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
-                this.stateRepository.Object);
+                this.stateRepository.Object,
+                reserveUtxoService);
 
             var senderHdAddress = new HdAddress { Address = senderAddress };
 

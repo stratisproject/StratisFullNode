@@ -32,8 +32,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
         Task<AddressesModel> GetAllAddresses(GetAllAddressesModel request, CancellationToken cancellationToken);
 
-        Task<WalletBuildTransactionModel> BuildTransaction(BuildTransactionRequest request,
-            CancellationToken cancellationToken);
+        Task<WalletBuildTransactionModel> BuildTransaction(BuildTransactionRequest request, CancellationToken cancellationToken);
 
         Task<Money> GetTransactionFeeEstimate(TxFeeEstimateRequest request, CancellationToken cancellationToken);
 

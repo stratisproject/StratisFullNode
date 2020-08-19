@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
@@ -35,6 +36,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         private readonly ICallDataSerializer callDataSerializer;
         private readonly IAddressGenerator addressGenerator;
         private readonly IStateRepositoryRoot stateRoot;
+        private readonly IReserveUtxoService reserveUtxoService;
 
         public SmartContractTransactionService(
             Network network,
@@ -43,7 +45,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             IMethodParameterStringSerializer methodParameterStringSerializer,
             ICallDataSerializer callDataSerializer,
             IAddressGenerator addressGenerator,
-            IStateRepositoryRoot stateRoot)
+            IStateRepositoryRoot stateRoot,
+            IReserveUtxoService reserveUtxoService
+            )
         {
             this.network = network;
             this.walletManager = walletManager;
@@ -52,6 +56,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             this.callDataSerializer = callDataSerializer;
             this.addressGenerator = addressGenerator;
             this.stateRoot = stateRoot;
+            this.reserveUtxoService = reserveUtxoService;
         }
 
         public EstimateFeeResult EstimateFee(ScTxFeeEstimateRequest request)
@@ -81,7 +86,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             var recipients = new List<Recipient>();
             foreach (RecipientModel recipientModel in request.Recipients)
             {
-                BitcoinAddress bitcoinAddress = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network);
+                var bitcoinAddress = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network);
 
                 // If it's a potential SC address, check if it's a contract.
                 if (bitcoinAddress is BitcoinPubKeyAddress bitcoinPubKeyAddress)
@@ -359,11 +364,28 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return !(addressBalance.AmountConfirmed == 0 && addressBalance.AmountUnconfirmed == 0);
         }
 
-        private List<OutPoint> SelectInputs(string walletName, string sender, List<OutpointRequest> outpoints)
+        private List<OutPoint> SelectInputs(string walletName, string sender, List<OutpointRequest> requestedOutpoints)
         {
             List<OutPoint> selectedInputs = this.walletManager.GetSpendableInputsForAddress(walletName, sender);
 
-            return this.ReduceToRequestedInputs(outpoints, selectedInputs);
+            if (requestedOutpoints != null && requestedOutpoints.Any())
+                selectedInputs = this.ReduceToRequestedInputs(requestedOutpoints, selectedInputs);
+
+            FilterReservedInputs(selectedInputs);
+
+            return selectedInputs;
+        }
+
+        private List<OutPoint> FilterReservedInputs(List<OutPoint> selectedInputs)
+        {
+            var result = new List<OutPoint>();
+            foreach (OutPoint input in selectedInputs)
+            {
+                if (!this.reserveUtxoService.IsUtxoReserved(input))
+                    result.Add(input);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -374,16 +396,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             var result = new List<OutPoint>(selectedInputs);
 
-            if (requestedOutpoints != null && requestedOutpoints.Any())
-            {
-                //Convert outpointRequest to OutPoint
-                IEnumerable<OutPoint> requestedOutPoints = requestedOutpoints.Select(outPointRequest => new OutPoint(new uint256(outPointRequest.TransactionId), outPointRequest.Index));
+            //Convert outpointRequest to OutPoint
+            IEnumerable<OutPoint> requestedOutPoints = requestedOutpoints.Select(outPointRequest => new OutPoint(new uint256(outPointRequest.TransactionId), outPointRequest.Index));
 
-                for (int i = result.Count - 1; i >= 0; i--)
-                {
-                    if (!requestedOutPoints.Contains(result[i]))
-                        result.RemoveAt(i);
-                }
+            for (int i = result.Count - 1; i >= 0; i--)
+            {
+                if (!requestedOutPoints.Contains(result[i]))
+                    result.RemoveAt(i);
             }
 
             return result;
