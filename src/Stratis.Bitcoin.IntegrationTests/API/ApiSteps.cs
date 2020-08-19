@@ -589,7 +589,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
                     WalletName = WalletName,
                     FeeAmount = Money.Satoshis(82275).ToString() // Minimum fee
                 });
-            
+
             return transactionResult;
         }
     }
