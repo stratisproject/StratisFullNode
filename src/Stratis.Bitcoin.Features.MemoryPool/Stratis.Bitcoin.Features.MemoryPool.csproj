@@ -16,9 +16,7 @@
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <Version>3.0.8.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <ApplicationIcon />
     <OutputTypeEx>library</OutputTypeEx>
-    <StartupObject />
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
   <ItemGroup>

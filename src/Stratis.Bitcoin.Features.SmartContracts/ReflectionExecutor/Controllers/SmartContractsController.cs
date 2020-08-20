@@ -18,7 +18,6 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts;
@@ -97,8 +96,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The address of the smart contract to retrieve as bytecode and C# source.</param>
         ///
         /// <returns>A response object containing the bytecode and the decompiled C# code.</returns>
-        [Route("api/[controller]/code")]
+        /// <response code="200">Returns code response (may be unsuccessful)</response>
+        [Route("code")]
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult GetCode([FromQuery]string address)
         {
             uint160 addressNumeric = address.ToUint160(this.network);
@@ -132,8 +133,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The address of the smart contract to retrieve the balance for.</param>
         /// 
         /// <returns>The balance of a smart contract in STRAT (or the sidechain coin).</returns>
-        [Route("api/[controller]/balance")]
+        /// <response code="200">Returns balance</response>
+        [Route("balance")]
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult GetBalance([FromQuery]string address)
         {
             uint160 addressNumeric = address.ToUint160(this.network);
@@ -155,8 +158,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="request">An object containing the necessary parameters to perform a retrieve stored data request.</param>
         ///
         /// <returns>A single piece of stored smart contract data.</returns>
-        [Route("api/[controller]/storage")]
+        /// <response code="200">Returns data response (may be unsuccessful)</response>
+        /// <response code="400">Invalid request</response>
+        [Route("storage")]
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult GetStorage([FromQuery] GetStorageRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -227,8 +234,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="txHash">A hash of the smart contract transaction (the transaction ID).</param>
         /// 
         /// <returns>The receipt for the smart contract.</returns> 
-        [Route("api/[controller]/receipt")]
+        /// <response code="200">Returns transaction receipt</response>
+        /// <response code="400">Transaction not found</response>
+        [Route("receipt")]
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult GetReceiptAPI([FromQuery] string txHash)
         {
             ReceiptResponse receiptResponse = this.GetReceipt(txHash);
@@ -294,8 +305,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
         // a web3-like library. For now the following method serves as a very basic example of how we can query the block
         // bloom filters to retrieve events.
-
-
+        
         /// <summary>
         /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
         /// is capable of storing C# structs, and structs are used to store information about different events occurring 
@@ -313,7 +323,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="toBlock">The block number where searching finishes.</param>
         /// 
         /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
-        [Route("api/[controller]/receipt-search")]
+        [Route("receipt-search")]
         [HttpGet]
         public async Task<IActionResult> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
@@ -373,8 +383,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="request">An object containing the necessary parameters to build the transaction.</param>
         /// 
         /// <returns>A transaction ready to create a smart contract.</returns>
-        [Route("api/[controller]/build-create")]
+        /// <response code="200">Returns create contract response</response>
+        /// <response code="400">Invalid request or failed to build transaction</response>
+        [Route("build-create")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult BuildCreateSmartContractTransaction([FromBody] BuildCreateContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -400,8 +414,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="request">An object containing the necessary parameters to build the transaction.</param>
         /// 
         /// <returns>A transaction ready to call a method on a smart contract.</returns>
-        [Route("api/[controller]/build-call")]
+        /// <response code="200">Returns call contract response</response>
+        /// <response code="400">Invalid request or failed to build transaction</response>
+        [Route("build-call")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult BuildCallSmartContractTransaction([FromBody] BuildCallContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -422,8 +440,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="request">An object containing the necessary parameters to build the transaction.</param>
         /// 
         /// <returns>The build transaction hex.</returns>
-        [Route("api/[controller]/build-transaction")]
+        /// <response code="200">Returns transaction response</response>
+        /// <response code="400">Invalid request or unexpected exception occurred</response>
+        [Route("build-transaction")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult BuildTransaction([FromBody] BuildContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -448,8 +470,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// </summary>
         /// <param name="request">An object containing the parameters used to build the the fee estimation transaction.</param>
         /// <returns>The estimated fee for the transaction.</returns>
-        [Route("api/[controller]/estimate-fee")]
+        /// <response code="200">Returns estimated fee</response>
+        /// <response code="400">Invalid request or unexpected exception occurred</response>
+        [Route("estimate-fee")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public IActionResult EstimateFee([FromBody] ScTxFeeEstimateRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -477,8 +503,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// 
         /// <returns>The transaction used to create the smart contract. The result of the transaction broadcast is not returned
         /// and you should check for a transaction receipt to see if it was successful.</returns>
-        [Route("api/[controller]/build-and-send-create")]
+        /// <response code="200">Returns create transaction response</response>
+        /// <response code="400">Invalid request, failed to build transaction, or cannot broadcast transaction</response>
+        /// <response code="403">No connected peers</response>
+        [Route("build-and-send-create")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         public async Task<IActionResult> BuildAndSendCreateSmartContractTransactionAsync([FromBody] BuildCreateContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -502,7 +534,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             // Check if transaction was actually added to a mempool.
             TransactionBroadcastEntry transactionBroadCastEntry = this.broadcasterManager.GetTransaction(transaction.GetHash());
 
-            if (transactionBroadCastEntry?.State == Features.Wallet.Broadcasting.State.CantBroadcast)
+            if (transactionBroadCastEntry?.TransactionBroadcastState == Features.Wallet.Broadcasting.TransactionBroadcastState.CantBroadcast)
             {
                 this.logger.LogError("Exception occurred: {0}", transactionBroadCastEntry.ErrorMessage);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, transactionBroadCastEntry.ErrorMessage, "Transaction Exception");
@@ -523,8 +555,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         ///
         /// <returns>The transaction used to call a smart contract method. The result of the transaction broadcast is not returned
         /// and you should check for a transaction receipt to see if it was successful.</returns>
-        [Route("api/[controller]/build-and-send-call")]
+        /// <response code="200">Returns call transaction response</response>
+        /// <response code="400">Invalid request or cannot broadcast transaction</response>
+        /// <response code="403">No connected peers</response>
+        [Route("build-and-send-call")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.Forbidden)]
         public async Task<IActionResult> BuildAndSendCallSmartContractTransactionAsync([FromBody] BuildCallContractTransactionRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -547,7 +585,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             // Check if transaction was actually added to a mempool.
             TransactionBroadcastEntry transactionBroadCastEntry = this.broadcasterManager.GetTransaction(transaction.GetHash());
 
-            if (transactionBroadCastEntry?.State == Features.Wallet.Broadcasting.State.CantBroadcast)
+            if (transactionBroadCastEntry?.TransactionBroadcastState == Features.Wallet.Broadcasting.TransactionBroadcastState.CantBroadcast)
             {
                 this.logger.LogError("Exception occurred: {0}", transactionBroadCastEntry.ErrorMessage);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, transactionBroadCastEntry.ErrorMessage, "Transaction Exception");
@@ -570,8 +608,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="request">An object containing the necessary parameters to build the transaction.</param>
         /// 
         /// <results>The result of the local call to the smart contract method.</results>
-        [Route("api/[controller]/local-call")]
+        /// <response code="200">Returns call response</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Unable to deserialize method parameters</response>
+        [Route("local-call")]
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
         {
             if (!this.ModelState.IsValid)
@@ -639,8 +683,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="walletName">The name of the wallet to retrieve the addresses from.</param>
         /// 
         /// <returns>The addresses owned by a wallet which have a balance associated with them.</returns>
-        [Route("api/[controller]/address-balances")]
+        /// <response code="200">Returns address balances</response>
+        [Route("address-balances")]
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult GetAddressesWithBalances([FromQuery] string walletName)
         {
             IEnumerable<IGrouping<HdAddress, UnspentOutputReference>> allSpendable = this.walletManager.GetSpendableTransactionsInWallet(walletName, MinConfirmationsAllChecks).GroupBy(x => x.Address);

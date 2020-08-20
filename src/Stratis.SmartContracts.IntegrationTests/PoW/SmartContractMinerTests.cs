@@ -73,7 +73,8 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 new SenderRetriever(),
                 testContext.StateRoot,
                 testContext.executionCache, 
-                testContext.callDataSerializer);
+                testContext.callDataSerializer,
+                new NodeDeployments(testContext.network, testContext.ChainIndexer));
         }
 
         public class Blockinfo
@@ -118,7 +119,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
         {
             var context = new MempoolValidationContext(tx, new MempoolValidationState(false))
             {
-                View = new MempoolCoinView(testContext.cachedCoinView, testContext.mempool, testContext.mempoolLock, null)
+                View = new MempoolCoinView(testContext.network, testContext.cachedCoinView, testContext.mempool, testContext.mempoolLock, null)
             };
 
             testContext.mempoolLock.ReadAsync(() => context.View.LoadViewLocked(tx)).GetAwaiter().GetResult();
@@ -201,12 +202,12 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 this.loggerFactory = ExtendedLoggerFactory.Create();
 
                 IDateTimeProvider dateTimeProvider = DateTimeProvider.Default;
-                var inMemoryCoinView = new InMemoryCoinView(this.ChainIndexer.Tip.HashBlock);
+                var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(this.ChainIndexer.Tip));
 
                 this.NodeSettings = new NodeSettings(this.network, args: new string[] { "-checkpoints" });
                 var consensusSettings = new ConsensusSettings(this.NodeSettings);
-
-                this.cachedCoinView = new CachedCoinView(inMemoryCoinView, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.loggerFactory), consensusSettings);
+                var checkPoints = new Checkpoints(this.network, consensusSettings);
+                this.cachedCoinView = new CachedCoinView(this.network, checkPoints, inMemoryCoinView, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.loggerFactory), consensusSettings);
 
                 var nodeDeployments = new NodeDeployments(this.network, this.ChainIndexer);
 
@@ -323,7 +324,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
             {
                 this.keyEncodingStrategy = BasicKeyEncodingStrategy.Default;
 
-                this.Folder = TestBase.AssureEmptyDir(Path.Combine(AppContext.BaseDirectory, "TestCase", callingMethod));
+                this.Folder = TestBase.AssureEmptyDir(Path.Combine(AppContext.BaseDirectory, "TestCase", callingMethod)).FullName;
                 var engine = new DBreezeEngine(Path.Combine(this.Folder, "contracts"));
                 var byteStore = new DBreezeByteStore(engine, "ContractState1");
                 byteStore.Empty();

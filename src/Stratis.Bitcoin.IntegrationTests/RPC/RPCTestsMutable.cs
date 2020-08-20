@@ -393,7 +393,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 capabilities.SupportScanUTXOSet.Should().BeFalse();
                 capabilities.SupportSignRawTransactionWith.Should().BeFalse();
                 capabilities.SupportSegwit.Should().BeFalse();
-                capabilities.SupportGenerateToAddress.Should().BeFalse();
+                capabilities.SupportGenerateToAddress.Should().BeTrue();
             }
         }
 
@@ -413,7 +413,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 capabilities.SupportScanUTXOSet.Should().BeFalse();
                 capabilities.SupportSignRawTransactionWith.Should().BeFalse();
                 capabilities.SupportSegwit.Should().BeTrue();
-                capabilities.SupportGenerateToAddress.Should().BeFalse();
+                capabilities.SupportGenerateToAddress.Should().BeTrue();
             }
         }
     }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Xunit;
 
@@ -25,6 +26,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
         private StreamResponseBodyFeature responseBody;
         private FeatureCollection featureCollection;
         private HttpRequestFeature request;
+        private RpcSettings rpcSettings;
 
         public RPCMiddlewareTest()
         {
@@ -45,7 +47,11 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
                 return newHttpContext;
             });
 
-            this.middleware = new RPCMiddleware(this.delegateContext.Object, this.authorization.Object, this.LoggerFactory.Object, this.httpContextFactory.Object, new DataFolder(string.Empty));
+            var nodeSettings = new NodeSettings(new StratisRegTest());
+
+            this.rpcSettings = new RpcSettings(nodeSettings);
+
+            this.middleware = new RPCMiddleware(this.delegateContext.Object, this.authorization.Object, this.LoggerFactory.Object, this.httpContextFactory.Object, new DataFolder(string.Empty), this.rpcSettings);
         }
 
         [Fact]

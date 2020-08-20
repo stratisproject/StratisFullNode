@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using DBreeze.Utils;
+using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.PoA.IntegrationTests.Common;
@@ -14,6 +15,7 @@ using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Bitcoin.Utilities.JsonErrors;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
@@ -109,6 +111,18 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             TestHelper.Connect(this.node2, this.node3);
 
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2, this.node3);
+        }
+
+        [Fact]
+        // Checks that multisig fed members can't be kicked.
+        public async Task CantKickMultiSigFedMemberAsync()
+        {
+            var network = new TestPoACollateralNetwork();
+            CoreNode node = this.builder.CreatePoANode(network, network.FederationKey1).Start();
+
+            var model = new HexPubKeyModel() { PubKeyHex = network.FederationKey2.PubKey.ToHex() };
+            IActionResult response = node.FullNode.NodeController<FederationVotingController>().VoteKickFedMember(model);
+            Assert.True(response is ErrorResult errorResult && errorResult.Value is ErrorResponse errorResponse && errorResponse.Errors.First().Message == "Multisig members can't be voted on");
         }
 
         [Fact]

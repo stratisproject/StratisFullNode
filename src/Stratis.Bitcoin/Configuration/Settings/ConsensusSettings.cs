@@ -32,6 +32,16 @@ namespace Stratis.Bitcoin.Configuration.Settings
         public int MaxBlockMemoryInMB { get; private set; }
 
         /// <summary>
+        /// Maximum memory to use for the coin db cache .
+        /// </summary>
+        public int MaxCoindbCacheInMB { get; private set; }
+
+        /// <summary>
+        /// How often to flush the cache to disk when in IBD, note if dbcache is bigger then <see cref="MaxCoindbCacheInMB"/> flush will happen anyway happen.
+        /// </summary>
+        public int CoindbIbdFlushMin { get; private set; }
+
+        /// <summary>
         /// The maximum number of cache items to be stored in the coinview.
         /// </summary>
         public int MaxCoinViewCacheItems { get; private set; }
@@ -52,7 +62,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
             this.BlockAssumedValid = config.GetOrDefault<uint256>("assumevalid", nodeSettings.Network.Consensus.DefaultAssumeValid, this.logger);
             this.MaxTipAge = config.GetOrDefault("maxtipage", nodeSettings.Network.MaxTipAge, this.logger);
             this.MaxBlockMemoryInMB = config.GetOrDefault("maxblkmem", 200, this.logger);
-            this.MaxCoinViewCacheItems = config.GetOrDefault("maxcoinviewcacheitems", 100_000, this.logger);
+            this.MaxCoindbCacheInMB = config.GetOrDefault("dbcache", 200, this.logger);
+            this.CoindbIbdFlushMin = config.GetOrDefault("dbflush", 10, this.logger);
         }
 
         /// <summary>Prints the help information on how to configure the Consensus settings to the logger.</summary>
@@ -66,8 +77,9 @@ namespace Stratis.Bitcoin.Configuration.Settings
             builder.AppendLine($"-checkpoints=<0 or 1>              Use checkpoints. Default 1.");
             builder.AppendLine($"-assumevalid=<hex>                 If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all). Defaults to { network.Consensus.DefaultAssumeValid }.");
             builder.AppendLine($"-maxtipage=<number>                Max tip age. Default {network.MaxTipAge}.");
-            builder.AppendLine($"-maxblkmem=<number>                Max memory to use for unconsumed blocks in MB. Default 200.");
-            builder.AppendLine($"-maxcoinviewcacheitems=<number>    Max number of items to store in the coinview cache. Default 100000.");
+            builder.AppendLine($"-maxblkmem=<number>                Max memory to use for unconsumed blocks in MB. Default 200 (this does not include the size of objects in memory).");
+            builder.AppendLine($"-dbcache=<number>                  Max cache memory for the coindb in MB. Default 200 (this does not include the size of objects in memory).");
+            builder.AppendLine($"-dbflush=<number>                  How often to flush the cache to disk when in IBD in minutes. Default 10 min (min=1min, max=60min).");
 
             NodeSettings.Default(network).Logger.LogInformation(builder.ToString());
         }
@@ -86,7 +98,12 @@ namespace Stratis.Bitcoin.Configuration.Settings
             builder.AppendLine($"#assumevalid={network.Consensus.DefaultAssumeValid}");
             builder.AppendLine($"#Max tip age. Default {network.MaxTipAge}.");
             builder.AppendLine($"#maxtipage={network.MaxTipAge}");
+            builder.AppendLine($"#Max memory to use for unconsumed blocks in MB. Default 200.");
             builder.AppendLine($"#maxblkmem=200");
+            builder.AppendLine($"#Max cache memory for the coindb in MB. Default 200.");
+            builder.AppendLine($"#dbcache=200");
+            builder.AppendLine($"#How often to flush the cache to disk when in IBD in minutes (min=1min, max=60min). The bigger the number the faster the sync and smaller the db, but shutdown will be longer.");
+            builder.AppendLine($"#dbflush=10");
         }
     }
 }

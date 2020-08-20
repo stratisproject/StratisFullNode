@@ -53,14 +53,12 @@ namespace Stratis.Bitcoin.Tests.Common
                 chainIndexer = new ChainIndexer(network);
 
             if (inMemoryCoinView == null)
-                inMemoryCoinView = new InMemoryCoinView(chainIndexer.Tip.HashBlock);
+                inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chainIndexer.Tip));
 
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
-            var connectionSettings = new ConnectionManagerSettings(nodeSettings);
-            var selfEndpointTracker = new SelfEndpointTracker(loggerFactory, connectionSettings);
+            var selfEndpointTracker = new SelfEndpointTracker(loggerFactory, connectionManagerSettings);
             var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, selfEndpointTracker);
-
             var networkPeerFactory = new NetworkPeerFactory(network,
                 dateTimeProvider,
                 loggerFactory, new PayloadProvider().DiscoverPayloads(),
@@ -71,6 +69,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 peerAddressManager);
 
             var peerDiscovery = new PeerDiscovery(asyncProvider, loggerFactory, network, networkPeerFactory, new NodeLifetime(), nodeSettings, peerAddressManager);
+            var connectionSettings = new ConnectionManagerSettings(nodeSettings);
             var connectionManager = new ConnectionManager(dateTimeProvider, loggerFactory, network, networkPeerFactory, nodeSettings,
                 new NodeLifetime(), new NetworkPeerConnectionParameters(), peerAddressManager, new IPeerConnector[] { },
                 peerDiscovery, selfEndpointTracker, connectionSettings, new VersionProvider(), new Mock<INodeStats>().Object, asyncProvider);

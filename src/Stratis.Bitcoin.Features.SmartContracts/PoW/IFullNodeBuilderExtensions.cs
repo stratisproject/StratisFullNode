@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
         /// <summary>
         /// Configures the node with the smart contract proof of work consensus model.
         /// </summary>
-        public static IFullNodeBuilder UseSmartContractPowConsensus(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseSmartContractPowConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
             LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
 
@@ -33,13 +33,25 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
                 .FeatureServices(services =>
                 {
                     services.AddSingleton<ConsensusOptions, ConsensusOptions>();
-                    services.AddSingleton<DBreezeCoinView>();
+                    AddCoindbImplementation(services, coindbType);
                     services.AddSingleton<ICoinView, CachedCoinView>();
                     services.AddSingleton<IConsensusRuleEngine, PowConsensusRuleEngine>();
                 });
             });
 
             return fullNodeBuilder;
+        }
+
+        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        {
+            if (coindbType == DbType.Dbreeze)
+                services.AddSingleton<ICoindb, DBreezeCoindb>();
+
+            if (coindbType == DbType.Leveldb)
+                services.AddSingleton<ICoindb, LeveldbCoindb>();
+
+            if (coindbType == DbType.Faster)
+                services.AddSingleton<ICoindb, FasterCoindb>();
         }
 
         /// <summary>

@@ -121,15 +121,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
         }
 
         /// <inheritdoc />
-        public override void CheckMaturity(UnspentOutputs coins, int spendHeight)
+        public override void CheckMaturity(UnspentOutput coins, int spendHeight)
         {
             base.CheckCoinbaseMaturity(coins, spendHeight);
 
-            if (coins.IsCoinstake)
+            if (coins.Coins.IsCoinstake)
             {
-                if ((spendHeight - coins.Height) < this.consensus.CoinbaseMaturity)
+                if ((spendHeight - coins.Coins.Height) < this.consensus.CoinbaseMaturity)
                 {
-                    this.Logger.LogDebug("Coinstake transaction height {0} spent at height {1}, but maturity is set to {2}.", coins.Height, spendHeight, this.consensus.CoinbaseMaturity);
+                    this.Logger.LogDebug("Coinstake transaction height {0} spent at height {1}, but maturity is set to {2}.", coins.Coins.Height, spendHeight, this.consensus.CoinbaseMaturity);
                     this.Logger.LogTrace("(-)[COINSTAKE_PREMATURE_SPENDING]");
                     ConsensusErrors.BadTransactionPrematureCoinstakeSpending.Throw();
                 }
