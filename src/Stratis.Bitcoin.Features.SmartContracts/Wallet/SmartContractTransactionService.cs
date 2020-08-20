@@ -396,7 +396,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             var result = new List<OutPoint>(selectedInputs);
 
-            //Convert outpointRequest to OutPoint
+            // Convert outpointRequest to OutPoint
             IEnumerable<OutPoint> requestedOutPoints = requestedOutpoints.Select(outPointRequest => new OutPoint(new uint256(outPointRequest.TransactionId), outPointRequest.Index));
 
             for (int i = result.Count - 1; i >= 0; i--)
