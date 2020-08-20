@@ -2460,6 +2460,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var walletManager = this.ConfigureMock<IWalletManager>();
             var walletSyncManager = this.ConfigureMock<IWalletSyncManager>();
+            walletManager.Setup(manager => manager.GetWallet(It.IsAny<string>())).Returns(wallet);
             walletManager.Setup(manager => manager.RemoveAllTransactions(walletName)).Returns(resultModel);
             walletSyncManager.Setup(manager => manager.SyncFromHeight(It.IsAny<int>(), It.IsAny<string>()));
             ChainIndexer chainIndexer = WalletTestsHelpers.GenerateChainWithHeight(3, this.Network);
@@ -2543,6 +2544,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var walletManager = this.ConfigureMock<IWalletManager>();
             var walletSyncManager = this.ConfigureMock<IWalletSyncManager>();
+            walletManager.Setup(manager => manager.GetWallet(It.IsAny<string>())).Returns(wallet);
             walletManager.Setup(manager => manager.RemoveTransactionsByIds(walletName, new[] { trxId1 }))
                 .Returns(resultModel);
             walletSyncManager.Setup(manager => manager.SyncFromHeight(It.IsAny<int>(), It.IsAny<string>()));

@@ -611,7 +611,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 .Where(i => i.Name.Equals(accountReference.AccountName))
                 .Single();
 
-            (Money confirmedAmount, Money unconfirmedAmount) = account.GetBalances();
+            (Money confirmedAmount, Money unconfirmedAmount) = account.GetBalances(account.IsNormalAccount());
 
             var balance = Money.Coins(GetBalance(string.Empty));
             var immature = Money.Coins(balance.ToDecimal(MoneyUnit.BTC) - GetBalance(string.Empty, (int)this.FullNode.Network.Consensus.CoinbaseMaturity)); // Balance - Balance(AtHeight)
@@ -654,7 +654,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     walletName = this.walletManager.GetWalletsNames().FirstOrDefault(w => w == this.walletSettings.DefaultWalletName);
                 else
                 {
-                    //TODO: Support multi wallet like core by mapping passed RPC credentials to a wallet/account
+                    // TODO: Support multi wallet like core by mapping passed RPC credentials to a wallet/account
                     walletName = this.walletManager.GetWalletsNames().FirstOrDefault();
                 }
             }
@@ -665,11 +665,13 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
 
             if (walletName == null)
-            {
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "No wallet found");
-            }
 
-            HdAccount account = this.walletManager.GetAccounts(walletName).First();
+            HdAccount account = this.walletManager.GetAccounts(walletName).FirstOrDefault();
+
+            if (account == null)
+                throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "Account not found");
+
             return new WalletAccountReference(walletName, account.Name);
         }
     }
