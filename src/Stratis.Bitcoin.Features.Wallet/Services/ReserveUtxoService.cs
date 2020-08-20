@@ -14,6 +14,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
     public sealed class ReserveUtxoService : IReserveUtxoService
     {
+        private readonly object lockObject = new object();
+
         private readonly ILogger logger;
         private readonly HashSet<OutPoint> reservedCoins = new HashSet<OutPoint>();
 
@@ -25,29 +27,38 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
         private void OnTransactionAdded(TransactionAddedToMemoryPool tx)
         {
-            this.logger.LogDebug("Unreserving UTXOs for transaction '{0}'", tx.AddedTransaction.GetHash());
-
-            foreach (var input in tx.AddedTransaction.Inputs)
+            lock (this.lockObject)
             {
-                this.reservedCoins.Remove(input.PrevOut);
+                this.logger.LogDebug("Unreserving UTXOs for transaction '{0}'", tx.AddedTransaction.GetHash());
+
+                foreach (var input in tx.AddedTransaction.Inputs)
+                {
+                    this.reservedCoins.Remove(input.PrevOut);
+                }
             }
         }
 
         public bool IsUtxoReserved(OutPoint outPoint)
         {
-            var result = this.reservedCoins.Contains(outPoint);
-            this.logger.LogDebug("Outpoint '{0}' reserved = {1}", outPoint.Hash, result);
-            return result;
+            lock (this.lockObject)
+            {
+                var result = this.reservedCoins.Contains(outPoint);
+                this.logger.LogDebug("Outpoint '{0}' reserved = {1}", outPoint.Hash, result);
+                return result;
+            }
         }
 
         public void ReserveUtxos(IEnumerable<OutPoint> outPoints)
         {
-            foreach (var outPoint in outPoints)
+            lock (this.lockObject)
             {
-                if (!this.reservedCoins.Contains(outPoint))
+                foreach (var outPoint in outPoints)
                 {
-                    this.reservedCoins.Add(outPoint);
-                    this.logger.LogDebug("Reserving UTXO '{0}'", outPoint.Hash);
+                    if (!this.reservedCoins.Contains(outPoint))
+                    {
+                        this.reservedCoins.Add(outPoint);
+                        this.logger.LogDebug("Reserving UTXO '{0}'", outPoint.Hash);
+                    }
                 }
             }
         }
