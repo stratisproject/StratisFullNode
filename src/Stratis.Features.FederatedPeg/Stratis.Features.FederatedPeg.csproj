@@ -8,8 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    
+    <TargetFramework>netcoreapp3.1</TargetFramework>    
     <DebugType>Full</DebugType>
     <CodeAnalysisRuleSet>..\None.ruleset</CodeAnalysisRuleSet>
     <Authors>Stratis Group Ltd.</Authors>

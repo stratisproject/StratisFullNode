@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Stratis Bitcoin FullNode</Description>
     <AssemblyTitle>Stratis.Bitcoin</AssemblyTitle>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>Stratis.Bitcoin</AssemblyName>
     <PackageId>Stratis.Bitcoin</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
@@ -39,8 +39,9 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="3.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="3.0.1" />
-		<PackageReference Include="NLog" Version="5.0.0-beta09" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="1.0.0-rtm-beta5" />
+		<PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
+		<PackageReference Include="NLog" Version="4.7.3" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="1.6.4" />
 		<PackageReference Include="Polly" Version="6.1.2" />
 		<PackageReference Include="StyleCop.Analyzers" Version="1.0.2" />
 		<PackageReference Include="System.Reactive" Version="4.0.0" />
