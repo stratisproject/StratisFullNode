@@ -389,6 +389,7 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>();
                     services.AddSingleton<IChainState, ChainState>();
                     services.AddSingleton<IChainRepository, ChainRepository>();
+                    services.AddSingleton<IBlockHeaderStore, LeveldbHeaderStore>();
                     services.AddSingleton<IFinalizedBlockInfoRepository, FinalizedBlockInfoRepository>();
                     services.AddSingleton<ITimeSyncBehaviorState, TimeSyncBehaviorState>();
                     services.AddSingleton<NodeDeployments>();

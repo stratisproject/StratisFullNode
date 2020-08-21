@@ -808,7 +808,8 @@ namespace Stratis.Bitcoin.Consensus
                     this.signals.Publish(new BlockConnected(blockToConnect));
                 }
 
-                this.logger.LogInformation("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
+                // TODO: Validate block size display, seems incorrect
+                this.logger.LogDebug("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
                     blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
                     dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
             }
@@ -1336,7 +1337,7 @@ namespace Stratis.Bitcoin.Consensus
                 }
 
                 // To fix issue https://github.com/stratisproject/StratisBitcoinFullNode/issues/2294#issue-364513736
-                // if there are no samples, assume the worst scenario (you are going to donwload full blocks).
+                // if there are no samples, assume the worst scenario (you are going to download full blocks).
                 long avgSize = (long)this.blockPuller.GetAverageBlockSizeBytes();
                 if (avgSize == 0)
                 {
@@ -1346,6 +1347,12 @@ namespace Stratis.Bitcoin.Consensus
                 int maxBlocksToAsk = Math.Min((int)(freeBytes / avgSize), freeSlots);
 
                 this.logger.LogDebug("With {0} average block size, we have {1} download slots available.", avgSize, maxBlocksToAsk);
+
+                if (maxBlocksToAsk <= 0)
+                {
+                    this.logger.LogTrace("(-)[NOT_ENOUGH_FREE_BYTES]");
+                    return;
+                }
 
                 BlockDownloadRequest request = this.toDownloadQueue.Peek();
 
