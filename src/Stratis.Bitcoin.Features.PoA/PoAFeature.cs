@@ -96,10 +96,13 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (options.VotingEnabled)
             {
-                this.votingManager.Initialize();
-
+                // If we are kicking members, we need to initialize this component before the VotingManager.
+                // The VotingManager may tally votes and execute federation changes, but the IdleKicker needs to know who the current block is from.
+                // The IdleKicker can much more easily find out who the block is from if it receives the block first.
                 if (options.AutoKickIdleMembers)
                     this.idleFederationMembersKicker.Initialize();
+
+                this.votingManager.Initialize();
             }
 
             this.miner.InitializeMining();
@@ -152,7 +155,7 @@ namespace Stratis.Bitcoin.Features.PoA
     public static class FullNodeBuilderConsensusExtension
     {
         /// <summary>This is mandatory for all PoA networks.</summary>
-        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -178,7 +181,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     .AddFeature<ConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<DBreezeCoinView>();
+                        AddCoindbImplementation(services, coindbType);
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
                         services.AddSingleton<IChainState, ChainState>();
@@ -195,6 +198,18 @@ namespace Stratis.Bitcoin.Features.PoA
             });
 
             return fullNodeBuilder;
+        }
+
+        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        {
+            if (coindbType == DbType.Dbreeze)
+                services.AddSingleton<ICoindb, DBreezeCoindb>();
+
+            if (coindbType == DbType.Leveldb)
+                services.AddSingleton<ICoindb, LeveldbCoindb>();
+
+            if (coindbType == DbType.Faster)
+                services.AddSingleton<ICoindb, FasterCoindb>();
         }
     }
 }

@@ -304,7 +304,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.PreMempoolChecks(context);
 
             // create the MemPoolCoinView and load relevant utxoset
-            context.View = new MempoolCoinView(this.coinView, this.memPool, this.mempoolLock, this);
+            context.View = new MempoolCoinView(this.network, this.coinView, this.memPool, this.mempoolLock, this);
 
             // adding to the mem pool can only be done sequentially
             // use the sequential scheduler for that.

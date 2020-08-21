@@ -837,12 +837,23 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             Guard.NotNull(account, nameof(account));
             FlatHistory[] items;
+
             lock (this.lockObject)
             {
                 // Get transactions contained in the account.
-                items = account.GetCombinedAddresses()
-                    .Where(a => take == int.MaxValue ? a.Transactions.Any() : a.AsPaginated(prevOutputTxTime, prevOutputIndex, take).Transactions.Any())
-                    .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                var query = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
+
+                if (account.IsNormalAccount())
+                {
+                    // When the account is a normal one, we want to filter out all cold stake UTXOs.
+                    items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                }
+                else
+                {
+                    items = account.GetCombinedAddresses()
+                        .Where(a => a.Transactions.Any())
+                        .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                }
             }
 
             return new AccountHistory { Account = account, History = items };

@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             public StratisConsensusOptionsOverrideTest()
             {
-                this.Name = Guid.NewGuid().ToString("N").Substring(0, 7);
+                this.Name = Guid.NewGuid().ToString().Substring(32);
             }
         }
 
@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             public BitcoinOverrideRegTest() : base()
             {
-                this.Name = Guid.NewGuid().ToString("N").Substring(0, 7);
+                this.Name = Guid.NewGuid().ToString().Substring(32);
             }
         }
 

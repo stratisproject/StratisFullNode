@@ -31,16 +31,17 @@ namespace Stratis.SmartContracts.Core.Tests
             transaction.Inputs.Add(new TxIn());
 
             // Setup coinview to return as if the PrevOut does not exist.
-            var unspentOutputArray = new UnspentOutputs[0];
-            this.coinView.Setup(x => x.FetchCoins(It.IsAny<uint256[]>(), default(CancellationToken)))
-                .Returns(new FetchCoinsResponse(unspentOutputArray, uint256.Zero));
+            var fetchResponse = new FetchCoinsResponse();
+
+            this.coinView.Setup(x => x.FetchCoins(It.IsAny<OutPoint[]>()))
+                .Returns(fetchResponse);
 
             var blockTxs = new List<Transaction>();
 
             // Retriever fails but doesn't throw exception
             GetSenderResult result = this.senderRetriever.GetSender(transaction, this.coinView.Object, blockTxs);
             Assert.False(result.Success);
-            Assert.Equal(result.Error, SenderRetriever.OutputsNotInCoinView);
+            Assert.Equal(SenderRetriever.OutputsNotInCoinView, result.Error);
         }
 
         [Fact]
@@ -50,25 +51,26 @@ namespace Stratis.SmartContracts.Core.Tests
             Transaction transaction = this.network.CreateTransaction();
             transaction.Inputs.Add(new TxIn(new OutPoint(uint256.One, 0)));
 
-            // Setup coinview to return as if the PrevOut is spent.
-            var unspentOutputs = new UnspentOutputs();
-            unspentOutputs.Outputs = new TxOut[]
+            // Setup coinview to return as if the PrevOut is spent (i.e. Coins is null).
+            var unspentOutput = new UnspentOutput(transaction.Inputs[0].PrevOut, null);
+
+            var unspentOutputArray = new UnspentOutput[]
             {
-                null
+                unspentOutput
             };
-            var unspentOutputArray = new UnspentOutputs[]
-            {
-                unspentOutputs
-            };
-            this.coinView.Setup(x => x.FetchCoins(It.IsAny<uint256[]>(), default(CancellationToken)))
-                .Returns(new FetchCoinsResponse(unspentOutputArray, uint256.Zero));
+
+            var fetchResponse = new FetchCoinsResponse();
+            fetchResponse.UnspentOutputs.Add(unspentOutputArray[0].OutPoint, unspentOutput);
+
+            this.coinView.Setup(x => x.FetchCoins(It.IsAny<OutPoint[]>()))
+                .Returns(fetchResponse);
 
             var blockTxs = new List<Transaction>();
 
             // Retriever fails but doesn't throw exception
             GetSenderResult result = this.senderRetriever.GetSender(transaction, this.coinView.Object, blockTxs);
             Assert.False(result.Success);
-            Assert.Equal(result.Error, SenderRetriever.OutputAlreadySpent);
+            Assert.Equal(SenderRetriever.OutputAlreadySpent, result.Error);
         }
 
         [Fact]
@@ -78,25 +80,20 @@ namespace Stratis.SmartContracts.Core.Tests
             Transaction transaction = this.network.CreateTransaction();
             transaction.Inputs.Add(new TxIn(new OutPoint(uint256.One, 2)));
 
-            // Setup coinview to return a prevout with only 1 output. AKA index 2 doesn't exist.
-            var unspentOutputs = new UnspentOutputs();
-            unspentOutputs.Outputs = new TxOut[]
-            {
-                new TxOut(0, new Script())
-            };
-            var unspentOutputArray = new UnspentOutputs[]
-            {
-                unspentOutputs
-            };
-            this.coinView.Setup(x => x.FetchCoins(It.IsAny<uint256[]>(), default(CancellationToken)))
-                .Returns(new FetchCoinsResponse(unspentOutputArray, uint256.Zero));
+            // Here we emulate the output not being found within the UTXO set at all. Spent-ness would be indicated
+            // by the Coins field being null. The UnspentOutputs dictionary being empty indicates that the UTXO was not found.
+            // This looks very much like the 'missing output' test, but in practice it would be a distinct case, perhaps better left to an integration test.
+            var fetchResponse = new FetchCoinsResponse();
+
+            this.coinView.Setup(x => x.FetchCoins(It.IsAny<OutPoint[]>()))
+                .Returns(fetchResponse);
 
             var blockTxs = new List<Transaction>();
 
             // Retriever fails but doesn't throw IndexOutOfRangeException
             GetSenderResult result = this.senderRetriever.GetSender(transaction, this.coinView.Object, blockTxs);
             Assert.False(result.Success);
-            Assert.Equal(result.Error, SenderRetriever.InvalidOutputIndex);
+            Assert.Equal(SenderRetriever.OutputsNotInCoinView, result.Error);
         }
 
         [Fact]
@@ -117,7 +114,7 @@ namespace Stratis.SmartContracts.Core.Tests
             // Retriever fails but doesn't throw IndexOutOfRangeException
             GetSenderResult result = this.senderRetriever.GetSender(transaction, null, blockTxs);
             Assert.False(result.Success);
-            Assert.Equal(result.Error, SenderRetriever.InvalidOutputIndex);
+            Assert.Equal(SenderRetriever.InvalidOutputIndex, result.Error);
         }
 
         [Fact]
@@ -130,9 +127,7 @@ namespace Stratis.SmartContracts.Core.Tests
             // Retriever fails - no transactions to draw from
             GetSenderResult result = this.senderRetriever.GetSender(transaction, null, null);
             Assert.False(result.Success);
-            Assert.Equal(result.Error, SenderRetriever.UnableToGetSender);
+            Assert.Equal(SenderRetriever.UnableToGetSender, result.Error);
         }
-
-
     }
 }

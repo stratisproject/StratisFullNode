@@ -152,7 +152,8 @@ namespace Stratis.Bitcoin.Controllers
                 RelayFee = this.nodeSettings.MinRelayTxFeeRate?.FeePerK?.ToUnit(MoneyUnit.BTC) ?? 0,
                 RunningTime = this.dateTimeProvider.GetUtcNow() - this.fullNode.StartTime,
                 CoinTicker = this.network.CoinTicker,
-                State = this.fullNode.State.ToString()
+                State = this.fullNode.State.ToString(),
+                BestPeerHeight = this.chainState.BestPeerTip?.Height
             };
 
             // Add the list of features that are enabled.
@@ -326,45 +327,52 @@ namespace Stratis.Bitcoin.Controllers
         [HttpGet]
         public IActionResult ValidateAddress([FromQuery] string address)
         {
+            Guard.NotEmpty(address, nameof(address));
+
+            var result = new ValidatedAddress
+            {
+                IsValid = false,
+                Address = address,
+            };
+
             try
             {
-                Guard.NotEmpty(address, nameof(address));
-
-                var res = new ValidatedAddress
-                {
-                    IsValid = false
-                };
                 // P2WPKH
                 if (BitcoinWitPubKeyAddress.IsValid(address, this.network, out Exception _))
                 {
-                    res.IsValid = true;
+                    result.IsValid = true;
                 }
-
                 // P2WSH
                 else if (BitcoinWitScriptAddress.IsValid(address, this.network, out Exception _))
                 {
-                    res.IsValid = true;
+                    result.IsValid = true;
                 }
-
                 // P2PKH
                 else if (BitcoinPubKeyAddress.IsValid(address, this.network))
                 {
-                    res.IsValid = true;
+                    result.IsValid = true;
                 }
-
                 // P2SH
                 else if (BitcoinScriptAddress.IsValid(address, this.network))
                 {
-                    res.IsValid = true;
+                    result.IsValid = true;
+                    result.IsScript = true;
                 }
-
-                return this.Json(res);
             }
             catch (Exception e)
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
+
+            if (result.IsValid)
+            {
+                var scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
+                result.ScriptPubKey = scriptPubKey.ToHex();
+                result.IsWitness = scriptPubKey.IsWitness(this.network);
+            }
+
+            return this.Json(result);
         }
 
         /// <summary>
@@ -391,22 +399,24 @@ namespace Stratis.Bitcoin.Controllers
                     throw new ArgumentException(nameof(trxid));
                 }
 
-                UnspentOutputs unspentOutputs = null;
+                OutPoint outPoint = new OutPoint(txid, vout);
+
+                UnspentOutput unspentOutput = null;
                 if (includeMemPool)
                 {
-                    unspentOutputs = this.pooledGetUnspentTransaction != null ? await this.pooledGetUnspentTransaction.GetUnspentTransactionAsync(txid).ConfigureAwait(false) : null;
+                    unspentOutput = this.pooledGetUnspentTransaction != null ? await this.pooledGetUnspentTransaction.GetUnspentTransactionAsync(outPoint).ConfigureAwait(false) : null;
                 }
                 else
                 {
-                    unspentOutputs = this.getUnspentTransaction != null ? await this.getUnspentTransaction.GetUnspentTransactionAsync(txid).ConfigureAwait(false) : null;
+                    unspentOutput = this.getUnspentTransaction != null ? await this.getUnspentTransaction.GetUnspentTransactionAsync(outPoint).ConfigureAwait(false) : null;
                 }
 
-                if (unspentOutputs == null)
+                if (unspentOutput?.Coins == null)
                 {
                     return this.Json(null);
                 }
 
-                return this.Json(new GetTxOutModel(unspentOutputs, vout, this.network, this.chainIndexer.Tip));
+                return this.Json(new GetTxOutModel(unspentOutput, this.network, this.chainIndexer.Tip));
             }
             catch (Exception e)
             {

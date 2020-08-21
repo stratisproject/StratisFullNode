@@ -95,7 +95,7 @@
             foreach (uint256 input in this.data.OrderBy(d => Guid.NewGuid()).Take(this.N))
             {
                 var coinKey = new CacheKey("Coins", input.ToString());
-                Status status = this.db.DeleteFromMemory(ref coinKey, 1);
+                Status status = Status.OK; //this.db.DeleteFromMemory(ref coinKey, 1);
                 if (status == Status.ERROR)
                     throw new ApplicationException("Failed to delete data");
             }

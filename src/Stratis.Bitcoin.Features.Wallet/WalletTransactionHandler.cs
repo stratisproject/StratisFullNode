@@ -82,7 +82,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 if (context.TransactionBuilder.Verify(transaction, out errors))
                     return transaction;
 
-                // Retry only if error is of type 'FeeTooLowPolicyError'
+                // Retry only if error is of type 'FeeTooLowPolicyError'.
                 if (!errors.Any(e => e is FeeTooLowPolicyError)) break;
 
                 retryCount++;
@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (context.Recipients.Any())
                 throw new WalletException("Adding outputs is not allowed.");
 
-            // Turn the txout set into a Recipient array
+            // Turn the txout set into a Recipient array.
             context.Recipients.AddRange(transaction.Outputs
                 .Select(s => new Recipient
                 {

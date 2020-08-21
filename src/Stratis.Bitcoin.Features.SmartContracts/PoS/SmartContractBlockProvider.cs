@@ -40,5 +40,23 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 
             return this.powBlockDefinition.Build(chainTip, script);
         }
+
+        public void BlockModified(ChainedHeader chainTip, Block block)
+        {
+            if (this.network.Consensus.IsProofOfStake)
+            {
+                if (BlockStake.IsProofOfStake(block))
+                {
+                    new System.NotImplementedException();
+                    //this.posBlockDefinition.BlockModified(chainTip, block);
+                }
+                else
+                {
+                    this.posPowBlockDefinition.BlockModified(chainTip, block);
+                }
+            }
+
+            this.powBlockDefinition.BlockModified(chainTip, block);
+        }
     }
 }

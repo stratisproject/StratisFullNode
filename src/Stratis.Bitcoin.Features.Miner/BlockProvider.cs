@@ -43,5 +43,23 @@ namespace Stratis.Bitcoin.Features.Miner
 
             return this.powBlockDefinition.Build(chainTip, script);
         }
+
+        /// <inheritdoc/>
+        public void BlockModified(ChainedHeader chainTip, Block block)
+        {
+            if (this.network.Consensus.IsProofOfStake)
+            {
+                if (BlockStake.IsProofOfStake(block))
+                {
+                    this.posBlockDefinition.BlockModified(chainTip, block);
+                }
+                else
+                {
+                    this.posPowBlockDefinition.BlockModified(chainTip, block);
+                }
+            }
+
+            this.powBlockDefinition.BlockModified(chainTip, block);
+        }
     }
 }

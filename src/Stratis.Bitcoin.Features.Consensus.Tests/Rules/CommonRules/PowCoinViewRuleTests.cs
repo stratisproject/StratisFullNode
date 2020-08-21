@@ -68,9 +68,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         private void AndSomeUnspentOutputs()
         {
             this.coinView = new UnspentOutputSet();
-            this.coinView.SetCoins(new UnspentOutputs[0]);
+            this.coinView.SetCoins(new UnspentOutput[0]);
             (this.ruleContext as UtxoRuleContext).UnspentOutputSet = this.coinView;
-            this.coinView.Update(this.transactionWithCoinbaseFromPreviousBlock, 0);
+            this.coinView.Update(this.network, this.transactionWithCoinbaseFromPreviousBlock, 0);
         }
 
         private void AndARuleContext()
@@ -92,8 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
                 this.logger = new Mock<ILogger>();
                 rule.Logger = this.logger.Object;
 
-                var loggerFactory = new ExtendedLoggerFactory();
-                loggerFactory.AddConsoleWithFilters();
+                var loggerFactory = ExtendedLoggerFactory.Create();
 
                 var dateTimeProvider = new DateTimeProvider();
 

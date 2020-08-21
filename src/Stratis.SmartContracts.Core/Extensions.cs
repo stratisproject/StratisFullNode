@@ -46,8 +46,8 @@ namespace Stratis.SmartContracts.Core
             for (int i = 0; i < transaction.Inputs.Count; i++)
             {
                 OutPoint prevout = transaction.Inputs[i].PrevOut;
-                UnspentOutputs coins = inputs.AccessCoins(prevout.Hash);
-                valueIn += coins.TryGetOutput(prevout.N).Value;
+                UnspentOutput coins = inputs.AccessCoins(prevout);
+                valueIn += coins.Coins.TxOut.Value;
             }
             return valueIn - transaction.TotalOut;
         }

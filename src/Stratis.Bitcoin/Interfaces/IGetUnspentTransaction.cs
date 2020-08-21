@@ -10,10 +10,10 @@ namespace Stratis.Bitcoin.Interfaces
     public interface IGetUnspentTransaction
     {
         /// <summary>
-        /// Returns the unspent outputs for a specific transaction
+        /// Returns a given unspent transaction output.
         /// </summary>
-        /// <param name="trxid">Hash of the transaction to query.</param>
-        /// <returns>Unspent Outputs</returns>
-        Task<UnspentOutputs> GetUnspentTransactionAsync(uint256 trxid);
+        /// <param name="outPoint">The outpoint identifying the UTXO to query.</param>
+        /// <returns>Unspent transaction output (UTXO)</returns>
+        Task<UnspentOutput> GetUnspentTransactionAsync(OutPoint outPoint);
     }
 }
