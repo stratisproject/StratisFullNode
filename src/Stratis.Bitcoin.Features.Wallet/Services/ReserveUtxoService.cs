@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Features.MemoryPool;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Signals;
 
 namespace Stratis.Bitcoin.Features.Wallet.Services
@@ -22,17 +23,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         public ReserveUtxoService(ILoggerFactory loggerFactory, ISignals signals)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            signals.Subscribe<TransactionAddedToMemoryPool>(this.OnTransactionAdded);
+            signals.Subscribe<BlockConnected>(this.OnTransactionAdded);
         }
 
-        private void OnTransactionAdded(TransactionAddedToMemoryPool tx)
+        private void OnTransactionAdded(BlockConnected tx)
         {
             lock (this.lockObject)
             {
-                this.logger.LogDebug("Unreserving UTXOs for transaction '{0}'", tx.AddedTransaction.GetHash());
-
-                foreach (var input in tx.AddedTransaction.Inputs)
+                foreach (var input in tx.ConnectedBlock.Block.Transactions.SelectMany(t => t.Inputs))
                 {
+                    this.logger.LogDebug("Unreserving UTXOs for transaction '{0}'", input.PrevOut.Hash);
                     this.reservedCoins.Remove(input.PrevOut);
                 }
             }

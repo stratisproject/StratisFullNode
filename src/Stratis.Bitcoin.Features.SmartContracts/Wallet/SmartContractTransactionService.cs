@@ -371,9 +371,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             if (requestedOutpoints != null && requestedOutpoints.Any())
                 selectedInputs = this.ReduceToRequestedInputs(requestedOutpoints, selectedInputs);
 
-            FilterReservedInputs(selectedInputs);
-
-            return selectedInputs;
+            return FilterReservedInputs(selectedInputs);
         }
 
         private List<OutPoint> FilterReservedInputs(List<OutPoint> selectedInputs)

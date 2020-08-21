@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Features.MemoryPool;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Networks;
 using Xunit;
@@ -37,11 +37,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var outpoint = new OutPoint(new uint256(0), 1);
             transaction.AddInput(new TxIn(outpoint));
 
+            var block = this.network.CreateBlock();
+            block.AddTransaction(transaction);
+
             var service = new ReserveUtxoService(this.loggerFactory, this.signals);
             service.ReserveUtxos(new[] { outpoint });
             Assert.True(service.IsUtxoReserved(outpoint));
 
-            this.signals.Publish(new TransactionAddedToMemoryPool(transaction));
+            this.signals.Publish(new BlockConnected(new Primitives.ChainedHeaderBlock(block, new ChainedHeader(block.Header, block.Header.GetHash(), 1))));
             Assert.False(service.IsUtxoReserved(outpoint));
         }
     }
