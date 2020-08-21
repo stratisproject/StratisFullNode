@@ -12,7 +12,7 @@
     <PackageReference Include="Stratis.SmartContracts" Version="1.2.1" />
     <PackageReference Include="Stratis.SmartContracts.Standards" Version="1.0.0" />
     <PackageReference Include="Tracer.Fody" Version="3.2.2">
-      <PrivateAssets>all</PrivateAssets>
+      <PrivateAssets>All</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
   </ItemGroup>
