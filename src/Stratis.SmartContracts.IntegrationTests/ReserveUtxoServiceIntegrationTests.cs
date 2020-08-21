@@ -33,7 +33,7 @@ namespace Stratis.SmartContracts.IntegrationTests
 
                 // Send the second transaction, which should fail as the utxo was already reserved with transaction one.
                 var responseTwo = sender.SendCreateContractTransaction(compilationResult.Compilation, 0, feeAmount: 0.001M, gasPrice: SmartContractMempoolValidator.MinGasPrice, gasLimit: SmartContractFormatLogic.GasLimitMaximum / 2);
-                Assert.False(responseTwo.Success);
+                Assert.Null(responseTwo); // This needs to be done better so that we can check the actual message.
             }
         }
     }

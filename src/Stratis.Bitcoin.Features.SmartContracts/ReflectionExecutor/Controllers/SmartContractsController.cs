@@ -18,7 +18,6 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts;

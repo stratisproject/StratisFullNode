@@ -221,9 +221,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
 
             IActionResult result = this.smartContractsController.BuildAndSendCreateSmartContractTransactionAsync(request).GetAwaiter().GetResult();
             if (result is JsonResult response)
-            {
                 return (BuildCreateContractTransactionResponse)response.Value;
-            }
 
             return null;
         }
