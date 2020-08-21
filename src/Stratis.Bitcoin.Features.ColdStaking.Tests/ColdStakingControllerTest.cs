@@ -27,8 +27,8 @@ using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -234,7 +234,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
                 new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), scriptDestinationReader,
                 this.loggerFactory, DateTimeProvider.Default, walletRepository);
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
 

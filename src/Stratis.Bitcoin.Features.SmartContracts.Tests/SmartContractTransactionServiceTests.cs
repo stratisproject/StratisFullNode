@@ -4,6 +4,7 @@ using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet;
@@ -22,6 +23,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 {
     public class SmartContractTransactionServiceTests
     {
+        private readonly ILoggerFactory loggerFactory = new ExtendedLoggerFactory();
         private readonly Network network;
         private readonly Mock<IWalletManager> walletManager = new Mock<IWalletManager>();
         private readonly Mock<IWalletTransactionHandler> walletTransactionHandler;
@@ -115,7 +117,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             this.walletManager.Setup(x => x.GetWallet(request.WalletName))
                 .Returns(wallet);
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -198,7 +200,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                     }
                 });
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -291,7 +293,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             this.callDataSerializer.Setup(x => x.Deserialize(It.IsAny<byte[]>()))
                 .Returns(Result.Ok(new ContractTxData(1, 100, (Gas)100_000, new byte[0])));
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -313,7 +315,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -353,7 +355,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -393,7 +395,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -440,7 +442,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             string senderAddress = uint160.Zero.ToBase58Address(this.network);
             string recipientAddress = uint160.One.ToBase58Address(this.network);
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
@@ -658,7 +660,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 }
             };
 
-            var reserveUtxoService = new ReserveUtxoService(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object);
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var service = new SmartContractTransactionService(
                 this.network,
