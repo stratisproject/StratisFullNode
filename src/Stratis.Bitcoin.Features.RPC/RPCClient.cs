@@ -85,8 +85,8 @@ namespace Stratis.Bitcoin.Features.RPC
         blockchain         getdifficulty
         blockchain         getmempoolinfo
         blockchain         getrawmempool                Yes
-        blockchain         gettxout                    Yes
-        blockchain         gettxoutproof
+        blockchain         gettxout                     Yes
+        blockchain         gettxoutproof                Yes
         blockchain         verifytxoutproof
         blockchain         gettxoutsetinfo
         blockchain         verifychain
@@ -105,9 +105,9 @@ namespace Stratis.Bitcoin.Features.RPC
 
         ------------------ Raw transactions
         rawtransactions    createrawtransaction
-        rawtransactions    decoderawtransaction
+        rawtransactions    decoderawtransaction         Yes
         rawtransactions    decodescript
-        rawtransactions    getrawtransaction
+        rawtransactions    getrawtransaction            Yes
         rawtransactions    sendrawtransaction
         rawtransactions    signrawtransaction
         rawtransactions    fundrawtransaction

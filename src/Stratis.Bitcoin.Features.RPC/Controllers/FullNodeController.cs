@@ -45,6 +45,8 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <summary>An interface implementation used to retrieve the network difficulty target.</summary>
         private readonly INetworkDifficulty networkDifficulty;
 
+        private readonly IConsensusManager consensusManager;
+
         /// <summary>An interface implementation for the blockstore.</summary>
         private readonly IBlockStore blockStore;
 
@@ -83,6 +85,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             this.pooledGetUnspentTransaction = pooledGetUnspentTransaction;
             this.getUnspentTransaction = getUnspentTransaction;
             this.networkDifficulty = networkDifficulty;
+            this.consensusManager = consensusManager;
             this.blockStore = blockStore;
             this.ibdState = ibdState;
             this.stakeChain = stakeChain;
@@ -234,6 +237,66 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
                 return new GetTxOutModel(unspentOutput, this.Network, this.ChainIndexer.Tip);
 
             return null;
+        }
+
+        /// <summary>
+        /// This returns a merkle proof that the specified transactions exist in a given block, which can optionally be specified (if known)
+        /// for more efficient lookup.
+        /// In order for this to work without specifying the block hash, the -txindex command line option needs to be enabled.
+        /// </summary>
+        /// <param name="txids">The txids to filter</param>
+        /// <param name="blockhash">If specified, looks for txid in the block with this hash</param>
+        /// <returns>The hex-encoded merkle proof.</returns>
+        [ActionName("gettxoutproof")]
+        [ActionDescription("Checks if transactions are within block. Returns a merkle proof of transaction inclusion.")]
+        public MerkleBlock GetTxOutProof(string[] txids, string blockhash = "")
+        {
+            List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
+
+            ChainedHeaderBlock block = null;
+
+            if (!string.IsNullOrEmpty(blockhash))
+            {
+                // We presume that all the transactions are supposed to be contained in the same specified block, so we only retrieve it once.
+                uint256 hashBlock = uint256.Parse(blockhash);
+
+                block = this.consensusManager?.GetBlockData(hashBlock);
+            }
+            else
+            {
+                // Loop through txids and try to find which block they're in. Exit loop once a block is found.
+                foreach (uint256 transactionId in transactionIds)
+                {
+                    ChainedHeader chainedHeader = this.GetTransactionBlock(transactionId);
+
+                    if (chainedHeader?.BlockDataAvailability != null && chainedHeader.BlockDataAvailability == BlockDataAvailabilityState.BlockAvailable)
+                    {
+                        block = this.consensusManager?.GetBlockData(chainedHeader.HashBlock);
+                        break;
+                    }
+                }
+            }
+
+            if (block == null)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+            }
+
+            // Need to be able to lookup the transactions within the block efficiently.
+            HashSet<uint256> transactionMap = block.Block.Transactions.Select(t => t.GetHash()).ToHashSet();
+
+            // Loop through txids and verify that every transaction is in the block.
+            foreach (uint256 transactionId in transactionIds)
+            {
+                if (!transactionMap.Contains(transactionId))
+                {
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Not all transactions found in specified or retrieved block");
+                }
+            }
+
+            var result = new MerkleBlock(block.Block, transactionIds.ToArray());
+
+            return result;
         }
 
         /// <summary>
