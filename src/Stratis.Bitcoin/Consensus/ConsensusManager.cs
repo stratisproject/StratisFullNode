@@ -40,6 +40,9 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>The maximum amount of blocks that can be assigned to <see cref="IBlockPuller"/> at the same time.</summary>
         private const int MaxBlocksToAskFromPuller = 10000;
 
+        /// <summary>The maximum amount of blocks that the <see cref="IChainedHeaderTree.UnconsumedBlocksCount"/> can store.</summary>
+        private const int MaxUnconsumedBlocksCount = 10000;
+
         /// <summary>The minimum amount of slots that should be available to trigger asking block puller for blocks.</summary>
         private const int ConsumptionThresholdSlots = MaxBlocksToAskFromPuller / 10;
 
@@ -1324,6 +1327,14 @@ namespace Stratis.Bitcoin.Consensus
                 if (freeSlots < ConsumptionThresholdSlots)
                 {
                     this.logger.LogTrace("(-)[NOT_ENOUGH_SLOTS]");
+                    return;
+                }
+
+                // TODO: It has been observed that nodes could previously download several hundred thousand blocks, and consensus would advance while the block store lagged far behind.
+                // TODO: That would cause exceedingly long rewinds on the next startup if the node happened to shut down. Check if the addition of this condition properly mitigates that.
+                if (this.chainedHeaderTree.UnconsumedBlocksCount > MaxUnconsumedBlocksCount)
+                {
+                    this.logger.LogTrace("(-)[MAX_UNCONSUMED_BLOCKS_REACHED]");
                     return;
                 }
 

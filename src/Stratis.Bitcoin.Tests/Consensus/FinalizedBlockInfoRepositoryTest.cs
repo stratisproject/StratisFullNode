@@ -3,11 +3,12 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
 
-namespace Stratis.Bitcoin.Tests
+namespace Stratis.Bitcoin.Tests.Consensus
 {
     public class FinalizedBlockInfoRepositoryTest : TestBase
     {

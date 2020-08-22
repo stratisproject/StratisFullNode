@@ -6,7 +6,7 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Consensus
 {
-    public class LeveldbHeaderStore : IBlockHeaderStore
+    public class LeveldbHeaderStore : IBlockHeaderStore, IDisposable
     {
         private readonly Network network;
 
@@ -86,6 +86,11 @@ namespace Stratis.Bitcoin.Consensus
             }
 
             return true;
+        }
+
+        public void Dispose()
+        {
+            this.leveldb?.Dispose();
         }
     }
 }
