@@ -104,7 +104,7 @@ namespace FederationSetup
             var blockStore = new BlockRepository(network, nodeSettings.DataFolder, nodeSettings.LoggerFactory, dBreezeSerializer);
             blockStore.Initialize();
 
-            var chain = new ChainRepository(nodeSettings.DataFolder, nodeSettings.LoggerFactory, dBreezeSerializer, new MemoryHeaderStore());
+            var chain = new ChainRepository(nodeSettings.LoggerFactory, new ChainStore(), network);
             Block genesisBlock = network.GetGenesis();
             ChainedHeader tip = chain.LoadAsync(new ChainedHeader(genesisBlock.Header, genesisBlock.GetHash(), 0)).GetAwaiter().GetResult();
             var chainIndexer = new ChainIndexer(network, tip);

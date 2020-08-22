@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using DBreeze;
-using DBreeze.DataTypes;
+using System.Linq;
 using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -22,41 +23,47 @@ namespace Stratis.Bitcoin.Tests.Base
         }
 
         [Fact]
-        public void SaveWritesChainToDisk()
+        public void SaveChainToDisk()
         {
             string dir = CreateTestDir(this);
             var chain = new ChainIndexer(KnownNetworks.StratisRegTest);
             this.AppendBlock(chain);
 
-            using (var repo = new ChainRepository(dir, new LoggerFactory(), this.dBreezeSerializer, new MemoryHeaderStore()))
+            using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
                 repo.SaveAsync(chain).GetAwaiter().GetResult();
             }
 
-            using (var engine = new DB(new Options { CreateIfMissing = true }, dir))
+            using (var engine = new DB(new Options { CreateIfMissing = true }, new DataFolder(dir).ChainPath))
             {
                 ChainedHeader tip = null;
                 var itr = engine.GetEnumerator();
                 while (itr.MoveNext())
                 {
-                    var blockHeader = this.dBreezeSerializer.Deserialize<BlockHeader>(itr.Current.Value);
+                    if (itr.Current.Key[0] == 1)
+                    {
+                        var data = new ChainRepository.ChainRepositoryData();
+                        data.FromBytes(itr.Current.Value.ToArray(), this.Network.Consensus.ConsensusFactory);
 
-                    if (tip != null && blockHeader.HashPrevBlock != tip.HashBlock)
-                        break;
-                    tip = new ChainedHeader(blockHeader, blockHeader.GetHash(), tip);
+                        tip = new ChainedHeader(data.Hash, data.Work, tip);
+
+                        if (tip.Height == 0)
+                            tip.SetChainStore(new ChainStore());
+                    }
                 }
+
                 Assert.Equal(tip, chain.Tip);
             }
         }
 
         [Fact]
-        public void GetChainReturnsConcurrentChainFromDisk()
+        public void LoadChainFromDisk()
         {
             string dir = CreateTestDir(this);
             var chain = new ChainIndexer(KnownNetworks.StratisRegTest);
             ChainedHeader tip = this.AppendBlock(chain);
 
-            using (var engine = new DB(new Options { CreateIfMissing = true }, dir))
+            using (var engine = new DB(new Options { CreateIfMissing = true }, new DataFolder(dir).ChainPath))
             {
                 using (var batch = new WriteBatch())
                 {
@@ -70,14 +77,17 @@ namespace Stratis.Bitcoin.Tests.Base
 
                     foreach (ChainedHeader block in blocks)
                     {
-                        batch.Put(BitConverter.GetBytes(block.Height), this.dBreezeSerializer.Serialize(block.Header));
+                        batch.Put(DBH.Key(1, BitConverter.GetBytes(block.Height)),
+                            new ChainRepository.ChainRepositoryData()
+                                    { Hash = block.HashBlock, Work = block.ChainWorkBytes }
+                                .ToBytes(this.Network.Consensus.ConsensusFactory));
                     }
 
                     engine.Write(batch);
                 }
             }
 
-            using (var repo = new ChainRepository(dir, new LoggerFactory(), this.dBreezeSerializer, new MemoryHeaderStore()))
+            using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
                 var testChain = new ChainIndexer(KnownNetworks.StratisRegTest);
                 testChain.SetTip(repo.LoadAsync(testChain.Genesis).GetAwaiter().GetResult());

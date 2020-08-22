@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using LevelDB;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -6,9 +7,12 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Consensus
 {
-    public class LeveldbHeaderStore : IBlockHeaderStore, IDisposable
+    public class LeveldbHeaderStore : IChainStore, IDisposable
     {
         private readonly Network network;
+
+        internal static readonly byte ChainTableName = 1;
+        internal static readonly byte HeaderTableName = 2;
 
         /// <summary>
         /// Headers that are close to the tip
@@ -28,7 +32,7 @@ namespace Stratis.Bitcoin.Consensus
 
             // Open a connection to a new DB and create if not found
             var options = new Options { CreateIfMissing = true };
-            this.leveldb = new DB(options, dataFolder.HeadersPath);
+            this.leveldb = new DB(options, dataFolder.ChainPath);
         }
 
         public ChainIndexer ChainIndexer { get; }
@@ -40,11 +44,12 @@ namespace Stratis.Bitcoin.Consensus
                 return blockHeader;
             }
 
+            // TODO: Bring in uint256 span optimisations
             byte[] bytes = hash.ToBytes();
 
             lock (this.locker)
             {
-                bytes = this.leveldb.Get(bytes);
+                bytes = this.leveldb.Get(DBH.Key(HeaderTableName, bytes));
             }
 
             if (bytes == null)
@@ -62,7 +67,7 @@ namespace Stratis.Bitcoin.Consensus
             return blockHeader;
         }
 
-        public bool StoreHeader(BlockHeader blockHeader)
+        public bool PutHeader(BlockHeader blockHeader)
         {
             ConsensusFactory consensusFactory = this.network.Consensus.ConsensusFactory;
 
@@ -82,10 +87,46 @@ namespace Stratis.Bitcoin.Consensus
 
             lock (this.locker)
             {
-                this.leveldb.Put(blockHeader.GetHash().ToBytes(), blockHeader.ToBytes(consensusFactory));
+                this.leveldb.Put(DBH.Key(HeaderTableName, blockHeader.GetHash().ToBytes()), blockHeader.ToBytes(consensusFactory));
             }
 
             return true;
+        }
+
+        public ChainData GetChainData(int height)
+        {
+            byte[] bytes = null;
+
+            lock (this.locker)
+            {
+                bytes = this.leveldb.Get(DBH.Key(ChainTableName, BitConverter.GetBytes(height)));
+            }
+
+            if (bytes == null)
+            {
+                return null;
+            }
+
+            var data = new ChainData();
+            data.FromBytes(bytes, this.network.Consensus.ConsensusFactory);
+
+            return data;
+        }
+
+        public void PutChainData(IEnumerable<ChainDataItem> items)
+        {
+            using (var batch = new WriteBatch())
+            {
+                foreach (var item in items)
+                {
+                    batch.Put(DBH.Key(ChainTableName, BitConverter.GetBytes(item.Height)), item.Data.ToBytes(this.network.Consensus.ConsensusFactory));
+                }
+
+                lock (this.locker)
+                {
+                    this.leveldb.Write(batch);
+                }
+            }
         }
 
         public void Dispose()
