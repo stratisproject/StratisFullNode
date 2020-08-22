@@ -4,10 +4,10 @@ using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Primitives;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 

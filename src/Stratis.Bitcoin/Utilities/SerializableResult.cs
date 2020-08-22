@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Stratis.Bitcoin
+namespace Stratis.Bitcoin.Utilities
 {
     /// <summary>
     /// A generic result type that can be serialized.
