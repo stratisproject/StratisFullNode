@@ -125,7 +125,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
         {
             var consensusManager = new Mock<IConsensusManager>();
             var header = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
-            consensusManager.Setup(cm => cm.Tip).Returns(new ChainedHeader(header, header.GetHash(), this.network.Consensus.LastPOWBlock + 1));
+            consensusManager.Setup(cm => cm.Tip).Returns(new ChainedHeader(header, header.GetHash(), this.network.Consensus.LastPOWBlock - 1));
 
             var walletManager = new Mock<IWalletManager>();
             walletManager.Setup(f => f.GetWalletsNames()).Returns(new List<string> { wallet });
@@ -154,7 +154,8 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
         public void GenerateBlocksOn_PosNetwork_ConsensusTip_IsAfterLastPowBlock_ReturnsError()
         {
             var consensusManager = new Mock<IConsensusManager>();
-            consensusManager.Setup(cm => cm.Tip).Returns(new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), new uint256(0), this.network.Consensus.LastPOWBlock + 1));
+            var mockHeader = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+            consensusManager.Setup(cm => cm.Tip).Returns(new ChainedHeader(mockHeader, mockHeader.GetHash(), this.network.Consensus.LastPOWBlock + 1));
             this.fullNode.Setup(i => i.NodeService<IConsensusManager>(false)).Returns(consensusManager.Object);
 
             var controller = new MiningController(consensusManager.Object, this.fullNode.Object, this.loggerFactory, this.network, new Mock<IPowMining>().Object, new Mock<IWalletManager>().Object);
