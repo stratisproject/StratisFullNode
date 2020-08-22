@@ -3,8 +3,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Stratis.Bitcoin;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Models;
 

@@ -43,8 +43,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
             }
         }
 
+        /// <summary>
+        /// MiningAndPropagatingPOS_MineBlockStakeAtInsufficientHeightError
+        /// </summary>
         [Fact]
-        public void MiningAndPropagatingPOS_MineBlockStakeAtInsufficientHeightError()
+        public void MiningPOSInsufficientHeightError()
         {
             using (NodeBuilder nodeBuilder = NodeBuilder.Create(this))
             {

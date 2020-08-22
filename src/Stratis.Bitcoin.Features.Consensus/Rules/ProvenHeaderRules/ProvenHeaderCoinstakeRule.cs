@@ -243,7 +243,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
                 return this.LastCheckpoint.StakeModifierV2;
             }
 
-            var previousProvenHeader = chainedHeader.Previous.Header as ProvenBlockHeader;
+            var previousProvenHeader = chainedHeader.Previous.ProvenBlockHeader;
             if (previousProvenHeader != null)
             {
                 if (previousProvenHeader.StakeModifierV2 == null)

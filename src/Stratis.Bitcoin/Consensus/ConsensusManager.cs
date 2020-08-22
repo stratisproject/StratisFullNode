@@ -40,6 +40,9 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>The maximum amount of blocks that can be assigned to <see cref="IBlockPuller"/> at the same time.</summary>
         private const int MaxBlocksToAskFromPuller = 10000;
 
+        /// <summary>The maximum amount of blocks that the <see cref="IChainedHeaderTree.UnconsumedBlocksCount"/> can store.</summary>
+        private const int MaxUnconsumedBlocksCount = 10000;
+
         /// <summary>The minimum amount of slots that should be available to trigger asking block puller for blocks.</summary>
         private const int ConsumptionThresholdSlots = MaxBlocksToAskFromPuller / 10;
 
@@ -808,7 +811,8 @@ namespace Stratis.Bitcoin.Consensus
                     this.signals.Publish(new BlockConnected(blockToConnect));
                 }
 
-                this.logger.LogInformation("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
+                // TODO: Validate block size display, seems incorrect
+                this.logger.LogDebug("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
                     blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
                     dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
             }
@@ -1326,6 +1330,14 @@ namespace Stratis.Bitcoin.Consensus
                     return;
                 }
 
+                // TODO: It has been observed that nodes could previously download several hundred thousand blocks, and consensus would advance while the block store lagged far behind.
+                // TODO: That would cause exceedingly long rewinds on the next startup if the node happened to shut down. Check if the addition of this condition properly mitigates that.
+                if (this.chainedHeaderTree.UnconsumedBlocksCount > MaxUnconsumedBlocksCount)
+                {
+                    this.logger.LogTrace("(-)[MAX_UNCONSUMED_BLOCKS_REACHED]");
+                    return;
+                }
+
                 long freeBytes = this.maxUnconsumedBlocksDataBytes - this.chainedHeaderTree.UnconsumedBlocksDataBytes - this.expectedBlockDataBytes;
                 this.logger.LogDebug("{0} bytes worth of blocks is available for download.", freeBytes);
 
@@ -1336,7 +1348,7 @@ namespace Stratis.Bitcoin.Consensus
                 }
 
                 // To fix issue https://github.com/stratisproject/StratisBitcoinFullNode/issues/2294#issue-364513736
-                // if there are no samples, assume the worst scenario (you are going to donwload full blocks).
+                // if there are no samples, assume the worst scenario (you are going to download full blocks).
                 long avgSize = (long)this.blockPuller.GetAverageBlockSizeBytes();
                 if (avgSize == 0)
                 {
@@ -1346,6 +1358,12 @@ namespace Stratis.Bitcoin.Consensus
                 int maxBlocksToAsk = Math.Min((int)(freeBytes / avgSize), freeSlots);
 
                 this.logger.LogDebug("With {0} average block size, we have {1} download slots available.", avgSize, maxBlocksToAsk);
+
+                if (maxBlocksToAsk <= 0)
+                {
+                    this.logger.LogTrace("(-)[NOT_ENOUGH_FREE_BYTES]");
+                    return;
+                }
 
                 BlockDownloadRequest request = this.toDownloadQueue.Peek();
 

@@ -1197,7 +1197,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightTestnet - 2;
             BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, uint256.One, height);
+            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
 
             var depth = this.stakeValidator.GetTargetDepthRequired(header);
 
@@ -1212,7 +1212,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightTestnet - 1;
             BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, uint256.One, height);
+            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
 
             var depth = this.stakeValidator.GetTargetDepthRequired(header);
 
@@ -1227,7 +1227,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightMainnet - 2;
             BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, uint256.One, height);
+            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
 
             var depth = this.stakeValidator.GetTargetDepthRequired(header);
 
@@ -1242,7 +1242,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightMainnet - 1;
             BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, uint256.One, height);
+            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
 
             var depth = this.stakeValidator.GetTargetDepthRequired(header);
 

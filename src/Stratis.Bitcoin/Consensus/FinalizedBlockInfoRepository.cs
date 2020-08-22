@@ -7,7 +7,7 @@ using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;
 
-namespace Stratis.Bitcoin
+namespace Stratis.Bitcoin.Consensus
 {
     /// <summary>Provider of the last finalized block's height and hash.</summary>
     /// <remarks>
@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin
         /// <summary>Protects access to <see cref="finalizedBlockInfosToSave"/>.</summary>
         private readonly object queueLock;
 
-        /// <summary>Task that continously persists finalized block info to the database.</summary>
+        /// <summary>Task that continuously persists finalized block info to the database.</summary>
         private readonly Task finalizedBlockInfoPersistingTask;
 
         private readonly CancellationTokenSource cancellation;
@@ -133,6 +133,7 @@ namespace Stratis.Bitcoin
 
                 this.finalizedBlockInfo = finalizedInfo;
             });
+
             return task;
         }
 
