@@ -366,7 +366,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 selectedInputs = this.ReduceToRequestedInputs(requestedOutpoints, selectedInputs);
                 if (!selectedInputs.Any())
-                    return (selectedInputs, "And invalid list of request outpoints have been passed to the method, please ensure that the outpoints are spendable by the sender address.");
+                    return (selectedInputs, "An invalid list of request outpoints have been passed to the method, please ensure that the outpoints are spendable by the sender address.");
             }
 
             selectedInputs = FilterReservedInputs(selectedInputs);

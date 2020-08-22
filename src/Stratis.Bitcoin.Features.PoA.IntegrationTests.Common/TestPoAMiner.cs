@@ -24,8 +24,6 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
         private readonly ISlotsManager slotsManager;
 
-        private readonly IConsensusManager consensusManager;
-
         public TestPoAMiner(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
@@ -50,7 +48,6 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
             this.cancellation = new CancellationTokenSource();
             this.slotsManager = slotsManager;
-            this.consensusManager = consensusManager;
         }
 
         public override void InitializeMining()

@@ -23,7 +23,6 @@ using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Local;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.State;
-using Xunit;
 
 namespace Stratis.SmartContracts.Tests.Common.MockChain
 {
@@ -107,17 +106,6 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
         {
             TestHelper.MineBlocks(this.CoreNode, amountOfBlocks);
             this.chain.WaitForAllNodesToSync();
-
-            int spendable = GetSpendableBlocks(amountOfBlocks, this.CoreNode.FullNode.Network.Consensus.CoinbaseMaturity);
-            Assert.Equal(Money.COIN * spendable * 50, (long)this.WalletSpendableBalance);
-        }
-
-        /// <summary>
-        /// Given an amount of blocks and a maturity, how many blocks have spendable coinbase / coinstakes.
-        /// </summary>
-        private static int GetSpendableBlocks(int mined, long maturity)
-        {
-            return mined - (int)maturity;
         }
 
         public ulong GetWalletAddressBalance(string walletAddress)

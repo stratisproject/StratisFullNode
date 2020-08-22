@@ -214,7 +214,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
             Assert.False(result.Success);
-            Assert.StartsWith("Invalid list of request outpoints", result.Message);
+            Assert.StartsWith("An invalid list of request outpoints", result.Message);
         }
 
         [Fact]
