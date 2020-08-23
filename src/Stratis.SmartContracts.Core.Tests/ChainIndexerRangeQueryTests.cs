@@ -167,7 +167,7 @@ namespace Stratis.SmartContracts.Core.Tests
 
                 var header = new ChainedHeader(
                     bh,
-                    new uint256(hash),
+                    bh.GetHash(),
                     prevBlockHeader
                 );
 

@@ -229,8 +229,11 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
+        /// <summary>
+        /// CM_Fork_Occurs_Node_Gets_Disconnected_Due_To_MaxReorgViolation
+        /// </summary>
         [Fact]
-        public void CM_Fork_Occurs_Node_Gets_Disconnected_Due_To_MaxReorgViolation()
+        public void MaxReorgViolation()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {

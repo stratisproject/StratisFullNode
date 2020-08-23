@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using DBreeze.DataTypes;
 using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Configuration;
@@ -96,16 +95,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
 
             var prevBlock = new Dictionary<uint256, uint256>();
 
-            using (DBreeze.Transactions.Transaction transaction = this.BlockRepo.DBreeze.GetTransaction())
+            byte[] hashBytes = uint256.Zero.ToBytes();
+
+            using (var itr = this.BlockRepo.Leveldb.GetEnumerator())
             {
-                transaction.ValuesLazyLoadingIsOn = true;
-
-                byte[] hashBytes = uint256.Zero.ToBytes();
-
-                foreach (Row<byte[], byte[]> blockRow in transaction.SelectForward<byte[], byte[]>("Block"))
+                while (itr.MoveNext())
                 {
-                    uint256 hashPrev = serializer.Deserialize<uint256>(blockRow.GetValuePart(sizeof(int), (uint)hashBytes.Length));
-                    var hashThis = new uint256(blockRow.Key);
+                    uint256 hashPrev = serializer.Deserialize<uint256>(itr.Current.Value);
+                    var hashThis = new uint256(itr.Current.Key);
                     prevBlock[hashThis] = hashPrev;
                     if (prevBlock.Count >= blockLimit)
                         break;
@@ -196,8 +193,11 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                 {
                     var nodeSettings = new NodeSettings(this.network, args: new[] { $"-datadir={dataFolder.RootPath}" }, protocolVersion: ProtocolVersion.ALT_PROTOCOL_VERSION);
 
-                    var repo = new SQLiteWalletRepository(nodeSettings.LoggerFactory, dataFolder, this.network, DateTimeProvider.Default, new ColdStakingDestinationReader(new ScriptAddressReader()));
-                    repo.WriteMetricsToFile = true;
+                    var repo = new SQLiteWalletRepository(nodeSettings.LoggerFactory, dataFolder, this.network, DateTimeProvider.Default, new ColdStakingDestinationReader(new ScriptAddressReader()))
+                    {
+                        WriteMetricsToFile = true
+                    };
+
                     repo.Initialize(this.dbPerWallet);
 
                     string password = "test";
@@ -222,19 +222,19 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     repo.CreateAccount(account.WalletName, 0, account.AccountName, extPubKey);
                     dbTran.Commit();
 
-                    // Verify the wallet exisits.
+                    // Verify the wallet exists.
                     Assert.Equal(account.WalletName, repo.GetWalletNames().First());
 
                     // Create block 1.
                     Block block0 = this.network.Consensus.ConsensusFactory.CreateBlock();
                     BlockHeader blockHeader0 = block0.Header;
-                    var chainedHeader0 = new ChainedHeader(blockHeader0, this.network.GenesisHash, null);
+                    var chainedHeader0 = new ChainedHeader(blockHeader0, blockHeader0.GetHash(), null);
 
                     Block block1a = this.network.Consensus.ConsensusFactory.CreateBlock();
                     BlockHeader blockHeader1a = block1a.Header;
-                    blockHeader1a.HashPrevBlock = this.network.GenesisHash;
+                    blockHeader1a.HashPrevBlock = blockHeader0.GetHash();
 
-                    // Will send 100 coins to this addreess.
+                    // Will send 100 coins to this address.
                     HdAddress address = hdWallet.AccountsRoot.First().Accounts.First().ExternalAddresses.ElementAt(19);
 
                     // Create transaction 1a.

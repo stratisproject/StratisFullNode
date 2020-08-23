@@ -168,7 +168,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
 
             for (int heightIndex = header.Height; heightIndex > fork.Height; heightIndex--)
             {
-                if (!(header.Header is ProvenBlockHeader provenBlockHeader))
+                ProvenBlockHeader provenBlockHeader = header.ProvenBlockHeader;
+                if (provenBlockHeader == null)
                 {
                     provenBlockHeader = this.provenBlockHeaderStore.GetAsync(header.Height).GetAwaiter().GetResult();
 
