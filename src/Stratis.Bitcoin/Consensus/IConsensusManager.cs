@@ -55,12 +55,6 @@ namespace Stratis.Bitcoin.Consensus
         int? HeaderTip { get; }
 
         /// <summary>
-        /// Gets the best known header received from the node's peers.
-        /// This may not definitely be the best verified header as the underlying blocks may not have been validated yet.
-        /// </summary>
-        ChainedHeader BestPeerHeader { get; }
-
-        /// <summary>
         /// Provides block data for the given block hashes.
         /// </summary>
         /// <remarks>

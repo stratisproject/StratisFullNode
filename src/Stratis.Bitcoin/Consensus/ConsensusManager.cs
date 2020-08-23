@@ -84,9 +84,7 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <inheritdoc />
         public int? HeaderTip => this.chainedHeaderTree.GetBestPeerTip()?.Height ?? this.Tip.Height;
-
-        public ChainedHeader BestPeerHeader => this.chainedHeaderTree.GetBestPeerTip();
-
+        
         /// <inheritdoc />
         public IConsensusRuleEngine ConsensusRules { get; private set; }
 

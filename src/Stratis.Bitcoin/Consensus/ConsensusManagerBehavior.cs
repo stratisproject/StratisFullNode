@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
@@ -39,6 +40,8 @@ namespace Stratis.Bitcoin.Consensus
         private readonly ILogger logger;
 
         protected ICheckpoints checkpoints { get; private set; }
+
+        protected IChainState chainState { get; private set; }
 
         /// <summary>
         /// Our view of the peer's consensus tip constructed on peer's announcement of its tip using "headers" message.
@@ -75,7 +78,7 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Protects write access to the <see cref="BestSentHeader"/>.</summary>
         private readonly object bestSentHeaderLock;
 
-        public ConsensusManagerBehavior(ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory, ICheckpoints checkpoints)
+        public ConsensusManagerBehavior(ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory, ICheckpoints checkpoints, IChainState chainState)
         {
             this.LoggerFactory = loggerFactory;
             this.InitialBlockDownloadState = initialBlockDownloadState;
@@ -87,6 +90,7 @@ namespace Stratis.Bitcoin.Consensus
             this.asyncLock = new AsyncLock();
             this.bestSentHeaderLock = new object();
             this.checkpoints = checkpoints;
+            this.chainState = chainState;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName, $"[{this.GetHashCode():x}] ");
         }
@@ -625,7 +629,7 @@ namespace Stratis.Bitcoin.Consensus
                 // We presume that the majority of peers are honest and will provide valid headers to us.
                 // So we optimistically start the peer from the tip of the currently-downloaded headers.
                 // If it is a rogue peer the headers will eventually be invalidated and the peer banned regardless.
-                tipToUse = this.ConsensusManager.BestPeerHeader ?? this.ChainIndexer.Genesis;
+                tipToUse = this.chainState?.BestPeerTip ?? this.ChainIndexer.Genesis;
             }
             else
             {
@@ -739,7 +743,7 @@ namespace Stratis.Bitcoin.Consensus
         [NoTrace]
         public override object Clone()
         {
-            return new ConsensusManagerBehavior(this.ChainIndexer, this.InitialBlockDownloadState, this.ConsensusManager, this.PeerBanning, this.LoggerFactory, this.checkpoints);
+            return new ConsensusManagerBehavior(this.ChainIndexer, this.InitialBlockDownloadState, this.ConsensusManager, this.PeerBanning, this.LoggerFactory, this.checkpoints, this.chainState);
         }
 
         [NoTrace]

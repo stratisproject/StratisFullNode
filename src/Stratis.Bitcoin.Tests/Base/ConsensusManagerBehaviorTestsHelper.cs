@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -71,6 +72,9 @@ namespace Stratis.Bitcoin.Tests.Base
             // Chain
             var chain = new ChainIndexer(KnownNetworks.StratisMain);
             chain.SetTip(consensusTip);
+            var chainState = new ChainState();
+
+            var checkPoints = new Checkpoints();
 
             // Ibd
             var ibdState = new Mock<IInitialBlockDownloadState>();
@@ -94,7 +98,7 @@ namespace Stratis.Bitcoin.Tests.Base
             var connectionManagerMock = new Mock<IConnectionManager>();
             connectionManagerMock.SetupGet(x => x.ConnectionSettings).Returns(new ConnectionManagerSettings(new NodeSettings(KnownNetworks.StratisMain)));
 
-            var cmBehavior = new ConsensusManagerBehavior(chain, ibdState.Object, cmMock.Object, this.testPeerBanning, this.loggerFactory);
+            var cmBehavior = new ConsensusManagerBehavior(chain, ibdState.Object, cmMock.Object, this.testPeerBanning, this.loggerFactory, checkPoints, chainState);
 
             // Peer and behavior
             this.PeerMock = this.CreatePeerMock();

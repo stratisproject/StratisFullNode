@@ -26,7 +26,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
 
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
-        private readonly IChainState chainState;
         private readonly IProvenBlockHeaderStore provenBlockHeaderStore;
         private readonly int lastCheckpointHeight;
         private readonly CheckpointInfo lastCheckpointInfo;
@@ -49,11 +48,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
             IChainState chainState,
             ICheckpoints checkpoints,
             IProvenBlockHeaderStore provenBlockHeaderStore,
-            ConnectionManagerSettings connectionManagerSettings) : base(chainIndexer, initialBlockDownloadState, consensusManager, peerBanning, loggerFactory, checkpoints)
+            ConnectionManagerSettings connectionManagerSettings) : base(chainIndexer, initialBlockDownloadState, consensusManager, peerBanning, loggerFactory, checkpoints, chainState)
         {
             this.network = network;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName, $"[{this.GetHashCode():x}] ");
-            this.chainState = chainState;
             this.provenBlockHeaderStore = provenBlockHeaderStore;
 
             this.lastCheckpointHeight = this.checkpoints.GetLastCheckpointHeight();
