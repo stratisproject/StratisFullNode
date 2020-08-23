@@ -323,7 +323,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 new CheckRateLimitMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
                 new CheckAncestorsMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
                 new CheckReplacementMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
-                new CheckAllInputsMempoolRule(this.network, txMemPool, mempoolSettings, chain, consensusRules, loggerFactory),
+                new CheckAllInputsMempoolRule(this.network, txMemPool, mempoolSettings, chain, consensusRules, deployments, loggerFactory),
                 new CheckTxOutDustRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
             };
 

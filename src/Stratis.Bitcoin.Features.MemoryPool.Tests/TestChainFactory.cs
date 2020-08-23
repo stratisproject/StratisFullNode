@@ -139,7 +139,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 new CheckRateLimitMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckAncestorsMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckReplacementMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
-                new CheckAllInputsMempoolRule(network, mempool, mempoolSettings, chain, consensusRules, loggerFactory),
+                new CheckAllInputsMempoolRule(network, mempool, mempoolSettings, chain, consensusRules, deployments, loggerFactory),
                 new CheckTxOutDustRule(network, mempool, mempoolSettings, chain, loggerFactory),
             };
 
@@ -278,7 +278,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 srcTxs.Add(currentBlock.Transactions[0]);
 
                 inMemoryCoinView.SaveChanges(new List<UnspentOutput>() { new UnspentOutput(new OutPoint(currentBlock.Transactions[0], 0), new Coins((uint)(i + 1), currentBlock.Transactions[0].Outputs.First(), currentBlock.Transactions[0].IsCoinBase)) }, new HashHeightPair(chain.Tip.Previous), new HashHeightPair(chain.Tip));
-
             }
 
             // Just to make sure we can still make simple blocks
@@ -298,7 +297,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 new CheckRateLimitMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckAncestorsMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckReplacementMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
-                new CheckAllInputsMempoolRule(network, mempool, mempoolSettings, chain, consensusRules, loggerFactory),
+                new CheckAllInputsMempoolRule(network, mempool, mempoolSettings, chain, consensusRules, deployments, loggerFactory),
                 new CheckTxOutDustRule(network, mempool, mempoolSettings, chain, loggerFactory),
             };
 

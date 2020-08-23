@@ -34,7 +34,6 @@ namespace Stratis.SmartContracts.Tests.Common
             this.FullNode = (FullNode)new FullNodeBuilder()
                 .UseNodeSettings(settings)
                 .UseBlockStore()
-                // Defer injection of the mempool rules until the smart contract feature.
                 .UseMempool()
                 .AddRPC()
                 .AddSmartContracts(options =>

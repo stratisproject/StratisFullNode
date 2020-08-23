@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -269,7 +270,14 @@ namespace Stratis.Bitcoin.Features.Wallet
                 context.ChangeAddress = this.walletManager.GetUnusedChangeAddress(new WalletAccountReference(context.AccountReference.WalletName, context.AccountReference.AccountName));
             }
 
-            context.TransactionBuilder.SetChange(context.ChangeAddress.ScriptPubKey);
+            if (context.UseSegwitChangeAddress)
+            {
+                context.TransactionBuilder.SetChange(new BitcoinWitPubKeyAddress(context.ChangeAddress.Bech32Address, this.network).ScriptPubKey);
+            }
+            else
+            {
+                context.TransactionBuilder.SetChange(context.ChangeAddress.ScriptPubKey);
+            }
         }
 
         /// <summary>
@@ -538,5 +546,10 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// The timestamp to set on the transaction.
         /// </summary>
         public uint? Time { get; set; }
+
+        /// <summary>
+        /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool UseSegwitChangeAddress { get; set; }
     }
 }
