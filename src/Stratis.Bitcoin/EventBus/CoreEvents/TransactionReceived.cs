@@ -5,7 +5,7 @@ namespace Stratis.Bitcoin.EventBus.CoreEvents
     /// <summary>
     /// Event that is executed when a transaction is received from another peer.
     /// </summary>
-    /// <seealso cref="Stratis.Bitcoin.EventBus.EventBase" />
+    /// <seealso cref="EventBase" />
     public class TransactionReceived : EventBase
     {
         public Transaction ReceivedTransaction { get; }
