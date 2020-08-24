@@ -54,10 +54,10 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         {
             // Set up
             int heightLocation = 480946;
-            string hashLocation = "000000000000000000c03dbe6ee5fedb25877a12e32aa95bc1d3bd480d7a93f9";
-            uint256 hash = uint256.Parse(hashLocation);
+            var header = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+            uint256 hash = header.GetHash();
 
-            var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
+            var chainedHeader = new ChainedHeader(header, hash, null);
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(heightLocation)).Returns(chainedHeader);
 
@@ -82,8 +82,9 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         {
             // Set up
             int heightLocation = 480946;
-            string hashLocation = "000000000000000000c03dbe6ee5fedb25877a12e32aa95bc1d3bd480d7a93f9";
-            uint256 hash = uint256.Parse(hashLocation);
+            var header = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+            uint256 hash = header.GetHash();
+            string hashLocation = hash.ToString();
 
             var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
             var chain = new Mock<ChainIndexer>();

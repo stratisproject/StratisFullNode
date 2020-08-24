@@ -8,8 +8,11 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
 {
     public partial class RetrieveFromBlockStoreSpecification : BddSpecification
     {
+        /// <summary>
+        /// A_block_can_be_retrieved_by_its_identifier_and_a_wrong_identifier_returns_null
+        /// </summary>
         [Fact]
-        public void A_block_can_be_retrieved_by_its_identifier_and_a_wrong_identifier_returns_null()
+        public void WrongBlockIdentifierReturnsNull()
         {
             Given(a_pow_node_running);
             And(a_miner_validating_blocks);
@@ -23,8 +26,11 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
             Then(the_wrong_block_id_should_return_null);
         }
 
+        /// <summary>
+        /// A_transaction_can_be_retrieved_by_its_identifier_and_a_wrong_identifier_returns_null
+        /// </summary>
         [Fact]
-        public void A_transaction_can_be_retrieved_by_its_identifier_and_a_wrong_identifier_returns_null()
+        public void WrongTxIdentifierReturnsNull()
         {
             Given(a_pow_node_running);
             And(a_pow_node_to_transact_with);

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
@@ -656,7 +657,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 ChangeAddress = changeAddress,
                 Recipients = new List<RecipientModel>
                 {
-                    new RecipientModel { Amount = amount.ToString(), DestinationAddress = recipientAddress}
+                    // In locales that use a , for the decimal point this would fail to be parsed unless we use the invariant culture
+                    new RecipientModel { Amount = amount.ToString(CultureInfo.InvariantCulture), DestinationAddress = recipientAddress}
                 }
             };
 

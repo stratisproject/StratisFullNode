@@ -318,8 +318,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.IsType<WalletException>(ex);
         }
 
+        /// <summary>
+        /// Given_GetMaximumSpendableAmountIsCalled_When_ThereAreNoSpendableFound_Then_MaxAmountReturnsAsZero
+        /// </summary>
         [Fact]
-        public void Given_GetMaximumSpendableAmountIsCalled_When_ThereAreNoSpendableFound_Then_MaxAmountReturnsAsZero()
+        public void WalletMaxSpendableTest3()
         {
             DataFolder dataFolder = CreateDataFolder(this);
 
@@ -388,8 +391,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.Equal(Money.Zero, result.fee);
         }
 
+        /// <summary>
+        /// GetMaximumSpendableAmountReturnsSumOfUnconfirmedWhenNoConfirmedSpendableFoundAndUnconfirmedAllowed
+        /// </summary>
         [Fact]
-        public void GetMaximumSpendableAmountReturnsSumOfUnconfirmedWhenNoConfirmedSpendableFoundAndUnconfirmedAllowed()
+        public void WalletMaxSpendableTest1()
         {
             DataFolder dataFolder = CreateDataFolder(this);
 
@@ -425,8 +431,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.Equal(new Money(165000), result.max + result.fee);
         }
 
+        /// <summary>
+        /// Given_GetMaximumSpendableAmountIsCalled_When_ThereAreNoTransactions_Then_MaxAmountReturnsAsZero
+        /// </summary>
         [Fact]
-        public void Given_GetMaximumSpendableAmountIsCalled_When_ThereAreNoTransactions_Then_MaxAmountReturnsAsZero()
+        public void WalletMaxSpendableTest2()
         {
             DataFolder dataFolder = CreateDataFolder(this);
 

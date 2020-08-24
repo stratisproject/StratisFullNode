@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
 
                 TestHelper.Disconnect(node1, node2);
 
-                // Create block manually on node1 without pushing to consensus (BlockMined wont be called).
+                // Create block manually on node1 without pushing to consensus (BlockMined won't be called).
                 Block manualBlock = TestHelper.GenerateBlockManually(node1, new List<Transaction>(), 0, false);
 
                 // Mine another 2 blocks on node 2 chain up to height 7.
