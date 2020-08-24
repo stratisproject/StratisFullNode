@@ -170,6 +170,12 @@ namespace Stratis.Bitcoin.Features.Wallet
         public Script Pubkey { get; set; }
 
         /// <summary>
+        /// The base32 representation of a segwit (P2WPH) address.
+        /// </summary>
+        [JsonProperty(PropertyName = "bech32Address")]
+        public string Bech32Address { get; set; }
+
+        /// <summary>
         /// The Base58 representation of this address.
         /// </summary>
         [JsonProperty(PropertyName = "address")]

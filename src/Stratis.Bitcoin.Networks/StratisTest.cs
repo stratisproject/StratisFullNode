@@ -76,15 +76,18 @@ namespace Stratis.Bitcoin.Networks
             {
                 [StratisBIP9Deployments.TestDummy] = new BIP9DeploymentsParameters("TestDummy", 28,
                     new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc)),
+                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultTestnetThreshold),
 
                 [StratisBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0,
                     new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc)),
+                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultTestnetThreshold),
 
                 [StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1,
                     new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
-                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc)),
+                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultTestnetThreshold),
                 
                 [StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2,
                     new DateTime(2018, 11, 1, 0, 0, 0, DateTimeKind.Utc),
