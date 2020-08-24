@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using FluentAssertions;
 using Moq;
 using NBitcoin;
-using NBitcoin.BitcoinCore;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Networks;
@@ -12,7 +12,6 @@ using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
-using Stratis.Bitcoin.Consensus;
 
 namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
 {
@@ -23,20 +22,19 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             // override max reorg to 10
             Type consensusType = typeof(NBitcoin.Consensus);
             consensusType.GetProperty("MaxReorgLength").SetValue(this.Network.Consensus, (uint)10);
-
         }
 
         [Fact]
         public void RewindDataIndex_InitialiseCache_BelowMaxReorg()
         {
-            Mock<IDateTimeProvider> dateTimeProviderMock = new Mock<IDateTimeProvider>();
-            Mock<ICoinView> coinViewMock = new Mock<ICoinView>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+            var coinViewMock = new Mock<ICoinView>();
             this.SetupMockCoinView(coinViewMock);
 
-            Mock<IFinalizedBlockInfoRepository> finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
+            var finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
             finalizedBlockInfoRepositoryMock.Setup(s => s.GetFinalizedBlockInfo()).Returns(new HashHeightPair());
 
-            RewindDataIndexCache rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
+            var rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
 
             rewindDataIndexCache.Initialize(5, coinViewMock.Object);
 
@@ -49,14 +47,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
         [Fact]
         public void RewindDataIndex_InitialiseCache()
         {
-            Mock<IDateTimeProvider> dateTimeProviderMock = new Mock<IDateTimeProvider>();
-            Mock<ICoinView> coinViewMock = new Mock<ICoinView>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+            var coinViewMock = new Mock<ICoinView>();
             this.SetupMockCoinView(coinViewMock);
 
-            Mock<IFinalizedBlockInfoRepository> finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
+            var finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
             finalizedBlockInfoRepositoryMock.Setup(s => s.GetFinalizedBlockInfo()).Returns(new HashHeightPair());
 
-            RewindDataIndexCache rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
+            var rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
 
             rewindDataIndexCache.Initialize(20, coinViewMock.Object);
 
@@ -69,14 +67,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
         [Fact]
         public void RewindDataIndex_Save()
         {
-            Mock<IDateTimeProvider> dateTimeProviderMock = new Mock<IDateTimeProvider>();
-            Mock<ICoinView> coinViewMock = new Mock<ICoinView>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+            var coinViewMock = new Mock<ICoinView>();
             this.SetupMockCoinView(coinViewMock);
 
-            Mock<IFinalizedBlockInfoRepository> finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
+            var finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
             finalizedBlockInfoRepositoryMock.Setup(s => s.GetFinalizedBlockInfo()).Returns(new HashHeightPair());
 
-            RewindDataIndexCache rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
+            var rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
 
             rewindDataIndexCache.Initialize(20, coinViewMock.Object);
 
@@ -90,14 +88,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
         [Fact]
         public void RewindDataIndex_Flush()
         {
-            Mock<IDateTimeProvider> dateTimeProviderMock = new Mock<IDateTimeProvider>();
-            Mock<ICoinView> coinViewMock = new Mock<ICoinView>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+            var coinViewMock = new Mock<ICoinView>();
             this.SetupMockCoinView(coinViewMock);
 
-            Mock<IFinalizedBlockInfoRepository> finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
+            var finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
             finalizedBlockInfoRepositoryMock.Setup(s => s.GetFinalizedBlockInfo()).Returns(new HashHeightPair());
 
-            RewindDataIndexCache rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
+            var rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
 
             rewindDataIndexCache.Initialize(20, coinViewMock.Object);
 
@@ -111,14 +109,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
         [Fact]
         public void RewindDataIndex_Remove()
         {
-            Mock<IDateTimeProvider> dateTimeProviderMock = new Mock<IDateTimeProvider>();
-            Mock<ICoinView> coinViewMock = new Mock<ICoinView>();
+            var dateTimeProviderMock = new Mock<IDateTimeProvider>();
+            var coinViewMock = new Mock<ICoinView>();
             this.SetupMockCoinView(coinViewMock);
 
-            Mock<IFinalizedBlockInfoRepository> finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
+            var finalizedBlockInfoRepositoryMock = new Mock<IFinalizedBlockInfoRepository>();
             finalizedBlockInfoRepositoryMock.Setup(s => s.GetFinalizedBlockInfo()).Returns(new HashHeightPair());
 
-            RewindDataIndexCache rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
+            var rewindDataIndexCache = new RewindDataIndexCache(dateTimeProviderMock.Object, this.Network, finalizedBlockInfoRepositoryMock.Object, new Checkpoints());
 
             rewindDataIndexCache.Initialize(20, coinViewMock.Object);
 
@@ -146,8 +144,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             {
                 OutputsToRestore = new List<RewindDataOutput>()
                 {
-                    new RewindDataOutput(new OutPoint(new uint256(index), 0), new Utilities.Coins(0, new TxOut(), false)),
-                    new RewindDataOutput(new OutPoint(new uint256(index++), 1), new Utilities.Coins(0, new TxOut(), false)),
+                    new RewindDataOutput(new OutPoint(new uint256(index), 0), new Coins(0, new TxOut(), false)),
+                    new RewindDataOutput(new OutPoint(new uint256(index++), 1), new Coins(0, new TxOut(), false)),
                 }
             });
         }
