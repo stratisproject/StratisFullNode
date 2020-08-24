@@ -78,7 +78,7 @@ public class TestLoader
 
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
 
-            CSharpCompilation compilation = CSharpCompilation.Create(
+            var compilation = CSharpCompilation.Create(
                 "smartContract",
                 new[] { syntaxTree },
                 references,
@@ -99,7 +99,7 @@ public class TestLoader
 
             SyntaxTree syntaxTreeLoader = CSharpSyntaxTree.ParseText(loader);
 
-            CSharpCompilation loaderCompilation = CSharpCompilation.Create(
+            var loaderCompilation = CSharpCompilation.Create(
                 "loader",
                 new[] { syntaxTreeLoader },
                 references,
@@ -109,7 +109,7 @@ public class TestLoader
 
             var alc = new TestAssemblyLoadContext();
 
-            var version2Assembly = alc.LoadFromAssemblyPath(version2DllPath);
+            Assembly version2Assembly = alc.LoadFromAssemblyPath(version2DllPath);
 
             Assert.Equal(Version.Parse("4.0.0.0"), version2Assembly.GetName().Version);
 
@@ -126,12 +126,12 @@ public class TestLoader
             }
 
             var version1ContractMemoryStream = new MemoryStream(version1CompiledContract);
-            var version1ContractAssembly = alc.LoadFromStream(version1ContractMemoryStream);
+            Assembly version1ContractAssembly = alc.LoadFromStream(version1ContractMemoryStream);
             version1ContractMemoryStream.Dispose();
 
-            var loaderType = loaderAssembly.ExportedTypes.First(t => t.Name == "TestLoader");
+            Type loaderType = loaderAssembly.ExportedTypes.First(t => t.Name == "TestLoader");
 
-            var loaderMethod = loaderType.GetMethod("Load");
+            MethodInfo loaderMethod = loaderType.GetMethod("Load");
 
             var version2MethodInvocationResult = (bool)loaderMethod.Invoke(null, new[] { version1ContractAssembly });
 
