@@ -336,7 +336,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 }
             }
 
-            var mempoolValidator = new MempoolValidator(txMemPool, mempoolLock, dateTimeProvider, mempoolSettings, chain, coins, loggerFactory, settings, consensusRules, mempoolRules);
+            var mempoolValidator = new MempoolValidator(txMemPool, mempoolLock, dateTimeProvider, mempoolSettings, chain, coins, loggerFactory, settings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null));
             return new MempoolManager(mempoolLock, txMemPool, mempoolValidator, dateTimeProvider, mempoolSettings, mempoolPersistence, coins, loggerFactory, settings.Network);
         }
     }
