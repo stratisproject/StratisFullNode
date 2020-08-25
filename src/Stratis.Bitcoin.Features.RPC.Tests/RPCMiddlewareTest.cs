@@ -40,7 +40,8 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
             this.featureCollection = new FeatureCollection();
 
             this.httpContextFactory = new Mock<IHttpContextFactory>();
-            this.httpContextFactory.Setup(f => f.Create(It.IsAny<FeatureCollection>())).Returns((FeatureCollection f) => {
+            this.httpContextFactory.Setup(f => f.Create(It.IsAny<FeatureCollection>())).Returns((FeatureCollection f) =>
+            {
                 DefaultHttpContext newHttpContext = new DefaultHttpContext();
                 newHttpContext.Initialize(f);
 

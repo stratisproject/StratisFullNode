@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DBreeze;
-using DBreeze.Utils;
 using FluentAssertions;
 using LevelDB;
 using Microsoft.Extensions.Logging;

@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.EventBus.CoreEvents;
+using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
 
 namespace Stratis.Bitcoin.Features.Wallet.Services
@@ -22,17 +23,30 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
         public ReserveUtxoService(ILoggerFactory loggerFactory, ISignals signals)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            signals.Subscribe<BlockConnected>(this.OnTransactionAdded);
+            this.logger = loggerFactory.CreateLogger(GetType().FullName);
+            signals.Subscribe<BlockConnected>(OnBlockConnected);
+            signals.Subscribe<TransactionFailedMempoolValidation>(OnTransactionFailedMempoolValidation);
         }
 
-        private void OnTransactionAdded(BlockConnected tx)
+        private void OnBlockConnected(BlockConnected e)
         {
             lock (this.lockObject)
             {
-                foreach (var input in tx.ConnectedBlock.Block.Transactions.SelectMany(t => t.Inputs))
+                foreach (var input in e.ConnectedBlock.Block.Transactions.SelectMany(t => t.Inputs))
                 {
-                    this.logger.LogDebug("Unreserving UTXOs for transaction '{0}'", input.PrevOut.Hash);
+                    this.logger.LogDebug("Tx added to block and removed from mempool, unreserving Utxo '{0}'", input.PrevOut.Hash);
+                    this.reservedCoins.Remove(input.PrevOut);
+                }
+            }
+        }
+
+        private void OnTransactionFailedMempoolValidation(TransactionFailedMempoolValidation e)
+        {
+            lock (this.lockObject)
+            {
+                foreach (var input in e.Transaction.Inputs)
+                {
+                    this.logger.LogDebug("Tx failed mempool validation, unreserving Utxo '{0}' for transaction '{1}'", input.PrevOut.Hash, e.Transaction.GetHash());
                     this.reservedCoins.Remove(input.PrevOut);
                 }
             }

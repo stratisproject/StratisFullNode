@@ -148,9 +148,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             }
 
             if (selectedInputs == null)
-            {
                 selectedInputs = this.CoreNode.FullNode.WalletManager().GetSpendableInputsForAddress(this.WalletName, this.MinerAddress.Address, 1); // Always send from the MinerAddress. Simplifies things.
-            }
 
             var txBuildContext = new TransactionBuildContext(this.CoreNode.FullNode.Network)
             {
@@ -166,7 +164,6 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             Transaction trx = (this.CoreNode.FullNode.NodeService<IWalletTransactionHandler>() as SmartContractWalletTransactionHandler).BuildTransaction(txBuildContext);
 
             // Broadcast to the other node.
-
             IActionResult result = this.smartContractWalletController.SendTransaction(new SendTransactionRequest(trx.ToHex()));
             if (result is ErrorResult errorResult)
             {
@@ -174,7 +171,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
                 return Result.Fail<WalletSendTransactionModel>(errorResponse.Errors[0].Message);
             }
 
-            JsonResult response = (JsonResult)result;
+            var response = (JsonResult)result;
             return Result.Ok((WalletSendTransactionModel)response.Value);
         }
 
