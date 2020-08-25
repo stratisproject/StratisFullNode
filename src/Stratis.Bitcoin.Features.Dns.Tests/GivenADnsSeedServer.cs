@@ -315,7 +315,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
 
             var logger = new Mock<ILogger>();
             bool receivedRequest = false;
-            
+
             bool receivedBadRequest = false;
 
             logger
@@ -565,7 +565,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             var loggerFactory = new Mock<ILoggerFactory>();
             loggerFactory.Setup<ILogger>(f => f.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
 
-            IAsyncProvider asyncProvider = new AsyncProvider(loggerFactory.Object,new Mock<ISignals>().Object, new Mock<INodeLifetime>().Object);
+            IAsyncProvider asyncProvider = new AsyncProvider(loggerFactory.Object, new Mock<ISignals>().Object, new Mock<INodeLifetime>().Object);
 
             IDateTimeProvider dateTimeProvider = new Mock<IDateTimeProvider>().Object;
             DnsSettings dnsSettings = new DnsSettings(NodeSettings.Default(this.Network));
