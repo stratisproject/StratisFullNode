@@ -201,7 +201,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal(this.Network.Consensus.MempoolRules.Count, mempoolRules.Count);
 
             var mempoolValidator = new MempoolValidator(this.txMemPool, mempoolLock, this.dateTimeProvider, this.mempoolSettings, this.chainIndexer,
-                this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new Signals.Signals(this.loggerFactory, null));
+                this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new Signals.Signals(this.loggerFactory, null), this.nodeDeployments);
 
             // Create mempool manager.
             var mempoolPersistence = new Mock<IMempoolPersistence>();

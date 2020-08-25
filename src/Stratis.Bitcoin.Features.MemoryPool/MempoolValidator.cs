@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Protocol;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
@@ -121,6 +122,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         private readonly Signals.ISignals signals;
 
+        private readonly NodeDeployments nodeDeployments;
+
         public MempoolValidator(
             ITxMempool memPool,
             MempoolSchedulerLock mempoolLock,
@@ -132,7 +135,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             NodeSettings nodeSettings,
             IConsensusRuleEngine consensusRules,
             IEnumerable<IMempoolRule> mempoolRules,
-            Signals.ISignals signals)
+            Signals.ISignals signals,
+            NodeDeployments nodeDeployments)
         {
             this.memPool = memPool;
             this.mempoolLock = mempoolLock;
@@ -149,6 +153,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.consensusRules = consensusRules;
             this.mempoolRules = mempoolRules.ToList();
             this.signals = signals;
+            this.nodeDeployments = nodeDeployments;
         }
 
         /// <summary>Gets a counter for tracking memory pool performance.</summary>
