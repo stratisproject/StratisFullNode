@@ -24,7 +24,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void NotByteCode_Returns_Error()
         {
-            byte[] notBytecode = new byte[]{0x01, 0x02, 0x03};
+            byte[] notBytecode = new byte[] { 0x01, 0x02, 0x03 };
             Result<string> result = this.decompiler.GetSource(notBytecode);
             Assert.True(result.IsFailure);
         }

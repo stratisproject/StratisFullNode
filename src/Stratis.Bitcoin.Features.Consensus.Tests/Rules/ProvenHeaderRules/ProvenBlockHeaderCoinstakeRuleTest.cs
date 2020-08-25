@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using FluentAssertions;
 using Moq;
 using NBitcoin;
@@ -17,17 +16,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
 {
     public class ProvenBlockHeaderCoinstakeRuleTest : TestPosConsensusRulesUnitTestBase
     {
-        private readonly PosConsensusOptions options;
-        private int provenHeadersActivationHeight;
+        private readonly int provenHeadersActivationHeight;
 
         public ProvenBlockHeaderCoinstakeRuleTest()
         {
-            this.options = (PosConsensusOptions)this.network.Consensus.Options;
             this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Last();
         }
 
         [Fact]
-        public void RunRule_ProvenHeadersNotActive_RuleIsSkipped()
+        public void ProvenHeadersNotActive_RuleIsSkipped()
         {
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
@@ -43,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
         }
 
         [Fact]
-        public void RunRule_ContextChainedHeaderIsNull_ArgumentNullExceptionIsThrown()
+        public void ContextChainedHeaderIsNull_ArgumentNullExceptionIsThrown()
         {
             // Setup null chained header.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = null;
@@ -53,8 +50,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             ruleValidation.Should().Throw<ArgumentNullException>();
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_CoinstakeIsNull_EmptyCoinstakeErrorIsThrown()
+        public void CoinstakeIsNull_EmptyCoinstakeErrorIsThrown()
         {
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
@@ -72,8 +70,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                           .Should().Be(ConsensusErrors.EmptyCoinstake);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_CoinstakeUtxoIsEmpty_ReadTxPrevFailedErrorIsThrown()
+        public void CoinstakeUtxoIsEmpty_ReadTxPrevFailedErrorIsThrown()
         {
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
@@ -98,8 +97,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.ReadTxPrevFailedInsufficient);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_CoinstakeUnspentOutputsIsNull_ReadTxPrevFailedErrorIsThrown()
+        public void CoinstakeUnspentOutputsIsNull_ReadTxPrevFailedErrorIsThrown()
         {
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
@@ -125,8 +125,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.ReadTxPrevFailedInsufficient);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_CoinstakeIsIncorrectlySetup_NonCoinstakeErrorIsThrown()
+        public void CoinstakeIsIncorrectlySetup_NonCoinstakeErrorIsThrown()
         {
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
@@ -153,8 +154,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.ProofOfWorkTooHigh);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_InvalidStakeTime_StakeTimeViolationErrorIsThrown()
+        public void InvalidStakeTime_StakeTimeViolationErrorIsThrown()
         {
             // Setup proven header with valid coinstake.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
@@ -191,8 +193,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.StakeTimeViolation);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_InvalidStakeDepth_StakeDepthErrorIsThrown()
+        public void InvalidStakeDepth_StakeDepthErrorIsThrown()
         {
             // Setup previous chained header.
             PosBlock prevPosBlock = new PosBlockBuilder(this.network).Build();
@@ -233,8 +236,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.InvalidStakeDepth);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_InvalidCoinstakeSignature_CoinstakeVerifySignatureErrorIsThrown()
+        public void InvalidCoinstakeSignature_CoinstakeVerifySignatureErrorIsThrown()
         {
             // Setup previous chained header.
             PosBlock prevPosBlock = new PosBlockBuilder(this.network).Build();
@@ -280,8 +284,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             ruleValidation.Should().Throw<ConsensusErrorException>().And.ConsensusError.Should().Be(ConsensusErrors.CoinstakeVerifySignatureFailed);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_NullPreviousStake_InvalidPreviousProvenHeaderStakeModifierErrorIsThrown()
+        public void NullPreviousStake_InvalidPreviousProvenHeaderStakeModifierErrorIsThrown()
         {
             // Setup previous chained header.
             PosBlock prevPosBlock = new PosBlockBuilder(this.network).Build();
@@ -330,8 +335,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.InvalidPreviousProvenHeaderStakeModifier);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_InvalidStakeKernelHash_CoinstakeVerifySignatureErrorIsThrown()
+        public void InvalidStakeKernelHash_CoinstakeVerifySignatureErrorIsThrown()
         {
             // Setup previous chained header.
             PosBlock prevPosBlock = new PosBlockBuilder(this.network).Build();
@@ -385,8 +391,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.StakeHashInvalidTarget);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_InvalidMerkleProof_BadMerkleProofErrorIsThrown()
+        public void InvalidMerkleProof_BadMerkleProofErrorIsThrown()
         {
             // Setup previous chained header.
             PosBlock prevPosBlock = new PosBlockBuilder(this.network).Build();
@@ -440,8 +447,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.BadMerkleRoot);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_InvalidCoinstakeKernelSignature_BadBlockSignatureErrorIsThrown()
+        public void InvalidCoinstakeKernelSignature_BadBlockSignatureErrorIsThrown()
         {
             // Setup private key.
             var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
@@ -502,8 +510,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Should().Be(ConsensusErrors.BadBlockSignature);
         }
 
+        /// <summary> ProvenHeaders are active in test.</summary>
         [Fact]
-        public void RunRule_ProvenHeadersActive_And_ValidProvenHeader_NoErrorsAreThrown()
+        public void ValidProvenHeader_NoErrorsAreThrown()
         {
             // Setup private key.
             var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
