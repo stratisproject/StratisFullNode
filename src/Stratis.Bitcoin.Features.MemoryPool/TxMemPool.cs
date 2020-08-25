@@ -30,8 +30,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         public long FeeDelta { get; set; }
     }
 
-;
-
     /// <summary>
     /// Memory pool of pending transactions.
     /// </summary>

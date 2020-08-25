@@ -5,6 +5,7 @@ using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.Core;
 
@@ -17,8 +18,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             IWalletManager walletManager,
             IWalletFeePolicy walletFeePolicy,
             Network network,
-            StandardTransactionPolicy transactionPolicy) :
-            base(loggerFactory, walletManager, walletFeePolicy, network, transactionPolicy)
+            StandardTransactionPolicy transactionPolicy,
+            IReserveUtxoService utxoReservedService) :
+            base(loggerFactory, walletManager, walletFeePolicy, network, transactionPolicy, utxoReservedService)
         {
         }
 

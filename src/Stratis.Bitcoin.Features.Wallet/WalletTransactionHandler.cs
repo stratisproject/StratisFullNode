@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet
@@ -13,7 +14,7 @@ namespace Stratis.Bitcoin.Features.Wallet
     /// <summary>
     /// A handler that has various functionalities related to transaction operations.
     /// </summary>
-    /// <seealso cref="Stratis.Bitcoin.Features.Wallet.Interfaces.IWalletTransactionHandler" />
+    /// <seealso cref="IWalletTransactionHandler" />
     /// <remarks>
     /// This will uses the <see cref="IWalletFeePolicy" /> and the <see cref="TransactionBuilder" />.
     /// TODO: Move also the broadcast transaction to this class
@@ -28,28 +29,26 @@ namespace Stratis.Bitcoin.Features.Wallet
         private static readonly Money PretendMaxFee = Money.Coins(1);
 
         private readonly ILogger logger;
-
         private readonly Network network;
-
+        private readonly IReserveUtxoService reserveUtxoService;
         protected readonly StandardTransactionPolicy TransactionPolicy;
-
-        private readonly IWalletManager walletManager;
-
         private readonly IWalletFeePolicy walletFeePolicy;
+        private readonly IWalletManager walletManager;
 
         public WalletTransactionHandler(
             ILoggerFactory loggerFactory,
             IWalletManager walletManager,
             IWalletFeePolicy walletFeePolicy,
             Network network,
-            StandardTransactionPolicy transactionPolicy)
+            StandardTransactionPolicy transactionPolicy,
+            IReserveUtxoService reservedUtxoService)
         {
             this.network = network;
             this.walletManager = walletManager;
             this.walletFeePolicy = walletFeePolicy;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-
             this.TransactionPolicy = transactionPolicy;
+            this.reserveUtxoService = reservedUtxoService;
         }
 
         /// <inheritdoc />
@@ -67,12 +66,16 @@ namespace Stratis.Bitcoin.Features.Wallet
                     context.TransactionBuilder.Shuffle();
 
                 Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
+                ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
+
+                // Here we reserve the UTXO OutPoint so that it cant be selected again.
+                if (spentCoins.Any())
+                    this.reserveUtxoService.ReserveUtxos(spentCoins.Select(c => c.Outpoint));
+
                 if (context.Sign)
                 {
-                    ICoin[] coinsSpent = context.TransactionBuilder.FindSpentCoins(transaction);
-
                     // TODO: Improve this as we already have secrets when running a retry iteration.
-                    this.AddSecrets(context, coinsSpent);
+                    this.AddSecrets(context, spentCoins);
                     context.TransactionBuilder.SignTransactionInPlace(transaction);
                 }
 
@@ -244,7 +247,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             ExtKey seedExtKey = this.walletManager.GetExtKey(context.AccountReference, context.WalletPassword);
 
             var signingKeys = new HashSet<ISecret>();
-            Dictionary<OutPoint,UnspentOutputReference> outpointLookup = context.UnspentOutputs.ToDictionary(o => o.ToOutPoint(), o => o);
+            Dictionary<OutPoint, UnspentOutputReference> outpointLookup = context.UnspentOutputs.ToDictionary(o => o.ToOutPoint(), o => o);
             IEnumerable<string> uniqueHdPaths = coinsSpent.Select(s => s.Outpoint).Select(o => outpointLookup[o].Address.HdPath).Distinct();
 
             foreach (string hdPath in uniqueHdPaths)

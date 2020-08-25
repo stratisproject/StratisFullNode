@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Protocol;
-using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
@@ -100,8 +99,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         private readonly IConsensusRuleEngine consensusRules;
 
-        private readonly NodeDeployments nodeDeployments;
-
         // TODO: Implement Later with CheckRateLimit()
         //private readonly FreeLimiterSection freeLimiter;
 
@@ -111,9 +108,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         //  public long LastTime;
         //}
 
-        private Network network;
+        private readonly Network network;
 
         private readonly List<IMempoolRule> mempoolRules;
+
+        private readonly Signals.ISignals signals;
 
         public MempoolValidator(
             ITxMempool memPool,
@@ -126,7 +125,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             NodeSettings nodeSettings,
             IConsensusRuleEngine consensusRules,
             IEnumerable<IMempoolRule> mempoolRules,
-            NodeDeployments nodeDeployments)
+            Signals.ISignals signals)
         {
             this.memPool = memPool;
             this.mempoolLock = mempoolLock;
@@ -141,8 +140,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.PerformanceCounter = new MempoolPerformanceCounter(this.dateTimeProvider);
             this.minRelayTxFee = nodeSettings.MinRelayTxFeeRate;
             this.consensusRules = consensusRules;
-            this.nodeDeployments = nodeDeployments;
             this.mempoolRules = mempoolRules.ToList();
+            this.signals = signals;
         }
 
         /// <summary>Gets a counter for tracking memory pool performance.</summary>
@@ -157,11 +156,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             try
             {
                 var vHashTxToUncache = new List<uint256>();
+
                 await this.AcceptToMemoryPoolWorkerAsync(state, tx, vHashTxToUncache);
-                //if (!res) {
-                //    BOOST_FOREACH(const uint256& hashTx, vHashTxToUncache)
-                //        pcoinsTip->Uncache(hashTx);
-                //}
 
                 if (state.IsInvalid)
                 {
@@ -176,6 +172,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             {
                 this.logger.LogDebug("{0}:'{1}' ErrorCode:'{2}',ErrorMessage:'{3}'", nameof(MempoolErrorException), mempoolError.Message, mempoolError.ValidationState?.Error?.Code, mempoolError.ValidationState?.ErrorMessage);
                 this.logger.LogTrace("(-)[MEMPOOL_EXCEPTION]:false");
+                this.signals.Publish(new TransactionFailedMempoolValidation(tx));
                 return false;
             }
             catch (ConsensusErrorException consensusError)
@@ -183,6 +180,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
                 this.logger.LogDebug("{0}:'{1}' ErrorCode:'{2}',ErrorMessage:'{3}'", nameof(ConsensusErrorException), consensusError.Message, consensusError.ConsensusError?.Code, consensusError.ConsensusError?.Message);
                 state.Error = new MempoolError(consensusError.ConsensusError);
                 this.logger.LogTrace("(-)[CONSENSUS_EXCEPTION]:false");
+                this.signals.Publish(new TransactionFailedMempoolValidation(tx));
                 return false;
             }
         }
@@ -296,9 +294,10 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <param name="vHashTxnToUncache">Not currently used</param>
         private async Task AcceptToMemoryPoolWorkerAsync(MempoolValidationState state, Transaction tx, List<uint256> vHashTxnToUncache)
         {
-            var context = new MempoolValidationContext(tx, state);
-
-            context.MinRelayTxFee = this.minRelayTxFee;
+            var context = new MempoolValidationContext(tx, state)
+            {
+                MinRelayTxFee = this.minRelayTxFee
+            };
 
             // TODO: Convert these into rules too
             this.PreMempoolChecks(context);
