@@ -677,7 +677,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     }
                 }
 
-                return addresses.Select(a => this.ToHdAddress(a));
+                return addresses.Select(a => this.ToHdAddress(a, this.Network));
             }
             finally
             {
@@ -696,7 +696,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 throw new WalletException($"No account with the name '{accountReference.AccountName}' could be found.");
 
             return conn.GetUsedAddresses(account.WalletId, account.AccountIndex, isChange ? 1 : 0, int.MaxValue).Select(a =>
-                (this.ToHdAddress(a), new Money(a.ConfirmedAmount), new Money(a.TotalAmount)));
+                (this.ToHdAddress(a, this.Network), new Money(a.ConfirmedAmount), new Money(a.TotalAmount)));
         }
 
         /// <inheritdoc />
@@ -709,7 +709,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             if (account == null)
                 throw new WalletException($"No account with the name '{accountReference.AccountName}' could be found.");
 
-            return conn.GetUnusedAddresses(account.WalletId, account.AccountIndex, isChange ? 1 : 0, int.MaxValue).Select(a => this.ToHdAddress(a));
+            return conn.GetUnusedAddresses(account.WalletId, account.AccountIndex, isChange ? 1 : 0, int.MaxValue).Select(a => this.ToHdAddress(a, this.Network));
         }
 
         /// <inheritdoc />
@@ -722,7 +722,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             foreach (HDAddress address in HDAddress.GetAccountAddresses(conn, addressIdentifier.WalletId, (int)addressIdentifier.AccountIndex, (int)addressIdentifier.AddressType, count))
             {
-                yield return this.ToHdAddress(address);
+                yield return this.ToHdAddress(address, this.Network);
             }
         }
 
@@ -1205,8 +1205,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                     AddressType = (int)transactionData.AddressType,
                     PubKey = "", // pubKey.ScriptPubKey.ToHex(),  - See TODO
                     ScriptPubKey = transactionData.ScriptPubKey,
-                    Address = transactionData.Address
-                });
+                    Address = transactionData.Address,
+                }, this.Network);
 
                 hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
 
@@ -1365,7 +1365,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.External, int.MaxValue)
                 .Concat(conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.Internal, int.MaxValue)))
             {
-                HdAddress hdAddress = this.ToHdAddress(address);
+                HdAddress hdAddress = this.ToHdAddress(address, this.Network);
 
                 hdAddress.AddressCollection = (address.AddressType == 0) ? account.ExternalAddresses : account.InternalAddresses;
 
@@ -1401,7 +1401,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.External, int.MaxValue)
                     .Concat(conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.Internal, int.MaxValue)))
                 {
-                    HdAddress hdAddress = this.ToHdAddress(address);
+                    HdAddress hdAddress = this.ToHdAddress(address, this.Network);
 
                     foreach (var transaction in conn.GetTransactionsForAddress(wallet.WalletId, account.AccountIndex, address.AddressType, address.AddressIndex))
                     {
@@ -1452,7 +1452,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         AddressType = (int)addressIdentifier.AddressType,
                         AddressIndex = (int)addressIdentifier.AddressIndex,
                         ScriptPubKey = addressIdentifier.ScriptPubKey
-                    });
+                    }, this.Network);
 
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
                     hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
@@ -1495,7 +1495,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         AddressType = (int)addressIdentifier.AddressType,
                         AddressIndex = (int)addressIdentifier.AddressIndex,
                         ScriptPubKey = addressIdentifier.ScriptPubKey
-                    });
+                    }, this.Network);
 
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
                     hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;

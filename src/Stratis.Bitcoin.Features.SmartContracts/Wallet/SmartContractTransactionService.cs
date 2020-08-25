@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
@@ -35,6 +36,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         private readonly ICallDataSerializer callDataSerializer;
         private readonly IAddressGenerator addressGenerator;
         private readonly IStateRepositoryRoot stateRoot;
+        private readonly IReserveUtxoService reserveUtxoService;
 
         public SmartContractTransactionService(
             Network network,
@@ -43,7 +45,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             IMethodParameterStringSerializer methodParameterStringSerializer,
             ICallDataSerializer callDataSerializer,
             IAddressGenerator addressGenerator,
-            IStateRepositoryRoot stateRoot)
+            IStateRepositoryRoot stateRoot,
+            IReserveUtxoService reserveUtxoService
+            )
         {
             this.network = network;
             this.walletManager = walletManager;
@@ -52,6 +56,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             this.callDataSerializer = callDataSerializer;
             this.addressGenerator = addressGenerator;
             this.stateRoot = stateRoot;
+            this.reserveUtxoService = reserveUtxoService;
         }
 
         public EstimateFeeResult EstimateFee(ScTxFeeEstimateRequest request)
@@ -64,24 +69,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 return EstimateFeeResult.Failure(AccountNotInWalletError, $"No account with the name '{request.AccountName}' could be found.");
 
             HdAddress senderAddress = account.GetCombinedAddresses().FirstOrDefault(x => x.Address == request.Sender);
-
             if (senderAddress == null)
-            {
                 return EstimateFeeResult.Failure(SenderNotInWalletError, $"The given address {request.Sender} was not found in the wallet.");
-            }
 
             if (!this.CheckBalance(senderAddress.Address))
                 return EstimateFeeResult.Failure(InsufficientBalanceError, SenderNoBalanceError);
 
-            List<OutPoint> selectedInputs = this.SelectInputs(request.WalletName, request.Sender, request.Outpoints);
-
-            if (!selectedInputs.Any())
-                return EstimateFeeResult.Failure(InvalidOutpointsError, "Invalid list of request outpoints have been passed to the method. Please ensure that the outpoints are spendable by the sender address.");
+            (List<OutPoint> selectedInputs, string message) = SelectInputs(request.WalletName, request.Sender, request.Outpoints);
+            if (!string.IsNullOrEmpty(message))
+                return EstimateFeeResult.Failure(InvalidOutpointsError, message);
 
             var recipients = new List<Recipient>();
             foreach (RecipientModel recipientModel in request.Recipients)
             {
-                BitcoinAddress bitcoinAddress = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network);
+                var bitcoinAddress = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network);
 
                 // If it's a potential SC address, check if it's a contract.
                 if (bitcoinAddress is BitcoinPubKeyAddress bitcoinPubKeyAddress)
@@ -136,24 +137,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 return BuildContractTransactionResult.Failure(AccountNotInWalletError, $"No account with the name '{request.AccountName}' could be found.");
 
             HdAddress senderAddress = account.GetCombinedAddresses().FirstOrDefault(x => x.Address == request.Sender);
-
             if (senderAddress == null)
-            {
                 return BuildContractTransactionResult.Failure(SenderNotInWalletError, $"The given address {request.Sender} was not found in the wallet.");
-            }
 
             if (!this.CheckBalance(senderAddress.Address))
                 return BuildContractTransactionResult.Failure(InsufficientBalanceError, SenderNoBalanceError);
 
-            List<OutPoint> selectedInputs = this.SelectInputs(request.WalletName, request.Sender, request.Outpoints);
-
-            if (!selectedInputs.Any())
-                return BuildContractTransactionResult.Failure(InvalidOutpointsError, "Invalid list of request outpoints have been passed to the method. Please ensure that the outpoints are spendable by the sender address.");
+            (List<OutPoint> selectedInputs, string message) = SelectInputs(request.WalletName, request.Sender, request.Outpoints);
+            if (!string.IsNullOrEmpty(message))
+                return BuildContractTransactionResult.Failure(InvalidOutpointsError, message);
 
             var recipients = new List<Recipient>();
             foreach (RecipientModel recipientModel in request.Recipients)
             {
-                BitcoinAddress bitcoinAddress = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network);
+                var bitcoinAddress = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network);
 
                 // If it's a potential SC address, check if it's a contract.
                 if (bitcoinAddress is BitcoinPubKeyAddress bitcoinPubKeyAddress)
@@ -206,9 +203,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             if (!this.CheckBalance(request.Sender))
                 return BuildCallContractTransactionResponse.Failed(SenderNoBalanceError);
 
-            List<OutPoint> selectedInputs = this.SelectInputs(request.WalletName, request.Sender, request.Outpoints);
-            if (!selectedInputs.Any())
-                return BuildCallContractTransactionResponse.Failed("Invalid list of request outpoints have been passed to the method. Please ensure that the outpoints are spendable by the sender address");
+            (List<OutPoint> selectedInputs, string message) = SelectInputs(request.WalletName, request.Sender, request.Outpoints);
+            if (!string.IsNullOrEmpty(message))
+                return BuildCallContractTransactionResponse.Failed(message);
 
             uint160 addressNumeric = request.ContractAddress.ToUint160(this.network);
 
@@ -269,9 +266,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             if (!this.CheckBalance(request.Sender))
                 return BuildCreateContractTransactionResponse.Failed(SenderNoBalanceError);
 
-            List<OutPoint> selectedInputs = this.SelectInputs(request.WalletName, request.Sender, request.Outpoints);
-            if (!selectedInputs.Any())
-                return BuildCreateContractTransactionResponse.Failed("Invalid list of request outpoints have been passed to the method. Please ensure that the outpoints are spendable by the sender address");
+            (List<OutPoint> selectedInputs, string message) = this.SelectInputs(request.WalletName, request.Sender, request.Outpoints);
+            if (!string.IsNullOrEmpty(message))
+                return BuildCreateContractTransactionResponse.Failed(message);
 
             ContractTxData txData;
             if (request.Parameters != null && request.Parameters.Any())
@@ -359,11 +356,36 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return !(addressBalance.AmountConfirmed == 0 && addressBalance.AmountUnconfirmed == 0);
         }
 
-        private List<OutPoint> SelectInputs(string walletName, string sender, List<OutpointRequest> outpoints)
+        private (List<OutPoint> seletedInputs, string message) SelectInputs(string walletName, string sender, List<OutpointRequest> requestedOutpoints)
         {
             List<OutPoint> selectedInputs = this.walletManager.GetSpendableInputsForAddress(walletName, sender);
+            if (!selectedInputs.Any())
+                return (selectedInputs, "The wallet does not contain any spendable inputs.");
 
-            return this.ReduceToRequestedInputs(outpoints, selectedInputs);
+            if (requestedOutpoints != null && requestedOutpoints.Any())
+            {
+                selectedInputs = this.ReduceToRequestedInputs(requestedOutpoints, selectedInputs);
+                if (!selectedInputs.Any())
+                    return (selectedInputs, "An invalid list of request outpoints have been passed to the method, please ensure that the outpoints are spendable by the sender address.");
+            }
+
+            selectedInputs = FilterReservedInputs(selectedInputs);
+            if (!selectedInputs.Any())
+                return (selectedInputs, "All of the selected inputs are currently reserved, please try again in 60 seconds.");
+
+            return (selectedInputs, null);
+        }
+
+        private List<OutPoint> FilterReservedInputs(List<OutPoint> selectedInputs)
+        {
+            var result = new List<OutPoint>();
+            foreach (OutPoint input in selectedInputs)
+            {
+                if (!this.reserveUtxoService.IsUtxoReserved(input))
+                    result.Add(input);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -374,16 +396,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             var result = new List<OutPoint>(selectedInputs);
 
-            if (requestedOutpoints != null && requestedOutpoints.Any())
-            {
-                //Convert outpointRequest to OutPoint
-                IEnumerable<OutPoint> requestedOutPoints = requestedOutpoints.Select(outPointRequest => new OutPoint(new uint256(outPointRequest.TransactionId), outPointRequest.Index));
+            // Convert outpointRequest to OutPoint
+            IEnumerable<OutPoint> requestedOutPoints = requestedOutpoints.Select(outPointRequest => new OutPoint(new uint256(outPointRequest.TransactionId), outPointRequest.Index));
 
-                for (int i = result.Count - 1; i >= 0; i--)
-                {
-                    if (!requestedOutPoints.Contains(result[i]))
-                        result.RemoveAt(i);
-                }
+            for (int i = result.Count - 1; i >= 0; i--)
+            {
+                if (!requestedOutPoints.Contains(result[i]))
+                    result.RemoveAt(i);
             }
 
             return result;

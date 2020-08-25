@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.ColdStaking;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -35,6 +36,7 @@ using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Features.SQLiteWalletRepository;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
@@ -215,14 +217,11 @@ namespace Stratis.Bitcoin.IntegrationTests
             {
                 var network = new StratisRegTest();
 
-                // Set the date ranges such that ColdStaking will 'Start' immediately after the initial confirmation window.
-                network.Consensus.BIP9Deployments[StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp());
+                // Set the date ranges such that segwit will 'Start' immediately after the initial confirmation window.
+                network.Consensus.BIP9Deployments[StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 2, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
 
                 // Set a small confirmation window to reduce time taken by this test.
                 network.Consensus.MinerConfirmationWindow = 10;
-
-                // Minimum number of 'votes' required within the confirmation window to reach 'LockedIn' state.
-                network.Consensus.RuleChangeActivationThreshold = 8;
 
                 CoreNode stratisNode = builder.CreateStratisPosNode(network).WithWallet();
                 stratisNode.Start();
@@ -549,7 +548,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         Password = node.WalletPassword,
                         WalletName = node.WalletName,
                         FeeAmount = Money.Coins(0.001m).ToString()
-                    });
+                    }).GetAwaiter().GetResult();
 
                 var walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
@@ -589,7 +588,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         Password = node.WalletPassword,
                         WalletName = node.WalletName,
                         FeeAmount = Money.Coins(0.001m).ToString()
-                    });
+                    }).GetAwaiter().GetResult();
 
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
@@ -646,7 +645,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         Password = node.WalletPassword,
                         WalletName = node.WalletName,
                         FeeAmount = Money.Coins(0.001m).ToString()
-                    });
+                    }).GetAwaiter().GetResult();
 
                 var walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
@@ -683,7 +682,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         Password = node.WalletPassword,
                         WalletName = node.WalletName,
                         FeeAmount = Money.Coins(0.001m).ToString()
-                    });
+                    }).GetAwaiter().GetResult();
 
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
@@ -729,7 +728,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         Password = node.WalletPassword,
                         WalletName = node.WalletName,
                         FeeAmount = Money.Coins(0.001m).ToString()
-                    });
+                    }).GetAwaiter().GetResult();
 
                 var walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
@@ -765,7 +764,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         Password = node.WalletPassword,
                         WalletName = node.WalletName,
                         FeeAmount = Money.Coins(0.001m).ToString()
-                    });
+                    }).GetAwaiter().GetResult();
 
                 walletBuildTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
 
@@ -941,7 +940,8 @@ namespace Stratis.Bitcoin.IntegrationTests
                     .UseBlockStore()
                     .UsePosConsensus()
                     .UseMempool()
-                    .UseWallet()
+                    .UseColdStakingWallet()
+                    .AddSQLiteWalletRepository()
                     .AddPowPosMining()
                     .AddRPC());
 

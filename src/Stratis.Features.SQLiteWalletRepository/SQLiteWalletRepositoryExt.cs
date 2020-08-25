@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Wallet;
@@ -38,10 +39,11 @@ namespace Stratis.Features.SQLiteWalletRepository
             return res;
         }
 
-        internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address)
+        internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address, Network network)
         {
             var pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
             var scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
+            var witAddress = new PubKey(address.PubKey).GetSegwitAddress(network);
 
             var res = new HdAddress(null)
             {
@@ -50,7 +52,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                 AddressType = address.AddressType,
                 HdPath = repo.ToHdPath(address.AccountIndex, address.AddressType, address.AddressIndex),
                 ScriptPubKey = scriptPubKey,
-                Pubkey = pubKeyScript
+                Pubkey = pubKeyScript,
+                Bech32Address = witAddress.ToString()
             };
 
             return res;

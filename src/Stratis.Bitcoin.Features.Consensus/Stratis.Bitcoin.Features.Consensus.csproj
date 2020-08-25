@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Stratis Bitcoin Features Consensus</Description>
     <AssemblyTitle>Stratis.Bitcoin.Features.Consensus</AssemblyTitle>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Features.Consensus</AssemblyName>
     <PackageId>Stratis.Bitcoin.Features.Consensus</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
@@ -28,7 +28,10 @@
     <PackageReference Include="LevelDB.Standard" Version="2.1.6.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
     <PackageReference Include="Microsoft.FASTER" Version="2020.2.1.1" />
-    <PackageReference Include="Tracer.Fody" Version="3.1.0" />
+    <PackageReference Include="Tracer.Fody" Version="3.2.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

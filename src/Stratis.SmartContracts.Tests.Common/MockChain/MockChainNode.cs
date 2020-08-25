@@ -209,9 +209,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
 
             IActionResult result = this.smartContractsController.BuildAndSendCreateSmartContractTransactionAsync(request).GetAwaiter().GetResult();
             if (result is JsonResult response)
-            {
                 return (BuildCreateContractTransactionResponse)response.Value;
-            }
 
             return null;
         }
@@ -272,10 +270,10 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             string[] parameters = null,
             ulong gasLimit = SmartContractFormatLogic.GasLimitMaximum / 2, // half of maximum
             ulong gasPrice = SmartContractMempoolValidator.MinGasPrice,
-            decimal feeAmount = 0.01M, 
+            decimal feeAmount = 0.01M,
             string sender = null,
             List<OutpointRequest> outpoints = null)
-            {
+        {
             var request = new BuildCallContractTransactionRequest
             {
                 AccountName = this.AccountName,

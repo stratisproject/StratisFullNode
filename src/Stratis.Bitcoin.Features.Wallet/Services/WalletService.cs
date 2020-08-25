@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             this.chainIndexer = chainIndexer;
             this.broadcasterManager = broadcasterManager;
             this.dateTimeProvider = dateTimeProvider;
-            this.coinType = (CoinType) network.Consensus.CoinType;
+            this.coinType = (CoinType)network.Consensus.CoinType;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
@@ -434,7 +434,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     .GroupBy(s => s.Transaction.Amount)
                     .OrderByDescending(sg => sg.Count())
                     .Select(sg => new UtxoAmountModel
-                        {Amount = sg.Key.ToDecimal(MoneyUnit.BTC), Count = sg.Count()})
+                    { Amount = sg.Key.ToDecimal(MoneyUnit.BTC), Count = sg.Count() })
                     .ToList();
 
                 // This is number of UTXO originating from the same transaction
@@ -444,14 +444,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     .GroupBy(sg => sg.Count())
                     .OrderByDescending(sgg => sgg.Count())
                     .Select(utxo => new UtxoPerTransactionModel
-                        {WalletInputsPerTransaction = utxo.Key, Count = utxo.Count()})
+                    { WalletInputsPerTransaction = utxo.Key, Count = utxo.Count() })
                     .ToList();
 
                 model.UtxoPerBlock = spendableTransactions
                     .GroupBy(s => s.Transaction.BlockHeight)
                     .GroupBy(sg => sg.Count())
                     .OrderByDescending(sgg => sgg.Count())
-                    .Select(utxo => new UtxoPerBlockModel {WalletInputsPerBlock = utxo.Key, Count = utxo.Count()})
+                    .Select(utxo => new UtxoPerBlockModel { WalletInputsPerBlock = utxo.Key, Count = utxo.Count() })
                     .ToList();
 
                 return model;
@@ -471,7 +471,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 var recipients = new List<Recipient>(request.UtxosCount);
                 for (int i = 0; i < request.UtxosCount; i++)
-                    recipients.Add(new Recipient {ScriptPubKey = address.ScriptPubKey, Amount = singleUtxoAmount});
+                    recipients.Add(new Recipient { ScriptPubKey = address.ScriptPubKey, Amount = singleUtxoAmount });
 
                 var context = new TransactionBuildContext(this.network)
                 {
@@ -480,7 +480,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     Shuffle = true,
                     WalletPassword = request.WalletPassword,
                     Recipients = recipients,
-                    Time = (uint) this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp()
+                    Time = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp()
                 };
 
                 Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
@@ -634,8 +634,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletBuildTransactionModel> BuildTransaction(BuildTransactionRequest request,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<WalletBuildTransactionModel> BuildTransaction(BuildTransactionRequest request, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await Task.Run(() =>
             {
@@ -926,7 +925,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 for (int i = 0; i < request.UtxosCount; i++)
                 {
-                    recipients.Add(new Recipient {ScriptPubKey = addresses[addressIndex].ScriptPubKey});
+                    recipients.Add(new Recipient { ScriptPubKey = addresses[addressIndex].ScriptPubKey });
 
                     if (request.UseUniqueAddressPerUtxo)
                         addressIndex++;
@@ -966,8 +965,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                             Shuffle = false,
                             WalletPassword = request.WalletPassword,
                             Recipients = recipients,
-                            Time = (uint) this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() +
-                                   (uint) request.TimestampDifferenceBetweenTransactions,
+                            Time = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() +
+                                   (uint)request.TimestampDifferenceBetweenTransactions,
                             AllowOtherInputs = false,
                             SelectedInputs = inputs,
                             FeeType = FeeType.Low
@@ -986,7 +985,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         catch (NotEnoughFundsException ex)
                         {
                             // This remains the best approach for estimating transaction fees.
-                            transactionFee = (Money) ex.Missing;
+                            transactionFee = (Money)ex.Missing;
                         }
 
                         if (transactionFee < this.network.MinTxFee)
@@ -1001,8 +1000,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                             Shuffle = false,
                             WalletPassword = request.WalletPassword,
                             Recipients = recipients,
-                            Time = (uint) this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() +
-                                   (uint) request.TimestampDifferenceBetweenTransactions,
+                            Time = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() +
+                                   (uint)request.TimestampDifferenceBetweenTransactions,
                             AllowOtherInputs = false,
                             SelectedInputs = inputs,
                             TransactionFee = transactionFee
