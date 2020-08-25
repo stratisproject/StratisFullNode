@@ -21,10 +21,10 @@ namespace Stratis.Bitcoin.Utilities.JsonErrors
                 }
             };
 
-            return new ErrorResult((int) statusCode, errorResponse);
+            return new ErrorResult((int)statusCode, errorResponse);
         }
 
-        public static ErrorResult MapToErrorResponse(this FeatureException featureException )
+        public static ErrorResult MapToErrorResponse(this FeatureException featureException)
         {
             var errorResponse = new ErrorResponse
             {
@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Utilities.JsonErrors
                 }
             };
 
-            return new ErrorResult((int) featureException.HttpStatusCode, errorResponse);
+            return new ErrorResult((int)featureException.HttpStatusCode, errorResponse);
         }
     }
 }

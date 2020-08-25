@@ -26,8 +26,6 @@ namespace Stratis.SmartContracts.IntegrationTests
         private readonly IMockChain mockChain;
         private readonly MockChainNode node1;
         private readonly MockChainNode node2;
-
-        private readonly IAddressGenerator addressGenerator;
         private readonly ISenderRetriever senderRetriever;
 
         protected ContractExecutionFailureTests(T fixture)
@@ -35,7 +33,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain = fixture.Chain;
             this.node1 = this.mockChain.Nodes[0];
             this.node2 = this.mockChain.Nodes[1];
-            this.addressGenerator = new AddressGenerator();
             this.senderRetriever = new SenderRetriever();
         }
 
@@ -43,10 +40,9 @@ namespace Stratis.SmartContracts.IntegrationTests
         public void ContractTransaction_Invalid_MethodParamSerialization()
         {
             // Create poorly serialized method params
-            var serializer =
-                new CallDataSerializer(new ContractPrimitiveSerializer(this.node1.CoreNode.FullNode.Network));
+            var serializer = new CallDataSerializer(new ContractPrimitiveSerializer(this.node1.CoreNode.FullNode.Network));
 
-            var txData = serializer.Serialize(new ContractTxData(1, 1, (RuntimeObserver.Gas)(GasPriceList.BaseCost + 1), new uint160(1), "Test"));
+            var txData = serializer.Serialize(new ContractTxData(1, 1, (Gas)(GasPriceList.BaseCost + 1), new uint160(1), "Test"));
 
             var random = new Random();
             byte[] bytes = new byte[101];
@@ -79,8 +75,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotNull(this.node1.GetCode(receiveResponse.NewContractAddress));
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
-            uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             // Send to empty method name on contract
             string[] parameters = new string[] { string.Format("{0}#{1}", (int)MethodParameterDataType.Address, receiveResponse.NewContractAddress) };
@@ -91,8 +85,6 @@ namespace Stratis.SmartContracts.IntegrationTests
                 parameters);
             this.mockChain.WaitAllMempoolCount(1);
             this.mockChain.MineBlocks(1);
-
-            NBitcoin.Block lastBlock = this.node1.GetLastBlock();
 
             // Receipt shows failure
             ReceiptResponse receipt = this.node1.GetReceipt(response.TransactionId.ToString());
@@ -122,7 +114,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain.MineBlocks(1);
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             // Create transaction with random bytecode.
@@ -166,7 +157,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain.MineBlocks(1);
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             // Create transaction with non-deterministic bytecode.
@@ -210,7 +200,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain.MineBlocks(1);
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/ExceptionInConstructor.cs");
@@ -269,7 +258,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotNull(this.node1.GetCode(preResponse.NewContractAddress));
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             BuildCallContractTransactionResponse response = this.node1.SendCallContractTransaction("Method", preResponse.NewContractAddress, amount);
@@ -314,7 +302,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain.MineBlocks(1);
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             // Send call to non-existent address
@@ -411,7 +398,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotNull(this.node1.GetCode(preResponse.NewContractAddress));
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             BuildCallContractTransactionResponse response = this.node1.SendCallContractTransaction("CallMe", preResponse.NewContractAddress, amount);
@@ -456,7 +442,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain.MineBlocks(1);
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/BasicParameters.cs");
@@ -486,7 +471,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
             Assert.Equal(new Money((long)amount, MoneyUnit.BTC), refundTransaction.Outputs[0].Value);
-            Money fee = lastBlock.Transactions[0].Outputs[0].Value - new Money(50, MoneyUnit.BTC);
 
             // Receipt is correct
             ReceiptResponse receipt = this.node1.GetReceipt(response.TransactionId.ToString());
@@ -501,7 +485,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Null(receipt.To);
         }
 
-
         [Fact]
         public void ContractTransaction_EmptyModule_Failure()
         {
@@ -509,7 +492,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.mockChain.MineBlocks(1);
 
             decimal amount = 25;
-            Money senderBalanceBefore = this.node1.WalletSpendableBalance;
             uint256 currentHash = this.node1.GetLastBlock().GetHash();
 
             // Create transaction with empty module
@@ -543,7 +525,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
             Assert.Equal(new Money((long)amount, MoneyUnit.BTC), refundTransaction.Outputs[0].Value);
-            Money fee = lastBlock.Transactions[0].Outputs[0].Value - new Money(50, MoneyUnit.BTC);
 
             // Receipt is correct
             ReceiptResponse receipt = this.node1.GetReceipt(response.TransactionId.ToString());
@@ -689,7 +670,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.True(GasPriceList.BaseCost < receipt.GasUsed);
             Assert.Null(receipt.NewContractAddress);
             Assert.Equal(this.node1.MinerAddress.Address, receipt.From);
-            Assert.StartsWith($"{typeof(RuntimeObserver.MemoryConsumptionException).FullName}", receipt.Error);
+            Assert.StartsWith($"{typeof(MemoryConsumptionException).FullName}", receipt.Error);
             Assert.Equal(preResponse.NewContractAddress, receipt.To);
         }
 

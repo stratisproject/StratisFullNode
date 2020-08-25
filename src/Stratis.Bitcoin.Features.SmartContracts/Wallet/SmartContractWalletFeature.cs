@@ -136,6 +136,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                     services.AddSingleton<WalletSettings>();
                     services.AddSingleton<IAddressBookManager, AddressBookManager>();
                     services.AddSingleton<IWalletService, WalletService>();
+                    services.AddSingleton<IReserveUtxoService, ReserveUtxoService>();
 
                     services.AddTransient<WalletRPCController>();
                 });
