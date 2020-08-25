@@ -249,7 +249,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <returns>The hex-encoded merkle proof.</returns>
         [ActionName("gettxoutproof")]
         [ActionDescription("Checks if transactions are within block. Returns a merkle proof of transaction inclusion.")]
-        public MerkleBlock GetTxOutProof(string[] txids, string blockhash = "")
+        public async Task<MerkleBlock> GetTxOutProofAsync(string[] txids, string blockhash = "")
         {
             List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
 

@@ -402,7 +402,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
             this.consensusManager.Setup(b => b.GetBlockData(It.IsAny<uint256>()))
                 .Returns(new ChainedHeaderBlock(block.Block, block));
 
-            MerkleBlock result = this.controller.GetTxOutProof(new [] { tx.GetHash().ToString() }, block.HashBlock.ToString());
+            MerkleBlock result = this.controller.GetTxOutProofAsync(new [] { tx.GetHash().ToString() }, block.HashBlock.ToString()).GetAwaiter().GetResult();
 
             Assert.NotNull(result);
         }
