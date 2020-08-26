@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
@@ -38,11 +39,15 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
+        protected ICheckpoints checkpoints { get; private set; }
+
+        protected IChainState chainState { get; private set; }
+
         /// <summary>
         /// Our view of the peer's consensus tip constructed on peer's announcement of its tip using "headers" message.
         /// </summary>
         /// <remarks>
-        /// The announced tip is accepted if it seems to be valid. Validation is only done on headers and so the announced tip may refer to invalid block.
+        /// The announced tip is accepted if it seems to be valid. Validation is only done on headers and so the announced tip may refer to an invalid block.
         /// </remarks>
         public ChainedHeader BestReceivedTip { get; protected set; }
 
@@ -73,7 +78,7 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Protects write access to the <see cref="BestSentHeader"/>.</summary>
         private readonly object bestSentHeaderLock;
 
-        public ConsensusManagerBehavior(ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory)
+        public ConsensusManagerBehavior(ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory, ICheckpoints checkpoints, IChainState chainState)
         {
             this.LoggerFactory = loggerFactory;
             this.InitialBlockDownloadState = initialBlockDownloadState;
@@ -84,6 +89,8 @@ namespace Stratis.Bitcoin.Consensus
             this.cachedHeaders = new List<BlockHeader>();
             this.asyncLock = new AsyncLock();
             this.bestSentHeaderLock = new object();
+            this.checkpoints = checkpoints;
+            this.chainState = chainState;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName, $"[{this.GetHashCode():x}] ");
         }
@@ -613,9 +620,30 @@ namespace Stratis.Bitcoin.Consensus
         /// <returns>The GetHeadersPayload instance. May return <c>null</c>; in such case the sync process wouldn't happen.</returns>
         protected virtual GetHeadersPayload BuildGetHeadersPayload()
         {
+            ChainedHeader tipToUse;
+
+            if (this.InitialBlockDownloadState.IsInitialBlockDownload() && this.ChainIndexer.Height < this.checkpoints.GetLastCheckpointHeight())
+            {
+                // During IBD there isn't much point re-downloading the entire header chain from every peer that happens to connect partway through.
+                // This can potentially waste gigabytes for ~16 peers and a large header chain.
+                // We presume that the majority of peers are honest and will provide valid headers to us.
+                // So we optimistically start the peer from the tip of the currently-downloaded headers.
+                // If it is a rogue peer the headers will eventually be invalidated and the peer banned regardless.
+                tipToUse = this.chainState?.BestPeerTip ?? this.ChainIndexer.Genesis;
+            }
+            else
+            {
+                // When we are out of IBD, the above approach does not give much benefit and might even be harmful,
+                // if we connect to a peer that happens to be on a fork.
+                // Note that when proven headers are being used this branch should never execute, as the proven header CMB will not call its base.
+                tipToUse = this.BestReceivedTip ?? this.ConsensusManager.Tip;
+            }
+
+            this.logger.LogDebug("Using height {0} (hash {1}) to create getheaders locator for peer '{2}'.", tipToUse.Height, tipToUse.HashBlock, this.AttachedPeer.RemoteSocketEndpoint);
+
             return new GetHeadersPayload()
             {
-                BlockLocator = (this.BestReceivedTip ?? this.ConsensusManager.Tip).GetLocator(),
+                BlockLocator = tipToUse.GetLocator(),
                 HashStop = null
             };
         }
@@ -715,7 +743,7 @@ namespace Stratis.Bitcoin.Consensus
         [NoTrace]
         public override object Clone()
         {
-            return new ConsensusManagerBehavior(this.ChainIndexer, this.InitialBlockDownloadState, this.ConsensusManager, this.PeerBanning, this.LoggerFactory);
+            return new ConsensusManagerBehavior(this.ChainIndexer, this.InitialBlockDownloadState, this.ConsensusManager, this.PeerBanning, this.LoggerFactory, this.checkpoints, this.chainState);
         }
 
         [NoTrace]

@@ -1193,6 +1193,8 @@ namespace Stratis.Bitcoin.Consensus
         {
             ChainedHeader bestTip = null;
 
+            // TODO: This dictionary gets heavily modified and thus should probably be locked in the CM rather than freely accessed
+            // TODO: Either that or we make a safe copy of it to enumerate here
             foreach (KeyValuePair<int, uint256> idTipHashPair in this.peerTipsByPeerId)
             {
                 if (idTipHashPair.Key == LocalPeerId)

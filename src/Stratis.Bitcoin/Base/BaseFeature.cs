@@ -123,6 +123,8 @@ namespace Stratis.Bitcoin.Base
         /// <inheritdoc cref="IPartialValidator"/>
         private readonly IPartialValidator partialValidator;
 
+        private readonly ICheckpoints checkpoints;
+
         public BaseFeature(NodeSettings nodeSettings,
             DataFolder dataFolder,
             INodeLifetime nodeLifetime,
@@ -147,6 +149,7 @@ namespace Stratis.Bitcoin.Base
             ITipsManager tipsManager,
             IKeyValueRepository keyValueRepo,
             INodeStats nodeStats,
+            ICheckpoints checkpoints,
             IProvenBlockHeaderStore provenBlockHeaderStore = null)
         {
             this.chainState = Guard.NotNull(chainState, nameof(chainState));
@@ -171,6 +174,8 @@ namespace Stratis.Bitcoin.Base
 
             this.peerAddressManager = Guard.NotNull(peerAddressManager, nameof(peerAddressManager));
             this.peerAddressManager.PeerFilePath = this.dataFolder;
+
+            this.checkpoints = Guard.NotNull(checkpoints, nameof(checkpoints));
 
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.dateTimeProvider = dateTimeProvider;
@@ -201,7 +206,7 @@ namespace Stratis.Bitcoin.Base
 
             connectionParameters.TemplateBehaviors.Add(new PingPongBehavior());
             connectionParameters.TemplateBehaviors.Add(new EnforcePeerVersionCheckBehavior(this.chainIndexer, this.nodeSettings, this.network, this.loggerFactory));
-            connectionParameters.TemplateBehaviors.Add(new ConsensusManagerBehavior(this.chainIndexer, this.initialBlockDownloadState, this.consensusManager, this.peerBanning, this.loggerFactory));
+            connectionParameters.TemplateBehaviors.Add(new ConsensusManagerBehavior(this.chainIndexer, this.initialBlockDownloadState, this.consensusManager, this.peerBanning, this.loggerFactory, this.checkpoints, this.chainState));
 
             // TODO: Once a proper rate limiting strategy has been implemented, this check will be removed.
             if (!this.network.IsRegTest())
