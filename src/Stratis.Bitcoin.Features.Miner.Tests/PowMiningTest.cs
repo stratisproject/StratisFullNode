@@ -245,7 +245,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             Assert.Empty(blockHashes);
         }
 
-        [Fact]
+        [Fact(Skip = "Unstable")]
         public void GenerateBlocks_MultipleBlocks_ReturnsGeneratedBlocks()
         {
             var blocksToValidate = new List<uint256>();
