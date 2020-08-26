@@ -394,7 +394,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
         }
 
         [Fact]
-        public void GetTxOutProof_TransactionInSameSpecifiedBlock_ReturnsProof()
+        public async Task GetTxOutProof_TransactionInSameSpecifiedBlock_ReturnsProof()
         {
             ChainedHeader block = this.chain.GetHeader(2);
             Transaction tx = block.Block.Transactions.First();
@@ -402,7 +402,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
             this.consensusManager.Setup(b => b.GetBlockData(It.IsAny<uint256>()))
                 .Returns(new ChainedHeaderBlock(block.Block, block));
 
-            MerkleBlock result = this.controller.GetTxOutProofAsync(new [] { tx.GetHash().ToString() }, block.HashBlock.ToString()).GetAwaiter().GetResult();
+            MerkleBlock result = await this.controller.GetTxOutProofAsync(new [] { tx.GetHash().ToString() }, block.HashBlock.ToString());
 
             Assert.NotNull(result);
         }
