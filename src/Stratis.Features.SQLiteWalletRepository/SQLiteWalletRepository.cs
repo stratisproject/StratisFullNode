@@ -1187,15 +1187,15 @@ namespace Stratis.Features.SQLiteWalletRepository
             Wallet hdWallet = this.GetWallet(walletAccountReference.WalletName);
             HdAccount hdAccount = this.GetAccounts(hdWallet, walletAccountReference.AccountName).FirstOrDefault();
 
+            ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+
             foreach (HDTransactionData transactionData in conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations))
             {
-                // TODO: This will take time and is possibly not needed.
-                /*
+                // TODO: There were some performance concerns noted here with the derivation of the pubkey for each address
                 var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
+                
+                PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
 
-                ExtPubKey extPubKey = account.GetExtPubKey(this.Network).Derive(keyPath);
-                PubKey pubKey = extPubKey.PubKey;
-                */
                 int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
                 HdAddress hdAddress = this.ToHdAddress(new HDAddress()
@@ -1203,7 +1203,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     AccountIndex = transactionData.AccountIndex,
                     AddressIndex = transactionData.AddressIndex,
                     AddressType = (int)transactionData.AddressType,
-                    PubKey = "", // pubKey.ScriptPubKey.ToHex(),  - See TODO
+                    PubKey = pubKey.ScriptPubKey.ToHex(),
                     ScriptPubKey = transactionData.ScriptPubKey,
                     Address = transactionData.Address,
                 }, this.Network);

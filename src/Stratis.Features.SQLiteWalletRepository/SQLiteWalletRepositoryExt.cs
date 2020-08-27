@@ -43,7 +43,8 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             var pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
             var scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
-            var witAddress = new PubKey(address.PubKey).GetSegwitAddress(network);
+            var dest = pubKeyScript.GetDestinationPublicKeys(network);
+            var witAddress = dest[0].GetSegwitAddress(network);
 
             var res = new HdAddress(null)
             {

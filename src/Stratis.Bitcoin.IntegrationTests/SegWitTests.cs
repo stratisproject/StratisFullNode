@@ -218,7 +218,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var network = new StratisRegTest();
 
                 // Set the date ranges such that segwit will 'Start' immediately after the initial confirmation window.
-                network.Consensus.BIP9Deployments[StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 2, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
+                network.Consensus.BIP9Deployments[StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
 
                 // Set a small confirmation window to reduce time taken by this test.
                 network.Consensus.MinerConfirmationWindow = 10;
