@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 .UseMempool()
                 .UseWallet()
                 .AddSQLiteWalletRepository()
-                .AddPowPosMining()
+                .AddPowPosMining(false)
                 .AddRPC()
                 .MockIBD()
                 .UseTestChainedHeaderTree()

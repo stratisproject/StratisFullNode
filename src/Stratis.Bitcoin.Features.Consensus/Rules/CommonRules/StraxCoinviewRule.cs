@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 if ((calcStakeReward * CirrusRewardPercentage / 100) > rewardScriptTotal)
                 {
                     this.Logger.LogTrace("(-)[BAD_COINSTAKE_REWARD_SCRIPT_AMOUNT]");
-                    ConsensusErrors.BadCoinstakeAmount.Throw();
+                    ConsensusErrors.BadCirrusRewardAmount.Throw();
                 }
 
                 // TODO: Perhaps we should limit it to a single output to prevent unnecessary UTXO set bloating
