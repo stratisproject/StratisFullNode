@@ -67,12 +67,13 @@ namespace Stratis.Bitcoin.Networks
 
             var bip9Deployments = new StratisBIP9Deployments()
             {
+            // TODO: Add the BIP9 deployments after segwit is merged (cold staking, segwit, csv)
             };
 
             this.Consensus = new NBitcoin.Consensus(
                 consensusFactory: consensusFactory,
                 consensusOptions: consensusOptions,
-                coinType: 200,
+                coinType: 200, // TODO: Choose an unused coin type number from https://github.com/satoshilabs/slips/blob/master/slip-0044.md
                 hashGenesisBlock: genesisBlock.GetHash(),
                 subsidyHalvingInterval: 210000,
                 majorityEnforceBlockUpgrade: 750,
@@ -80,10 +81,10 @@ namespace Stratis.Bitcoin.Networks
                 majorityWindow: 1000,
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
-                bip34Hash: null, // TODO: Check
+                bip34Hash: null,
                 minerConfirmationWindow: 2016,
                 maxReorgLength: 500,
-                defaultAssumeValid: null,// TODO: Check
+                defaultAssumeValid: null,
                 maxMoney: long.MaxValue,
                 coinbaseMaturity: 50,
                 premineHeight: 2,
@@ -97,7 +98,7 @@ namespace Stratis.Bitcoin.Networks
                 powLimit: new Target(new uint256("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")),
                 minimumChainWork: null,
                 isProofOfStake: true,
-                lastPowBlock: 12500,
+                lastPowBlock: 12500, // TODO: Decide how long the PoW phase should be
                 proofOfStakeLimit: new BigInteger(uint256.Parse("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeLimitV2: new BigInteger(uint256.Parse("000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeReward: Money.COIN // TODO: Check
@@ -105,7 +106,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.Base58Prefixes = new byte[12][];
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 75 }; // X
-            this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 125 };
+            this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 140 };
             this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (75 + 128) };
             this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_NO_EC] = new byte[] { 0x01, 0x42 };
             this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_EC] = new byte[] { 0x01, 0x43 };
@@ -121,7 +122,7 @@ namespace Stratis.Bitcoin.Networks
             {
             };
 
-            this.Bech32Encoders = new Bech32Encoder[2]; // TODO: Check
+            this.Bech32Encoders = new Bech32Encoder[2]; // TODO: Add these in with the segwit merge
             // Bech32 is currently unsupported on Stratis - once supported uncomment lines below
             //var encoder = new Bech32Encoder("bc");
             //this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
