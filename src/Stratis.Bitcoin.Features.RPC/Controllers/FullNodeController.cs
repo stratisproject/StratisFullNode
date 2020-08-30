@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
 using Stratis.Bitcoin.Features.RPC.ModelBinders;
@@ -50,6 +51,8 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <summary>An interface implementation for the blockstore.</summary>
         private readonly IBlockStore blockStore;
 
+        private readonly StoreSettings storeSettings;
+
         /// <summary>A interface implementation for the initial block download state.</summary>
         private readonly IInitialBlockDownloadState ibdState;
 
@@ -69,6 +72,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             Connection.IConnectionManager connectionManager = null,
             IConsensusManager consensusManager = null,
             IBlockStore blockStore = null,
+            StoreSettings storeSettings = null,
             IInitialBlockDownloadState ibdState = null,
             IStakeChain stakeChain = null)
             : base(
@@ -87,6 +91,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             this.networkDifficulty = networkDifficulty;
             this.consensusManager = consensusManager;
             this.blockStore = blockStore;
+            this.storeSettings = storeSettings;
             this.ibdState = ibdState;
             this.stakeChain = stakeChain;
         }
@@ -264,7 +269,12 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             }
             else
             {
-                // Loop through txids and try to find which block they're in. Exit loop once a block is found.
+                if (!(this.storeSettings?.TxIndex ?? false))
+                {
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Cannot find block containing specified transactions if hash is not specified and -txindex is disabled");
+                }
+
+                // Loop through txids and try to find which block they're in. Exit loop once a block is found, as they are supposed to all be in the same block.
                 foreach (uint256 transactionId in transactionIds)
                 {
                     ChainedHeader chainedHeader = this.GetTransactionBlock(transactionId);
@@ -279,7 +289,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
 
             if (block == null)
             {
-                throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+                throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Block not found");
             }
 
             // Need to be able to lookup the transactions within the block efficiently.
@@ -290,7 +300,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             {
                 if (!transactionMap.Contains(transactionId))
                 {
-                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Not all transactions found in specified or retrieved block");
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Not all transactions found in specified or retrieved block");
                 }
             }
 
