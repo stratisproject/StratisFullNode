@@ -21,6 +21,7 @@ using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
@@ -81,6 +82,8 @@ namespace Stratis.Bitcoin.Controllers
 
         private readonly ISelfEndpointTracker selfEndpointTracker;
 
+        private readonly IConsensusManager consensusManager;
+
         public NodeController(
             ChainIndexer chainIndexer,
             IChainState chainState,
@@ -92,6 +95,7 @@ namespace Stratis.Bitcoin.Controllers
             Network network,
             IAsyncProvider asyncProvider,
             ISelfEndpointTracker selfEndpointTracker,
+            IConsensusManager consensusManager = null,
             IBlockStore blockStore = null,
             IGetUnspentTransaction getUnspentTransaction = null,
             INetworkDifficulty networkDifficulty = null,
@@ -120,6 +124,7 @@ namespace Stratis.Bitcoin.Controllers
             this.asyncProvider = asyncProvider;
             this.selfEndpointTracker = selfEndpointTracker;
 
+            this.consensusManager = consensusManager;
             this.blockStore = blockStore;
             this.getUnspentTransaction = getUnspentTransaction;
             this.networkDifficulty = networkDifficulty;
@@ -426,6 +431,66 @@ namespace Stratis.Bitcoin.Controllers
         }
 
         /// <summary>
+        /// This returns a merkle proof that the specified transactions exist in a given block, which can optionally be specified (if known)
+        /// for more efficient lookup.
+        /// In order for this to work without specifying the block hash, the -txindex command line option needs to be enabled.
+        /// </summary>
+        /// <param name="txids">The txids to filter</param>
+        /// <param name="blockhash">If specified, looks for txid in the block with this hash</param>
+        /// <returns>The hex-encoded merkle proof.</returns>
+        [Route("gettxoutproof")]
+        [HttpGet]
+        public async Task<IActionResult> GetTxOutProofAsync([FromQuery] string[] txids, string blockhash = "")
+        {
+            List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
+
+            ChainedHeaderBlock block = null;
+
+            if (!string.IsNullOrEmpty(blockhash))
+            {
+                // We presume that all the transactions are supposed to be contained in the same specified block, so we only retrieve it once.
+                uint256 hashBlock = uint256.Parse(blockhash);
+
+                block = this.consensusManager?.GetBlockData(hashBlock);
+            }
+            else
+            {
+                // Loop through txids and try to find which block they're in. Exit loop once a block is found.
+                foreach (uint256 transactionId in transactionIds)
+                {
+                    ChainedHeader chainedHeader = this.GetTransactionBlock(transactionId);
+
+                    if (chainedHeader?.BlockDataAvailability != null && chainedHeader.BlockDataAvailability == BlockDataAvailabilityState.BlockAvailable)
+                    {
+                        block = this.consensusManager?.GetBlockData(chainedHeader.HashBlock);
+                        break;
+                    }
+                }
+            }
+
+            if (block == null)
+            {
+                throw new Exception("Block not found");
+            }
+
+            // Need to be able to lookup the transactions within the block efficiently.
+            HashSet<uint256> transactionMap = block.Block.Transactions.Select(t => t.GetHash()).ToHashSet();
+
+            // Loop through txids and verify that every transaction is in the block.
+            foreach (uint256 transactionId in transactionIds)
+            {
+                if (!transactionMap.Contains(transactionId))
+                {
+                    throw new Exception("Not all transactions found in specified or retrieved block");
+                }
+            }
+
+            var result = new MerkleBlock(block.Block, transactionIds.ToArray());
+
+            return this.Json(result);
+        }
+
+        /// <summary>
         /// Triggers a shutdown of this node.
         /// </summary>
         /// <param name="corsProtection">This body parameter is here to prevent a Cross Origin Resource Sharing
@@ -625,6 +690,17 @@ namespace Stratis.Bitcoin.Controllers
         internal static Target GetNetworkDifficulty(INetworkDifficulty networkDifficulty = null)
         {
             return networkDifficulty?.GetNetworkDifficulty();
+        }
+
+        private ChainedHeader GetTransactionBlock(uint256 trxid)
+        {
+            ChainedHeader block = null;
+
+            uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);
+            if (blockid != null)
+                block = this.chainIndexer?.GetHeader(blockid);
+
+            return block;
         }
     }
 }
