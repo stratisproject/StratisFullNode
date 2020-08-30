@@ -13,7 +13,7 @@ using Stratis.Bitcoin.Networks.Policies;
 
 namespace Stratis.Bitcoin.Networks
 {
-    public sealed class StraxMain : Network
+    public class StraxMain : Network
     {
         public StraxMain()
         {
@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultPort = 17000;
             this.DefaultMaxOutboundConnections = 16;
             this.DefaultMaxInboundConnections = 100;
-            this.DefaultRPCPort = 17000;
+            this.DefaultRPCPort = 18000;
             this.DefaultAPIPort = 37000;
             this.DefaultSignalRPort = 38000;
             this.MaxTipAge = 2 * 60 * 60;
@@ -67,7 +67,7 @@ namespace Stratis.Bitcoin.Networks
 
             var bip9Deployments = new StratisBIP9Deployments()
             {
-            // TODO: Add the BIP9 deployments after segwit is merged (cold staking, segwit, csv)
+                // TODO: Add the BIP9 deployments after segwit is merged (cold staking, segwit, csv)
             };
 
             this.Consensus = new NBitcoin.Consensus(
@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.Base58Prefixes = new byte[12][];
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 75 }; // X
-            this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 140 };
+            this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 140 }; // y
             this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (75 + 128) };
             this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_NO_EC] = new byte[] { 0x01, 0x42 };
             this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_EC] = new byte[] { 0x01, 0x43 };
@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Networks
                 .Register<CheckPowTransactionRule>()
                 .Register<CheckPosTransactionRule>()
                 .Register<CheckSigOpsRule>()
-                .Register<PosCoinstakeRule>();
+                .Register<StraxCoinstakeRule>();
 
             consensus.ConsensusRules
                 .Register<SetActivationDeploymentsFullValidationRule>()
@@ -192,14 +192,14 @@ namespace Stratis.Bitcoin.Networks
                 // rules that require the store to be loaded (coinview)
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>()
-                .Register<PosCoinviewRule>() // implements BIP68, MaxSigOps and BlockReward calculation
+                .Register<StraxCoinviewRule>() // implements BIP68, MaxSigOps and BlockReward calculation
                                              // Place the PosColdStakingRule after the PosCoinviewRule to ensure that all input scripts have been evaluated
                                              // and that the "IsColdCoinStake" flag would have been set by the OP_CHECKCOLDSTAKEVERIFY opcode if applicable.
                 .Register<PosColdStakingRule>()
                 .Register<SaveCoinviewRule>();
         }
 
-        private void RegisterMempoolRules(IConsensus consensus)
+        protected void RegisterMempoolRules(IConsensus consensus)
         {
             consensus.MempoolRules = new List<Type>()
             {
@@ -227,7 +227,7 @@ namespace Stratis.Bitcoin.Networks
                 {
                     Code = (OpcodeType)0x1,
                     PushData = new[] { (byte)42 }
-                }, Op.GetPushOp(Encoders.ASCII.DecodeData("straxgenesisblock")))
+                }, Op.GetPushOp(Encoders.ASCII.DecodeData("straxgenesisblock"))) // TODO: Update this to a dated newspaper article closer to launch
             });
             txNew.AddOutput(new TxOut()
             {
@@ -242,6 +242,7 @@ namespace Stratis.Bitcoin.Networks
             genesis.Transactions.Add(txNew);
             genesis.Header.HashPrevBlock = uint256.Zero;
             genesis.UpdateMerkleRoot();
+
             return genesis;
         }
     }

@@ -86,7 +86,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 builder
                  .AddSQLiteWalletRepository()
-                 .AddPowPosMining()
+                 .AddPowPosMining(false)
                  .AddRPC()
                  .UseApi()
                  .UseTestChainedHeaderTree()
