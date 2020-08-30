@@ -103,7 +103,7 @@ namespace Stratis.CirrusPegD
                 .UsePosConsensus()
                 .UseWallet()
                 .AddSQLiteWalletRepository()
-                .AddPowPosMining()
+                .AddPowPosMining(false)
                 .Build();
 
             return node;

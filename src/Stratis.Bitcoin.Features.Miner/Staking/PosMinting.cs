@@ -135,7 +135,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         private readonly MinerSettings minerSettings;
 
         /// <summary>Instance logger.</summary>
-        private readonly ILogger logger;
+        protected readonly ILogger logger;
 
         /// <summary>Loop in which the node attempts to generate new POS blocks by staking coins from its wallet.</summary>
         private IAsyncLoop stakingLoop;
@@ -361,7 +361,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Prevent mining if the system time is not in sync with that of other members on the network.
+                // Prevent staking if the system time is not in sync with that of other members on the network.
                 if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
                 {
                     this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
@@ -646,7 +646,6 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             // Run task in parallel using the default task scheduler.
             int coinIndex = 0;
             int workerCount = (stakingUtxoDescriptions.Count + UtxoStakeDescriptionsPerCoinstakeWorker - 1) / UtxoStakeDescriptionsPerCoinstakeWorker;
-            var workers = new Task[workerCount];
             var workerContexts = new CoinstakeWorkerContext[workerCount];
 
             var workersResult = new CoinstakeWorkerResult();
@@ -713,7 +712,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             long coinstakeOutputValue = coinstakeInput.TxOut.Value + reward;
 
             int eventuallyStakableUtxosCount = utxoStakeDescriptions.Count;
-            Transaction coinstakeTx = this.PrepareCoinStakeTransactions(chainTip.Height, coinstakeContext, coinstakeOutputValue, eventuallyStakableUtxosCount, ourWeight);
+            Transaction coinstakeTx = this.PrepareCoinStakeTransactions(chainTip.Height, coinstakeContext, coinstakeOutputValue, eventuallyStakableUtxosCount, ourWeight, reward);
 
             coinstakeTx.Time = coinstakeContext.StakeTimeSlot;
 
@@ -737,7 +736,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             return true;
         }
 
-        internal Transaction PrepareCoinStakeTransactions(int currentChainHeight, CoinstakeContext coinstakeContext, long coinstakeOutputValue, int utxosCount, long amountStaked)
+        public virtual Transaction PrepareCoinStakeTransactions(int currentChainHeight, CoinstakeContext coinstakeContext, long coinstakeOutputValue, int utxosCount, long amountStaked, long reward)
         {
             // Split stake into SplitFactor utxos if above threshold.
             bool shouldSplitStake = this.ShouldSplitStake(utxosCount, amountStaked, coinstakeOutputValue, currentChainHeight);

@@ -234,7 +234,7 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </summary>
         /// <param name="fullNodeBuilder">The object used to build the current node.</param>
         /// <returns>The full node builder, enriched with the new component.</returns>
-        public static IFullNodeBuilder AddPowPosMining(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder AddPowPosMining(this IFullNodeBuilder fullNodeBuilder, bool straxMode)
         {
             LoggingConfiguration.RegisterFeatureNamespace<MiningFeature>("mining");
 
@@ -250,7 +250,12 @@ namespace Stratis.Bitcoin.Features.Miner
                     .FeatureServices(services =>
                     {
                         services.AddSingleton<IPowMining, PowMining>();
-                        services.AddSingleton<IPosMinting, PosMinting>();
+
+                        if (straxMode)
+                            services.AddSingleton<IPosMinting, StraxMinting>();
+                        else
+                            services.AddSingleton<IPosMinting, PosMinting>();
+
                         services.AddSingleton<IBlockProvider, BlockProvider>();
                         services.AddSingleton<BlockDefinition, PowBlockDefinition>();
                         services.AddSingleton<BlockDefinition, PosBlockDefinition>();
