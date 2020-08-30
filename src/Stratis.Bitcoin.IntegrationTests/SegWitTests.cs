@@ -942,7 +942,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                     .UseMempool()
                     .UseColdStakingWallet()
                     .AddSQLiteWalletRepository()
-                    .AddPowPosMining()
+                    .AddPowPosMining(false)
                     .AddRPC());
 
                 var config = new NodeConfigParameters
