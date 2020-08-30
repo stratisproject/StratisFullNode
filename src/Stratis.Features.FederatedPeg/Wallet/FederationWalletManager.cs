@@ -1054,12 +1054,13 @@ namespace Stratis.Features.FederatedPeg.Wallet
             {
                 // All the input UTXO's should be present in spending details of the multi-sig address.
                 List<Coin> coins = checkSignature ? new List<Coin>() : null;
+
                 // Verify that the transaction has valid UTXOs.
                 if (!this.TransactionHasValidUTXOs(transaction, coins))
                     return false;
 
                 // Verify that there are no earlier unspent UTXOs.
-                Comparer<TransactionData> comparer = Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData);
+                var comparer = Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData);
                 TransactionData earliestUnspent = this.Wallet.MultiSigAddress.Transactions.GetUnspentTransactions().FirstOrDefault();
                 if (earliestUnspent != null)
                 {

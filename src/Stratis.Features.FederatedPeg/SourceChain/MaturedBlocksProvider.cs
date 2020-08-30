@@ -66,7 +66,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             var maturedBlockDepositModels = new List<MaturedBlockDepositsModel>();
 
             // Half of the timeout. We will also need time to convert it to json.
-            int maxTimeCollectionCanTakeMs = RestApiClientBase.TimeoutMs / 2;
+            int maxTimeCollectionCanTakeMs = RestApiClientBase.TimeoutSeconds / 2;
             var cancellation = new CancellationTokenSource(maxTimeCollectionCanTakeMs);
 
             int maxBlockHeight = Math.Min(matureTipHeight, retrieveFromHeight + maxBlocks - 1);

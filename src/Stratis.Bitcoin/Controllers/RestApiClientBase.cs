@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Controllers
         /// <summary>Delay between retries.</summary>
         private const int AttemptDelayMs = 1000;
 
-        public const int TimeoutMs = 60_000;
+        public const int TimeoutSeconds = 60;
 
         private readonly RetryPolicy policy;
 
@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Controllers
 
             using (HttpClient client = this.httpClientFactory.CreateClient())
             {
-                client.Timeout = TimeSpan.FromMilliseconds(TimeoutMs);
+                client.Timeout = TimeSpan.FromMilliseconds(TimeoutSeconds);
 
                 var request = new JsonContent(requestModel);
 
@@ -169,7 +169,7 @@ namespace Stratis.Bitcoin.Controllers
 
             using (HttpClient client = this.httpClientFactory.CreateClient())
             {
-                client.Timeout = TimeSpan.FromMilliseconds(TimeoutMs);
+                client.Timeout = TimeSpan.FromMilliseconds(TimeoutSeconds);
 
                 try
                 {

@@ -81,7 +81,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
                 return null;
 
-            List<TxOut> depositsToMultisig = transaction.Outputs.Where(output =>
+            var depositsToMultisig = transaction.Outputs.Where(output =>
                 output.ScriptPubKey == this.depositScript
                 && output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
 

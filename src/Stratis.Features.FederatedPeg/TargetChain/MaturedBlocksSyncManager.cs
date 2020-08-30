@@ -27,14 +27,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
-        private readonly ICrossChainTransferStore store;
-
-        private readonly IFederationGatewayClient federationGatewayClient;
         private readonly IAsyncProvider asyncProvider;
-
+        private readonly CancellationTokenSource cancellationTokenSource;
+        private readonly ICrossChainTransferStore crossChainTransferStore;
+        private readonly IFederationGatewayClient federationGatewayClient;
         private readonly ILogger logger;
-
-        private readonly CancellationTokenSource cancellation;
 
         private Task blockRequestingTask;
 
@@ -45,19 +42,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private const int MaxDepositsToRequest = 100;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
-        private const int RefreshDelayMs = 10_000;
+        private const int RefreshDelaySeconds = 10;
 
         /// <summary>Delay between initialization and first request to other node.</summary>
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
-        private const int InitializationDelayMs = 10_000;
+        private const int InitializationDelaySeconds = 10;
 
-        public MaturedBlocksSyncManager(ICrossChainTransferStore store, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider)
+        public MaturedBlocksSyncManager(ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider)
         {
-            this.store = store;
-            this.federationGatewayClient = federationGatewayClient;
             this.asyncProvider = asyncProvider;
+            this.cancellationTokenSource = new CancellationTokenSource();
+            this.crossChainTransferStore = crossChainTransferStore;
+            this.federationGatewayClient = federationGatewayClient;
 
-            this.cancellation = new CancellationTokenSource();
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
@@ -75,18 +72,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 // Initialization delay.
                 // Give other node some time to start API service.
-                await Task.Delay(InitializationDelayMs, this.cancellation.Token).ConfigureAwait(false);
+                await Task.Delay(InitializationDelaySeconds, this.cancellationTokenSource.Token).ConfigureAwait(false);
 
-                while (!this.cancellation.IsCancellationRequested)
+                while (!this.cancellationTokenSource.IsCancellationRequested)
                 {
-                    bool delayRequired = await this.SyncBatchOfBlocksAsync(this.cancellation.Token).ConfigureAwait(false);
+                    bool delayRequired = await this.SyncBatchOfBlocksAsync(this.cancellationTokenSource.Token).ConfigureAwait(false);
 
                     if (delayRequired)
                     {
                         // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
                         // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
                         // or alt chain node might be started.
-                        await Task.Delay(RefreshDelayMs, this.cancellation.Token).ConfigureAwait(false);
+                        await Task.Delay(RefreshDelaySeconds, this.cancellationTokenSource.Token).ConfigureAwait(false);
                     }
                 }
             }
@@ -99,16 +96,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Asks for blocks from another gateway node and then processes them.</summary>
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
-        protected async Task<bool> SyncBatchOfBlocksAsync(CancellationToken cancellationToken = default(CancellationToken))
+        protected async Task<bool> SyncBatchOfBlocksAsync(CancellationToken cancellationToken = default)
         {
             int blocksToRequest = 1;
 
             // TODO why are we asking for max of 1 block and if it's not suspended then 1000? investigate this logic in maturedBlocksProvider
-            if (!this.store.HasSuspended())
+            if (!this.crossChainTransferStore.HasSuspended())
                 blocksToRequest = MaxBlocksToRequest;
 
             // API method that provides blocks should't give us blocks that are not mature!
-            var model = new MaturedBlockRequestModel(this.store.NextMatureDepositHeight, blocksToRequest, MaxDepositsToRequest);
+            var model = new MaturedBlockRequestModel(this.crossChainTransferStore.NextMatureDepositHeight, blocksToRequest, MaxDepositsToRequest);
 
             this.logger.LogDebug("Request model created: {0}:{1}, {2}:{3}.", nameof(model.BlockHeight), model.BlockHeight, nameof(model.MaxBlocksToSend), model.MaxBlocksToSend);
 
@@ -145,7 +142,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (matureBlockDepositsResult.Value.Count > 0)
             {
-                RecordLatestMatureDepositsResult result = await this.store.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
+                RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
 
                 // If we received a portion of blocks we can ask for new portion without any delay.
                 if (result.MatureDepositRecorded)
@@ -157,7 +154,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 // If we've received nothing we assume we are at the tip and should flush.
                 // Same mechanic as with syncing headers protocol.
-                await this.store.SaveCurrentTipAsync().ConfigureAwait(false);
+                await this.crossChainTransferStore.SaveCurrentTipAsync().ConfigureAwait(false);
             }
 
 
@@ -168,7 +165,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public void Dispose()
         {
-            this.cancellation.Cancel();
+            this.cancellationTokenSource.Cancel();
             this.blockRequestingTask?.GetAwaiter().GetResult();
         }
     }
