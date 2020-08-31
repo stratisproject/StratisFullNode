@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -17,6 +18,7 @@ using Stratis.Bitcoin.Features.RPC.Exceptions;
 using Stratis.Bitcoin.Features.RPC.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Tests.Wallet.Common;
@@ -389,6 +391,20 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
             Assert.Equal(this.chain.Tip.HashBlock, model.BestBlock);
             Assert.True(model.Coinbase);
             Assert.Equal(3, model.Confirmations);
+        }
+
+        [Fact]
+        public async Task GetTxOutProof_TransactionInSameSpecifiedBlock_ReturnsProof()
+        {
+            ChainedHeader block = this.chain.GetHeader(2);
+            Transaction tx = block.Block.Transactions.First();
+
+            this.consensusManager.Setup(b => b.GetBlockData(It.IsAny<uint256>()))
+                .Returns(new ChainedHeaderBlock(block.Block, block));
+
+            MerkleBlock result = await this.controller.GetTxOutProofAsync(new [] { tx.GetHash().ToString() }, block.HashBlock.ToString());
+
+            Assert.NotNull(result);
         }
 
         [Fact]

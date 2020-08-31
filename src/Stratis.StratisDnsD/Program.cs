@@ -54,7 +54,7 @@ namespace Stratis.StratisDnsD
                         .UseMempool()
                         .UseWallet()
                         .AddSQLiteWalletRepository()
-                        .AddPowPosMining()
+                        .AddPowPosMining(false)
                         .UseApi()
                         .AddRPC()
                         .UseDns()

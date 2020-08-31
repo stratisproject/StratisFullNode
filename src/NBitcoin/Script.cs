@@ -922,7 +922,7 @@ namespace NBitcoin
         {
             switch (type)
             {
-                // TODO: The known types can be added to, e.g. cold staking. Need dynamic set.
+                // TODO: The known types can be added to, e.g. cold staking. Need dynamic set; perhaps set this from the network class?
 
                 case ScriptType.Witness:
                     return PayToWitTemplate.Instance.CheckScriptPubKey(this);

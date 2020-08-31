@@ -19,7 +19,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
 
-namespace Stratis.StratisD
+namespace Stratis.StraxD
 {
     public class Program
     {
@@ -27,7 +27,7 @@ namespace Stratis.StratisD
         {
             try
             {
-                var nodeSettings = new NodeSettings(networksSelector: Networks.Stratis, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
+                var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
                 };
@@ -39,7 +39,7 @@ namespace Stratis.StratisD
                     .UseMempool()
                     .UseColdStakingWallet()
                     .AddSQLiteWalletRepository()
-                    .AddPowPosMining(false)
+                    .AddPowPosMining(true)
                     .UseApi()
                     .AddRPC()
                     .UseDiagnosticFeature();
@@ -75,7 +75,7 @@ namespace Stratis.StratisD
             }
             catch (Exception ex)
             {
-                Console.WriteLine("There was a problem initializing the node. Details: '{0}'", ex.ToString());
+                Console.WriteLine("There was a problem initializing the node. Details: '{0}'", ex);
             }
         }
     }
