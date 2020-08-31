@@ -62,6 +62,22 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         int CounterChainDepositStartBlock { get; }
 
         /// <summary>
+        /// Similar to <see cref="MinimumDepositConfirmations"/> but this settings allows us to specify how mature faster (smaller) deposits need to be in order
+        /// to be considered for a cross chain transfer.
+        /// </summary>
+        int FasterDepositMinimumConfirmations { get; }
+
+        /// <summary>
+        /// Deposits under or equasl to this value will be processed faster (earlier) on the counter-chain.
+        /// </summary>
+        int FasterDepositThresholdAmount { get; }
+
+        /// <summary>
+        /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
+        /// </summary>
+        int MinimumDepositConfirmations { get; }
+
+        /// <summary>
         /// Address for the MultiSig script.
         /// </summary>
         BitcoinAddress MultiSigAddress { get; }
@@ -70,16 +86,5 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// Pay2Multisig redeem script.
         /// </summary>
         Script MultiSigRedeemScript { get; }
-
-        /// <summary>
-        /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
-        /// </summary>
-        uint MinimumDepositConfirmations { get; }
-
-        /// <summary>
-        /// Similar to <see cref="MinimumDepositConfirmations"/> but this settings allows us to specify how mature faster (smaller) deposits need to be in order
-        /// to be considered for a cross chain transfer.
-        /// </summary>
-        uint MinimumFasterDepositConfirmations { get; }
     }
 }

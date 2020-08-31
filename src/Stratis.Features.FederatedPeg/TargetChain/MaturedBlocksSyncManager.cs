@@ -36,10 +36,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private Task blockRequestingTask;
 
         /// <summary>The maximum amount of blocks to request at a time from alt chain.</summary>
-        private const int MaxBlocksToRequest = 1000;
-
-        /// <summary>The maximum amount of deposits to request at a time from alt chain.</summary>
-        private const int MaxDepositsToRequest = 100;
+        public const int MaxBlocksToRequest = 1000;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
         private const int RefreshDelaySeconds = 10;
@@ -61,17 +58,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public void Start()
         {
-            this.blockRequestingTask = this.RequestMaturedBlocksContinouslyAsync();
+            this.blockRequestingTask = RequestMaturedBlocksContinuouslyAsync();
             this.asyncProvider.RegisterTask($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.blockRequestingTask)}", this.blockRequestingTask);
         }
 
-        /// <summary>Continuously requests matured blocks from another chain.</summary>
-        private async Task RequestMaturedBlocksContinouslyAsync()
+        /// <summary>Continuously requests matured blocks from the counter chain.</summary>
+        private async Task RequestMaturedBlocksContinuouslyAsync()
         {
             try
             {
-                // Initialization delay.
-                // Give other node some time to start API service.
+                // Initialization delay; give the counter chain node some time to start it's API service.
                 await Task.Delay(InitializationDelaySeconds, this.cancellationTokenSource.Token).ConfigureAwait(false);
 
                 while (!this.cancellationTokenSource.IsCancellationRequested)
@@ -98,31 +94,32 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
         protected async Task<bool> SyncBatchOfBlocksAsync(CancellationToken cancellationToken = default)
         {
-            int blocksToRequest = 1;
+            // First retrieve faster deposits.
+            // TODO We can't look at CCTS. NextMatureDepositHeight for faster deposits.
+            SerializableResult<List<MaturedBlockDepositsModel>> fasterDeposits = await this.federationGatewayClient.GetFasterMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight).ConfigureAwait(false);
 
-            // TODO why are we asking for max of 1 block and if it's not suspended then 1000? investigate this logic in maturedBlocksProvider
-            if (!this.crossChainTransferStore.HasSuspended())
-                blocksToRequest = MaxBlocksToRequest;
+            // Then normal deposits.
+            if (fasterDeposits.IsSuccess)
+            {
+                SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, cancellationToken).ConfigureAwait(false);
+                fasterDeposits.Value.AddRange(model.Value);
+            }
 
-            // API method that provides blocks should't give us blocks that are not mature!
-            var model = new MaturedBlockRequestModel(this.crossChainTransferStore.NextMatureDepositHeight, blocksToRequest, MaxDepositsToRequest);
+            var delayRequired = await ProcessMatureBlockDepositsAsync(fasterDeposits);
+            return delayRequired;
+        }
 
-            this.logger.LogDebug("Request model created: {0}:{1}, {2}:{3}.", nameof(model.BlockHeight), model.BlockHeight, nameof(model.MaxBlocksToSend), model.MaxBlocksToSend);
-
-            // Ask for blocks.
-            SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(model, cancellationToken).ConfigureAwait(false);
-
+        private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult)
+        {
             if (matureBlockDepositsResult == null)
             {
                 this.logger.LogDebug("Failed to fetch matured block deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
-                this.logger.LogTrace("(-)[COUNTERCHAIN_NODE_NO_RESPONSE]:true");
                 return true;
             }
 
             if (matureBlockDepositsResult.Value == null)
             {
                 this.logger.LogDebug("Failed to fetch matured block deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, matureBlockDepositsResult.Message ?? "none");
-                this.logger.LogTrace("(-)[COUNTERCHAIN_NODE_SENT_NO_DEPOSITS]:true");
                 return true;
             }
 
@@ -157,9 +154,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 await this.crossChainTransferStore.SaveCurrentTipAsync().ConfigureAwait(false);
             }
 
-
             return delayRequired;
-
         }
 
         /// <inheritdoc />

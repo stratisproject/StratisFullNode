@@ -38,7 +38,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var models = new List<MaturedBlockDepositsModel>() { new MaturedBlockDepositsModel(new MaturedBlockInfoModel(), new List<IDeposit>()) };
             var result = SerializableResult<List<MaturedBlockDepositsModel>>.Ok(models);
-            this.federationGatewayClient.GetMaturedBlockDepositsAsync(null).ReturnsForAnyArgs(Task.FromResult(result));
+            this.federationGatewayClient.GetMaturedBlockDepositsAsync(0).ReturnsForAnyArgs(Task.FromResult(result));
 
             bool delayRequired = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
             // Delay shouldn't be required because a non-empty list was provided.
@@ -46,7 +46,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // Now provide empty list.
             result = SerializableResult<List<MaturedBlockDepositsModel>>.Ok(new List<MaturedBlockDepositsModel>() { });
-            this.federationGatewayClient.GetMaturedBlockDepositsAsync(null).ReturnsForAnyArgs(Task.FromResult(result));
+            this.federationGatewayClient.GetMaturedBlockDepositsAsync(0).ReturnsForAnyArgs(Task.FromResult(result));
 
             bool delayRequired2 = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
             // Delay is required because an empty list was provided.
@@ -54,7 +54,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // Now provide null.
             result = SerializableResult<List<MaturedBlockDepositsModel>>.Ok(null as List<MaturedBlockDepositsModel>);
-            this.federationGatewayClient.GetMaturedBlockDepositsAsync(null).ReturnsForAnyArgs(Task.FromResult(result));
+            this.federationGatewayClient.GetMaturedBlockDepositsAsync(0).ReturnsForAnyArgs(Task.FromResult(result));
 
             bool delayRequired3 = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
             // Delay is required because a null list was provided.

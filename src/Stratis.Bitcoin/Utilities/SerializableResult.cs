@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Utilities
 
         public static SerializableResult<T> Fail(string message)
         {
-            return new SerializableResult<T>(false, default(T), message);
+            return new SerializableResult<T>(false, default, message);
         }
     }
 }

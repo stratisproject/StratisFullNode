@@ -41,9 +41,10 @@ namespace Stratis.Features.FederatedPeg
 
         public const string CounterChainDepositBlock = "counterchaindepositblock";
 
-        private const string MinimumDepositConfirmationsParam = "mindepositconfirmations";
+        private const string FasterDepositThresholdAmountParam = "fasterdepositthresholdamount";
+        private const string FasterDepositMinimumConfirmationsParam = "fasterdepositm inconfirmations";
 
-        private const string MinimumFasterDepositConfirmationsParam = "minfastdepositconfirmations";
+        private const string MinimumDepositConfirmationsParam = "mindepositconfirmations";
 
         /// <summary>
         /// The fee taken by the federation to build withdrawal transactions. The federation will keep most of this.
@@ -95,7 +96,7 @@ namespace Stratis.Features.FederatedPeg
 
             TextFileConfiguration configReader = nodeSettings.ConfigReader;
 
-            this.IsMainChain = configReader.GetOrDefault<bool>("mainchain", false);
+            this.IsMainChain = configReader.GetOrDefault("mainchain", false);
             if (!this.IsMainChain && !configReader.GetOrDefault("sidechain", false))
                 throw new ConfigurationException("Either -mainchain or -sidechain must be specified");
 
@@ -130,14 +131,21 @@ namespace Stratis.Features.FederatedPeg
             this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x => x.Address), new IPAddressComparer());
 
             // These values are only configurable for tests at the moment. Fed members on live networks shouldn't play with them.
-            this.CounterChainDepositStartBlock = configReader.GetOrDefault<int>(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
-            this.MinimumDepositConfirmations = (uint)configReader.GetOrDefault<int>(MinimumDepositConfirmationsParam, (int)nodeSettings.Network.Consensus.MaxReorgLength + 1);
-            this.MinimumFasterDepositConfirmations = (uint)configReader.GetOrDefault<int>(MinimumFasterDepositConfirmationsParam, 10);
+            this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
+            this.FasterDepositThresholdAmount = configReader.GetOrDefault(FasterDepositThresholdAmountParam, 100);
+            this.FasterDepositMinimumConfirmations = configReader.GetOrDefault(FasterDepositMinimumConfirmationsParam, 10);
+            this.MinimumDepositConfirmations = configReader.GetOrDefault(MinimumDepositConfirmationsParam, (int)nodeSettings.Network.Consensus.MaxReorgLength + 1);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, federatedPegOptions?.WalletSyncFromHeight ?? 0);
         }
 
         /// <inheritdoc/>
         public bool IsMainChain { get; }
+
+        /// <inheritdoc />
+        public int FasterDepositMinimumConfirmations { get; }
+
+        /// <inheritdoc />
+        public int FasterDepositThresholdAmount { get; }
 
         /// <inheritdoc/>
         public HashSet<IPEndPoint> FederationNodeIpEndPoints { get; }
@@ -169,16 +177,13 @@ namespace Stratis.Features.FederatedPeg
         /// <inheritdoc/>
         public int CounterChainDepositStartBlock { get; }
 
+        /// <inheritdoc />
+        public int MinimumDepositConfirmations { get; }
+
         /// <inheritdoc/>
         public BitcoinAddress MultiSigAddress { get; }
 
         /// <inheritdoc/>
         public Script MultiSigRedeemScript { get; }
-
-        /// <inheritdoc />
-        public uint MinimumDepositConfirmations { get; }
-
-        /// <inheritdoc />
-        public uint MinimumFasterDepositConfirmations { get; }
     }
 }

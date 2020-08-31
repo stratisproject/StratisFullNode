@@ -92,7 +92,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             block.AddTransaction(nonDepositTransactionToOtherAddress);
 
             int blockHeight = 230;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
 
             extractedDeposits.Count.Should().Be(1);
             IDeposit extractedTransaction = extractedDeposits[0];
@@ -136,7 +136,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader.TryGetTargetAddress(thirdDepositTransaction, out string unused3).Returns(callInfo => { callInfo[1] = newTargetAddress; return true; });
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
 
             extractedDeposits.Count.Should().Be(3);
             extractedDeposits.Select(d => d.BlockNumber).Should().AllBeEquivalentTo(blockHeight);
@@ -189,7 +189,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             block.AddTransaction(thirdDepositTransaction);
             this.opReturnDataReader.TryGetTargetAddress(thirdDepositTransaction, out string unused3).Returns(callInfo => { callInfo[1] = targetAddress.ToString(); return true; });// Extract deposits
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
 
             // Should only be two, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(2);

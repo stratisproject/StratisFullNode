@@ -56,20 +56,18 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <summary>
         /// Retrieves blocks deposits.
         /// </summary>
-        /// <param name="blockRequest">Last known block height and the maximum number of blocks to send.</param>
+        /// <param name="blockHeight">Last known block height at which to retrieve from.</param>
         /// <returns><see cref="IActionResult"/>OK on success.</returns>
         /// <response code="200">Returns blocks deposits</response>
         /// <response code="400">Invalid request or blocks are not mature</response>
         /// <response code="500">Request is null</response>
         [Route(FederationGatewayRouteEndPoint.GetMaturedBlockDeposits)]
-        [HttpPost]
+        [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetMaturedBlockDeposits([FromBody] MaturedBlockRequestModel blockRequest)
+        public IActionResult GetMaturedBlockDeposits([FromQuery(Name = "h")] int blockHeight)
         {
-            Guard.NotNull(blockRequest, nameof(blockRequest));
-
             if (!this.ModelState.IsValid)
             {
                 IEnumerable<string> errors = this.ModelState.Values.SelectMany(e => e.Errors.Select(m => m.ErrorMessage));
@@ -78,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             try
             {
-                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.GetMaturedDeposits(blockRequest.BlockHeight, blockRequest.MaxBlocksToSend);
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.RetrieveDeposits(DepositRetrievalType.Normal, blockHeight);
                 return this.Json(depositsResult);
             }
             catch (Exception e)
@@ -92,7 +90,6 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// Retrieves blocks deposits eligle for faster processing.
         /// </summary>
         /// <param name="blockHeight">Last known block height at which to retrieve from.</param>
-        /// <param name="maxBlocks">The maximum number blocks to process.</param>
         /// <returns><see cref="IActionResult"/>OK on success.</returns>
         /// <response code="200">Returns blocks deposits</response>
         /// <response code="400">Invalid request or blocks are not mature</response>
@@ -102,7 +99,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetFasterMaturedBlockDeposits([FromQuery(Name = "h")] int blockHeight, [FromQuery(Name = "max")] int maxBlocks)
+        public IActionResult GetFasterMaturedBlockDeposits([FromQuery(Name = "h")] int blockHeight)
         {
             if (!this.ModelState.IsValid)
             {
@@ -112,7 +109,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             try
             {
-                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.GetFasterMaturedDeposits(blockHeight, maxBlocks);
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.RetrieveDeposits(DepositRetrievalType.Faster, blockHeight);
                 return this.Json(depositsResult);
             }
             catch (Exception e)
@@ -149,7 +146,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     FederationMiningPubKeys = isMainchain ? null : this.federationManager.GetFederationMembers().Select(k => k.ToString()),
                     MultiSigAddress = this.federatedPegSettings.MultiSigAddress,
                     MultiSigRedeemScript = this.federatedPegSettings.MultiSigRedeemScript.ToString(),
-                    MinimumDepositConfirmations = this.federatedPegSettings.MinimumDepositConfirmations
+                    MinimumDepositConfirmations = (uint)this.federatedPegSettings.MinimumDepositConfirmations
                 };
 
                 return this.Json(model);

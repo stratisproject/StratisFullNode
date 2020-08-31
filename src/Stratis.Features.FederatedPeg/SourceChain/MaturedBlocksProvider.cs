@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
+using Stratis.Features.FederatedPeg.TargetChain;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
@@ -18,23 +19,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <summary>
         /// Retrieves deposits for the indicated blocks from the block repository and throws an error if the blocks are not mature enough.
         /// </summary>
-        /// <param name="blockHeight">The block height at which to start retrieving blocks.</param>
-        /// <param name="maxBlocksToProcess">The number of blocks to retrieve.</param>
-        /// <param name="maxDeposits">The number of deposits to retrieve.</param>
+        /// <param name="retrievalType">The type of deposits to retrieve.</param>
+        /// <param name="retrieveFromHeight">The block height at which to start retrieving blocks.</param>
         /// <returns>A list of mature block deposits.</returns>
-        SerializableResult<List<MaturedBlockDepositsModel>> GetMaturedDeposits(int blockHeight, int maxBlocksToProcess, int maxDeposits = int.MaxValue);
-
-        /// <summary>
-        /// Retrieves deposits that are eligible for faster processing.
-        /// <para>
-        /// Blocks that are considered mature is determined by <see cref="IFederatedPegSettings.MinimumFasterDepositConfirmations"/>.
-        /// </para>
-        /// </summary>
-        /// <param name="blockHeight">The block height at which to start retrieving blocks.</param>
-        /// <param name="maxBlocksToProcess">The number of blocks to retrieve.</param>
-        /// <param name="maxDeposits">The number of deposits to retrieve.</param>
-        /// <returns>A list mature block deposits.</returns>
-        SerializableResult<List<MaturedBlockDepositsModel>> GetFasterMaturedDeposits(int blockHeight, int maxBlocksToProcess, int maxDeposits = int.MaxValue);
+        SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(DepositRetrievalType retrievalType, int retrieveFromHeight);
     }
 
     public sealed class MaturedBlocksProvider : IMaturedBlocksProvider
@@ -61,45 +49,33 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public SerializableResult<List<MaturedBlockDepositsModel>> GetMaturedDeposits(int retrieveFromHeight, int maxBlocksToProcess, int maxDepositsToReturn = int.MaxValue)
+        public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(DepositRetrievalType retrievalType, int retrieveFromHeight)
         {
-            (SerializableResult<List<MaturedBlockDepositsModel>> result, int? applicableHeight) = DetermineApplicableBlockMaturityHeight(retrieveFromHeight, (int)this.federatedPegSettings.MinimumDepositConfirmations);
-            if (result != null)
-                return result;
+            var applicableRetrievalHeight = DetermineApplicableBlockMaturityHeight(retrievalType, retrieveFromHeight, out string message);
+            if (applicableRetrievalHeight == null)
+            {
+                this.logger.LogDebug(message);
+                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail(message);
+            }
 
-            List<MaturedBlockDepositsModel> maturedBlockDepositModels = ProcessApplicableHeaders(applicableHeight.Value, retrieveFromHeight, maxBlocksToProcess, maxDepositsToReturn);
-
+            List<MaturedBlockDepositsModel> maturedBlockDepositModels = RetrieveDepositsFromHeight(retrievalType, applicableRetrievalHeight.Value, retrieveFromHeight);
             return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels);
         }
 
-        /// <inheritdoc />
-        public SerializableResult<List<MaturedBlockDepositsModel>> GetFasterMaturedDeposits(int retrieveFromHeight, int maxBlocksToProcess, int maxDepositsToReturn = int.MaxValue)
+        private List<MaturedBlockDepositsModel> RetrieveDepositsFromHeight(DepositRetrievalType retrievalType, int applicableHeight, int retrieveFromHeight)
         {
-            (SerializableResult<List<MaturedBlockDepositsModel>> result, int? applicableHeight) = DetermineApplicableBlockMaturityHeight(retrieveFromHeight, (int)this.federatedPegSettings.MinimumFasterDepositConfirmations);
-            if (result != null)
-                return result;
-
-            List<MaturedBlockDepositsModel> maturedBlockDepositModels = ProcessApplicableHeaders(applicableHeight.Value, retrieveFromHeight, maxBlocksToProcess, maxDepositsToReturn);
-
-            return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels);
-
-        }
-
-        private List<MaturedBlockDepositsModel> ProcessApplicableHeaders(int applicableHeight, int retrieveFromHeight, int maxBlocksToProcess, int maxDepositsToReturn)
-        {
-            List<ChainedHeader> applicableHeadersToProcess = RetrieveApplicableHeadersToProcess(applicableHeight, retrieveFromHeight, maxBlocksToProcess);
+            List<ChainedHeader> applicableHeaders = RetrieveApplicableHeaders(applicableHeight, retrieveFromHeight);
 
             var maturedBlockDepositModels = new List<MaturedBlockDepositsModel>();
 
             int numberOfDeposits = 0;
 
             // Half of the timeout, wee will also need time to convert it to json.
-
             using (var cancellationToken = new CancellationTokenSource(RestApiClientBase.TimeoutSeconds / 2))
             {
-                for (int headerIndex = 0; headerIndex < applicableHeadersToProcess.Count; headerIndex += 100)
+                for (int headerIndex = 0; headerIndex < applicableHeaders.Count; headerIndex += 100)
                 {
-                    List<ChainedHeader> currentHeaders = applicableHeadersToProcess.GetRange(headerIndex, Math.Min(100, applicableHeadersToProcess.Count - headerIndex));
+                    List<ChainedHeader> currentHeaders = applicableHeaders.GetRange(headerIndex, Math.Min(100, applicableHeaders.Count - headerIndex));
 
                     var hashes = currentHeaders.Select(h => h.HashBlock).ToList();
 
@@ -113,16 +89,16 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                             break;
                         }
 
-                        MaturedBlockDepositsModel maturedBlockDepositModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock);
+                        MaturedBlockDepositsModel maturedBlockDepositModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock, retrievalType);
 
                         if (maturedBlockDepositModel.Deposits != null && maturedBlockDepositModel.Deposits.Count > 0)
                         {
-                            this.logger.LogDebug("{0} deposits extracted at block {1}", maturedBlockDepositModel.Deposits.Count, chainedHeaderBlock.ChainedHeader);
+                            this.logger.LogDebug("{0} {1} deposits extracted at block {2}", maturedBlockDepositModel.Deposits.Count, retrievalType, chainedHeaderBlock.ChainedHeader);
                             numberOfDeposits += maturedBlockDepositModel.Deposits.Count();
                             maturedBlockDepositModels.Add(maturedBlockDepositModel);
                         }
 
-                        if (maturedBlockDepositModels.Count >= maxBlocksToProcess || numberOfDeposits >= maxDepositsToReturn)
+                        if (maturedBlockDepositModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest || numberOfDeposits >= int.MaxValue)
                         {
                             this.logger.LogDebug("Stopping matured blocks collection, thresholds reached; {0}={1}, {2}={3}", nameof(maturedBlockDepositModels), maturedBlockDepositModels.Count, nameof(numberOfDeposits), numberOfDeposits);
                             break;
@@ -130,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         if (cancellationToken.IsCancellationRequested)
                         {
-                            this.logger.LogDebug("Stopping matured blocks collection, the request is taking too long. Sending what has been collected.");
+                            this.logger.LogDebug("Stopping matured blocks collection, the request is taking too long, sending what has been collected.");
                             break;
                         }
                     }
@@ -140,9 +116,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return maturedBlockDepositModels;
         }
 
-        private List<ChainedHeader> RetrieveApplicableHeadersToProcess(int applicableHeight, int retrieveFromHeight, int maxBlocksToProcess)
+        private List<ChainedHeader> RetrieveApplicableHeaders(int applicableHeight, int retrieveFromHeight)
         {
-            int maxBlockHeight = Math.Min(applicableHeight, retrieveFromHeight + maxBlocksToProcess - 1);
+            int maxBlockHeight = Math.Min(applicableHeight, retrieveFromHeight + MaturedBlocksSyncManager.MaxBlocksToRequest - 1);
 
             var headers = new List<ChainedHeader>();
             ChainedHeader header = this.consensusTip.GetAncestor(maxBlockHeight);
@@ -157,20 +133,41 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return headers;
         }
 
-        private (SerializableResult<List<MaturedBlockDepositsModel>>, int? applicableHeight) DetermineApplicableBlockMaturityHeight(int retrieveFromHeight, int minimumDepositConfirmations)
+        private int? DetermineApplicableBlockMaturityHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, out string message)
         {
-            if (this.consensusTip == null)
-                return (SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (un-initialized or still starting up)."), null);
+            message = string.Empty;
 
-            int applicableMaturityHeight = this.consensusTip.Height - minimumDepositConfirmations;
+            if (this.consensusTip == null)
+            {
+                message = "Consensus is not ready to provide blocks (un-initialized or still starting up).";
+                return null;
+            }
+
+            int applicableMaturityHeight;
+            if (retrievalType == DepositRetrievalType.Faster)
+                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.FasterDepositMinimumConfirmations;
+            else
+                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumDepositConfirmations;
 
             if (retrieveFromHeight > applicableMaturityHeight)
             {
-                this.logger.LogTrace("(-)[RETRIEVEFROMBLOCK_HIGHER_THAN_MATUREDTIP]:{0}={1},{2}={3}", nameof(retrieveFromHeight), retrieveFromHeight, nameof(applicableMaturityHeight), applicableMaturityHeight);
-                return (SerializableResult<List<MaturedBlockDepositsModel>>.Fail(string.Format(RetrieveBlockHeightHigherThanMaturedTipMessage, retrieveFromHeight, applicableMaturityHeight)), null);
+                message = string.Format(RetrieveBlockHeightHigherThanMaturedTipMessage, retrieveFromHeight, applicableMaturityHeight);
+                return null;
             }
 
-            return (null, applicableMaturityHeight);
+            this.logger.LogDebug("Blocks will be inspected for deposits from height {0}.", applicableMaturityHeight);
+
+            return applicableMaturityHeight;
         }
+    }
+
+    /// <summary>
+    /// Normal deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumDepositConfirmations"/>) confirmations (blocks).
+    /// Faster deposits are processed after <see cref="IFederatedPegSettings.FasterDepositMinimumConfirmations"/> confirmations (blocks).
+    /// </summary>
+    public enum DepositRetrievalType
+    {
+        Normal,
+        Faster
     }
 }

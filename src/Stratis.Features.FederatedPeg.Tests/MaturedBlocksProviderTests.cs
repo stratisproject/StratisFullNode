@@ -60,15 +60,15 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
 
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
-            federatedPegSettings.MinimumDepositConfirmations.Returns((uint)0);
+            federatedPegSettings.MinimumDepositConfirmations.Returns(0);
 
-            this.depositExtractor.ExtractBlockDeposits(null).ReturnsForAnyArgs(new MaturedBlockDepositsModel(new MaturedBlockInfoModel(), new List<IDeposit>()));
+            this.depositExtractor.ExtractBlockDeposits(null, DepositRetrievalType.Normal).ReturnsForAnyArgs(new MaturedBlockDepositsModel(new MaturedBlockInfoModel(), new List<IDeposit>()));
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, this.loggerFactory);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.GetMaturedDeposits(0, 10);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(DepositRetrievalType.Normal, 0);
 
             // Expect the number of matured deposits to equal the number of blocks.
             Assert.Equal(10, depositsResult.Value.Count);
