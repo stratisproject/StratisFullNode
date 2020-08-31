@@ -75,5 +75,11 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
         /// </summary>
         uint MinimumDepositConfirmations { get; }
+
+        /// <summary>
+        /// Similar to <see cref="MinimumDepositConfirmations"/> but this settings allows us to specify how mature faster (smaller) deposits need to be in order
+        /// to be considered for a cross chain transfer.
+        /// </summary>
+        uint MinimumFasterDepositConfirmations { get; }
     }
 }

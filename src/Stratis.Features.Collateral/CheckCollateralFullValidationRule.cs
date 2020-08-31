@@ -23,8 +23,6 @@ namespace Stratis.Features.Collateral
 
         private readonly IDateTimeProvider dateTime;
 
-        private readonly CollateralHeightCommitmentEncoder encoder;
-
         private readonly Network network;
 
         /// <summary>For how many seconds the block should be banned in case collateral check failed.</summary>
@@ -49,8 +47,6 @@ namespace Stratis.Features.Collateral
                 this.Logger.LogTrace("(-)[SKIPPED_IN_IBD]");
                 return Task.CompletedTask;
             }
-
-            IFederationMember federationMember = this.slotsManager.GetFederationMemberForTimestamp(context.ValidationContext.BlockToValidate.Header.Time);
 
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
             int? commitmentHeight = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
@@ -82,6 +78,7 @@ namespace Stratis.Features.Collateral
                 PoAConsensusErrors.InvalidCollateralAmountCommitmentTooNew.Throw();
             }
 
+            IFederationMember federationMember = this.slotsManager.GetFederationMemberForTimestamp(context.ValidationContext.BlockToValidate.Header.Time);
             if (!this.collateralChecker.CheckCollateral(federationMember, commitmentHeight.Value))
             {
                 // By setting rejectUntil we avoid banning a peer that provided a block.

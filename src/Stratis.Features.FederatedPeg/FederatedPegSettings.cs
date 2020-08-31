@@ -43,6 +43,8 @@ namespace Stratis.Features.FederatedPeg
 
         private const string MinimumDepositConfirmationsParam = "mindepositconfirmations";
 
+        private const string MinimumFasterDepositConfirmationsParam = "minfastdepositconfirmations";
+
         /// <summary>
         /// The fee taken by the federation to build withdrawal transactions. The federation will keep most of this.
         /// </summary>
@@ -125,11 +127,12 @@ namespace Stratis.Features.FederatedPeg
             IEnumerable<IPEndPoint> endPoints = federationIpsRaw.Split(',').Select(a => a.ToIPEndPoint(nodeSettings.Network.DefaultPort));
 
             this.FederationNodeIpEndPoints = new HashSet<IPEndPoint>(endPoints, new IPEndPointComparer());
-            this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x=>x.Address), new IPAddressComparer());
+            this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x => x.Address), new IPAddressComparer());
 
             // These values are only configurable for tests at the moment. Fed members on live networks shouldn't play with them.
             this.CounterChainDepositStartBlock = configReader.GetOrDefault<int>(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
             this.MinimumDepositConfirmations = (uint)configReader.GetOrDefault<int>(MinimumDepositConfirmationsParam, (int)nodeSettings.Network.Consensus.MaxReorgLength + 1);
+            this.MinimumFasterDepositConfirmations = (uint)configReader.GetOrDefault<int>(MinimumFasterDepositConfirmationsParam, 10);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, federatedPegOptions?.WalletSyncFromHeight ?? 0);
         }
 
@@ -174,5 +177,8 @@ namespace Stratis.Features.FederatedPeg
 
         /// <inheritdoc />
         public uint MinimumDepositConfirmations { get; }
+
+        /// <inheritdoc />
+        public uint MinimumFasterDepositConfirmations { get; }
     }
 }

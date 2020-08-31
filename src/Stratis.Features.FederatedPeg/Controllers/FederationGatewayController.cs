@@ -16,7 +16,8 @@ namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
-        public const string GetMaturedBlockDeposits = "get_matured_block_deposits";
+        public const string GetFasterMaturedBlockDeposits = "deposits/faster";
+        public const string GetMaturedBlockDeposits = "deposits";
         public const string GetInfo = "info";
     }
 
@@ -83,6 +84,40 @@ namespace Stratis.Features.FederatedPeg.Controllers
             catch (Exception e)
             {
                 this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, e.Message);
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Could not re-sync matured block deposits: {e.Message}", e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves blocks deposits eligle for faster processing.
+        /// </summary>
+        /// <param name="blockHeight">Last known block height at which to retrieve from.</param>
+        /// <param name="maxBlocks">The maximum number blocks to process.</param>
+        /// <returns><see cref="IActionResult"/>OK on success.</returns>
+        /// <response code="200">Returns blocks deposits</response>
+        /// <response code="400">Invalid request or blocks are not mature</response>
+        /// <response code="500">Request is null</response>
+        [Route(FederationGatewayRouteEndPoint.GetFasterMaturedBlockDeposits)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult GetFasterMaturedBlockDeposits([FromQuery(Name = "h")] int blockHeight, [FromQuery(Name = "max")] int maxBlocks)
+        {
+            if (!this.ModelState.IsValid)
+            {
+                IEnumerable<string> errors = this.ModelState.Values.SelectMany(e => e.Errors.Select(m => m.ErrorMessage));
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Formatting error", string.Join(Environment.NewLine, errors));
+            }
+
+            try
+            {
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.GetFasterMaturedDeposits(blockHeight, maxBlocks);
+                return this.Json(depositsResult);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFasterMaturedBlockDeposits, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Could not re-sync matured block deposits: {e.Message}", e.ToString());
             }
         }
