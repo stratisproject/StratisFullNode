@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Protocol;
 using NSubstitute;
-using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
@@ -15,7 +14,6 @@ using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.Collateral;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -64,11 +62,11 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.federationManager = new CollateralFederationManager(NodeSettings.Default(this.network), this.network, this.loggerFactory, this.keyValueRepository, this.signals);
         }
 
-        private FederationGatewayController CreateController()
+        private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
             var controller = new FederationGatewayController(
                 this.loggerFactory,
-                this.GetMaturedBlocksProvider(),
+                this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.federatedPegSettings,
                 this.federationWalletManager,
                 this.federationManager);
@@ -76,7 +74,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             return controller;
         }
 
-        private MaturedBlocksProvider GetMaturedBlocksProvider()
+        private MaturedBlocksProvider GetMaturedBlocksProvider(IFederatedPegSettings federatedPegSettings)
         {
             IBlockRepository blockRepository = Substitute.For<IBlockRepository>();
 
@@ -93,7 +91,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 return blocks;
             });
 
-            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, this.loggerFactory);
+            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, this.loggerFactory);
         }
 
         [Fact]
@@ -102,12 +100,12 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(5, null, true).Last();
             this.consensusManager.Tip.Returns(tip);
 
-            FederationGatewayController controller = this.CreateController();
-
             // Minimum deposit confirmations : 2
-            this.depositExtractor.MinimumDepositConfirmations.Returns((uint)2);
+            IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
+            federatedPegSettings.MinimumDepositConfirmations.Returns((uint)2);
+            FederationGatewayController controller = this.CreateController(federatedPegSettings);
 
-            int maturedHeight = (int)(tip.Height - this.depositExtractor.MinimumDepositConfirmations);
+            int maturedHeight = (int)(tip.Height - 2);
 
             // Back online at block height : 3
             // 0 - 1 - 2 - 3
@@ -129,12 +127,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(10, null, true).Last();
             this.consensusManager.Tip.Returns(tip);
 
-            FederationGatewayController controller = this.CreateController();
+            int minConfirmations = 2;
+
+            // Minimum deposit confirmations : 2
+            IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
+            federatedPegSettings.MinimumDepositConfirmations.Returns((uint)2);
+            FederationGatewayController controller = this.CreateController(federatedPegSettings);
 
             ChainedHeader earlierBlock = tip.GetAncestor(2);
-
-            int minConfirmations = 2;
-            this.depositExtractor.MinimumDepositConfirmations.Returns((uint)minConfirmations);
 
             int depositExtractorCallCount = 0;
             this.depositExtractor.ExtractBlockDeposits(Arg.Any<ChainedHeaderBlock>()).Returns(new MaturedBlockDepositsModel(null, null));
@@ -180,7 +180,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var controller = new FederationGatewayController(
                 this.loggerFactory,
-                this.GetMaturedBlocksProvider(),
+                this.GetMaturedBlocksProvider(settings),
                 settings,
                 this.federationWalletManager,
                 this.federationManager);
@@ -215,7 +215,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var controller = new FederationGatewayController(
                 this.loggerFactory,
-                this.GetMaturedBlocksProvider(),
+                this.GetMaturedBlocksProvider(settings),
                 settings,
                 this.federationWalletManager,
                 this.federationManager);

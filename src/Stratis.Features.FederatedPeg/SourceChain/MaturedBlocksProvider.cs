@@ -32,15 +32,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         public const string UnableToRetrieveBlockDataFromConsensusMessage = "Stopping mature block collection and sending what we've collected. Reason: Unable to get block data for {0} from consensus.";
 
         private readonly IConsensusManager consensusManager;
-
         private readonly IDepositExtractor depositExtractor;
-
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
 
-        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, ILoggerFactory loggerFactory)
+        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings, ILoggerFactory loggerFactory)
         {
             this.depositExtractor = depositExtractor;
             this.consensusManager = consensusManager;
+            this.federatedPegSettings = federatedPegSettings;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
@@ -51,11 +51,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             ChainedHeader consensusTip = this.consensusManager.Tip;
 
             if (consensusTip == null)
-            {
                 return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks.");
-            }
 
-            int matureTipHeight = (consensusTip.Height - (int)this.depositExtractor.MinimumDepositConfirmations);
+            int matureTipHeight = consensusTip.Height - (int)this.federatedPegSettings.MinimumDepositConfirmations;
 
             if (retrieveFromHeight > matureTipHeight)
             {

@@ -35,7 +35,5 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="newlyMaturedBlock">The newly matured block.</param>
         /// <returns>The matured deposits.</returns>
         MaturedBlockDepositsModel ExtractBlockDeposits(ChainedHeaderBlock newlyMaturedBlock);
-
-        uint MinimumDepositConfirmations { get; }
     }
 }

@@ -55,17 +55,18 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).Returns(delegate (CallInfo info)
             {
-                List<uint256> hashes = (List<uint256>)info[0];
+                var hashes = (List<uint256>)info[0];
                 return hashes.Select((hash) => blocks.Single(x => x.ChainedHeader.HashBlock == hash)).ToArray();
             });
 
-            uint zero = 0;
-            this.depositExtractor.MinimumDepositConfirmations.Returns(info => zero);
+            IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
+            federatedPegSettings.MinimumDepositConfirmations.Returns((uint)0);
+
             this.depositExtractor.ExtractBlockDeposits(null).ReturnsForAnyArgs(new MaturedBlockDepositsModel(new MaturedBlockInfoModel(), new List<IDeposit>()));
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, this.loggerFactory);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.GetMaturedDeposits(0, 10);
 

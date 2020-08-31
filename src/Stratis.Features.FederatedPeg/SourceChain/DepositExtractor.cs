@@ -30,8 +30,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         private readonly Script depositScript;
 
-        public uint MinimumDepositConfirmations { get; private set; }
-
         public DepositExtractor(
             ILoggerFactory loggerFactory,
             IFederatedPegSettings federatedPegSettings,
@@ -43,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 federatedPegSettings.MultiSigRedeemScript?.PaymentScript ??
                 federatedPegSettings.MultiSigAddress?.ScriptPubKey;
             this.opReturnDataReader = opReturnDataReader;
-            this.MinimumDepositConfirmations = federatedPegSettings.MinimumDepositConfirmations;
+
         }
 
         /// <inheritdoc />
