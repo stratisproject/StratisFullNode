@@ -1049,16 +1049,17 @@ namespace Stratis.Bitcoin.Features.RPC
         }
 
         /// <summary>
-        /// Get the a whole block
+        /// Get a whole block, given its hash.
         /// </summary>
-        /// <param name="blockId"></param>
+        /// <param name="blockId">The hash of the block to be retrieved.</param>
         /// <remarks>This method is not compatible with stratisX, which always returns a JSON object no matter what parameters are passed to the second argument.</remarks>
-        /// <returns></returns>
+        /// <returns>The requested block.</returns>
         public async Task<Block> GetBlockAsync(uint256 blockId)
         {
+            // TODO: Add verbosity parameter down the call chain
             // bitcoind implements this RPC with slightly more flexibility, it accepts both an int or a bool for the verbosity.
             // stratisd, however, only accepts a bool. And it unconditionally returns a JSON object, which is not useable for parsing back into a block.
-            RPCResponse resp = await SendCommandAsync(RPCOperations.getblock, blockId.ToString(), false).ConfigureAwait(false);
+            RPCResponse resp = await SendCommandAsync(RPCOperations.getblock, blockId.ToString(), 0).ConfigureAwait(false);
             return Block.Load(Encoders.Hex.DecodeData(resp.Result.ToString()), this.Network.Consensus.ConsensusFactory);
         }
 
