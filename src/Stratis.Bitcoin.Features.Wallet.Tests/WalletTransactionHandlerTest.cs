@@ -412,9 +412,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
 
             var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy, reserveUtxoService);
+            
+            (Wallet wallet, ExtKey extKey) = WalletTestsHelpers.GenerateBlankWalletWithExtKey("wallet1", "password", walletRepository);
 
-            Wallet wallet = WalletTestsHelpers.CreateWallet("wallet1", walletRepository);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null, accountName: "account 1");
+            // Passing a null extpubkey into account creation causes problems later, so we need to obtain it first
+            Key privateKey = Key.Parse(wallet.EncryptedSeed, "password", this.Network);
+            var seedExtKey = new ExtKey(privateKey, wallet.ChainCode);
+            int accountIndex = 0;
+            ExtKey addressExtKey = seedExtKey.Derive(new KeyPath($"m/44'/{this.Network.Consensus.CoinType}'/{accountIndex}'"));
+            ExtPubKey extPubKey = addressExtKey.Neuter();
+
+            HdAccount account = wallet.AddNewAccount(extPubKey, accountName: "account 1");
 
             HdAddress accountAddress1 = WalletTestsHelpers.CreateAddress();
             accountAddress1.Transactions.Add(WalletTestsHelpers.CreateTransaction(new uint256(1), new Money(15000), null, null, null, accountAddress1.ScriptPubKey));
