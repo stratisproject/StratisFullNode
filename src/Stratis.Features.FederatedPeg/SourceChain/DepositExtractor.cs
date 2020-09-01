@@ -62,7 +62,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     if (depositRetrievalType == DepositRetrievalType.Faster && deposit.Amount <= this.federatedPegSettings.FasterDepositThresholdAmount)
                         deposits.Add(deposit);
 
-                    if (depositRetrievalType == DepositRetrievalType.Normal && deposit.Amount >= this.federatedPegSettings.FasterDepositThresholdAmount)
+                    if (depositRetrievalType == DepositRetrievalType.Normal && deposit.Amount > this.federatedPegSettings.FasterDepositThresholdAmount)
                         deposits.Add(deposit);
                 }
             }

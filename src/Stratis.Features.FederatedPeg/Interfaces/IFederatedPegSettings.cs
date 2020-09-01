@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>
         /// Deposits under or equasl to this value will be processed faster (earlier) on the counter-chain.
         /// </summary>
-        int FasterDepositThresholdAmount { get; }
+        Money FasterDepositThresholdAmount { get; }
 
         /// <summary>
         /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
