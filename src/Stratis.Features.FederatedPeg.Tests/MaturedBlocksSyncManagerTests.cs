@@ -14,20 +14,19 @@ namespace Stratis.Features.FederatedPeg.Tests
 {
     public class MaturedBlocksSyncManagerTests
     {
-        private readonly TestOnlyMaturedBlocksSyncManager syncManager;
-
-        private readonly IFederationGatewayClient federationGatewayClient;
-        private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IAsyncProvider asyncProvider;
+        private readonly ICrossChainTransferStore crossChainTransferStore;
+        private readonly IFederationGatewayClient federationGatewayClient;
+        private readonly TestOnlyMaturedBlocksSyncManager syncManager;
 
         public MaturedBlocksSyncManagerTests()
         {
-            ILoggerFactory loggerFactory = Substitute.For<ILoggerFactory>();
-            this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
-            this.crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             this.asyncProvider = Substitute.For<IAsyncProvider>();
+            this.crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
+            this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
+            ILoggerFactory loggerFactory = Substitute.For<ILoggerFactory>();
 
-            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.crossChainTransferStore, this.federationGatewayClient, loggerFactory, this.asyncProvider);
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.crossChainTransferStore, this.federationGatewayClient, loggerFactory, new NodeLifetime());
         }
 
         [Fact]
@@ -63,14 +62,14 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         private class TestOnlyMaturedBlocksSyncManager : MaturedBlocksSyncManager
         {
-            public TestOnlyMaturedBlocksSyncManager(ICrossChainTransferStore store, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider)
-                : base(store, federationGatewayClient, loggerFactory, asyncProvider)
+            public TestOnlyMaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, INodeLifetime nodeLifetime)
+                : base(asyncProvider, crossChainTransferStore, federationGatewayClient, loggerFactory, nodeLifetime)
             {
             }
 
             public Task<bool> ExposedSyncBatchOfBlocksAsync()
             {
-                return this.SyncBatchOfBlocksAsync();
+                return this.SyncNormalDepositsAsync();
             }
         }
     }

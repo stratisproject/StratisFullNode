@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.Tests.Common
         public static List<ChainedHeader> CreateConsecutiveHeaders(int count, ChainedHeader prevBlock = null, bool includePrevBlock = false, Target bits = null, Network network = null)
         {
             var chainedHeaders = new List<ChainedHeader>();
-            network = (network == null) ? KnownNetworks.StratisMain : network;
+            network = network ?? KnownNetworks.StratisMain;
 
             ChainedHeader tip = prevBlock;
 
@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Tests.Common
                 BlockHeader header = network.Consensus.ConsensusFactory.CreateBlockHeader();
                 header.Nonce = (uint)Interlocked.Increment(ref currentNonce);
                 header.HashPrevBlock = hashPrevBlock;
-                header.Bits = (bits == null) ? Target.Difficulty1 : bits;
+                header.Bits = bits ?? Target.Difficulty1;
 
                 var chainedHeader = new ChainedHeader(header, header.GetHash(), tip);
 

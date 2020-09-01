@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Controllers
 
             using (HttpClient client = this.httpClientFactory.CreateClient())
             {
-                client.Timeout = TimeSpan.FromMilliseconds(TimeoutSeconds);
+                client.Timeout = TimeSpan.FromSeconds(TimeoutSeconds);
 
                 var request = new JsonContent(requestModel);
 
@@ -167,7 +167,7 @@ namespace Stratis.Bitcoin.Controllers
 
             using (HttpClient client = this.httpClientFactory.CreateClient())
             {
-                client.Timeout = TimeSpan.FromMilliseconds(TimeoutSeconds);
+                client.Timeout = TimeSpan.FromSeconds(TimeoutSeconds);
 
                 try
                 {

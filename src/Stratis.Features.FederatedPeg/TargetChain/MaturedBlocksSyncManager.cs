@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -21,19 +20,20 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     public interface IMaturedBlocksSyncManager : IDisposable
     {
         /// <summary>Starts requesting blocks from another chain.</summary>
-        void Start();
+        Task StartAsync();
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
         private readonly IAsyncProvider asyncProvider;
-        private readonly CancellationTokenSource cancellationTokenSource;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
         private readonly ILogger logger;
+        private readonly INodeLifetime nodeLifetime;
 
-        private Task blockRequestingTask;
+        private IAsyncLoop requestFasterDepositsTask;
+        private IAsyncLoop requestNormalDeposits;
 
         /// <summary>The maximum amount of blocks to request at a time from alt chain.</summary>
         public const int MaxBlocksToRequest = 1000;
@@ -45,68 +45,66 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
         private const int InitializationDelaySeconds = 10;
 
-        public MaturedBlocksSyncManager(ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider)
+        public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, INodeLifetime nodeLifetime)
         {
             this.asyncProvider = asyncProvider;
-            this.cancellationTokenSource = new CancellationTokenSource();
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
+            this.nodeLifetime = nodeLifetime;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <inheritdoc />
-        public void Start()
+        public async Task StartAsync()
         {
-            this.blockRequestingTask = RequestMaturedBlocksContinuouslyAsync();
-            this.asyncProvider.RegisterTask($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.blockRequestingTask)}", this.blockRequestingTask);
-        }
+            // Initialization delay; give the counter chain node some time to start it's API service.
+            await Task.Delay(InitializationDelaySeconds, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
-        /// <summary>Continuously requests matured blocks from the counter chain.</summary>
-        private async Task RequestMaturedBlocksContinuouslyAsync()
-        {
-            try
+            this.requestNormalDeposits = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestNormalDeposits)}", async token =>
             {
-                // Initialization delay; give the counter chain node some time to start it's API service.
-                await Task.Delay(InitializationDelaySeconds, this.cancellationTokenSource.Token).ConfigureAwait(false);
-
-                while (!this.cancellationTokenSource.IsCancellationRequested)
+                bool delayRequired = await this.SyncNormalDepositsAsync().ConfigureAwait(false);
+                if (delayRequired)
                 {
-                    bool delayRequired = await this.SyncBatchOfBlocksAsync(this.cancellationTokenSource.Token).ConfigureAwait(false);
-
-                    if (delayRequired)
-                    {
-                        // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
-                        // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
-                        // or alt chain node might be started.
-                        await Task.Delay(RefreshDelaySeconds, this.cancellationTokenSource.Token).ConfigureAwait(false);
-                    }
+                    // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
+                    // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
+                    // or alt chain node might be started.
+                    await Task.Delay(RefreshDelaySeconds, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
                 }
-            }
-            catch (OperationCanceledException)
+            },
+            this.nodeLifetime.ApplicationStopping,
+            repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));
+
+            this.requestFasterDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.federationGatewayClient)}", async token =>
             {
-                this.logger.LogTrace("(-)[CANCELLED]");
-            }
+                bool delayRequired = await this.SyncFasterDepositsAsync().ConfigureAwait(false);
+                if (delayRequired)
+                {
+                    // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
+                    // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
+                    // or alt chain node might be started.
+                    await Task.Delay(RefreshDelaySeconds, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+                }
+            },
+            this.nodeLifetime.ApplicationStopping,
+            repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));
         }
 
         /// <summary>Asks for blocks from another gateway node and then processes them.</summary>
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
-        /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
-        protected async Task<bool> SyncBatchOfBlocksAsync(CancellationToken cancellationToken = default)
+        protected async Task<bool> SyncNormalDepositsAsync()
         {
-            // First retrieve faster deposits.
+            SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+            return await ProcessMatureBlockDepositsAsync(model);
+        }
+
+        /// <summary>Ask the counter chain node for blocks that contain faster deposits.</summary>
+        /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
+        protected async Task<bool> SyncFasterDepositsAsync()
+        {
             // TODO We can't look at CCTS. NextMatureDepositHeight for faster deposits.
-            SerializableResult<List<MaturedBlockDepositsModel>> fasterDeposits = await this.federationGatewayClient.GetFasterMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight).ConfigureAwait(false);
-
-            // Then normal deposits.
-            if (fasterDeposits.IsSuccess)
-            {
-                SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, cancellationToken).ConfigureAwait(false);
-                fasterDeposits.Value.AddRange(model.Value);
-            }
-
-            var delayRequired = await ProcessMatureBlockDepositsAsync(fasterDeposits);
-            return delayRequired;
+            SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetFasterMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+            return await ProcessMatureBlockDepositsAsync(model);
         }
 
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult)
@@ -160,8 +158,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public void Dispose()
         {
-            this.cancellationTokenSource.Cancel();
-            this.blockRequestingTask?.GetAwaiter().GetResult();
+            this.requestNormalDeposits?.Dispose();
+            this.requestFasterDepositsTask?.Dispose();
         }
     }
 }

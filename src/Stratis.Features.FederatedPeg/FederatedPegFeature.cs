@@ -147,7 +147,7 @@ namespace Stratis.Features.FederatedPeg
             this.federationWalletManager.Start();
 
             // Query the other chain every N seconds for deposits. Triggers signing process if deposits are found.
-            this.maturedBlocksSyncManager.Start();
+            await this.maturedBlocksSyncManager.StartAsync();
 
             // Syncs the wallet correctly when restarting the node. i.e. deals with reorgs.
             this.walletSyncManager.Initialize();

@@ -62,7 +62,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             federatedPegSettings.MinimumDepositConfirmations.Returns(0);
 
-            this.depositExtractor.ExtractBlockDeposits(null, DepositRetrievalType.Normal).ReturnsForAnyArgs(new MaturedBlockDepositsModel(new MaturedBlockInfoModel(), new List<IDeposit>()));
+            var deposits = new List<IDeposit>() { new Deposit(new uint256(0), DepositRetrievalType.Normal, 100, "test", 0, new uint256(1)) };
+
+            this.depositExtractor.ExtractBlockDeposits(blocks.First(), DepositRetrievalType.Normal).ReturnsForAnyArgs(new MaturedBlockDepositsModel(new MaturedBlockInfoModel(), deposits));
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.
@@ -71,7 +73,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(DepositRetrievalType.Normal, 0);
 
             // Expect the number of matured deposits to equal the number of blocks.
-            Assert.Equal(10, depositsResult.Value.Count);
+            Assert.Equal(11, depositsResult.Value.Count);
         }
     }
 }

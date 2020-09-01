@@ -51,7 +51,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc />
         public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(DepositRetrievalType retrievalType, int retrieveFromHeight)
         {
-            var applicableRetrievalHeight = DetermineApplicableBlockMaturityHeight(retrievalType, retrieveFromHeight, out string message);
+            var applicableRetrievalHeight = DetermineApplicableRetrievalBlockHeight(retrievalType, retrieveFromHeight, out string message);
             if (applicableRetrievalHeight == null)
             {
                 this.logger.LogDebug(message);
@@ -71,7 +71,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             int numberOfDeposits = 0;
 
             // Half of the timeout, wee will also need time to convert it to json.
-            using (var cancellationToken = new CancellationTokenSource(RestApiClientBase.TimeoutSeconds / 2))
+            using (var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2)))
             {
                 for (int headerIndex = 0; headerIndex < applicableHeaders.Count; headerIndex += 100)
                 {
@@ -133,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return headers;
         }
 
-        private int? DetermineApplicableBlockMaturityHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, out string message)
+        private int? DetermineApplicableRetrievalBlockHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, out string message)
         {
             message = string.Empty;
 
