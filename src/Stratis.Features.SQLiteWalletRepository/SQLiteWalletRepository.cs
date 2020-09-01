@@ -1445,13 +1445,21 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
+                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+
+                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
                         WalletId = addressIdentifier.WalletId,
                         AccountIndex = (int)addressIdentifier.AccountIndex,
                         AddressType = (int)addressIdentifier.AddressType,
                         AddressIndex = (int)addressIdentifier.AddressIndex,
-                        ScriptPubKey = addressIdentifier.ScriptPubKey
+                        ScriptPubKey = addressIdentifier.ScriptPubKey,
+                        PubKey = pubKey.ScriptPubKey.ToHex(),
+                        Address = tranData.Address
                     }, this.Network);
 
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
@@ -1488,13 +1496,21 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
+                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+
+                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
                         WalletId = addressIdentifier.WalletId,
                         AccountIndex = (int)addressIdentifier.AccountIndex,
                         AddressType = (int)addressIdentifier.AddressType,
                         AddressIndex = (int)addressIdentifier.AddressIndex,
-                        ScriptPubKey = addressIdentifier.ScriptPubKey
+                        ScriptPubKey = addressIdentifier.ScriptPubKey,
+                        PubKey = pubKey.ScriptPubKey.ToHex(),
+                        Address = tranData.Address
                     }, this.Network);
 
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
