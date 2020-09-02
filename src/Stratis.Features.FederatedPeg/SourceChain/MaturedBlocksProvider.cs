@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -50,31 +51,47 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc />
         public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int retrieveFromHeight)
         {
-            var deposits = new List<MaturedBlockDepositsModel>();
+            if (this.consensusTip == null)
+                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (it is un-initialized or still starting up).");
+
+            var result = new SerializableResult<List<MaturedBlockDepositsModel>>
+            {
+                Value = new List<MaturedBlockDepositsModel>()
+            };
+
+            var messageBuilder = new StringBuilder();
 
             // Retrieve faster deposits.
             var fasterRetrievalHeight = DetermineApplicableRetrievalHeight(DepositRetrievalType.Faster, retrieveFromHeight, out string message);
             if (fasterRetrievalHeight == null)
+            {
                 this.logger.LogDebug(message);
+                messageBuilder.AppendLine(message);
+            }
             else
             {
                 List<MaturedBlockDepositsModel> fasterDeposits = RetrieveDepositsFromHeight(DepositRetrievalType.Faster, fasterRetrievalHeight.Value, retrieveFromHeight);
                 if (fasterDeposits.Any())
-                    deposits.AddRange(fasterDeposits);
+                    result.Value.AddRange(fasterDeposits);
             }
 
             // Retrieve normal deposits.
             var normalRetrievalHeight = DetermineApplicableRetrievalHeight(DepositRetrievalType.Normal, retrieveFromHeight, out message);
             if (normalRetrievalHeight == null)
+            {
                 this.logger.LogDebug(message);
+                messageBuilder.AppendLine(message);
+            }
             else
             {
                 List<MaturedBlockDepositsModel> normalDeposits = RetrieveDepositsFromHeight(DepositRetrievalType.Normal, normalRetrievalHeight.Value, retrieveFromHeight);
                 if (normalDeposits.Any())
-                    deposits.AddRange(normalDeposits);
+                    result.Value.AddRange(normalDeposits);
             }
 
-            return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(deposits);
+            result.Message = messageBuilder.ToString();
+
+            return result;
         }
 
         private List<MaturedBlockDepositsModel> RetrieveDepositsFromHeight(DepositRetrievalType retrievalType, int applicableHeight, int retrieveFromHeight)
@@ -104,7 +121,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         MaturedBlockDepositsModel depositBlockModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock, retrievalType);
 
-                        if (depositBlockModel.Deposits != null)
+                        if (depositBlockModel != null && depositBlockModel.Deposits != null)
                         {
                             this.logger.LogDebug("{0} '{1}' deposits extracted at block '{2}'", depositBlockModel.Deposits.Count, retrievalType, chainedHeaderBlock.ChainedHeader);
 
@@ -150,12 +167,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private int? DetermineApplicableRetrievalHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, out string message)
         {
             message = string.Empty;
-
-            if (this.consensusTip == null)
-            {
-                message = "Consensus is not ready to provide blocks (it is un-initialized or still starting up).";
-                return null;
-            }
 
             int applicableMaturityHeight;
             if (retrievalType == DepositRetrievalType.Faster)

@@ -117,8 +117,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             // Block height (3) > Mature height (2) - returns error message
             var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
             maturedBlockDepositsResult.Should().NotBeNull();
-            maturedBlockDepositsResult.IsSuccess.Should().Be(false);
-            maturedBlockDepositsResult.Message.Should().Be(string.Format("The submitted block height of {0} is not mature enough for '{1}' deposits, blocks below {2} can be returned.", earlierBlock.Height, maturedHeight));
+            maturedBlockDepositsResult.Value.Count().Should().Be(0);
+            maturedBlockDepositsResult.Message.Should().Contain(string.Format("The submitted block height of {0} is not mature enough for '{1}' deposits, blocks below {2} can be returned.", earlierBlock.Height, DepositRetrievalType.Normal, maturedHeight));
         }
 
         [Fact]
@@ -154,8 +154,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             result.Should().BeOfType<JsonResult>();
             var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
             maturedBlockDepositsResult.Should().NotBeNull();
-            maturedBlockDepositsResult.IsSuccess.Should().Be(true);
-            maturedBlockDepositsResult.Message.Should().Be(null);
+            maturedBlockDepositsResult.Message.Should().Be(string.Empty);
 
             // If the minConfirmations == 0 and this.chain.Height == earlierBlock.Height then expectedCallCount must be 1.
             int expectedCallCount = (tip.Height - minConfirmations) - earlierBlock.Height + 1;

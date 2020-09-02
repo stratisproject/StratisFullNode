@@ -375,8 +375,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 lock (this.lockObj)
                 {
-                    // Sanitize and sort the list.
                     int originalDepositHeight = this.NextMatureDepositHeight;
+
+                    // Sanitize and sort the list.
 
                     maturedBlockDeposits = maturedBlockDeposits
                         .OrderBy(a => a.BlockInfo.BlockHeight)
