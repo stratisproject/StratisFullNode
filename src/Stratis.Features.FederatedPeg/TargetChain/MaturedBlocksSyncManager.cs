@@ -95,6 +95,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         protected async Task<bool> SyncNormalDepositsAsync()
         {
             SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+
+            if (model == null)
+            {
+                this.logger.LogDebug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
+                return true;
+            }
+
+            if (model.Value == null)
+            {
+                this.logger.LogDebug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, model.Message ?? "none");
+                return true;
+            }
+
             return await ProcessMatureBlockDepositsAsync(model);
         }
 
@@ -102,25 +115,25 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncFasterDepositsAsync()
         {
-            // TODO We can't look at CCTS. NextMatureDepositHeight for faster deposits.
             SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetFasterMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+
+            if (model == null)
+            {
+                this.logger.LogDebug("Failed to fetch faster deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
+                return true;
+            }
+
+            if (model.Value == null)
+            {
+                this.logger.LogDebug("Failed to fetch faster deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, model.Message ?? "none");
+                return true;
+            }
+
             return await ProcessMatureBlockDepositsAsync(model);
         }
 
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult)
         {
-            if (matureBlockDepositsResult == null)
-            {
-                this.logger.LogDebug("Failed to fetch matured block deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
-                return true;
-            }
-
-            if (matureBlockDepositsResult.Value == null)
-            {
-                this.logger.LogDebug("Failed to fetch matured block deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, matureBlockDepositsResult.Message ?? "none");
-                return true;
-            }
-
             bool delayRequired = true;
 
             // Log what we've received.

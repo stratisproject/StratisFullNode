@@ -78,13 +78,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 return null;
 
             // Deposits have a certain structure.
-            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange
-                && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
+            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
                 return null;
 
             var depositsToMultisig = transaction.Outputs.Where(output =>
-                output.ScriptPubKey == this.depositScript
-                && output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
+                output.ScriptPubKey == this.depositScript &&
+                output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
 
             if (!depositsToMultisig.Any())
                 return null;
@@ -92,8 +91,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
                 return null;
 
-            this.logger.LogDebug("Processing a received deposit transaction with address: {0}. Transaction hash: {1}.",
-                targetAddress, transaction.GetHash());
+            this.logger.LogDebug("Processing a received deposit transaction with address: {0}. Transaction hash: {1}.", targetAddress, transaction.GetHash());
 
             return new Deposit(transaction.GetHash(), depositRetrievalType, depositsToMultisig.Sum(o => o.Value), targetAddress, blockHeight, blockHash);
         }

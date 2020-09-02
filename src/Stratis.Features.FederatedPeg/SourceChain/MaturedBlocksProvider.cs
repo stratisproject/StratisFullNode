@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             int numberOfDeposits = 0;
 
-            // Half of the timeout, wee will also need time to convert it to json.
+            // Half of the timeout, we will also need time to convert it to json.
             using (var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2)))
             {
                 for (int headerIndex = 0; headerIndex < applicableHeaders.Count; headerIndex += 100)
