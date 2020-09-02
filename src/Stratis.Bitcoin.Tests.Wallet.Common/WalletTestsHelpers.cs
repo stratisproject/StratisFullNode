@@ -415,6 +415,18 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
             return chain;
         }
 
+        public static void CreateSpentTransactionOfBlockHeight(HdAddress address, Network network, int blockHeight)
+        {
+            address.Transactions.Add(new TransactionData
+            {
+                BlockHeight = blockHeight,
+                BlockHash = (uint)blockHeight,
+                Amount = new Money(new Random().Next(500000, 1000000)),
+                SpendingDetails = new SpendingDetails(),
+                Id = new uint256(),
+            });
+        }
+
         public static ICollection<HdAddress> CreateSpentTransactionsOfBlockHeights(Network network, params int[] blockHeights)
         {
             var addresses = new List<HdAddress>();
@@ -455,17 +467,7 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
                 byte[] buf = new byte[32];
                 (new Random()).NextBytes(buf);
 
-                var key = new Key();
-                var address = new HdAddress
-                {
-                    Index = i,
-                    HdPath = $"{addressCollection.HdPath}/{i}",
-                    Address = key.PubKey.Hash.ScriptPubKey.GetDestinationAddress(network).ToString(),
-                    Pubkey = key.PubKey.ScriptPubKey,
-                    ScriptPubKey = key.PubKey.Hash.ScriptPubKey
-                };
-
-                addressCollection.Add(address);
+                HdAddress address = addressCollection.Account.ExternalAddresses.Skip(i).First();
 
                 address.Transactions.Add(new TransactionData
                 {
@@ -477,6 +479,22 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
                     Amount = new Money(new Random().Next(500000, 1000000))
                 });
             }
+        }
+
+        public static void CreateUnspentTransactionOfBlockHeight(HdAddress address, Network network, int blockHeight)
+        {
+            byte[] buf = new byte[32];
+            (new Random()).NextBytes(buf);
+
+            address.Transactions.Add(new TransactionData
+            {
+                ScriptPubKey = address.ScriptPubKey,
+                Id = new uint256(buf),
+                Index = 0,
+                BlockHeight = blockHeight,
+                BlockHash = (uint)blockHeight,
+                Amount = new Money(new Random().Next(500000, 1000000))
+            });
         }
 
         public static TransactionData CreateTransactionDataFromFirstBlock(ChainIndexer chain, (uint256 blockHash, Block block) chainInfo)
