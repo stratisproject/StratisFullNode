@@ -118,7 +118,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
             maturedBlockDepositsResult.Should().NotBeNull();
             maturedBlockDepositsResult.IsSuccess.Should().Be(false);
-            maturedBlockDepositsResult.Message.Should().Be(string.Format(MaturedBlocksProvider.RetrieveBlockHeightHigherThanMaturedTipMessage, earlierBlock.Height, maturedHeight));
+            maturedBlockDepositsResult.Message.Should().Be(string.Format("The submitted block height of {0} is not mature enough for '{1}' deposits, blocks below {2} can be returned.", earlierBlock.Height, maturedHeight));
         }
 
         [Fact]

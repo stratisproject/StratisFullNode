@@ -70,10 +70,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Makes every block a matured block.
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, this.loggerFactory);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(DepositRetrievalType.Normal, 0);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(0);
 
-            // Expect the number of matured deposits to equal the number of blocks.
-            Assert.Equal(11, depositsResult.Value.Count);
+            // This will be double the maount of blocks because the mocked depositExtractor will always return a set of blocks
+            // as that is how it has been configured.
+            Assert.Equal(22, depositsResult.Value.Count);
         }
     }
 }

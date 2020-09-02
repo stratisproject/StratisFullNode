@@ -69,7 +69,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             public Task<bool> ExposedSyncBatchOfBlocksAsync()
             {
-                return this.SyncNormalDepositsAsync();
+                return this.SyncDepositsAsync();
             }
         }
     }

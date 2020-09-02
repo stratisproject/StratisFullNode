@@ -19,15 +19,14 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <summary>
         /// Retrieves deposits for the indicated blocks from the block repository and throws an error if the blocks are not mature enough.
         /// </summary>
-        /// <param name="retrievalType">The type of deposits to retrieve.</param>
         /// <param name="retrieveFromHeight">The block height at which to start retrieving blocks.</param>
+        /// 
         /// <returns>A list of mature block deposits.</returns>
-        SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(DepositRetrievalType retrievalType, int retrieveFromHeight);
+        SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int retrieveFromHeight);
     }
 
     public sealed class MaturedBlocksProvider : IMaturedBlocksProvider
     {
-        public const string RetrieveBlockHeightHigherThanMaturedTipMessage = "The submitted block height of {0} is not mature enough. Blocks below {1} can be returned.";
         public const string UnableToRetrieveBlockDataFromConsensusMessage = "Stopping mature block collection and sending what we've collected. Reason: Unable to get block data for {0} from consensus.";
 
         private readonly IConsensusManager consensusManager;
@@ -49,26 +48,40 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(DepositRetrievalType retrievalType, int retrieveFromHeight)
+        public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int retrieveFromHeight)
         {
-            var applicableRetrievalHeight = DetermineApplicableRetrievalBlockHeight(retrievalType, retrieveFromHeight, out string message);
-            if (applicableRetrievalHeight == null)
-            {
+            var deposits = new List<MaturedBlockDepositsModel>();
+
+            // Retrieve faster deposits.
+            var fasterRetrievalHeight = DetermineApplicableRetrievalHeight(DepositRetrievalType.Faster, retrieveFromHeight, out string message);
+            if (fasterRetrievalHeight == null)
                 this.logger.LogDebug(message);
-                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail(message);
+            else
+            {
+                List<MaturedBlockDepositsModel> fasterDeposits = RetrieveDepositsFromHeight(DepositRetrievalType.Faster, fasterRetrievalHeight.Value, retrieveFromHeight);
+                if (fasterDeposits.Any())
+                    deposits.AddRange(fasterDeposits);
             }
 
-            List<MaturedBlockDepositsModel> maturedBlockDepositModels = RetrieveDepositsFromHeight(retrievalType, applicableRetrievalHeight.Value, retrieveFromHeight);
-            return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels);
+            // Retrieve normal deposits.
+            var normalRetrievalHeight = DetermineApplicableRetrievalHeight(DepositRetrievalType.Normal, retrieveFromHeight, out message);
+            if (normalRetrievalHeight == null)
+                this.logger.LogDebug(message);
+            else
+            {
+                List<MaturedBlockDepositsModel> normalDeposits = RetrieveDepositsFromHeight(DepositRetrievalType.Normal, normalRetrievalHeight.Value, retrieveFromHeight);
+                if (normalDeposits.Any())
+                    deposits.AddRange(normalDeposits);
+            }
+
+            return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(deposits);
         }
 
         private List<MaturedBlockDepositsModel> RetrieveDepositsFromHeight(DepositRetrievalType retrievalType, int applicableHeight, int retrieveFromHeight)
         {
             List<ChainedHeader> applicableHeaders = RetrieveApplicableHeaders(applicableHeight, retrieveFromHeight);
 
-            var maturedBlockDepositModels = new List<MaturedBlockDepositsModel>();
-
-            int numberOfDeposits = 0;
+            var depositBlockModels = new List<MaturedBlockDepositsModel>();
 
             // Half of the timeout, we will also need time to convert it to json.
             using (var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2)))
@@ -89,18 +102,19 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                             break;
                         }
 
-                        MaturedBlockDepositsModel maturedBlockDepositModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock, retrievalType);
+                        MaturedBlockDepositsModel depositBlockModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock, retrievalType);
 
-                        if (maturedBlockDepositModel.Deposits != null && maturedBlockDepositModel.Deposits.Count > 0)
+                        if (depositBlockModel.Deposits != null)
                         {
-                            this.logger.LogDebug("{0} {1} deposits extracted at block {2}", maturedBlockDepositModel.Deposits.Count, retrievalType, chainedHeaderBlock.ChainedHeader);
-                            numberOfDeposits += maturedBlockDepositModel.Deposits.Count();
-                            maturedBlockDepositModels.Add(maturedBlockDepositModel);
+                            this.logger.LogDebug("{0} '{1}' deposits extracted at block '{2}'", depositBlockModel.Deposits.Count, retrievalType, chainedHeaderBlock.ChainedHeader);
+
+                            if (depositBlockModel.Deposits.Any())
+                                depositBlockModels.Add(depositBlockModel);
                         }
 
-                        if (maturedBlockDepositModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest || numberOfDeposits >= int.MaxValue)
+                        if (depositBlockModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest || depositBlockModels.SelectMany(d => d.Deposits).Count() >= int.MaxValue)
                         {
-                            this.logger.LogDebug("Stopping matured blocks collection, thresholds reached; {0}={1}, {2}={3}", nameof(maturedBlockDepositModels), maturedBlockDepositModels.Count, nameof(numberOfDeposits), numberOfDeposits);
+                            this.logger.LogDebug("Stopping matured blocks collection, thresholds reached; {0}={1}, numberOfDeposits={2}", nameof(depositBlockModels), depositBlockModels.Count, depositBlockModels.SelectMany(d => d.Deposits).Count());
                             break;
                         }
 
@@ -113,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 }
             }
 
-            return maturedBlockDepositModels;
+            return depositBlockModels;
         }
 
         private List<ChainedHeader> RetrieveApplicableHeaders(int applicableHeight, int retrieveFromHeight)
@@ -133,13 +147,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return headers;
         }
 
-        private int? DetermineApplicableRetrievalBlockHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, out string message)
+        private int? DetermineApplicableRetrievalHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, out string message)
         {
             message = string.Empty;
 
             if (this.consensusTip == null)
             {
-                message = "Consensus is not ready to provide blocks (un-initialized or still starting up).";
+                message = "Consensus is not ready to provide blocks (it is un-initialized or still starting up).";
                 return null;
             }
 
@@ -151,11 +165,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (retrieveFromHeight > applicableMaturityHeight)
             {
-                message = string.Format(RetrieveBlockHeightHigherThanMaturedTipMessage, retrieveFromHeight, applicableMaturityHeight);
+                message = string.Format("The submitted block height of {0} is not mature enough for '{1}' deposits, blocks below {2} can be returned.", retrieveFromHeight, retrievalType, applicableMaturityHeight);
                 return null;
             }
 
-            this.logger.LogDebug("Blocks will be inspected for deposits from height {0}.", applicableMaturityHeight);
+            this.logger.LogDebug("Blocks will be inspected for '{0}' deposits from height {1}.", retrievalType, applicableMaturityHeight);
 
             return applicableMaturityHeight;
         }

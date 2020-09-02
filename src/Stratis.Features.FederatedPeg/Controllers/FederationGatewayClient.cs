@@ -13,11 +13,6 @@ namespace Stratis.Features.FederatedPeg.Controllers
     /// <summary>Rest client for <see cref="FederationGatewayController"/>.</summary>
     public interface IFederationGatewayClient : IRestApiClientBase
     {
-        /// <summary><see cref="FederationGatewayController.GetFasterMaturedBlockDeposits(int, int)"/></summary>
-        /// <param name="blockHeight">Last known block height at which to retrieve from.</param>
-        /// <param name="cancellation">Cancellation Token.</param>
-        Task<SerializableResult<List<MaturedBlockDepositsModel>>> GetFasterMaturedBlockDepositsAsync(int blockHeight, CancellationToken cancellation = default);
-
         /// <summary><see cref="FederationGatewayController.GetMaturedBlockDeposits"/></summary>
         /// <param name="blockHeight">Last known block height at which to retrieve from.</param>
         /// <param name="cancellation">Cancellation Token.</param>
@@ -33,15 +28,12 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// In a production/live scenario the sidechain and mainnet federation nodes should run on the same machine.
         /// </para>
         /// </summary>
-        public FederationGatewayClient(ILoggerFactory loggerFactory, ICounterChainSettings counterChainSettings, IHttpClientFactory httpClientFactory)
+        public FederationGatewayClient(
+            ILoggerFactory loggerFactory,
+            ICounterChainSettings counterChainSettings,
+            IHttpClientFactory httpClientFactory)
             : base(loggerFactory, httpClientFactory, counterChainSettings.CounterChainApiPort, "FederationGateway", $"http://{counterChainSettings.CounterChainApiHost}")
         {
-        }
-
-        /// <inheritdoc />
-        public Task<SerializableResult<List<MaturedBlockDepositsModel>>> GetFasterMaturedBlockDepositsAsync(int height, CancellationToken cancellation = default)
-        {
-            return this.SendGetRequestAsync<SerializableResult<List<MaturedBlockDepositsModel>>>(FederationGatewayRouteEndPoint.GetFasterMaturedBlockDeposits, $"h={height}", cancellation);
         }
 
         /// <inheritdoc />
