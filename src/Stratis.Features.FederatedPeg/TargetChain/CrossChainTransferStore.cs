@@ -378,7 +378,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     int originalDepositHeight = this.NextMatureDepositHeight;
 
                     // Sanitize and sort the list.
-
                     maturedBlockDeposits = maturedBlockDeposits
                         .OrderBy(a => a.BlockInfo.BlockHeight)
                         .SkipWhile(m => m.BlockInfo.BlockHeight < this.NextMatureDepositHeight).ToArray();

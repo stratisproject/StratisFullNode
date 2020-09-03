@@ -124,9 +124,11 @@ namespace Stratis.Features.FederatedPeg.Tests
                 var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
-                    new MaturedBlockInfoModel() {
+                    new MaturedBlockInfoModel()
+                    {
                         BlockHash = 1,
-                        BlockHeight = crossChainTransferStore.NextMatureDepositHeight },
+                        BlockHeight = crossChainTransferStore.NextMatureDepositHeight
+                    },
                     new[] { deposit1, deposit2 })
                 };
 
@@ -396,10 +398,13 @@ namespace Stratis.Features.FederatedPeg.Tests
                 var deposit2 = new Deposit(txId2, DepositRetrievalType.Normal, new Money(2m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
                 var deposit3 = new Deposit(txId3, DepositRetrievalType.Normal, new Money(3m, MoneyUnit.BTC), address3.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
 
-                MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
-                    new MaturedBlockInfoModel() {
+                MaturedBlockDepositsModel[] blockDeposits = new[]
+                {
+                    new MaturedBlockDepositsModel(new MaturedBlockInfoModel()
+                    {
                         BlockHash = blockHash,
-                        BlockHeight = crossChainTransferStore.NextMatureDepositHeight },
+                        BlockHeight = crossChainTransferStore.NextMatureDepositHeight
+                    },
                     new[] { deposit1, deposit2, deposit3 })
                 };
 
@@ -815,7 +820,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// even though we previously tried to do so.
         /// </summary>
         [Fact]
-        public async Task ReorgSetsAllInProgressToSuspended()
+        public async Task ReorgSetsAllInProgressToSuspendedAsync()
         {
             var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
 

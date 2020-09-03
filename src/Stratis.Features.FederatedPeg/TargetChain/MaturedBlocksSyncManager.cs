@@ -113,7 +113,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Log what we've received.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDepositsResult.Value)
             {
-                // Order transactions in block deterministically.
+                // Order transactions in block deterministically
                 maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
@@ -122,9 +122,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
             }
 
-            // If we received a portion of blocks we can ask for a new portion without delay.
+            // If we received a portion of blocks we can ask for new portion without any delay.
             RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
-
             return !result.MatureDepositRecorded;
         }
 
