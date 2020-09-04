@@ -26,6 +26,11 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// The signature which signs the hex representation of the voting request transaction hash with the collateral address's private key.
         /// </summary>
         string Signature { get; }
+
+        /// <summary>
+        /// The identifier for the event that previously removed this miner (if any). Guards against replaying of voting requests.
+        /// </summary>
+        string RemovalEventId { get; }
     }
 
     /// <inheritdoc />
@@ -35,6 +40,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         private Money collateralAmount;
         private string colllateralMainchainAddress;
         private string signature;
+        private string removalEventId;
 
         /// <inheritdoc />
         public PubKey PubKey
@@ -57,7 +63,14 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             private set { this.signature = value; }
         }
 
-        public string SignatureMessage => $"The address '{this.colllateralMainchainAddress}' is owned by '{this.PubKey.ToHex()}'";
+        /// <inheritdoc />
+        public string RemovalEventId
+        {
+            get { return this.removalEventId; }
+            private set { this.removalEventId = value; }
+        }
+
+        public string SignatureMessage => $"The address '{this.colllateralMainchainAddress}' is owned by '{this.PubKey.ToHex()} ({this.removalEventId})'";
 
         /// <inheritdoc />
         public string CollateralMainchainAddress 
@@ -72,11 +85,12 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <param name="pubKey">The public key to be associated with this miner on the sidechain.</param>
         /// <param name="collateralAmount">The collateral amount.</param>
         /// <param name="collateralMainchainAddress">The address on the main chain that holds the collateral.</param>
-        public VotingRequest(PubKey pubKey, Money collateralAmount, string collateralMainchainAddress)
+        public VotingRequest(PubKey pubKey, Money collateralAmount, string collateralMainchainAddress, string removalEventId)
         {
             this.PubKey = pubKey;
             this.CollateralAmount = collateralAmount;
             this.CollateralMainchainAddress = collateralMainchainAddress;
+            this.RemovalEventId = removalEventId;
         }
 
         public VotingRequest()
@@ -105,6 +119,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             }
 
             stream.ReadWrite(ref this.colllateralMainchainAddress);
+            stream.ReadWrite(ref this.removalEventId);
         }
     }
 }

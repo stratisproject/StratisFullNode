@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             BitcoinAddress address = collateralScript.GetDestinationAddress(counterChainNetwork);
 
-            var votingRequest = new VotingRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), address.ToString());
+            var votingRequest = new VotingRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), address.ToString(), string.Empty);
 
             votingRequest.AddSignature(addressKey.SignMessage(votingRequest.SignatureMessage));
 
@@ -136,6 +136,15 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             Transaction tx = this.network.CreateTransaction();
             tx.AddOutput(Money.COIN, votingRequestOutputScript);
+
+            //TransactionSignature signature = tx.SignInput(this.network, k, coin);
+
+            var txBuilder = new TransactionBuilder(this.network);
+            //txBuilder.AddCoins(coin);
+            //txBuilder.AddKnownSignature(k.PubKey, signature);
+            txBuilder.SignTransactionInPlace(tx);
+
+            //Assert.True(tx.Inputs.AsIndexedInputs().First().VerifyScript(KnownNetworks.Main, coin));
 
             Block block = new Block();
             block.Transactions.Add(tx);
