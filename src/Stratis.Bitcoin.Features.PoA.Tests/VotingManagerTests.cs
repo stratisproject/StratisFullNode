@@ -137,15 +137,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Transaction tx = this.network.CreateTransaction();
             tx.AddOutput(Money.COIN, votingRequestOutputScript);
 
-            //TransactionSignature signature = tx.SignInput(this.network, k, coin);
-
-            var txBuilder = new TransactionBuilder(this.network);
-            //txBuilder.AddCoins(coin);
-            //txBuilder.AddKnownSignature(k.PubKey, signature);
-            txBuilder.SignTransactionInPlace(tx);
-
-            //Assert.True(tx.Inputs.AsIndexedInputs().First().VerifyScript(KnownNetworks.Main, coin));
-
             Block block = new Block();
             block.Transactions.Add(tx);
 
