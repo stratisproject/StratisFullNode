@@ -42,8 +42,7 @@ namespace Stratis.Features.FederatedPeg
         public const string CounterChainDepositBlock = "counterchaindepositblock";
 
         private const string FasterDepositThresholdAmountParam = "fasterdepositthresholdamount";
-        private const string FasterDepositMinimumConfirmationsParam = "fasterdepositm inconfirmations";
-
+        private const string FasterDepositMinimumConfirmationsParam = "fasterdepositminconfirmations";
         private const string MinimumDepositConfirmationsParam = "mindepositconfirmations";
 
         /// <summary>

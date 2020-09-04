@@ -58,7 +58,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         public async Task StartAsync()
         {
             // Initialization delay; give the counter chain node some time to start it's API service.
-            await Task.Delay(InitializationDelaySeconds, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(InitializationDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
             this.requestDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestDepositsTask)}", async token =>
             {
@@ -68,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
                     // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
                     // or alt chain node might be started.
-                    await Task.Delay(RefreshDelaySeconds, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(RefreshDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
                 }
             },
             this.nodeLifetime.ApplicationStopping,
