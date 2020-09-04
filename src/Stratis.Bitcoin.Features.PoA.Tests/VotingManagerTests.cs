@@ -3,6 +3,8 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
@@ -96,6 +98,54 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             // VotingManager cleverly removed the pending poll but kept the finished poll.
             Assert.Single(this.votingManager.GetFinishedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
+        }
+
+
+        [Fact]
+        public void CanCreateVotingRequest()
+        {
+            var counterChainNetwork = new StratisTest();
+
+            var addressKey = new Key();
+            var miningKey = new Key();
+
+            Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(addressKey.PubKey);
+
+            BitcoinAddress address = collateralScript.GetDestinationAddress(counterChainNetwork);
+
+            var votingRequest = new VotingRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), address.ToString());
+
+            votingRequest.AddSignature(addressKey.SignMessage(votingRequest.SignatureMessage));
+
+            int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
+
+            for (int i = 0; i < votesRequired; i++)
+            {
+                this.TriggerOnBlockConnected(this.CreateBlockWithVotingRequest(votingRequest, i + 1));
+            }
+        }
+
+        private ChainedHeaderBlock CreateBlockWithVotingRequest(VotingRequest votingRequest, int height)
+        {
+            var encoder = new VotingRequestEncoder(this.loggerFactory);
+
+            var votingRequestData = new List<byte>(VotingRequestEncoder.VotingRequestOutputPrefixBytes);
+            votingRequestData.AddRange(encoder.Encode(votingRequest));
+
+            var votingRequestOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(votingRequestData.ToArray()));
+
+            Transaction tx = this.network.CreateTransaction();
+            tx.AddOutput(Money.COIN, votingRequestOutputScript);
+
+            Block block = new Block();
+            block.Transactions.Add(tx);
+
+            block.Header.Time = (uint)(height * (this.network.ConsensusOptions as PoAConsensusOptions).TargetSpacingSeconds);
+
+            block.UpdateMerkleRoot();
+            block.GetHash();
+
+            return new ChainedHeaderBlock(block, new ChainedHeader(block.Header, block.GetHash(), height));
         }
 
         private ChainedHeaderBlock CreateBlockWithVotingData(List<VotingData> data, int height)
