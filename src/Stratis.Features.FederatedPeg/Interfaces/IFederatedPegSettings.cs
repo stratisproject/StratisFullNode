@@ -68,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         int FasterDepositMinimumConfirmations { get; }
 
         /// <summary>
-        /// Deposits under or equasl to this value will be processed faster (earlier) on the counter-chain.
+        /// Deposits under or equal to this value will be processed faster (earlier) on the counter-chain.
         /// </summary>
         Money FasterDepositThresholdAmount { get; }
 
