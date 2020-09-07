@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         KeyId CollateralMainchainAddress { get; }
 
         /// <summary>
-        /// The signature which signs the hex representation of the voting request transaction hash with the collateral address's private key.
+        /// The signature that signs a statement about associating the collateral address with the miner's public key.
         /// </summary>
         string Signature { get; }
 
