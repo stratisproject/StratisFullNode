@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using DBreeze.Utils;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.PoA;
@@ -25,7 +26,8 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             using (var memoryStream = new MemoryStream())
             {
                 var serializeStream = new BitcoinStream(memoryStream, true);
-
+                var prefix = (byte[])VotingRequestOutputPrefixBytes.Clone();
+                serializeStream.ReadWrite(ref prefix);
                 serializeStream.ReadWrite(ref votingRequestData);
 
                 return memoryStream.ToArray();
@@ -41,12 +43,17 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
                 if (votingRequestDataBytes.Length > VotingRequestDataMaxSerializedSize)
                 {
                     this.logger.LogTrace("(-)[INVALID_SIZE]");
-                    PoAConsensusErrors.VotingDataInvalidFormat.Throw();
+                    PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                 }
 
                 using (var memoryStream = new MemoryStream(votingRequestDataBytes))
                 {
                     var deserializeStream = new BitcoinStream(memoryStream, false);
+
+                    byte[] prefix = new byte[VotingRequestOutputPrefixBytes.Length];
+                    deserializeStream.ReadWrite(ref prefix);
+                    if (!prefix._ByteArrayEquals(VotingRequestOutputPrefixBytes))
+                        PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
 
                     var decoded = new VotingRequest();
 
@@ -60,7 +67,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
                 this.logger.LogDebug("Exception during deserialization: '{0}'.", e.ToString());
                 this.logger.LogTrace("(-)[DESERIALIZING_EXCEPTION]");
 
-                PoAConsensusErrors.VotingDataInvalidFormat.Throw();
+                PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                 return null;
             }
         }

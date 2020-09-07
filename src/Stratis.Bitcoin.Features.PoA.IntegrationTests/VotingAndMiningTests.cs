@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Castle.Core.Logging;
 using DBreeze.Utils;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
@@ -14,6 +15,8 @@ using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Xunit;
@@ -364,6 +367,8 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 
                 Transaction trx = nodeA.FullNode.WalletTransactionHandler().BuildTransaction(context);
 
+                Assert.True(context.TransactionBuilder.Verify(trx, out _));
+
                 nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
 
                 TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
@@ -379,6 +384,61 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                     long balance = walletManager.GetBalances(walletName, walletAccount).Sum(x => x.AmountConfirmed);
 
                     return balance == (transferAmount + feeAmount);
+                });
+            }
+        }
+
+        [Fact]
+        public async Task CanMineVotingRequestTransactionAsync()
+        {
+            TestPoANetwork network = new TestPoANetwork();
+
+            using (PoANodeBuilder builder = PoANodeBuilder.CreatePoANodeBuilder(this))
+            {
+                string walletName = "mywallet";
+                string walletPassword = "pass";
+                string walletAccount = "account 0";
+
+                Money transferAmount = Money.Coins(0.01m);
+                Money feeAmount = Money.Coins(0.0001m);
+
+                CoreNode nodeA = builder.CreatePoANode(network, network.FederationKey1).WithWallet(walletPassword, walletName).Start();
+                CoreNode nodeB = builder.CreatePoANode(network, network.FederationKey2).WithWallet(walletPassword, walletName).Start();
+
+                TestHelper.Connect(nodeA, nodeB);
+
+                long toMineCount = network.Consensus.PremineHeight + network.Consensus.CoinbaseMaturity + 1 - nodeA.GetTip().Height;
+
+                // Get coins on nodeA via the premine.
+                await nodeA.MineBlocksAsync((int)toMineCount).ConfigureAwait(false);
+
+                CoreNodePoAExtensions.WaitTillSynced(nodeA, nodeB);
+
+                // Create voting output script.
+                var minerKey = new Key();
+                var collateralKey = new Key();
+                Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(collateralKey.PubKey);
+                var request = new VotingRequest(minerKey.PubKey, new Money(10_000m, MoneyUnit.BTC), collateralKey.PubKey.Hash);
+                request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));
+                var encoder = new VotingRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
+
+                Transaction trx = VotingRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
+
+                nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
+
+                TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
+
+                await nodeB.MineBlocksAsync((int)toMineCount).ConfigureAwait(false);
+
+                TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 0 && nodeB.CreateRPCClient().GetRawMempool().Length == 0);
+
+                IWalletManager walletManager = nodeB.FullNode.NodeService<IWalletManager>();
+
+                TestBase.WaitLoop(() =>
+                {
+                    long balance = walletManager.GetBalances(walletName, walletAccount).Sum(x => x.AmountConfirmed);
+
+                    return balance == feeAmount;
                 });
             }
         }

@@ -1,4 +1,6 @@
-﻿using NBitcoin;
+﻿using System;
+using NBitcoin;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.PoA.Features.Voting
 {
@@ -20,7 +22,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <summary>
         /// The address on the main chain that holds the collateral.
         /// </summary>
-        string CollateralMainchainAddress { get; }
+        KeyId CollateralMainchainAddress { get; }
 
         /// <summary>
         /// The signature which signs the hex representation of the voting request transaction hash with the collateral address's private key.
@@ -30,7 +32,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <summary>
         /// The identifier for the event that previously removed this miner (if any). Guards against replaying of voting requests.
         /// </summary>
-        string RemovalEventId { get; }
+        Guid RemovalEventId { get; }
     }
 
     /// <inheritdoc />
@@ -38,9 +40,9 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
     {
         private PubKey pubKey;
         private Money collateralAmount;
-        private string colllateralMainchainAddress;
+        private KeyId colllateralMainchainAddress;
         private string signature;
-        private string removalEventId;
+        private Guid removalEventId;
 
         /// <inheritdoc />
         public PubKey PubKey
@@ -64,7 +66,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         }
 
         /// <inheritdoc />
-        public string RemovalEventId
+        public Guid RemovalEventId
         {
             get { return this.removalEventId; }
             private set { this.removalEventId = value; }
@@ -73,7 +75,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         public string SignatureMessage => $"The address '{this.colllateralMainchainAddress}' is owned by '{this.PubKey.ToHex()} ({this.removalEventId})'";
 
         /// <inheritdoc />
-        public string CollateralMainchainAddress 
+        public KeyId CollateralMainchainAddress 
         {
             get { return this.colllateralMainchainAddress; }
             private set { this.colllateralMainchainAddress = value; }
@@ -85,7 +87,8 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <param name="pubKey">The public key to be associated with this miner on the sidechain.</param>
         /// <param name="collateralAmount">The collateral amount.</param>
         /// <param name="collateralMainchainAddress">The address on the main chain that holds the collateral.</param>
-        public VotingRequest(PubKey pubKey, Money collateralAmount, string collateralMainchainAddress, string removalEventId)
+        /// <param name="removalEventId">Identifies to the voting event that led to removal of this miner (if any).</param>
+        public VotingRequest(PubKey pubKey, Money collateralAmount, KeyId collateralMainchainAddress, Guid removalEventId = default)
         {
             this.PubKey = pubKey;
             this.CollateralAmount = collateralAmount;
@@ -105,21 +108,43 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <inheritdoc />
         public void ReadWrite(BitcoinStream stream)
         {
-            stream.ReadWrite(ref this.pubKey);
             if (stream.Serializing)
             {
+                byte[] pubKey = this.pubKey.ToBytes();
+                Guard.Assert(pubKey.Length == 33);
+                stream.ReadWrite(ref pubKey);
                 ulong amount = this.collateralAmount;
                 stream.ReadWrite(ref amount);
+                byte[] keyId = this.colllateralMainchainAddress.ToBytes();
+                stream.ReadWrite(ref keyId);
+                byte[] sig = Convert.FromBase64String(this.signature);
+                Guard.Assert(sig.Length == 65);
+                stream.ReadWrite(ref sig);
+                byte[] guid = this.removalEventId.ToByteArray();
+                stream.ReadWrite(ref guid);
             }
             else
             {
+                byte[] pubKey = new byte[33];
+                stream.ReadWrite(ref pubKey);
+                this.pubKey = new PubKey(pubKey);
+
                 ulong amount = 0;
                 stream.ReadWrite(ref amount);
                 this.collateralAmount = amount;
-            }
 
-            stream.ReadWrite(ref this.colllateralMainchainAddress);
-            stream.ReadWrite(ref this.removalEventId);
+                byte[] keyId = new byte[20];
+                stream.ReadWrite(ref keyId);
+                this.colllateralMainchainAddress = new KeyId(keyId);
+
+                byte[] sig = new byte[65];
+                stream.ReadWrite(ref sig);
+                this.signature = Convert.ToBase64String(sig);
+
+                byte[] guid = new byte[16];
+                stream.ReadWrite(ref guid);
+                this.removalEventId = new Guid(guid);
+            }
         }
     }
 }
