@@ -12,7 +12,6 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
 {
     public static class TestingValues
     {
-
         /// <summary>
         /// Utility to run tests when developing. Set to null to run sidechains tests.
         /// </summary>
@@ -61,7 +60,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
             Money depositAmount = GetMoney();
             string targetAddress = GetString();
 
-            return new Deposit(depositId, depositAmount, targetAddress, hashHeightPair.Height, hashHeightPair.Hash);
+            return new Deposit(depositId, DepositRetrievalType.Normal, depositAmount, targetAddress, hashHeightPair.Height, hashHeightPair.Hash);
         }
 
         public static MaturedBlockDepositsModel GetMaturedBlockDeposits(int depositCount = 0, HashHeightPair fixedHashHeight = null)
