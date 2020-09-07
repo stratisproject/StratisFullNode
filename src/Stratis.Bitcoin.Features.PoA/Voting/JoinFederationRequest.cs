@@ -7,7 +7,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
     /// <summary>
     /// Holds the information required to service a voting request that adds this miner as a collateral federation member.
     /// </summary>
-    public interface IVotingRequest : IBitcoinSerializable
+    public interface IJoinFederationRequest : IBitcoinSerializable
     {
         /// <summary>
         /// The public key to be associated with this miner on the sidechain.
@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
     }
 
     /// <inheritdoc />
-    public class VotingRequest : IVotingRequest
+    public class JoinFederationRequest : IJoinFederationRequest
     {
         private PubKey pubKey;
         private Money collateralAmount;
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <param name="collateralAmount">The collateral amount.</param>
         /// <param name="collateralMainchainAddress">The address on the main chain that holds the collateral.</param>
         /// <param name="removalEventId">Identifies to the voting event that led to removal of this miner (if any).</param>
-        public VotingRequest(PubKey pubKey, Money collateralAmount, KeyId collateralMainchainAddress, Guid removalEventId = default)
+        public JoinFederationRequest(PubKey pubKey, Money collateralAmount, KeyId collateralMainchainAddress, Guid removalEventId = default)
         {
             this.PubKey = pubKey;
             this.CollateralAmount = collateralAmount;
@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             this.RemovalEventId = removalEventId;
         }
 
-        public VotingRequest()
+        public JoinFederationRequest()
         {
         }
 

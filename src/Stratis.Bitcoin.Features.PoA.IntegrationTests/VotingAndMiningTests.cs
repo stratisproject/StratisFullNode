@@ -418,11 +418,11 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 var minerKey = new Key();
                 var collateralKey = new Key();
                 Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(collateralKey.PubKey);
-                var request = new VotingRequest(minerKey.PubKey, new Money(10_000m, MoneyUnit.BTC), collateralKey.PubKey.Hash);
+                var request = new JoinFederationRequest(minerKey.PubKey, new Money(10_000m, MoneyUnit.BTC), collateralKey.PubKey.Hash);
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));
-                var encoder = new VotingRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
+                var encoder = new JoinFederationRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
 
-                Transaction trx = VotingRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
+                Transaction trx = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
 
                 nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
 

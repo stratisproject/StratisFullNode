@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             BitcoinAddress address = collateralScript.GetDestinationAddress(counterChainNetwork);
 
-            var votingRequest = new VotingRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), addressKey.PubKey.Hash);
+            var votingRequest = new JoinFederationRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), addressKey.PubKey.Hash);
 
             votingRequest.AddSignature(addressKey.SignMessage(votingRequest.SignatureMessage));
 
@@ -125,9 +125,9 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             }
         }
 
-        private ChainedHeaderBlock CreateBlockWithVotingRequest(VotingRequest votingRequest, int height)
+        private ChainedHeaderBlock CreateBlockWithVotingRequest(JoinFederationRequest votingRequest, int height)
         {
-            var encoder = new VotingRequestEncoder(this.loggerFactory);
+            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
 
             var votingRequestData = new List<byte>();
             votingRequestData.AddRange(encoder.Encode(votingRequest));

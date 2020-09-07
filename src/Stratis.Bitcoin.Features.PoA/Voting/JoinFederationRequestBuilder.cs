@@ -8,13 +8,13 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
-    public static class VotingRequestBuilder
+    public static class JoinFederationRequestBuilder
     {
         public const decimal VotingRequestTransferAmount = 0.01m;
         public const int VotingRequestExpectedInputCount = 1;
         public const int VotingRequestExpectedOutputCount = 2;
 
-        public static Transaction BuildTransaction(WalletTransactionHandler walletTransactionHandler, Network network, VotingRequest request, VotingRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
+        public static Transaction BuildTransaction(WalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
         {
             byte[] encodedVotingRequest = encoder.Encode(request);
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedVotingRequest));
@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return trx;
         }
 
-        public static bool IsVotingRequestTransaction(Transaction trx, VotingRequestEncoder encoder)
+        public static bool IsVotingRequestTransaction(Transaction trx, JoinFederationRequestEncoder encoder)
         {
             if (trx.Inputs.Count != VotingRequestExpectedInputCount)
                 return false;
@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             try
             {
-                VotingRequest request = encoder.Decode(ops[1].PushData);
+                JoinFederationRequest request = encoder.Decode(ops[1].PushData);
             }
             catch (Exception)
             {

@@ -7,7 +7,7 @@ using Stratis.Bitcoin.Features.PoA;
 
 namespace Stratis.Bitcoin.PoA.Features.Voting
 {
-    public class VotingRequestEncoder
+    public class JoinFederationRequestEncoder
     {
         public static readonly byte[] VotingRequestOutputPrefixBytes = new byte[] { 143, 18, 13, 250 };
 
@@ -15,13 +15,13 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
         private readonly ILogger logger;
 
-        public VotingRequestEncoder(ILoggerFactory loggerFactory)
+        public JoinFederationRequestEncoder(ILoggerFactory loggerFactory)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <summary>Encodes voting request data.</summary>
-        public byte[] Encode(VotingRequest votingRequestData)
+        public byte[] Encode(JoinFederationRequest votingRequestData)
         {
             using (var memoryStream = new MemoryStream())
             {
@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
         /// <summary>Decodes the voting request.</summary>
         /// <exception cref="PoAConsensusErrors.VotingDataInvalidFormat">Thrown in case voting data format is invalid.</exception>
-        public VotingRequest Decode(byte[] votingRequestDataBytes)
+        public JoinFederationRequest Decode(byte[] votingRequestDataBytes)
         {
             try
             {
@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
                     if (!prefix._ByteArrayEquals(VotingRequestOutputPrefixBytes))
                         PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
 
-                    var decoded = new VotingRequest();
+                    var decoded = new JoinFederationRequest();
 
                     deserializeStream.ReadWrite(ref decoded);
 
