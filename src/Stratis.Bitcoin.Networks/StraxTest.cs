@@ -31,18 +31,18 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultConfigFilename = StraxNetworkConstants.StraxDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "TSTRAX";
-            this.DefaultBanTimeSeconds = 16000; // 500 (MaxReorg) * 64 (TargetSpacing) / 2 = 4 hours, 26 minutes and 40 seconds
+            this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             var consensusFactory = new PosConsensusFactory();
 
             // Create the genesis block.
             this.GenesisTime = 1598918400; // 1 September 2020
-            this.GenesisNonce = 1831645; // TODO: Check
-            this.GenesisBits = 0x1e0fffff; // TODO: Check
+            this.GenesisNonce = 3490706; // TODO: Update this once the final block is mined
+            this.GenesisBits = 0x1e0fffff;
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward);
+            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "teststraxgenesisblock");
 
             this.Genesis = genesisBlock;
 
@@ -70,7 +70,7 @@ namespace Stratis.Bitcoin.Networks
             this.Consensus = new NBitcoin.Consensus(
                 consensusFactory: consensusFactory,
                 consensusOptions: consensusOptions,
-                coinType: 200,
+                coinType: 1, // Per https://github.com/satoshilabs/slips/blob/master/slip-0044.md - testnets share a cointype
                 hashGenesisBlock: genesisBlock.GetHash(),
                 subsidyHalvingInterval: 210000,
                 majorityEnforceBlockUpgrade: 750,
@@ -78,15 +78,15 @@ namespace Stratis.Bitcoin.Networks
                 majorityWindow: 1000,
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
-                bip34Hash: null, // TODO: Check
+                bip34Hash: null,
                 minerConfirmationWindow: 2016,
                 maxReorgLength: 500,
-                defaultAssumeValid: null,// TODO: Check
+                defaultAssumeValid: null,
                 maxMoney: long.MaxValue,
                 coinbaseMaturity: 50,
                 premineHeight: 2,
-                premineReward: Money.Coins(98000000), // TODO: Check
-                proofOfWorkReward: Money.Coins(4), // TODO: Check
+                premineReward: Money.Coins(130000000),
+                proofOfWorkReward: Money.Coins(18),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60),
                 powTargetSpacing: TimeSpan.FromSeconds(10 * 60),
                 powAllowMinDifficultyBlocks: false,
@@ -98,7 +98,7 @@ namespace Stratis.Bitcoin.Networks
                 lastPowBlock: 12500,
                 proofOfStakeLimit: new BigInteger(uint256.Parse("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeLimitV2: new BigInteger(uint256.Parse("000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
-                proofOfStakeReward: Money.COIN // TODO: Check
+                proofOfStakeReward: Money.Coins(18)
             );
 
             this.Base58Prefixes = new byte[12][];
@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Networks
             {
             };
 
-            this.Bech32Encoders = new Bech32Encoder[2]; // TODO: Check
+            this.Bech32Encoders = new Bech32Encoder[2]; // TODO: Add these in with the segwit merge
             // Bech32 is currently unsupported on Stratis - once supported uncomment lines below
             //var encoder = new Bech32Encoder("bc");
             //this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
@@ -137,45 +137,15 @@ namespace Stratis.Bitcoin.Networks
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
 
-            // 64 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 64 / 2);
+            // 45 below should be changed to TargetSpacingSeconds when we move that field.
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 45 / 2);
 
-            // TODO: Check
-            //Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000066e91e46e5a264d42c89e1204963b2ee6be230b443e9159020539d972af"));
-            //Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0x65a26bc20b0351aebf05829daefa8f7db2f800623439f3c114257c91447f1518"));
+            // TODO: Update these when the final block is mined
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000ffa0cac6d37f7c5cd8d269719a6c9f2590e5bb4ba87875b5e9563485f8a"));
+            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0x879a453c6e99e6199c0e623f5bf1965d1691a4e00cd05f713651830306ad899f"));
 
             this.RegisterRules(this.Consensus);
             this.RegisterMempoolRules(this.Consensus);
-        }
-
-        private Block CreateStraxGenesisBlock(ConsensusFactory consensusFactory, uint time, uint nonce, uint bits, int version, Money genesisReward)
-        {
-            Transaction txNew = consensusFactory.CreateTransaction();
-            txNew.Version = 1;
-            txNew.Time = time;
-            txNew.AddInput(new TxIn()
-            {
-                ScriptSig = new Script(Op.GetPushOp(0), new Op()
-                {
-                    Code = (OpcodeType)0x1,
-                    PushData = new[] { (byte)42 }
-                }, Op.GetPushOp(Encoders.ASCII.DecodeData("teststraxgenesisblock")))
-            });
-            txNew.AddOutput(new TxOut()
-            {
-                Value = genesisReward,
-            });
-
-            Block genesis = consensusFactory.CreateBlock();
-            genesis.Header.BlockTime = Utils.UnixTimeToDateTime(time);
-            genesis.Header.Bits = bits;
-            genesis.Header.Nonce = nonce;
-            genesis.Header.Version = version;
-            genesis.Transactions.Add(txNew);
-            genesis.Header.HashPrevBlock = uint256.Zero;
-            genesis.UpdateMerkleRoot();
-
-            return genesis;
         }
     }
 }
