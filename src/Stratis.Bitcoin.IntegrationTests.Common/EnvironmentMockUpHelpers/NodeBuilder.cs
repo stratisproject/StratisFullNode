@@ -165,11 +165,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <param name="network">The network the node will run on.</param>
         /// <param name="agent">Overrides the node's agent prefix.</param>
         /// <param name="configParameters">Adds to the nodes configuration parameters.</param>
-        /// <param name="isGateway">Whether the node is a Proven Headers gateway node.</param>
+        /// 
         /// <returns>The constructed PoS node.</returns>
-        public CoreNode CreateStratisPosNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null, bool isGateway = false)
+        public CoreNode CreateStratisPosNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null)
         {
-            return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent, isGateway), "stratis.conf", configParameters: configParameters);
+            return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent), "stratis.conf", configParameters: configParameters);
         }
 
         public CoreNode CloneStratisNode(CoreNode cloneNode, string agent = "StratisBitcoin")
