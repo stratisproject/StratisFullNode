@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "POA";
 
-            var consensusFactory = new PoAConsensusFactory();
+            var consensusFactory = this.GetConsensusFactory();
 
             // Create the genesis block.
             this.GenesisTime = 1513622125;
@@ -186,6 +186,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.RegisterRules(this.Consensus);
             this.RegisterMempoolRules(this.Consensus);
+        }
+
+        protected virtual PoAConsensusFactory GetConsensusFactory()
+        {
+            return new PoAConsensusFactory();
         }
 
         protected virtual void RegisterRules(IConsensus consensus)
