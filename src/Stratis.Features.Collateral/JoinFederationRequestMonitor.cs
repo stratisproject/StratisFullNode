@@ -91,7 +91,7 @@ namespace Stratis.Features.Collateral
                     }
 
                     // Populate the RemovalEventId.
-                    Poll poll = this.votingManager.GetFinishedPolls().FirstOrDefault(x => !x.IsExecuted &&
+                    Poll poll = this.votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
                           x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
                     request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.ToBytes());
