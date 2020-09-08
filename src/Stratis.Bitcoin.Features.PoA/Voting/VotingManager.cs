@@ -194,15 +194,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
         {
-            // TODO: When checking finished polls, should we check whether the finished poll aligns with the current membership state.?
-
             List<Poll> finishedPolls = this.GetFinishedPolls();
 
             if (finishedPolls.Any(x => !x.IsExecuted &&
                   x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
                   x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {
-                // We've already voted in a finished poll.
+                // We've already voted in a finished poll that's only awaiting execution.
                 return true;
             }
 
