@@ -131,7 +131,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(20_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                powTargetSpacing: TimeSpan.FromMinutes(1),
+                targetSpacing: TimeSpan.FromSeconds(16),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: true,
@@ -177,8 +177,7 @@ namespace Stratis.Sidechains.Networks
 
             this.CollateralCommitmentActivationHeight = 25810;
 
-            // 16 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 16 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0000af9ab2c8660481328d0444cf167dfd31f24ca2dbba8e5e963a2434cffa93"));
             Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("cf8ce1419bbc4870b7d4f1c084534d91126dd3283b51ec379e0a20e27bd23633"));
 

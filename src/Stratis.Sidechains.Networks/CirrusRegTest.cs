@@ -125,7 +125,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(20_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                powTargetSpacing: TimeSpan.FromMinutes(1),
+                targetSpacing: TimeSpan.FromSeconds(16),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,
@@ -166,7 +166,7 @@ namespace Stratis.Sidechains.Networks
             this.StandardScriptsRegistry = new SmartContractsStandardScriptsRegistry();
 
             // 16 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 16 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Do we need Asserts for block hash
 

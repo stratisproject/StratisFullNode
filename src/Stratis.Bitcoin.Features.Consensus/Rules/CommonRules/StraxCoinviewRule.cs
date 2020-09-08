@@ -10,15 +10,16 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
     /// </summary>
     public sealed class StraxCoinviewRule : PosCoinviewRule
     {
-        // (Provisionally) 2% of the block reward should be assigned to the reward script.
+        // 50% of the block reward should be assigned to the reward script.
         // This has to be within the coinview rule because we need access to the coinstake input value to determine the size of the block reward.
-        public static readonly int CirrusRewardPercentage = 2;
+        public static readonly int CirrusRewardPercentage = 50;
 
         // TODO: We further need to check that any transactions that spend outputs from the reward script only go to the cross-chain multisig.
 
         /// <inheritdoc />
         public override void CheckBlockReward(RuleContext context, Money fees, int height, Block block)
         {
+            // Currently this rule only applies to PoS blocks
             if (BlockStake.IsProofOfStake(block))
             {
                 var posRuleContext = context as PosRuleContext;
