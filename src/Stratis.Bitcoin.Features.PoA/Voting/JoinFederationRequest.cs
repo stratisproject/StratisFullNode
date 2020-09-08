@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         public Guid RemovalEventId
         {
             get { return this.removalEventId; }
-            private set { this.removalEventId = value; }
+            set { this.removalEventId = value; }
         }
 
         public string SignatureMessage => $"The address '{this.colllateralMainchainAddress}' is owned by '{this.PubKey.ToHex()} ({this.removalEventId})'";

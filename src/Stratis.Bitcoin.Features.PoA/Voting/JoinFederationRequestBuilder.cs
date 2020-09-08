@@ -36,29 +36,32 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return trx;
         }
 
-        public static bool IsVotingRequestTransaction(Transaction trx, JoinFederationRequestEncoder encoder)
+        public static JoinFederationRequest Deconstruct(Transaction trx, JoinFederationRequestEncoder encoder)
         {
             if (trx.Inputs.Count != VotingRequestExpectedInputCount)
-                return false;
+                return null;
 
             if (trx.Outputs.Count != VotingRequestExpectedOutputCount)
-                return false;
+                return null;
 
             IList<Op> ops = trx.Outputs[1].ScriptPubKey.ToOps();
 
             if (ops[0].Code != OpcodeType.OP_RETURN)
-                return false;
+                return null;
 
             try
             {
-                JoinFederationRequest request = encoder.Decode(ops[1].PushData);
+                return encoder.Decode(ops[1].PushData);
             }
             catch (Exception)
             {
-                return false;
+                return null;
             }
+        }
 
-            return true;
+        public static bool IsVotingRequestTransaction(Transaction trx, JoinFederationRequestEncoder encoder)
+        {
+            return Deconstruct(trx, encoder) != null;
         }
     }
 }
