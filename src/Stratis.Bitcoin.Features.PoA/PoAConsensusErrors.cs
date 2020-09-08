@@ -18,6 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public static ConsensusError VotingDataInvalidFormat => new ConsensusError("invalid-voting-data-format", "voting data format is invalid");
 
+        public static ConsensusError VotingRequestInvalidFormat => new ConsensusError("invalid-voting-request-format", "voting request format is invalid");
+
         // Collateral related errors.
         public static ConsensusError InvalidCollateralAmount => new ConsensusError("invalid-collateral-amount", "collateral requirement is not fulfilled");
 
