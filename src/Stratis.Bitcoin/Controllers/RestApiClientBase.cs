@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Controllers
         /// <summary>Delay between retries.</summary>
         private const int AttemptDelayMs = 1000;
 
-        public const int TimeoutMs = 60_000;
+        public const int TimeoutSeconds = 60;
 
         private readonly RetryPolicy policy;
 
@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Controllers
 
             using (HttpClient client = this.httpClientFactory.CreateClient())
             {
-                client.Timeout = TimeSpan.FromMilliseconds(TimeoutMs);
+                client.Timeout = TimeSpan.FromSeconds(TimeoutSeconds);
 
                 var request = new JsonContent(requestModel);
 
@@ -112,8 +112,7 @@ namespace Stratis.Bitcoin.Controllers
             return await this.ParseHttpResponseMessageAsync<Response>(response).ConfigureAwait(false);
         }
 
-        public async Task<Response> SendGetRequestAsync<Response>(string apiMethodName, string arguments = null,
-            CancellationToken cancellation = default(CancellationToken)) where Response : class
+        public async Task<Response> SendGetRequestAsync<Response>(string apiMethodName, string arguments = null, CancellationToken cancellation = default) where Response : class
         {
             HttpResponseMessage response = await this.SendGetRequestAsync(apiMethodName, arguments, cancellation).ConfigureAwait(false);
 
@@ -155,8 +154,7 @@ namespace Stratis.Bitcoin.Controllers
             return responseModel;
         }
 
-        protected async Task<HttpResponseMessage> SendGetRequestAsync(string apiMethodName, string arguments = null,
-            CancellationToken cancellation = default(CancellationToken))
+        protected async Task<HttpResponseMessage> SendGetRequestAsync(string apiMethodName, string arguments = null, CancellationToken cancellation = default)
         {
             string url = $"{this.endpointUrl}/{apiMethodName}";
 
@@ -169,7 +167,7 @@ namespace Stratis.Bitcoin.Controllers
 
             using (HttpClient client = this.httpClientFactory.CreateClient())
             {
-                client.Timeout = TimeSpan.FromMilliseconds(TimeoutMs);
+                client.Timeout = TimeSpan.FromSeconds(TimeoutSeconds);
 
                 try
                 {

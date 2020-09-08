@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
 using TracerAttributes;
@@ -134,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return false;
             }
 
-             return true;
+            return true;
         }
 
         /// <inheritdoc />

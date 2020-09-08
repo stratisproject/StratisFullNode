@@ -19,18 +19,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// </summary>
         private const int ExpectedNumberOfOutputsNoChange = 2;
 
-        /// <summary>
-        /// Deposits will have 3 outputs when there is change.
-        /// </summary>
+        /// <summary> Deposits will have 3 outputs when there is change.</summary>
         private const int ExpectedNumberOfOutputsChange = 3;
 
-        private readonly IOpReturnDataReader opReturnDataReader;
-
-        private readonly ILogger logger;
-
         private readonly Script depositScript;
-
-        public uint MinimumDepositConfirmations { get; private set; }
+        private readonly IFederatedPegSettings federatedPegSettings;
+        private readonly ILogger logger;
+        private readonly IOpReturnDataReader opReturnDataReader;
 
         public DepositExtractor(
             ILoggerFactory loggerFactory,
@@ -38,16 +33,18 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             IOpReturnDataReader opReturnDataReader)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+
             // Note: MultiSigRedeemScript.PaymentScript equals MultiSigAddress.ScriptPubKey
             this.depositScript =
                 federatedPegSettings.MultiSigRedeemScript?.PaymentScript ??
                 federatedPegSettings.MultiSigAddress?.ScriptPubKey;
+
+            this.federatedPegSettings = federatedPegSettings;
             this.opReturnDataReader = opReturnDataReader;
-            this.MinimumDepositConfirmations = federatedPegSettings.MinimumDepositConfirmations;
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight)
+        public IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType depositRetrievalType)
         {
             var deposits = new List<IDeposit>();
 
@@ -59,10 +56,14 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             foreach (Transaction transaction in block.Transactions)
             {
-                IDeposit deposit = this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash);
+                IDeposit deposit = this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash, depositRetrievalType);
                 if (deposit != null)
                 {
-                    deposits.Add(deposit);
+                    if (depositRetrievalType == DepositRetrievalType.Faster && deposit.Amount <= this.federatedPegSettings.FasterDepositThresholdAmount)
+                        deposits.Add(deposit);
+
+                    if (depositRetrievalType == DepositRetrievalType.Normal && deposit.Amount > this.federatedPegSettings.FasterDepositThresholdAmount)
+                        deposits.Add(deposit);
                 }
             }
 
@@ -70,20 +71,19 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash, DepositRetrievalType depositRetrievalType)
         {
             // Coinbases can't have deposits.
             if (transaction.IsCoinBase)
                 return null;
 
             // Deposits have a certain structure.
-            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange
-                && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
+            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
                 return null;
 
-            List<TxOut> depositsToMultisig = transaction.Outputs.Where(output =>
-                output.ScriptPubKey == this.depositScript
-                && output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
+            var depositsToMultisig = transaction.Outputs.Where(output =>
+                output.ScriptPubKey == this.depositScript &&
+                output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
 
             if (!depositsToMultisig.Any())
                 return null;
@@ -91,13 +91,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
                 return null;
 
-            this.logger.LogDebug("Processing a received deposit transaction with address: {0}. Transaction hash: {1}.",
-                targetAddress, transaction.GetHash());
+            this.logger.LogDebug("Processing a received deposit transaction with address: {0}. Transaction hash: {1}.", targetAddress, transaction.GetHash());
 
-            return new Deposit(transaction.GetHash(), depositsToMultisig.Sum(o => o.Value), targetAddress, blockHeight, blockHash);
+            return new Deposit(transaction.GetHash(), depositRetrievalType, depositsToMultisig.Sum(o => o.Value), targetAddress, blockHeight, blockHash);
         }
 
-        public MaturedBlockDepositsModel ExtractBlockDeposits(ChainedHeaderBlock blockToExtractDepositsFrom)
+        /// <inheritdoc />
+        public MaturedBlockDepositsModel ExtractBlockDeposits(ChainedHeaderBlock blockToExtractDepositsFrom, DepositRetrievalType depositRetrievalType)
         {
             Guard.NotNull(blockToExtractDepositsFrom, nameof(blockToExtractDepositsFrom));
 
@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 BlockTime = blockToExtractDepositsFrom.ChainedHeader.Header.Time
             };
 
-            IReadOnlyList<IDeposit> deposits = this.ExtractDepositsFromBlock(blockToExtractDepositsFrom.Block, blockToExtractDepositsFrom.ChainedHeader.Height);
+            IReadOnlyList<IDeposit> deposits = ExtractDepositsFromBlock(blockToExtractDepositsFrom.Block, blockToExtractDepositsFrom.ChainedHeader.Height, depositRetrievalType);
 
             return new MaturedBlockDepositsModel(maturedBlockModel, deposits);
         }

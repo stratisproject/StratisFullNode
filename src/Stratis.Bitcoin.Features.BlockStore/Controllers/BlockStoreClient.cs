@@ -12,10 +12,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
     public interface IBlockStoreClient : IRestApiClientBase
     {
         /// <summary><see cref="BlockStoreController.GetAddressesBalances"/></summary>
-        Task<AddressBalancesResult> GetAddressBalancesAsync(IEnumerable<string> addresses, int minConfirmations, CancellationToken cancellation = default(CancellationToken));
+        Task<AddressBalancesResult> GetAddressBalancesAsync(IEnumerable<string> addresses, int minConfirmations, CancellationToken cancellation = default);
 
         /// <summary><see cref="BlockStoreController.GetVerboseAddressesBalancesData"/></summary>
-        Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default(CancellationToken));
+        Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default);
     }
 
     /// <inheritdoc cref="IBlockStoreClient"/>
@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         }
 
         /// <inheritdoc />
-        public Task<AddressBalancesResult> GetAddressBalancesAsync(IEnumerable<string> addresses, int minConfirmations, CancellationToken cancellation = default(CancellationToken))
+        public Task<AddressBalancesResult> GetAddressBalancesAsync(IEnumerable<string> addresses, int minConfirmations, CancellationToken cancellation = default)
         {
             string addrString = string.Join(",", addresses);
 
@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         }
 
         /// <inheritdoc />
-        public Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default(CancellationToken))
+        public Task<VerboseAddressBalancesResult> GetVerboseAddressesBalancesDataAsync(IEnumerable<string> addresses, CancellationToken cancellation = default)
         {
             string addrString = string.Join(",", addresses);
 

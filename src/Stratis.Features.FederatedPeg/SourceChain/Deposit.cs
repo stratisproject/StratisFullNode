@@ -6,9 +6,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public class Deposit : IDeposit
     {
-        public Deposit(uint256 id, Money amount, string targetAddress, int blockNumber, uint256 blockHash)
+        public Deposit(uint256 id, DepositRetrievalType retrievalType, Money amount, string targetAddress, int blockNumber, uint256 blockHash)
         {
             this.Id = id;
+            this.RetrievalType = retrievalType;
             this.Amount = amount;
             this.TargetAddress = targetAddress;
             this.BlockNumber = blockNumber;
@@ -29,6 +30,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         /// <inheritdoc />
         public uint256 BlockHash { get; }
+
+        /// <inheritdoc />
+        public DepositRetrievalType RetrievalType { get; }
 
         /// <inheritdoc />
         public override string ToString()
