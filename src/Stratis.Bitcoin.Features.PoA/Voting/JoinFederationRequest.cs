@@ -36,6 +36,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
         /// <summary>
         /// The identifier for the event that previously removed this miner (if any). Guards against replaying of voting requests.
+        /// The value is set to <c>Guid.Empty</c> when there is no preceding removal event.
         /// </summary>
         Guid RemovalEventId { get; }
     }
