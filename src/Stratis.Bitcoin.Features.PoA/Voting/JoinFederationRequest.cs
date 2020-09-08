@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         /// <summary>
         /// The version of this class.
         /// </summary>
-        public int Version { get; }
+        int Version { get; }
 
         /// <summary>
         /// The public key to be associated with this miner on the sidechain.
