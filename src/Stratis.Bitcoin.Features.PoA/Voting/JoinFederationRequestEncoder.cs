@@ -11,8 +11,6 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
     {
         public static readonly byte[] VotingRequestOutputPrefixBytes = new byte[] { 143, 18, 13, 250 };
 
-        public const int VotingRequestDataMaxSerializedSize = ushort.MaxValue;
-
         private readonly ILogger logger;
 
         public JoinFederationRequestEncoder(ILoggerFactory loggerFactory)
@@ -40,12 +38,6 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
         {
             try
             {
-                if (votingRequestDataBytes.Length > VotingRequestDataMaxSerializedSize)
-                {
-                    this.logger.LogTrace("(-)[INVALID_SIZE]");
-                    PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
-                }
-
                 using (var memoryStream = new MemoryStream(votingRequestDataBytes))
                 {
                     var deserializeStream = new BitcoinStream(memoryStream, false);
@@ -58,6 +50,12 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
                     var decoded = new JoinFederationRequest();
 
                     deserializeStream.ReadWrite(ref decoded);
+
+                    if (deserializeStream.ProcessedBytes != votingRequestDataBytes.Length)
+                    {
+                        this.logger.LogTrace("(-)[INVALID_SIZE]");
+                        PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
+                    }
 
                     return decoded;
                 }
