@@ -21,17 +21,15 @@ namespace Stratis.Features.Collateral
         private readonly ISignals signals;
         private SubscriptionToken blockConnectedToken;
         private readonly VotingManager votingManager;
-        private readonly IFederationManager federationManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, IFederationManager federationManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, ILoggerFactory loggerFactory)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, ILoggerFactory loggerFactory)
         {
             this.signals = signals;
             this.loggerFactory = loggerFactory;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.votingManager = votingManager;
-            this.federationManager = federationManager;
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
         }
@@ -45,14 +43,12 @@ namespace Stratis.Features.Collateral
 
         private void OnBlockConnected(BlockConnected blockConnectedData)
         {
+            if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
+                return;
+
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
 
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
-            List<Poll> finishedPolls = null;
-            List<Poll> pendingPolls = null;
-
-            if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
-                return;
 
             for (int i = 0; i < transactions.Count; i++)
             {
@@ -94,10 +90,8 @@ namespace Stratis.Features.Collateral
                         continue;
                     }
 
-                    finishedPolls = finishedPolls ?? this.votingManager.GetFinishedPolls();
-
                     // Populate the RemovalEventId.
-                    Poll poll = finishedPolls.FirstOrDefault(x => !x.IsExecuted &&
+                    Poll poll = this.votingManager.GetFinishedPolls().FirstOrDefault(x => !x.IsExecuted &&
                           x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
                     request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.ToBytes());
