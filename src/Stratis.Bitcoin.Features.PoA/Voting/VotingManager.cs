@@ -226,6 +226,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return false;
         }
 
+        public bool IsFederationMember(PubKey pubKey)
+        {
+            return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
+        }
+
         private bool IsVotingOnMultisigMember(VotingData votingData)
         {
             if (votingData.Key != VoteKey.AddFederationMember && votingData.Key != VoteKey.KickFederationMember)

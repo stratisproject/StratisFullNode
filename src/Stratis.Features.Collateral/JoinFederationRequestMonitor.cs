@@ -61,11 +61,14 @@ namespace Stratis.Features.Collateral
                     if (request == null)
                         continue;
 
-                    // TODO: Skip if the member already exists.
+                    // Skip if the member already exists.
+                    if (this.votingManager.IsFederationMember(request.PubKey))
+                        continue;
 
                     // Check if the collateral amount is valid.
+                    // Voting only works on non-multisig members.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
-                    if (collateralAmount != 10_000m && collateralAmount != 50_000m)
+                    if (collateralAmount != 10_000m)
                     {
                         this.logger.LogDebug("Ignoring voting request with invalid collateral amount '{0}'.", collateralAmount);
 
@@ -75,10 +78,7 @@ namespace Stratis.Features.Collateral
                     // Fill in the request.removalEventId (if any).
                     Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
                     
-                    // TODO: Perhaps there is a better way than this.
-                    bool isMultisigMember = collateralAmount == 50_000m;
-
-                    var collateralFederationMember = new CollateralFederationMember(request.PubKey, isMultisigMember, request.CollateralAmount, collateralScript.GetDestinationAddress(this.counterChainNetwork).ToString());
+                    var collateralFederationMember = new CollateralFederationMember(request.PubKey, false, request.CollateralAmount, collateralScript.GetDestinationAddress(this.counterChainNetwork).ToString());
 
                     byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(collateralFederationMember);
 
