@@ -12,7 +12,6 @@ using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Consensus.Behaviors
@@ -23,20 +22,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
     public class ProvenHeadersConsensusManagerBehavior : ConsensusManagerBehavior
     {
         private readonly Network network;
-
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
         private readonly IProvenBlockHeaderStore provenBlockHeaderStore;
         private readonly int lastCheckpointHeight;
         private readonly CheckpointInfo lastCheckpointInfo;
         private readonly ConnectionManagerSettings connectionManagerSettings;
-
-        /// <summary>
-        /// Specify if the node is a gateway or not.
-        /// Gateway are used internally by Stratis to prevent network split during the transition from Headers to ProvenHeaders protocol.
-        /// Gateways can only receive headers and blocks from whitelisted nodes.
-        /// </summary>
-        private readonly bool isGateway;
 
         public ProvenHeadersConsensusManagerBehavior(
             ChainIndexer chainIndexer,
@@ -58,8 +48,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
             this.lastCheckpointInfo = this.checkpoints.GetCheckpoint(this.lastCheckpointHeight);
 
             this.connectionManagerSettings = connectionManagerSettings;
-
-            this.isGateway = this.connectionManagerSettings.IsGateway;
         }
 
         /// <inheritdoc />
@@ -121,9 +109,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
             // If getHeadersPayload isn't a GetProvenHeadersPayload, return base implementation result
             if (!(getHeadersPayload is GetProvenHeadersPayload))
             {
-                var headersPayload = base.ConstructHeadersPayload(getHeadersPayload, out lastHeader) as HeadersPayload;
-
-                if (headersPayload == null)
+                if (!(base.ConstructHeadersPayload(getHeadersPayload, out lastHeader) is HeadersPayload headersPayload))
                 {
                     this.logger.LogTrace("(-)[INVALID_LOCATOR]:null");
                     return null;
@@ -255,26 +241,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
             INetworkPeer peer = this.AttachedPeer;
 
             bool aboveLastCheckpoint = this.GetCurrentHeight() >= this.lastCheckpointHeight;
-
             if (!aboveLastCheckpoint)
             {
                 // If proven header isn't activated, build a legacy header request
                 // TODO: If the current ExpectedPeerTip is less then MaxItemsPerHeadersMessage from the last checkpoint we can set the GetProvenHeadersPayload.HashStop to be the hash of the last checkpoint (this will prevent sending over regular headers beyond last checkpoint).
                 return base.BuildGetHeadersPayload();
-            }
-
-            if (this.isGateway)
-            {
-                if (peer.IsWhitelisted())
-                {
-                    // A gateway node can only sync using regular headers and from whitelisted peers
-                    this.logger.LogDebug("Node is a gateway, sync regular headers from whitelisted peer.");
-                    this.logger.LogTrace("(-)[PEER_WHITELISTED_BY_GATEWAY]");
-                    return base.BuildGetHeadersPayload();
-                }
-
-                this.logger.LogTrace("(-)[PEER_NOT_WHITELISTED_BY_GATEWAY]:null");
-                return null;
             }
 
             if (this.CanPeerProcessProvenHeaders(peer))
@@ -294,12 +265,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
         /// <inheritdoc />
         protected override Task ProcessHeadersAsync(INetworkPeer peer, List<BlockHeader> headers)
         {
-            if (this.isGateway)
-            {
-                this.logger.LogDebug("Node is a gateway, cannot sync from Proven Headers. Ignoring received headers.");
-                return Task.CompletedTask;
-            }
-
             return base.ProcessHeadersAsync(peer, headers);
         }
 
@@ -311,15 +276,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
         /// <param name="headers">The headers.</param>
         protected async Task ProcessLegacyHeadersAsync(INetworkPeer peer, List<BlockHeader> headers)
         {
-            if (this.isGateway && peer.IsWhitelisted())
-            {
-                this.logger.LogDebug("Node is a gateway, can only sync regular headers from whitelisted peer.");
-                await base.ProcessHeadersAsync(peer, headers);
-
-                this.logger.LogTrace("(-)[GATEWAY_AND_WHITELISTED]");
-                return;
-            }
-
             bool belowLastCheckpoint = this.GetCurrentHeight() <= this.lastCheckpointHeight;
             if (!belowLastCheckpoint)
             {
