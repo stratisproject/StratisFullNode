@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Castle.Core.Logging;
 using DBreeze.Utils;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
@@ -14,7 +13,6 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Tests.Common;
@@ -391,7 +389,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         [Fact]
         public async Task CanMineVotingRequestTransactionAsync()
         {
-            TestPoANetwork network = new TestPoANetwork();
+            var network = new TestPoACollateralNetwork();
 
             using (PoANodeBuilder builder = PoANodeBuilder.CreatePoANodeBuilder(this))
             {
@@ -402,8 +400,10 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 Money transferAmount = Money.Coins(0.01m);
                 Money feeAmount = Money.Coins(0.0001m);
 
-                CoreNode nodeA = builder.CreatePoANode(network, network.FederationKey1).WithWallet(walletPassword, walletName).Start();
-                CoreNode nodeB = builder.CreatePoANode(network, network.FederationKey2).WithWallet(walletPassword, walletName).Start();
+                var counterchainNetwork = new StratisTest();
+
+                CoreNode nodeA = builder.CreatePoANodeWithCounterchain(network, counterchainNetwork, network.FederationKey1).WithWallet(walletPassword, walletName).Start();
+                CoreNode nodeB = builder.CreatePoANodeWithCounterchain(network, counterchainNetwork, network.FederationKey2).WithWallet(walletPassword, walletName).Start();
 
                 TestHelper.Connect(nodeA, nodeB);
 
@@ -441,6 +441,9 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 
                     return balance == feeAmount;
                 });
+
+                Assert.Single(nodeA.FullNode.NodeService<VotingManager>().GetPendingPolls());
+                Assert.Single(nodeB.FullNode.NodeService<VotingManager>().GetPendingPolls());
             }
         }
 
