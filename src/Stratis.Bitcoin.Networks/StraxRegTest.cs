@@ -19,9 +19,10 @@ namespace Stratis.Bitcoin.Networks
             this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("RtrX")); ;
             this.DefaultPort = 17200;
             this.DefaultMaxOutboundConnections = 16;
-            this.DefaultMaxInboundConnections = 109;
+            this.DefaultMaxInboundConnections = 100;
             this.DefaultRPCPort = 18200;
-            this.DefaultAPIPort = 38221;
+            this.DefaultAPIPort = 37200;
+            this.DefaultSignalRPort = 38200;
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
@@ -82,7 +83,7 @@ namespace Stratis.Bitcoin.Networks
                 premineReward: Money.Coins(130000000),
                 proofOfWorkReward: Money.Coins(18),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                powTargetSpacing: TimeSpan.FromSeconds(10 * 60),
+                targetSpacing: TimeSpan.FromSeconds(45),
                 powAllowMinDifficultyBlocks: true,
                 posNoRetargeting: true,
                 powNoRetargeting: true,
@@ -116,8 +117,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
 
-            // 45 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 45 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update this once the final block is mined
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000042266634fa92136e4c50392007ec8f530d297fb89bc430d26ff2d9bc557"));

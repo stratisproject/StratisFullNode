@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Networks
                 premineReward: Money.Coins(130000000),
                 proofOfWorkReward: Money.Coins(18),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60),
-                powTargetSpacing: TimeSpan.FromSeconds(10 * 60),
+                targetSpacing: TimeSpan.FromSeconds(45),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: false,
@@ -141,8 +141,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
 
-            // 45 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 45 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000016c94cd31b3b84465335f7ceca6491ae6b54c7b8fafc6862e78b090ebe3"));
