@@ -1,29 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NBitcoin.DataEncoders;
-using NBitcoin.Protocol;
 using Stratis.Bitcoin.Base.Deployments;
-using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
-using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.ColdStaking;
-using Stratis.Bitcoin.Features.Consensus;
-using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
-using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.Miner.Staking;
 using Stratis.Bitcoin.Features.RPC;
-using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.IntegrationTests.Common;
@@ -36,7 +27,6 @@ using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.Extensions;
-using Stratis.Features.SQLiteWalletRepository;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
@@ -292,7 +282,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Even though we are mining, we still want to use PoS consensus rules.
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).Start();
+                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).Start();
 
                 // Create a Segwit P2WPKH scriptPubKey.
                 var script = new Key().PubKey.WitHash.ScriptPubKey;
@@ -407,8 +397,8 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).Start();
-                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).Start();
+                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).Start();
+                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).Start();
 
                 IConnectionManager listenerConnMan = listener.FullNode.NodeService<IConnectionManager>();
                 listenerConnMan.Parameters.TemplateBehaviors.Add(new TestBehavior());
@@ -450,12 +440,12 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // We have to name the networks differently because the NBitcoin network registration won't allow two identical networks to coexist otherwise.
-                var network = new StratisRegTest();
-                network.SetPrivatePropertyValue("Name", "StratisRegTestWithDeployments");
+                var network = new StraxRegTest();
+                network.SetPrivatePropertyValue("Name", "StraxRegTestWithDeployments");
                 Assert.NotNull(network.Consensus.BIP9Deployments[2]);
 
-                var networkNoBIP9 = new StratisRegTest();
-                networkNoBIP9.SetPrivatePropertyValue("Name", "StratisRegTestWithoutDeployments");
+                var networkNoBIP9 = new StraxRegTest();
+                networkNoBIP9.SetPrivatePropertyValue("Name", "StraxRegTestWithoutDeployments");
                 Assert.NotNull(networkNoBIP9.Consensus.BIP9Deployments[2]);
 
                 // Remove BIP9 deployments (i.e. segwit).
@@ -522,8 +512,8 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
+                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
 
                 IConnectionManager listenerConnMan = listener.FullNode.NodeService<IConnectionManager>();
                 listenerConnMan.Parameters.TemplateBehaviors.Add(new TestBehavior());
@@ -621,8 +611,8 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
+                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
 
                 TestHelper.Connect(listener, node);
 
@@ -780,205 +770,6 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length == 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
                 TestBase.WaitLoop(() => listener.CreateRPCClient().GetRawMempool().Length == 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
-            }
-        }
-
-        [Fact]
-        public void StakeSegwitBlock_On_SBFN_Check_StratisX_Syncs_When_SBFN_Initiates_Connection()
-        {
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                // Even though we are mining, we still want to use PoS consensus rules.
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-
-                // Need the premine to be past coinbase maturity so that we can stake with it.
-                RPCClient rpc = node.CreateRPCClient();
-                rpc.Generate(12);
-
-                var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token;
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 12, cancellationToken: cancellationToken);
-
-                // Now need to start staking.
-                var staker = node.FullNode.NodeService<IPosMinting>() as PosMinting;
-
-                staker.Stake(new WalletSecret()
-                {
-                    WalletName = node.WalletName,
-                    WalletPassword = node.WalletPassword
-                });
-
-                // Wait for the chain height to increase.
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-
-                // Get the first staked block.
-                Block block = node.FullNode.ChainIndexer.GetHeader(13).Block;
-
-                // Confirm that the staked block is Segwit-ted.
-                Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
-
-                // We presume that the consensus rules are checking the actual validity of the commitment, we just ensure that it exists here.
-                Assert.NotNull(commitment);
-
-                CoreNode stratisX = builder.CreateStratisXNode().Start();
-
-                // Now connect the stratisX node and allow it to sync.
-                node.CreateRPCClient().AddNode(stratisX.Endpoint);
-
-                TestBase.WaitLoop(() => stratisX.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-            }
-        }
-
-        [Fact]
-        public void StakeSegwitBlock_On_SBFN_Check_StratisX_Syncs_When_StratisX_Initiates_Connection()
-        {
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                // Even though we are mining, we still want to use PoS consensus rules.
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-
-                // Need the premine to be past coinbase maturity so that we can stake with it.
-                RPCClient rpc = node.CreateRPCClient();
-                rpc.Generate(12);
-
-                var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token;
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 12, cancellationToken: cancellationToken);
-
-                // Now need to start staking.
-                var staker = node.FullNode.NodeService<IPosMinting>() as PosMinting;
-
-                staker.Stake(new WalletSecret()
-                {
-                    WalletName = node.WalletName,
-                    WalletPassword = node.WalletPassword
-                });
-
-                // Wait for the chain height to increase.
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-
-                // Get the first staked block.
-                Block block = node.FullNode.ChainIndexer.GetHeader(13).Block;
-
-                // Confirm that the staked block is Segwit-ted.
-                Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
-
-                // We presume that the consensus rules are checking the actual validity of the commitment, we just ensure that it exists here.
-                Assert.NotNull(commitment);
-
-                // stratisX appears to have problems with addnode RPC calls sent after the node has started up, so set the endpoint in the config instead.
-                var parameters = new NodeConfigParameters { { "addnode", node.Endpoint.ToString() } };
-
-                // Start the stratisX node and allow it to sync.
-                // The P2P behaviours can have asymmetric rules about version requirements, so we have to test in both directions.
-                CoreNode stratisX = builder.CreateStratisXNode(configParameters: parameters).Start();
-
-                TestBase.WaitLoop(() => stratisX.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-            }
-        }
-
-        [Fact]
-        public void StakeSegwitBlock_On_SBFN_Connected_To_SBFN_Check_StratisX_Syncs_When_StratisX_Connects_Later()
-        {
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                CoreNode node1 = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-                CoreNode node2 = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-
-                // Need the premine to be past coinbase maturity so that we can stake with it.
-                RPCClient rpc = node1.CreateRPCClient();
-                rpc.Generate(12);
-
-                var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token;
-                TestBase.WaitLoop(() => node1.CreateRPCClient().GetBlockCount() >= 12, cancellationToken: cancellationToken);
-
-                TestHelper.ConnectAndSync(node1, node2);
-
-                // Now need to start staking on one of the SBFN nodes.
-                var staker = node1.FullNode.NodeService<IPosMinting>() as PosMinting;
-
-                staker.Stake(new WalletSecret()
-                {
-                    WalletName = node1.WalletName,
-                    WalletPassword = node1.WalletPassword
-                });
-
-                // Wait for the chain height to increase.
-                TestBase.WaitLoop(() => node1.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-
-                // Get the first staked block.
-                Block block = node1.FullNode.ChainIndexer.GetHeader(13).Block;
-
-                // Confirm that the staked block is Segwit-ted.
-                Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node1.FullNode.Network, block);
-
-                Assert.NotNull(commitment);
-
-                // Wait for the other SBFN node to sync.
-                TestBase.WaitLoop(() => node2.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-
-                // The idea here is that the second SBFN node has received and validated a segwit block from node1. So it should now be expecting witness data from its other peers.
-                // However, for this test we only sync stratisX rather than allow it to mine.
-                var parameters = new NodeConfigParameters { { "addnode", node2.Endpoint.ToString() } };
-
-                // Start the stratisX node and allow it to sync.
-                // The P2P behaviours can have asymmetric rules about version requirements, so we have to test in both directions.
-                CoreNode stratisX = builder.CreateStratisXNode(configParameters: parameters).Start();
-
-                TestBase.WaitLoop(() => stratisX.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
-            }
-        }
-
-        [Fact]
-        public void Mine_On_StratisX_SBFN_Syncs_Via_Intermediary_Gateway_Node()
-        {
-            using (NodeBuilder builder = NodeBuilder.Create(this).WithLogsEnabled())
-            {
-                CoreNode stratisX = builder.CreateStratisXNode().Start();
-
-                // Generate some blocks on the X node
-                RPCClient rpc = stratisX.CreateRPCClient();
-                rpc.SendCommand(RPCOperations.generate, 12);
-
-                // Node 1 is the SBFN gateway node
-                var callback = new Action<IFullNodeBuilder>(build => build
-                    .UseBlockStore()
-                    .UsePosConsensus()
-                    .UseMempool()
-                    .UseColdStakingWallet()
-                    .AddSQLiteWalletRepository()
-                    .AddPowPosMining(false)
-                    .AddRPC());
-
-                var config = new NodeConfigParameters
-                {
-                    {"whitebind", "0.0.0.0"},
-                    {"gateway", "1"}
-                };
-
-                CoreNode node1 = builder
-                    .CreateCustomNode(callback, KnownNetworks.StratisRegTest, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, minProtocolVersion: ProtocolVersion.ALT_PROTOCOL_VERSION, configParameters: config)
-                    .WithWallet().Start();
-
-                // Connect inbound to the gateway node so that the X node isn't disconnected for not being able to provide witness data
-                // This test should not have an outbound connection to stratisX in order to simulate a 'real' environment
-                // Addnode does not work properly with stratisX, because it only attempts connections to nodes added this way every 2 minutes.
-                rpc.AddNode(node1.Endpoint);
-
-                // We have to wait up to 3 minutes here
-                var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(3)).Token;
-                TestBase.WaitLoop(() => node1.CreateRPCClient().GetBlockCount() >= 12, cancellationToken: cancellationToken);
-
-                // Node 2 is the 'ordinary' SBFN node
-                CoreNode node2 = builder.CreateStratisPosNode(KnownNetworks.StratisRegTest).WithWallet().Start();
-
-                TestHelper.ConnectAndSync(node1, node2);
-
-                // Get the last received block from node2 after it syncs
-                Block block = node1.FullNode.ChainIndexer.GetHeader(12).Block;
-
-                // The block will not have a witness commitment, as it was mined by stratisX
-                Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node1.FullNode.Network, block);
-
-                Assert.Null(commitment);
             }
         }
     }
