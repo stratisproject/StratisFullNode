@@ -80,6 +80,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 AddressType = this.AddressType,
                 AddressIndex = addressIndex,
                 ScriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey).ToHex(),
+                Bech32ScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey).ToHex(),
                 PubKeyScript = pubKey.ScriptPubKey.ToHex()
             };
         }

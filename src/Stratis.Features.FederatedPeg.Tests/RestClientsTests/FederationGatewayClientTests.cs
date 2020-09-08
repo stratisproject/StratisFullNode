@@ -30,8 +30,7 @@ namespace Stratis.Features.FederatedPeg.Tests.RestClientsTests
         [Fact]
         public async Task ReturnsNullIfCounterChainNodeIsOfflineAsync()
         {
-            SerializableResult<List<MaturedBlockDepositsModel>> result = await this.client.GetMaturedBlockDepositsAsync(new MaturedBlockRequestModel(100, 10));
-
+            SerializableResult<List<MaturedBlockDepositsModel>> result = await this.client.GetMaturedBlockDepositsAsync(100);
             Assert.Null(result);
         }
     }

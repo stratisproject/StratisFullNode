@@ -25,11 +25,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         public int Count => this.GetTransactions().Count();
         public bool IsReadOnly => true;
 
-        public AddressIdentifier GetAddressIdentifier()
-        {
-            return this.repository.GetAddressIdentifier(this.wallet.Name, this.account.Name, this.Address.AddressCollection.AddressType, this.Address.Index);
-        }
-
         private IEnumerable<TransactionData> GetTransactions()
         {
             // TODO: if (this.transactions == null)

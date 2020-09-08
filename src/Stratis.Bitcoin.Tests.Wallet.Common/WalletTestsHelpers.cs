@@ -603,11 +603,11 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
         /// <param name="name">The name.</param>
         /// <param name="password">The password.</param>
         /// <returns>The generated wallet.</returns>
-        public Features.Wallet.Wallet GenerateBlankWallet(string name, string password, IWalletRepository walletRepository = null)
+        public (Features.Wallet.Wallet, ExtKey) GenerateBlankWallet(string name, string password, IWalletRepository walletRepository = null)
         {
-            Features.Wallet.Wallet newWallet = WalletTestsHelpers.GenerateBlankWallet(name, password, walletRepository);
+            (Features.Wallet.Wallet newWallet, ExtKey extKey) = WalletTestsHelpers.GenerateBlankWalletWithExtKey(name, password, walletRepository);
 
-            return newWallet;
+            return (newWallet, extKey);
         }
     }
 }

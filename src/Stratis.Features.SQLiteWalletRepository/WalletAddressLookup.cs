@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SQLiteWalletRepository.External;
@@ -83,6 +84,9 @@ namespace Stratis.Features.SQLiteWalletRepository
             foreach (HDAddress address in addresses)
             {
                 this.Add(Script.FromHex(address.ScriptPubKey));
+
+                // We need to add the P2WPKH scriptPubKey as an address of interest too
+                this.Add(Script.FromHex(address.Bech32ScriptPubKey));
             }
         }
 

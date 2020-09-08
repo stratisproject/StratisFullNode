@@ -426,10 +426,11 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var commands = JsonDataSerializer.Instance.Deserialize<List<RpcCommandModel>>(this.responseText);
 
-            commands.Count.Should().Be(33);
+            commands.Count.Should().Be(34);
             commands.Should().Contain(x => x.Command == "stop");
             commands.Should().Contain(x => x.Command == "getrawtransaction <txid> [<verbose>] [<blockhash>]");
             commands.Should().Contain(x => x.Command == "gettxout <txid> <vout> [<includemempool>]");
+            commands.Should().Contain(x => x.Command == "gettxoutproof <txids> [<blockhash>]");
             commands.Should().Contain(x => x.Command == "getblockcount");
             commands.Should().Contain(x => x.Command == "getinfo");
             commands.Should().Contain(x => x.Command == "getblockheader <hash> [<isjsonformat>]");

@@ -901,7 +901,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 foreach (string walletName in this.WalletRepository.GetWalletNames())
                 {
-                    int walletId = this.WalletRepository.GetAddressIdentifier(walletName).WalletId;
+                    int walletId = this.WalletRepository.GetWalletId(walletName);
 
                     if (!this.WalletRepository.GetWalletAddressLookup(walletName).Contains(scriptPubKey, out AddressIdentifier addressIdentifier))
                         continue;

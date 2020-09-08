@@ -147,7 +147,7 @@ namespace Stratis.Features.FederatedPeg
             this.federationWalletManager.Start();
 
             // Query the other chain every N seconds for deposits. Triggers signing process if deposits are found.
-            this.maturedBlocksSyncManager.Start();
+            await this.maturedBlocksSyncManager.StartAsync();
 
             // Syncs the wallet correctly when restarting the node. i.e. deals with reorgs.
             this.walletSyncManager.Initialize();
@@ -378,7 +378,9 @@ namespace Stratis.Features.FederatedPeg
                     .DependOn<CounterChainFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<IMaturedBlocksProvider, MaturedBlocksProvider>();
+                        // This should be transient as we want to create a new instance everytime with creation of the FederationGateWayController.
+                        services.AddTransient<IMaturedBlocksProvider, MaturedBlocksProvider>();
+
                         services.AddSingleton(federatedPegOptions ?? new FederatedPegOptions());
                         services.AddSingleton<IFederatedPegSettings, FederatedPegSettings>();
                         services.AddSingleton<IOpReturnDataReader, OpReturnDataReader>();

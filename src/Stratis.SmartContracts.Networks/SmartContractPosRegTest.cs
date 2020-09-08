@@ -81,7 +81,7 @@ namespace Stratis.SmartContracts.Networks
                 premineReward: Money.Zero,
                 proofOfWorkReward: Money.Coins(50),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                powTargetSpacing: TimeSpan.FromSeconds(10 * 60),
+                targetSpacing: TimeSpan.FromSeconds(64),
                 powAllowMinDifficultyBlocks: true,
                 posNoRetargeting: true,
                 powNoRetargeting: true,

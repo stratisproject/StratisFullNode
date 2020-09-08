@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.ConsensusManager
             double blocksPerMinute = this.TotalConnectionTime.GetAvgExecutionTimeCountMin();
             builder.AppendLine($"Blocks per minute: {blocksPerMinute}");
             double minutesFromNowToTip = (DateTime.UtcNow - this.chainIndex.Tip.Header.BlockTime.DateTime).TotalMinutes;
-            double blockTime = this.chainIndex.Network.Consensus.PowTargetSpacing.TotalMinutes;
+            double blockTime = this.chainIndex.Network.Consensus.TargetSpacing.TotalMinutes;
             double expectedRemainingBlocks = minutesFromNowToTip / blockTime;
             if (blocksPerMinute != 0)
                 builder.AppendLine($"Estimated time to full sync: {Math.Round(TimeSpan.FromMinutes(expectedRemainingBlocks / blocksPerMinute).TotalHours, 2)} hours");

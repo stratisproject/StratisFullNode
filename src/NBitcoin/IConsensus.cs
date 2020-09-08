@@ -64,7 +64,8 @@ namespace NBitcoin
 
         TimeSpan PowTargetTimespan { get; }
 
-        TimeSpan PowTargetSpacing { get; }
+        /// <summary>Expected (or target) block time in seconds.</summary>
+        TimeSpan TargetSpacing { get; }
 
         bool PowAllowMinDifficultyBlocks { get; }
 

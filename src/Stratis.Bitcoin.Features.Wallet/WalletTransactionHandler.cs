@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 Dictionary<OutPoint, UnspentOutputReference> availableHashList = context.UnspentOutputs.ToDictionary(item => item.ToOutPoint(), item => item);
 
                 if (!context.SelectedInputs.All(input => availableHashList.ContainsKey(input)))
-                    throw new WalletException("Not all the selected inputs were found on the wallet.");
+                    throw new WalletException("Not all the selected inputs were found in the wallet.");
 
                 if (!context.AllowOtherInputs)
                 {

@@ -129,7 +129,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 premineReward: Money.Coins(100_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                powTargetSpacing: TimeSpan.FromSeconds(60),
+                targetSpacing: TimeSpan.FromSeconds(60),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,

@@ -12,6 +12,7 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Interfaces;
@@ -37,6 +38,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
         private readonly Network network;
         private readonly NodeSettings nodeSettings;
 
+        private readonly Mock<IConsensusManager> consensusManager;
         private readonly Mock<IBlockStore> blockStore;
         private readonly Mock<IGetUnspentTransaction> getUnspentTransaction;
         private readonly Mock<INetworkDifficulty> networkDifficulty;
@@ -60,6 +62,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             this.nodeSettings = new NodeSettings(networksSelector: Networks.Networks.Bitcoin);
             this.peerBanning = new Mock<IPeerBanning>();
 
+            this.consensusManager = new Mock<IConsensusManager>();
             this.blockStore = new Mock<IBlockStore>();
             this.getUnspentTransaction = new Mock<IGetUnspentTransaction>();
             this.networkDifficulty = new Mock<INetworkDifficulty>();
@@ -79,6 +82,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 this.network,
                 this.asyncProvider.Object,
                 this.selfEndpointTracker.Object,
+                this.consensusManager.Object,
                 this.blockStore.Object,
                 this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object,
@@ -127,7 +131,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Verifiable();
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
 
             string txid = txId.ToString();
@@ -151,7 +155,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Returns(transaction);
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             bool verbose = false;
@@ -190,7 +194,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Returns(transaction);
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             bool verbose = false;
@@ -211,7 +215,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Verifiable();
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             bool verbose = false;
@@ -232,7 +236,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
 
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
 
             var json = (JsonResult)this.controller.DecodeRawTransaction(new DecodeRawTransactionModel() { RawHex = transaction.ToHex() });
@@ -404,7 +408,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             var txId = new uint256(1243124);
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             uint vout = 0;
@@ -424,7 +428,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Verifiable();
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             uint vout = 0;
@@ -442,7 +446,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             var txId = new uint256(1243124);
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             uint vout = 0;
@@ -464,7 +468,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Verifiable();
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             uint vout = 0;
@@ -492,7 +496,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
                 .Verifiable();
             this.controller = new NodeController(this.chainIndexer, this.chainState.Object,
                 this.connectionManager.Object, this.dateTimeProvider.Object, this.fullNode.Object,
-                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
+                this.LoggerFactory.Object, this.nodeSettings, this.network, this.asyncProvider.Object, this.selfEndpointTracker.Object, this.consensusManager.Object, this.blockStore.Object, this.getUnspentTransaction.Object,
                 this.networkDifficulty.Object, this.pooledGetUnspentTransaction.Object, this.pooledTransaction.Object);
             string txid = txId.ToString();
             uint vout = 0;

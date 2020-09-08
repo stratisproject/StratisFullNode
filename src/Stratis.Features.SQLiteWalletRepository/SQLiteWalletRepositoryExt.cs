@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Wallet;
@@ -14,6 +13,7 @@ namespace Stratis.Features.SQLiteWalletRepository
     {
         internal static string ToHdPath(this SQLiteWalletRepository repo, int accountIndex)
         {
+            // TODO: Support wallets for other derivation standards e.g. BIP84 for P2WPKH addresses
             return $"m/44'/{repo.Network.Consensus.CoinType}'/{accountIndex}'";
         }
 
@@ -41,10 +41,8 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address, Network network)
         {
-            var pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
-            var scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
-            var dest = pubKeyScript.GetDestinationPublicKeys(network);
-            var witAddress = dest[0].GetSegwitAddress(network);
+            Script pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
+            Script scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
 
             var res = new HdAddress(null)
             {
@@ -54,7 +52,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 HdPath = repo.ToHdPath(address.AccountIndex, address.AddressType, address.AddressIndex),
                 ScriptPubKey = scriptPubKey,
                 Pubkey = pubKeyScript,
-                Bech32Address = witAddress.ToString()
+                Bech32Address = address.Bech32Address
             };
 
             return res;
@@ -79,6 +77,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                                   && (bytes[48] == (byte)0x68) // OP_ENDIF
                                   && (bytes[49] == (byte)0x88) // OP_EQUALVERIFY
                                   && (bytes[50] == (byte)0xac)); // OP_CHECKSIG
+            
+            // TODO: Need to make a central determination of whether a UTXO is Segwit or not (i.e. it pays to a P2WPKH scriptPubKey)
 
             var res = new TransactionData()
             {
