@@ -47,7 +47,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         protected readonly ILogger logger;
 
-        private readonly NodeSettings settings;
+        protected readonly NodeSettings settings;
 
         protected readonly PoANetwork network;
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Utilities;
 
@@ -14,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public const int VotingRequestExpectedInputCount = 1;
         public const int VotingRequestExpectedOutputCount = 2;
 
-        public static Transaction BuildTransaction(WalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
+        public static Transaction BuildTransaction(IWalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
         {
             byte[] encodedVotingRequest = encoder.Encode(request);
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedVotingRequest));
