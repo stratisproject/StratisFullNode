@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -51,7 +52,7 @@ namespace Stratis.Features.Collateral
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult JoinFederation([FromBody] JoinFederationRequestModel request)
+        public async Task<IActionResult> JoinFederationAsync([FromBody] JoinFederationRequestModel request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -64,7 +65,7 @@ namespace Stratis.Features.Collateral
 
             try
             {
-                (this.federationManager as CollateralFederationManager).JoinFederation(request.CollateralAddress, request.CollateralWalletName, request.CollateralWalletPassword, request.WalletName, request.WalletAccount, request.WalletPassword, default(CancellationToken));
+                await (this.federationManager as CollateralFederationManager).JoinFederationAsync(request, default(CancellationToken));
 
                 var model = new JoinFederationResponseModel
                 {
