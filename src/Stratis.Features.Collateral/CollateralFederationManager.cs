@@ -1,21 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
 {
     public class CollateralFederationManager : FederationManagerBase
     {
-        public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals)
+        private readonly ICounterChainSettings counterChainSettings;
+        private readonly ILoggerFactory loggerFactory;
+        private readonly IWalletService walletService;
+        private readonly IWalletTransactionHandler walletTransactionHandler;
+
+        public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals, 
+            ICounterChainSettings counterChainSettings, IWalletService walletService, IWalletTransactionHandler walletTransactionHandler)
             : base(nodeSettings, network, loggerFactory, keyValueRepo, signals)
         {
+            this.counterChainSettings = counterChainSettings;
+            this.loggerFactory = loggerFactory;
+            this.walletService = walletService;
+            this.walletTransactionHandler = walletTransactionHandler;
         }
 
         public override void Initialize()
@@ -90,6 +106,33 @@ namespace Stratis.Features.Collateral
             }
 
             this.keyValueRepo.SaveValueJson(federationMembersDbKey, modelsCollection);
+        }
+
+        public void JoinFederation(string collateralAddress, string collateralWalletName, string collateralWalletPassword, string walletName, string walletAccount, string walletPassword, CancellationToken cancellationToken)
+        {
+            // Get the address pub key hash.
+            var address = BitcoinAddress.Create(collateralAddress, this.counterChainSettings.CounterChainNetwork);
+            KeyId addressKey = PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(address.ScriptPubKey);
+
+            // Get mining key.
+            var keyTool = new KeyTool(this.settings.DataFolder);
+            Key minerKey = keyTool.LoadPrivateKey();
+            if (minerKey == null)
+            {
+                minerKey = keyTool.GeneratePrivateKey();
+                keyTool.SavePrivateKey(minerKey);
+            }
+
+            var request = new JoinFederationRequest(minerKey.PubKey, new Money(10_000m, MoneyUnit.BTC), addressKey);
+
+            // In practice this signature will come from calling the counter-chain "signmessage" API.
+            request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));
+
+            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
+            // TODO: Rely on wallet being unlocked?
+            Transaction trx = JoinFederationRequestBuilder.BuildTransaction(this.walletTransactionHandler, this.network, request, encoder, walletName, walletAccount, walletPassword);
+
+            this.walletService.SendTransaction(new SendTransactionRequest(trx.ToHex()), cancellationToken);
         }
     }
 }
