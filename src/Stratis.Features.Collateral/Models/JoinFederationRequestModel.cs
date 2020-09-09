@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 namespace Stratis.Bitcoin.Features.BlockStore.Models
 {
     /// <summary>
-    /// A class containing the necessary parameters for a block search request.
+    /// A class containing the necessary parameters for a join federation request.
     /// </summary>
     public class JoinFederationRequestModel
     {
