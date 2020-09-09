@@ -44,6 +44,8 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// Called by a miner wanting to join the federation.
         /// </summary>
+        /// <param name="request">See <see cref="JoinFederationRequestModel"></see>.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>An instance of <see cref="JoinFederationResponseModel"/>.</returns>
         /// <response code="200">Returns a valid response.</response>
         /// <response code="400">Unexpected exception occurred</response>
@@ -52,7 +54,7 @@ namespace Stratis.Features.Collateral
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> JoinFederationAsync([FromBody] JoinFederationRequestModel request)
+        public async Task<IActionResult> JoinFederationAsync([FromBody] JoinFederationRequestModel request, CancellationToken cancellationToken = default)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -65,7 +67,7 @@ namespace Stratis.Features.Collateral
 
             try
             {
-                PubKey minerPubKey = await (this.federationManager as CollateralFederationManager).JoinFederationAsync(request, default(CancellationToken));
+                PubKey minerPubKey = await (this.federationManager as CollateralFederationManager).JoinFederationAsync(request, cancellationToken);
 
                 var model = new JoinFederationResponseModel
                 {
