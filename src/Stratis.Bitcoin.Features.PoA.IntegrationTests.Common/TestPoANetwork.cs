@@ -61,5 +61,10 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
             this.Name = "PoaCollateralMain";
         }
+
+        protected override PoAConsensusFactory GetConsensusFactory()
+        {
+            return new CollateralPoAConsensusFactory();
+        }
     }
 }

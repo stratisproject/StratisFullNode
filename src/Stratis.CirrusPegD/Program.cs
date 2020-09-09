@@ -127,6 +127,7 @@ namespace Stratis.CirrusPegD
                 .UseFederatedPegPoAMining()
                 .AddFederatedPeg(fedPegOptions)
                 .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
+                .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
