@@ -113,7 +113,7 @@ namespace Stratis.Features.Collateral
             this.keyValueRepo.SaveValueJson(federationMembersDbKey, modelsCollection);
         }
 
-        public async Task JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)
+        public async Task<PubKey> JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)
         {
             // Get the address pub key hash.
             var address = BitcoinAddress.Create(request.CollateralAddress, this.counterChainSettings.CounterChainNetwork);
@@ -164,6 +164,8 @@ namespace Stratis.Features.Collateral
 
             var walletService = this.fullNode.NodeService<IWalletService>();
             await walletService.SendTransaction(new SendTransactionRequest(trx.ToHex()), cancellationToken);
+
+            return minerKey.PubKey;
         }
     }
 }

@@ -11,6 +11,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Models
         /// The collateral address.
         /// </summary>
         [Required(AllowEmptyStrings = false)]
-        public string CollateralAddress { get; set; }
+        public string MinerPublicKey { get; set; }
     }
 }

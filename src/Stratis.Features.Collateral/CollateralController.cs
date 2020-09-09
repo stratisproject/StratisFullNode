@@ -65,10 +65,11 @@ namespace Stratis.Features.Collateral
 
             try
             {
-                await (this.federationManager as CollateralFederationManager).JoinFederationAsync(request, default(CancellationToken));
+                PubKey minerPubKey = await (this.federationManager as CollateralFederationManager).JoinFederationAsync(request, default(CancellationToken));
 
                 var model = new JoinFederationResponseModel
                 {
+                    MinerPublicKey = minerPubKey.ToHex()
                 };
 
                 this.logger.LogTrace("(-):'{0}'", model);
