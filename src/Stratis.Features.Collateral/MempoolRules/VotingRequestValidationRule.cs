@@ -11,12 +11,12 @@ using Stratis.Features.Collateral;
 
 namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
 {
-    public class VotingRequestValidFormatRule : MempoolRule
+    public class VotingRequestValidationRule : MempoolRule
     {
         private readonly JoinFederationRequestEncoder encoder;
         private readonly VotingManager votingManager;
 
-        public VotingRequestValidFormatRule(Network network,
+        public VotingRequestValidationRule(Network network,
             ITxMempool mempool,
             MempoolSettings mempoolSettings,
             ChainIndexer chainIndexer,

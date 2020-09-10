@@ -44,7 +44,7 @@ namespace Stratis.Features.Collateral
         {
             // These rules always execute between all Cirrus nodes.
             fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Insert(0, typeof(CheckCollateralCommitmentHeightRule));
-            fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidFormatRule));
+            fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 
             // Only configure this if the Cirrus node is a miner (CirrusPegD and CirrusMinerD)
             if (isMiner)
