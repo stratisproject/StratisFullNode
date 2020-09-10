@@ -33,6 +33,12 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             if (request == null)
                 return;
 
+            if (FederationVotingController.IsMultisigMember(this.network, request.PubKey))
+            {
+                this.logger.LogTrace("(-)[INVALID_MULTISIG_VOTING]");
+                PoAConsensusErrors.VotingRequestInvalidMultisig.Throw();
+            }
+
             // Check collateral amount?
             if (request.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)
             {
