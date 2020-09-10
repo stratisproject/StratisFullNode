@@ -23,7 +23,7 @@ using Stratis.Features.Collateral.CounterChain;
 namespace Stratis.Features.Collateral
 {
     public class CollateralFederationManager : FederationManagerBase
-    {
+    {  
         private readonly ICounterChainSettings counterChainSettings;
         private readonly ILoggerFactory loggerFactory;
         private readonly IFullNode fullNode;
@@ -123,12 +123,9 @@ namespace Stratis.Features.Collateral
             var keyTool = new KeyTool(this.settings.DataFolder);
             Key minerKey = keyTool.LoadPrivateKey();
             if (minerKey == null)
-            {
-                minerKey = keyTool.GeneratePrivateKey();
-                keyTool.SavePrivateKey(minerKey);
-            }
+                throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName}) has not been configured.");
 
-            Money collateralAmount = new Money(10_000m, MoneyUnit.BTC);
+            Money collateralAmount = new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC);
 
             var joinRequest = new JoinFederationRequest(minerKey.PubKey, collateralAmount, addressKey);
 
@@ -166,6 +163,53 @@ namespace Stratis.Features.Collateral
             await walletService.SendTransaction(new SendTransactionRequest(trx.ToHex()), cancellationToken);
 
             return minerKey.PubKey;
+        }
+
+        private CollateralFederationMember GetMember(VotingData votingData)
+        {
+            if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory collateralPoAConsensusFactory))
+                return null;
+
+            if (!(collateralPoAConsensusFactory.DeserializeFederationMember(votingData.Data) is CollateralFederationMember collateralFederationMember))
+                return null;
+
+            return collateralFederationMember;
+        }
+        
+        public CollateralFederationMember CollateralAddressOwner(VotingManager votingManager, VoteKey voteKey, string address)
+        {
+            CollateralFederationMember member = (this.federationMembers.Cast<CollateralFederationMember>().FirstOrDefault(x => x.CollateralMainchainAddress == address));
+            if (member != null)
+                return member;
+
+            List<Poll> finishedPolls = votingManager.GetFinishedPolls();
+
+            member = finishedPolls
+                .Where(x => !x.IsExecuted && x.VotingData.Key == voteKey)
+                .Select(x => this.GetMember(x.VotingData))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            if (member != null)
+                return member;
+
+            List<Poll> pendingPolls = votingManager.GetPendingPolls();
+
+            member = pendingPolls
+                .Where(x => x.VotingData.Key == voteKey)
+                .Select(x => this.GetMember(x.VotingData))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            if (member != null)
+                return member;
+
+            List<VotingData> scheduledVotes = votingManager.GetScheduledVotes();
+
+            member = scheduledVotes
+                .Where(x => x.Key == voteKey)
+                .Select(x => this.GetMember(x))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            return member;
         }
     }
 }

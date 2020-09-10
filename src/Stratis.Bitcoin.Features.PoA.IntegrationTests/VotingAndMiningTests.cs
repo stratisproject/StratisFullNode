@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Features.Collateral;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
@@ -417,7 +418,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 // Create voting-request transaction.
                 var minerKey = new Key();
                 var collateralKey = new Key();
-                var request = new JoinFederationRequest(minerKey.PubKey, new Money(10_000m, MoneyUnit.BTC), collateralKey.PubKey.Hash);
+                var request = new JoinFederationRequest(minerKey.PubKey, new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC), collateralKey.PubKey.Hash);
 
                 // In practice this signature will come from calling the counter-chain "signmessage" API.
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));

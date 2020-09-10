@@ -50,14 +50,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (ops[0].Code != OpcodeType.OP_RETURN)
                 return null;
 
-            try
-            {
-                return encoder.Decode(ops[1].PushData);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return encoder.Decode(ops[1].PushData);
         }
 
         public static bool IsVotingRequestTransaction(Transaction trx, JoinFederationRequestEncoder encoder)

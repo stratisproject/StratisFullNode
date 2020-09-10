@@ -44,8 +44,10 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
                     byte[] prefix = new byte[VotingRequestOutputPrefixBytes.Length];
                     deserializeStream.ReadWrite(ref prefix);
-                    if (!prefix._ByteArrayEquals(VotingRequestOutputPrefixBytes))
-                        PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
+
+                    // It's not a voting request if the prefix does not match.
+                    if (!prefix._ByteArrayEquals(VotingRequestOutputPrefixBytes))                       
+                        return null;
 
                     var decoded = new JoinFederationRequest();
 
