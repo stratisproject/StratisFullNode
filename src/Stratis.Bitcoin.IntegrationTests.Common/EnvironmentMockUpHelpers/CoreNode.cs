@@ -240,10 +240,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         {
             Network network;
 
-            if (this.runner is StratisXRunner)
-                network = KnownNetworks.StratisRegTest;
-            else
-                network = this.FullNode?.Network ?? KnownNetworks.RegTest;
+            network = this.FullNode?.Network ?? KnownNetworks.RegTest;
 
             return new RPCClient(this.GetRPCAuth(), new Uri("http://127.0.0.1:" + this.RpcPort + "/"), network);
         }

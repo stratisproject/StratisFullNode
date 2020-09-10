@@ -122,7 +122,10 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     bool isChange = destinations.Any(d => addressesOfInterest.Contains(d, out AddressIdentifier address2) && address2.AddressType == 1);
 
                     if (addSpendTx)
+                    {
+                        // TODO: Why is this done? If the receipt is not to one of our addresses (i.e. identified in the loop coming next) then why bother trying to record it?
                         this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? tx.Time, txId, i, isChange);
+                    }
 
                     foreach (Script pubKeyScript in destinations)
                     {

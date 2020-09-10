@@ -107,7 +107,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         ,       AddressIndex
                         ,       ScriptPubKey
                         FROM    HDAddress
-                        WHERE   ScriptPubKey = {strHex} {
+                        WHERE   (ScriptPubKey = {strHex} OR Bech32ScriptPubKey = {strHex}) {
                     // Restrict to wallet if provided.
                     // "BETWEEN" boosts performance from half a seconds to 2ms.
                     ((this.walletId != null) ? $@"
