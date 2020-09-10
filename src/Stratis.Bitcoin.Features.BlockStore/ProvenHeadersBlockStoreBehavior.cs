@@ -12,7 +12,7 @@ using TracerAttributes;
 namespace Stratis.Bitcoin.Features.BlockStore
 {
     /// <inheritdoc />
-    public class ProvenHeadersBlockStoreBehavior : BlockStoreBehavior
+    public sealed class ProvenHeadersBlockStoreBehavior : BlockStoreBehavior
     {
         private readonly Network network;
         private readonly ICheckpoints checkpoints;
@@ -40,13 +40,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
         [NoTrace]
         public override object Clone()
         {
-            var res = new ProvenHeadersBlockStoreBehavior(this.network, this.ChainIndexer, this.chainState, this.loggerFactory, this.consensusManager, this.checkpoints, this.blockStoreQueue)
+            var clone = new ProvenHeadersBlockStoreBehavior(this.network, this.ChainIndexer, this.chainState, this.loggerFactory, this.consensusManager, this.checkpoints, this.blockStoreQueue)
             {
-                CanRespondToGetBlocksPayload = this.CanRespondToGetBlocksPayload,
                 CanRespondToGetDataPayload = this.CanRespondToGetDataPayload
             };
 
-            return res;
+            return clone;
         }
     }
 }

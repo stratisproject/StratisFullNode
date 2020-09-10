@@ -57,8 +57,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <returns>A <see cref="NodeBuilder"/> instance with logs disabled.</returns>
         private static NodeBuilder CreateNodeBuilder(string testFolderPath)
         {
-            return new NodeBuilder(testFolderPath)
-                .WithLogsDisabled();
+            return new NodeBuilder(testFolderPath).WithLogsDisabled();
         }
 
         private static string GetBitcoinCorePath(string version)
@@ -78,23 +77,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             throw new FileNotFoundException($"Could not load the file {path}.");
         }
 
-        private static string GetStratisXPath(string version)
-        {
-            string path;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                path = $"../../../../External libs/StratisX/{version}/Windows/stratisd.exe";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                path = $"../../../../External libs/StratisX/{version}/Linux/stratisd";
-            else
-                path = $"../../../../External libs/StratisX/{version}/OSX/stratisd";
-
-            if (File.Exists(path))
-                return path;
-
-            throw new FileNotFoundException($"Could not load the file {path}.");
-        }
-
         protected CoreNode CreateNode(NodeRunner runner, string configFile = "bitcoin.conf", bool useCookieAuth = false, NodeConfigParameters configParameters = null)
         {
             var node = new CoreNode(runner, configParameters, configFile, useCookieAuth);
@@ -106,22 +88,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         {
             string bitcoinDPath = GetBitcoinCorePath(version);
             return this.CreateNode(new BitcoinCoreRunner(this.GetNextDataFolderName(), bitcoinDPath), useCookieAuth: useCookieAuth);
-        }
-
-        public CoreNode CreateStratisXNode(string version = "2.0.0.5", bool useCookieAuth = false)
-        {
-            string stratisDPath = GetStratisXPath(version);
-            return this.CreateNode(new StratisXRunner(this.GetNextDataFolderName(), stratisDPath), "stratis.conf", useCookieAuth);
-        }
-
-        public CoreNode CreateMainnetStratisXNode(string version = "2.0.0.5", bool useCookieAuth = false)
-        {
-            var parameters = new NodeConfigParameters();
-            parameters.Add("regtest", "0");
-            parameters.Add("server", "0");
-
-            string stratisDPath = GetStratisXPath(version);
-            return this.CreateNode(new StratisXRunner(this.GetNextDataFolderName(), stratisDPath), "stratis.conf", useCookieAuth, parameters);
         }
 
         /// <summary>
