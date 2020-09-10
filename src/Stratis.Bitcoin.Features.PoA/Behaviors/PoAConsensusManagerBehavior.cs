@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA.Payloads;
@@ -21,8 +20,8 @@ namespace Stratis.Bitcoin.Features.PoA.Behaviors
         private readonly ILogger logger;
 
         public PoAConsensusManagerBehavior(ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState,
-            IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory, ICheckpoints checkpoints, IChainState chainState)
-        : base(chainIndexer, initialBlockDownloadState, consensusManager, peerBanning, loggerFactory, checkpoints, chainState)
+            IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory)
+        : base(chainIndexer, initialBlockDownloadState, consensusManager, peerBanning, loggerFactory)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName, $"[{this.GetHashCode():x}] ");
         }
@@ -83,7 +82,7 @@ namespace Stratis.Bitcoin.Features.PoA.Behaviors
         /// <inheritdoc />
         public override object Clone()
         {
-            return new PoAConsensusManagerBehavior(this.ChainIndexer, this.InitialBlockDownloadState, this.ConsensusManager, this.PeerBanning, this.LoggerFactory, this.checkpoints, this.chainState);
+            return new PoAConsensusManagerBehavior(this.ChainIndexer, this.InitialBlockDownloadState, this.ConsensusManager, this.PeerBanning, this.LoggerFactory);
         }
     }
 }

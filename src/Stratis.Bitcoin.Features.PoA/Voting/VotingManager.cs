@@ -188,6 +188,49 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+
+        /// <summary>
+        /// Tells us whether we have already voted to boot a federation member.
+        /// </summary>
+        public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
+        {
+            List<Poll> finishedPolls = this.GetFinishedPolls();
+
+            if (finishedPolls.Any(x => !x.IsExecuted &&
+                  x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
+                  x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+            {
+                // We've already voted in a finished poll that's only awaiting execution.
+                return true;
+            }
+
+            List<Poll> pendingPolls = this.GetPendingPolls();
+
+            if (pendingPolls.Any(x => x.VotingData.Key == voteKey &&
+                                       x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
+                                       x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+            {
+                // We've already voted in a pending poll.
+                return true;
+            }
+
+
+            List<VotingData> scheduledVotes = this.GetScheduledVotes();
+
+            if (scheduledVotes.Any(x => x.Key == voteKey && x.Data.SequenceEqual(federationMemberBytes)))
+            {
+                // We have the vote queued to be put out next time we mine a block.
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool IsFederationMember(PubKey pubKey)
+        {
+            return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
+        }
+
         private bool IsVotingOnMultisigMember(VotingData votingData)
         {
             if (votingData.Key != VoteKey.AddFederationMember && votingData.Key != VoteKey.KickFederationMember)

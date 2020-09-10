@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Utilities;
 
@@ -14,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public const int VotingRequestExpectedInputCount = 1;
         public const int VotingRequestExpectedOutputCount = 2;
 
-        public static Transaction BuildTransaction(WalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
+        public static Transaction BuildTransaction(IWalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
         {
             byte[] encodedVotingRequest = encoder.Encode(request);
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedVotingRequest));
@@ -36,29 +37,25 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return trx;
         }
 
-        public static bool IsVotingRequestTransaction(Transaction trx, JoinFederationRequestEncoder encoder)
+        public static JoinFederationRequest Deconstruct(Transaction trx, JoinFederationRequestEncoder encoder)
         {
             if (trx.Inputs.Count != VotingRequestExpectedInputCount)
-                return false;
+                return null;
 
             if (trx.Outputs.Count != VotingRequestExpectedOutputCount)
-                return false;
+                return null;
 
             IList<Op> ops = trx.Outputs[1].ScriptPubKey.ToOps();
 
             if (ops[0].Code != OpcodeType.OP_RETURN)
-                return false;
+                return null;
 
-            try
-            {
-                JoinFederationRequest request = encoder.Decode(ops[1].PushData);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return encoder.Decode(ops[1].PushData);
+        }
 
-            return true;
+        public static bool IsVotingRequestTransaction(Transaction trx, JoinFederationRequestEncoder encoder)
+        {
+            return Deconstruct(trx, encoder) != null;
         }
     }
 }
