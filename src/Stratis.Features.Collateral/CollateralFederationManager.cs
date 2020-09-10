@@ -123,10 +123,7 @@ namespace Stratis.Features.Collateral
             var keyTool = new KeyTool(this.settings.DataFolder);
             Key minerKey = keyTool.LoadPrivateKey();
             if (minerKey == null)
-            {
-                minerKey = keyTool.GeneratePrivateKey();
-                keyTool.SavePrivateKey(minerKey);
-            }
+                throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName})has not been configured.");
 
             Money collateralAmount = new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC);
 
