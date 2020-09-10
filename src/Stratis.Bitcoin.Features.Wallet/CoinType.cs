@@ -19,6 +19,8 @@
         /// <summary>
         /// Stratis
         /// </summary>
-        Stratis = 105
+        Stratis = 105,
+
+        Strax = 105105
     }
 }
