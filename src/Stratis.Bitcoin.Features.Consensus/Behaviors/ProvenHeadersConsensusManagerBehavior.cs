@@ -23,6 +23,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
     {
         private readonly Network network;
         private readonly ILogger logger;
+        private readonly IChainState chainState;
+        private readonly ICheckpoints checkpoints;
         private readonly IProvenBlockHeaderStore provenBlockHeaderStore;
         private readonly int lastCheckpointHeight;
         private readonly CheckpointInfo lastCheckpointInfo;
@@ -38,10 +40,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
             IChainState chainState,
             ICheckpoints checkpoints,
             IProvenBlockHeaderStore provenBlockHeaderStore,
-            ConnectionManagerSettings connectionManagerSettings) : base(chainIndexer, initialBlockDownloadState, consensusManager, peerBanning, loggerFactory, checkpoints, chainState)
+            ConnectionManagerSettings connectionManagerSettings) : base(chainIndexer, initialBlockDownloadState, consensusManager, peerBanning, loggerFactory)
         {
             this.network = network;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName, $"[{this.GetHashCode():x}] ");
+            this.chainState = chainState;
+            this.checkpoints = checkpoints;
             this.provenBlockHeaderStore = provenBlockHeaderStore;
 
             this.lastCheckpointHeight = this.checkpoints.GetLastCheckpointHeight();
@@ -90,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
 
             if (height > this.lastCheckpointHeight)
             {
-                // Try cache consumption every N blocks advanced by consensus.
+                // Try cashe consumption every N blocks advanced by consensus.
                 // N should be between 0 and max reorg. 20% of max reorg is a good random value.
                 // Higher the N the better performance boost we can get.
                 uint tryCacheEveryBlocksCount = this.network.Consensus.MaxReorgLength / 5;
