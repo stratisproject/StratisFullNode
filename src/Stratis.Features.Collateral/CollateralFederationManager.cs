@@ -164,5 +164,52 @@ namespace Stratis.Features.Collateral
 
             return minerKey.PubKey;
         }
+
+        private CollateralFederationMember GetMember(VotingData votingData)
+        {
+            if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory collateralPoAConsensusFactory))
+                return null;
+
+            if (!(collateralPoAConsensusFactory.DeserializeFederationMember(votingData.Data) is CollateralFederationMember collateralFederationMember))
+                return null;
+
+            return collateralFederationMember;
+        }
+        
+        public CollateralFederationMember CollateralAddressOwner(VotingManager votingManager, VoteKey voteKey, string address)
+        {
+            CollateralFederationMember member = (this.federationMembers.Cast<CollateralFederationMember>().FirstOrDefault(x => x.CollateralMainchainAddress == address));
+            if (member != null)
+                return member;
+
+            List<Poll> finishedPolls = votingManager.GetFinishedPolls();
+
+            member = finishedPolls
+                .Where(x => !x.IsExecuted && x.VotingData.Key == voteKey)
+                .Select(x => this.GetMember(x.VotingData))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            if (member != null)
+                return member;
+
+            List<Poll> pendingPolls = votingManager.GetPendingPolls();
+
+            member = pendingPolls
+                .Where(x => x.VotingData.Key == voteKey)
+                .Select(x => this.GetMember(x.VotingData))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            if (member != null)
+                return member;
+
+            List<VotingData> scheduledVotes = votingManager.GetScheduledVotes();
+
+            member = scheduledVotes
+                .Where(x => x.Key == voteKey)
+                .Select(x => this.GetMember(x))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            return member;
+        }
     }
 }
