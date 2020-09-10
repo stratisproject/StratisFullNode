@@ -5,6 +5,7 @@ using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
+using Stratis.Bitcoin.Features.PoA.Voting.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
@@ -188,6 +189,9 @@ namespace Stratis.SmartContracts.Networks
                 typeof(SmartContractFormatLogicMempoolRule),
                 typeof(CanGetSenderMempoolRule),
                 typeof(CheckMinGasLimitSmartContractMempoolRule),
+
+                // A voting request transaction must contain an embedded, correctly encoded, voting request.
+                typeof(VotingRequestValidFormatRule),
 
                 // Remaining non-SC rules.
                 typeof(CheckRateLimitMempoolRule),

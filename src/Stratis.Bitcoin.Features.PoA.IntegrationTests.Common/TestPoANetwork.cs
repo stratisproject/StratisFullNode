@@ -58,6 +58,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             options.GenesisFederationMembers.Clear();
             foreach (IFederationMember member in members)
                 options.GenesisFederationMembers.Add(member);
+            this.Consensus.MempoolRules.Add(typeof(Stratis.Bitcoin.Features.PoA.Voting.MempoolRules.VotingRequestValidFormatRule));
 
             this.Name = "PoaCollateralMain";
         }
