@@ -23,7 +23,7 @@ using Stratis.Features.Collateral.CounterChain;
 namespace Stratis.Features.Collateral
 {
     public class CollateralFederationManager : FederationManagerBase
-    {
+    {  
         private readonly ICounterChainSettings counterChainSettings;
         private readonly ILoggerFactory loggerFactory;
         private readonly IFullNode fullNode;
@@ -128,7 +128,7 @@ namespace Stratis.Features.Collateral
                 keyTool.SavePrivateKey(minerKey);
             }
 
-            Money collateralAmount = new Money(10_000m, MoneyUnit.BTC);
+            Money collateralAmount = new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC);
 
             var joinRequest = new JoinFederationRequest(minerKey.PubKey, collateralAmount, addressKey);
 

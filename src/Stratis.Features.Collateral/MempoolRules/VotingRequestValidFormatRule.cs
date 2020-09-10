@@ -2,9 +2,12 @@
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
+using Stratis.Features.Collateral;
 
-namespace Stratis.Bitcoin.Features.PoA.Voting.MempoolRules
+namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
 {
     public class VotingRequestValidFormatRule : MempoolRule
     {
@@ -29,8 +32,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting.MempoolRules
             JoinFederationRequest request = JoinFederationRequestBuilder.Deconstruct(context.Transaction, this.encoder);
             if (request == null)
                 return;
-            
-            // TODO: Check collateral amount?
+
+            // Check collateral amount?
+            if (request.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)
+            {
+                this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
+                PoAConsensusErrors.InvalidCollateralRequirement.Throw();
+            }
         }
     }
 }
