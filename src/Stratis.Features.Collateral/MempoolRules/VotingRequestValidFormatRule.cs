@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -12,14 +14,17 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
     public class VotingRequestValidFormatRule : MempoolRule
     {
         private readonly JoinFederationRequestEncoder encoder;
+        private readonly VotingManager votingManager;
 
         public VotingRequestValidFormatRule(Network network,
             ITxMempool mempool,
             MempoolSettings mempoolSettings,
             ChainIndexer chainIndexer,
-            ILoggerFactory loggerFactory) : base(network, mempool, mempoolSettings, chainIndexer, loggerFactory)
+            ILoggerFactory loggerFactory,
+            VotingManager votingManager) : base(network, mempool, mempoolSettings, chainIndexer, loggerFactory)
         {
             this.encoder = new JoinFederationRequestEncoder(loggerFactory);
+            this.votingManager = votingManager;
         }
 
         /// <inheritdoc/>
@@ -45,6 +50,59 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
                 this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
                 PoAConsensusErrors.InvalidCollateralRequirement.Throw();
             }
+
+            // Prohibit re-use of collateral addresses.
+            Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
+            string collateralAddress = script.GetDestinationAddress(this.network).ToString();
+            CollateralFederationMember owner = CollateralAddressOwner(VoteKey.AddFederationMember, collateralAddress);
+            if (owner != null && owner.PubKey != request.PubKey)
+            {
+                this.logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");
+                PoAConsensusErrors.VotingRequestInvalidCollateralReuse.Throw();
+            }
+        }
+
+        private CollateralFederationMember GetMember(VotingData votingData)
+        {
+            if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory collateralPoAConsensusFactory))
+                return null;
+
+            if (!(collateralPoAConsensusFactory.DeserializeFederationMember(votingData.Data) is CollateralFederationMember collateralFederationMember))
+                return null;
+
+            return collateralFederationMember;
+        }
+
+        public CollateralFederationMember CollateralAddressOwner(VoteKey voteKey, string address)
+        {
+            List<Poll> finishedPolls = this.votingManager.GetFinishedPolls();
+
+            CollateralFederationMember member = finishedPolls
+                .Where(x => !x.IsExecuted && x.VotingData.Key == voteKey)
+                .Select(x => this.GetMember(x.VotingData))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+            
+            if (member != null)
+                return member;
+
+            List<Poll> pendingPolls = this.votingManager.GetPendingPolls();
+
+            member = pendingPolls
+                .Where(x => x.VotingData.Key == voteKey)
+                .Select(x => this.GetMember(x.VotingData))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            if (member != null)
+                return member;
+
+            List<VotingData> scheduledVotes = this.votingManager.GetScheduledVotes();
+
+            member = scheduledVotes
+                .Where(x => x.Key == voteKey)
+                .Select(x => this.GetMember(x))
+                .FirstOrDefault(x => x.CollateralMainchainAddress == address);
+
+            return member;
         }
     }
 }
