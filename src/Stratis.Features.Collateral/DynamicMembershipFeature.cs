@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Features.Collateral.ConsensusRules;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts;
@@ -45,6 +46,9 @@ namespace Stratis.Features.Collateral
         // Both Cirrus Peg and Cirrus Miner calls this.
         public static IFullNodeBuilder AddDynamicMemberhip(this IFullNodeBuilder fullNodeBuilder)
         {
+            fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
+            fullNodeBuilder.Network.Consensus.ConsensusRules.PartialValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+
             fullNodeBuilder.ConfigureFeature(features =>
             {
                 features.AddFeature<DynamicMembershipFeature>()
@@ -52,7 +56,7 @@ namespace Stratis.Features.Collateral
                     .DependOn<PoAFeature>()
                     .FeatureServices(services =>
                     {
-                        //services.AddSingleton<IFederationManager, CollateralFederationManager>();
+                        services.AddSingleton<IFederationManager, CollateralFederationManager>();
                         services.AddSingleton<JoinFederationRequestMonitor>();
                     });
             });

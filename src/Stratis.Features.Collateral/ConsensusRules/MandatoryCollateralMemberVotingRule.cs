@@ -5,10 +5,12 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Features.Collateral;
 using TracerAttributes;
 
-namespace Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules
+namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 {
     /// <summary>Validates <see cref="VotingData"/> collection to ensure new members are being voted-in.</summary>
     public class MandatoryCollateralMemberVotingRule : PartialValidationConsensusRule
@@ -46,11 +48,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules
             if ((context.ValidationContext.ChainedHeaderToValidate.Height - this.chainState.ConsensusTip.Height) > this.network.Consensus.MaxReorgLength)
                 return Task.CompletedTask;
 
-            string blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate).Hash.ToString();
-
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
+            if (!pendingPolls.Any())
+                return Task.CompletedTask;
+
+            PubKey blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate);
+
             List<CollateralFederationMember> expectedVotes = pendingPolls
-                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && !p.PubKeysHexVotedInFavor.Any(pkh => pkh == blockMiner))
+                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
                 .Select(p => (CollateralFederationMember)consensusFactory.DeserializeFederationMember(p.VotingData.Data)).ToList();
 
             if (!expectedVotes.Any())
