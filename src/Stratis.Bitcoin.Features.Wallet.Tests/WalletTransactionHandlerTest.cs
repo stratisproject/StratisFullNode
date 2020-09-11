@@ -614,10 +614,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             Wallet wallet = WalletTestsHelpers.GenerateBlankWallet(walletReference.WalletName, "password", walletRepository);
-            (ExtKey ExtKey, string ExtPubKey) accountKeys = WalletTestsHelpers.GenerateAccountKeys(wallet, "password", "m/44'/0'/0'");
+            (ExtKey ExtKey, string ExtPubKey) accountKeys = WalletTestsHelpers.GenerateAccountKeys(wallet, "password", $"m/44'/{this.Network.Consensus.CoinType}'/0'");
             (PubKey PubKey, BitcoinPubKeyAddress Address) destinationKeys = WalletTestsHelpers.GenerateAddressKeys(wallet, accountKeys.ExtPubKey, "0/1");
 
-            var account = wallet.AddNewAccount(ExtPubKey.Parse(accountKeys.ExtPubKey), accountName: walletReference.AccountName);
+            var account = wallet.AddNewAccount(accountKeys.ExtKey.Neuter(), accountName: walletReference.AccountName);
 
             HdAddress address = account.ExternalAddresses.ElementAt(0);
 

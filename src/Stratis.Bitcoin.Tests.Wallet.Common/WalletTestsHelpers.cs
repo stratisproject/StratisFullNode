@@ -158,8 +158,11 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
             Network network = walletRepository?.Network ?? KnownNetworks.Main;
             string encryptedSeed = extendedKey.PrivateKey.GetEncryptedBitcoinSecret(password, network).ToWif();
 
-            var wallet = new Features.Wallet.Wallet(name, encryptedSeed, extendedKey.ChainCode, walletRepository: walletRepository);
-            wallet.Network = network;
+            var wallet = new Features.Wallet.Wallet(name, encryptedSeed, extendedKey.ChainCode, walletRepository: walletRepository)
+            {
+                Network = network
+            };
+
             wallet.AccountsRoot = new List<AccountRoot> { new AccountRoot(wallet) { CoinType = (CoinType)network.Consensus.CoinType } };
 
             return (wallet, extendedKey);
