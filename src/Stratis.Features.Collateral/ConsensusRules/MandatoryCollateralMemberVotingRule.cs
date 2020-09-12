@@ -52,10 +52,10 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                     && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
                 .Select(p => ((CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).PubKey)
                 .Concat(context.ValidationContext.BlockToValidate.Transactions
-                    .Skip(1)
+                    .Where(tx => !tx.IsCoinBase && !tx.IsCoinStake)
                     .Select(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder))
-                    .Where(r => r != null)
-                    .Select(r => r.PubKey))
+                    .Where(req => req != null)
+                    .Select(req => req.PubKey))
                 .Distinct();
 
             if (!newMembers.Any())
