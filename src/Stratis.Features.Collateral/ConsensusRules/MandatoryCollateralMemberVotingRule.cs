@@ -40,26 +40,38 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
+            // Determine the members that this node is currently in favor of adding.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
-            if (!pendingPolls.Any())
+            List<VotingData> scheduledVotes = this.ruleEngine.VotingManager.GetScheduledVotes();
+            IEnumerable<CollateralFederationMember> newMembers = pendingPolls
+                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
+                .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data))
+                .Concat(scheduledVotes
+                    .Where(p => p.Key == VoteKey.AddFederationMember)
+                    .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.Data)))
+                .Distinct();
+
+            if (!newMembers.Any())
                 return Task.CompletedTask;
 
             // Determine who mined the block.
             PubKey blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate);
 
-            // Check whether whomever mined the block has any outstanding votes for adding new federation members.
-            List<CollateralFederationMember> expectedVotes = pendingPolls
-                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
-                .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).ToList();
+            // Check that the miner is in favor of adding the same member(s).
+            Dictionary<string, bool> checkList = newMembers.ToDictionary(x => x.PubKey.ToHex(), x => false);
 
-            // If this miner has no outstanding expected votes, then return.
-            if (!expectedVotes.Any())
+            foreach (CollateralFederationMember member in pendingPolls
+                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
+                .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)))
+            {
+                checkList[member.PubKey.ToHex()] = true;
+            }
+
+            if (!checkList.Any(c => !c.Value))
                 return Task.CompletedTask;
 
             // Otherwise check that the miner is including those votes now.
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
-
-            Dictionary<string, bool> checkList = expectedVotes.ToDictionary(x => x.PubKey.ToHex(), x => false);
 
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
             if (votingDataBytes != null)
