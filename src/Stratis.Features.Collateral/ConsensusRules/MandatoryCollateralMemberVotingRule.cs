@@ -22,7 +22,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private IFederationManager federationManager;
         private ISlotsManager slotsManager;
         private CollateralPoAConsensusFactory consensusFactory;
-        private IChainState chainState;
         private ILogger logger;
 
         [NoTrace]
@@ -35,7 +34,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.federationManager = this.ruleEngine.FederationManager;
             this.slotsManager = this.ruleEngine.SlotsManager;
             this.consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
-            this.chainState = this.ruleEngine.ChainState;
 
             base.Initialize();
         }
