@@ -43,10 +43,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            // May be insufficient.
-            if ((context.ValidationContext.ChainedHeaderToValidate.Height - this.chainState.ConsensusTip.Height) > this.network.Consensus.MaxReorgLength)
-                return Task.CompletedTask;
-
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
             if (!pendingPolls.Any())
                 return Task.CompletedTask;
