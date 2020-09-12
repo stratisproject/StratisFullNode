@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Features.Collateral;
 using TracerAttributes;
 
@@ -21,6 +22,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private IFederationManager federationManager;
         private ISlotsManager slotsManager;
         private CollateralPoAConsensusFactory consensusFactory;
+        private ILoggerFactory loggerFactory;
         private ILogger logger;
 
         [NoTrace]
@@ -28,7 +30,8 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         {
             this.votingDataEncoder = new VotingDataEncoder(this.Parent.LoggerFactory);
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
-            this.logger = this.Parent.LoggerFactory.CreateLogger(this.GetType().FullName);
+            this.loggerFactory = this.Parent.LoggerFactory;
+            this.logger = this.loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = this.Parent.Network;
             this.federationManager = this.ruleEngine.FederationManager;
             this.slotsManager = this.ruleEngine.SlotsManager;
@@ -42,13 +45,17 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         {
             // Determine the members that this node is currently in favor of adding.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
-            List<VotingData> scheduledVotes = this.ruleEngine.VotingManager.GetScheduledVotes();
+            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
             IEnumerable<CollateralFederationMember> newMembers = pendingPolls
-                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
+                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember 
+                    && (p.PollStartBlockData == null || p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height)
+                    && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
                 .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data))
-                .Concat(scheduledVotes
-                    .Where(p => p.Key == VoteKey.AddFederationMember)
-                    .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.Data)))
+                .Concat(context.ValidationContext.BlockToValidate.Transactions
+                    .Skip(1)
+                    .Select(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder))
+                    .Where(r => r != null)
+                    .Select(r => new CollateralFederationMember(r.PubKey, false, r.CollateralAmount, "")))
                 .Distinct();
 
             if (!newMembers.Any())
