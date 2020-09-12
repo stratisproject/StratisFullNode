@@ -12,7 +12,8 @@ using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 {
-    /// <summary>Validates <see cref="VotingData"/> collection to ensure new members are being voted-in.</summary>
+    /// <summary>Used with the dynamic-mebership feature to validate <see cref="VotingData"/> 
+    /// collection to ensure new members are being voted-in.</summary>
     public class MandatoryCollateralMemberVotingRule : PartialValidationConsensusRule
     {
         private VotingDataEncoder votingDataEncoder;
@@ -20,6 +21,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private Network network;
         private IFederationManager federationManager;
         private ISlotsManager slotsManager;
+        private CollateralPoAConsensusFactory consensusFactory;
         private IChainState chainState;
         private ILogger logger;
 
@@ -32,6 +34,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.network = this.Parent.Network;
             this.federationManager = this.ruleEngine.FederationManager;
             this.slotsManager = this.ruleEngine.SlotsManager;
+            this.consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
             this.chainState = this.ruleEngine.ChainState;
 
             base.Initialize();
@@ -40,10 +43,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory) || 
-                !(this.federationManager is CollateralFederationManager federationManager))
-                return Task.CompletedTask;
-
             // May be insufficient.
             if ((context.ValidationContext.ChainedHeaderToValidate.Height - this.chainState.ConsensusTip.Height) > this.network.Consensus.MaxReorgLength)
                 return Task.CompletedTask;
@@ -56,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
             List<CollateralFederationMember> expectedVotes = pendingPolls
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
-                .Select(p => (CollateralFederationMember)consensusFactory.DeserializeFederationMember(p.VotingData.Data)).ToList();
+                .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).ToList();
 
             if (!expectedVotes.Any())
                 return Task.CompletedTask;
@@ -71,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
                 foreach (VotingData votingData in votingDataList)
                 {
-                    var member = (CollateralFederationMember)consensusFactory.DeserializeFederationMember(votingData.Data);
+                    var member = (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(votingData.Data);
                     
                     // Check collateral amount.
                     if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)

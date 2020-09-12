@@ -8,6 +8,7 @@ using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
@@ -41,11 +42,13 @@ namespace Stratis.Features.Collateral
     /// <summary>
     /// A class providing extension methods for <see cref="IFullNodeBuilder"/>.
     /// </summary>
-    public static class FullNodeBuilderDynamixMembershipFeatureExtension
+    public static class FullNodeBuilderDynamicMembershipFeatureExtension
     {
         // Both Cirrus Peg and Cirrus Miner calls this.
         public static IFullNodeBuilder AddDynamicMemberhip(this IFullNodeBuilder fullNodeBuilder)
         {
+            Guard.Assert(fullNodeBuilder.Network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory);
+
             fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
             fullNodeBuilder.Network.Consensus.ConsensusRules.PartialValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
 
