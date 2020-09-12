@@ -31,6 +31,18 @@ using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
 {
+    /// <summary>
+    /// Prevent network being matched by name and replaced with a different network
+    /// in the <see cref="Configuration.NodeSettings" /> constructor.
+    /// </summary>
+    public class StraxOverrideRegTest : StraxRegTest
+    {
+        public StraxOverrideRegTest() : base()
+        {
+            this.Name = Guid.NewGuid().ToString();
+        }
+    }
+
     // TODO: This is also used in the block store integration tests, perhaps move it into the common namespace
     /// <summary>
     /// Used for recording messages coming into a test node. Does not respond to them in any way.
@@ -205,7 +217,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = new StraxOverrideRegTest();
 
                 // Set the date ranges such that segwit will 'Start' immediately after the initial confirmation window.
                 network.Consensus.BIP9Deployments[StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
