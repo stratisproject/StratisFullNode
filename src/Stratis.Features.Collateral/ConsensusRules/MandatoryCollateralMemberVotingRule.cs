@@ -47,16 +47,10 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
             IEnumerable<PubKey> newMembers = pendingPolls
-                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember 
+                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
                     && (p.PollStartBlockData == null || p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height)
                     && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
-                .Select(p => ((CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).PubKey)
-                .Concat(context.ValidationContext.BlockToValidate.Transactions
-                    .Where(tx => !tx.IsCoinBase && !tx.IsCoinStake)
-                    .Select(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder))
-                    .Where(req => req != null)
-                    .Select(req => req.PubKey))
-                .Distinct();
+                .Select(p => ((CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).PubKey);
 
             if (!newMembers.Any())
                 return Task.CompletedTask;
