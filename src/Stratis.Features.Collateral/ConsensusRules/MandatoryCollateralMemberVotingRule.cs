@@ -51,15 +51,19 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             if (!pendingPolls.Any())
                 return Task.CompletedTask;
 
+            // Determine who mined the block.
             PubKey blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate);
 
+            // Check whether whomever mined the block has any outstanding votes for adding new federation members.
             List<CollateralFederationMember> expectedVotes = pendingPolls
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
                 .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).ToList();
 
+            // If this miner has no outstanding expected votes, then return.
             if (!expectedVotes.Any())
                 return Task.CompletedTask;
 
+            // Otherwise check that the miner is including those votes now.
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
 
             Dictionary<string, bool> checkList = expectedVotes.ToDictionary(x => x.PubKey.ToHex(), x => false);
@@ -90,6 +94,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 }
             }
 
+            // If any outstanding votes have not been included throw a consensus error.
             if (checkList.Any(c => !c.Value))
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
