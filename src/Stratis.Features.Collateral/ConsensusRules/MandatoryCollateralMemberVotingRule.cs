@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
