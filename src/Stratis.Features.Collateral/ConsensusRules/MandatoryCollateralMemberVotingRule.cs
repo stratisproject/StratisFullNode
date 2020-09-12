@@ -46,16 +46,16 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             // Determine the members that this node is currently in favor of adding.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
-            IEnumerable<CollateralFederationMember> newMembers = pendingPolls
+            IEnumerable<PubKey> newMembers = pendingPolls
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember 
                     && (p.PollStartBlockData == null || p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height)
                     && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
-                .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data))
+                .Select(p => ((CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).PubKey)
                 .Concat(context.ValidationContext.BlockToValidate.Transactions
                     .Skip(1)
                     .Select(tx => JoinFederationRequestBuilder.Deconstruct(tx, encoder))
                     .Where(r => r != null)
-                    .Select(r => new CollateralFederationMember(r.PubKey, false, r.CollateralAmount, "")))
+                    .Select(r => r.PubKey))
                 .Distinct();
 
             if (!newMembers.Any())
@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             PubKey blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate);
 
             // Check that the miner is in favor of adding the same member(s).
-            Dictionary<string, bool> checkList = newMembers.ToDictionary(x => x.PubKey.ToHex(), x => false);
+            Dictionary<string, bool> checkList = newMembers.ToDictionary(x => x.ToHex(), x => false);
 
             foreach (CollateralFederationMember member in pendingPolls
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
