@@ -83,7 +83,7 @@ namespace Stratis.Bitcoin.Cli
                     builder.AppendLine();
                     builder.AppendLine("Command line arguments:");
                     builder.AppendLine();
-                    builder.AppendLine("[network-name]                     Name of the network - e.g. \"stratis\" or \"bitcoin\".");
+                    builder.AppendLine("[network-name]                     Name of the network - e.g. \"strax\" or \"bitcoin\".");
                     builder.AppendLine("[options]                          Options for the CLI (optional) - e.g. -help, -rpcuser, see below.");
                     builder.AppendLine("[method]                           Method to use for API calls - 'GET', 'POST' or 'DELETE'.");
                     builder.AppendLine("[command]                          Name of RPC method or API <controller>/<method>.");
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Cli
                     builder.AppendLine("Options:");
                     builder.AppendLine("-help                              This help message");
                     builder.AppendLine("-rpcconnect=<ip>                   Send commands to node running on <ip> (default: 127.0.0.1)");
-                    builder.AppendLine("-rpcport=<port>                    Connect to JSON-RPC on <port> (default for Stratis: 26174 or default for Bitcoin: 8332)");
+                    builder.AppendLine("-rpcport=<port>                    Connect to JSON-RPC on <port> (default for Strax: 18000 (mainnet), 18100 (testnet) or default for Bitcoin: 8332)");
                     builder.AppendLine("-rpcuser=<user>                    Username for JSON-RPC connections");
                     builder.AppendLine("-rpcpassword=<pw>                  Password for JSON-RPC connections");
                     builder.AppendLine();
@@ -108,7 +108,11 @@ namespace Stratis.Bitcoin.Cli
                 // Determine API port.
                 NetworksSelector networksSelector = null;
 
-                if (networkName.Contains("stratis"))
+                if (networkName.Contains("strax"))
+                {
+                    networksSelector = Networks.Networks.Strax;
+                }
+                else if (networkName.Contains("stratis"))
                 {
                     networksSelector = Networks.Networks.Stratis;
                 }
@@ -117,7 +121,7 @@ namespace Stratis.Bitcoin.Cli
                     networksSelector = Networks.Networks.Bitcoin;
                 }
 
-                // API calls require both the contoller name and the method name separated by "/".
+                // API calls require both the controller name and the method name separated by "/".
                 // If this is not an API call then assume it is an RPC call.
                 if (!command.Contains("/"))
                 {
