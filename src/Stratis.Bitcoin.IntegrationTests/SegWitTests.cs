@@ -540,6 +540,9 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 miner.GenerateBlocks(new ReserveScript(mineAddress.ScriptPubKey), (ulong)(node.FullNode.Network.Consensus.CoinbaseMaturity + 1), int.MaxValue);
 
+                // Wait for listener to sync to the same block height so that it won't reject the coinbase spend as being premature.
+                TestHelper.WaitForNodeToSync(node, listener);
+
                 // Send a transaction from first node to itself so that it has a proper segwit input to spend.
                 var destinationAddress = node.FullNode.WalletManager().GetUnusedAddress();
                 var witAddress = destinationAddress.Bech32Address;
@@ -719,6 +722,8 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 miner.GenerateBlocks(new ReserveScript(mineAddress.ScriptPubKey), (ulong)(maturity + 1), int.MaxValue);
+
+                TestHelper.WaitForNodeToSync(node, listener);
 
                 var destinationAddress = node.FullNode.WalletManager().GetUnusedAddress();
                 var witAddress = destinationAddress.Bech32Address;
