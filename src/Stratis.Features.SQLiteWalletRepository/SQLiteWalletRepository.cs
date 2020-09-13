@@ -1204,17 +1204,23 @@ namespace Stratis.Features.SQLiteWalletRepository
                 var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
                 
                 PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+                Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
                 int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
+                // We do not use the address from the transaction (i.e. UTXO) data here in case it is a segwit (P2WPKH) UTXO.
+                // That is because the bech32 functionality is somewhat bolted onto the HdAddress, so we need to return an HdAddress augmented with bech32 data rather than only bech32 data.
                 HdAddress hdAddress = this.ToHdAddress(new HDAddress()
                 {
                     AccountIndex = transactionData.AccountIndex,
                     AddressIndex = transactionData.AddressIndex,
                     AddressType = (int)transactionData.AddressType,
                     PubKey = pubKey.ScriptPubKey.ToHex(),
-                    ScriptPubKey = transactionData.ScriptPubKey,
-                    Address = transactionData.Address,
+                    ScriptPubKey = scriptPubKey.ToHex(),
+                    Address = scriptPubKey.GetDestinationAddress(this.Network).ToString(),
+                    Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString(),
+                    Bech32ScriptPubKey = witScriptPubKey.ToHex()
                 }, this.Network);
 
                 hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
