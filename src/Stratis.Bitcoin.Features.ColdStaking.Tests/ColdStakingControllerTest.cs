@@ -650,7 +650,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
         }
 
-        [Fact(Skip="Temporarily disabled")]
         public void SetupScriptColdStakingWithColdWalletSegwitSucceeds()
         {
             this.Initialize();
@@ -922,7 +921,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
         }
 
-        [Fact(Skip="Temporarily disabled")]
         public void ColdStakingScriptWithdrawalToSegwitWithColdWalletSucceeds()
         {
             this.Initialize();
