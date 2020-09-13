@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public void BuildTransactionNoChangeAdressesLeftCreatesNewChangeAddress()
+        public void BuildTransactionNoChangeAdressSpecified()
         {
             WalletTransactionHandlerTestContext testContext = SetupWallet();
 
@@ -84,7 +84,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Transaction transactionResult = testContext.WalletTransactionHandler.BuildTransaction(context);
 
             Transaction result = this.Network.CreateTransaction(transactionResult.ToHex());
-            (PubKey PubKey, BitcoinPubKeyAddress Address) expectedChangeAddressKeys = WalletTestsHelpers.GenerateAddressKeys(testContext.Wallet, testContext.AccountKeys.ExtPubKey, "1/0");
+            HdAccount account = testContext.Wallet.GetAccount("account1");
+            Script expectedChangeAddressScript = account.InternalAddresses.First().ScriptPubKey;
 
             Assert.Single(result.Inputs);
             Assert.Equal(testContext.AddressTransaction.Id, result.Inputs[0].PrevOut.Hash);
@@ -92,7 +93,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.Equal(2, result.Outputs.Count);
             TxOut output = result.Outputs[0];
             Assert.Equal((testContext.AddressTransaction.Amount - context.TransactionFee - 7500), output.Value);
-            Assert.Equal(expectedChangeAddressKeys.Address.ScriptPubKey, output.ScriptPubKey);
+            Assert.Equal(expectedChangeAddressScript, output.ScriptPubKey);
 
             output = result.Outputs[1];
             Assert.Equal(7500, output.Value);
@@ -615,9 +616,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             Wallet wallet = WalletTestsHelpers.GenerateBlankWallet(walletReference.WalletName, "password", walletRepository);
             (ExtKey ExtKey, string ExtPubKey) accountKeys = WalletTestsHelpers.GenerateAccountKeys(wallet, "password", $"m/44'/{this.Network.Consensus.CoinType}'/0'");
-            (PubKey PubKey, BitcoinPubKeyAddress Address) destinationKeys = WalletTestsHelpers.GenerateAddressKeys(wallet, accountKeys.ExtPubKey, "0/1");
 
             var account = wallet.AddNewAccount(accountKeys.ExtKey.Neuter(), accountName: walletReference.AccountName);
+
+            var destinationAddress = account.ExternalAddresses.Skip(1).First();
+
+            (PubKey PubKey, BitcoinPubKeyAddress Address) destinationKeys = (destinationAddress.Pubkey.GetDestinationPublicKeys(this.Network).First(), new BitcoinPubKeyAddress(destinationAddress.Address, this.Network));
 
             HdAddress address = account.ExternalAddresses.ElementAt(0);
 
