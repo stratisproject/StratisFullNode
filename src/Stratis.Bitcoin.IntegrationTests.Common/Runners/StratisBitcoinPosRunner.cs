@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.P2P;
 using Stratis.Features.SQLiteWalletRepository;
 
@@ -35,7 +36,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
                 .UseMempool()
                 .UseWallet()
                 .AddSQLiteWalletRepository()
-                .AddPowPosMining(false)
+                .AddPowPosMining(!(this.Network is StratisMain || this.Network is StratisTest || this.Network is StratisRegTest))
                 .AddRPC()
                 .UseApi()
                 .UseTestChainedHeaderTree()

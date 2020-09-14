@@ -44,12 +44,30 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 
             if (BlockStake.IsProofOfStake(block))
             {
-                // TODO: We may want to remove this limitation to allow future flexibility, or more close alignment with Bitcoin Core's segwit implementation.
-                // Coinbase output should be empty if proof-of-stake block.
-                if ((block.Transactions[0].Outputs.Count != 1) || !block.Transactions[0].Outputs[0].IsEmpty)
+                Transaction coinBase = block.Transactions[0];
+
+                // On the Stratis network, we mandated that the coinbase output must be empty if the block is proof-of-stake.
+                // Here, we anticipate that the coinbase will contain the segwit witness commitment.
+                // For maximum flexibility in the future we don't want to restrict what else the coinbase in a PoS block can contain, with some limitations:
+                // 1. No outputs should be spendable (we could mandate that the PoS reward must be wholly contained in the coinstake, but it is sufficient that the coinbase outputs are unspendable)
+                // 2. The first coinbase output must be empty
+
+                // First output must be empty.
+                if ((!coinBase.Outputs[0].IsEmpty))
                 {
                     this.Logger.LogTrace("(-)[COINBASE_NOT_EMPTY]");
                     ConsensusErrors.BadStakeBlock.Throw();
+                }
+
+                // Check that the rest of the outputs are not spendable (OP_RETURN)
+                foreach (TxOut txOut in coinBase.Outputs.Skip(1))
+                {
+                    // Only OP_RETURN scripts are allowed in coinbase.
+                    if (!txOut.ScriptPubKey.IsUnspendable)
+                    {
+                        this.Logger.LogTrace("(-)[COINBASE_SPENDABLE]");
+                        ConsensusErrors.BadStakeBlock.Throw();
+                    }
                 }
 
                 Transaction coinStake = block.Transactions[1];

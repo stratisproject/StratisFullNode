@@ -25,11 +25,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         public int Count => this.GetTransactions().Count();
         public bool IsReadOnly => true;
 
-        public AddressIdentifier GetAddressIdentifier()
-        {
-            return this.repository.GetAddressIdentifier(this.wallet.Name, this.account.Name, this.Address.AddressCollection.AddressType, this.Address.Index);
-        }
-
         private IEnumerable<TransactionData> GetTransactions()
         {
             // TODO: if (this.transactions == null)
@@ -168,6 +163,12 @@ namespace Stratis.Bitcoin.Features.Wallet
         [JsonProperty(PropertyName = "pubkey")]
         [JsonConverter(typeof(ScriptJsonConverter))]
         public Script Pubkey { get; set; }
+
+        /// <summary>
+        /// The base32 representation of a segwit (P2WPH) address.
+        /// </summary>
+        [JsonProperty(PropertyName = "bech32Address")]
+        public string Bech32Address { get; set; }
 
         /// <summary>
         /// The Base58 representation of this address.

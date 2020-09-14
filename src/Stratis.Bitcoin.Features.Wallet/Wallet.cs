@@ -375,7 +375,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             foreach (AccountRoot root in this.AccountsRoot)
                 foreach (HdAccount account in root.Accounts.GetAccounts(AllAccounts))
                     foreach (HdAddress accountAddress in account.GetCombinedAddresses())
-                        if (address.Address == accountAddress.Address)
+                        if (address.Address == accountAddress.Address || address.Bech32Address == accountAddress.Address)
                             return true;
 
             return false;

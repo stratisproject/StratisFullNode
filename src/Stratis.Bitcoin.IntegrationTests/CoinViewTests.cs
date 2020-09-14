@@ -1,215 +1,323 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using NBitcoin;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
-using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
-using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.IntegrationTests.Common;
+using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
+using DBreeze.DataTypes;
+using Microsoft.Extensions.Logging;
+using NBitcoin;
+using NBitcoin.Crypto;
 using Xunit;
 
-namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
+namespace Stratis.Bitcoin.IntegrationTests
 {
-    public class CoinviewTests
+    public class CoinViewTests
     {
+        protected readonly ILoggerFactory loggerFactory;
         private readonly Network network;
-        private readonly DataFolder dataFolder;
-        private readonly IDateTimeProvider dateTimeProvider;
-        private readonly ILoggerFactory loggerFactory;
-        private readonly INodeStats nodeStats;
-        private readonly ICoindb coindb;
+        private readonly Network regTest;
 
-        private readonly ChainIndexer chainIndexer;
-        private readonly StakeChainStore stakeChainStore;
-        private readonly IRewindDataIndexCache rewindDataIndexCache;
-        private readonly CachedCoinView cachedCoinView;
-        private readonly Random random;
-
-        public CoinviewTests()
+        /// <summary>
+        /// Initializes logger factory for tests in this class.
+        /// </summary>
+        public CoinViewTests()
         {
-            this.network = new StratisMain();
-            this.dataFolder = TestBase.CreateDataFolder(this);
-            this.dateTimeProvider = new DateTimeProvider();
-            this.loggerFactory = new ExtendedLoggerFactory();
-            this.nodeStats = new NodeStats(this.dateTimeProvider, this.loggerFactory);
-
-            //this.coindb = new DBreezeCoindb(this.network, this.dataFolder, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
-            //this.coindb = new FasterCoindb(this.network, this.dataFolder, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
-            this.coindb = new LeveldbCoindb(this.network, this.dataFolder, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
-            this.coindb.Initialize();
-
-            this.chainIndexer = new ChainIndexer(this.network);
-            this.stakeChainStore = new StakeChainStore(this.network, this.chainIndexer, (IStakedb)this.coindb, this.loggerFactory);
-            this.stakeChainStore.Load();
-
-            this.rewindDataIndexCache = new RewindDataIndexCache(this.dateTimeProvider, this.network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints());
-
-            this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), this.coindb, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new ConsensusSettings(new NodeSettings(this.network)), this.stakeChainStore, this.rewindDataIndexCache);
-
-            this.rewindDataIndexCache.Initialize(this.chainIndexer.Height, this.cachedCoinView);
-
-            this.random = new Random();
-
-            ChainedHeader newTip = ChainedHeadersHelper.CreateConsecutiveHeaders(1000, this.chainIndexer.Tip, true, null, this.network).Last();
-            this.chainIndexer.SetTip(newTip);
+            this.loggerFactory = new LoggerFactory();
+            this.network = KnownNetworks.Main;
+            this.regTest = KnownNetworks.RegTest;
         }
 
         [Fact]
-        public async Task TestRewindAsync()
+        public void TestDBreezeSerialization()
         {
-            HashHeightPair tip = this.cachedCoinView.GetTipHash();
-            Assert.Equal(this.chainIndexer.Genesis.HashBlock, tip.Hash);
-
-            int currentHeight = 0;
-
-            // Create a lot of new coins.
-            List<UnspentOutput> outputsList = this.CreateOutputsList(currentHeight + 1, 100);
-            this.SaveChanges(outputsList, currentHeight + 1);
-            currentHeight++;
-
-            this.cachedCoinView.Flush(true);
-
-            HashHeightPair tipAfterOriginalCoinsCreation = this.cachedCoinView.GetTipHash();
-
-            // Collection that will be used as a coinview that we will update in parallel. Needed to verify that actual coinview is ok.
-            List<OutPoint> outPoints = this.ConvertToListOfOutputPoints(outputsList);
-
-            // Copy of current state to later rewind and verify against it.
-            List<OutPoint> copyOfOriginalOutPoints = new List<OutPoint>(outPoints);
-
-            List<OutPoint> copyAfterHalfOfAdditions = new List<OutPoint>();
-            HashHeightPair coinviewTipAfterHalf = null;
-
-            int addChangesTimes = 500;
-            // Spend some coins in the next N saves.
-            for (int i = 0; i < addChangesTimes; ++i)
+            using (NodeContext ctx = NodeContext.Create(this))
             {
-                OutPoint txId = outPoints[this.random.Next(0, outPoints.Count)];
-                List<OutPoint> txPoints = outPoints.Where(x => x.Hash == txId.Hash).ToList();
-                this.Shuffle(txPoints);
-                List<OutPoint> txPointsToSpend = txPoints.Take(txPoints.Count / 2).ToList();
+                Block genesis = ctx.Network.GetGenesis();
+                var genesisChainedHeader = new ChainedHeader(genesis.Header, ctx.Network.GenesisHash, 0);
+                ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
+                ctx.Coindb.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
+                Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
+                Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
 
-                // First spend in cached coinview
-                FetchCoinsResponse response = this.cachedCoinView.FetchCoins(txPoints.ToArray());
-                Assert.Equal(txPoints.Count, response.UnspentOutputs.Count);
-                var toSpend = new List<UnspentOutput>();
-                foreach (OutPoint outPointToSpend in txPointsToSpend)
+                ChainedHeader previous = chained;
+                chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
+                chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
+                ctx.Coindb.SaveChanges(new List<UnspentOutput>(), new HashHeightPair(previous), new HashHeightPair(chained));
+                Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
+                ctx.ReloadPersistentCoinView();
+                Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
+                Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
+                Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
+            }
+        }
+
+        [Fact]
+        public void TestCacheCoinView()
+        {
+            using (NodeContext ctx = NodeContext.Create(this))
+            {
+                Block genesis = ctx.Network.GetGenesis();
+                var genesisChainedHeader = new ChainedHeader(genesis.Header, ctx.Network.GenesisHash, 0);
+                ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
+                var dateTimeProvider = new DateTimeProvider();
+
+                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.loggerFactory), new ConsensusSettings(new NodeSettings(this.network)));
+
+                cacheCoinView.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
+                Assert.NotNull(cacheCoinView.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
+                Assert.Null(cacheCoinView.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
+                Assert.Equal(new HashHeightPair(chained), cacheCoinView.GetTipHash());
+
+                Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
+                Assert.Equal(chained.Previous.HashBlock, ctx.Coindb.GetTipHash().Hash);
+                cacheCoinView.Flush();
+                Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
+                Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
+                //Assert.Null(ctx.PersistentCoinView.FetchCoinsAsync(new[] { new uint256() }).Result.UnspentOutputs[0]);
+
+                //var previous = chained;
+                //chained = MakeNext(MakeNext(genesisChainedBlock));
+                //chained = MakeNext(MakeNext(genesisChainedBlock));
+                //ctx.PersistentCoinView.SaveChangesAsync(new UnspentOutputs[0], previous.HashBlock, chained.HashBlock).Wait();
+                //Assert.Equal(chained.HashBlock, ctx.PersistentCoinView.GetTipHashAsync().GetAwaiter().GetResult());
+                //ctx.ReloadPersistentCoinView();
+                //Assert.Equal(chained.HashBlock, ctx.PersistentCoinView.GetTipHashAsync().GetAwaiter().GetResult());
+                //Assert.NotNull(ctx.PersistentCoinView.FetchCoinsAsync(new[] { genesis.Transactions[0].GetHash() }).Result.UnspentOutputs[0]);
+                //Assert.Null(ctx.PersistentCoinView.FetchCoinsAsync(new[] { new uint256() }).Result.UnspentOutputs[0]);
+            }
+        }
+
+        [Fact]
+        public void CanRewind()
+        {
+            using (NodeContext nodeContext = NodeContext.Create(this))
+            {
+                var dateTimeProvider = new DateTimeProvider();
+                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.loggerFactory), new ConsensusSettings(new NodeSettings(this.network)));
+                var tester = new CoinViewTester(cacheCoinView);
+
+                List<(Coins, OutPoint)> coinsA = tester.CreateCoins(5);
+                List<(Coins, OutPoint)> coinsB = tester.CreateCoins(1);
+                tester.NewBlock();
+                cacheCoinView.Flush();
+                Assert.True(tester.Exists(coinsA[2]));
+                Assert.True(tester.Exists(coinsB[0]));
+
+                // Spend some coins.
+                tester.Spend(coinsA[2]);
+                tester.Spend(coinsB[0]);
+
+                tester.NewBlock();
+
+                // This will save an empty RewindData instance
+                tester.NewBlock();
+
+                // Create a new coin set/
+                List<(Coins, OutPoint)> coinsC = tester.CreateCoins(1);
+                tester.NewBlock();
+                Assert.True(tester.Exists(coinsA[0]));
+                Assert.True(tester.Exists(coinsC[0]));
+                Assert.False(tester.Exists(coinsA[2]));
+                Assert.False(tester.Exists(coinsB[0]));
+
+                // We need to rewind 3 times as we are now rewinding one block at a time.
+                tester.Rewind(); // coinsC[0] should not exist any more.
+                tester.Rewind(); // coinsA[2] should be spendable again.
+                tester.Rewind(); // coinsB[2] should be spendable again.
+                Assert.False(tester.Exists(coinsC[0]));
+                Assert.True(tester.Exists(coinsA[2]));
+                Assert.True(tester.Exists(coinsB[0]));
+
+                // Spend some coins and esnure they are not spendable.
+                tester.Spend(coinsA[2]);
+                tester.Spend(coinsB[0]);
+                tester.NewBlock();
+                cacheCoinView.Flush();
+                Assert.False(tester.Exists(coinsA[2]));
+                Assert.False(tester.Exists(coinsB[0]));
+
+                // Rewind so that coinsA[2] and coinsB[0] become spendable again.
+                tester.Rewind();
+                Assert.True(tester.Exists(coinsA[2]));
+                Assert.True(tester.Exists(coinsB[0]));
+
+                // Create 7 coins in a new coin set and spend the first coin.
+                List<(Coins, OutPoint)> coinsD = tester.CreateCoins(7);
+                tester.Spend(coinsD[0]);
+                // Create a coin in a new coin set and spend it.
+                List<(Coins, OutPoint)> coinsE = tester.CreateCoins(1);
+                tester.Spend(coinsE[0]);
+                tester.NewBlock();
+
+                Assert.True(tester.Exists(coinsD[1]));
+                Assert.False(tester.Exists(coinsD[0]));
+                cacheCoinView.Flush();
+
+                // Creates another empty RewindData instance.
+                tester.NewBlock();
+
+                // Rewind one block.
+                tester.Rewind();
+
+                // coinsD[1] was never touched, so should remain unchanged.
+                // coinsD[0] was spent but the block in which the changes happened was not yet rewound to, so it remains unchanged.
+                // coinsE[0] was spent but the block in which the changes happened was not yet rewound to, so it remains unchanged.
+                // coinsA[1] was not touched, so should remain unchanged.
+                // coinsB[1] was not touched, so should remain unchanged.
+                Assert.True(tester.Exists(coinsD[1]));
+                Assert.False(tester.Exists(coinsD[0]));
+                Assert.False(tester.Exists(coinsE[0]));
+                Assert.True(tester.Exists(coinsA[2]));
+                Assert.True(tester.Exists(coinsB[0]));
+
+                // Rewind one block.
+                tester.Rewind();
+
+                // coinsD[0] should now not exist in CoinView anymore.
+                // coinsE[0] should now not exist in CoinView anymore.
+                Assert.False(tester.Exists(coinsD[0]));
+                Assert.False(tester.Exists(coinsE[0]));
+            }
+        }
+
+        [Fact]
+        public void CanHandleReorgs()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode stratisNode = builder.CreateStratisPowNode(this.regTest, "cv-1-stratisNode").Start();
+                CoreNode coreNode1 = builder.CreateBitcoinCoreNode().Start();
+                CoreNode coreNode2 = builder.CreateBitcoinCoreNode().Start();
+
+                //Core1 discovers 10 blocks, sends to stratis
+                coreNode1.FindBlock(10).Last();
+                TestHelper.ConnectAndSync(stratisNode, coreNode1);
+                TestHelper.Disconnect(stratisNode, coreNode1);
+
+                //Core2 discovers 20 blocks, sends to stratis
+                coreNode2.FindBlock(20).Last();
+                TestHelper.ConnectAndSync(stratisNode, coreNode2);
+                TestHelper.Disconnect(stratisNode, coreNode2);
+                ((CachedCoinView)stratisNode.FullNode.CoinView()).Flush();
+
+                //Core1 discovers 30 blocks, sends to stratis
+                coreNode1.FindBlock(30).Last();
+                TestHelper.ConnectAndSync(stratisNode, coreNode1);
+                TestHelper.Disconnect(stratisNode, coreNode1);
+
+                //Core2 discovers 50 blocks, sends to stratis
+                coreNode2.FindBlock(50).Last();
+                TestHelper.ConnectAndSync(stratisNode, coreNode2);
+                TestHelper.Disconnect(stratisNode, coreNode2);
+                ((CachedCoinView)stratisNode.FullNode.CoinView()).Flush();
+
+                TestBase.WaitLoop(() => TestHelper.AreNodesSynced(stratisNode, coreNode2));
+            }
+        }
+
+        [Fact]
+        public void TestDBreezeInsertOrder()
+        {
+            using (NodeContext ctx = NodeContext.Create(this))
+            {
+                using (var engine = new DBreeze.DBreezeEngine(ctx.FolderName + "/2"))
                 {
-                    response.UnspentOutputs[outPointToSpend].Spend();
-                    toSpend.Add(response.UnspentOutputs[outPointToSpend]);
-                }
+                    var data = new[]
+                    {
+                        new uint256(3),
+                        new uint256(2),
+                        new uint256(2439425),
+                        new uint256(5),
+                        new uint256(243945),
+                        new uint256(10),
+                        new uint256(Hashes.Hash256(new byte[0])),
+                        new uint256(Hashes.Hash256(new byte[] {1})),
+                        new uint256(Hashes.Hash256(new byte[] {2})),
+                    };
+                    Array.Sort(data, new UInt256Comparer());
 
-                // Spend from outPoints.
-                outPoints.RemoveAll(x => txPointsToSpend.Contains(x));
+                    using (DBreeze.Transactions.Transaction tx = engine.GetTransaction())
+                    {
+                        foreach (uint256 d in data)
+                            tx.Insert("Table", d.ToBytes(false), d.ToBytes());
+                        tx.Commit();
+                    }
 
-                // Save coinview
-                this.SaveChanges(toSpend, currentHeight + 1);
+                    var data2 = new uint256[data.Length];
+                    using (DBreeze.Transactions.Transaction tx = engine.GetTransaction())
+                    {
+                        int i = 0;
+                        foreach (Row<byte[], byte[]> row in tx.SelectForward<byte[], byte[]>("Table"))
+                        {
+                            data2[i++] = new uint256(row.Key, false);
+                        }
+                    }
 
-                currentHeight++;
-
-                if (i == addChangesTimes / 2)
-                {
-                    copyAfterHalfOfAdditions = new List<OutPoint>(outPoints);
-                    coinviewTipAfterHalf = this.cachedCoinView.GetTipHash();
-                }
-            }
-
-            await this.ValidateCoinviewIntegrityAsync(outPoints);
-
-            for (int i = 0; i < addChangesTimes; i++)
-            {
-                this.cachedCoinView.Rewind();
-
-                HashHeightPair currentTip = this.cachedCoinView.GetTipHash();
-
-                if (currentTip == coinviewTipAfterHalf)
-                    await this.ValidateCoinviewIntegrityAsync(copyAfterHalfOfAdditions);
-            }
-
-            Assert.Equal(tipAfterOriginalCoinsCreation, this.cachedCoinView.GetTipHash());
-
-            await this.ValidateCoinviewIntegrityAsync(copyOfOriginalOutPoints);
-        }
-
-        private List<OutPoint> ConvertToListOfOutputPoints(List<UnspentOutput> outputsList)
-        {
-            return outputsList.Select(s => s.OutPoint).ToList();
-        }
-
-        private List<UnspentOutput> CreateOutputsList(int height, int itemsCount = 10)
-        {
-            List<UnspentOutput> lst = new List<UnspentOutput>();
-
-            for (int j = 0; j < itemsCount; j++)
-            {
-                int outputCount = 20;
-                var tx = new Transaction();
-                tx.LockTime = RandomUtils.GetUInt32(); // add randmoness
-
-                for (int i = 0; i < outputCount; i++)
-                {
-                    var money = new Money(this.random.Next(1_000, 1_000_000));
-                    tx.AddOutput(money, Script.Empty);
-                }
-
-                foreach (IndexedTxOut txout in tx.Outputs.AsIndexedOutputs())
-                {
-                    lst.Add(new UnspentOutput(txout.ToOutPoint(), new Coins((uint)height, txout.TxOut, false)));
+                    Assert.True(data.SequenceEqual(data2));
                 }
             }
-
-            return lst;
         }
 
-        private void SaveChanges(List<UnspentOutput> unspent, int height)
+        private ChainedHeader MakeNext(ChainedHeader previous, Network network)
         {
-            ChainedHeader current = this.chainIndexer.Tip.GetAncestor(height);
-            ChainedHeader previous = current.Previous;
-
-            this.cachedCoinView.SaveChanges(unspent, new HashHeightPair(previous), new HashHeightPair(current));
+            BlockHeader header = BlockHeader.Load(previous.Header.ToBytes(network.Consensus.ConsensusFactory), network);
+            header.HashPrevBlock = previous.HashBlock;
+            return new ChainedHeader(header, header.GetHash(), previous);
         }
 
-        private async Task ValidateCoinviewIntegrityAsync(List<OutPoint> expectedAvailableOutPoints)
+        [Fact]
+        public void CanSaveChainIncrementally()
         {
-            FetchCoinsResponse result = this.cachedCoinView.FetchCoins(expectedAvailableOutPoints.ToArray());
+            var chain = new ChainIndexer(this.regTest);
+            var data = new DataFolder(TestBase.CreateTestDir(this));
 
-            foreach (OutPoint outPoints in expectedAvailableOutPoints)
+            using (var repo = new ChainRepository(this.loggerFactory, new LeveldbHeaderStore(this.network, data, chain), this.network))
             {
-                // Check unexpected coins are not present.
-                Assert.NotNull(result.UnspentOutputs[outPoints].Coins);
-            }
-
-            // Verify that snapshot is equal to current state of coinview.
-            OutPoint[] allTxIds = expectedAvailableOutPoints.Select(x => x).Distinct().ToArray();
-            FetchCoinsResponse result2 = this.cachedCoinView.FetchCoins(allTxIds);
-            List<OutPoint> availableOutPoints = this.ConvertToListOfOutputPoints(result2.UnspentOutputs.Values.ToList());
-
-            Assert.Equal(expectedAvailableOutPoints.Count, availableOutPoints.Count);
-
-            foreach (OutPoint referenceOutPoint in expectedAvailableOutPoints)
-            {
-                Assert.Contains(referenceOutPoint, availableOutPoints);
+                chain.SetTip(repo.LoadAsync(chain.Genesis).GetAwaiter().GetResult());
+                Assert.True(chain.Tip == chain.Genesis);
+                chain = new ChainIndexer(this.regTest);
+                ChainedHeader tip = this.AppendBlock(chain);
+                repo.SaveAsync(chain).GetAwaiter().GetResult();
+                var newChain = new ChainIndexer(this.regTest);
+                newChain.SetTip(repo.LoadAsync(chain.Genesis).GetAwaiter().GetResult());
+                Assert.Equal(tip, newChain.Tip);
+                tip = this.AppendBlock(chain);
+                repo.SaveAsync(chain).GetAwaiter().GetResult();
+                newChain = new ChainIndexer(this.regTest);
+                newChain.SetTip(repo.LoadAsync(chain.Genesis).GetAwaiter().GetResult());
+                Assert.Equal(tip, newChain.Tip);
             }
         }
 
-        private void Shuffle<T>(IList<T> list)
+        public ChainedHeader AppendBlock(ChainedHeader previous, params ChainIndexer[] chainsIndexer)
         {
-            int n = list.Count;
-            while (n > 1)
+            ChainedHeader last = null;
+            uint nonce = RandomUtils.GetUInt32();
+            foreach (ChainIndexer chain in chainsIndexer)
             {
-                n--;
-                int k = this.random.Next(n + 1);
-                T value = list[k];
-                list[k] = list[n];
-                list[n] = value;
+                Block block = this.network.CreateBlock();
+                block.AddTransaction(this.network.CreateTransaction());
+                block.UpdateMerkleRoot();
+                block.Header.HashPrevBlock = previous == null ? chain.Tip.HashBlock : previous.HashBlock;
+                block.Header.Nonce = nonce;
+                if (!chain.TrySetTip(block.Header, out last))
+                    throw new InvalidOperationException("Previous not existing");
             }
+            return last;
+        }
+
+        private ChainedHeader AppendBlock(params ChainIndexer[] chainsIndexer)
+        {
+            ChainedHeader index = null;
+            return this.AppendBlock(index, chainsIndexer);
         }
     }
 }
