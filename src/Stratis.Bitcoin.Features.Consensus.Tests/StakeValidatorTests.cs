@@ -1189,66 +1189,6 @@ namespace Stratis.Bitcoin.Tests.Consensus
             Assert.True(result);
         }
 
-        [Fact]
-        public void GetTargetDepthRequired_Testnet_HeightBelowMinConfirmationHeight_UsesChainedHeaderHeightAndConsensusOptions_CalculatesTarget()
-        {
-            this.Network = KnownNetworks.StratisTest;
-            this.stakeValidator = CreateStakeValidator();
-
-            var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightTestnet - 2;
-            BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
-
-            var depth = this.stakeValidator.GetTargetDepthRequired(header);
-
-            Assert.Equal(9, depth);
-        }
-
-        [Fact]
-        public void GetTargetDepthRequired_Testnet_HeightAtMinConfirmationHeight_UsesChainedHeaderHeightAndConsensusOptions_CalculatesTarget()
-        {
-            this.Network = KnownNetworks.StratisTest;
-            this.stakeValidator = CreateStakeValidator();
-
-            var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightTestnet - 1;
-            BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
-
-            var depth = this.stakeValidator.GetTargetDepthRequired(header);
-
-            Assert.Equal(19, depth);
-        }
-
-        [Fact]
-        public void GetTargetDepthRequired_Mainnet_HeightBelowMinConfirmationHeight_UsesChainedHeaderHeightAndConsensusOptions_CalculatesTarget()
-        {
-            this.Network = KnownNetworks.StratisMain;
-            this.stakeValidator = CreateStakeValidator();
-
-            var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightMainnet - 2;
-            BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
-
-            var depth = this.stakeValidator.GetTargetDepthRequired(header);
-
-            Assert.Equal(49, depth);
-        }
-
-        [Fact]
-        public void GetTargetDepthRequired_Mainnet_HeightAtMinConfirmationHeight_UsesChainedHeaderHeightAndConsensusOptions_CalculatesTarget()
-        {
-            this.Network = KnownNetworks.StratisMain;
-            this.stakeValidator = CreateStakeValidator();
-
-            var height = PosConsensusOptions.CoinstakeMinConfirmationActivationHeightMainnet - 1;
-            BlockHeader blockHeader = this.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-            ChainedHeader header = new ChainedHeader(blockHeader, blockHeader.GetHash(), height);
-
-            var depth = this.stakeValidator.GetTargetDepthRequired(header);
-
-            Assert.Equal(499, depth);
-        }
-
         private ChainedHeader CreateChainWithStubCoinStakeTransactions(ChainIndexer chainIndexer, int height, Money money = null)
         {
             ChainedHeader previous = null;
