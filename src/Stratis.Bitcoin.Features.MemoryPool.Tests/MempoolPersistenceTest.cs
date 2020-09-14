@@ -323,7 +323,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 new CheckRateLimitMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
                 new CheckAncestorsMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
                 new CheckReplacementMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
-                new CheckAllInputsMempoolRule(this.network, txMemPool, mempoolSettings, chain, consensusRules, loggerFactory),
+                new CheckAllInputsMempoolRule(this.network, txMemPool, mempoolSettings, chain, consensusRules, deployments, loggerFactory),
                 new CheckTxOutDustRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
             };
 
@@ -336,7 +336,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 }
             }
 
-            var mempoolValidator = new MempoolValidator(txMemPool, mempoolLock, dateTimeProvider, mempoolSettings, chain, coins, loggerFactory, settings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null));
+            var nodeDeployments = new NodeDeployments(this.network, chain);
+
+            var mempoolValidator = new MempoolValidator(txMemPool, mempoolLock, dateTimeProvider, mempoolSettings, chain, coins, loggerFactory, settings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null), nodeDeployments);
             return new MempoolManager(mempoolLock, txMemPool, mempoolValidator, dateTimeProvider, mempoolSettings, mempoolPersistence, coins, loggerFactory, settings.Network);
         }
     }

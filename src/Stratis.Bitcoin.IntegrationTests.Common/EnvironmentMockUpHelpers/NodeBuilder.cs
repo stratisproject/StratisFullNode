@@ -84,10 +84,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             return node;
         }
 
-        public CoreNode CreateBitcoinCoreNode(string version = "0.13.1", bool useCookieAuth = false)
+        public CoreNode CreateBitcoinCoreNode(string version = "0.13.1", bool useCookieAuth = false, bool useNewConfigStyle = false)
         {
             string bitcoinDPath = GetBitcoinCorePath(version);
-            return this.CreateNode(new BitcoinCoreRunner(this.GetNextDataFolderName(), bitcoinDPath), useCookieAuth: useCookieAuth);
+            return this.CreateNode(new BitcoinCoreRunner(this.GetNextDataFolderName(), bitcoinDPath, useNewConfigStyle), useCookieAuth: useCookieAuth);
         }
 
         /// <summary>

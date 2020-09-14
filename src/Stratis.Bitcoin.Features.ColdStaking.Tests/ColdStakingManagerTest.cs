@@ -109,10 +109,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             walletManager.Start();
 
-            Wallet.Wallet wallet = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            Wallet.Wallet coldWallet = this.walletFixture.GenerateBlankWallet("myColdWallet", "password", walletRepository);
-            Wallet.Wallet hotWallet = this.walletFixture.GenerateBlankWallet("myHotWallet", "password", walletRepository);
-            Wallet.Wallet withdrawalWallet = this.walletFixture.GenerateBlankWallet("myWithDrawalWallet", "password", walletRepository);
+            (Wallet.Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
+            (Wallet.Wallet coldWallet, ExtKey coldWalletExtKey) = this.walletFixture.GenerateBlankWallet("myColdWallet", "password", walletRepository);
+            (Wallet.Wallet hotWallet, ExtKey hotWalletExtKey) = this.walletFixture.GenerateBlankWallet("myHotWallet", "password", walletRepository);
+            (Wallet.Wallet withdrawalWallet, ExtKey withdrawalWalletExtKey) = this.walletFixture.GenerateBlankWallet("myWithDrawalWallet", "password", walletRepository);
 
             HdAccount withdrawalAccount = withdrawalWallet.AddNewAccount("password");
             HdAddress withdrawalAddress = withdrawalAccount.ExternalAddresses.ElementAt(0);

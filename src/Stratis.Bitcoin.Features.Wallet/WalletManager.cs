@@ -224,7 +224,9 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             return new Dictionary<string, ScriptTemplate> {
                 { "P2PK", PayToPubkeyTemplate.Instance },
-                { "P2PKH", PayToPubkeyHashTemplate.Instance } };
+                { "P2PKH", PayToPubkeyHashTemplate.Instance },
+                { "P2WPKH", PayToWitPubKeyHashTemplate.Instance }
+            };
         }
 
         // <inheritdoc />
@@ -899,7 +901,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 foreach (string walletName in this.WalletRepository.GetWalletNames())
                 {
-                    int walletId = this.WalletRepository.GetAddressIdentifier(walletName).WalletId;
+                    int walletId = this.WalletRepository.GetWalletId(walletName);
 
                     if (!this.WalletRepository.GetWalletAddressLookup(walletName).Contains(scriptPubKey, out AddressIdentifier addressIdentifier))
                         continue;

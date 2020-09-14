@@ -42,9 +42,9 @@ namespace Stratis.CirrusPegD
 
         private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
         {
-            { NetworkType.Mainnet, Networks.Stratis.Mainnet },
-            { NetworkType.Testnet, Networks.Stratis.Testnet },
-            { NetworkType.Regtest, Networks.Stratis.Regtest }
+            { NetworkType.Mainnet, Networks.Strax.Mainnet},
+            { NetworkType.Testnet, Networks.Strax.Testnet },
+            { NetworkType.Regtest, Networks.Strax.Regtest }
         };
 
         private static void Main(string[] args)
@@ -79,7 +79,7 @@ namespace Stratis.CirrusPegD
         {
             // TODO: Hardcode -addressindex
 
-            var nodeSettings = new NodeSettings(networksSelector: Networks.Stratis, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
+            var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
             {
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };

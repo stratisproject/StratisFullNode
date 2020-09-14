@@ -23,6 +23,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         public string PubKey { get; set; }
         public string Address { get; set; }
 
+        // It is not really accurate to call this a 'bech32' scriptPubKey, rather it is P2WPKH. But naming it this implies pairing with Bech32Address, which is beneficial.
+        public string Bech32ScriptPubKey { get; set; }
+
+        // TODO: It would be better if the wallet database didn't have any concept of an address at all, only scriptPubKeys of various types, with address translation only occurring in the API or wallet manager
+        public string Bech32Address { get; set; }
+
         internal static IEnumerable<string> CreateScript()
         {
             yield return $@"
@@ -32,12 +38,15 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 AddressType         INTEGER NOT NULL,
                 AddressIndex        INTEGER NOT NULL,
                 ScriptPubKey        TEXT    NOT NULL,
+                Bech32ScriptPubKey  TEXT    NOT NULL,
                 PubKey              TEXT,
                 Address             TEXT NOT NULL,
+                Bech32Address       TEXT NOT NULL,
                 PRIMARY KEY(WalletId, AccountIndex, AddressType, AddressIndex)
             )";
 
             yield return "CREATE UNIQUE INDEX UX_HDAddress_ScriptPubKey ON HDAddress(WalletId, ScriptPubKey)";
+            yield return "CREATE UNIQUE INDEX UX_HDAddress_Bech32ScriptPubKey ON HDAddress(WalletId, Bech32ScriptPubKey)";
             yield return "CREATE UNIQUE INDEX UX_HDAddress_PubKey ON HDAddress(WalletId, PubKey)";
         }
 

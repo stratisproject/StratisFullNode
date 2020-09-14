@@ -50,6 +50,10 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     case TxOutType.TX_SCRIPTHASH:
                         yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).ScriptPubKey;
                         break;
+                    case TxOutType.TX_SEGWIT:
+                        // TODO: Do we need to make the distinction between P2WPKH and P2WSH?
+                        yield return PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript).ScriptPubKey;
+                        break;
                     default:
                         if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
                         {
@@ -118,7 +122,10 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     bool isChange = destinations.Any(d => addressesOfInterest.Contains(d, out AddressIdentifier address2) && address2.AddressType == 1);
 
                     if (addSpendTx)
+                    {
+                        // TODO: Why is this done? If the receipt is not to one of our addresses (i.e. identified in the loop coming next) then why bother trying to record it?
                         this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? tx.Time, txId, i, isChange);
+                    }
 
                     foreach (Script pubKeyScript in destinations)
                     {
@@ -141,6 +148,9 @@ namespace Stratis.Features.SQLiteWalletRepository.External
 
                                         // Add the new address to our addresses of interest.
                                         addressesOfInterest.AddTentative(Script.FromHex(newAddress.ScriptPubKey), newAddress);
+
+                                        // And the P2WPKH.
+                                        addressesOfInterest.AddTentative(Script.FromHex(newAddress.Bech32ScriptPubKey), newAddress);
                                     }
                                 }
                             }

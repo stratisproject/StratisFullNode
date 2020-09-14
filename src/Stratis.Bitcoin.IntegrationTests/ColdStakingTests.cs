@@ -4,37 +4,24 @@ using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Utilities.Extensions;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
 {
-    /// <summary>
-    /// Prevent network being matched by name and replaced with a different network
-    /// in the <see cref="Configuration.NodeSettings" /> constructor.
-    /// </summary>
-    public class StratisOverrideRegTest : StratisRegTest
-    {
-        public StratisOverrideRegTest() : base()
-        {
-            this.Name = Guid.NewGuid().ToString();
-        }
-    }
-
     public class ColdStakingTests
     {
         /// <summary>
         /// Tests that cold staking gets activated as expected.
         /// </summary>
         [Fact]
-        public void ColdStakingActivatedOnStratisNode()
+        public void ColdStakingActivatedOnStraxNode()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Create separate network parameters for this test.
-                var network = new StratisOverrideRegTest();
+                var network = new StraxOverrideRegTest();
 
                 // Set the date ranges such that ColdStaking will 'Start' immediately after the initial confirmation window.
                 // Also reduce the minimum number of 'votes' required within the confirmation window to reach 'LockedIn' state.
