@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             headerValidationRules.Count.Should().Be(7);
             headerValidationRules[0].FullName.Should().Be(typeof(HeaderTimeChecksRule).FullName);
             headerValidationRules[1].FullName.Should().Be(typeof(HeaderTimeChecksPosRule).FullName);
-            headerValidationRules[2].FullName.Should().Be(typeof(StratisBugFixPosFutureDriftRule).FullName);
+            headerValidationRules[2].FullName.Should().Be(typeof(PosFutureDriftRule).FullName);
             headerValidationRules[3].FullName.Should().Be(typeof(CheckDifficultyPosRule).FullName);
             headerValidationRules[4].FullName.Should().Be(typeof(StratisHeaderVersionRule).FullName);
             headerValidationRules[5].FullName.Should().Be(typeof(ProvenHeaderSizeRule).FullName);
@@ -159,7 +159,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             fullValidationRules[2].FullName.Should().Be(typeof(LoadCoinviewRule).FullName);
             fullValidationRules[3].FullName.Should().Be(typeof(TransactionDuplicationActivationRule).FullName);
             fullValidationRules[4].FullName.Should().Be(typeof(StraxCoinviewRule).FullName);
-            fullValidationRules[5].FullName.Should().Be(typeof(PosColdStakingRule).FullName);
+            fullValidationRules[5].FullName.Should().Be(typeof(StraxColdStakingRule).FullName);
             fullValidationRules[6].FullName.Should().Be(typeof(SaveCoinviewRule).FullName);
         }
     }
