@@ -2,6 +2,7 @@
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Collateral.ConsensusRules;
+using Stratis.Bitcoin.Features.Collateral.MempoolRules;
 using Stratis.Bitcoin.Tests.Common;
 
 namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common

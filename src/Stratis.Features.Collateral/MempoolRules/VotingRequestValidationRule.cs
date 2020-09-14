@@ -7,7 +7,7 @@ using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Features.Collateral;
 
-namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
+namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
 {
     public class VotingRequestValidationRule : MempoolRule
     {
