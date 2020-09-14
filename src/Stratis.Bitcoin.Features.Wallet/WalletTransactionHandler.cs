@@ -187,6 +187,14 @@ namespace Stratis.Bitcoin.Features.Wallet
             catch (NotEnoughFundsException e)
             {
                 fee = (Money)e.Missing;
+
+                Money minTrxFee = new Money(this.network.MinTxFee, MoneyUnit.Satoshi);
+
+                // Make sure that the fee is at least the minimum transaction fee.
+                fee = Math.Max(fee, minTrxFee);
+
+                if (maxSpendableAmount < fee)
+                    return (Money.Zero, Money.Zero);
             }
 
             return (maxSpendableAmount - fee, fee);
