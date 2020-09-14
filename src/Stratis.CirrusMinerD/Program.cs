@@ -34,9 +34,9 @@ namespace Stratis.CirrusMinerD
 
         private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
         {
-            { NetworkType.Mainnet, Networks.Stratis.Mainnet },
-            { NetworkType.Testnet, Networks.Stratis.Testnet },
-            { NetworkType.Regtest, Networks.Stratis.Regtest }
+            { NetworkType.Mainnet, Networks.Strax.Mainnet},
+            { NetworkType.Testnet, Networks.Strax.Testnet },
+            { NetworkType.Regtest, Networks.Strax.Regtest }
         };
 
         public static void Main(string[] args)
@@ -56,7 +56,7 @@ namespace Stratis.CirrusMinerD
                     throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
                 }
 
-                IFullNode node = isMainchainNode ? GetStratisNode(args) : GetCirrusMiningNode(args);
+                IFullNode node = isMainchainNode ? GetStraxNode(args) : GetCirrusMiningNode(args);
 
                 if (node != null)
                     await node.RunAsync();
@@ -102,11 +102,11 @@ namespace Stratis.CirrusMinerD
         /// <summary>
         /// Returns a standard Stratis node. Just like StratisD.
         /// </summary>
-        private static IFullNode GetStratisNode(string[] args)
+        private static IFullNode GetStraxNode(string[] args)
         {
             // TODO: Hardcode -addressindex for better user experience
 
-            var nodeSettings = new NodeSettings(networksSelector: Networks.Stratis, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
+            var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
             {
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
