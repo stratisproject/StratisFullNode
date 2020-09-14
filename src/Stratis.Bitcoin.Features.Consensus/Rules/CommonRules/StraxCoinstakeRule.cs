@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     }
                 }
 
-                // TODO: Add proper Strax-speciific consensus error
+                // TODO: Add proper Strax-specific consensus error
                 if (!cirrusRewardOutput)
                 {
                     this.Logger.LogTrace("(-)[MISSING_REWARD_SCRIPT_COINSTAKE_OUTPUT]");

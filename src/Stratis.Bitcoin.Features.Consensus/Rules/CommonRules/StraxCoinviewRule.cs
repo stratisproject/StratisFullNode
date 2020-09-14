@@ -23,7 +23,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             if (BlockStake.IsProofOfStake(block))
             {
                 var posRuleContext = context as PosRuleContext;
-                Money stakeReward = block.Transactions[1].TotalOut - posRuleContext.TotalCoinStakeValueIn;
+                Transaction coinstake = block.Transactions[1];
+                Money stakeReward = coinstake.TotalOut - posRuleContext.TotalCoinStakeValueIn;
                 Money calcStakeReward = fees + this.GetProofOfStakeReward(height);
 
                 this.Logger.LogDebug("Block stake reward is {0}, calculated reward is {1}.", stakeReward, calcStakeReward);
@@ -37,14 +38,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 // We only mandate that at least x% of the reward is sent there, there are no other constraints on what gets done with the rest of the reward.
                 Money rewardScriptTotal = Money.Coins(0.0m);
 
-                foreach (TxOut output in block.Transactions[1].Outputs)
+                foreach (TxOut output in coinstake.Outputs)
                 {
                     // TODO: Double check which rule we have the negative output (and overflow) amount check inside; we assume that has been done before this check
                     if (output.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
                         rewardScriptTotal += output.Value;
                 }
 
-                // It must be x% of the maximum possible reward. It must not be possible to short-change it by deliberately sacrificing the rest of the claimed reward.
+                // It must be x% of the maximum possible reward.
+                // It must not be possible to short-change it by deliberately sacrificing the rest of the claimed reward.
                 // TODO: Create a distinct consensus error for this?
                 if ((calcStakeReward * CirrusRewardPercentage / 100) > rewardScriptTotal)
                 {

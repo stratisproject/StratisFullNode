@@ -67,12 +67,12 @@ namespace Stratis.Bitcoin.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            var bip9Deployments = new StratisBIP9Deployments()
+            var bip9Deployments = new StraxBIP9Deployments()
             {
                 // Always active.
-                [StratisBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
-                [StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
-                [StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold)
+                [StraxBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
+                [StraxBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
+                [StraxBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold)
             };
 
             this.Consensus = new NBitcoin.Consensus(
@@ -159,7 +159,7 @@ namespace Stratis.Bitcoin.Networks
             consensus.ConsensusRules
                 .Register<HeaderTimeChecksRule>()
                 .Register<HeaderTimeChecksPosRule>()
-                .Register<StratisBugFixPosFutureDriftRule>() // TODO: Don't need this version of the rule
+                .Register<PosFutureDriftRule>()
                 .Register<CheckDifficultyPosRule>()
                 .Register<StratisHeaderVersionRule>()
                 .Register<ProvenHeaderSizeRule>()
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Networks
                 .Register<StraxCoinviewRule>() // implements BIP68, MaxSigOps and BlockReward calculation
                                              // Place the PosColdStakingRule after the PosCoinviewRule to ensure that all input scripts have been evaluated
                                              // and that the "IsColdCoinStake" flag would have been set by the OP_CHECKCOLDSTAKEVERIFY opcode if applicable.
-                .Register<PosColdStakingRule>()
+                .Register<StraxColdStakingRule>()
                 .Register<SaveCoinviewRule>();
         }
 
