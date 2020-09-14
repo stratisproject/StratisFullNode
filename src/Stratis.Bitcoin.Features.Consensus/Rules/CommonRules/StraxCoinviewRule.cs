@@ -6,15 +6,13 @@ using Stratis.Bitcoin.Consensus.Rules;
 namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 {
     /// <summary>
-    /// Proof of stake override for the coinview rules - BIP68, MaxSigOps and BlockReward checks.
+    /// Strax PoS overrides for certain coinview rule checks.
     /// </summary>
     public sealed class StraxCoinviewRule : PosCoinviewRule
     {
         // 50% of the block reward should be assigned to the reward script.
         // This has to be within the coinview rule because we need access to the coinstake input value to determine the size of the block reward.
         public static readonly int CirrusRewardPercentage = 50;
-
-        // TODO: We further need to check that any transactions that spend outputs from the reward script only go to the cross-chain multisig.
 
         /// <inheritdoc />
         public override void CheckBlockReward(RuleContext context, Money fees, int height, Block block)
@@ -68,6 +66,43 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 
                 // TODO: Should the reward split apply to blocks in the POW phase of the network too?
             }
+        }
+
+        /// <inheritdoc />
+        protected override bool AllowSpend(TxOut prevOut, Transaction tx)
+        {
+            // TODO: Make a mempool rule for this too
+
+            // We further need to check that any transactions that spend outputs from the reward script only go to the cross-chain multisig.
+            // This check is not isolated to PoS specifically.
+            if (prevOut.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
+            {
+                foreach (TxOut output in tx.Outputs)
+                {
+                    // We allow OP_RETURNs for tagging purposes, but they must not be allowed to have any value attached
+                    // (as that would then be burning Cirrus rewards)
+                    if (output.ScriptPubKey.IsUnspendable)
+                    {
+                        if (output.Value != 0)
+                        {
+                            this.Logger.LogTrace("(-)[INVALID_REWARD_OP_RETURN_SPEND]");
+                            ConsensusErrors.BadTransactionScriptError.Throw();
+                        }
+
+                        continue;
+                    }
+
+                    // Every other (spendable) output must go to the multisig
+                    if (output.ScriptPubKey != this.Parent.Network.FederationMultisigScript)
+                    {
+                        this.Logger.LogTrace("(-)[INVALID_REWARD_SPEND_DESTINATION]");
+                        ConsensusErrors.BadTransactionScriptError.Throw();
+                    }
+                }
+            }
+
+            // Otherwise allow the spend.
+            return true;
         }
     }
 }
