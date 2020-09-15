@@ -1054,8 +1054,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var accountBalance = balanceResponse.AccountsBalances.Single();
             var totalBalance = accountBalance.AmountConfirmed + accountBalance.AmountUnconfirmed;
 
-            maxBalanceResponse.MaxSpendableAmount.Should().Be(new Money(24289999986040));
-            maxBalanceResponse.Fee.Should().Be(new Money(9360));
+            maxBalanceResponse.MaxSpendableAmount.Should().Be(new Money(24289999985400));
+            maxBalanceResponse.Fee.Should().Be(new Money(10000));
         }
 
         [Fact]
