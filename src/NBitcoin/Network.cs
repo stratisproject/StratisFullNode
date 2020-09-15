@@ -271,6 +271,8 @@ namespace NBitcoin
         /// </summary>
         public IStandardScriptsRegistry StandardScriptsRegistry { get; protected set; }
 
+        public Script FederationMultisigScript { get; protected set; }
+
         /// <summary>
         /// Mines a new genesis block, to use with a new network.
         /// Typically, 3 such genesis blocks need to be created when bootstrapping a new coin: for Main, Test and Reg networks.

@@ -220,7 +220,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var network = new StraxOverrideRegTest();
 
                 // Set the date ranges such that segwit will 'Start' immediately after the initial confirmation window.
-                network.Consensus.BIP9Deployments[StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
+                network.Consensus.BIP9Deployments[StraxBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
 
                 // Set a small confirmation window to reduce time taken by this test.
                 network.Consensus.MinerConfirmationWindow = 10;
@@ -243,10 +243,10 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Check that Segwit states got updated as expected.
                 ThresholdConditionCache cache = (stratisNode.FullNode.NodeService<IConsensusRuleEngine>() as ConsensusRuleEngine).NodeDeployments.BIP9;
-                Assert.Equal(ThresholdState.Defined, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight - 1), StratisBIP9Deployments.Segwit));
-                Assert.Equal(ThresholdState.Started, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight), StratisBIP9Deployments.Segwit));
-                Assert.Equal(ThresholdState.LockedIn, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(lockedInHeight), StratisBIP9Deployments.Segwit));
-                Assert.Equal(ThresholdState.Active, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(activeHeight), StratisBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.Defined, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight - 1), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.Started, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.LockedIn, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(lockedInHeight), StraxBIP9Deployments.Segwit));
+                Assert.Equal(ThresholdState.Active, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(activeHeight), StraxBIP9Deployments.Segwit));
 
                 // Verify that the block created before activation does not have the 'Witness' script flag set.
                 var rulesEngine = stratisNode.FullNode.NodeService<IConsensusRuleEngine>();

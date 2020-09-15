@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 {
                     if (!tx.IsCoinBase && !view.HaveInputs(tx))
                     {
-                        this.Logger.LogDebug("Transaction '{0}' has not inputs", tx.GetHash());
+                        this.Logger.LogDebug("Transaction '{0}' has no inputs", tx.GetHash());
                         this.Logger.LogTrace("(-)[BAD_TX_NO_INPUT]");
                         ConsensusErrors.BadTransactionMissingInput.Throw();
                     }
@@ -85,10 +85,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                         {
                             TxIn input = tx.Inputs[inputIndex];
 
+                            TxOut prevOut = view.GetOutputFor(input);
+
+                            // If there are any consensus-specific requirements to inhibit spends from or to particular scripts, they get enforced here.
+                            this.AllowSpend(prevOut, tx);
+
                             inputsToCheck.Add((
                                 tx: tx,
                                 inputIndexCopy: inputIndex,
-                                txOut: view.GetOutputFor(input),
+                                txOut: prevOut,
                                 txData,
                                 input: input,
                                 flags
@@ -129,6 +134,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 }
             }
             else this.Logger.LogDebug("BIP68, SigOp cost, and block reward validation skipped for block at height {0}.", index.Height);
+        }
+
+        /// <summary>
+        /// Any non-signature checks that prevent the spending of a given UTXO.
+        /// </summary>
+        /// <param name="prevOut">The input being checked for validity.</param>
+        /// <param name="spendingTx">The transaction that attempts to spend the given input.</param>
+        protected virtual void AllowSpend(TxOut prevOut, Transaction spendingTx)
+        {
         }
 
         protected abstract Money GetTransactionFee(UnspentOutputSet view, Transaction tx);
