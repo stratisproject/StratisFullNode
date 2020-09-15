@@ -90,7 +90,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
                 ,      NULL SpendTxTotalOut
                 FROM   temp.TempOutput T
                 JOIN   HDAddress A
-                ON     A.ScriptPubKey = T.ScriptPubKey
+                ON     (A.ScriptPubKey = T.ScriptPubKey) OR (A.Bech32ScriptPubKey = T.ScriptPubKey)
                 AND    A.WalletId IN (
                        SELECT WalletId
                        FROM   HDWallet

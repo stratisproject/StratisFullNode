@@ -283,6 +283,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <returns>The lookup.</returns>
         IWalletTransactionReadOnlyLookup GetWalletTransactionLookup(string walletName);
 
+        int GetWalletId(string walletName);
+
         /// <summary>
         /// Gets a structure representing the HD Path of the provided parameters.
         /// </summary>

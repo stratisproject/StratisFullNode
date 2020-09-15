@@ -542,7 +542,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 HdAddress result = this.walletManager.GetUnusedAddress(new WalletAccountReference(
                     request.WalletName,
                     request.AccountName));
-                return this.Json(result.Address);
+                return this.Json(request.Segwit ? result.Bech32Address : result.Address);
             });
         }
 
@@ -570,7 +570,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             {
                 var result = this.walletManager.GetUnusedAddresses(
                         new WalletAccountReference(request.WalletName, req.AccountName), int.Parse(req.Count))
-                    .Select(x => x.Address).ToArray();
+                    .Select(x => request.Segwit ? x.Bech32Address : x.Address).ToArray();
 
                 return this.Json(result);
             });

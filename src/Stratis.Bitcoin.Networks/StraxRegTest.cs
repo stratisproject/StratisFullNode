@@ -16,7 +16,7 @@ namespace Stratis.Bitcoin.Networks
         {
             this.Name = "StraxRegTest";
             this.NetworkType = NetworkType.Regtest;
-            this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("RtrX")); ;
+            this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("RtrX"));
             this.DefaultPort = 17200;
             this.DefaultMaxOutboundConnections = 16;
             this.DefaultMaxInboundConnections = 100;
@@ -41,13 +41,14 @@ namespace Stratis.Bitcoin.Networks
 
             this.Genesis = genesisBlock;
 
-            // Taken from StratisX.
+            // Taken from Stratis.
             var consensusOptions = new PosConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
                 maxStandardTxWeight: 100_000,
                 maxBlockSigopsCost: 20_000,
-                maxStandardTxSigopsCost: 20_000 / 5
+                maxStandardTxSigopsCost: 20_000 / 5,
+                witnessScaleFactor: 4
             );
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -59,7 +60,10 @@ namespace Stratis.Bitcoin.Networks
 
             var bip9Deployments = new StratisBIP9Deployments()
             {
-                // TODO: Add the BIP9 deployments after segwit is merged (cold staking, segwit, csv)
+                // Always active.
+                [StratisBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultRegTestThreshold),
+                [StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultRegTestThreshold),
+                [StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             this.Consensus = new NBitcoin.Consensus(
@@ -96,6 +100,8 @@ namespace Stratis.Bitcoin.Networks
                 proofOfStakeReward: Money.Coins(18)
             );
 
+            this.Consensus.PosEmptyCoinbase = false;
+
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (120) };
             this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (127) };
             this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (65 + 128) };
@@ -104,13 +110,10 @@ namespace Stratis.Bitcoin.Networks
             {
             };
 
-            this.Bech32Encoders = new Bech32Encoder[2]; // TODO: Add these in with the segwit merge
-            // Bech32 is currently unsupported on Stratis - once supported uncomment lines below
-            //var encoder = new Bech32Encoder("bc");
-            //this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
-            //this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
-            this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = null;
-            this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = null;
+            this.Bech32Encoders = new Bech32Encoder[2];
+            var encoder = new Bech32Encoder("tstrax");
+            this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
+            this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
 
             this.DNSSeeds = new List<DNSSeedData>();
             this.SeedNodes = new List<NetworkAddress>();

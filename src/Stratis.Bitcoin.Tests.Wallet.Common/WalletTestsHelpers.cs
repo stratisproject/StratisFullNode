@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using NBitcoin.Policy;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -157,8 +158,11 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
             Network network = walletRepository?.Network ?? KnownNetworks.Main;
             string encryptedSeed = extendedKey.PrivateKey.GetEncryptedBitcoinSecret(password, network).ToWif();
 
-            var wallet = new Features.Wallet.Wallet(name, encryptedSeed, extendedKey.ChainCode, walletRepository: walletRepository);
-            wallet.Network = network;
+            var wallet = new Features.Wallet.Wallet(name, encryptedSeed, extendedKey.ChainCode, walletRepository: walletRepository)
+            {
+                Network = network
+            };
+
             wallet.AccountsRoot = new List<AccountRoot> { new AccountRoot(wallet) { CoinType = (CoinType)network.Consensus.CoinType } };
 
             return (wallet, extendedKey);
@@ -184,6 +188,13 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
             return SetupValidTransaction(wallet, password, spendingAddress, destinationPubKey.ScriptPubKey, changeAddress, amount, fee);
         }
 
+        public static Transaction SetupValidSegwitTransaction(Features.Wallet.Wallet wallet, string password, HdAddress spendingAddress, HdAddress destinationAddress, HdAddress changeAddress, Money amount, Money fee)
+        {
+            Script scriptPubKey = BitcoinWitPubKeyAddress.Create(destinationAddress.Bech32Address, wallet.Network).ScriptPubKey;
+
+            return SetupValidTransaction(wallet, password, spendingAddress, scriptPubKey, changeAddress, amount, fee);
+        }
+
         public static Transaction SetupValidTransaction(Features.Wallet.Wallet wallet, string password, HdAddress spendingAddress, Script destinationScript, HdAddress changeAddress, Money amount, Money fee)
         {
             TransactionData spendingTransaction = spendingAddress.Transactions.ElementAt(0);
@@ -191,10 +202,12 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
 
             Key privateKey = Key.Parse(wallet.EncryptedSeed, password, wallet.Network);
 
+            var extKey = new ExtKey(privateKey, wallet.ChainCode).Derive(new KeyPath(spendingAddress.HdPath)).GetWif(wallet.Network);
+
             var builder = new TransactionBuilder(wallet.Network);
             Transaction tx = builder
                 .AddCoins(new List<Coin> { coin })
-                .AddKeys(new ExtKey(privateKey, wallet.ChainCode).Derive(new KeyPath(spendingAddress.HdPath)).GetWif(wallet.Network))
+                .AddKeys(extKey)
                 .Send(destinationScript, amount)
                 .SetChange(changeAddress.ScriptPubKey)
                 .SendFees(fee)
@@ -244,23 +257,19 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
             };
         }
 
-        public static HdAddress CreateAddressWithEmptyTransaction(HdAccount account, int addrType, int index, string addressName)
+        public static HdAddress AddEmptyTransactionToAddress(HdAccount account, int addrType, int index)
         {
-            PubKey pubKey = (new Key()).PubKey;
+            HdAddress res;
 
-            var res = new HdAddress(null)
-            {
-                Index = index,
-                Address = addressName,
-                HdPath = $"{account.HdPath}/{addrType}/{index}",
-                Pubkey = pubKey.ScriptPubKey,
-                ScriptPubKey = pubKey.Hash.ScriptPubKey
-            };
+            if (addrType == 0)
+                res = account.ExternalAddresses.Skip(index).First();
+            else
+                res = account.InternalAddresses.Skip(index).First();
 
             res.Transactions.Add(new TransactionData() {
                 Id = new uint256((ulong)addrType),
                 Index = index,
-                ScriptPubKey = pubKey.Hash.ScriptPubKey
+                ScriptPubKey = res.ScriptPubKey
             });
 
             return res;
@@ -282,8 +291,9 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
 
         public static (ExtKey ExtKey, string ExtPubKey) GenerateAccountKeys(Features.Wallet.Wallet wallet, string password, string keyPath)
         {
-            var accountExtKey = new ExtKey(Key.Parse(wallet.EncryptedSeed, password, wallet.Network), wallet.ChainCode);
+            var accountExtKey = new ExtKey(Key.Parse(wallet.EncryptedSeed, password, wallet.Network), wallet.ChainCode).Derive(new KeyPath(keyPath));
             string accountExtendedPubKey = accountExtKey.Derive(new KeyPath(keyPath)).Neuter().ToString(wallet.Network);
+
             return (accountExtKey, accountExtendedPubKey);
         }
 
@@ -400,19 +410,32 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
             return (chain, blocks);
         }
 
-        public static ChainIndexer PrepareChainWithBlock()
+        public static ChainIndexer PrepareChainWithBlock(Network network)
         {
-            var chain = new ChainIndexer(KnownNetworks.StratisMain);
+            var chain = new ChainIndexer(network);
             uint nonce = RandomUtils.GetUInt32();
-            Block block = KnownNetworks.StratisMain.CreateBlock();
-            block.AddTransaction(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = network.CreateBlock();
+            block.AddTransaction(network.CreateTransaction());
             block.UpdateMerkleRoot();
             block.Header.HashPrevBlock = chain.Genesis.HashBlock;
             block.Header.Nonce = nonce;
             block.Header.BlockTime = DateTimeOffset.Now;
             chain.SetTip(block.Header);
             chain.Tip.Block = block;
+
             return chain;
+        }
+
+        public static void CreateSpentTransactionOfBlockHeight(HdAddress address, Network network, int blockHeight)
+        {
+            address.Transactions.Add(new TransactionData
+            {
+                BlockHeight = blockHeight,
+                BlockHash = (uint)blockHeight,
+                Amount = new Money(new Random().Next(500000, 1000000)),
+                SpendingDetails = new SpendingDetails(),
+                Id = new uint256(),
+            });
         }
 
         public static ICollection<HdAddress> CreateSpentTransactionsOfBlockHeights(Network network, params int[] blockHeights)
@@ -454,18 +477,8 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
 
                 byte[] buf = new byte[32];
                 (new Random()).NextBytes(buf);
-
-                var key = new Key();
-                var address = new HdAddress
-                {
-                    Index = i,
-                    HdPath = $"{addressCollection.HdPath}/{i}",
-                    Address = key.PubKey.Hash.ScriptPubKey.GetDestinationAddress(network).ToString(),
-                    Pubkey = key.PubKey.ScriptPubKey,
-                    ScriptPubKey = key.PubKey.Hash.ScriptPubKey
-                };
-
-                addressCollection.Add(address);
+                
+                HdAddress address = addressCollection.Account.ExternalAddresses.Skip(i).First();
 
                 address.Transactions.Add(new TransactionData
                 {
@@ -477,6 +490,22 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
                     Amount = new Money(new Random().Next(500000, 1000000))
                 });
             }
+        }
+
+        public static void CreateUnspentTransactionOfBlockHeight(HdAddress address, Network network, int blockHeight)
+        {
+            byte[] buf = new byte[32];
+            (new Random()).NextBytes(buf);
+
+            address.Transactions.Add(new TransactionData
+            {
+                ScriptPubKey = address.ScriptPubKey,
+                Id = new uint256(buf),
+                Index = 0,
+                BlockHeight = blockHeight,
+                BlockHash = (uint)blockHeight,
+                Amount = new Money(new Random().Next(500000, 1000000))
+            });
         }
 
         public static TransactionData CreateTransactionDataFromFirstBlock(ChainIndexer chain, (uint256 blockHash, Block block) chainInfo)
@@ -585,11 +614,11 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
         /// <param name="name">The name.</param>
         /// <param name="password">The password.</param>
         /// <returns>The generated wallet.</returns>
-        public Features.Wallet.Wallet GenerateBlankWallet(string name, string password, IWalletRepository walletRepository = null)
+        public (Features.Wallet.Wallet, ExtKey) GenerateBlankWallet(string name, string password, IWalletRepository walletRepository = null)
         {
-            Features.Wallet.Wallet newWallet = WalletTestsHelpers.GenerateBlankWallet(name, password, walletRepository);
+            (Features.Wallet.Wallet newWallet, ExtKey extKey) = WalletTestsHelpers.GenerateBlankWalletWithExtKey(name, password, walletRepository);
 
-            return newWallet;
+            return (newWallet, extKey);
         }
     }
 }

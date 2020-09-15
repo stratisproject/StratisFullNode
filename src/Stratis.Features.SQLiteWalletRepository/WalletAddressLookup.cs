@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SQLiteWalletRepository.External;
@@ -83,6 +84,9 @@ namespace Stratis.Features.SQLiteWalletRepository
             foreach (HDAddress address in addresses)
             {
                 this.Add(Script.FromHex(address.ScriptPubKey));
+
+                // We need to add the P2WPKH scriptPubKey as an address of interest too
+                this.Add(Script.FromHex(address.Bech32ScriptPubKey));
             }
         }
 
@@ -103,7 +107,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         ,       AddressIndex
                         ,       ScriptPubKey
                         FROM    HDAddress
-                        WHERE   ScriptPubKey = {strHex} {
+                        WHERE   (ScriptPubKey = {strHex} OR Bech32ScriptPubKey = {strHex}) {
                     // Restrict to wallet if provided.
                     // "BETWEEN" boosts performance from half a seconds to 2ms.
                     ((this.walletId != null) ? $@"
