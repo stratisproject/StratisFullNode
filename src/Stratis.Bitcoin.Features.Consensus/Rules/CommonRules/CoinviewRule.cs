@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 
                             TxOut prevOut = view.GetOutputFor(input);
 
-                            // If there are any consensus-specific requirements to inhibit spends from or two particular scripts, they get enforced here.
+                            // If there are any consensus-specific requirements to inhibit spends from or to particular scripts, they get enforced here.
                             this.AllowSpend(prevOut, tx);
 
                             inputsToCheck.Add((
