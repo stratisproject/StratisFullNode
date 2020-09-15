@@ -14,6 +14,8 @@ namespace Stratis.Bitcoin.Features.PoA
         public static ConsensusError InvalidBlockSignature => new ConsensusError("invalid-block-signature", "invalid block signature");
 
         // Voting related errors.
+        public static ConsensusError BlockMissingVotes => new ConsensusError("missing-block-votes", "missing block votes");
+
         public static ConsensusError TooManyVotingOutputs => new ConsensusError("too-many-voting-outputs", "there could be only 1 voting output");
 
         public static ConsensusError VotingDataInvalidFormat => new ConsensusError("invalid-voting-data-format", "voting data format is invalid");
