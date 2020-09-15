@@ -42,14 +42,14 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             if (FederationVotingController.IsMultisigMember(this.network, request.PubKey))
             {
                 this.logger.LogTrace("(-)[INVALID_MULTISIG_VOTING]");
-                PoAConsensusErrors.VotingRequestInvalidMultisig.Throw();
+                context.State.Fail(MempoolErrors.VotingRequestInvalidMultisig, $"{context.Transaction.GetHash()} has an invalid voting request for a multisig member.").Throw();
             }
 
             // Check collateral amount?
             if (request.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)
             {
                 this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
-                PoAConsensusErrors.InvalidCollateralRequirement.Throw();
+                context.State.Fail(MempoolErrors.InvalidCollateralRequirement, $"{context.Transaction.GetHash()} has a voting request with an invalid colateral requirement.").Throw();
             }
 
             if (!(this.federationManager is CollateralFederationManager federationManager))
@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             if (owner != null && owner.PubKey != request.PubKey)
             {
                 this.logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");
-                PoAConsensusErrors.VotingRequestInvalidCollateralReuse.Throw();
+                context.State.Fail(MempoolErrors.VotingRequestInvalidCollateralReuse, $"{context.Transaction.GetHash()} has a voting request that's re-using collateral.").Throw();
             }
         }
     }

@@ -214,6 +214,15 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>'mempool-tx-contains-dust-outputs' error returns a <see cref="RejectInvalid"/> reject code.</summary>
         public static MempoolError TransactionContainsDustTxOuts = new MempoolError(RejectInvalid, "mempool-tx-contains-dust-outputs");
 
+        /// <summary>'invalid-voting-request-multisig' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError VotingRequestInvalidMultisig = new MempoolError(RejectInvalid, "invalid-voting-request-multisig");
+
+        /// <summary>'invalid-collateral-requirement' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError InvalidCollateralRequirement = new MempoolError(RejectInvalid, "invalid-collateral-requirement");
+
+        /// <summary>'invalid-voting-request-collateral' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError VotingRequestInvalidCollateralReuse = new MempoolError(RejectInvalid, "invalid-voting-request-collateral");
+
         // TODO: It is not clear from the Bitcoin Core source what the actual message is supposed to be in this case. Chose witness-mutated as an unambiguous message.
         /// <summary>'witness-mutated' error returns a <see cref="RejectInvalid"/> reject code.</summary>
         public static MempoolError WitnessMutated = new MempoolError(RejectInvalid, "witness-mutated");
