@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         }
 
         /// <inheritdoc />
-        protected override bool AllowSpend(TxOut prevOut, Transaction tx)
+        protected override void AllowSpend(TxOut prevOut, Transaction tx)
         {
             // TODO: Make a mempool rule for this too
 
@@ -101,8 +101,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 }
             }
 
-            // Otherwise allow the spend.
-            return true;
+            // Otherwise allow the spend (do nothing).
         }
     }
 }

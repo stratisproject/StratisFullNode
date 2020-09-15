@@ -87,10 +87,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 
                             TxOut prevOut = view.GetOutputFor(input);
 
-                            if (!this.AllowSpend(prevOut, tx))
-                            {
-
-                            }
+                            // If there are any consensus-specific requirements to inhibit spends from or two particular scripts, they get enforced here.
+                            this.AllowSpend(prevOut, tx);
 
                             inputsToCheck.Add((
                                 tx: tx,
@@ -142,11 +140,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// Any non-signature checks that prevent the spending of a given UTXO.
         /// </summary>
         /// <param name="prevOut">The input being checked for validity.</param>
-        /// <param name="spendingTx">The transaction the attempts to spend the given input.</param>
-        /// <returns>Success or failure.</returns>
-        protected virtual bool AllowSpend(TxOut prevOut, Transaction spendingTx)
+        /// <param name="spendingTx">The transaction that attempts to spend the given input.</param>
+        protected virtual void AllowSpend(TxOut prevOut, Transaction spendingTx)
         {
-            return true;
         }
 
         protected abstract Money GetTransactionFee(UnspentOutputSet view, Transaction tx);
