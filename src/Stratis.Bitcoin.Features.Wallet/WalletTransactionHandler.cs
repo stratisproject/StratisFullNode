@@ -94,6 +94,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             throw new WalletException($"Could not build the transaction. Details: {errorsMessage}");
         }
 
+        // TODO: This only seems to be used in a test, consider removing it?
         /// <inheritdoc />
         public void FundTransaction(TransactionBuildContext context, Transaction transaction)
         {
@@ -307,7 +308,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             // Get total spendable balance in the account.
             long balance = context.UnspentOutputs.Sum(t => t.Transaction.Amount);
-            long totalToSend = context.Recipients.Sum(s => s.Amount);
+            long totalToSend = context.Recipients.Sum(s => s.Amount) + (context.OpReturnAmount ?? Money.Zero);
             if (balance < totalToSend)
                 throw new WalletException("Not enough funds.");
 
