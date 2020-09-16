@@ -18,12 +18,12 @@ namespace Stratis.Bitcoin.Networks
             this.Name = "StraxTest";
             this.NetworkType = NetworkType.Testnet;
             this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("TtrX"));
-            this.DefaultPort = 17100;
+            this.DefaultPort = 27105;
             this.DefaultMaxOutboundConnections = 16;
             this.DefaultMaxInboundConnections = 100;
-            this.DefaultRPCPort = 18100;
-            this.DefaultAPIPort = 37100;
-            this.DefaultSignalRPort = 38100;
+            this.DefaultRPCPort = 27104;
+            this.DefaultAPIPort = 27103;
+            this.DefaultSignalRPort = 27102;
             this.MaxTipAge = 2 * 60 * 60;
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
