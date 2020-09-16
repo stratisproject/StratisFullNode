@@ -112,7 +112,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             else
                 this.logger.LogDebug("Creating database connection to shared database `Wallet.db`");
 
-            var conn = new DBConnection(this, this.DatabasePerWallet ? $"{walletName}.db" : "Wallet.db");
+            var conn = new DBConnection(this, this.DatabasePerWallet ? $"{walletName}.db" : "Wallet.db", this.dateTimeProvider);
 
             this.logger.LogDebug("Creating database structure.");
 
@@ -929,7 +929,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     this.Metrics.BlockCount++;
 
                     // Determine the scripts for creating temporary tables and inserting the block's information into them.
-                    ITransactionsToLists transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, round);
+                    ITransactionsToLists transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, round, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(block.Transactions, new HashHeightPair(chainedHeader), blockTime: block.Header.BlockTime.ToUnixTimeSeconds()))
                         this.Metrics.ProcessCount++;
 
@@ -1141,7 +1141,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             {
                 IEnumerable<IEnumerable<string>> txToScript;
                 {
-                    var transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, processBlocksInfo);
+                    var transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, processBlocksInfo, this.dateTimeProvider);
                     transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId);
                     txToScript = (new[] { processBlocksInfo.Outputs, processBlocksInfo.PrevOuts }).Select(list => list.CreateScript());
                 }

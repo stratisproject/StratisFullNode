@@ -228,8 +228,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                     new OutPoint(t.Transaction.Id, 0),
                     new Utilities.Coins(0, new TxOut(t.Transaction.Amount ?? Money.Zero, t.Address.ScriptPubKey),
                     false,
-                    false,
-                    milliseconds550MinutesAgo)))
+                    false)))
                 .ToArray();
             var fetchCoinsResponse = new FetchCoinsResponse();
             foreach (var fetch in fetchedUtxos)
@@ -495,7 +494,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 TxOut = new TxOut(new Money(100), new Mock<IDestination>().Object),
                 OutPoint = new OutPoint(uint256.One, 0),
                 HashBlock = chainTip.Previous.HashBlock,
-                UtxoSet = new UnspentOutput(new OutPoint(uint256.One, 0), new Utilities.Coins(1, new TxOut(), false, isCoinstake, chainTip.Header.Time))
+                UtxoSet = new UnspentOutput(new OutPoint(uint256.One, 0), new Utilities.Coins(1, new TxOut(), false, isCoinstake))
             };
 
             descriptions.Add(utxoDescription);

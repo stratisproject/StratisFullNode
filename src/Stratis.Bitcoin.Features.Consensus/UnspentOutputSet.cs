@@ -57,9 +57,8 @@ namespace Stratis.Bitcoin.Features.Consensus
                 var outpoint = output.ToOutPoint();
                 var coinbase = transaction.IsCoinBase;
                 var coinstake = network.Consensus.IsProofOfStake ? transaction.IsCoinStake : false;
-                var time = transaction.Time;
 
-                var coins = new Coins((uint)height, output.TxOut, coinbase, coinstake, time);
+                var coins = new Coins((uint)height, output.TxOut, coinbase, coinstake);
                 var unspentOutput = new UnspentOutput(outpoint, coins)
                 {
                     CreatedFromBlock = true

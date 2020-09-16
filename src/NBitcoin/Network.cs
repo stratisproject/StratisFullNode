@@ -336,7 +336,6 @@ namespace NBitcoin
 
             Transaction txNew = consensusFactory.CreateTransaction();
             txNew.Version = (uint)version;
-            txNew.Time = unixTime;
             txNew.AddInput(new TxIn()
             {
                 ScriptSig = new Script(

@@ -724,10 +724,6 @@ namespace Stratis.Bitcoin.IntegrationTests
                 ScriptPubKey = minerB.MinerHDAddress.ScriptPubKey
             });
 
-            var dateTimeProvider = minerA.FullNode.NodeService<IDateTimeProvider>();
-            txThatSpendCoinstake.Time = (uint)dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
-
-
             Coin spentCoin = new Coin(txWithBigPremine, 0);
             List<ICoin> coins = new List<ICoin> { spentCoin };
 

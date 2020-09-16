@@ -1161,9 +1161,6 @@ namespace NBitcoin
             if (this._LockTime != null)
                 ctx.Transaction.LockTime = this._LockTime.Value;
 
-            if (this._TimeStamp != null)
-                ctx.Transaction.Time = this._TimeStamp.Value;
-
             foreach (BuilderGroup group in this._BuilderGroups)
             {
                 ctx.Group = group;

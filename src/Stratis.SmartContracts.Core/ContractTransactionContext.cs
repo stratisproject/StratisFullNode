@@ -66,14 +66,6 @@ namespace Stratis.SmartContracts.Core
             get { return this.blockHeight; }
         }
 
-        public uint Time
-        {
-            get
-            {
-                return this.transaction.Time;
-            }
-        }
-
         public ContractTransactionContext(
             ulong blockHeight,
             uint160 coinbaseAddress,

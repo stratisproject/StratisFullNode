@@ -97,9 +97,13 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         internal Dictionary<string, long> Metrics = new Dictionary<string, long>();
 
-        public DBConnection(SQLiteWalletRepository repo, string dbFile)
+        private readonly IDateTimeProvider dateTimeProvider;
+
+        public DBConnection(SQLiteWalletRepository repo, string dbFile, IDateTimeProvider dateTimeProvider)
         {
             string path = Path.Combine(repo.DBPath, dbFile);
+
+            this.dateTimeProvider = dateTimeProvider;
 
             try
             {
@@ -275,7 +279,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 HDWallet wallet = GetById(account.WalletId);
                 WalletContainer walletContainer = this.Repository.Wallets[wallet.Name];
 
-                var transactionsToLists = new TransactionsToLists(this.Repository.Network, this.Repository.ScriptAddressReader, walletContainer);
+                var transactionsToLists = new TransactionsToLists(this.Repository.Network, this.Repository.ScriptAddressReader, walletContainer, this.dateTimeProvider);
                 transactionsToLists.ProcessTransactionData(address, transactions);
 
                 var outputs = walletContainer.Outputs;
