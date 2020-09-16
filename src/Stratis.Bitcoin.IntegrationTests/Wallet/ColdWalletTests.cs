@@ -184,7 +184,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 Assert.Null(coldWalletManager.GetSpendableTransactionsInColdWallet(WalletName, true).First().Transaction.BlockHeight);
 
                 // Allow coins to reach maturity
-                TestHelper.MineBlocks(stratisSender, maturity, true);
+                int stakingMaturity = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
+                TestHelper.MineBlocks(stratisSender, stakingMaturity, true);
 
                 // Start staking.
                 var hotMiningFeature = stratisHotStake.FullNode.NodeFeature<MiningFeature>();
