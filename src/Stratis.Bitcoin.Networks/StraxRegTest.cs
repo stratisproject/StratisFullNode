@@ -17,12 +17,12 @@ namespace Stratis.Bitcoin.Networks
             this.Name = "StraxRegTest";
             this.NetworkType = NetworkType.Regtest;
             this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("RtrX"));
-            this.DefaultPort = 17200;
+            this.DefaultPort = 37105;
             this.DefaultMaxOutboundConnections = 16;
             this.DefaultMaxInboundConnections = 100;
-            this.DefaultRPCPort = 18200;
-            this.DefaultAPIPort = 37200;
-            this.DefaultSignalRPort = 38200;
+            this.DefaultRPCPort = 37104;
+            this.DefaultAPIPort = 37103;
+            this.DefaultSignalRPort = 37102;
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
