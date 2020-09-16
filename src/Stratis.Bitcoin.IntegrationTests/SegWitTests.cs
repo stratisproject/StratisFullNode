@@ -319,14 +319,16 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Even though we are mining, we still want to use PoS consensus rules.
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                Network network = KnownNetworks.StraxRegTest;
+                CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
 
                 // Need the premine to be past coinbase maturity so that we can stake with it.
                 RPCClient rpc = node.CreateRPCClient();
-                rpc.Generate(12);
+                int minStakeConfirmations = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
+                rpc.Generate(minStakeConfirmations + 2);
 
                 var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token;
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 12, cancellationToken: cancellationToken);
+                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= (minStakeConfirmations + 2), cancellationToken: cancellationToken);
 
                 // Now need to start staking.
                 var staker = node.FullNode.NodeService<IPosMinting>() as StraxMinting;
@@ -338,7 +340,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 });
 
                 // Wait for the chain height to increase.
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
+                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= (minStakeConfirmations + 3), cancellationToken: cancellationToken);
 
                 // Get the last staked block.
                 Block block = node.FullNode.ChainIndexer.Tip.Block;
@@ -357,20 +359,22 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Even though we are mining, we still want to use PoS consensus rules.
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                Network network = KnownNetworks.StraxRegTest;
+                CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
 
-                var address = BitcoinWitPubKeyAddress.Create(node.FullNode.WalletManager().GetUnusedAddress().Bech32Address, KnownNetworks.StraxRegTest);
+                var address = BitcoinWitPubKeyAddress.Create(node.FullNode.WalletManager().GetUnusedAddress().Bech32Address, network);
 
                 // A P2WPKH scriptPubKey - so that funds get mined into the node's wallet as segwit UTXOs
                 var script = address.ScriptPubKey;
 
                 // Need the premine to be past coinbase maturity so that we can stake with it.
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
-                List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 12, int.MaxValue);
+                int minStakeConfirmations = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
+                List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), (ulong)minStakeConfirmations + 2, int.MaxValue);
                 
                 var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token;
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 12, cancellationToken: cancellationToken);
-                TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight >= 12, cancellationToken: cancellationToken);
+                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= (minStakeConfirmations + 2), cancellationToken: cancellationToken);
+                TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight >= (minStakeConfirmations + 2), cancellationToken: cancellationToken);
 
                 var scriptPubKeys = node.FullNode.WalletManager().GetAccounts(node.WalletName).SelectMany(a => a.GetCombinedAddresses()).SelectMany(b => b.Transactions).Select(c => c.ScriptPubKey);
 
@@ -391,7 +395,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 });
 
                 // Wait for the chain height to increase.
-                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= 13, cancellationToken: cancellationToken);
+                TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= (minStakeConfirmations + 3), cancellationToken: cancellationToken);
 
                 // Get the last staked block.
                 Block block = node.FullNode.ChainIndexer.Tip.Block;

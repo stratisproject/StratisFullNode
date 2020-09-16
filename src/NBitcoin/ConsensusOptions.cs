@@ -125,12 +125,6 @@ namespace NBitcoin
     /// </summary>
     public class PosConsensusOptions : ConsensusOptions
     {
-        /// <summary>Coinstake minimal confirmations softfork activation height for mainnet.</summary>
-        public const int CoinstakeMinConfirmationActivationHeightMainnet = 1005000;
-
-        /// <summary>Coinstake minimal confirmations softfork activation height for testnet.</summary>
-        public const int CoinstakeMinConfirmationActivationHeightTestnet = 436000;
-
         /// <summary>A mask for coinstake transaction's timestamp and header's timestamp.</summary>
         /// <remarks>Used to decrease granularity of timestamp. Supposed to be 2^n-1.</remarks>
         public const uint StakeTimestampMask = 0x0000000F;
@@ -195,9 +189,9 @@ namespace NBitcoin
         {
             // TODO: Is there supposed to be a defined activation height for regtest?
             if (network.NetworkType == NetworkType.Testnet || network.NetworkType == NetworkType.Regtest)
-                return height < CoinstakeMinConfirmationActivationHeightTestnet ? 10 : 20;
+                return 20;
 
-            return height < CoinstakeMinConfirmationActivationHeightMainnet ? 50 : 500;
+            return 500;
         }
     }
 }
