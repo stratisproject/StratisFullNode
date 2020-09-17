@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Networks
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "regteststraxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "regteststraxgenesisblock");
 
             this.Genesis = genesisBlock;
 
@@ -128,8 +128,8 @@ namespace Stratis.Bitcoin.Networks
             // TODO: Update this once the final block is mined
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000b17f472cec2c4a006178db9aaa671aaf15bf953c39225b6fd35468a6dac"));
 
-            this.RegisterRules(this.Consensus);
-            this.RegisterMempoolRules(this.Consensus);
+            StraxNetwork.RegisterRules(this.Consensus);
+            StraxNetwork.RegisterMempoolRules(this.Consensus);
         }
     }
 }

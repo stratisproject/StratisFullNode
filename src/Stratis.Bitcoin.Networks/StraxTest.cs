@@ -11,7 +11,7 @@ using Stratis.Bitcoin.Networks.Policies;
 
 namespace Stratis.Bitcoin.Networks
 {
-    public sealed class StraxTest : StraxMain
+    public sealed class StraxTest : Network
     {
         public StraxTest()
         {
@@ -28,8 +28,8 @@ namespace Stratis.Bitcoin.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = StraxNetworkConstants.StraxRootFolderName;
-            this.DefaultConfigFilename = StraxNetworkConstants.StraxDefaultConfigFilename;
+            this.RootFolderName = StraxNetwork.StraxRootFolderName;
+            this.DefaultConfigFilename = StraxNetwork.StraxDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
@@ -46,7 +46,7 @@ namespace Stratis.Bitcoin.Networks
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "teststraxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "teststraxgenesisblock");
 
             this.Genesis = genesisBlock;
 
@@ -148,11 +148,11 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000b23c2a4f986ea3d930110bf6b5d04e7407ed9770626104a302f7b72e051"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0xa9df5dfe176356d989028d88bfabb9ee31df16a4b438a3497534e755b3d560e2"));
             Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xfe6317d42149b091399e7f834ca32fd248f8f26f493c30a35d6eea692fe4fcad"));
 
-            this.RegisterRules(this.Consensus);
-            this.RegisterMempoolRules(this.Consensus);
+            StraxNetwork.RegisterRules(this.Consensus);
+            StraxNetwork.RegisterMempoolRules(this.Consensus);
         }
     }
 }
