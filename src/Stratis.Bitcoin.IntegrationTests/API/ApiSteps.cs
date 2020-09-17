@@ -284,7 +284,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             this.send_api_get_request($"{BalanceUri}?walletname={walletName}&AccountName=account {accountIndex}");
 
-            this.responseText.Should().StartWith("{\"balances\":[{\"accountName\":\"account " + accountIndex + "\",\"accountHdPath\":\"m/44'/105'/" + accountIndex + "'\",\"coinType\":105,\"amountConfirmed\":0,\"amountUnconfirmed\":0,\"spendableAmount\":0,\"addresses\":");
+            this.responseText.Should().StartWith("{\"balances\":[{\"accountName\":\"account " + accountIndex + $"\",\"accountHdPath\":\"m/44'/{this.posNetwork.Consensus.CoinType}'/" + accountIndex + $"'\",\"coinType\":{this.posNetwork.Consensus.CoinType},\"amountConfirmed\":0,\"amountUnconfirmed\":0,\"spendableAmount\":0,\"addresses\":");
         }
 
         private void calling_general_info()
@@ -494,7 +494,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var generalInfoResponse = JsonDataSerializer.Instance.Deserialize<WalletGeneralInfoModel>(this.responseText);
             generalInfoResponse.WalletName.Should().Be(WalletName);
-            generalInfoResponse.Network.Name.Should().Be(StratisRegTest);
+            generalInfoResponse.Network.Name.Should().Be("StraxRegTest");
             generalInfoResponse.ChainTip.Should().Be(0);
             generalInfoResponse.IsChainSynced.Should().BeFalse();
             generalInfoResponse.ConnectedNodes.Should().Be(0);

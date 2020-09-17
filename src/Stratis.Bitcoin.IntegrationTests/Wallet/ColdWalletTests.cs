@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // The mining should add coins to the wallet
                 long total = stratisSender.FullNode.WalletManager().GetSpendableTransactionsInWallet(WalletName).Sum(s => s.Transaction.Amount);
-                Assert.Equal(Money.COIN * 98000060, total);
+                Assert.Equal((long)(network.Consensus.PremineReward + (15 * network.Consensus.ProofOfWorkReward)), total);
 
                 int confirmations = 10;
 
@@ -151,7 +151,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestHelper.Connect(stratisSender, stratisColdStake);
 
                 // Send coins to hot wallet.
-                Money amountToSend = Money.COIN * 98000059;
+                Money amountToSend = (long)(network.Consensus.PremineReward + (15 * network.Consensus.ProofOfWorkReward) - 1);
                 HdAddress sendto = hotWalletManager.GetUnusedAddress(new WalletAccountReference(WalletName, Account));
 
                 Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, sendto.ScriptPubKey, amountToSend, FeeType.Medium, confirmations));
