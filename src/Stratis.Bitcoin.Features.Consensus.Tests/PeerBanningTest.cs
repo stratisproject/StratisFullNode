@@ -253,7 +253,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, dataFolder, loggerFactory, new Mock<ISelfEndpointTracker>().Object);
             peerAddressManager.AddPeer(endpoint, endpoint.Address.MapToIPv6());
 
-            var nodeSettings = new NodeSettings(new StratisRegTest());
+            var nodeSettings = new NodeSettings(new StraxTest());
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
             var peerCollection = new Mock<IReadOnlyNetworkPeerCollection>();
@@ -285,7 +285,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, dataFolder, loggerFactory, new Mock<ISelfEndpointTracker>().Object);
             peerAddressManager.AddPeer(endpoint, endpoint.Address.MapToIPv6());
 
-            var nodeSettings = new NodeSettings(new StratisRegTest());
+            var nodeSettings = new NodeSettings(new StraxTest());
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
             var connectionManagerBehaviour = new Mock<IConnectionManagerBehavior>();
@@ -332,7 +332,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             peerAddressManager.AddPeer(endpoint80, IPAddress.Loopback);
             peerAddressManager.AddPeer(endpoint81, IPAddress.Loopback);
 
-            var nodeSettings = new NodeSettings(new StratisRegTest());
+            var nodeSettings = new NodeSettings(new StraxTest());
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
             var peerCollection = new Mock<IReadOnlyNetworkPeerCollection>();
@@ -370,7 +370,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, dataFolder, loggerFactory, new Mock<ISelfEndpointTracker>().Object);
             peerAddressManager.AddPeer(endpoint, IPAddress.Loopback);
 
-            var nodeSettings = new NodeSettings(new StratisRegTest());
+            var nodeSettings = new NodeSettings(new StraxTest());
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
             var peerCollection = new Mock<IReadOnlyNetworkPeerCollection>();
@@ -406,7 +406,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, dataFolder, loggerFactory, new Mock<ISelfEndpointTracker>().Object);
             peerAddressManager.AddPeer(endpoint, IPAddress.Loopback);
 
-            var nodeSettings = new NodeSettings(new StratisRegTest());
+            var nodeSettings = new NodeSettings(new StraxTest());
             var connectionManagerSettings = new ConnectionManagerSettings(nodeSettings);
 
             var peerCollection = new Mock<IReadOnlyNetworkPeerCollection>();
