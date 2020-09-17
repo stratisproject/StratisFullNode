@@ -389,7 +389,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 throw new WalletException("No amount specified.");
 
             if (context.Recipients.Any(a => a.SubtractFeeFromAmount))
-                throw new NotImplementedException("Substracting the fee from the recipient is not supported yet.");
+                throw new NotImplementedException("Subtracting the fee from the recipient is not supported yet.");
 
             foreach (Recipient recipient in context.Recipients)
                 context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
