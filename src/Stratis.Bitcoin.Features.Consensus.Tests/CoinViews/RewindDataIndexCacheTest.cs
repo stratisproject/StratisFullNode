@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
 {
     public class RewindDataIndexCacheTest : LogsTestBase
     {
-        public RewindDataIndexCacheTest() : base(new StratisTest())
+        public RewindDataIndexCacheTest() : base(new StraxTest())
         {
             // override max reorg to 10
             Type consensusType = typeof(NBitcoin.Consensus);

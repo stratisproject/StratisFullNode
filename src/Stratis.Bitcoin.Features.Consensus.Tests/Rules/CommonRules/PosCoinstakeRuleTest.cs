@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             Assert.True(BlockStake.IsProofOfStake(this.ruleContext.ValidationContext.BlockToValidate));
 
-            ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<PosCoinstakeRule>().RunAsync(this.ruleContext));
+            ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<StraxCoinstakeRule>().RunAsync(this.ruleContext));
 
             Assert.Equal(ConsensusErrors.BadStakeBlock, exception.ConsensusError);
         }

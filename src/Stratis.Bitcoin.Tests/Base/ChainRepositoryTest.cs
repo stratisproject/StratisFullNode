@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Tests.Base
     {
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public ChainRepositoryTest() : base(KnownNetworks.StratisRegTest)
+        public ChainRepositoryTest() : base(KnownNetworks.StraxRegTest)
         {
             this.dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
         }
@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Tests.Base
         public void SaveChainToDisk()
         {
             string dir = CreateTestDir(this);
-            var chain = new ChainIndexer(KnownNetworks.StratisRegTest);
+            var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             this.AppendBlock(chain);
 
             using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Tests.Base
         public void LoadChainFromDisk()
         {
             string dir = CreateTestDir(this);
-            var chain = new ChainIndexer(KnownNetworks.StratisRegTest);
+            var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             ChainedHeader tip = this.AppendBlock(chain);
 
             using (var engine = new DB(new Options { CreateIfMissing = true }, new DataFolder(dir).ChainPath))
@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Tests.Base
 
             using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
-                var testChain = new ChainIndexer(KnownNetworks.StratisRegTest);
+                var testChain = new ChainIndexer(KnownNetworks.StraxRegTest);
                 testChain.SetTip(repo.LoadAsync(testChain.Genesis).GetAwaiter().GetResult());
                 Assert.Equal(tip, testChain.Tip);
             }

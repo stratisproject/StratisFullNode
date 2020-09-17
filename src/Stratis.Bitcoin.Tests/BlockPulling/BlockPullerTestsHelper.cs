@@ -46,7 +46,7 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
             this.CallbacksCalled = new Dictionary<uint256, Block>();
             this.ChainState = new ChainState() { ConsensusTip = ChainedHeadersHelper.CreateGenesisChainedHeader() };
 
-            this.Puller = new ExtendedBlockPuller(this.ChainState, new NodeSettings(new StratisMain()), new DateTimeProvider(), new NodeStats(new DateTimeProvider(), this.loggerFactory), this.loggerFactory);
+            this.Puller = new ExtendedBlockPuller(this.ChainState, new NodeSettings(new StraxMain()), new DateTimeProvider(), new NodeStats(new DateTimeProvider(), this.loggerFactory), this.loggerFactory);
         }
 
         /// <summary>Creates a peer with extended puller behavior.</summary>
@@ -63,14 +63,14 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
             var signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
             var asyncProvider = new AsyncProvider(this.loggerFactory, signals, new NodeLifetime());
 
-            var connection = new NetworkPeerConnection(KnownNetworks.StratisMain, peer.Object, new TcpClient(), this.currentPeerId, (message, token) => Task.CompletedTask,
+            var connection = new NetworkPeerConnection(KnownNetworks.StraxMain, peer.Object, new TcpClient(), this.currentPeerId, (message, token) => Task.CompletedTask,
                 new DateTimeProvider(), this.loggerFactory, new PayloadProvider(), asyncProvider);
 
             this.currentPeerId++;
             peer.SetupGet(networkPeer => networkPeer.Connection).Returns(connection);
 
             var connectionParameters = new NetworkPeerConnectionParameters();
-            VersionPayload version = connectionParameters.CreateVersion(new IPEndPoint(1, 1), new IPEndPoint(1, 1), KnownNetworks.StratisMain, new DateTimeProvider().GetTimeOffset());
+            VersionPayload version = connectionParameters.CreateVersion(new IPEndPoint(1, 1), new IPEndPoint(1, 1), KnownNetworks.StraxMain, new DateTimeProvider().GetTimeOffset());
 
             if (notSupportedVersion)
                 version.Version = ProtocolVersion.NOBLKS_VERSION_START;
@@ -102,7 +102,7 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
         /// <summary>Creates a new block with mocked serialized size.</summary>
         public Block GenerateBlock(long size)
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
 
             block.SetPrivatePropertyValue("BlockSize", size);
 
@@ -271,7 +271,6 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
         {
             this.underlyingBehavior.OnIbdStateChanged(isIbd);
         }
-
 
         public override object Clone() { return null; }
 

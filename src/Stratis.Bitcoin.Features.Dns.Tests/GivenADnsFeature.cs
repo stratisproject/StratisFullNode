@@ -70,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                 IChainState chainState = new Mock<IChainState>().Object;
                 IPeerBanning peerBanning = new Mock<IPeerBanning>().Object;
                 Checkpoints checkpoints = new Checkpoints();
-                return new UnreliablePeerBehavior(KnownNetworks.StratisMain, chainState, this.loggerFactory.Object, peerBanning, this.nodeSettings, checkpoints);
+                return new UnreliablePeerBehavior(KnownNetworks.StraxMain, chainState, this.loggerFactory.Object, peerBanning, this.nodeSettings, checkpoints);
             }
         }
 

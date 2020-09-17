@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private Mock<IStakeValidator> stakeValidator;
         private MempoolManager mempoolManager;
 
-        public ColdStakingControllerTest() : base(KnownNetworks.StratisMain)
+        public ColdStakingControllerTest() : base(KnownNetworks.StraxMain)
         {
             // Register the cold staking script template.
             this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(ColdStakingScriptTemplate.Instance);

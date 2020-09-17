@@ -171,8 +171,8 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
         public WalletRepositoryTests(bool dbPerWallet = true)
         {
             this.dbPerWallet = dbPerWallet;
-            //this.network = KnownNetworks.StratisTest;
-            this.network = KnownNetworks.StratisMain;
+            //this.network = KnownNetworks.StraxTest;
+            this.network = KnownNetworks.StraxMain;
 
 
             //Configure this to point to your "StratisTest" root folder and wallet.

@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.P2P
         public PeerSelectorTests()
         {
             this.extendedLoggerFactory = ExtendedLoggerFactory.Create();
-            this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(new StratisRegTest()));
+            this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(new StraxRegTest()));
         }
 
         /// <summary>

@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
 
         public CoinviewTests()
         {
-            this.network = new StratisMain();
+            this.network = new StraxMain();
             this.dataFolder = TestBase.CreateDataFolder(this);
             this.dateTimeProvider = new DateTimeProvider();
             this.loggerFactory = new ExtendedLoggerFactory();

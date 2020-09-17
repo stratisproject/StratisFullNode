@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Tests.Common
         public static List<ChainedHeader> CreateConsecutiveHeaders(int count, ChainedHeader prevBlock = null, bool includePrevBlock = false, Target bits = null, Network network = null)
         {
             var chainedHeaders = new List<ChainedHeader>();
-            network = network ?? KnownNetworks.StratisMain;
+            network = network ?? KnownNetworks.StraxMain;
 
             ChainedHeader tip = prevBlock;
 

@@ -23,9 +23,9 @@ namespace NBitcoin.Tests
         public NetworkTests()
         {
             this.networkMain = KnownNetworks.Main;
-            this.stratisMain = KnownNetworks.StratisMain;
-            this.stratisTest = KnownNetworks.StratisTest;
-            this.stratisRegTest = KnownNetworks.StratisRegTest;
+            this.stratisMain = KnownNetworks.StraxMain;
+            this.stratisTest = KnownNetworks.StraxTest;
+            this.stratisRegTest = KnownNetworks.StraxRegTest;
         }
 
         [Fact]
@@ -42,12 +42,12 @@ namespace NBitcoin.Tests
             Assert.Equal(NetworkRegistration.GetNetwork("testnet"), bitcoinTestnet);
             Assert.Equal(NetworkRegistration.GetNetwork("regtest"), bitcoinRegtest);
             Assert.Equal(NetworkRegistration.GetNetwork("reg"), bitcoinRegtest);
-            Assert.Equal(NetworkRegistration.GetNetwork("stratismain"), this.stratisMain);
-            Assert.Equal(NetworkRegistration.GetNetwork("StratisMain"), this.stratisMain);
-            Assert.Equal(NetworkRegistration.GetNetwork("StratisTest"), this.stratisTest);
-            Assert.Equal(NetworkRegistration.GetNetwork("stratistest"), this.stratisTest);
-            Assert.Equal(NetworkRegistration.GetNetwork("StratisRegTest"), this.stratisRegTest);
-            Assert.Equal(NetworkRegistration.GetNetwork("stratisregtest"), this.stratisRegTest);
+            Assert.Equal(NetworkRegistration.GetNetwork("straxmain"), this.stratisMain);
+            Assert.Equal(NetworkRegistration.GetNetwork("StraxMain"), this.stratisMain);
+            Assert.Equal(NetworkRegistration.GetNetwork("StraxTest"), this.stratisTest);
+            Assert.Equal(NetworkRegistration.GetNetwork("straxtest"), this.stratisTest);
+            Assert.Equal(NetworkRegistration.GetNetwork("StraxRegTest"), this.stratisRegTest);
+            Assert.Equal(NetworkRegistration.GetNetwork("straxregtest"), this.stratisRegTest);
             Assert.Null(NetworkRegistration.GetNetwork("invalid"));
         }
 
@@ -394,7 +394,7 @@ namespace NBitcoin.Tests
 
         [Fact]
         [Trait("UnitTest", "UnitTest")]
-        public void StratisTestnetIsInitializedCorrectly()
+        public void StraxTestnetIsInitializedCorrectly()
         {
             Network network = this.stratisTest;
 
@@ -402,18 +402,18 @@ namespace NBitcoin.Tests
             Assert.Equal(2, network.DNSSeeds.Count);
             Assert.Equal(2, network.SeedNodes.Count);
 
-            Assert.Equal("StratisTest", network.Name);
-            Assert.Equal(StratisMain.StratisRootFolderName, network.RootFolderName);
-            Assert.Equal(StratisMain.StratisDefaultConfigFilename, network.DefaultConfigFilename);
+            Assert.Equal("StraxTest", network.Name);
+            Assert.Equal(StraxNetwork.StraxRootFolderName, network.RootFolderName);
+            Assert.Equal(StraxNetwork.StraxDefaultConfigFilename, network.DefaultConfigFilename);
             Assert.Equal(0x11213171.ToString(), network.Magic.ToString());
             Assert.Equal(26178, network.DefaultPort);
             Assert.Equal(26174, network.DefaultRPCPort);
-            Assert.Equal(StratisMain.StratisMaxTimeOffsetSeconds, network.MaxTimeOffsetSeconds);
-            Assert.Equal(StratisMain.StratisDefaultMaxTipAgeInSeconds, network.MaxTipAge);
+            Assert.Equal(StraxNetwork.StratisMaxTimeOffsetSeconds, network.MaxTimeOffsetSeconds);
+            Assert.Equal(StraxNetwork.StratisDefaultMaxTipAgeInSeconds, network.MaxTipAge);
             Assert.Equal(10000, network.MinTxFee);
             Assert.Equal(10000, network.FallbackFee);
             Assert.Equal(10000, network.MinRelayTxFee);
-            Assert.Equal("TSTRAT", network.CoinTicker);
+            Assert.Equal("TSTRAX", network.CoinTicker);
 
             Assert.Equal(2, network.Bech32Encoders.Length);
             Assert.Equal(new Bech32Encoder("tstrat").ToString(), network.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS].ToString());

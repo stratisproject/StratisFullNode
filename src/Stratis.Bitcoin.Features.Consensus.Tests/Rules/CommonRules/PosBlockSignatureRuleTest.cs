@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfWorkBlockSignatureNotEmpty_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            this.ruleContext.ValidationContext.BlockToValidate = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
+            this.ruleContext.ValidationContext.BlockToValidate = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
 
             (this.ruleContext.ValidationContext.BlockToValidate as PosBlock).BlockSignature = new BlockSignature() { Signature = new byte[] { 0x2, 0x3 } };
 
@@ -34,10 +34,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlockSignatureEmpty_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            this.ruleContext.ValidationContext.BlockToValidate = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            this.ruleContext.ValidationContext.BlockToValidate = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -57,10 +57,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_CoinStakePayToPubScriptKeyInvalid_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -87,10 +87,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_NoOpsInScriptPubKey_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -115,10 +115,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_FirstOpInScriptPubKeyNotOP_Return_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -143,10 +143,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_OpCountBelowTwo_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -171,10 +171,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_ScriptKeyDoesNotPassCompressedUncompresedKeyValidation_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -199,10 +199,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_ScriptKeyDoesNotPassBlockSignatureValidation_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -231,10 +231,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfStakeBlock_PayToPubKeyScriptPassesBlockSignatureValidation_DoesNotThrowException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -258,10 +258,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void RunAsync_ProofOfWorkBlock_BlockSignatureEmpty_DoesNotThrowException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(uint256.Zero, uint.MaxValue),
@@ -291,13 +291,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         /// <param name="expectFailure">Determines whether we expect failure (versus success).</param>
         private void ProofOfStakeBlock_CoinStakeTestHelper(bool useCompressedKey, bool includeSecondPush, bool expectFailure)
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
 
             // Add a dummy coinbase transaction.
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
             // Build a coinstake transaction.
-            Transaction coinStakeTransaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction coinStakeTransaction = KnownNetworks.StraxMain.CreateTransaction();
             coinStakeTransaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),

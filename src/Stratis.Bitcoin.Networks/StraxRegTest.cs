@@ -10,7 +10,7 @@ using Stratis.Bitcoin.Networks.Policies;
 
 namespace Stratis.Bitcoin.Networks
 {
-    public class StraxRegTest : StraxMain
+    public class StraxRegTest : Network
     {
         public StraxRegTest()
         {
@@ -24,6 +24,8 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultAPIPort = 37103;
             this.DefaultSignalRPort = 37102;
             this.CoinTicker = "TSTRAX";
+            this.RootFolderName = StraxNetwork.StraxRootFolderName;
+            this.DefaultConfigFilename = StraxNetwork.StraxDefaultConfigFilename;
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             // TODO: Update this later
@@ -105,6 +107,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.Consensus.PosEmptyCoinbase = false;
 
+            this.Base58Prefixes = new byte[12][];
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (120) };
             this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (127) };
             this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (65 + 128) };

@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Tests.Builder
         public void BuildWithInitialServicesSetupConfiguresFullNodeUsingConfiguration()
         {
             string dataDir = "TestData/FullNodeBuilder/BuildWithInitialServicesSetup";
-            var nodeSettings = new NodeSettings(KnownNetworks.StratisRegTest, args: new string[] { $"-datadir={dataDir}" });
+            var nodeSettings = new NodeSettings(KnownNetworks.StraxRegTest, args: new string[] { $"-datadir={dataDir}" });
 
             this.fullNodeBuilder = new FullNodeBuilder(nodeSettings, this.serviceCollectionDelegates, this.serviceProviderDelegates, this.featureCollectionDelegates, this.featureCollection);
 
@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Tests.Builder
         public void BuildConfiguresFullNodeUsingConfiguration()
         {
             string dataDir = "TestData/FullNodeBuilder/BuildConfiguresFullNodeUsingConfiguration";
-            var nodeSettings = new NodeSettings(KnownNetworks.StratisRegTest, args: new string[] { $"-datadir={dataDir}" });
+            var nodeSettings = new NodeSettings(KnownNetworks.StraxRegTest, args: new string[] { $"-datadir={dataDir}" });
 
             this.fullNodeBuilder.ConfigureServices(e =>
             {
@@ -175,7 +175,7 @@ namespace Stratis.Bitcoin.Tests.Builder
         public void BuildTwiceThrowsException()
         {
             string dataDir = "TestData/FullNodeBuilder/BuildConfiguresFullNodeUsingConfiguration";
-            var nodeSettings = new NodeSettings(KnownNetworks.StratisRegTest, args: new string[] { $"-datadir={dataDir}" });
+            var nodeSettings = new NodeSettings(KnownNetworks.StraxRegTest, args: new string[] { $"-datadir={dataDir}" });
 
             Assert.Throws<InvalidOperationException>(() =>
             {

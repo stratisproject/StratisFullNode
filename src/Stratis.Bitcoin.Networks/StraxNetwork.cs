@@ -107,7 +107,7 @@ namespace Stratis.Bitcoin.Networks
             Block genesis = consensusFactory.CreateBlock();
             genesis.Header.BlockTime = Utils.UnixTimeToDateTime(time);
             genesis.Header.Bits = bits;
-            genesis.Header.Nonce = 0; //nonce;
+            genesis.Header.Nonce = nonce;
             genesis.Header.Version = version;
             genesis.Transactions.Add(txNew);
             genesis.Header.HashPrevBlock = uint256.Zero;

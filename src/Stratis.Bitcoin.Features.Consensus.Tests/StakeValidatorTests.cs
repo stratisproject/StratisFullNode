@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
         private readonly Mock<ICoinView> coinView;
         private readonly Mock<IConsensus> consensus;
 
-        public StakeValidatorTests() : base(new StratisRegTest())
+        public StakeValidatorTests() : base(new StraxRegTest())
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.chainIndexer = new ChainIndexer(this.Network);
@@ -771,20 +771,6 @@ namespace Stratis.Bitcoin.Tests.Consensus
             chainedHeader.Previous.Header.Time = chainedHeader.Header.Time - 1;
 
             this.stakeValidator.CheckProofOfStake(context, chainedHeader, blockStake, input1, headerbits);
-        }
-
-        [Fact]
-        public void CheckStakeKernelHash_TransactionTimeBeforeStakeTime_ThrowsConsensusError()
-        {
-            var transactionTimestamp = DateTime.Now;
-            var posTimeStamp = transactionTimestamp.AddSeconds(-1);
-            var transaction = this.Network.CreateTransaction();
-            uint transactionTime = Utils.DateTimeToUnixTime(posTimeStamp);
-            UnspentOutput stakingCoins = new UnspentOutput(new OutPoint(transaction, 0), new Coins(15, new TxOut(), false, false));
-
-            var exception = Assert.Throws<ConsensusErrorException>(() => this.stakeValidator.CheckStakeKernelHash(new PosRuleContext(), 0, uint256.Zero, stakingCoins, new OutPoint(), transactionTime));
-
-            Assert.Equal(ConsensusErrors.StakeTimeViolation.Code, exception.ConsensusError.Code);
         }
 
         [Fact]

@@ -24,7 +24,7 @@ namespace NBitcoin.Tests
 
         public Pos_Transaction_Tests()
         {
-            this.stratisMain = KnownNetworks.StratisMain;
+            this.stratisMain = KnownNetworks.StraxMain;
             this.consensusFactory = this.stratisMain.Consensus.ConsensusFactory;
         }
 
@@ -1237,7 +1237,7 @@ namespace NBitcoin.Tests
         {
             Action<Transaction, TransactionBuilder> AssertEstimatedSize = (tx, b) =>
             {
-                int expectedVSize = tx.GetVirtualSize(KnownNetworks.StratisMain.Consensus.Options.WitnessScaleFactor);
+                int expectedVSize = tx.GetVirtualSize(KnownNetworks.StraxMain.Consensus.Options.WitnessScaleFactor);
                 int actualVSize = b.EstimateSize(tx, true);
                 int expectedSize = tx.GetSerializedSize();
                 int actualSize = b.EstimateSize(tx, false);

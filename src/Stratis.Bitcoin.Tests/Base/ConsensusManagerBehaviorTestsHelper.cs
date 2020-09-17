@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Tests.Base
             Func<List<BlockHeader>, bool, ConnectNewHeadersResult> connectNewHeadersMethod = null)
         {
             // Chain
-            var chain = new ChainIndexer(KnownNetworks.StratisMain);
+            var chain = new ChainIndexer(KnownNetworks.StraxMain);
             chain.SetTip(consensusTip);
 
             // Ibd
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Tests.Base
             this.testPeerBanning = new TestPeerBanning();
 
             var connectionManagerMock = new Mock<IConnectionManager>();
-            connectionManagerMock.SetupGet(x => x.ConnectionSettings).Returns(new ConnectionManagerSettings(new NodeSettings(KnownNetworks.StratisMain)));
+            connectionManagerMock.SetupGet(x => x.ConnectionSettings).Returns(new ConnectionManagerSettings(new NodeSettings(KnownNetworks.StraxMain)));
 
             var cmBehavior = new ConsensusManagerBehavior(chain, ibdState.Object, cmMock.Object, this.testPeerBanning, this.loggerFactory);
 
@@ -153,13 +153,13 @@ namespace Stratis.Bitcoin.Tests.Base
             var signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
             var asyncProvider = new AsyncProvider(this.loggerFactory, signals, new NodeLifetime());
 
-            var connection = new NetworkPeerConnection(KnownNetworks.StratisMain, peer.Object, new TcpClient(), 0, (message, token) => Task.CompletedTask,
+            var connection = new NetworkPeerConnection(KnownNetworks.StraxMain, peer.Object, new TcpClient(), 0, (message, token) => Task.CompletedTask,
                 new DateTimeProvider(), this.loggerFactory, new PayloadProvider(), asyncProvider);
 
             peer.SetupGet(networkPeer => networkPeer.Connection).Returns(connection);
 
             var connectionParameters = new NetworkPeerConnectionParameters();
-            VersionPayload version = connectionParameters.CreateVersion(new IPEndPoint(1, 1), new IPEndPoint(1, 1), KnownNetworks.StratisMain, new DateTimeProvider().GetTimeOffset());
+            VersionPayload version = connectionParameters.CreateVersion(new IPEndPoint(1, 1), new IPEndPoint(1, 1), KnownNetworks.StraxMain, new DateTimeProvider().GetTimeOffset());
             version.Services = NetworkPeerServices.Network;
 
             peer.SetupGet(x => x.PeerVersion).Returns(version);

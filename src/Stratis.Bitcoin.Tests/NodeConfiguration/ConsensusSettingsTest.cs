@@ -41,11 +41,11 @@ namespace Stratis.Bitcoin.Tests.NodeConfiguration
         [Fact]
         public void LoadConfigWithDefaultsSetsToNetworkDefault()
         {
-            Network network = KnownNetworks.StratisMain;
+            Network network = KnownNetworks.StraxMain;
             var settings = new ConsensusSettings(NodeSettings.Default(network));
             Assert.Equal(network.Consensus.DefaultAssumeValid, settings.BlockAssumedValid);
 
-            network = KnownNetworks.StratisTest;
+            network = KnownNetworks.StraxTest;
             settings = new ConsensusSettings(NodeSettings.Default(network));
             Assert.Equal(network.Consensus.DefaultAssumeValid, settings.BlockAssumedValid);
 

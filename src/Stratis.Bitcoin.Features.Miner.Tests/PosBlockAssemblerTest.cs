@@ -39,14 +39,14 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         private readonly Mock<IStakeChain> stakeChain;
         private readonly Mock<IStakeValidator> stakeValidator;
 
-        public PosBlockAssemblerTest() : base(KnownNetworks.StratisTest)
+        public PosBlockAssemblerTest() : base(KnownNetworks.StraxTest)
         {
             this.consensusManager = new Mock<IConsensusManager>();
             this.mempool = new Mock<ITxMempool>();
             this.dateTimeProvider = new Mock<IDateTimeProvider>();
             this.stakeValidator = new Mock<IStakeValidator>();
             this.stakeChain = new Mock<IStakeChain>();
-            this.stratisTest = KnownNetworks.StratisTest;
+            this.stratisTest = KnownNetworks.StraxTest;
             this.key = new Key();
             this.minerSettings = new MinerSettings(NodeSettings.Default(this.Network));
             SetupConsensusManager();

@@ -148,7 +148,7 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0xa9df5dfe176356d989028d88bfabb9ee31df16a4b438a3497534e755b3d560e2"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000b23c2a4f986ea3d930110bf6b5d04e7407ed9770626104a302f7b72e051"));
             Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xfe6317d42149b091399e7f834ca32fd248f8f26f493c30a35d6eea692fe4fcad"));
 
             StraxNetwork.RegisterRules(this.Consensus);

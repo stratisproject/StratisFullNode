@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public PosConsensusRuleUnitTestBase() : base(KnownNetworks.StratisTest)
+        public PosConsensusRuleUnitTestBase() : base(KnownNetworks.StraxTest)
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();
@@ -217,7 +217,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StratisTest)
+        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StraxTest)
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();
