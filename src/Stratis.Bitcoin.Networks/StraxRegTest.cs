@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Networks
 
             // Create the genesis block.
             this.GenesisTime = 1470467000; // TODO: Make this more recent?
-            this.GenesisNonce = 1730667; // TODO: Update once the final block is mined
+            this.GenesisNonce = 242717; // TODO: Update once the final block is mined
             this.GenesisBits = 0x1e0fffff;
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
@@ -126,7 +126,7 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update this once the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000042266634fa92136e4c50392007ec8f530d297fb89bc430d26ff2d9bc557"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000b17f472cec2c4a006178db9aaa671aaf15bf953c39225b6fd35468a6dac"));
 
             this.RegisterRules(this.Consensus);
             this.RegisterMempoolRules(this.Consensus);

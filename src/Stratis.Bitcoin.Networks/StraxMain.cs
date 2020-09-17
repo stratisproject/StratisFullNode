@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Networks
 
             // Create the genesis block.
             this.GenesisTime = 1598918400; // 1 September 2020
-            this.GenesisNonce = 128917; // TODO: Update this once the final block is mined
+            this.GenesisNonce = 1236386; // TODO: Update this once the final block is mined
             this.GenesisBits = 0x1e0fffff; // The difficulty target
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
@@ -150,8 +150,8 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000016c94cd31b3b84465335f7ceca6491ae6b54c7b8fafc6862e78b090ebe3"));
-            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xaa489ed22a8d82af81f0f124a16d9c61657b5fcf2708e0aecf3f78bbc6afb2ab"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000921702bd55eb8c4318a8dbcfca29b9d340b1856c6af0b8962a3a0e12fff"));
+            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xb21368a732cb9ae9b34a45eea13ce1b7cdb3c4b02991d3f715022d67d2b51c8d"));
 
             this.RegisterRules(this.Consensus);
             this.RegisterMempoolRules(this.Consensus);
@@ -242,7 +242,7 @@ namespace Stratis.Bitcoin.Networks
             Block genesis = consensusFactory.CreateBlock();
             genesis.Header.BlockTime = Utils.UnixTimeToDateTime(time);
             genesis.Header.Bits = bits;
-            genesis.Header.Nonce = nonce;
+            genesis.Header.Nonce = 0; //nonce;
             genesis.Header.Version = version;
             genesis.Transactions.Add(txNew);
             genesis.Header.HashPrevBlock = uint256.Zero;
