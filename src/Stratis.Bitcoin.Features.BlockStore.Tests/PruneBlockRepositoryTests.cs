@@ -1,4 +1,6 @@
 ﻿using System.Linq;
+using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore.Pruning;
 using Stratis.Bitcoin.Networks;
@@ -10,7 +12,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 {
     public sealed class PruneBlockRepositoryTests : LogsTestBase
     {
-        public PruneBlockRepositoryTests() : base(new StratisMain())
+        public PruneBlockRepositoryTests() : base(new StraxMain())
         {
         }
 
@@ -19,6 +21,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         {
             var posBlocks = CreatePosBlocks(50);
             var chainedHeaderTip = BuildProvenHeaderChainFromBlocks(posBlocks);
+
+            var res = Encoders.Hex.EncodeData(posBlocks.First().ToBytes());
 
             var dataFolderPath = CreateTestDir(this);
             var dataFolder = new DataFolder(dataFolderPath);

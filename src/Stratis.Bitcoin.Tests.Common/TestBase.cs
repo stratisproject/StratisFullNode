@@ -160,6 +160,8 @@ namespace Stratis.Bitcoin.Tests.Common
             {
                 PosBlock block = this.CreatePosBlock();
                 block.Header.HashPrevBlock = blocks.LastOrDefault()?.GetHash() ?? this.Network.GenesisHash;
+                block.Header.Bits = Target.Difficulty1;
+                block.Header.HashMerkleRoot = new uint256(RandomUtils.GetBytes(32));
                 blocks.Add(block);
             }
 
