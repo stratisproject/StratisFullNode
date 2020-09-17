@@ -1,7 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CsvHelper;
 using Flurl;
 using Flurl.Http;
 using NBitcoin;
@@ -13,27 +17,43 @@ namespace SwapExtractionTool
     public sealed class SwapExtractionService
     {
         private readonly Network network;
+        private readonly Network straxNetwork;
+
+        private List<SwapTransaction> swapTransactions;
 
         /// <summary>
         /// This is the block height from which to start scanning from.
         /// </summary>
-        private const int StartHeight = 1482863;
+        private const int StartHeight = 1_487_140;
+        private const int EndHeight = 1_487_160;
         //private const int StartHeight = 1_900_000;
 
-        public SwapExtractionService(Network network)
+        public SwapExtractionService(Network stratisNetwork, Network straxNetwork)
         {
-            this.network = network;
+            this.network = stratisNetwork;
+            this.straxNetwork = straxNetwork;
+            this.swapTransactions = new List<SwapTransaction>();
         }
 
         public async Task RunAsync()
         {
-            // Retrieve 500 blocks at a time from start height.
-            for (int height = StartHeight; height < StartHeight + 1; height++)
+            for (int height = StartHeight; height < EndHeight; height++)
             {
                 Block block = await RetrieveBlockAtHeightAsync(height);
 
-                // Process block for Swap OP_RETURN transactions.
+                // Process block for swap OP_RETURN transactions.
                 ProcessBlock(block, height);
+            }
+
+            Console.WriteLine($"Writing {this.swapTransactions.Count} swap transactions.");
+
+            using (var writer = new StreamWriter(Path.Combine("c:", "[StratisWork]", "swaps.csv")))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                foreach (SwapTransaction swapTransaction in this.swapTransactions)
+                {
+                    csv.WriteRecord(swapTransaction);
+                }
             }
         }
 
@@ -62,17 +82,27 @@ namespace SwapExtractionTool
                 // Find all the OP_RETURN outputs.
                 foreach (TxOut output in transaction.Outputs.Where(o => o.ScriptPubKey.IsUnspendable))
                 {
-                    // Verify the sender address is a valid Strax address
                     IList<Op> ops = output.ScriptPubKey.ToOps();
-                    var pushdata = ops.Last().PushData;
-                    var senderAddress = Encoding.ASCII.GetString(pushdata);
-                    var swapTransaction = new SwapTransaction()
+                    var pushData = Encoding.ASCII.GetString(ops.Last().PushData);
+                    var straxAddress = pushData.Substring("SWAP".Length);
+                    try
                     {
-                        BlockHeight = blockHeight,
-                        SenderAddress = senderAddress.ToString(),
-                        SenderAmount = output.Value,
-                        TransactionHash = transaction.GetHash()
-                    };
+                        // Verify the sender address is a valid Strax address
+                        var validStraxAddress = BitcoinAddress.Create(straxAddress, this.straxNetwork);
+                        Console.WriteLine($"Swap found: {validStraxAddress}:{output.Value}");
+                        var swapTransaction = new SwapTransaction()
+                        {
+                            BlockHeight = blockHeight,
+                            SenderAddress = validStraxAddress.ToString(),
+                            SenderAmount = output.Value,
+                            TransactionHash = transaction.GetHash().ToString()
+                        };
+
+                        this.swapTransactions.Add(swapTransaction);
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
             }
         }
@@ -83,6 +113,6 @@ namespace SwapExtractionTool
         public int BlockHeight { get; set; }
         public string SenderAddress { get; set; }
         public Money SenderAmount { get; set; }
-        public uint256 TransactionHash { get; set; }
+        public string TransactionHash { get; set; }
     }
 }

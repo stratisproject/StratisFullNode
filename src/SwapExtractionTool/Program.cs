@@ -9,13 +9,20 @@ namespace SwapExtractionTool
     {
         static async Task Main(string[] args)
         {
-            Network network;
+            Network stratisNetwork;
+            Network straxNetwork;
             if (args.Contains("-testnet"))
-                network = new StratisTest();
+            {
+                stratisNetwork = new StratisTest();
+                straxNetwork = new StraxTest();
+            }
             else
-                network = new StratisMain();
+            {
+                stratisNetwork = new StratisMain();
+                straxNetwork = new StraxMain();
+            }
 
-            var service = new SwapExtractionService(network);
+            var service = new SwapExtractionService(stratisNetwork, straxNetwork);
             await service.RunAsync();
         }
     }
