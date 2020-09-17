@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
-        public class StratisConsensusOptionsOverrideTest : StratisRegTest
+        public class StratisConsensusOptionsOverrideTest : StraxRegTest
         {
             public StratisConsensusOptionsOverrideTest()
             {
@@ -518,7 +518,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var sharedMnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
 
@@ -584,7 +584,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var sharedMnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
 
@@ -629,7 +629,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var minerA = builder.CreateStratisPosNode(network, "cm-11-minerA").OverrideDateTimeProvider().WithWallet().Start();
                 var minerB = builder.CreateStratisPosNode(network, "cm-11-minerB").OverrideDateTimeProvider().Start();
@@ -678,7 +678,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 // MinerA requires a physical wallet to stake with.
                 var minerA = builder.CreateStratisPosNode(network, "minerA").WithWallet().Start();

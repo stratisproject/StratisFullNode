@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public AddressBookTests()
         {
-            this.network = new StratisRegTest();
+            this.network = new StraxRegTest();
         }
 
         [Fact]

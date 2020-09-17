@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
         public GetRawTransactionTest()
         {
-            this.network = new StratisRegTest();
+            this.network = new StraxRegTest();
         }
 
         [Fact]

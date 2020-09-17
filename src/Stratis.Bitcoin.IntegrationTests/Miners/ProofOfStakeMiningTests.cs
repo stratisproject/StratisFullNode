@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
         {
             using (NodeBuilder nodeBuilder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 CoreNode node = nodeBuilder.CreateStratisPosNode(network, "posmining-1-node").WithDummyWallet().Start();
                 CoreNode syncer = nodeBuilder.CreateStratisPosNode(network, "posmining-1-syncer").Start();
@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
             using (var builder = NodeBuilder.Create(this))
             {
                 var configParameters = new NodeConfigParameters { { "savetrxhex", "true" } };
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var minerA = builder.CreateStratisPosNode(network, "stake-1-minerA", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
 

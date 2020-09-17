@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         public NodeSyncTests()
         {
             this.powNetwork = new BitcoinRegTest();
-            this.posNetwork = new StratisRegTest();
+            this.posNetwork = new StraxRegTest();
         }
 
         public class StratisRegTestMaxReorg : StratisRegTest

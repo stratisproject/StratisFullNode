@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public WalletOperationsFixture()
         {
-            this.network = new StratisRegTest();
+            this.network = new StraxRegTest();
             this.builder = NodeBuilder.Create("WalletOperationsTests");
             CoreNode stratisNode = this.builder.CreateStratisPosNode(this.network).Start();
 
