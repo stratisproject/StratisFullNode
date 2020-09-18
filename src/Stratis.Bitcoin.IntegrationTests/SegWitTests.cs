@@ -362,7 +362,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 Network network = KnownNetworks.StraxRegTest;
                 CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
 
-                var address = BitcoinWitPubKeyAddress.Create(node.FullNode.WalletManager().GetUnusedAddress().Bech32Address, network);
+                var address = BitcoinWitPubKeyAddress.Create(node.FullNode.WalletManager().GetUnusedAddress().Bech32Address(network), network);
 
                 // A P2WPKH scriptPubKey - so that funds get mined into the node's wallet as segwit UTXOs
                 var script = address.ScriptPubKey;
@@ -549,7 +549,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Send a transaction from first node to itself so that it has a proper segwit input to spend.
                 var destinationAddress = node.FullNode.WalletManager().GetUnusedAddress();
-                var witAddress = destinationAddress.Bech32Address;
+                var witAddress = destinationAddress.Bech32Address(KnownNetworks.StraxRegTest);
 
                 IActionResult transactionResult = node.FullNode.NodeController<WalletController>()
                     .BuildTransaction(new BuildTransactionRequest
@@ -644,7 +644,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Send a transaction from first node to itself so that it has a proper segwit input to spend.
                 var destinationAddress = node.FullNode.WalletManager().GetUnusedAddress();
-                var witAddress = destinationAddress.Bech32Address;
+                var witAddress = destinationAddress.Bech32Address(node.FullNode.Network);
 
                 var p2wpkhAmount = Money.Coins(1);
 
@@ -678,7 +678,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // Make sure wallet is synced.
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() == node.FullNode.WalletManager().LastBlockHeight(), cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
 
-                var spendable = node.FullNode.WalletManager().GetSpendableTransactionsInWallet(node.WalletName).Where(t => t.Address.Bech32Address != witAddress);
+                var spendable = node.FullNode.WalletManager().GetSpendableTransactionsInWallet(node.WalletName).Where(t => t.Address.Bech32Address(node.FullNode.Network) != witAddress);
 
                 // By sending more than the size of the P2WPKH UTXO, we guarantee that at least one non-P2WPKH UTXO gets included
                 transactionResult = node.FullNode.NodeController<WalletController>()
@@ -730,7 +730,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 TestHelper.WaitForNodeToSync(node, listener);
 
                 var destinationAddress = node.FullNode.WalletManager().GetUnusedAddress();
-                var witAddress = destinationAddress.Bech32Address;
+                var witAddress = destinationAddress.Bech32Address(node.FullNode.Network);
                 var nonWitAddress = destinationAddress.Address;
 
                 IActionResult transactionResult = node.FullNode.NodeController<WalletController>()

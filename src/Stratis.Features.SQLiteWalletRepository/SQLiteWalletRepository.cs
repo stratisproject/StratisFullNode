@@ -517,7 +517,6 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             Script pubKeyScript = null;
             Script scriptPubKey = null;
-            Script bech32ScriptPubKey = null;
 
             if (account.ExtPubKey != null)
             {
@@ -525,7 +524,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 PubKey pubKey = extPubKey.PubKey;
                 pubKeyScript = pubKey.ScriptPubKey;
                 scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
-                bech32ScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
             }
 
             // Add the new address details to the list of addresses.
@@ -537,9 +535,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 AddressIndex = addressIndex,
                 PubKey = pubKeyScript?.ToHex(),
                 ScriptPubKey = scriptPubKey?.ToHex(),
-                Bech32ScriptPubKey = bech32ScriptPubKey?.ToHex(),
-                Address = scriptPubKey?.GetDestinationAddress(this.Network).ToString() ?? "",
-                Bech32Address = bech32ScriptPubKey?.GetDestinationAddress(this.Network).ToString() ?? ""
+                Address = scriptPubKey?.GetDestinationAddress(this.Network).ToString() ?? ""
             };
         }
 
@@ -624,8 +620,6 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         private HDAddress CreateAddress(AddressIdentifier addressId)
         {
-            Script witScriptPubKey = Script.FromHex(addressId.Bech32ScriptPubKey);
-
             return new HDAddress()
             {
                 WalletId = addressId.WalletId,
@@ -634,9 +628,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 AddressIndex = (int)addressId.AddressIndex,
                 PubKey = addressId.PubKeyScript,
                 ScriptPubKey = addressId.ScriptPubKey,
-                Address = Script.FromHex(addressId.ScriptPubKey).GetDestinationAddress(this.Network).ToString(),
-                Bech32ScriptPubKey = addressId.Bech32ScriptPubKey,
-                Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString()
+                Address = Script.FromHex(addressId.ScriptPubKey).GetDestinationAddress(this.Network).ToString()
             };
         }
 
@@ -1209,8 +1201,6 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
-                // We do not use the address from the transaction (i.e. UTXO) data here in case it is a segwit (P2WPKH) UTXO.
-                // That is because the bech32 functionality is somewhat bolted onto the HdAddress, so we need to return an HdAddress augmented with bech32 data rather than only bech32 data.
                 HdAddress hdAddress = this.ToHdAddress(new HDAddress()
                 {
                     AccountIndex = transactionData.AccountIndex,
@@ -1218,9 +1208,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     AddressType = (int)transactionData.AddressType,
                     PubKey = pubKey.ScriptPubKey.ToHex(),
                     ScriptPubKey = scriptPubKey.ToHex(),
-                    Address = scriptPubKey.GetDestinationAddress(this.Network).ToString(),
-                    Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString(),
-                    Bech32ScriptPubKey = witScriptPubKey.ToHex()
+                    Address = scriptPubKey.GetDestinationAddress(this.Network).ToString()
                 }, this.Network);
 
                 hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;

@@ -284,7 +284,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             if (context.UseSegwitChangeAddress)
             {
-                context.TransactionBuilder.SetChange(new BitcoinWitPubKeyAddress(context.ChangeAddress.Bech32Address, this.network).ScriptPubKey);
+                context.TransactionBuilder.SetChange(new BitcoinWitPubKeyAddress(context.ChangeAddress.Bech32Address(this.network), this.network).ScriptPubKey);
             }
             else
             {

@@ -25,19 +25,22 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         private readonly IWalletManager walletManager;
         private readonly IWalletSyncManager walletSyncManager;
         private readonly ChainIndexer chainIndexer;
+        private readonly Network network;
 
         public WalletController(
             ILoggerFactory loggerFactory,
             IWalletService walletService,
             IWalletManager walletManager,
             IWalletSyncManager walletSyncManager,
-            ChainIndexer chainIndexer)
+            ChainIndexer chainIndexer,
+            Network network)
             : base(loggerFactory.CreateLogger(typeof(WalletController).FullName))
         {
             this.walletService = walletService;
             this.walletManager = walletManager;
             this.walletSyncManager = walletSyncManager;
             this.chainIndexer = chainIndexer;
+            this.network = network;
         }
 
         /// <summary>
@@ -542,7 +545,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 HdAddress result = this.walletManager.GetUnusedAddress(new WalletAccountReference(
                     request.WalletName,
                     request.AccountName));
-                return this.Json(request.Segwit ? result.Bech32Address : result.Address);
+                return this.Json(request.Segwit ? result.Bech32Address(this.network) : result.Address);
             });
         }
 
@@ -570,7 +573,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             {
                 var result = this.walletManager.GetUnusedAddresses(
                         new WalletAccountReference(request.WalletName, req.AccountName), int.Parse(req.Count))
-                    .Select(x => request.Segwit ? x.Bech32Address : x.Address).ToArray();
+                    .Select(x => request.Segwit ? x.Bech32Address(this.network) : x.Address).ToArray();
 
                 return this.Json(result);
             });

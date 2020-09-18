@@ -12,9 +12,6 @@
 
         public string ScriptPubKey { get; set; }
 
-        /// <summary>P2WPKH scriptPubKey</summary>
-        public string Bech32ScriptPubKey { get; set; }
-
         // TODO: Document how this is distinct from ScriptPubKey. Is it the P2PK scriptPubKey as opposed to ScriptPubKey storing the P2PKH scriptPubKey?
         public string PubKeyScript;
 

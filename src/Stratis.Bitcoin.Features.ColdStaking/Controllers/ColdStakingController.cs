@@ -21,6 +21,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
     {
         public ColdStakingManager ColdStakingManager { get; private set; }
         private readonly IWalletTransactionHandler walletTransactionHandler;
+        private readonly Network network;
 
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
@@ -28,7 +29,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         public ColdStakingController(
             ILoggerFactory loggerFactory,
             IWalletManager walletManager,
-            IWalletTransactionHandler walletTransactionHandler)
+            IWalletTransactionHandler walletTransactionHandler,
+            Network network)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(walletManager, nameof(walletManager));
@@ -39,6 +41,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.walletTransactionHandler = walletTransactionHandler;
+            this.network = network;
         }
 
         /// <summary>
@@ -161,7 +164,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
                 var model = new GetColdStakingAddressResponse
                 {
-                    Address = request.Segwit ? address?.Bech32Address : address?.Address
+                    Address = request.Segwit ? address?.Bech32Address(this.network) : address?.Address
                 };
 
                 if (model.Address == null)

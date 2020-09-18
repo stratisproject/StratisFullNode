@@ -51,8 +51,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 AddressType = address.AddressType,
                 HdPath = repo.ToHdPath(address.AccountIndex, address.AddressType, address.AddressIndex),
                 ScriptPubKey = scriptPubKey,
-                Pubkey = pubKeyScript,
-                Bech32Address = address.Bech32Address
+                Pubkey = pubKeyScript
             };
 
             return res;

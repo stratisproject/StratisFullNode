@@ -165,12 +165,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         public Script Pubkey { get; set; }
 
         /// <summary>
-        /// The base32 representation of a segwit (P2WPH) address.
-        /// </summary>
-        [JsonProperty(PropertyName = "bech32Address")]
-        public string Bech32Address { get; set; }
-
-        /// <summary>
         /// The Base58 representation of this address.
         /// </summary>
         [JsonProperty(PropertyName = "address")]
@@ -279,6 +273,11 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
 
             return this.Transactions.Where(t => !t.IsSpent());
+        }
+
+        public string Bech32Address(Network network)
+        {
+            return PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(this.Pubkey.GetDestinationPublicKeys(network)[0]).GetDestinationAddress(network).ToString();
         }
 
         public static (Money confirmedAmount, Money unConfirmedAmount) GetBalances(IEnumerable<TransactionData> transactions)

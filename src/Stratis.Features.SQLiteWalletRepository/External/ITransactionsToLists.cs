@@ -52,7 +52,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         break;
                     case TxOutType.TX_SEGWIT:
                         // TODO: Do we need to make the distinction between P2WPKH and P2WSH?
-                        yield return PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript).ScriptPubKey;
+                        yield return new KeyId(PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript).ScriptPubKey.ToOps()[1].PushData).ScriptPubKey;
                         break;
                     default:
                         if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
@@ -148,9 +148,6 @@ namespace Stratis.Features.SQLiteWalletRepository.External
 
                                         // Add the new address to our addresses of interest.
                                         addressesOfInterest.AddTentative(Script.FromHex(newAddress.ScriptPubKey), newAddress);
-
-                                        // And the P2WPKH.
-                                        addressesOfInterest.AddTentative(Script.FromHex(newAddress.Bech32ScriptPubKey), newAddress);
                                     }
                                 }
                             }

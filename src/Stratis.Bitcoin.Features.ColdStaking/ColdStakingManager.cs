@@ -311,8 +311,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             HdAccount coldAccount = this.GetOrCreateColdStakingAccount(walletName, true, walletPassword);
             HdAccount hotAccount = this.GetOrCreateColdStakingAccount(walletName, false, walletPassword);
 
-            HdAddress coldAddress = coldAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == coldWalletAddress || s.Bech32Address == coldWalletAddress);
-            HdAddress hotAddress = hotAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == hotWalletAddress || s.Bech32Address == hotWalletAddress);
+            HdAddress coldAddress = coldAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == coldWalletAddress || s.Bech32Address(this.network) == coldWalletAddress);
+            HdAddress hotAddress = hotAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == hotWalletAddress || s.Bech32Address(this.network) == hotWalletAddress);
 
             bool thisIsColdWallet = coldAddress != null;
             bool thisIsHotWallet = hotAddress != null;
@@ -335,7 +335,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Script destination = null;
 
             // Check if this is a segwit address
-            if (coldAddress?.Bech32Address == coldWalletAddress || hotAddress?.Bech32Address == hotWalletAddress)
+            if (coldAddress?.Bech32Address(this.network) == coldWalletAddress || hotAddress?.Bech32Address(this.network) == hotWalletAddress)
             {
                 KeyId hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
                 KeyId coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
@@ -410,14 +410,14 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             }
 
             // Prevent reusing cold stake addresses as regular withdrawal addresses.
-            if (coldAccount.ExternalAddresses.Concat(coldAccount.InternalAddresses).Any(s => s.Address == receivingAddress || s.Bech32Address == receivingAddress))
+            if (coldAccount.ExternalAddresses.Concat(coldAccount.InternalAddresses).Any(s => s.Address == receivingAddress || s.Bech32Address(this.network) == receivingAddress))
             {
                 this.logger.LogTrace("(-)[COLDSTAKE_INVALID_COLD_WALLET_ADDRESS_USAGE]");
                 throw new WalletException("You can't send the money to a cold staking cold wallet account.");
             }
 
             HdAccount hotAccount = this.GetColdStakingAccount(wallet, false);
-            if (hotAccount != null && hotAccount.ExternalAddresses.Concat(hotAccount.InternalAddresses).Any(s => s.Address == receivingAddress || s.Bech32Address == receivingAddress))
+            if (hotAccount != null && hotAccount.ExternalAddresses.Concat(hotAccount.InternalAddresses).Any(s => s.Address == receivingAddress || s.Bech32Address(this.network) == receivingAddress))
             {
                 this.logger.LogTrace("(-)[COLDSTAKE_INVALID_HOT_WALLET_ADDRESS_USAGE]");
                 throw new WalletException("You can't send the money to a cold staking hot wallet account.");
