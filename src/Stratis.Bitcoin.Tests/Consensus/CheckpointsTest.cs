@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             Assert.Equal(0, result);
         }
 
-        [Fact()]
+        [Fact]
         public void GetLastCheckPointHeight_StratisRegTestNet_DoesNotLoadCheckpoints()
         {
             var checkpoints = new Checkpoints(KnownNetworks.StraxRegTest, new ConsensusSettings(NodeSettings.Default(KnownNetworks.StraxTest)) { UseCheckpoints = true });
