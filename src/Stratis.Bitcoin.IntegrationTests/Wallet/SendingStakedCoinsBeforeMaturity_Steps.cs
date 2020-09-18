@@ -21,8 +21,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         private const decimal OneMillion = 1_000_000;
         private CoreNode receiverNode;
         private const string WalletName = "mywallet";
-        private const string WalletPassword = "123456";
-        private const string WalletPassphrase = "passphrase";
         private const string WalletAccountName = "account 0";
 
         public SendingStakedCoinsBeforeMaturity(ITestOutputHelper outputHelper)

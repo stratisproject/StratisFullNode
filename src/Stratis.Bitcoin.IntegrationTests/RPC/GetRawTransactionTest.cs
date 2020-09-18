@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 RPCClient rpc = node.CreateRPCClient();
 
@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"
@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Act.
                 RPCClient rpc = node.CreateRPCClient();
@@ -93,7 +93,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the genesis block.
                 BlockModel block = await $"http://localhost:{node.ApiPort}/api"
@@ -117,7 +117,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"
@@ -146,7 +146,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"
@@ -174,8 +174,8 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             {
                 //Arrange.
                 // Create a sending and a receiving node.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
@@ -229,7 +229,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"
@@ -257,7 +257,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"
@@ -314,7 +314,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"
@@ -343,7 +343,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 // Get the last block we have.
                 string lastBlockHash = await $"http://localhost:{node.ApiPort}/api"

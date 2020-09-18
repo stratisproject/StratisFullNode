@@ -400,7 +400,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).Start();
-                CoreNode miningNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode miningNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 TestHelper.ConnectAndSync(node, miningNode);
 
@@ -442,8 +442,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 // Create a sending and a receiving node.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
                 // Check balances.
@@ -640,8 +640,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 // Create a sending and a receiving node.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
                 // Check balances.

@@ -23,9 +23,14 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultRPCPort = 37104;
             this.DefaultAPIPort = 37103;
             this.DefaultSignalRPort = 37102;
-            this.CoinTicker = "TSTRAX";
+            this.MaxTipAge = 2 * 60 * 60;
+            this.MinTxFee = 10000;
+            this.FallbackFee = 10000;
+            this.MinRelayTxFee = 10000;
             this.RootFolderName = StraxNetwork.StraxRootFolderName;
             this.DefaultConfigFilename = StraxNetwork.StraxDefaultConfigFilename;
+            this.MaxTimeOffsetSeconds = 25 * 60;
+            this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             // TODO: Update this later
