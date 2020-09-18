@@ -98,7 +98,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 // Get the genesis block.
                 BlockModel block = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("blockstore/block")
-                    .SetQueryParams(new { hash = "0x93925104d664314f581bc7ecb7b4bad07bcfabd1cfce4256dbd2faddcf53bd1f", outputJson = true })
+                    .SetQueryParams(new { hash = "0x77283cca51b83fe3bda9ce8966248613036b0dc55a707ce76ca7b79aaa9962e4", outputJson = true })
                     .GetJsonAsync<BlockModel>();
 
                 RPCClient rpc = node.CreateRPCClient();
@@ -109,7 +109,6 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 exception.Message.Should().Be("The genesis block coinbase is not considered an ordinary transaction and cannot be retrieved.");
             }
         }
-
 
         [Fact]
         public async Task GetRawTransactionWithTransactionIndexedInBlockchainVerboseAsync()
