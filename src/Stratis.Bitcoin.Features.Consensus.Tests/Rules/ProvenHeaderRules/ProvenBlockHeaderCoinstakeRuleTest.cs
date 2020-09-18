@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
 
         public ProvenBlockHeaderCoinstakeRuleTest()
         {
-            this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Last();
+            this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Any() ? this.network.Checkpoints.Keys.Last() : 0;
         }
 
         [Fact]
@@ -172,20 +172,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Setup(m => m.FetchCoins(It.IsAny<OutPoint[]>()))
                 .Returns(res);
 
-            // Change coinstake time to differ from header time but divisible by 16.
-            ((ProvenBlockHeader)this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header).Time = 16;
-
-            // When we run the validation rule, we should hit coinstake stake time violation error.
             Action ruleValidation = () => this.consensusRules.RegisterRule<ProvenHeaderCoinstakeRule>().Run(this.ruleContext);
-            ruleValidation.Should().Throw<ConsensusErrorException>()
-                .And.ConsensusError
-                .Should().Be(ConsensusErrors.StakeTimeViolation);
 
-            // Change coinstake time to be the same as header time but not divisible by 16.
+            // Change header time to be not divisible by 16.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header.Time = 50;
             ((ProvenBlockHeader)this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header).Time = 50;
 
-            // When we run the validation rule, we should hit coinstake stake time violation error.
+            // When we run the validation rule, we should hit stake time violation error.
             ruleValidation.Should().Throw<ConsensusErrorException>()
                 .And.ConsensusError
                 .Should().Be(ConsensusErrors.StakeTimeViolation);
