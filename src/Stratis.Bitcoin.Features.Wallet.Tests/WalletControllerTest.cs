@@ -434,7 +434,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             string walletName = "myWallet";
             string extPubKey =
-                "xq5hcJV8uJDLaNytrg6FphHY1vdqxP1rCPhAmp4xZwpxzYyYEscYEujAmNR5NrPfy9vzQ6BajEqtFezcyRe4zcGHH3dR6BKaKov43JHd8UYhBVy";
+                "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex";
 
             await this.RecoverWithExtPubAndCheckSuccessfulResponse(walletName, extPubKey);
         }
@@ -2582,7 +2582,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 this.configuredMocks.Add(typeof(TMock), value);
             }
 
-            return (TMock) this.configuredMocks[typeof(TMock)];
+            return (TMock)this.configuredMocks[typeof(TMock)];
         }
 
         private Mock<TMock> ConfigureMock<TMock>(Action<Mock<TMock>> setup = null) where TMock : class
@@ -2601,11 +2601,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             if (this.configuredMocks.ContainsKey(typeof(TMock))
                 && this.configuredMocks[typeof(TMock)] as Mock<TMock> != null)
             {
-                return ((Mock<TMock>) this.configuredMocks[typeof(TMock)]).Object;
+                return ((Mock<TMock>)this.configuredMocks[typeof(TMock)]).Object;
             }
 
             return this.configuredMocks.ContainsKey(typeof(TMock))
-                ? (TMock) this.configuredMocks[typeof(TMock)]
+                ? (TMock)this.configuredMocks[typeof(TMock)]
                 : createIfNotExists
                     ? new Mock<TMock>().Object
                     : null;
