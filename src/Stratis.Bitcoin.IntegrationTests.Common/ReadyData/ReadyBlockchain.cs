@@ -14,10 +14,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.ReadyData
 
         public static string StratisRegTestMinerAddress = "TXYdgqNVbHTfW5FsdxqSX6vejBByNEk2Yb";
         public static string BitcoinRegTestMinerAddress = "mgCHT7ABM88SGpgQGXmidU6dG3qb9qC4oa";
-
-        public static string StratisRegTest10Miner = @"ReadyData/StraxRegTest10Miner.zip";
-        public static string StratisRegTest10Listener = @"ReadyData/StraxRegTest10Listener.zip";
-        public static string StratisRegTest10NoWallet = @"ReadyData/StraxRegTest10NoWallet.zip";
+        public static string StraxRegTest10Miner = @"ReadyData/StraxRegTest10Miner.zip";
+        public static string StraxRegTest10Listener = @"ReadyData/StraxRegTest10Listener.zip";
+        public static string StraxRegTest10NoWallet = @"ReadyData/StraxRegTest10NoWallet.zip";
 
         public static string StratisRegTest100Miner = @"ReadyData/StraxRegTest100Miner.zip";
         public static string StratisRegTest100Listener = @"ReadyData/StraxRegTest100Listener.zip";

@@ -14,15 +14,13 @@ namespace Stratis.Bitcoin.IntegrationTests
     public class NodeSyncTests
     {
         private readonly Network powNetwork;
-        private readonly Network posNetwork;
 
         public NodeSyncTests()
         {
             this.powNetwork = new BitcoinRegTest();
-            this.posNetwork = new StraxRegTest();
         }
 
-        public class StratisRegTestMaxReorg : StratisRegTest
+        public class StratisRegTestMaxReorg : StraxRegTest
         {
             public StratisRegTestMaxReorg()
             {

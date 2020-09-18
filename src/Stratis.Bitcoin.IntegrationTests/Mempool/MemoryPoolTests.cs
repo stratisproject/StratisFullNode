@@ -20,7 +20,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
     {
         private const string Password = "password";
         private const string WalletName = "mywallet";
-        private const string Passphrase = "passphrase";
         private const string Account = "account 0";
 
         private readonly Network network;
@@ -358,7 +357,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -396,7 +395,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -433,7 +432,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -469,7 +468,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 

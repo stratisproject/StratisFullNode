@@ -40,7 +40,6 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         private const string WalletAccountName = "account 0";
         private const string WalletPassword = "password";
         private const string WalletPassphrase = "wallet_passphrase";
-        private const string StratisRegTest = "StratisRegTest";
 
         // BlockStore
         private const string BlockUri = "api/blockstore/block";
@@ -224,7 +223,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
 
         private void calling_recover_via_extpubkey_for_account_0()
         {
-            this.RecoverViaExtPubKey(WalletName, "xpub6DGguHV1FQFPvZ5Xu7VfeENyiySv4R2bdd6VtvwxWGVTVNnHUmphMNgTRkLe8j2JdAv332ogZcyhqSuz1yUPnN4trJ49cFQXmEhwNQHUqk1", 0);
+            this.RecoverViaExtPubKey(WalletName, "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex", 0);
         }
 
         private void attempting_to_add_an_account()
@@ -241,13 +240,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
 
         private void an_extpubkey_only_wallet_with_account_0()
         {
-            this.RecoverViaExtPubKey(WalletName, "xpub6DGguHV1FQFPvZ5Xu7VfeENyiySv4R2bdd6VtvwxWGVTVNnHUmphMNgTRkLe8j2JdAv332ogZcyhqSuz1yUPnN4trJ49cFQXmEhwNQHUqk1", 0);
-        }
-
-        private void calling_recover_via_extpubkey_for_account_1()
-        {
-            //NOTE: use legacy stratis xpub key format for this one to ensure that works too.
-            this.RecoverViaExtPubKey("Secondary_Wallet", "xq5hcJV8uJDLaNytrg6FphHY1vdqxP1rCPhAmp4xZwpxzYyYEscYEujAmNR5NrPfy9vzQ6BajEqtFezcyRe4zcGHH3dR6BKaKov43JHd8UYhBVy", 1);
+            this.RecoverViaExtPubKey(WalletName, "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex", 0);
         }
 
         private void RecoverViaExtPubKey(string walletName, string extPubKey, int accountIndex)

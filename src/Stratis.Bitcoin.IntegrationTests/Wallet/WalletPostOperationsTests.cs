@@ -749,7 +749,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 // Create a sending and a receiving node.
-                CoreNode node1 = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode node1 = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 // Act.
                 WalletBalanceModel node1Balances = await $"http://localhost:{node1.ApiPort}/api"
