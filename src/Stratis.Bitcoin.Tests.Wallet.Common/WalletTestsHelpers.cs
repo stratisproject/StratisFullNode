@@ -190,7 +190,7 @@ namespace Stratis.Bitcoin.Tests.Wallet.Common
 
         public static Transaction SetupValidSegwitTransaction(Features.Wallet.Wallet wallet, string password, HdAddress spendingAddress, HdAddress destinationAddress, HdAddress changeAddress, Money amount, Money fee)
         {
-            Script scriptPubKey = BitcoinWitPubKeyAddress.Create(destinationAddress.Bech32Address, wallet.Network).ScriptPubKey;
+            Script scriptPubKey = BitcoinWitPubKeyAddress.Create(destinationAddress.Bech32Address(wallet.Network), wallet.Network).ScriptPubKey;
 
             return SetupValidTransaction(wallet, password, spendingAddress, scriptPubKey, changeAddress, amount, fee);
         }
