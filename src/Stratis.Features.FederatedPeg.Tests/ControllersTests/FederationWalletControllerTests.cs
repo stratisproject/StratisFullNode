@@ -43,13 +43,12 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.walletManager = Substitute.For<IFederationWalletManager>();
             this.walletSyncManager = Substitute.For<IFederationWalletSyncManager>();
             this.connectionManager = Substitute.For<IConnectionManager>();
-            this.network = new StratisTest();
+            this.network = new StraxTest();
 
             this.chainIndexer = new ChainIndexer(this.network);
 
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(100, ChainedHeadersHelper.CreateGenesisChainedHeader(this.network), true, null, this.network).Last();
             this.chainIndexer.SetTip(tip);
-
 
             this.dateTimeProvider = Substitute.For<IDateTimeProvider>();
             this.withdrawalHistoryProvider = Substitute.For<IWithdrawalHistoryProvider>();
@@ -57,10 +56,12 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.controller = new FederationWalletController(this.loggerFactory, this.walletManager, this.walletSyncManager,
                 this.connectionManager, this.network, this.chainIndexer, this.dateTimeProvider, this.withdrawalHistoryProvider);
 
-            this.fedWallet = new FederationWallet();
-            this.fedWallet.Network = this.network;
-            this.fedWallet.LastBlockSyncedHeight = 999;
-            this.fedWallet.CreationTime = DateTimeOffset.Now;
+            this.fedWallet = new FederationWallet
+            {
+                Network = this.network,
+                LastBlockSyncedHeight = 999,
+                CreationTime = DateTimeOffset.Now
+            };
 
             this.walletManager.GetWallet().Returns(this.fedWallet);
 
@@ -68,7 +69,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             PropertyInfo lockProp = typeof(LockProtected).GetProperty("lockObject", BindingFlags.NonPublic | BindingFlags.Instance);
             lockProp.SetValue(federationWalletManager, new object());
             federationWalletManager.Wallet = this.fedWallet;
-            this.walletManager.GetSpendableAmount().Returns((x) => {
+            this.walletManager.GetSpendableAmount().Returns((x) =>
+            {
                 return federationWalletManager.GetSpendableAmount();
             });
         }
@@ -95,14 +97,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             WalletBalanceModel model = this.ActionResultToModel<WalletBalanceModel>(result);
 
             Assert.Single(model.AccountsBalances);
-            Assert.Equal(CoinType.Stratis, model.AccountsBalances.First().CoinType);
+            Assert.Equal(CoinType.Testnet, model.AccountsBalances.First().CoinType);
             Assert.Equal(0, model.AccountsBalances.First().AmountConfirmed.Satoshi);
         }
 
         [Fact]
         public void GetHistory()
         {
-            var withdrawals = new List<WithdrawalModel>() {new WithdrawalModel(), new WithdrawalModel()};
+            var withdrawals = new List<WithdrawalModel>() { new WithdrawalModel(), new WithdrawalModel() };
 
             this.withdrawalHistoryProvider.GetHistory(0).ReturnsForAnyArgs(withdrawals);
 

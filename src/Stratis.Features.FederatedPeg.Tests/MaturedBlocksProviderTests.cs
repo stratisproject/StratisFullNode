@@ -45,7 +45,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.transactionBuilder = new TestTransactionBuilder();
 
-            this.addressHelper = new MultisigAddressHelper(this.network, Networks.Stratis.Regtest());
+            this.addressHelper = new MultisigAddressHelper(this.network, Networks.Strax.Regtest());
             this.targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             this.opReturnBytes = Encoding.UTF8.GetBytes(this.targetAddress.ToString());
 

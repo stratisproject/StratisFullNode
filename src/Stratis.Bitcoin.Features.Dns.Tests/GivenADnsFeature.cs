@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -44,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
 
                 var logger = new Mock<ILogger>(MockBehavior.Loose);
                 this.loggerFactory = new Mock<ILoggerFactory>();
-                this.loggerFactory.Setup<ILogger>(f => f.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
+                this.loggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
 
                 this.nodeLifetime = new Mock<INodeLifetime>();
                 this.nodeSettings = new NodeSettings(network, args: new string[] { $"-datadir={Directory.GetCurrentDirectory()}" });
@@ -58,8 +59,8 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
 
             private Mock<IConnectionManager> BuildConnectionManager()
             {
-                NetworkPeerConnectionParameters networkPeerParameters = new NetworkPeerConnectionParameters();
-                Mock<IConnectionManager> connectionManager = new Mock<IConnectionManager>();
+                var networkPeerParameters = new NetworkPeerConnectionParameters();
+                var connectionManager = new Mock<IConnectionManager>();
                 connectionManager.SetupGet(np => np.Parameters).Returns(networkPeerParameters);
                 connectionManager.SetupGet(np => np.ConnectedPeers).Returns(new NetworkPeerCollection());
                 return connectionManager;
@@ -69,8 +70,8 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             {
                 IChainState chainState = new Mock<IChainState>().Object;
                 IPeerBanning peerBanning = new Mock<IPeerBanning>().Object;
-                Checkpoints checkpoints = new Checkpoints();
-                return new UnreliablePeerBehavior(KnownNetworks.StraxMain, chainState, this.loggerFactory.Object, peerBanning, this.nodeSettings, checkpoints);
+                var checkpoints = new Checkpoints();
+                return new UnreliablePeerBehavior(new StraxMain(), chainState, this.loggerFactory.Object, peerBanning, this.nodeSettings, checkpoints);
             }
         }
 
@@ -266,7 +267,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                         serverError = invocation.Arguments[2].ToString().StartsWith("Failed whilst running the DNS server");
                     }
                 }));
-            this.defaultConstructorParameters.loggerFactory.Setup<ILogger>(f => f.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
+            this.defaultConstructorParameters.loggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
 
             // Act.
             var feature = this.BuildDefaultDnsFeature();

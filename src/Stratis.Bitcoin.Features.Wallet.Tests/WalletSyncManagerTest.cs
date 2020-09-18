@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
@@ -49,13 +50,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
         public WalletSyncManagerTest()
         {
-            this.SetupMockObjects(new ChainIndexer(KnownNetworks.StraxMain));
+            this.SetupMockObjects(new ChainIndexer(new StraxMain()));
         }
 
         private void SetupMockObjects(ChainIndexer chainIndexer, List<Block> blocks = null)
         {
             this.chainIndexer = chainIndexer;
-            this.storeSettings = new StoreSettings(new NodeSettings(KnownNetworks.StraxMain));
+            this.storeSettings = new StoreSettings(new NodeSettings(new StraxMain()));
             this.loggerFactory = new LoggerFactory();
             this.walletManager = new Mock<MockWalletManager>(this.Network, this.chainIndexer, this.loggerFactory) { CallBase = true };
             this.blockStore = new Mock<IBlockStore>();
@@ -68,12 +69,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             this.walletName = "test";
             this.walletTip = this.chainIndexer.Tip;
 
-            this.walletRepository.Setup(w => w.GetWalletNames()).Returns(() => {
+            this.walletRepository.Setup(w => w.GetWalletNames()).Returns(() =>
+            {
                 return (this.walletName == null) ? new List<string> { } : new List<string> { this.walletName };
             });
 
             // Mock wallet repository's 'RewindWallet'.
-            this.walletRepository.Setup(r => r.RewindWallet(It.IsAny<string>(), It.IsAny<ChainedHeader>())).Returns((string name, ChainedHeader chainedHeader) => {
+            this.walletRepository.Setup(r => r.RewindWallet(It.IsAny<string>(), It.IsAny<ChainedHeader>())).Returns((string name, ChainedHeader chainedHeader) =>
+            {
                 this.walletTip = (chainedHeader == null) ? null : this.walletTip.FindFork(chainedHeader);
                 return (true, new List<(uint256, DateTimeOffset)>());
             });
@@ -99,7 +102,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             this.storeSettings.AmountOfBlocksToKeep = 1;
             this.storeSettings.PruningEnabled = true;
 
-            var walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, KnownNetworks.StraxMain,
+            var walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, new StraxMain(),
                 this.blockStore.Object, this.storeSettings, this.signals, this.asyncProvider, new Mock<INodeLifetime>().Object);
 
             Assert.Throws<WalletException>(() =>
@@ -135,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         public void Start_BlockNotChain_ReorgsWalletManagerUsingWallet()
         {
             this.storeSettings.AmountOfBlocksToKeep = 0;
-            this.chainIndexer = WalletTestsHelpers.GenerateChainWithHeight(5, KnownNetworks.StraxMain);
+            this.chainIndexer = WalletTestsHelpers.GenerateChainWithHeight(5, new StraxMain());
             this.walletManager.SetupGet(w => w.WalletTipHash)
                 .Returns(new uint256(125)); // try to load non-existing block to get chain to return null.
 
@@ -144,7 +147,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             //this.walletManager.Setup(w => w.GetFirstWalletBlockLocator())
                // .Returns(new Collection<uint256> { forkBlockHash });
 
-            var walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, KnownNetworks.StraxMain,
+            var walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, new StraxMain(),
                 this.blockStore.Object, this.storeSettings, this.signals, this.asyncProvider, new Mock<INodeLifetime>().Object);
 
             walletSyncManager.Start();
@@ -163,7 +166,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void ProcessBlock_NewBlock_PreviousHashSameAsWalletTip_PassesBlockToManagerWithoutReorg()
         {
-            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, KnownNetworks.StraxMain);
+            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, new StraxMain());
             this.SetupMockObjects(result.Chain, result.Blocks);
 
             walletSyncManager.OrchestrateWalletSync();
@@ -180,7 +183,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void ProcessBlock_NewBlock_BlockNotOnBestChain_ReOrgWalletManagerUsingBlockStoreCache()
         {
-            (ChainIndexer LeftChain, ChainIndexer RightChain, List<Block> LeftForkBlocks, List<Block> RightForkBlocks) result = WalletTestsHelpers.GenerateForkedChainAndBlocksWithHeight(5, KnownNetworks.StraxMain, 2);
+            (ChainIndexer LeftChain, ChainIndexer RightChain, List<Block> LeftForkBlocks, List<Block> RightForkBlocks) result = WalletTestsHelpers.GenerateForkedChainAndBlocksWithHeight(5, new StraxMain(), 2);
 
             // Left side chain containing the 'old' fork.
             ChainIndexer leftChainIndexer = result.LeftChain;
@@ -215,7 +218,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void ProcessBlock_NewBlock__BlockOnBestChain_ReOrgWalletManagerUsingBlockStoreCache()
         {
-            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, KnownNetworks.StraxMain);
+            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, new StraxMain());
             this.SetupMockObjects(result.Chain, result.Blocks);
 
             // Set 2nd block as tip.
@@ -240,7 +243,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void ProcessBlock_NewBlock_BlockArrivesLateInBlockStoreCache_ReOrgWalletManagerUsingBlockStoreCache()
         {
-            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, KnownNetworks.StraxMain);
+            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, new StraxMain());
             this.SetupMockObjects(result.Chain, result.Blocks);
 
             // Rewind the wallet.
@@ -258,7 +261,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void ProcessTransaction_CallsWalletManager()
         {
-            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(5, KnownNetworks.StraxMain));
+            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(5, new StraxMain()));
 
             var transaction = new Transaction
             {
@@ -276,7 +279,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void SyncFromDate_GivenDateMatchingBlocksOnChain_UpdatesUsingClosestBlock()
         {
-            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(5, KnownNetworks.StraxMain));
+            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(5, new StraxMain()));
 
             this.walletSyncManager.SyncFromDate(this.chainIndexer.GetHeader(3).Header.BlockTime.DateTime.AddSeconds(1));
 
@@ -290,7 +293,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void SyncFromDate_GivenDateNotMatchingBlocksOnChain_UpdatesUsingFirstBlock()
         {
-            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(3, KnownNetworks.StraxMain));
+            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(3, new StraxMain()));
 
             this.walletSyncManager.SyncFromDate(new DateTime(1900, 1, 1)); // date before any block.
 
@@ -304,9 +307,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void SyncFromDate_EmptyChain_UpdateUsingGenesisBlock()
         {
-            this.chainIndexer = new ChainIndexer(KnownNetworks.StraxMain);
+            this.chainIndexer = new ChainIndexer(new StraxMain());
 
-            var walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, KnownNetworks.StraxMain,
+            var walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, new StraxMain(),
              this.blockStore.Object, this.storeSettings, this.signals, this.asyncProvider, new Mock<INodeLifetime>().Object);
 
             walletSyncManager.SyncFromDate(new DateTime(1900, 1, 1)); // date before any block.
@@ -317,7 +320,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void SyncFromHeight_BlockWithHeightOnChain_UpdatesWalletTipOnWalletAndWalletSyncManagers()
         {
-            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(3, KnownNetworks.StraxMain));
+            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(3, new StraxMain()));
 
             this.walletSyncManager.SyncFromHeight(2);
 
@@ -328,7 +331,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void SyncFromHeight_NoBlockWithGivenHeightOnChain_ThrowsWalletException()
         {
-            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(1, KnownNetworks.StraxMain));
+            this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(1, new StraxMain()));
 
             Assert.Throws<WalletException>(() =>
             {
@@ -342,7 +345,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void ProcessBlock_With_No_Wallet_Processing_Is_Ignored()
         {
-            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(1, KnownNetworks.StraxMain);
+            (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(1, new StraxMain());
 
             this.SetupMockObjects(result.Chain, result.Blocks);
 

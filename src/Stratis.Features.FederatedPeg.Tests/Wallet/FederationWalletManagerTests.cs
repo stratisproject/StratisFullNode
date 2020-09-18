@@ -23,7 +23,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
         public FederationWalletManagerTests()
         {
-            this.network = new StratisMain();
+            this.network = new StraxMain();
 
             var base58 = new Key().PubKey.GetAddress(this.network).ToString();
             this.federationMultiSigAddress = BitcoinAddress.Create(base58, this.network);
