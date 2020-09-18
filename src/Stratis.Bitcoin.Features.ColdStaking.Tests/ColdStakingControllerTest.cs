@@ -50,14 +50,13 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private const string walletPassphrase = "passphrase";
         private const string walletMnemonic1 = "close vanish burden journey attract open soul romance beach surprise home produce";
         private const string walletMnemonic2 = "wish happy anchor lava path reject cinnamon absurd energy mammal cliff version";
-        private const string coldWalletAddress1 = "SNiAnXM2WmbMhUij9cbit62sR8U9FjFJr3";
-        private const string hotWalletAddress1 = "SaVUwmJSvRiofghrePxrBQGoke1pLfmfXN";
-        private const string coldWalletAddress2 = "Sagbh9LuzNAV7y2FHyUQJcgmjcuogSssef";
-        private const string hotWalletAddress2 = "SVoMim67CMF1St6j6toAWnnQ2mCvb8V4mT";
-        private const string coldWalletSegwitAddress1 = "strat1qp79yqxx44gza9mzmwjk25cxmyg6wdee4hnf7c9";
+
+        private const string coldWalletAddress1 = "XSdnjExcZSTNW3RsYBUGm8RmprStfohT4k";
+        private const string hotWalletAddress1 = "XBi2GPJuP77KUVAsNddyJehjt2ZwbgGkE6";
+        private const string coldWalletAddress2 = "XG7qNGZKXu5wZ7B1H5UN4nYBeUwXzGD5LB";
+        private const string hotWalletAddress2 = "XBr725uHFeRWFcZzYFyPsDh9go5ViKZn7o";
         private const string hotWalletSegwitAddress1 = "strat1qjrzc9ju366mdwa7rrjy36j2rlm2wmtp63vre6g";
         private const string coldWalletSegwitAddress2 = "strat1qjt0ms2wnrnh7dgrnru6r9h4yzkt2y7xedlgcp9";
-        private const string hotWalletSegwitAddress2 = "strat1qt489d0ct9snhutaam7dmttrtf4f3hfk23xmn0s";
 
         private ColdStakingManager coldStakingManager;
         private ColdStakingController coldStakingController;
@@ -554,7 +553,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             var state = new MempoolValidationState(true);
             Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
         }
-        
+
         /// <summary>
         /// Confirms that cold staking setup with the hot wallet will succeed if no issues (as per above test cases) are encountered.
         /// </summary>
