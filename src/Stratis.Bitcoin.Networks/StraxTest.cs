@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Networks
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: false,
-                powLimit: new Target(new uint256("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")),
+                powLimit: new Target(new uint256("0000ffff00000000000000000000000000000000000000000000000000000000")),
                 minimumChainWork: null,
                 isProofOfStake: true,
                 lastPowBlock: 12500,
@@ -140,7 +140,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.SeedNodes = new List<NetworkAddress>
             {
-                new NetworkAddress(IPAddress.Parse("82.146.153.140"), 17100), // Iain
+                new NetworkAddress(IPAddress.Parse("82.146.153.140"), 27105), // Iain
             };
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
