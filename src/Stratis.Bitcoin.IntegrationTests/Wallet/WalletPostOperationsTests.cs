@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using DBreeze.Utils;
 using FluentAssertions;
 using Flurl;
 using Flurl.Http;
@@ -435,8 +434,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         [Fact]
         public async Task SendingFromOneAddressToFiftyAddressesAsync()
         {
-            int sendingAccountBalanceOnStart = 98000596;
-            int receivingAccountBalanceOnStart = 0;
+            Money sendingAccountBalanceOnStart = this.network.Consensus.PremineReward + (149 * this.network.Consensus.ProofOfWorkReward);
+            Money receivingAccountBalanceOnStart = 0;
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -453,7 +452,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(new Money(sendingAccountBalanceOnStart, MoneyUnit.BTC));
+                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(sendingAccountBalanceOnStart);
 
                 WalletBalanceModel receivingNodeBalances = await $"http://localhost:{receivingNode.ApiPort}/api"
                     .AppendPathSegment("wallet/balance")
@@ -461,7 +460,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel receivingAccountBalance = receivingNodeBalances.AccountsBalances.Single();
-                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(new Money(receivingAccountBalanceOnStart));
+                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(receivingAccountBalanceOnStart);
 
                 // Act.
                 // Get 50 addresses to send to.
@@ -505,7 +504,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(new Money(sendingAccountBalanceOnStart - 50 - buildTransactionModel.Fee.ToDecimal(MoneyUnit.BTC), MoneyUnit.BTC));
+                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(sendingAccountBalanceOnStart - 50 - buildTransactionModel.Fee);
 
                 // Mine and sync so that we make sure the receiving node is up to date.
                 TestHelper.MineBlocks(sendingNode, 1);
@@ -517,15 +516,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 receivingAccountBalance = receivingNodeBalances.AccountsBalances.Single();
-                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(new Money(receivingAccountBalanceOnStart + 50, MoneyUnit.BTC));
+                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(receivingAccountBalanceOnStart + 50);
             }
         }
 
         [Fact]
         public async Task SendingFromManyAddressesToOneAddressAsync()
         {
-            int sendingAccountBalanceOnStart = 98000596;
-            int receivingAccountBalanceOnStart = 0;
+            Money sendingAccountBalanceOnStart = this.network.Consensus.PremineReward + (149 * this.network.Consensus.ProofOfWorkReward);
+            Money receivingAccountBalanceOnStart = 0;
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -554,7 +553,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(new Money(sendingAccountBalanceOnStart, MoneyUnit.BTC));
+                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(sendingAccountBalanceOnStart);
 
                 WalletBalanceModel receivingNodeBalances = await $"http://localhost:{receivingNode.ApiPort}/api"
                     .AppendPathSegment("wallet/balance")
@@ -562,7 +561,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel receivingAccountBalance = receivingNodeBalances.AccountsBalances.Single();
-                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(new Money(receivingAccountBalanceOnStart));
+                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(receivingAccountBalanceOnStart);
 
                 // Check max spendable amount.
                 var maxBalanceResponse = await $"http://localhost:{sendingNode.ApiPort}/api"
@@ -614,7 +613,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(new Money(sendingAccountBalanceOnStart, MoneyUnit.BTC) - totalToSpend);
+                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(sendingAccountBalanceOnStart - totalToSpend);
 
                 // Mine and sync so that we make sure the receiving node is up to date.
                 TestHelper.MineBlocks(sendingNode, 1);
@@ -626,15 +625,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 receivingAccountBalance = receivingNodeBalances.AccountsBalances.Single();
-                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(new Money(receivingAccountBalanceOnStart) + maxBalanceResponse.MaxSpendableAmount);
+                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(receivingAccountBalanceOnStart + maxBalanceResponse.MaxSpendableAmount);
             }
         }
 
         [Fact]
         public async Task SendingATransactionWithAnOpReturnAsync()
         {
-            int sendingAccountBalanceOnStart = 98000596;
-            int receivingAccountBalanceOnStart = 0;
+            Money sendingAccountBalanceOnStart = this.network.Consensus.PremineReward + (149 * this.network.Consensus.ProofOfWorkReward);
+            Money receivingAccountBalanceOnStart = 0;
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -651,7 +650,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(new Money(sendingAccountBalanceOnStart, MoneyUnit.BTC));
+                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(sendingAccountBalanceOnStart);
 
                 WalletBalanceModel receivingNodeBalances = await $"http://localhost:{receivingNode.ApiPort}/api"
                     .AppendPathSegment("wallet/balance")
@@ -659,7 +658,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel receivingAccountBalance = receivingNodeBalances.AccountsBalances.Single();
-                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(new Money(receivingAccountBalanceOnStart));
+                (receivingAccountBalance.AmountConfirmed + receivingAccountBalance.AmountUnconfirmed).Should().Be(receivingAccountBalanceOnStart);
 
                 // Act.
                 // Get an address to send to.
@@ -709,7 +708,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 receivingAccountBalance = receivingNodeBalances.AccountsBalances.Single();
-                (receivingAccountBalance.AmountConfirmed).Should().Be(new Money(receivingAccountBalanceOnStart + 1, MoneyUnit.BTC));
+                (receivingAccountBalance.AmountConfirmed).Should().Be(receivingAccountBalanceOnStart + 1);
 
                 // The sending node should have fewer coins.
                 sendingNodeBalances = await $"http://localhost:{sendingNode.ApiPort}/api"
@@ -718,7 +717,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed).Should().Be(new Money(sendingAccountBalanceOnStart + 4 - 2, MoneyUnit.BTC));
+                (sendingAccountBalance.AmountConfirmed).Should().Be(sendingAccountBalanceOnStart + 4 - 2);
 
                 // Check the transaction.
                 string lastBlockHash = await $"http://localhost:{receivingNode.ApiPort}/api"
@@ -759,9 +758,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Assert.
                 AccountBalanceModel node1Balance = node1Balances.AccountsBalances.Single();
-                node1Balance.AmountConfirmed.Should().Be(new Money(98000036, MoneyUnit.BTC)); // premine is 98M + 9 blocks * 4.
+                node1Balance.AmountConfirmed.Should().Be(this.network.Consensus.PremineReward + (9 * this.network.Consensus.ProofOfWorkReward));
                 node1Balance.AmountUnconfirmed.Should().Be(Money.Zero);
-                node1Balance.SpendableAmount.Should().Be(Money.Zero); // Maturity for StratisregTest is 10, so at block 10, no coin is spendable.
+                node1Balance.SpendableAmount.Should().Be(Money.Zero); // Maturity for StraxRegTest is 10, so at block 10, no coin is spendable.
 
                 // Arrange.
                 // Create a sending and a receiving node.
@@ -775,9 +774,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Assert.
                 AccountBalanceModel node2Balance = node2Balances.AccountsBalances.Single();
-                node2Balance.AmountConfirmed.Should().Be(new Money(98000396, MoneyUnit.BTC)); // premine is 98M + 99 blocks * 4.
+                node2Balance.AmountConfirmed.Should().Be(this.network.Consensus.PremineReward + (99 * this.network.Consensus.ProofOfWorkReward));
                 node2Balance.AmountUnconfirmed.Should().Be(Money.Zero);
-                node2Balance.SpendableAmount.Should().Be(new Money(98000396 - 40, MoneyUnit.BTC)); // Maturity for StratisregTest is 10, so at block 100, the coins in the last 10 blocks (10*4) are not spendable.
+                node2Balance.SpendableAmount.Should().Be(this.network.Consensus.PremineReward + (99 * this.network.Consensus.ProofOfWorkReward) - (10 * this.network.Consensus.ProofOfWorkReward)); // Maturity for StraxRegTest is 10, so at block 100, the coins in the last 10 blocks are not spendable.
             }
         }
 
@@ -799,7 +798,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<WalletBalanceModel>();
 
                 AccountBalanceModel sendingAccountBalance = sendingNodeBalances.AccountsBalances.Single();
-                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(new Money(98000000 + (4 * 4), MoneyUnit.BTC));
+                (sendingAccountBalance.AmountConfirmed + sendingAccountBalance.AmountUnconfirmed).Should().Be(this.network.Consensus.PremineReward + (4 * this.network.Consensus.ProofOfWorkReward));
 
                 // Act.
                 WalletHistoryModel firstAccountHistory = await $"http://localhost:{miningNode.ApiPort}/api"
@@ -815,7 +814,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 history.Count.Should().Be(5);
 
                 TransactionItemModel firstItem = history.First(); // First item in the list but last item to have occurred.
-                firstItem.Amount.Should().Be(new Money(4, MoneyUnit.BTC));
+                firstItem.Amount.Should().Be(this.network.Consensus.ProofOfWorkReward);
                 //firstItem.BlockIndex.Should().Be(0);
                 firstItem.ConfirmedInBlock.Should().Be(5);
                 firstItem.ToAddress.Should().NotBeNullOrEmpty();

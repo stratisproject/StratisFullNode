@@ -14,7 +14,9 @@ using Newtonsoft.Json;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Xunit;
@@ -29,17 +31,19 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public CoreNode Node { get; }
 
-        internal readonly string walletWithFundsName = "wallet-with-funds";
+        internal readonly string walletFileName = "Wallet";
 
-        internal readonly string walletWithFundsPassword = "123456";
+        internal readonly string walletWithFundsName = "mywallet";
 
-        internal readonly string addressWithFunds = "TRCT9QP3ipb6zCvW15yKoEtaU418UaKVE2";
+        internal readonly string walletWithFundsPassword = "password";
 
-        internal readonly string addressWithoutFunds = "TDQAiMyvWZeQxuL9U1BJXt8XrTRMgwjCBe";
+        internal readonly string addressWithFunds = "qJtkhfMsZrqBR55jKPU1FmHx1MNs542P2E";
+
+        internal readonly string addressWithoutFunds = "qPUAZWePSTG6qH7EJhTwpVVxyJWRPEWT3w";
 
         internal readonly string signatureMessage = "This is a test";
 
-        internal readonly string validSignature = "IFpsneU79ikNfeqljDgSwrvdgOyEmrydaib1Xdc/npr7O1s+9GrAzaVOMfvz5x9mq4395JZQfNhSNiUqK0qTW4M=";
+        internal readonly string validSignature = "INPTnRKzpK7WU7PgtSfErbDgHHdqfvKA5RxJjFs/bU6gAm+5gpPOonMc1pTLy1BN8qryCHuJltrV7+PgaOJtzGU=";
 
         public string WalletWithFundsFilePath { get; }
 
@@ -47,12 +51,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         {
             this.network = new StraxRegTest();
             this.builder = NodeBuilder.Create("WalletOperationsTests");
-            CoreNode stratisNode = this.builder.CreateStratisPosNode(this.network).Start();
-
-            string walletsFolderPath = stratisNode.FullNode.DataFolder.WalletPath;
-            string filename = $"{this.walletWithFundsName}.wallet.json";
-            this.WalletWithFundsFilePath = Path.Combine(walletsFolderPath, filename);
-            File.Copy(Path.Combine("Wallet", "Data", filename), this.WalletWithFundsFilePath, true);
+            CoreNode stratisNode = this.builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
             // Stop the wallet sync manager to prevent it from rewinding the wallet.
             stratisNode.FullNode.NodeService<IWalletSyncManager>().Stop();
@@ -64,7 +63,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var result = $"http://localhost:{stratisNode.ApiPort}/api".AppendPathSegment("wallet/load").PostJsonAsync(new WalletLoadRequest
             {
                 Name = this.walletWithFundsName,
-                Password = "123456"
+                Password = this.walletWithFundsPassword
             }).Result;
 
             this.Node = stratisNode;
@@ -190,8 +189,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -244,8 +243,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -302,8 +301,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -356,8 +355,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -407,8 +406,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -622,19 +621,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         public async Task LoadWalletAsync()
         {
             // Arrange.
-            string walletName = this.fixture.GetUniqueWalletName();
-            string walletsFolderPath = this.fixture.Node.FullNode.DataFolder.WalletPath;
-            string importWalletPath = Path.Combine("Wallet", "Data", "test.wallet.json");
-
-            Features.Wallet.Wallet importedWallet = JsonConvert.DeserializeObject<Features.Wallet.Wallet>(File.ReadAllText(importWalletPath));
-            importedWallet.Name = walletName;
-            File.WriteAllText(Path.Combine(walletsFolderPath, $"{walletName}.wallet.json"), JsonConvert.SerializeObject(importedWallet, Formatting.Indented));
 
             // Act.
             var response = await $"http://localhost:{this.fixture.Node.ApiPort}/api".AppendPathSegment("wallet/load").PostJsonAsync(new WalletLoadRequest
             {
-                Name = walletName,
-                Password = "123456"
+                Name = this.fixture.walletWithFundsName,
+                Password = this.fixture.walletWithFundsPassword
             });
 
             // Assert.
@@ -643,7 +635,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             // Check the wallet is loaded.
             var getAccountsResponse = await $"http://localhost:{this.fixture.Node.ApiPort}/api"
                 .AppendPathSegment("wallet/accounts")
-                .SetQueryParams(new { walletName })
+                .SetQueryParams(new { walletName = this.fixture.walletWithFundsName })
                 .GetJsonAsync<IEnumerable<string>>();
 
             getAccountsResponse.First().Should().Be("account 0");
@@ -653,18 +645,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         public async Task LoadWalletWithWrongPasswordAsync()
         {
             // Arrange.
-            string walletName = this.fixture.GetUniqueWalletName();
-            string walletsFolderPath = this.fixture.Node.FullNode.DataFolder.WalletPath;
-            string importWalletPath = Path.Combine("Wallet", "Data", "test.wallet.json");
-
-            Features.Wallet.Wallet importedWallet = JsonConvert.DeserializeObject<Features.Wallet.Wallet>(File.ReadAllText(importWalletPath));
-            importedWallet.Name = walletName;
-            File.WriteAllText(Path.Combine(walletsFolderPath, $"{walletName}.wallet.json"), JsonConvert.SerializeObject(importedWallet, Formatting.Indented));
-
+            
             // Act.
             Func<Task> act = async () => await $"http://localhost:{this.fixture.Node.ApiPort}/api".AppendPathSegment("wallet/load").PostJsonAsync(new WalletLoadRequest
             {
-                Name = walletName,
+                Name = this.fixture.walletWithFundsName,
                 Password = "wrongpassword"
             });
 
@@ -678,23 +663,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("Wrong password, please try again.");
-
-            // Check the wallet hasn't been loaded.
-            Func<Task> getAccounts = async () => await $"http://localhost:{this.fixture.Node.ApiPort}/api"
-                .AppendPathSegment("wallet/accounts")
-                .SetQueryParams(new { walletName })
-                .GetJsonAsync<IEnumerable<string>>();
-
-            var exception2 = getAccounts.Should().Throw<FlurlHttpException>().Which;
-            var response2 = exception2.Call.Response;
-
-            // Assert.
-            ErrorResponse errorResponse2 = JsonConvert.DeserializeObject<ErrorResponse>(await response2.Content.ReadAsStringAsync());
-            List<ErrorModel> errors2 = errorResponse2.Errors;
-
-            response2.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-            errors2.Should().ContainSingle();
-            errors2.First().Message.Should().Be($"No wallet with name '{walletName}' could be found.");
         }
 
         [Fact]
@@ -820,8 +788,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -868,8 +836,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             account.InternalAddresses.Count().Should().Be(20);
             account.Index.Should().Be(0);
             account.ExtendedPubKey.Should().NotBeNullOrEmpty();
-            account.GetCoinType().Should().Be(CoinType.Stratis);
-            account.HdPath.Should().Be("m/44'/105'/0'");
+            account.GetCoinType().Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            account.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
         }
 
         [Fact]
@@ -936,11 +904,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             response.AccountsBalances.Should().ContainSingle();
 
             var accountBalance = response.AccountsBalances.Single();
-            accountBalance.HdPath.Should().Be("m/44'/105'/0'");
+            accountBalance.HdPath.Should().Be($"m/44'/{this.fixture.Node.FullNode.Network.Consensus.CoinType}'/0'");
             accountBalance.Name.Should().Be("account 0");
-            accountBalance.CoinType.Should().Be(CoinType.Stratis);
-            accountBalance.AmountConfirmed.Should().Be(new Money(142190299995400));
-            accountBalance.AmountUnconfirmed.Should().Be(new Money(100000000000));
+            accountBalance.CoinType.Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            accountBalance.AmountConfirmed.Should().Be(new Money(13000268200000000));
+            accountBalance.AmountUnconfirmed.Should().Be(new Money(0));
         }
 
         [Fact]
@@ -991,12 +959,13 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         [Fact]
         public async Task FundsReceivedByAddressAsync()
         {
+            // TODO: Check this comment still applies, now that we are using a SQL wallet from the readydata
             // TODO: These tests are all in the situation where the wallet is ahead of the ChainIndexer.
             // They don't make much sense. How could the chain be at height 0 but we have new "Money(10150100000000)" Confirmed???
             // The tests should be checking a real situation, like where the wallet is at block N and the ChainIndexer is also at block N (or higher).
 
             // Arrange.
-            string address = "TRCT9QP3ipb6zCvW15yKoEtaU418UaKVE2";
+            string address = "qJtkhfMsZrqBR55jKPU1FmHx1MNs542P2E";
 
             // Act.
             AddressBalanceModel addressBalance = await $"http://localhost:{this.fixture.Node.ApiPort}/api"
@@ -1005,19 +974,19 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 .GetJsonAsync<AddressBalanceModel>();
 
             addressBalance.Address.Should().Be(address);
-            addressBalance.CoinType.Should().Be(CoinType.Stratis);
-            addressBalance.AmountConfirmed.Should().Be(new Money(10150100000000));
+            addressBalance.CoinType.Should().Be(this.fixture.Node.FullNode.Network.Consensus.CoinType);
+            addressBalance.AmountConfirmed.Should().Be(new Money(13000268200000000));
             addressBalance.AmountUnconfirmed.Should().Be(Money.Zero);
 
             // The total that we have received to this address, apart from coinbases/staking which require maturity.
-            addressBalance.SpendableAmount.Should().Be(new Money(1500, MoneyUnit.BTC));
+            addressBalance.SpendableAmount.Should().Be(new Money(130002502, MoneyUnit.BTC));
         }
 
         [Fact]
         public async Task FundsReceivedByAddressWhenNoSuchAddressExistsAsync()
         {
             // Arrange.
-            string address = "TX725W9ngnnoNuXX6mxvx5iHwS9VEuTa4s";
+            string address = "qWZY537FsCM7veGCn8Nfno5uXgAm3PB2a8";
 
             // Act.
             Func<Task> act = async () => await $"http://localhost:{this.fixture.Node.ApiPort}/api"
@@ -1054,8 +1023,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var accountBalance = balanceResponse.AccountsBalances.Single();
             var totalBalance = accountBalance.AmountConfirmed + accountBalance.AmountUnconfirmed;
 
-            maxBalanceResponse.MaxSpendableAmount.Should().Be(new Money(24289999985400));
-            maxBalanceResponse.Fee.Should().Be(new Money(10000));
+            maxBalanceResponse.MaxSpendableAmount.Should().Be(new Money(13000250199792360));
+            maxBalanceResponse.Fee.Should().Be(new Money(207640));
         }
 
         [Fact]
@@ -1119,7 +1088,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 .GetJsonAsync<string>();
 
             // Assert.
-            extPubKey.Should().Be("xpub6CDG8zbSEN2uGfnYSS9EsizpfmVv9wrBggHyDR4KLAempCXS2FpKL3xSvJwwmS5iEESZCPUuAoMsQvYYbyuTuEEkdrPVkgFBRAEoucFYTfr");
+            extPubKey.Should().Be("xpub6Cq2DVL4zXCjqx1xiuuzheS5nQCHJTnxqmbg7QbPKarS1aoX8HHaQqACcJeaobhmzvp444mHJ4Gb68VyGrnioZZiKpMQbsiXeJTwNLsSLup");
         }
 
         [Fact]
@@ -1172,9 +1141,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 .GetJsonAsync<AddressesModel>();
 
             // Assert.
-            addressesModel.Addresses.Count().Should().Be(50);
-            addressesModel.Addresses.Where(a => a.IsUsed).Count().Should().Be(10);
-            addressesModel.Addresses.Where(a => a.IsChange).Count().Should().Be(22);
+            addressesModel.Addresses.Count().Should().Be(41); // 20 external, 1 used -> bump to 21 external, 20 change/internal
+            addressesModel.Addresses.Where(a => a.IsUsed).Count().Should().Be(1);
+            addressesModel.Addresses.Where(a => a.IsChange).Count().Should().Be(20);
         }
 
         [Fact]
@@ -1237,7 +1206,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             unusedaddresses.Count().Should().Be(1);
 
             string address = unusedaddresses.Single();
-            address.Should().Be("TDQAiMyvWZeQxuL9U1BJXt8XrTRMgwjCBe");
+            address.Should().Be("qLRbKdhk46rcjSYJuEaCqRgGvVyPqtxX9D");
         }
 
         [Fact]
@@ -1252,9 +1221,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             // Assert.
             generalInfoModel.ChainTip.Should().NotBeNull();
             generalInfoModel.ConnectedNodes.Should().Be(0);
-            generalInfoModel.CreationTime.ToUnixTimeSeconds().Should().Be(1540204793);
+            generalInfoModel.CreationTime.ToUnixTimeSeconds().Should().Be(1470467001);
             generalInfoModel.IsDecrypted.Should().BeTrue();
-            generalInfoModel.Network.Name.Should().Be(new StratisRegTest().Name);
+            generalInfoModel.Network.Name.Should().Be(new StraxRegTest().Name);
             //generalInfoModel.WalletFilePath.Should().Be(this.fixture.WalletWithFundsFilePath);
         }
 
@@ -1272,7 +1241,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     WalletName = this.fixture.walletWithFundsName,
                     AccountName = "account 0",
                     FeeType = "low",
-                    Password = "123456",
+                    Password = this.fixture.walletWithFundsPassword,
                     ShuffleOutputs = true,
                     AllowUnconfirmed = true,
                     Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = address, Amount = "1000" } }
@@ -1292,6 +1261,14 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             // Arrange.
             var address = new Key().PubKey.GetAddress(this.fixture.Node.FullNode.Network).ToString();
 
+            var unspents = this.fixture.Node.FullNode.WalletManager().GetSpendableTransactionsInWallet(this.fixture.walletWithFundsName);
+
+            // This is a readydata wallet so it has ample UTXOs available - we just need a few.
+            var utxo1 = unspents.First().Transaction;
+            var utxo2 = unspents.Skip(1).First().Transaction;
+            var utxo3 = unspents.Skip(2).First().Transaction;
+            var utxo4 = unspents.Skip(3).First().Transaction;
+
             // Act.
             WalletBuildTransactionModel buildTransactionModel = await $"http://localhost:{this.fixture.Node.ApiPort}/api"
                 .AppendPathSegment("wallet/build-transaction")
@@ -1300,16 +1277,16 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     WalletName = this.fixture.walletWithFundsName,
                     AccountName = "account 0",
                     FeeType = "low",
-                    Password = "123456",
+                    Password = this.fixture.walletWithFundsPassword,
                     ShuffleOutputs = true,
                     AllowUnconfirmed = true,
                     Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = address, Amount = "1000" } },
                     Outpoints = new List<OutpointRequest>
                     {
-                        new OutpointRequest{ Index = 1, TransactionId = "4f1766c2dca4bb96bb7282b4eef113c0956f1ad50ba1a205bec50c7770cac2d5" }, //150000000000
-                        new OutpointRequest{ Index = 1, TransactionId = "a40cf5f3c20cf265f5e1a360c7c984688b191993792e7a9cd6227c952b840710" }, //19000000000000
-                        new OutpointRequest{ Index = 0, TransactionId = "8b2e57f8959272d357682ede444244d9831cb47e9c936ea9452657a5633a53b5" }, //39999997700
-                        new OutpointRequest{ Index = 1, TransactionId = "385ed3fd641f2c33f7c03b9698e69ff03beea90f1e1e0a5943b1a0f4fd29ed97" }, //2500000000000
+                        new OutpointRequest{ Index = utxo1.Index, TransactionId = utxo1.Id.ToString() },
+                        new OutpointRequest{ Index = utxo2.Index, TransactionId = utxo2.Id.ToString() },
+                        new OutpointRequest{ Index = utxo3.Index, TransactionId = utxo3.Id.ToString() },
+                        new OutpointRequest{ Index = utxo4.Index, TransactionId = utxo4.Id.ToString() }
                     }
                 })
                 .ReceiveJson<WalletBuildTransactionModel>();
@@ -1320,10 +1297,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             Transaction trx = this.fixture.Node.FullNode.Network.Consensus.ConsensusFactory.CreateTransaction(buildTransactionModel.Hex);
             trx.Outputs.Should().Contain(o => o.Value == Money.COIN * 1000 && o.ScriptPubKey == BitcoinAddress.Create(address, this.fixture.Node.FullNode.Network).ScriptPubKey);
             trx.Inputs.Should().HaveCount(4);
-            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse("4f1766c2dca4bb96bb7282b4eef113c0956f1ad50ba1a205bec50c7770cac2d5"), 1));
-            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse("a40cf5f3c20cf265f5e1a360c7c984688b191993792e7a9cd6227c952b840710"), 1));
-            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse("8b2e57f8959272d357682ede444244d9831cb47e9c936ea9452657a5633a53b5"), 0));
-            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse("385ed3fd641f2c33f7c03b9698e69ff03beea90f1e1e0a5943b1a0f4fd29ed97"), 1));
+            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse(utxo1.Id.ToString()), utxo1.Index));
+            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse(utxo2.Id.ToString()), utxo2.Index));
+            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse(utxo3.Id.ToString()), utxo3.Index));
+            trx.Inputs.Should().Contain(i => i.PrevOut == new OutPoint(uint256.Parse(utxo4.Id.ToString()), utxo4.Index));
         }
 
         [Fact]
@@ -1341,7 +1318,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     WalletName = this.fixture.walletWithFundsName,
                     AccountName = "account 0",
                     FeeType = "low",
-                    Password = "123456",
+                    Password = this.fixture.walletWithFundsPassword,
                     ShuffleOutputs = true,
                     AllowUnconfirmed = true,
                     Recipients = new List<RecipientModel> {
@@ -1525,8 +1502,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
             // Assert.
             walletFileModel.WalletNames.Count().Should().BeGreaterThan(0);
-            walletFileModel.WalletNames.Should().Contain(
-                Path.GetFileNameWithoutExtension(this.fixture.WalletWithFundsFilePath).Replace(".wallet",""));
+            walletFileModel.WalletNames.Should().Contain("mywallet");
         }
 
         [Fact]
