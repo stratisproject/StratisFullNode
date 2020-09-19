@@ -376,6 +376,11 @@ namespace Stratis.Features.SQLiteWalletRepository
                     throw new Exception($"Table creation failed for database at { this.Repository.DBPath }: {err.Message}");
                 }
             }
+            else
+            {
+                if (typeof(T) == typeof(HDAddress))
+                    HDAddress.MigrateTable(this);
+            }
         }
 
         internal HDWallet GetWalletByName(string walletName)

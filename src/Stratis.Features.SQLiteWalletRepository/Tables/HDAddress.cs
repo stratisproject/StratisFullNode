@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using SQLite;
 
 namespace Stratis.Features.SQLiteWalletRepository.Tables
@@ -23,9 +24,6 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         public string PubKey { get; set; }
         public string Address { get; set; }
 
-        // It is not really accurate to call this a 'bech32' scriptPubKey, rather it is P2WPKH. But naming it this implies pairing with Bech32Address, which is beneficial.
-        public string Bech32ScriptPubKey { get; set; }
-
         // TODO: It would be better if the wallet database didn't have any concept of an address at all, only scriptPubKeys of various types, with address translation only occurring in the API or wallet manager
         public string Bech32Address { get; set; }
 
@@ -38,7 +36,6 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 AddressType         INTEGER NOT NULL,
                 AddressIndex        INTEGER NOT NULL,
                 ScriptPubKey        TEXT    NOT NULL,
-                Bech32ScriptPubKey  TEXT    NOT NULL,
                 PubKey              TEXT,
                 Address             TEXT NOT NULL,
                 Bech32Address       TEXT NOT NULL,
@@ -46,14 +43,49 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             )";
 
             yield return "CREATE UNIQUE INDEX UX_HDAddress_ScriptPubKey ON HDAddress(WalletId, ScriptPubKey)";
-            yield return "CREATE UNIQUE INDEX UX_HDAddress_Bech32ScriptPubKey ON HDAddress(WalletId, Bech32ScriptPubKey)";
             yield return "CREATE UNIQUE INDEX UX_HDAddress_PubKey ON HDAddress(WalletId, PubKey)";
+        }
+
+        internal static IEnumerable<string> MigrateScript()
+        {
+            yield return $@"
+                PRAGMA foreign_keys=off;
+            ";
+
+            yield return CreateScript().First().Replace("HDAddress", "new_HDAddress");
+
+            // TODO: Copy the data.
+            yield return $@"
+                INSERT INTO new_HDAddress SELECT WalletId, AccountIndex, AddressType, AddressIndex, ScriptPubKey, PubKey, Address, Bech32Address FROM HDAddress;
+            ";
+
+            yield return $@"
+                DROP TABLE HDAddress;
+            ";
+
+            yield return $@"
+                ALTER TABLE new_HDAddress RENAME TO HDAddress;
+            ";
+
+            foreach (var indexScript in CreateScript().Skip(1))
+                yield return indexScript;
+
+            yield return $@"
+                PRAGMA foreign_keys=on;
+            ";
         }
 
         internal static void CreateTable(SQLiteConnection conn)
         {
             foreach (string command in CreateScript())
                 conn.Execute(command);
+        }
+
+        internal static void MigrateTable(SQLiteConnection conn)
+        {
+            if (conn.ExecuteScalar<int>("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('HDAddress') WHERE name='Bech32ScriptPubKey'") != 0)
+                foreach (string command in MigrateScript())
+                    conn.Execute(command);
         }
 
         internal static IEnumerable<HDAddress> GetAccountAddresses(SQLiteConnection conn, int walletId, int accountIndex, int addressType, int count)

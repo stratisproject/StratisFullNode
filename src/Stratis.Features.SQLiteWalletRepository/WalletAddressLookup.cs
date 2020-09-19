@@ -84,9 +84,6 @@ namespace Stratis.Features.SQLiteWalletRepository
             foreach (HDAddress address in addresses)
             {
                 this.Add(Script.FromHex(address.ScriptPubKey));
-
-                // We need to add the P2WPKH scriptPubKey as an address of interest too
-                this.Add(Script.FromHex(address.Bech32ScriptPubKey));
             }
         }
 
@@ -107,7 +104,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         ,       AddressIndex
                         ,       ScriptPubKey
                         FROM    HDAddress
-                        WHERE   (ScriptPubKey = {strHex} OR Bech32ScriptPubKey = {strHex}) {
+                        WHERE   ScriptPubKey = {strHex} {
                     // Restrict to wallet if provided.
                     // "BETWEEN" boosts performance from half a seconds to 2ms.
                     ((this.walletId != null) ? $@"

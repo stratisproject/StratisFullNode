@@ -10,12 +10,11 @@
 
         public int? AddressIndex { get; set; }
 
+        /// <summary>The ScriptPubKey of a TxDestination (PKH). TxOut ScriptPubKey values are mapped to one or more of these destinations via ScriptDestinationReader.</summary>
+        /// <remarks>Don't use this to store scripts derived from templates other than P2PKH.</remarks>
         public string ScriptPubKey { get; set; }
 
-        /// <summary>P2WPKH scriptPubKey</summary>
-        public string Bech32ScriptPubKey { get; set; }
-
-        // TODO: Document how this is distinct from ScriptPubKey. Is it the P2PK scriptPubKey as opposed to ScriptPubKey storing the P2PKH scriptPubKey?
+        /// <summary>Always a P2PK script.</summary>
         public string PubKeyScript;
 
         public override bool Equals(object obj)
