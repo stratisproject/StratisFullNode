@@ -22,6 +22,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             Transaction transaction = this.network.CreateTransaction();
             block.AddTransaction(transaction);
             block.AddTransaction(CreateCoinStakeTransaction(this.network, new Key(), 6, this.ChainIndexer.GetHeader(5).HashBlock));
+            block.Header.Time = 18276127; // Since the coinstake no longer contains the time field we have to directly set it on the block for this test
             this.ruleContext.ValidationContext = new ValidationContext()
             {
                 BlockToValidate = block,
