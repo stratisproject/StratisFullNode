@@ -13,7 +13,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate = this.network.CreateBlock();
         }
 
-        [Fact]
+        [Fact(Skip="We relax this constraint on the Strax networks")]
         public async Task RunAsync_ProofOfStakeBlock_CoinBaseNotEmpty_NoOutputsOnTransaction_ThrowsBadStakeBlockConsensusErrorExceptionAsync()
         {
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(new Transaction());
