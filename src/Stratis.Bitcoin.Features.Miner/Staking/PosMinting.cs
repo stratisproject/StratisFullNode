@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
         /// <summary> If <see cref="CoinstakeSplitEnabled"/> is set, the coinstake will be split if
         /// the number of non-empty UTXOs in the wallet is lower than the required coin age for staking plus 1,
-        /// multiplied by this value. See <see cref="GetSplitStake(int, ChainedHeader)"/>.</summary>
+        /// multiplied by this value. See <see cref="ShouldSplitStake"/>.</summary>
         public const int CoinstakeSplitLimitMultiplier = 3;
 
         /// <summary>Number of UTXO descriptions that a single worker's task will process.</summary>
