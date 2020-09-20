@@ -151,7 +151,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestHelper.Connect(stratisSender, stratisColdStake);
 
                 // Send coins to hot wallet.
-                Money amountToSend = (long)(network.Consensus.PremineReward + (15 * network.Consensus.ProofOfWorkReward) - Money.Coins(18));
+                Money amountToSend = total2 - Money.Coins(18);
                 HdAddress sendto = hotWalletManager.GetUnusedAddress(new WalletAccountReference(WalletName, Account));
 
                 Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, sendto.ScriptPubKey, amountToSend, FeeType.Medium, confirmations));

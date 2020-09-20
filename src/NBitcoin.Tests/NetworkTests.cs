@@ -464,7 +464,7 @@ namespace NBitcoin.Tests
             Assert.Equal(long.MaxValue, network.Consensus.MaxMoney);
 
             Block genesis = network.GetGenesis();
-            Assert.Equal(uint256.Parse("0x00000b23c2a4f986ea3d930110bf6b5d04e7407ed9770626104a302f7b72e051"), genesis.GetHash());
+            Assert.Equal(uint256.Parse("0x0000db68ff9e74fbaf7654bab4fa702c237318428fa9186055c243ddde6354ca"), genesis.GetHash());
             Assert.Equal(uint256.Parse("0xfe6317d42149b091399e7f834ca32fd248f8f26f493c30a35d6eea692fe4fcad"), genesis.Header.HashMerkleRoot);
         }
 
