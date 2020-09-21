@@ -86,7 +86,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Bitcoin.Features.Dn
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Bitcoin.Features.Dns.Tests", "Stratis.Bitcoin.Features.Dns.Tests\Stratis.Bitcoin.Features.Dns.Tests.csproj", "{CB7A2800-8E98-4CD5-A88A-832E03AF7ABF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.StratisDnsD", "Stratis.StratisDnsD\Stratis.StratisDnsD.csproj", "{978482B2-AE17-421E-AD6F-ED9667C6B8A1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.StraxDnsD", "Stratis.StratisDnsD\Stratis.StraxDnsD.csproj", "{978482B2-AE17-421E-AD6F-ED9667C6B8A1}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Bitcoin.Tests.Wallet.Common", "Stratis.Bitcoin.Tests.Wallet.Common\Stratis.Bitcoin.Tests.Wallet.Common.csproj", "{A52CC0A6-D860-418C-8B08-8A1388D96D71}"
 EndProject
