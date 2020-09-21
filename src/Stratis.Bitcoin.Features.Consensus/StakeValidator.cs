@@ -298,13 +298,6 @@ namespace Stratis.Bitcoin.Features.Consensus
             Guard.NotNull(prevout, nameof(prevout));
             Guard.NotNull(stakingCoins, nameof(stakingCoins));
 
-            if (transactionTime < stakingCoins.Coins.Time)
-            {
-                this.logger.LogDebug("Coinstake transaction timestamp {0} is lower than it's own UTXO timestamp {1}.", transactionTime, stakingCoins.Coins.Time);
-                this.logger.LogTrace("(-)[BAD_STAKE_TIME]");
-                ConsensusErrors.StakeTimeViolation.Throw();
-            }
-
             // Base target.
             BigInteger target = new Target(headerBits).ToBigInteger();
 
@@ -326,7 +319,6 @@ namespace Stratis.Bitcoin.Features.Consensus
             {
                 var serializer = new BitcoinStream(ms, true);
                 serializer.ReadWrite(prevStakeModifier);
-                serializer.ReadWrite(stakingCoins.Coins.Time);
                 serializer.ReadWrite(prevout.Hash);
                 serializer.ReadWrite(prevout.N);
                 serializer.ReadWrite(transactionTime);

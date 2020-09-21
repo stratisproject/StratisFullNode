@@ -1,23 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using FluentAssertions;
-using NBitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.Miner.Interfaces;
-using Stratis.Bitcoin.Features.Miner.Staking;
-using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests.Miners
 {
     public class ProofOfStakeMiningTests
     {
-        private class StratisRegTestLastPowBlock : StratisRegTest
+        private class StratisRegTestLastPowBlock : StraxRegTest
         {
             public StratisRegTestLastPowBlock()
             {
@@ -30,7 +22,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
         {
             using (NodeBuilder nodeBuilder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 CoreNode node = nodeBuilder.CreateStratisPosNode(network, "posmining-1-node").WithDummyWallet().Start();
                 CoreNode syncer = nodeBuilder.CreateStratisPosNode(network, "posmining-1-syncer").Start();
@@ -75,7 +67,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
             using (var builder = NodeBuilder.Create(this))
             {
                 var configParameters = new NodeConfigParameters { { "savetrxhex", "true" } };
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var minerA = builder.CreateStratisPosNode(network, "stake-1-minerA", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
 

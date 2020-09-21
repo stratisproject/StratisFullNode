@@ -50,14 +50,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>True</c> if identical and <c>false</c> otherwise.</returns>
         public static bool TemplatesMatch(Network network, Transaction partialTransaction1, Transaction partialTransaction2)
         {
-            if (network.Consensus.IsProofOfStake)
-            {
-                if (partialTransaction1.Time != partialTransaction2.Time)
-                {
-                    return false;
-                }
-            }
-
             if ((partialTransaction1.Inputs.Count != partialTransaction2.Inputs.Count) ||
                 (partialTransaction1.Outputs.Count != partialTransaction2.Outputs.Count))
             {

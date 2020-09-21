@@ -434,7 +434,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             string walletName = "myWallet";
             string extPubKey =
-                "xq5hcJV8uJDLaNytrg6FphHY1vdqxP1rCPhAmp4xZwpxzYyYEscYEujAmNR5NrPfy9vzQ6BajEqtFezcyRe4zcGHH3dR6BKaKov43JHd8UYhBVy";
+                "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex";
 
             await this.RecoverWithExtPubAndCheckSuccessfulResponse(walletName, extPubKey);
         }
@@ -444,14 +444,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var wallet = new Wallet
             {
                 Name = walletName,
-                Network = KnownNetworks.StratisMain
+                Network = KnownNetworks.StraxMain
             };
 
             var walletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(w => w.RecoverWallet(walletName, It.IsAny<ExtPubKey>(), 1, It.IsAny<DateTime>(), null))
                     .Returns(wallet));
 
-            this.ConfigureMockInstance(KnownNetworks.StratisMain);
+            this.ConfigureMockInstance(KnownNetworks.StraxMain);
             this.ConfigureMock<IWalletSyncManager>(mock =>
                 mock.Setup(w => w.WalletTip).Returns(new ChainedHeader(this.Network.GetGenesis().Header,
                     this.Network.GetGenesis().Header.GetHash(), 3)));
@@ -487,7 +487,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var wallet = new Wallet
             {
                 Name = walletName,
-                Network = KnownNetworks.StratisMain
+                Network = KnownNetworks.StraxMain
             };
 
             DateTime lastBlockDateTime = chainIndexer.Tip.Header.BlockTime.DateTime;
@@ -497,7 +497,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                         w.RecoverWallet(It.IsAny<string>(), It.IsAny<ExtPubKey>(), 1, It.IsAny<DateTime>(), null))
                     .Returns(wallet));
 
-            this.ConfigureMockInstance(KnownNetworks.StratisMain);
+            this.ConfigureMockInstance(KnownNetworks.StraxMain);
 
             Mock<IWalletSyncManager> walletSyncManager = this.ConfigureMock<IWalletSyncManager>(mock =>
                 mock.Setup(w => w.WalletTip).Returns(new ChainedHeader(this.Network.GetGenesis().Header,
@@ -2582,7 +2582,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 this.configuredMocks.Add(typeof(TMock), value);
             }
 
-            return (TMock) this.configuredMocks[typeof(TMock)];
+            return (TMock)this.configuredMocks[typeof(TMock)];
         }
 
         private Mock<TMock> ConfigureMock<TMock>(Action<Mock<TMock>> setup = null) where TMock : class
@@ -2601,11 +2601,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             if (this.configuredMocks.ContainsKey(typeof(TMock))
                 && this.configuredMocks[typeof(TMock)] as Mock<TMock> != null)
             {
-                return ((Mock<TMock>) this.configuredMocks[typeof(TMock)]).Object;
+                return ((Mock<TMock>)this.configuredMocks[typeof(TMock)]).Object;
             }
 
             return this.configuredMocks.ContainsKey(typeof(TMock))
-                ? (TMock) this.configuredMocks[typeof(TMock)]
+                ? (TMock)this.configuredMocks[typeof(TMock)]
                 : createIfNotExists
                     ? new Mock<TMock>().Object
                     : null;

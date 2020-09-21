@@ -321,7 +321,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 {
                     long balanceAfterPremine = walletManager.GetBalances(walletName, "account 0").Sum(x => x.AmountConfirmed);
 
-                    return network.Consensus.PremineReward.Satoshi ==  balanceAfterPremine;
+                    return network.Consensus.PremineReward.Satoshi == balanceAfterPremine;
                 });
             }
         }
@@ -368,7 +368,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 
                 Assert.True(context.TransactionBuilder.Verify(trx, out _));
 
-                nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
+                await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
 
                 TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
 
@@ -401,7 +401,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 Money transferAmount = Money.Coins(0.01m);
                 Money feeAmount = Money.Coins(0.0001m);
 
-                var counterchainNetwork = new StratisTest();
+                var counterchainNetwork = new StraxTest();
 
                 CoreNode nodeA = builder.CreatePoANodeWithCounterchain(network, counterchainNetwork, network.FederationKey1).WithWallet(walletPassword, walletName).Start();
                 CoreNode nodeB = builder.CreatePoANodeWithCounterchain(network, counterchainNetwork, network.FederationKey2).WithWallet(walletPassword, walletName).Start();
@@ -426,7 +426,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 var encoder = new JoinFederationRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
                 Transaction trx = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
 
-                nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
+                await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
 
                 TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
 

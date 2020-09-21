@@ -5,6 +5,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
@@ -44,7 +45,7 @@ namespace Stratis.Bitcoin.Api.Tests
         public void GivenNoApiSettingsAreProvided_AndOnStratisNetwork_ThenDefaultSettingAreUsed()
         {
             // Arrange.
-            Network network = KnownNetworks.StratisMain;
+            Network network = new StraxMain();
             var nodeSettings = new NodeSettings(network);
 
             // Act.
@@ -66,7 +67,7 @@ namespace Stratis.Bitcoin.Api.Tests
         {
             // Arrange.
             int customPort = 55555;
-            var nodeSettings = new NodeSettings(this.Network, args:new[] { $"-apiport={customPort}" });
+            var nodeSettings = new NodeSettings(this.Network, args: new[] { $"-apiport={customPort}" });
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
@@ -85,7 +86,7 @@ namespace Stratis.Bitcoin.Api.Tests
             // Arrange.
             string customApiUri = "http://0.0.0.0";
             Network network = KnownNetworks.Main;
-            var nodeSettings = new NodeSettings(network, args:new[] { $"-apiuri={customApiUri}" });
+            var nodeSettings = new NodeSettings(network, args: new[] { $"-apiuri={customApiUri}" });
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
@@ -104,8 +105,8 @@ namespace Stratis.Bitcoin.Api.Tests
         {
             // Arrange.
             string customApiUri = "http://0.0.0.0";
-            Network network = KnownNetworks.StratisMain;
-            var nodeSettings = new NodeSettings(network, args:new[] { $"-apiuri={customApiUri}" });
+            Network network = new StraxMain();
+            var nodeSettings = new NodeSettings(network, args: new[] { $"-apiuri={customApiUri}" });
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
@@ -125,7 +126,7 @@ namespace Stratis.Bitcoin.Api.Tests
             string customApiUri = "http://0.0.0.0";
             int customPort = 55555;
             Network network = KnownNetworks.Main;
-            var nodeSettings = new NodeSettings(network, args:new[] { $"-apiuri={customApiUri}", $"-apiport={customPort}" });
+            var nodeSettings = new NodeSettings(network, args: new[] { $"-apiuri={customApiUri}", $"-apiport={customPort}" });
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
@@ -145,7 +146,7 @@ namespace Stratis.Bitcoin.Api.Tests
             int customPort = 5522;
             string customApiUri = $"http://0.0.0.0:{customPort}";
             Network network = KnownNetworks.Main;
-            var nodeSettings = new NodeSettings(network, args:new[] { $"-apiuri={customApiUri}" });
+            var nodeSettings = new NodeSettings(network, args: new[] { $"-apiuri={customApiUri}" });
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
@@ -194,13 +195,13 @@ namespace Stratis.Bitcoin.Api.Tests
         public void GivenStratisMainnet_ThenUseTheCorrectPort()
         {
             // Arrange.
-            NodeSettings nodeSettings = NodeSettings.Default(KnownNetworks.StratisMain);
+            NodeSettings nodeSettings = NodeSettings.Default(new StraxMain());
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
 
             // Assert.
-            Assert.Equal(KnownNetworks.StratisMain.DefaultAPIPort, settings.ApiPort);
+            Assert.Equal(new StraxMain().DefaultAPIPort, settings.ApiPort);
         }
 
         /// <summary>
@@ -210,13 +211,13 @@ namespace Stratis.Bitcoin.Api.Tests
         public void GivenStratisTestnet_ThenUseTheCorrectPort()
         {
             // Arrange.
-            NodeSettings nodeSettings = NodeSettings.Default(KnownNetworks.StratisTest);
+            NodeSettings nodeSettings = NodeSettings.Default(new StraxTest());
 
             // Act.
             ApiSettings settings = FullNodeSetup(nodeSettings);
 
             // Assert.
-            Assert.Equal(KnownNetworks.StratisTest.DefaultAPIPort, settings.ApiPort);
+            Assert.Equal(new StraxTest().DefaultAPIPort, settings.ApiPort);
         }
 
         [Theory]

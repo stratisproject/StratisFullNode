@@ -135,12 +135,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <returns>The constructed PoS node.</returns>
         public CoreNode CreateStratisPosNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null)
         {
-            return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent), "stratis.conf", configParameters: configParameters);
+            return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent), network.DefaultConfigFilename, configParameters: configParameters);
         }
 
         public CoreNode CloneStratisNode(CoreNode cloneNode, string agent = "StratisBitcoin")
         {
-            var node = new CoreNode(new StratisBitcoinPowRunner(cloneNode.FullNode.Settings.DataFolder.RootPath, cloneNode.FullNode.Network, agent), this.ConfigParameters, "bitcoin.conf");
+            var node = new CoreNode(new StratisBitcoinPowRunner(cloneNode.FullNode.Settings.DataFolder.RootPath, cloneNode.FullNode.Network, agent), this.ConfigParameters, cloneNode.FullNode.Network.DefaultConfigFilename);
             this.Nodes.Add(node);
             this.Nodes.Remove(cloneNode);
             return node;

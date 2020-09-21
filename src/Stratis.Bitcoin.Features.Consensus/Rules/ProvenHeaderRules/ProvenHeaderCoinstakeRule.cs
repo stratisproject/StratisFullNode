@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
 
             this.CheckIfCoinstakeIsTrue(header);
 
-            this.CheckHeaderAndCoinstakeTimes(header);
+            this.CheckHeaderTime(header);
 
             UnspentOutput prevUtxo = this.GetAndValidatePreviousUtxo(header, context);
 
@@ -161,21 +161,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
         }
 
         /// <summary>
-        /// Checks whether header time is equal to the timestamp of the coinstake tx and if coinstake tx
-        /// timestamp is divisible by 16 (using timestamp mask).
+        /// Checks whether header time is divisible by 16 (using timestamp mask).
         /// </summary>
         /// <param name="header">The proven block header.</param>
         /// <exception cref="ConsensusException">
         /// Throws exception with error <see cref="ConsensusErrors.StakeTimeViolation" /> if check fails.
         /// </exception>
-        private void CheckHeaderAndCoinstakeTimes(ProvenBlockHeader header)
+        private void CheckHeaderTime(ProvenBlockHeader header)
         {
-            if (header.Time != header.Coinstake.Time)
-            {
-                this.Logger.LogTrace("(-)[BAD_TIME]");
-                ConsensusErrors.StakeTimeViolation.Throw();
-            }
-
+            // TODO: This is checked elsewhere in PosTimeMaskRule, can we remove the duplication?
             if ((header.Time & PosConsensusOptions.StakeTimestampMask) != 0)
             {
                 this.Logger.LogTrace("(-)[BAD_TIME]");

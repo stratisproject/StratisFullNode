@@ -382,8 +382,8 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                Network network = new StratisRegTest();
-                var node = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                Network network = new StraxRegTest();
+                var node = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
                 RPCClient rpcClient = node.CreateRPCClient();
 
                 RPCCapabilities capabilities = await rpcClient.ScanRPCCapabilitiesAsync();

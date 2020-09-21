@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.Rules
 
         public CheckTxOutDustRuleTests()
         {
-            this.network = new StratisMain();
+            this.network = new StraxMain();
             this.chainIndexer = new ChainIndexer(this.network);
             this.loggerFactory = ExtendedLoggerFactory.Create();
             this.nodeSettings = NodeSettings.Default(this.network);

@@ -64,7 +64,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             var result = new List<WithdrawalModel>();
             ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.SeenInBlock });
 
-            foreach (ICrossChainTransfer transfer in transfers.OrderByDescending(t => t.PartialTransaction.Time))
+            foreach (ICrossChainTransfer transfer in transfers.OrderByDescending(t => t.BlockHeight))
             {
                 if (maximumEntriesToReturn-- <= 0)
                     break;

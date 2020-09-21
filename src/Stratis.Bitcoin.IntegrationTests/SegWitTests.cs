@@ -183,9 +183,9 @@ namespace Stratis.Bitcoin.IntegrationTests
         [Fact]
         public void CanCheckBlockWithWitnessInInput()
         {
-            var network = KnownNetworks.StratisRegTest;
+            var network = new StraxRegTest();
 
-            var blockHex = "000000202556b759011bdeb042b65a06b36c1d8f42f1e14e38c416c4f6ef5088bdc3ed1cb4cf11a1ca0990feb5d5f97539248a41e6cf888fe2d4acff52c59ece09844256907f495affff001b000000000201000000907f495a0001010000000000000000000000000000000000000000000000000000000000000000ffffffff290117006a24aa21a9ed45bcfb983571363bb71eacddafc5329fe341b966551ad4e44f6b0d92244f6301ffffffff01000000000000000000012000000000000000000000000000000000000000000000000000000000000000000000000001000000907f495a01d335db6f66303b5dc2ece709bc59c2b5c5682b3633663382291b65d188d1cd2a000000006b483045022100ac03651d705193814fedeb3c22235607a235c14b50efe126027c1388d5d1aa1702204e22fa85e7db05a6e02ae3c6cffb105ca4f4d765089e63c59b1d79699dd69aea0121034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcffffffff09000000000000000000204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac204c988a215a04002321034b8aa350c8e3879206e577f6a55ab7ffee8233b6aa156ba0f950c988593582bcac0000000046304402202b443911b7eaaa80a0acb372832fd81cb9436497fa80717195bfdb726dee2157022013ece143268a772f9a844541cb679fb3bedb3ebcd299ac110c3833b9664787be";
+            var blockHex = "00000020e46299aa9ab7a76ce77c705ac50d6b031386246689cea9bde33fb851ca3c287726236faaa13be02ea891cdffbc229c9c39f9fdd957009ccf86d8c3311c377353eda4645fffff7f200500000001010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff025100ffffffff0200d2496b000000002321033ee9fd42c7ea8a3374710ea4e8af00d56015e1ed7c61a31eac29114e080f120fac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf9012000000000000000000000000000000000000000000000000000000000000000000000000000";
 
             Block block = Block.Load(Encoders.Hex.DecodeData(blockHex), network.Consensus.ConsensusFactory);
 
@@ -371,7 +371,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 int minStakeConfirmations = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), (ulong)minStakeConfirmations + 2, int.MaxValue);
-                
+
                 var cancellationToken = new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token;
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetBlockCount() >= (minStakeConfirmations + 2), cancellationToken: cancellationToken);
                 TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight >= (minStakeConfirmations + 2), cancellationToken: cancellationToken);
@@ -687,7 +687,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                         AccountName = "account 0",
                         AllowUnconfirmed = true,
                         Outpoints = new List<OutpointRequest>() {
-                            new OutpointRequest() { Index = (int)witIndex, TransactionId = witFunds.GetHash().ToString() }, 
+                            new OutpointRequest() { Index = (int)witIndex, TransactionId = witFunds.GetHash().ToString() },
                             new OutpointRequest() { Index = spendable.First().Transaction.Index, TransactionId = spendable.First().Transaction.Id.ToString() }
                         },
                         Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = witAddress, Amount = (p2wpkhAmount + Money.Coins(0.5m)).ToString() } },

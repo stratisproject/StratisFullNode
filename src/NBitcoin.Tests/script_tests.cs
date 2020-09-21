@@ -203,14 +203,14 @@ namespace NBitcoin.Tests
         /// Tests how <see cref="IndexedTxIn.VerifyScript(Network, Script, ScriptVerify, out ScriptError)"/> responds to a script composed of 
         /// <see cref="OpcodeType.OP_CHECKCOLDSTAKEVERIFY"/> and <see cref="OpcodeType.OP_TRUE"/> under various circumstances as controlled via the inputs.
         /// </summary>
-        /// <param name="isPos">If set uses the <see cref="KnownNetworks.StratisMain"/> network (versus the <see cref="KnownNetworks.Main"/> network).</param>
+        /// <param name="isPos">If set uses the <see cref="KnownNetworks.StraxMain"/> network (versus the <see cref="KnownNetworks.Main"/> network).</param>
         /// <param name="isActivated">If set includes the <see cref="ScriptVerify.CheckColdStakeVerify"/> flag into the <see cref="ScriptVerify"/> flags.</param>
         /// <param name="isCoinStake">If set executes the opcode in the context of a cold coin stake transaction (versus a normal transaction).</param>
         /// <param name="expectedFlagSet">Determines whether we expect the <see cref="PosTransaction.IsColdCoinStake"/> variable to be set on the transaction.</param>
         /// <param name="expectedError">Determines the error we expect the verify operation to produce.</param>
         private void Coldstaking_testsCore(bool isPos, bool isActivated, bool isCoinStake, bool expectedFlagSet, ScriptError expectedError)
         {
-            Network network = isPos ? KnownNetworks.StratisMain : KnownNetworks.Main;
+            Network network = isPos ? KnownNetworks.StraxMain : KnownNetworks.Main;
 
             Transaction tx = network.CreateTransaction();
             tx.Outputs.Add(new TxOut()
@@ -220,7 +220,6 @@ namespace NBitcoin.Tests
             });
 
             Transaction coldCoinStake = network.CreateTransaction();
-            coldCoinStake.Time = (uint)18276127;
             coldCoinStake.Inputs.Add(new TxIn(tx.Outputs.AsCoins().First().Outpoint, new Script()));
 
             if (isCoinStake)

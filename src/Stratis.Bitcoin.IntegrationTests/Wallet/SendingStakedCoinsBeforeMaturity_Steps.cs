@@ -21,8 +21,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         private const decimal OneMillion = 1_000_000;
         private CoreNode receiverNode;
         private const string WalletName = "mywallet";
-        private const string WalletPassword = "123456";
-        private const string WalletPassphrase = "passphrase";
         private const string WalletAccountName = "account 0";
 
         public SendingStakedCoinsBeforeMaturity(ITestOutputHelper outputHelper)
@@ -44,7 +42,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             this.proofOfStakeSteps.PremineNodeWithWallet("ssc-pmnode");
             this.proofOfStakeSteps.MineGenesisAndPremineBlocks();
 
-            this.receiverNode = this.proofOfStakeSteps.nodeBuilder.CreateStratisPosNode(new StratisRegTest(), "ssc-receiver").WithWallet().Start();
+            this.receiverNode = this.proofOfStakeSteps.nodeBuilder.CreateStratisPosNode(new StraxRegTest(), "ssc-receiver").WithWallet().Start();
 
             TestHelper.ConnectAndSync(this.proofOfStakeSteps.PremineNodeWithCoins, this.receiverNode);
         }

@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public PosConsensusRuleUnitTestBase() : base(KnownNetworks.StratisTest)
+        public PosConsensusRuleUnitTestBase() : base(KnownNetworks.StraxTest)
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();
@@ -217,7 +217,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StratisTest)
+        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StraxTest)
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();
@@ -312,7 +312,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             {
                 var hash = new uint256(RandomUtils.GetBytes(32));
                 hashes.Add(hash);
-                this.posBlock.Transactions.Add(new PosTransaction { Time = (uint)i });
+                this.posBlock.Transactions.Add(new PosTransaction { LockTime = (uint)i }); // Arbitrary data to cause different hashes
             }
 
             this.posBlock.UpdateMerkleRoot();

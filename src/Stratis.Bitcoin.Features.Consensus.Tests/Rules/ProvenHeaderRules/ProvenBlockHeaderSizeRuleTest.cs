@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
         public ProvenBlockHeaderSizeRuleTest()
         {
             this.options = (PosConsensusOptions)this.network.Consensus.Options;
-            this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Last();
+            this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Any() ? this.network.Checkpoints.Keys.Last() : 0;
         }
 
         [Fact]

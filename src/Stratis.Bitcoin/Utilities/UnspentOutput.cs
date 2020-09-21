@@ -4,7 +4,7 @@ using NBitcoin;
 namespace Stratis.Bitcoin.Utilities
 {
     /// <summary>
-    /// Represents an immutable instance of a transaction outout.
+    /// Represents an immutable instance of a transaction output.
     /// To be used by coindb to serialize utxo to storage.
     /// </summary>
     public class Coins : IBitcoinSerializable
@@ -13,16 +13,14 @@ namespace Stratis.Bitcoin.Utilities
         private TxOut txOut;
         private bool isCoinbase;
 
-        // Time and coinstake are pos properties, for POW they will stay default values.
+        // isCoinstake is a PoS property, for PoW they will stay default values.
         private bool isCoinstake;
-
-        private uint time;
 
         public Coins()
         {
         }
 
-        public Coins(uint height, TxOut txOut, bool isCoinbase, bool isCoinStake = false, uint time = 0)
+        public Coins(uint height, TxOut txOut, bool isCoinbase, bool isCoinStake = false)
         {
             Guard.NotNull(txOut, nameof(txOut));
 
@@ -30,7 +28,6 @@ namespace Stratis.Bitcoin.Utilities
             this.txOut = txOut;
             this.isCoinbase = isCoinbase;
             this.isCoinstake = isCoinStake;
-            this.time = time;
         }
 
         public uint Height => this.height;
@@ -41,8 +38,6 @@ namespace Stratis.Bitcoin.Utilities
 
         public bool IsCoinstake => this.isCoinstake;
 
-        public uint Time => this.time;
-
         public void ReadWrite(BitcoinStream stream)
         {
             if (stream.Serializing)
@@ -50,7 +45,6 @@ namespace Stratis.Bitcoin.Utilities
                 stream.ReadWriteAsVarInt(ref this.height);
                 stream.ReadWrite(ref this.isCoinbase);
                 stream.ReadWrite(ref this.isCoinstake);
-                stream.ReadWrite(ref this.time);
 
                 stream.ReadWrite(ref this.txOut);
 
@@ -62,7 +56,6 @@ namespace Stratis.Bitcoin.Utilities
                 stream.ReadWriteAsVarInt(ref this.height);
                 stream.ReadWrite(ref this.isCoinbase);
                 stream.ReadWrite(ref this.isCoinstake);
-                stream.ReadWrite(ref this.time);
 
                 stream.ReadWrite(ref this.txOut);
 

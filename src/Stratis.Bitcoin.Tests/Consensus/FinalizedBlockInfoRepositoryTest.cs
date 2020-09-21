@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
     {
         private readonly ILoggerFactory loggerFactory;
 
-        public FinalizedBlockInfoRepositoryTest() : base(KnownNetworks.StratisRegTest)
+        public FinalizedBlockInfoRepositoryTest() : base(KnownNetworks.StraxRegTest)
         {
             this.loggerFactory = new LoggerFactory();
         }

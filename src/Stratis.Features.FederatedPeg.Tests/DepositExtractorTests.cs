@@ -17,15 +17,10 @@ namespace Stratis.Features.FederatedPeg.Tests
     public class DepositExtractorTests
     {
         private readonly IFederatedPegSettings federationSettings;
-
         private readonly IOpReturnDataReader opReturnDataReader;
-
         private readonly DepositExtractor depositExtractor;
-
         private readonly Network network;
-
         private readonly MultisigAddressHelper addressHelper;
-
         private readonly TestTransactionBuilder transactionBuilder;
 
         public DepositExtractorTests()
@@ -34,7 +29,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             ILoggerFactory loggerFactory = Substitute.For<ILoggerFactory>();
 
-            this.addressHelper = new MultisigAddressHelper(this.network, Networks.Stratis.Regtest());
+            this.addressHelper = new MultisigAddressHelper(this.network, Networks.Strax.Regtest());
 
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
             this.federationSettings.FasterDepositThresholdAmount.Returns(Money.Coins(10));

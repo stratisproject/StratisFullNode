@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
 
         public MiningControllerTest()
         {
-            this.network = KnownNetworks.StratisRegTest;
+            this.network = KnownNetworks.StraxRegTest;
 
             this.fullNode = new Mock<IFullNode>();
             this.fullNode.Setup(i => i.Network).Returns(this.network);

@@ -172,11 +172,11 @@ namespace FederationSetup
                     continue;
 
                 // Transaction times must match.
-                if (incomingPartialTransaction is PosTransaction && incomingPartialTransaction.Time != model.tx.Time)
-                {
-                    Console.WriteLine($"The locally generated transaction is time-stamped differently from the transaction contained in '{fileName}'. The imported signature can't be used.");
-                    continue;
-                }
+                //if (incomingPartialTransaction is PosTransaction && incomingPartialTransaction.Time != model.tx.Time)
+                //{
+                //    Console.WriteLine($"The locally generated transaction is time-stamped differently from the transaction contained in '{fileName}'. The imported signature can't be used.");
+                //    continue;
+                //}
 
                 // Combine signatures.
                 Transaction newTransaction = SigningUtils.CheckTemplateAndCombineSignatures(builder, model.tx, new[] { incomingPartialTransaction });

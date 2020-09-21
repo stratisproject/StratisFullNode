@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
 
         public ProvenBlockHeaderCoinstakeRuleTest()
         {
-            this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Last();
+            this.provenHeadersActivationHeight = this.network.Checkpoints.Keys.Any() ? this.network.Checkpoints.Keys.Last() : 0;
         }
 
         [Fact]
@@ -77,7 +77,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Setup chained header and move it to the height higher than proven header activation height.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(provenBlockHeader, provenBlockHeader.GetHash(), null);
@@ -104,7 +103,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             // Setup proven header.
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Setup chained header and move it to the height higher than proven header activation height.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(provenBlockHeader, provenBlockHeader.GetHash(), null);
@@ -174,20 +172,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
                 .Setup(m => m.FetchCoins(It.IsAny<OutPoint[]>()))
                 .Returns(res);
 
-            // Change coinstake time to differ from header time but divisible by 16.
-            ((ProvenBlockHeader)this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header).Time = 16;
-
-            // When we run the validation rule, we should hit coinstake stake time violation error.
             Action ruleValidation = () => this.consensusRules.RegisterRule<ProvenHeaderCoinstakeRule>().Run(this.ruleContext);
-            ruleValidation.Should().Throw<ConsensusErrorException>()
-                .And.ConsensusError
-                .Should().Be(ConsensusErrors.StakeTimeViolation);
 
-            // Change coinstake time to be the same as header time but not divisible by 16.
+            // Change header time to be not divisible by 16.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header.Time = 50;
             ((ProvenBlockHeader)this.ruleContext.ValidationContext.ChainedHeaderToValidate.Header).Time = 50;
 
-            // When we run the validation rule, we should hit coinstake stake time violation error.
+            // When we run the validation rule, we should hit stake time violation error.
             ruleValidation.Should().Throw<ConsensusErrorException>()
                 .And.ConsensusError
                 .Should().Be(ConsensusErrors.StakeTimeViolation);
@@ -207,7 +198,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build();
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Setup chained header and move it to the height higher than proven header activation height.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(provenBlockHeader, provenBlockHeader.GetHash(), previousChainedHeader);
@@ -250,7 +240,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build();
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Setup chained header and move it to the height higher than proven header activation height.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(provenBlockHeader, provenBlockHeader.GetHash(), previousChainedHeader);
@@ -299,7 +288,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build();
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Setup chained header and move it to the height higher than proven header activation height.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(provenBlockHeader, provenBlockHeader.GetHash(), previousChainedHeader);
@@ -349,7 +337,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build(prevProvenBlockHeader);
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Setup chained header and move it to the height higher than proven header activation height.
             this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(provenBlockHeader, provenBlockHeader.GetHash(), previousChainedHeader);
@@ -405,7 +392,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             PosBlock posBlock = new PosBlockBuilder(this.network).Build();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build(prevProvenBlockHeader);
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Corrupt merkle proof.
             provenBlockHeader.SetPrivateVariableValue("merkleProof", new PartialMerkleTree(new[] { new uint256(1234) }, new[] { false }));
@@ -466,7 +452,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
             posBlock.UpdateMerkleRoot();
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build(prevProvenBlockHeader);
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Set invalid coinstake script pub key.
             provenBlockHeader.Coinstake.Outputs[1].ScriptPubKey = new Script("03cdac179a3391d96cf4957fa0255e4aa8055a993e92df7146e740117885b184ea OP_CHECKSIG");
@@ -536,7 +521,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.ProvenHeaderRules
 
             ProvenBlockHeader provenBlockHeader = new ProvenBlockHeaderBuilder(posBlock, this.network).Build(prevProvenBlockHeader);
             provenBlockHeader.HashPrevBlock = prevProvenBlockHeader.GetHash();
-            provenBlockHeader.Coinstake.Time = provenBlockHeader.Time;
 
             // Set invalid coinstake script pub key
             provenBlockHeader.Coinstake.Outputs[1].ScriptPubKey = privateKey.PubKey.ScriptPubKey;

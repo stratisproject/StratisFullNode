@@ -164,12 +164,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             uint blockTime = (this.ChainIndexer.Tip.Header.Time + 60) & ~PosConsensusOptions.StakeTimestampMask;
 
-            // To avoid violating the transaction timestamp consensus rule
-            // we need to ensure that the transaction used for the coinstake's
-            // input occurs well before the block time (as the coinstake time
-            // is set to the block time)
-            prevTransaction.Time = blockTime - 100;
-
             // Coins sent to miner 2.
             prevTransaction.Outputs.Add(new TxOut(Money.COIN * 5_000_000, scriptPubKey2));
             // Coins sent to miner 1.

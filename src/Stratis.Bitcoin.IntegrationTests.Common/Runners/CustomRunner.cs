@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
         {
             var argsAsStringArray = this.configParameters.AsConsoleArgArray();
 
-            NodeSettings settings = null;
+            NodeSettings settings;
 
             if (string.IsNullOrEmpty(this.Agent))
                 settings = new NodeSettings(this.Network, this.protocolVersion, args: argsAsStringArray) { MinProtocolVersion = this.minProtocolVersion };

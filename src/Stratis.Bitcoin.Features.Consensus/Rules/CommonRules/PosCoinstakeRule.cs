@@ -78,19 +78,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     ConsensusErrors.BadMultipleCoinstake.Throw();
                 }
             }
-
-            // Check transactions.
-            foreach (Transaction transaction in block.Transactions)
-            {
-                // Check transaction timestamp.
-                if (block.Header.Time < transaction.Time)
-                {
-                    this.Logger.LogDebug("Block contains transaction with timestamp {0}, which is greater than block's timestamp {1}.", transaction.Time, block.Header.Time);
-                    this.Logger.LogTrace("(-)[TX_TIME_MISMATCH]");
-                    ConsensusErrors.BlockTimeBeforeTrx.Throw();
-                }
-            }
-
+            
             return Task.CompletedTask;
         }
     }

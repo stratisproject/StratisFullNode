@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         private readonly ISignals signals;
         private readonly IAsyncProvider asyncProvider;
 
-        public ProvenHeaderConsenusManagerBehaviorTests() : base(new StratisTest())
+        public ProvenHeaderConsenusManagerBehaviorTests() : base(new StraxTest())
         {
             this.chainState = new Mock<IChainState>().Object;
             this.checkpoints = new Mock<ICheckpoints>().Object;

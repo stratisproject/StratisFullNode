@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Notifications.Controllers;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
@@ -20,7 +21,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
         public NotificationsControllerTest()
         {
-            this.network = KnownNetworks.StratisMain;
+            this.network = new StraxMain();
         }
 
         [Theory]

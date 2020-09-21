@@ -13,7 +13,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         [Fact]
         public void Eight_Of_Fifteen_SufficientlyFunded()
         {
-            var network = new StratisMain();
+            var network = new StraxMain();
 
             const int n = 15;
             const int m = 8;

@@ -19,17 +19,19 @@ namespace Stratis.Features.SQLiteWalletRepository.External
         private readonly IScriptAddressReader scriptAddressReader;
         protected readonly IWalletTransactionLookup transactionsOfInterest;
         protected readonly IWalletAddressLookup addressesOfInterest;
+        private readonly IDateTimeProvider dateTimeProvider;
 
         public abstract ITopUpTracker GetTopUpTracker(AddressIdentifier address);
         public abstract void RecordSpend(HashHeightPair block, TxIn txIn, string pubKeyScript, bool isCoinBase, long spendTime, Money totalOut, uint256 spendTxId, int spendIndex);
         public abstract void RecordReceipt(HashHeightPair block, Script pubKeyScript, TxOut txOut, bool isCoinBase, long creationTime, uint256 outputTxId, int outputIndex, bool isChange);
 
-        public TransactionsToListsBase(Network network, IScriptAddressReader scriptAddressReader, IWalletTransactionLookup transactionsOfInterest, IWalletAddressLookup addressesOfInterest)
+        public TransactionsToListsBase(Network network, IScriptAddressReader scriptAddressReader, IWalletTransactionLookup transactionsOfInterest, IWalletAddressLookup addressesOfInterest, IDateTimeProvider dateTimeProvider)
         {
             this.network = network;
             this.scriptAddressReader = scriptAddressReader;
             this.transactionsOfInterest = transactionsOfInterest;
             this.addressesOfInterest = addressesOfInterest;
+            this.dateTimeProvider = dateTimeProvider;
         }
 
         internal IEnumerable<Script> GetDestinations(Script redeemScript)
@@ -83,6 +85,8 @@ namespace Stratis.Features.SQLiteWalletRepository.External
             IWalletTransactionLookup transactionsOfInterest = this.transactionsOfInterest;
             IWalletAddressLookup addressesOfInterest = this.addressesOfInterest;
 
+            long currentTime = this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+
             foreach (Transaction tx in transactions)
             {
                 // Build temp.PrevOuts
@@ -97,7 +101,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     {
                         // Record our outputs that are being spent.
                         foreach (AddressIdentifier address in addresses)
-                            RecordSpend(block, txIn, address.ScriptPubKey, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? tx.Time, tx.TotalOut, txId, i);
+                            RecordSpend(block, txIn, address.ScriptPubKey, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, tx.TotalOut, txId, i);
 
                         additions = true;
                         addSpendTx = true;
@@ -124,7 +128,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     if (addSpendTx)
                     {
                         // TODO: Why is this done? If the receipt is not to one of our addresses (i.e. identified in the loop coming next) then why bother trying to record it?
-                        this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? tx.Time, txId, i, isChange);
+                        this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, isChange);
                     }
 
                     foreach (Script pubKeyScript in destinations)
@@ -160,7 +164,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             // will most likely have unintended consequences on areas of the code that do expect the outputs to have a value, such as staking.
 
                             // Record outputs received by our wallets.
-                            this.RecordReceipt(block, pubKeyScript, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? tx.Time, txId, i, containsAddress && address.AddressType == 1);
+                            this.RecordReceipt(block, pubKeyScript, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, containsAddress && address.AddressType == 1);
 
                             additions = true;
 

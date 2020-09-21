@@ -78,7 +78,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public CrossChainTestBase(Network network = null, Network counterChainNetwork = null)
         {
             this.network = network ?? CirrusNetwork.NetworksSelector.Regtest();
-            this.counterChainNetwork = counterChainNetwork ?? Networks.Stratis.Regtest();
+            this.counterChainNetwork = counterChainNetwork ?? Networks.Strax.Regtest();
             this.counterChainNetworkWrapper = new CounterChainNetworkWrapper(counterChainNetwork);
 
             NetworkRegistration.Register(this.network);
@@ -148,7 +148,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return block;
             });
 
-            this.blockRepository.TipHashAndHeight.Returns((x) => {
+            this.blockRepository.TipHashAndHeight.Returns((x) =>
+            {
                 return new HashHeightPair(this.blockDict.Last().Value.GetHash(), this.blockDict.Count - 1);
             });
         }
