@@ -16,7 +16,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             CoinType result = account.GetCoinType();
 
-            Assert.Equal(CoinType.Stratis, result);
+            Assert.Equal(CoinType.Strax, result);
         }
 
         [Fact]
