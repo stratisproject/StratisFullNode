@@ -101,7 +101,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     // We have to make allowance for the fact that one of the cold stake outputs will be the Cirrus reward payment script.
                     // So do not throw a consensus error for those unless more than one appears in the transaction.
                     // We do not need to check the reward amount, because that is done elsewhere.
-                    // TODO: Need to investigate whether the bearer of the 'hot' private key could potentially over-allocate funds to the Cirrus reward script at the expense of the non-Cirrus reward
                     if (coinstakeTransaction.Outputs[i].ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript && !cirrusScriptFlagSeen)
                     {
                         cirrusScriptFlagSeen = true;
