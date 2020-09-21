@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyName>Stratis.StratisDnsD</AssemblyName>
+    <AssemblyName>Stratis.StraxDnsD</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>Stratis.StratisDnsD</PackageId>
+    <PackageId>Stratis.StraxDnsD</PackageId>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
