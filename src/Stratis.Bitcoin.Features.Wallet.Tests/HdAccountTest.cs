@@ -9,7 +9,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
     public class HdAccountTest
     {
         [Fact]
-        public void GetCoinTypeHavingHdPathReturnsCointType()
+        public void GetCoinTypeHavingHdPathReturnsCoinType()
         {
             var account = new HdAccount();
             account.HdPath = "1/2/105105";
