@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         {
             // Register the cold staking script template.
             this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(ColdStakingScriptTemplate.Instance);
-            var registry = (StratisStandardScriptsRegistry)this.Network.StandardScriptsRegistry;
+            var registry = (StraxStandardScriptsRegistry)this.Network.StandardScriptsRegistry;
             registry.GetScriptTemplates.Remove(registry.GetScriptTemplates.OfType<TxNullDataTemplate>().Single()); // remove the default standard script
             this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(TxNullDataTemplate.Instance);
         }

@@ -140,7 +140,7 @@ namespace Stratis.Bitcoin.Networks
             this.DNSSeeds = new List<DNSSeedData>();
             this.SeedNodes = new List<NetworkAddress>();
 
-            this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new StraxStandardScriptsRegistry();
 
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
