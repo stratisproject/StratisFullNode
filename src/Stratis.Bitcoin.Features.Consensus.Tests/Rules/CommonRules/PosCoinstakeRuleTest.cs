@@ -13,7 +13,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate = this.network.CreateBlock();
         }
 
-        [Fact]
+        [Fact(Skip="We relax this constraint on the Strax networks")]
         public async Task RunAsync_ProofOfStakeBlock_CoinBaseNotEmpty_NoOutputsOnTransaction_ThrowsBadStakeBlockConsensusErrorExceptionAsync()
         {
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(new Transaction());
@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             Assert.True(BlockStake.IsProofOfStake(this.ruleContext.ValidationContext.BlockToValidate));
 
-            ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<PosCoinstakeRule>().RunAsync(this.ruleContext));
+            ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<StraxCoinstakeRule>().RunAsync(this.ruleContext));
 
             Assert.Equal(ConsensusErrors.BadStakeBlock, exception.ConsensusError);
         }
@@ -85,50 +85,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         }
 
         [Fact]
-        public async Task RunAsync_ProofOfStakeBlock_TransactionTimestampAfterBlockTimeStamp_ThrowsBlockTimeBeforeTrxConsensusErrorExceptionAsync()
-        {
-            var transaction = this.network.CreateTransaction();
-            transaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(transaction);
-
-            transaction = this.network.CreateTransaction();
-            transaction.Inputs.Add(new TxIn()
-            {
-                PrevOut = new OutPoint(new uint256(15), 1),
-                ScriptSig = new Script()
-            });
-            transaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
-            transaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(transaction);
-
-            this.ruleContext.ValidationContext.BlockToValidate.Header.Time = (uint)1483747200;
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions[1].Time = (uint)1483747201;
-
-            Assert.True(BlockStake.IsProofOfStake(this.ruleContext.ValidationContext.BlockToValidate));
-
-            ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<PosCoinstakeRule>().RunAsync(this.ruleContext));
-
-            Assert.Equal(ConsensusErrors.BlockTimeBeforeTrx, exception.ConsensusError);
-        }
-
-        [Fact]
-        public async Task RunAsync_ProofOfWorkBlock_TransactionTimestampAfterBlockTimeStamp_ThrowsBlockTimeBeforeTrxConsensusErrorExceptionAsync()
-        {
-            var transaction = this.network.CreateTransaction();
-            transaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(transaction);
-
-            this.ruleContext.ValidationContext.BlockToValidate.Header.Time = (uint)1483747200;
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions[0].Time = (uint)1483747201;
-
-            Assert.True(BlockStake.IsProofOfWork(this.ruleContext.ValidationContext.BlockToValidate));
-
-            ConsensusErrorException exception = await Assert.ThrowsAsync<ConsensusErrorException>(() => this.consensusRules.RegisterRule<PosCoinstakeRule>().RunAsync(this.ruleContext));
-
-            Assert.Equal(ConsensusErrors.BlockTimeBeforeTrx, exception.ConsensusError);
-        }
-
-        [Fact]
         public async Task RunAsync_ProofOfStakeBlock_ValidBlock_DoesNotThrowExceptionAsync()
         {
             var transaction = this.network.CreateTransaction();
@@ -146,8 +102,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(transaction);
 
             this.ruleContext.ValidationContext.BlockToValidate.Header.Time = (uint)1483747200;
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions[0].Time = (uint)1483747200;
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions[1].Time = (uint)1483747200;
 
             Assert.True(BlockStake.IsProofOfStake(this.ruleContext.ValidationContext.BlockToValidate));
 
@@ -161,7 +115,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             transaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
             this.ruleContext.ValidationContext.BlockToValidate.Transactions.Add(transaction);
             this.ruleContext.ValidationContext.BlockToValidate.Header.Time = (uint)1483747200;
-            this.ruleContext.ValidationContext.BlockToValidate.Transactions[0].Time = (uint)1483747200;
 
             Assert.True(BlockStake.IsProofOfWork(this.ruleContext.ValidationContext.BlockToValidate));
 

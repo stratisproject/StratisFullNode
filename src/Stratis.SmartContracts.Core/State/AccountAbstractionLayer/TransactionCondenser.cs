@@ -82,7 +82,6 @@ namespace Stratis.SmartContracts.Core.State.AccountAbstractionLayer
         private Transaction BuildTransaction()
         {
             Transaction tx = this.network.CreateTransaction();
-            tx.Time = this.transactionContext.Time; // set to time of actual transaction.
 
             foreach (ContractUnspentOutput vin in this.unspents)
             {

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
-using NBitcoin.Policy;
 using NSubstitute;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -21,7 +20,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
         public ManualMultiSigTransactionBuilderTests()
         {
-            this.network = new StratisTest();
+            this.network = new StraxTest();
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.walletFeePolicy = Substitute.For<IWalletFeePolicy>();
             this.multisigCoinSelector = Substitute.For<IMultisigCoinSelector>();
@@ -72,8 +71,8 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             Transaction transaction = builder.BuildTransaction(recipients, keys);
 
             // Check the amount & recipients are correct
-            Assert.Equal(recipients[0].Amount, (Money) transaction.Outputs.Where(r => r.ScriptPubKey == recipients[0].ScriptPubKey).Sum(o => o.Value));
-            Assert.Equal(recipients[1].Amount, (Money) transaction.Outputs.Where(r => r.ScriptPubKey == recipients[1].ScriptPubKey).Sum(o => o.Value));
+            Assert.Equal(recipients[0].Amount, (Money)transaction.Outputs.Where(r => r.ScriptPubKey == recipients[0].ScriptPubKey).Sum(o => o.Value));
+            Assert.Equal(recipients[1].Amount, (Money)transaction.Outputs.Where(r => r.ScriptPubKey == recipients[1].ScriptPubKey).Sum(o => o.Value));
 
             // Check the fee is correct
             Assert.Equal(transaction.GetFee(coins.ToArray()), coins.Sum(c => c.Amount) - transaction.TotalOut);
@@ -95,7 +94,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             Script redeemScript = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, keys.Select(k => k.PubKey).ToArray());
 
             BitcoinAddress multiSigAddress = redeemScript.Hash.GetAddress(network);
-            
+
             this.federatedPegSettings.MultiSigAddress.Returns(multiSigAddress);
 
             this.walletFeePolicy.GetFeeRate(Arg.Any<int>()).Returns(new FeeRate(10000));

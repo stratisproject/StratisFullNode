@@ -5,6 +5,7 @@ using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
@@ -16,7 +17,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
     /// </summary>
     public class StratisMempoolValidatorTest : TestBase
     {
-        public StratisMempoolValidatorTest() : base(KnownNetworks.StratisRegTest)
+        public StratisMempoolValidatorTest() : base(new StraxRegTest())
         {
         }
 
@@ -1587,7 +1588,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
 
             // Put a regular valid transaction into the mempool.
             tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
-            tx.AddOutput(new TxOut(Money.Coins(3.9m), minerSecret.PubKeyHash));
+            tx.AddOutput(new TxOut(Money.Coins(10m), minerSecret.PubKeyHash));
 
             // We need the sequence of all the transactions to be lower than (Sequence.Final - 1) to avoid triggering the conflict mempool error.
             tx.Inputs.First().Sequence = 1;
@@ -1602,7 +1603,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
 
             // Put another valid transaction into the mempool.
             tx2.AddInput(new TxIn(new OutPoint(context.SrcTxs[1].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
-            tx2.AddOutput(new TxOut(Money.Coins(3.9m), minerSecret.PubKeyHash));
+            tx2.AddOutput(new TxOut(Money.Coins(10m), minerSecret.PubKeyHash));
 
             tx2.Inputs.First().Sequence = 1;
 
@@ -1633,7 +1634,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             Assert.False(isSuccess, "Transaction attempting replacement, that refers to an unconfirmed input, should not have been accepted.");
             Assert.Equal(MempoolErrors.ReplacementAddsUnconfirmed, state.Error);
         }
-        
+
         [Fact]
         public async Task AcceptToMemoryPool_TxPowConsensusCheckInputBadTransactionInBelowOut_ReturnsFalseAsync()
         {
@@ -1744,7 +1745,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
         public async Task AcceptToMemoryPool_MemPoolFull_ReturnsFalseAsync()
         {
             string dataDir = GetTestDirectoryPath(this);
-            
+
             var minerSecret = new BitcoinSecret(new Key(), this.Network);
             ITestChainContext context = await TestChainFactory.CreatePosAsync(this.Network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
             IMempoolValidator validator = context.MempoolValidator;

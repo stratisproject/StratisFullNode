@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using NBitcoin;
@@ -16,7 +15,6 @@ using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
-using Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -141,7 +139,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             ConsensusManager consensusManager = await this.CreateConsensusManagerAsync(unspentOutputs);
 
-
             // The keys used by miner 1 and miner 2.
             var minerKey1 = new Key();
             var minerKey2 = new Key();
@@ -167,12 +164,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             uint blockTime = (this.ChainIndexer.Tip.Header.Time + 60) & ~PosConsensusOptions.StakeTimestampMask;
 
-            // To avoid violating the transaction timestamp consensus rule
-            // we need to ensure that the transaction used for the coinstake's
-            // input occurs well before the block time (as the coinstake time
-            // is set to the block time)
-            prevTransaction.Time = blockTime - 100;
-
             // Coins sent to miner 2.
             prevTransaction.Outputs.Add(new TxOut(Money.COIN * 5_000_000, scriptPubKey2));
             // Coins sent to miner 1.
@@ -190,6 +181,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             // Coinstake marker.
             coinstakeTransaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
+            
+            // We need to pay the Cirrus reward to the correct scriptPubKey to prevent failing that consensus rule.
+            coinstakeTransaction.Outputs.Add(new TxOut(Money.COIN * 9, StraxCoinstakeRule.CirrusRewardScript));
+            
             // Normal pay to public key that belongs to the second miner with value that
             // equals to the sum of the inputs.
             coinstakeTransaction.Outputs.Add(new TxOut(Money.COIN * 15_000_000, scriptPubKey2));

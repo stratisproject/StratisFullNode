@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             get { return this.provenBlockHeaderStore.GetMemberValue("pendingBatch") as SortedDictionary<int, ProvenBlockHeader>; }
         }
 
-        public ProvenBlockHeaderStoreTests() : base(new StratisTest())
+        public ProvenBlockHeaderStoreTests() : base(new StraxTest())
         {
             var nodeStats = new NodeStats(DateTimeProvider.Default, this.LoggerFactory.Object);
 

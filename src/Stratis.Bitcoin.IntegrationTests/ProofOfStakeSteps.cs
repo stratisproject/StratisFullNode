@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public void PremineNodeWithWallet(string testId)
         {
-            this.PremineNodeWithCoins = this.nodeBuilder.CreateStratisPosNode(new StratisRegTest(), testId).WithWallet().Start();
+            this.PremineNodeWithCoins = this.nodeBuilder.CreateStratisPosNode(new StraxRegTest(), testId).WithWallet().Start();
         }
 
         public void PremineNodeWithWalletWithOverrides()
@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 .UseTestChainedHeaderTree()
                 .OverrideDateTimeProviderFor<MiningFeature>());
 
-            this.PremineNodeWithCoins = this.nodeBuilder.CreateCustomNode(callback, new StratisRegTest(), ProtocolVersion.PROTOCOL_VERSION, agent: "mint-pmnode", configParameters: configParameters);
+            this.PremineNodeWithCoins = this.nodeBuilder.CreateCustomNode(callback, new StraxRegTest(), ProtocolVersion.PROTOCOL_VERSION, agent: "mint-pmnode", configParameters: configParameters);
             this.PremineNodeWithCoins.WithWallet().Start();
         }
 

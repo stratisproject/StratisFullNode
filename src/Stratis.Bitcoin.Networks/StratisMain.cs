@@ -299,7 +299,8 @@ namespace Stratis.Bitcoin.Networks
 
             Transaction txNew = consensusFactory.CreateTransaction();
             txNew.Version = 1;
-            txNew.Time = nTime;
+            // TODO: Need to remove the Stratis* networks from the solution (they will remain in SBFN)
+            //txNew.Time = nTime;
             txNew.AddInput(new TxIn()
             {
                 ScriptSig = new Script(Op.GetPushOp(0), new Op()

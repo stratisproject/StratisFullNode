@@ -21,7 +21,6 @@ using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
 using Stratis.Sidechains.Networks;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Stratis.Features.FederatedPeg.Tests
 {
@@ -53,7 +52,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             FederatedPegSettings fedPegSettings = FedPegTestsHelper.CreateSettings(network, out NodeSettings nodeSettings);
 
-            CounterChainSettings settings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Stratis.Regtest()));
+            CounterChainSettings settings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest()));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 

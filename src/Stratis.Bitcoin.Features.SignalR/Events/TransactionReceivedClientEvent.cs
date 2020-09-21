@@ -11,9 +11,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
         public bool IsCoinbase { get; set; }
 
         public bool IsCoinstake { get; set; }
-
-        public uint Time { get; set; }
-
+        
         public Type NodeEventType { get; } = typeof(TransactionReceived);
 
         public void BuildFrom(EventBase @event)
@@ -23,7 +21,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
                 this.TxHash = transactionReceived.ReceivedTransaction.GetHash().ToString();
                 this.IsCoinbase = transactionReceived.ReceivedTransaction.IsCoinBase;
                 this.IsCoinstake = transactionReceived.ReceivedTransaction.IsCoinStake;
-                this.Time = transactionReceived.ReceivedTransaction.Time;
+
                 return;
             }
 

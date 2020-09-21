@@ -18,7 +18,7 @@ namespace Stratis.Bitcoin.Tests.P2P
         {
             this.extendedLoggerFactory = new ExtendedLoggerFactory();
             this.selfEndpointTracker = new SelfEndpointTracker(this.extendedLoggerFactory,
-                new Configuration.Settings.ConnectionManagerSettings(NodeSettings.Default(new StratisRegTest())));
+                new Configuration.Settings.ConnectionManagerSettings(NodeSettings.Default(new StraxRegTest())));
         }
 
         [Fact]

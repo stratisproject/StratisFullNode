@@ -10,7 +10,7 @@ using Stratis.Bitcoin.Networks.Policies;
 
 namespace Stratis.Bitcoin.Networks
 {
-    public class StraxRegTest : StraxMain
+    public class StraxRegTest : Network
     {
         public StraxRegTest()
         {
@@ -23,6 +23,13 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultRPCPort = 37104;
             this.DefaultAPIPort = 37103;
             this.DefaultSignalRPort = 37102;
+            this.MaxTipAge = 2 * 60 * 60;
+            this.MinTxFee = 10000;
+            this.FallbackFee = 10000;
+            this.MinRelayTxFee = 10000;
+            this.RootFolderName = StraxNetwork.StraxRootFolderName;
+            this.DefaultConfigFilename = StraxNetwork.StraxDefaultConfigFilename;
+            this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
@@ -35,12 +42,12 @@ namespace Stratis.Bitcoin.Networks
 
             // Create the genesis block.
             this.GenesisTime = 1470467000; // TODO: Make this more recent?
-            this.GenesisNonce = 1730667; // TODO: Update once the final block is mined
-            this.GenesisBits = 0x1e0fffff;
+            this.GenesisNonce = 1; // TODO: Update once the final block is mined
+            this.GenesisBits = powLimit.ToCompact();
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "regteststraxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "regteststraxgenesisblock");
 
             this.Genesis = genesisBlock;
 
@@ -105,9 +112,21 @@ namespace Stratis.Bitcoin.Networks
 
             this.Consensus.PosEmptyCoinbase = false;
 
+            this.Base58Prefixes = new byte[12][];
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (120) };
             this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (127) };
-            this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (65 + 128) };
+            this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (120 + 128) };
+
+            // Copied from StraxTest:
+            this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_NO_EC] = new byte[] { 0x01, 0x42 };
+            this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_EC] = new byte[] { 0x01, 0x43 };
+            this.Base58Prefixes[(int)Base58Type.EXT_PUBLIC_KEY] = new byte[] { (0x04), (0x88), (0xB2), (0x1E) };
+            this.Base58Prefixes[(int)Base58Type.EXT_SECRET_KEY] = new byte[] { (0x04), (0x88), (0xAD), (0xE4) };
+            this.Base58Prefixes[(int)Base58Type.PASSPHRASE_CODE] = new byte[] { 0x2C, 0xE9, 0xB3, 0xE1, 0xFF, 0x39, 0xE2 };
+            this.Base58Prefixes[(int)Base58Type.CONFIRMATION_CODE] = new byte[] { 0x64, 0x3B, 0xF6, 0xA8, 0x9A };
+            this.Base58Prefixes[(int)Base58Type.STEALTH_ADDRESS] = new byte[] { 0x2a };
+            this.Base58Prefixes[(int)Base58Type.ASSET_ID] = new byte[] { 23 };
+            this.Base58Prefixes[(int)Base58Type.COLORED_ADDRESS] = new byte[] { 0x13 };
 
             this.Checkpoints = new Dictionary<int, CheckpointInfo>()
             {
@@ -126,10 +145,10 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update this once the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000042266634fa92136e4c50392007ec8f530d297fb89bc430d26ff2d9bc557"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x77283cca51b83fe3bda9ce8966248613036b0dc55a707ce76ca7b79aaa9962e4"));
 
-            this.RegisterRules(this.Consensus);
-            this.RegisterMempoolRules(this.Consensus);
+            StraxNetwork.RegisterRules(this.Consensus);
+            StraxNetwork.RegisterMempoolRules(this.Consensus);
         }
     }
 }

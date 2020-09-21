@@ -13,8 +13,8 @@ namespace Stratis.Features.SQLiteWalletRepository
         private readonly DBConnection conn;
         private readonly ProcessBlocksInfo processBlocksInfo;
 
-        internal TransactionsToLists(Network network, IScriptAddressReader scriptAddressReader, ProcessBlocksInfo processBlocksInfo)
-            : base(network, scriptAddressReader, processBlocksInfo.TransactionsOfInterest, processBlocksInfo.AddressesOfInterest)
+        internal TransactionsToLists(Network network, IScriptAddressReader scriptAddressReader, ProcessBlocksInfo processBlocksInfo, IDateTimeProvider dateTimeProvider)
+            : base(network, scriptAddressReader, processBlocksInfo.TransactionsOfInterest, processBlocksInfo.AddressesOfInterest, dateTimeProvider)
         {
             this.conn = processBlocksInfo.Conn;
             this.processBlocksInfo = processBlocksInfo;

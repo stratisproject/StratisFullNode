@@ -1172,20 +1172,6 @@ namespace NBitcoin
             }
         }
 
-        private uint nTime = Utils.DateTimeToUnixTime(DateTime.UtcNow);
-
-        public uint Time
-        {
-            get
-            {
-                return this.nTime;
-            }
-            set
-            {
-                this.nTime = value;
-            }
-        }
-
         private TxInList vin;
         private TxOutList vout;
         private LockTime nLockTime;
@@ -1246,10 +1232,6 @@ namespace NBitcoin
             {
                 stream.ReadWrite(ref this.nVersion);
 
-                // the POS time stamp
-                if (this is PosTransaction)
-                    stream.ReadWrite(ref this.nTime);
-
                 /* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
                 stream.ReadWrite<TxInList, TxIn>(ref this.vin);
 
@@ -1298,10 +1280,6 @@ namespace NBitcoin
             {
                 uint version = (witSupported && (this.vin.Count == 0 && this.vout.Count > 0)) ? this.nVersion | NoDummyInput : this.nVersion;
                 stream.ReadWrite(ref version);
-
-                // the POS time stamp
-                if (this is PosTransaction)
-                    stream.ReadWrite(ref this.nTime);
 
                 if (witSupported)
                 {

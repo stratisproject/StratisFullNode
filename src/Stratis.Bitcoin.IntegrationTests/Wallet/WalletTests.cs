@@ -335,11 +335,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 int maturity = (int)node1.FullNode.Network.Consensus.CoinbaseMaturity;
                 TestHelper.MineBlocks(node1, maturity + 1 + 15);
 
-                int currentBestHeight = maturity + 1 + 15;
-
                 // The mining should add coins to the wallet.
                 long total = node1.FullNode.WalletManager().GetSpendableTransactionsInWallet(WalletName).Sum(s => s.Transaction.Amount);
-                Assert.Equal(Money.COIN * 16 * 50, total);
+                Assert.Equal(16 * (long)this.network.Consensus.ProofOfWorkReward, total);
 
                 // Sync all nodes.
                 TestHelper.ConnectAndSync(node1, node2);

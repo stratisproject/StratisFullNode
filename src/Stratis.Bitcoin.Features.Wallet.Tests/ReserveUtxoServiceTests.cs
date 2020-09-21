@@ -18,7 +18,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             this.loggerFactory = new ExtendedLoggerFactory();
             this.signals = new Signals.Signals(this.loggerFactory, null);
-            this.network = new StratisTest();
+            this.network = new StraxTest();
         }
 
         [Fact]

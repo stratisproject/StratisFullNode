@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         private static readonly byte ProvenBlockHeaderTable = 1;
         private static readonly byte BlockHashHeightTable = 2;
 
-        public ProvenBlockHeaderRepositoryTests() : base(KnownNetworks.StratisTest)
+        public ProvenBlockHeaderRepositoryTests() : base(KnownNetworks.StraxTest)
         {
             this.loggerFactory = new Mock<ILoggerFactory>();
             this.dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);

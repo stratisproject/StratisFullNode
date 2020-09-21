@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions.Common;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -19,6 +20,7 @@ using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Mining;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
@@ -39,14 +41,14 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         private readonly Mock<IStakeChain> stakeChain;
         private readonly Mock<IStakeValidator> stakeValidator;
 
-        public PosBlockAssemblerTest() : base(KnownNetworks.StratisTest)
+        public PosBlockAssemblerTest() : base(KnownNetworks.StraxTest)
         {
             this.consensusManager = new Mock<IConsensusManager>();
             this.mempool = new Mock<ITxMempool>();
             this.dateTimeProvider = new Mock<IDateTimeProvider>();
             this.stakeValidator = new Mock<IStakeValidator>();
             this.stakeChain = new Mock<IStakeChain>();
-            this.stratisTest = KnownNetworks.StratisTest;
+            this.stratisTest = KnownNetworks.StraxTest;
             this.key = new Key();
             this.minerSettings = new MinerSettings(NodeSettings.Default(this.Network));
             SetupConsensusManager();
@@ -86,8 +88,9 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 this.SetupRulesEngine(chainIndexer);
                 var datetime = new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc);
                 this.dateTimeProvider.Setup(d => d.GetAdjustedTimeAsUnixTimestamp()).Returns(datetime.ToUnixTimestamp());
+                // Ensure that the BlockDefinition UpdateBaseHeaders sets the timestamp as required
+                this.dateTimeProvider.Setup(d => d.GetTimeOffset()).Returns(datetime.ToDateTimeOffset());
                 Transaction transaction = CreateTransaction(this.stratisTest, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
-                transaction.Time = Utils.DateTimeToUnixTime(datetime);
                 var txFee = new Money(1000);
 
                 SetupTxMempool(chainIndexer, this.stratisTest.Consensus.Options as PosConsensusOptions, txFee, transaction);
@@ -106,7 +109,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 Assert.Equal(2, blockTemplate.Block.Transactions.Count);
 
                 Transaction resultingTransaction = blockTemplate.Block.Transactions[0];
-                Assert.Equal((uint)new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc).ToUnixTimestamp(), resultingTransaction.Time);
+                Assert.Equal((uint)new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc).ToUnixTimestamp(), blockTemplate.Block.Header.Time);
                 Assert.NotEmpty(resultingTransaction.Inputs);
                 Assert.NotEmpty(resultingTransaction.Outputs);
                 Assert.True(resultingTransaction.IsCoinBase);
@@ -179,6 +182,14 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             });
         }
 
+        private class StraxOverrideRegTest : StraxRegTest
+        {
+            public StraxOverrideRegTest() : base()
+            {
+                this.Name = Guid.NewGuid().ToString();
+            }
+        }
+
         [Fact]
         public void ComputeBlockVersion_UsingChainTipAndConsensus_Bip9DeploymentActive_UpdatesHeightAndVersion()
         {
@@ -189,9 +200,11 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             {
                 var newOptions = new PosConsensusOptions();
                 this.stratisTest.Consensus.Options = newOptions;
-                this.stratisTest.Consensus.BIP9Deployments[0] = new BIP9DeploymentsParameters("Test",19,
+
+                // Set the BIP9 activation to expire one day from now so that it is still signaled in the blocks.
+                this.stratisTest.Consensus.BIP9Deployments[0] = new BIP9DeploymentsParameters("Test", 19,
                     new DateTimeOffset(new DateTime(2016, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
-                    new DateTimeOffset(new DateTime(2018, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
+                    new DateTimeOffset(DateTime.UtcNow + TimeSpan.FromDays(1)),
                     2);
 
                 this.stratisTest.Consensus.MinerConfirmationWindow = 2;
@@ -199,7 +212,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 ChainIndexer chainIndexer = GenerateChainWithHeightAndActivatedBip9(5, this.stratisTest, new Key(), this.stratisTest.Consensus.BIP9Deployments[0]);
                 this.SetupRulesEngine(chainIndexer);
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 (int Height, int Version) result = posBlockAssembler.ComputeBlockVersion(chainIndexer.GetHeader(4));
 
@@ -225,7 +238,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, this.key);
                 this.dateTimeProvider.Setup(d => d.GetAdjustedTimeAsUnixTimestamp())
                     .Returns(new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc).ToUnixTimestamp());
-
+                
                 var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
 
                 BlockTemplate result = posBlockAssembler.CreateCoinBase(chainIndexer.Tip, this.key.ScriptPubKey);
@@ -233,7 +246,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 Assert.NotEmpty(result.Block.Transactions);
 
                 Transaction resultingTransaction = result.Block.Transactions[0];
-                Assert.Equal((uint)new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc).ToUnixTimestamp(), resultingTransaction.Time);
+                // Creating a coinbase will not by itself update the header timestamp. So we don't check that here.
                 Assert.True(resultingTransaction.IsCoinBase);
                 Assert.False(resultingTransaction.IsCoinStake);
                 Assert.Equal(Money.Zero, resultingTransaction.TotalOut);
@@ -291,7 +304,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
                 Transaction transaction = CreateTransaction(this.stratisTest, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
 
-                this.dateTimeProvider.Setup(s => s.GetAdjustedTimeAsUnixTimestamp()).Returns(transaction.Time);
+                this.dateTimeProvider.Setup(s => s.GetAdjustedTimeAsUnixTimestamp()).Returns(chainIndexer.Tip.Header.Time);
 
                 var txFee = new Money(1000);
                 SetupTxMempool(chainIndexer, newOptions, txFee, transaction);

@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             this.mockLoggerFactory = new Mock<ILoggerFactory>();
             this.mockLoggerFactory.Setup(i => i.CreateLogger(It.IsAny<string>())).Returns(new Mock<ILogger>().Object);
             this.connectionManager.Setup(i => i.Network)
-                .Returns(KnownNetworks.StratisTest);
+                .Returns(KnownNetworks.StraxTest);
             this.controller = new ConnectionManagerController(this.connectionManager.Object, this.LoggerFactory.Object, this.peerBanning.Object);
         }
 

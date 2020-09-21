@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         private readonly Mock<IChainState> chainState;
         private readonly INodeLifetime nodeLifetime;
 
-        public PruneBlockStoreServiceTests() : base(new StratisMain())
+        public PruneBlockStoreServiceTests() : base(new StraxMain())
         {
             this.asyncProvider = new Mock<IAsyncProvider>().Object;
             this.blockRepository = new Mock<IBlockRepository>().Object;

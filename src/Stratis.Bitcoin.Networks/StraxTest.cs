@@ -11,7 +11,7 @@ using Stratis.Bitcoin.Networks.Policies;
 
 namespace Stratis.Bitcoin.Networks
 {
-    public sealed class StraxTest : StraxMain
+    public sealed class StraxTest : Network
     {
         public StraxTest()
         {
@@ -28,8 +28,8 @@ namespace Stratis.Bitcoin.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = StraxNetworkConstants.StraxRootFolderName;
-            this.DefaultConfigFilename = StraxNetworkConstants.StraxDefaultConfigFilename;
+            this.RootFolderName = StraxNetwork.StraxRootFolderName;
+            this.DefaultConfigFilename = StraxNetwork.StraxDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
@@ -41,12 +41,12 @@ namespace Stratis.Bitcoin.Networks
 
             // Create the genesis block.
             this.GenesisTime = 1598918400; // 1 September 2020
-            this.GenesisNonce = 3490706; // TODO: Update this once the final block is mined
-            this.GenesisBits = 0x1e0fffff;
+            this.GenesisNonce = 109534; // TODO: Update this once the final block is mined
+            this.GenesisBits = new Target(new uint256("0000ffff00000000000000000000000000000000000000000000000000000000")).ToCompact(); // This should be set to the same as the PowLimit
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "teststraxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "teststraxgenesisblock");
 
             this.Genesis = genesisBlock;
 
@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Networks
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: false,
-                powLimit: new Target(new uint256("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")),
+                powLimit: new Target(new uint256("0000ffff00000000000000000000000000000000000000000000000000000000")),
                 minimumChainWork: null,
                 isProofOfStake: true,
                 lastPowBlock: 12500,
@@ -140,7 +140,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.SeedNodes = new List<NetworkAddress>
             {
-                new NetworkAddress(IPAddress.Parse("82.146.153.140"), 17100), // Iain
+                new NetworkAddress(IPAddress.Parse("82.146.153.140"), 27105), // Iain
             };
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
@@ -148,11 +148,11 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000ffa0cac6d37f7c5cd8d269719a6c9f2590e5bb4ba87875b5e9563485f8a"));
-            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0x879a453c6e99e6199c0e623f5bf1965d1691a4e00cd05f713651830306ad899f"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000db68ff9e74fbaf7654bab4fa702c237318428fa9186055c243ddde6354ca"));
+            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xfe6317d42149b091399e7f834ca32fd248f8f26f493c30a35d6eea692fe4fcad"));
 
-            this.RegisterRules(this.Consensus);
-            this.RegisterMempoolRules(this.Consensus);
+            StraxNetwork.RegisterRules(this.Consensus);
+            StraxNetwork.RegisterMempoolRules(this.Consensus);
         }
     }
 }

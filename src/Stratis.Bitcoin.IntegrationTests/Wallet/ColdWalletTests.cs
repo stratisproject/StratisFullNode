@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Builder;
@@ -93,8 +94,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                  .MockIBD();
             });
 
-            return nodeBuilder.CreateCustomNode(buildAction, network,
-                ProtocolVersion.PROVEN_HEADER_VERSION, configParameters: extraParams);
+            return nodeBuilder.CreateCustomNode(buildAction, network, ProtocolVersion.PROVEN_HEADER_VERSION, configParameters: extraParams);
         }
 
         /// <summary>
@@ -107,11 +107,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         /// </description>
         [Fact]
         [Trait("Unstable", "True")]
-        public void WalletCanMineWithColdWalletCoins()
+        public async Task WalletCanMineWithColdWalletCoinsAsync()
         {
-            using (NodeBuilder builder = NodeBuilder.Create(this))
+            using (var builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 CoreNode stratisSender = CreatePowPosMiningNode(builder, network, TestBase.CreateTestDir(this), coldStakeNode: false);
                 CoreNode stratisHotStake = CreatePowPosMiningNode(builder, network, TestBase.CreateTestDir(this), coldStakeNode: true);
@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // The mining should add coins to the wallet
                 long total = stratisSender.FullNode.WalletManager().GetSpendableTransactionsInWallet(WalletName).Sum(s => s.Transaction.Amount);
-                Assert.Equal(Money.COIN * 98000060, total);
+                Assert.Equal((long)(network.Consensus.PremineReward + (15 * network.Consensus.ProofOfWorkReward)), total);
 
                 int confirmations = 10;
 
@@ -151,13 +151,13 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestHelper.Connect(stratisSender, stratisColdStake);
 
                 // Send coins to hot wallet.
-                Money amountToSend = Money.COIN * 98000059;
+                Money amountToSend = total2 - Money.Coins(18);
                 HdAddress sendto = hotWalletManager.GetUnusedAddress(new WalletAccountReference(WalletName, Account));
 
                 Transaction transaction1 = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network, new WalletAccountReference(WalletName, Account), Password, sendto.ScriptPubKey, amountToSend, FeeType.Medium, confirmations));
 
                 // Broadcast to the other node
-                stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction1.ToHex()));
+                await stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction1.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => stratisHotStake.CreateRPCClient().GetRawMempool().Length > 0);
@@ -169,12 +169,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 Assert.Null(stratisHotStake.FullNode.WalletManager().GetSpendableTransactionsInWallet(WalletName).First().Transaction.BlockHeight);
 
                 // Setup cold staking from the hot wallet.
-                Money amountToSend2 = Money.COIN * 98000058;
+                Money amountToSend2 = network.Consensus.PremineReward;
                 Transaction transaction2 = hotWalletManager.GetColdStakingSetupTransaction(stratisHotStake.FullNode.WalletTransactionHandler(),
                     coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC));
 
                 // Broadcast to the other node
-                stratisHotStake.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction2.ToHex()));
+                await stratisHotStake.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction2.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => coldWalletManager.GetSpendableTransactionsInColdWallet(WalletName, true).Any());

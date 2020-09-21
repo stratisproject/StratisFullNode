@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public WalletRPCControllerTest()
         {
-            this.network = new StratisRegTest();
+            this.network = new StraxRegTest();
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 RPCClient rpc = node.CreateRPCClient();
 
@@ -54,7 +54,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 ChainedHeader header = node.FullNode.ChainIndexer.GetHeader(3);
                 Block fetchBlock = node.FullNode.NodeService<IBlockStore>().GetBlock(header.HashBlock);
@@ -85,11 +85,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 ChainedHeader header = sendingNode.FullNode.ChainIndexer.GetHeader(3);
                 Block fetchBlock = sendingNode.FullNode.NodeService<IBlockStore>().GetBlock(header.HashBlock);
                 string blockHash = header.HashBlock.ToString();
+
                 // Transaction included in block at height 3.
                 string txId = fetchBlock.Transactions[0].GetHash().ToString();
 
@@ -107,7 +108,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Assert.
                 GetTransactionModel result = walletTx.Result.ToObject<GetTransactionModel>();
-                result.Amount.Should().Be((decimal)4.00000000);
+                result.Amount.Should().Be(this.network.Consensus.ProofOfWorkReward.ToDecimal(MoneyUnit.BTC));
                 result.Fee.Should().BeNull();
                 result.Confirmations.Should().Be(148);
                 result.Isgenerated.Should().BeTrue();
@@ -115,13 +116,13 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 result.BlockHash.ToString().Should().Be(blockHash);
                 result.BlockIndex.Should().Be(0);
                 result.BlockTime.Should().Be(header.Header.Time);
-                result.TimeReceived.Should().Be(fetchBlock.Transactions[0].Time);
-                result.TransactionTime.Should().Be(fetchBlock.Transactions[0].Time);
+                result.TimeReceived.Should().Be(fetchBlock.Header.Time);
+                result.TransactionTime.Should().Be(fetchBlock.Header.Time);
                 result.Details.Should().ContainSingle();
 
                 GetTransactionDetailsModel details = result.Details.Single();
                 details.Address.Should().Be(fetchBlock.Transactions[0].Outputs[0].ScriptPubKey.GetDestinationAddress(this.network).ToString());
-                details.Amount.Should().Be((decimal)4.00000000);
+                details.Amount.Should().Be(this.network.Consensus.ProofOfWorkReward.ToDecimal(MoneyUnit.BTC));
                 details.Fee.Should().BeNull();
                 details.Category.Should().Be(GetTransactionDetailsCategoryModel.Generate);
                 details.OutputIndex.Should().Be(0);
@@ -134,7 +135,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 
                 ChainedHeader header = sendingNode.FullNode.ChainIndexer.GetHeader(145);
                 Block fetchBlock = sendingNode.FullNode.NodeService<IBlockStore>().GetBlock(header.HashBlock);
@@ -157,7 +158,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Assert.
                 GetTransactionModel result = walletTx.Result.ToObject<GetTransactionModel>();
-                result.Amount.Should().Be((decimal)4.00000000);
+                result.Amount.Should().Be(this.network.Consensus.ProofOfWorkReward.ToDecimal(MoneyUnit.BTC));
                 result.Fee.Should().BeNull();
                 result.Confirmations.Should().Be(6);
                 result.Isgenerated.Should().BeTrue();
@@ -170,7 +171,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 GetTransactionDetailsModel details = result.Details.Single();
                 details.Address.Should().Be(fetchBlock.Transactions[0].Outputs[0].ScriptPubKey.GetDestinationAddress(this.network).ToString());
-                details.Amount.Should().Be((decimal)4.00000000);
+                details.Amount.Should().Be(this.network.Consensus.ProofOfWorkReward.ToDecimal(MoneyUnit.BTC));
                 details.Fee.Should().BeNull();
                 details.Category.Should().Be(GetTransactionDetailsCategoryModel.Immature);
                 details.OutputIndex.Should().Be(0);
@@ -184,8 +185,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 // Create a sending and a receiving node.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
@@ -303,8 +304,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 // Create a sending and a receiving node.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
@@ -376,7 +377,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 resultSendingWallet.BlockIndex.Should().Be(1);
                 resultSendingWallet.BlockTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.TimeReceived.Should().BeGreaterThan((DateTimeOffset.Now - TimeSpan.FromMinutes(1)).ToUnixTimeSeconds());
-                resultSendingWallet.TransactionTime.Should().Be(((PosTransaction)trx).Time);
+                resultSendingWallet.TransactionTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.Details.Count.Should().Be(1);
 
                 GetTransactionDetailsModel detailsSendingWallet = resultSendingWallet.Details.Single();
@@ -415,8 +416,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 // Create a sending and a receiving node.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
@@ -488,7 +489,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 resultSendingWallet.BlockIndex.Should().Be(1);
                 resultSendingWallet.BlockTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.TimeReceived.Should().BeGreaterThan((DateTimeOffset.Now - TimeSpan.FromMinutes(1)).ToUnixTimeSeconds());
-                resultSendingWallet.TransactionTime.Should().Be(((PosTransaction)trx).Time);
+                resultSendingWallet.TransactionTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.Details.Count.Should().Be(2);
 
                 GetTransactionDetailsModel detailsSendingWalletFirstRecipient = resultSendingWallet.Details.Single(d => d.Address == unusedaddresses.First());
@@ -541,8 +542,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
@@ -610,7 +611,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 resultSendingWallet.BlockIndex.Should().Be(1);
                 resultSendingWallet.BlockTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.TimeReceived.Should().BeGreaterThan((DateTimeOffset.Now - TimeSpan.FromMinutes(1)).ToUnixTimeSeconds());
-                resultSendingWallet.TransactionTime.Should().Be(((PosTransaction)trx).Time);
+                resultSendingWallet.TransactionTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.Details.Count.Should().Be(2);
 
                 GetTransactionDetailsModel detailsReceivingWallet = resultSendingWallet.Details.Single(d => d.Category == GetTransactionDetailsCategoryModel.Receive);
@@ -633,8 +634,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
-                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Miner).Start();
-                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest150Listener).Start();
+                CoreNode sendingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode receivingNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Listener).Start();
 
                 TestHelper.ConnectAndSync(sendingNode, receivingNode);
 
@@ -702,7 +703,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 resultSendingWallet.BlockIndex.Should().Be(1);
                 resultSendingWallet.BlockTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.TimeReceived.Should().BeLessOrEqualTo(blockModelAtTip.Time);
-                resultSendingWallet.TransactionTime.Should().Be(((PosTransaction)trx).Time);
+                resultSendingWallet.TransactionTime.Should().Be(blockModelAtTip.Time);
                 resultSendingWallet.Details.Count.Should().Be(1);
 
                 GetTransactionDetailsModel detailsSendingWallet = resultSendingWallet.Details.Single();

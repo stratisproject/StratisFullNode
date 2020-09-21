@@ -43,10 +43,5 @@ namespace Stratis.SmartContracts.Core
         /// Height of the current block in the chain.
         /// </summary>
         ulong BlockHeight { get; }
-
-        /// <summary>
-        /// Time as set on transaction.
-        /// </summary>
-        uint Time { get; }
     }
 }

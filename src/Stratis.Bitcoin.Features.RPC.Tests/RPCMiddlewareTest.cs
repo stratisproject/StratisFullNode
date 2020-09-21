@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
                 return newHttpContext;
             });
 
-            var nodeSettings = new NodeSettings(new StratisRegTest());
+            var nodeSettings = new NodeSettings(new StraxRegTest());
 
             this.rpcSettings = new RpcSettings(nodeSettings);
 

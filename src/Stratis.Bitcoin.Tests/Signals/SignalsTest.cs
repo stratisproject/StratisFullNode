@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Tests.Signals
         [Fact]
         public void SignalBlockBroadcastsToBlockSignaler()
         {
-            Block block = KnownNetworks.StratisMain.CreateBlock();
+            Block block = KnownNetworks.StraxMain.CreateBlock();
             ChainedHeader header = ChainedHeadersHelper.CreateGenesisChainedHeader();
             var chainedHeaderBlock = new ChainedHeaderBlock(block, header);
 
@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Tests.Signals
         [Fact]
         public void SignalBlockDisconnectedToBlockSignaler()
         {
-            Block block = KnownNetworks.StratisMain.CreateBlock();
+            Block block = KnownNetworks.StraxMain.CreateBlock();
             ChainedHeader header = ChainedHeadersHelper.CreateGenesisChainedHeader();
             var chainedHeaderBlock = new ChainedHeaderBlock(block, header);
 
@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Tests.Signals
         [Fact]
         public void SignalTransactionBroadcastsToTransactionSignaler()
         {
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
 
             bool signaled = false;
             using (SubscriptionToken sub = this.signals.Subscribe<TransactionReceived>(transaction1 => signaled = true))
@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Tests.Signals
         [Fact]
         public void SignalUnsubscribingPreventTriggeringPreviouslySubscribedAction()
         {
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
 
             bool signaled = false;
             using (SubscriptionToken sub = this.signals.Subscribe<TransactionReceived>(transaction1 => signaled = true))

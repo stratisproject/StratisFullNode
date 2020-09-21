@@ -570,9 +570,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 uint minTimestamp = chainTip.Header.Time + 1;
                 if (coinstakeContext.StakeTimeSlot >= minTimestamp)
                 {
-                    // Make sure coinstake would meet timestamp protocol as it would be the same as the block timestamp.
                     block.Header.Time = coinstakeContext.StakeTimeSlot;
-                    block.Transactions[0].Time = coinstakeContext.StakeTimeSlot;
 
                     block.Transactions.Insert(1, coinstakeContext.CoinstakeTx);
 
@@ -679,21 +677,6 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
             this.logger.LogDebug("Worker #{0} found the kernel.", workersResult.KernelFoundIndex);
 
-            // We have to make sure that we have no future timestamps in our transactions set.
-            // We ignore the coinbase (it gets its timestamp reset after the coinstake is created).
-            for (int i = blockTemplate.Block.Transactions.Count - 1; i >= 1; i--)
-            {
-                // We have not yet updated the header timestamp, so we use the coinstake timestamp directly here.
-                if (blockTemplate.Block.Transactions[i].Time <= coinstakeContext.StakeTimeSlot)
-                    continue;
-
-                // Update the total fees, with the to-be-removed transaction taken into account.
-                fees -= blockTemplate.FeeDetails[blockTemplate.Block.Transactions[i].GetHash()].Satoshi;
-
-                this.logger.LogDebug("Removing transaction with timestamp {0} as it is greater than coinstake transaction timestamp {1}. New fee amount {2}.", blockTemplate.Block.Transactions[i].Time, coinstakeContext.StakeTimeSlot, fees);
-                blockTemplate.Block.Transactions.Remove(blockTemplate.Block.Transactions[i]);
-            }
-
             // Get reward for newly created block.
             long reward = fees + this.consensusManager.ConsensusRules.GetRule<PosCoinviewRule>().GetProofOfStakeReward(chainTip.Height + 1);
             if (reward <= 0)
@@ -713,9 +696,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
             int eventuallyStakableUtxosCount = utxoStakeDescriptions.Count;
             Transaction coinstakeTx = this.PrepareCoinStakeTransactions(chainTip.Height, coinstakeContext, coinstakeOutputValue, eventuallyStakableUtxosCount, ourWeight, reward);
-
-            coinstakeTx.Time = coinstakeContext.StakeTimeSlot;
-
+            
             // Sign.
             if (!this.SignTransactionInput(coinstakeInput, coinstakeTx))
             {
@@ -822,17 +803,17 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                         break;
                     }
 
-                    uint txTime = context.CoinstakeContext.StakeTimeSlot - n;
+                    uint blockTime = context.CoinstakeContext.StakeTimeSlot - n;
 
                     // Once we reach previous block time + 1, we can't go any lower
                     // because it is required that the block time is greater than the previous block time.
-                    if (txTime < minimalAllowedTime)
+                    if (blockTime < minimalAllowedTime)
                         break;
 
-                    if ((txTime & PosConsensusOptions.StakeTimestampMask) != 0)
+                    if ((blockTime & PosConsensusOptions.StakeTimestampMask) != 0)
                         continue;
 
-                    context.Logger.LogDebug("Trying with transaction time {0}.", txTime);
+                    context.Logger.LogDebug("Trying with block time {0}.", blockTime);
 
                     try
                     {
@@ -840,7 +821,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
                         var contextInformation = new PosRuleContext(BlockStake.Load(block));
 
-                        var validKernel = this.stakeValidator.CheckKernel(contextInformation, chainTip, block.Header.Bits, txTime, prevoutStake);
+                        var validKernel = this.stakeValidator.CheckKernel(contextInformation, chainTip, block.Header.Bits, blockTime, prevoutStake);
 
                         if (!validKernel)
                         {
@@ -855,7 +836,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                             context.CoinstakeContext.Key = wallet.GetExtendedPrivateKeyForAddress(utxoStakeInfo.Secret.WalletPassword, utxoStakeInfo.Address).PrivateKey;
                             utxoStakeInfo.Key = context.CoinstakeContext.Key;
 
-                            context.CoinstakeContext.StakeTimeSlot = txTime;
+                            context.CoinstakeContext.StakeTimeSlot = blockTime;
                             context.CoinstakeContext.CoinstakeTx.AddInput(new TxIn(prevoutStake));
                             Script scriptPubKeyOut;
 
@@ -1004,12 +985,6 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 if (depth < requiredDepth)
                 {
                     this.logger.LogDebug("UTXO '{0}' depth {1} is lower than required minimum depth {2}.", utxoStakeDescription.OutPoint, depth, requiredDepth); this.logger.LogDebug("UTXO '{0}' depth {1} is lower than required minimum depth {2}.", utxoStakeDescription.OutPoint, depth, requiredDepth);
-                    continue;
-                }
-
-                if (utxoStakeDescription.UtxoSet.Coins.Time > spendTime)
-                {
-                    this.logger.LogDebug("UTXO '{0}' can't be added because its time {1} is greater than coinstake time {2}.", utxoStakeDescription.OutPoint, utxoStakeDescription.UtxoSet.Coins.Time, spendTime);
                     continue;
                 }
 

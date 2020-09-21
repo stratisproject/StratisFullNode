@@ -863,43 +863,5 @@ namespace Stratis.Bitcoin.IntegrationTests
             //    SetMockTime(0);
             //    mempool.clear();
         }
-
-        [Fact]
-        public void Miner_PosNetwork_CreatePowTransaction_AheadOfFutureDrift_ShouldNotBeIncludedInBlock()
-        {
-            var network = KnownNetworks.StratisRegTest;
-
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                CoreNode stratisMiner = builder.CreateStratisPosNode(network).WithWallet().Start();
-
-                int maturity = (int)network.Consensus.CoinbaseMaturity;
-                TestHelper.MineBlocks(stratisMiner, maturity + 5);
-
-                // Send coins to the receiver
-                var context = WalletTests.CreateContext(network, new WalletAccountReference(WalletName, Account), Password, new Key().PubKey.GetAddress(network).ScriptPubKey, Money.COIN * 100, FeeType.Medium, 1);
-
-                Transaction trx = stratisMiner.FullNode.WalletTransactionHandler().BuildTransaction(context);
-
-                // This should make the mempool reject a POS trx.
-                trx.Time = Utils.DateTimeToUnixTime(Utils.UnixTimeToDateTime(trx.Time).AddMinutes(5));
-
-                // Sign trx again after changing the time property.
-                trx = context.TransactionBuilder.SignTransaction(trx);
-
-                var broadcaster = stratisMiner.FullNode.NodeService<IBroadcasterManager>();
-
-                broadcaster.BroadcastTransactionAsync(trx).GetAwaiter().GetResult();
-                var entry = broadcaster.GetTransaction(trx.GetHash());
-
-                Assert.Equal(TransactionBroadcastState.ToBroadcast, entry.TransactionBroadcastState);
-
-                Assert.NotNull(stratisMiner.FullNode.MempoolManager().GetTransaction(trx.GetHash()).Result);
-
-                TestHelper.MineBlocks(stratisMiner, 1);
-
-                Assert.NotNull(stratisMiner.FullNode.MempoolManager().GetTransaction(trx.GetHash()).Result);
-            }
-        }
     }
 }

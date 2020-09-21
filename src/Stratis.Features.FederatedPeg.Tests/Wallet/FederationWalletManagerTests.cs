@@ -23,7 +23,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
         public FederationWalletManagerTests()
         {
-            this.network = new StratisMain();
+            this.network = new StraxMain();
 
             var base58 = new Key().PubKey.GetAddress(this.network).ToString();
             this.federationMultiSigAddress = BitcoinAddress.Create(base58, this.network);
@@ -56,7 +56,6 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
             // Create a spending transaction that spends transaction A
             Transaction transactionB = this.network.CreateTransaction();
-            transactionB.Time = transactionA.Time + 1;
             transactionB.AddInput(transactionA, 0);
             transactionB.AddOutput(new TxOut(Money.Coins(5), this.federationMultiSigAddress));
             federationWalletManager.ProcessTransaction(transactionB);
@@ -74,7 +73,6 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
             // Create another spending transaction that also spends transaction A
             Transaction transactionC = this.network.CreateTransaction();
-            transactionC.Time = transactionB.Time + 1;
             transactionC.AddInput(transactionA, 0);
             transactionC.AddOutput(new TxOut(Money.Coins(5), this.federationMultiSigAddress));
             federationWalletManager.ProcessTransaction(transactionC);

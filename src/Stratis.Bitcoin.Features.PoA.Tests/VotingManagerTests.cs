@@ -3,7 +3,6 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA.Voting;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
@@ -104,14 +103,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void CanCreateVotingRequest()
         {
-            var counterChainNetwork = new StratisTest();
-
             var addressKey = new Key();
             var miningKey = new Key();
-
-            Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(addressKey.PubKey);
-
-            BitcoinAddress address = collateralScript.GetDestinationAddress(counterChainNetwork);
 
             var votingRequest = new JoinFederationRequest(miningKey.PubKey, new Money(10_000m, MoneyUnit.BTC), addressKey.PubKey.Hash);
 

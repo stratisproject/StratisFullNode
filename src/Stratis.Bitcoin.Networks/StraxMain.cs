@@ -5,9 +5,6 @@ using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
-using Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules;
-using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Networks.Policies;
 
@@ -30,8 +27,8 @@ namespace Stratis.Bitcoin.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = StraxNetworkConstants.StraxRootFolderName;
-            this.DefaultConfigFilename = StraxNetworkConstants.StraxDefaultConfigFilename;
+            this.RootFolderName = StraxNetwork.StraxRootFolderName;
+            this.DefaultConfigFilename = StraxNetwork.StraxDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "STRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
@@ -43,13 +40,13 @@ namespace Stratis.Bitcoin.Networks
 
             // Create the genesis block.
             this.GenesisTime = 1598918400; // 1 September 2020
-            this.GenesisNonce = 128917; // TODO: Update this once the final block is mined
+            this.GenesisNonce = 1236386;
             this.GenesisBits = 0x1e0fffff; // The difficulty target
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
             // TODO: Update the genesis text to a dated newspaper article closer to launch
-            Block genesisBlock = CreateStraxGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "straxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "straxgenesisblock");
 
             this.Genesis = genesisBlock;
 
@@ -150,123 +147,11 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000016c94cd31b3b84465335f7ceca6491ae6b54c7b8fafc6862e78b090ebe3"));
-            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xaa489ed22a8d82af81f0f124a16d9c61657b5fcf2708e0aecf3f78bbc6afb2ab"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000921702bd55eb8c4318a8dbcfca29b9d340b1856c6af0b8962a3a0e12fff"));
+            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xb21368a732cb9ae9b34a45eea13ce1b7cdb3c4b02991d3f715022d67d2b51c8d"));
 
-            this.RegisterRules(this.Consensus);
-            this.RegisterMempoolRules(this.Consensus);
-        }
-
-        protected void RegisterRules(IConsensus consensus)
-        {
-            consensus.ConsensusRules
-                .Register<HeaderTimeChecksRule>()
-                .Register<HeaderTimeChecksPosRule>()
-                .Register<PosFutureDriftRule>()
-                .Register<CheckDifficultyPosRule>()
-                .Register<StratisHeaderVersionRule>()
-                .Register<ProvenHeaderSizeRule>()
-                .Register<ProvenHeaderCoinstakeRule>();
-
-            consensus.ConsensusRules
-                .Register<BlockMerkleRootRule>()
-                .Register<PosBlockSignatureRepresentationRule>()
-                .Register<PosBlockSignatureRule>();
-
-            consensus.ConsensusRules
-                .Register<SetActivationDeploymentsPartialValidationRule>()
-                .Register<PosTimeMaskRule>()
-
-                // rules that are inside the method ContextualCheckBlock
-                .Register<TransactionLocktimeActivationRule>()
-                .Register<CoinbaseHeightActivationRule>()
-                .Register<WitnessCommitmentsRule>()
-                .Register<BlockSizeRule>()
-
-                // rules that are inside the method CheckBlock
-                .Register<EnsureCoinbaseRule>()
-                .Register<CheckPowTransactionRule>()
-                .Register<CheckPosTransactionRule>()
-                .Register<CheckSigOpsRule>()
-                .Register<StraxCoinstakeRule>();
-
-            consensus.ConsensusRules
-                .Register<SetActivationDeploymentsFullValidationRule>()
-
-                .Register<CheckDifficultyHybridRule>()
-
-                // rules that require the store to be loaded (coinview)
-                .Register<LoadCoinviewRule>()
-                .Register<TransactionDuplicationActivationRule>()
-                .Register<StraxCoinviewRule>() // implements BIP68, MaxSigOps and BlockReward calculation
-                                             // Place the PosColdStakingRule after the PosCoinviewRule to ensure that all input scripts have been evaluated
-                                             // and that the "IsColdCoinStake" flag would have been set by the OP_CHECKCOLDSTAKEVERIFY opcode if applicable.
-                .Register<StraxColdStakingRule>()
-                .Register<SaveCoinviewRule>();
-        }
-
-        protected void RegisterMempoolRules(IConsensus consensus)
-        {
-            consensus.MempoolRules = new List<Type>()
-            {
-                typeof(CheckConflictsMempoolRule),
-                typeof(CheckCoinViewMempoolRule),
-                typeof(CreateMempoolEntryMempoolRule),
-                typeof(CheckSigOpsMempoolRule),
-                typeof(CheckFeeMempoolRule),
-                typeof(CheckRateLimitMempoolRule),
-                typeof(CheckAncestorsMempoolRule),
-                typeof(CheckReplacementMempoolRule),
-                typeof(CheckAllInputsMempoolRule),
-                typeof(CheckTxOutDustRule)
-            };
-        }
-
-        protected Block CreateStraxGenesisBlock(ConsensusFactory consensusFactory, uint time, uint nonce, uint bits, int version, Money genesisReward, string genesisText)
-        {
-            Transaction txNew = consensusFactory.CreateTransaction();
-            txNew.Version = 1;
-            txNew.Time = time;
-            txNew.AddInput(new TxIn()
-            {
-                ScriptSig = new Script(Op.GetPushOp(0), new Op()
-                {
-                    Code = (OpcodeType)0x1,
-                    PushData = new[] { (byte)42 }
-                }, Op.GetPushOp(Encoders.ASCII.DecodeData(genesisText)))
-            });
-            txNew.AddOutput(new TxOut()
-            {
-                Value = genesisReward,
-            });
-
-            Block genesis = consensusFactory.CreateBlock();
-            genesis.Header.BlockTime = Utils.UnixTimeToDateTime(time);
-            genesis.Header.Bits = bits;
-            genesis.Header.Nonce = nonce;
-            genesis.Header.Version = version;
-            genesis.Transactions.Add(txNew);
-            genesis.Header.HashPrevBlock = uint256.Zero;
-            genesis.UpdateMerkleRoot();
-
-            /*
-            Procedure for creating a new genesis block:
-            1. Create the template block as above in the CreateStraxGenesisBlock method
-
-            3. Iterate over the nonce until the proof-of-work is valid
-
-            while (!genesis.CheckProofOfWork())
-            {
-                genesis.Header.Nonce++;
-                if (genesis.Header.Nonce == 0)
-                    genesis.Header.Time++;
-            }
-
-            4. This will mean the block header hash is under the target
-            5. Retrieve the Nonce and Time values from the resulting block header and insert them into the network definition
-            */
-
-            return genesis;
+            StraxNetwork.RegisterRules(this.Consensus);
+            StraxNetwork.RegisterMempoolRules(this.Consensus);
         }
     }
 }

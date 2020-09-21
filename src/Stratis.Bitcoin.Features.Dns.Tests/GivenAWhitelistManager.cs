@@ -299,7 +299,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                 })
                 .Verifiable();
 
-            Network network = KnownNetworks.StratisTest;
+            Network network = KnownNetworks.StraxTest;
             var nodeSettings = new NodeSettings(network, args: args);
             DnsSettings dnsSettings = new DnsSettings(NodeSettings.Default(this.Network));
             dnsSettings.DnsPeerBlacklistThresholdInSeconds = inactiveTimePeriod;
@@ -386,7 +386,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                 })
                 .Verifiable();
 
-            Network network = KnownNetworks.StratisTest;
+            Network network = KnownNetworks.StraxTest;
             var nodeSettings = new NodeSettings(network, args: args);
             DnsSettings dnsSettings = new DnsSettings(NodeSettings.Default(this.Network));
             dnsSettings.DnsFullNode = true;
