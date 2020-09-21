@@ -43,10 +43,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                         rewardScriptTotal += output.Value;
                 }
 
-                // It must be x% of the maximum possible reward.
-                // It must not be possible to short-change it by deliberately sacrificing the rest of the claimed reward.
+                // It must be CirrusRewardPercentage of the maximum possible reward precisely.
+                // This additionally protects cold staking transactions from over-allocating to the Cirrus reward script at the expense of the non-Cirrus reward.
+                // This means that the hot key can be used for staking by anybody and they will not be able to redirect the non-Cirrus reward to the Cirrus script.
+                // It must additionally not be possible to short-change the Cirrus reward script by deliberately sacrificing part of the overall claimed reward.
                 // TODO: Create a distinct consensus error for this?
-                if ((calcStakeReward * CirrusRewardPercentage / 100) > rewardScriptTotal)
+                if ((calcStakeReward * CirrusRewardPercentage / 100) != rewardScriptTotal)
                 {
                     this.Logger.LogTrace("(-)[BAD_COINSTAKE_REWARD_SCRIPT_AMOUNT]");
                     ConsensusErrors.BadCirrusRewardAmount.Throw();
