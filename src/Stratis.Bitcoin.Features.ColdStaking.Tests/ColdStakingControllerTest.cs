@@ -413,7 +413,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             ErrorModel error = errorResponse.Errors[0];
             Assert.Equal((int)HttpStatusCode.BadRequest, error.Status);
             Assert.StartsWith($"{nameof(Stratis)}.{nameof(Bitcoin)}.{nameof(Features)}.{nameof(Wallet)}.{nameof(WalletException)}", error.Description);
-            Assert.StartsWith("You can't use this wallet as both hot wallet and cold wallet.", error.Message);
+            Assert.StartsWith("You can't use this wallet as both the hot wallet and cold wallet.", error.Message);
         }
 
         /// <summary>
