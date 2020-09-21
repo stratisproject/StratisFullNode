@@ -537,7 +537,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 AddressIndex = addressIndex,
                 PubKey = pubKeyScript?.ToHex(),
                 ScriptPubKey = scriptPubKey?.ToHex(),
-                Bech32ScriptPubKey = bech32ScriptPubKey?.ToHex(),
                 Address = scriptPubKey?.GetDestinationAddress(this.Network).ToString() ?? "",
                 Bech32Address = bech32ScriptPubKey?.GetDestinationAddress(this.Network).ToString() ?? ""
             };
@@ -624,7 +623,8 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         private HDAddress CreateAddress(AddressIdentifier addressId)
         {
-            Script witScriptPubKey = Script.FromHex(addressId.Bech32ScriptPubKey);
+            var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(Script.FromHex(addressId.PubKeyScript));
+            Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
             return new HDAddress()
             {
@@ -635,7 +635,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 PubKey = addressId.PubKeyScript,
                 ScriptPubKey = addressId.ScriptPubKey,
                 Address = Script.FromHex(addressId.ScriptPubKey).GetDestinationAddress(this.Network).ToString(),
-                Bech32ScriptPubKey = addressId.Bech32ScriptPubKey,
                 Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString()
             };
         }
@@ -1219,8 +1218,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     PubKey = pubKey.ScriptPubKey.ToHex(),
                     ScriptPubKey = scriptPubKey.ToHex(),
                     Address = scriptPubKey.GetDestinationAddress(this.Network).ToString(),
-                    Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString(),
-                    Bech32ScriptPubKey = witScriptPubKey.ToHex()
+                    Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString()
                 }, this.Network);
 
                 hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
