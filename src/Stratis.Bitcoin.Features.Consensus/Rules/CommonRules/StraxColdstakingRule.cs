@@ -112,9 +112,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     ConsensusErrors.BadColdstakeOutputs.Throw();
                 }
             }
-
+            
             // Check that the sum of values of all inputs is smaller or equal to the sum of values of all outputs. If this does
-            // not hold, the script fails.
+            // not hold, the script fails. This prevents the hot balance from being reduced.
             if (posRuleContext.TotalCoinStakeValueIn > coinstakeTransaction.TotalOut)
             {
                 this.Logger.LogTrace("(-)[COLDSTAKE_INPUTS_EXCEED_OUTPUTS]");
