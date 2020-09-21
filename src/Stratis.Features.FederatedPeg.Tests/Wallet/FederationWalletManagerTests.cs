@@ -75,6 +75,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             Transaction transactionC = this.network.CreateTransaction();
             transactionC.AddInput(transactionA, 0);
             transactionC.AddOutput(new TxOut(Money.Coins(5), this.federationMultiSigAddress));
+            transactionC.LockTime = new LockTime(1); // need to make this transaction have a different hash from transactionB
             federationWalletManager.ProcessTransaction(transactionC);
 
             // Verify that transaction C is present and unspent.
