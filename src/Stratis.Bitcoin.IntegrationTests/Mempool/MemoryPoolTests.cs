@@ -11,6 +11,7 @@ using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
 using Stratis.Bitcoin.IntegrationTests.Wallet;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
@@ -466,7 +467,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         {
             var network = new StraxRegTest();
 
-            using (NodeBuilder builder = NodeBuilder.Create(this))
+            using (var builder = NodeBuilder.Create(this))
             {
                 CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
@@ -482,10 +483,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
                 {
                     if (output.ScriptPubKey.IsUnspendable)
                     {
-                        int[] data =
+                        var data = new int[StraxStandardScriptsRegistry.MaxOpReturnRelay + 1];
+                        for (int i = 0; i < StraxStandardScriptsRegistry.MaxOpReturnRelay + 1; i++)
                         {
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-                        };
+                            data[i] = 0;
+                        }
                         var ops = new Op[data.Length + 1];
                         ops[0] = OpcodeType.OP_RETURN;
                         for (int i = 0; i < data.Length; i++)
