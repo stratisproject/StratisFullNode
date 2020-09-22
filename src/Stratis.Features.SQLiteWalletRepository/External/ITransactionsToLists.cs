@@ -23,7 +23,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
 
         public abstract ITopUpTracker GetTopUpTracker(AddressIdentifier address);
         public abstract void RecordSpend(HashHeightPair block, TxIn txIn, string pubKeyScript, bool isCoinBase, long spendTime, Money totalOut, uint256 spendTxId, int spendIndex);
-        public abstract void RecordReceipt(HashHeightPair block, Script pubKeyScript, TxOut txOut, bool isCoinBase, long creationTime, uint256 outputTxId, int outputIndex, bool isChange);
+        public abstract void RecordReceipt(HashHeightPair block, Script pubKeyScript, TxOut txOut, bool isCoinBase, long creationTime, uint256 outputTxId, int outputIndex, string addressStr, bool isChange);
 
         public TransactionsToListsBase(Network network, IScriptAddressReader scriptAddressReader, IWalletTransactionLookup transactionsOfInterest, IWalletAddressLookup addressesOfInterest, IDateTimeProvider dateTimeProvider)
         {
@@ -34,46 +34,41 @@ namespace Stratis.Features.SQLiteWalletRepository.External
             this.dateTimeProvider = dateTimeProvider;
         }
 
-        internal IEnumerable<Script> GetDestinations(Script redeemScript)
+        internal IEnumerable<(TxDestination destination, KeyId keyId)> GetDestinations(Script redeemScript)
         {
-            ScriptTemplate scriptTemplate = this.network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(redeemScript);
+            var destinations = new List<TxDestination>() { redeemScript.GetDestination(this.network) };
 
-            if (scriptTemplate != null)
+            if (destinations[0] == null)
             {
-                // We need scripts suitable for matching to HDAddress.ScriptPubKey.
-                switch (scriptTemplate.Type)
-                {
-                    case TxOutType.TX_PUBKEYHASH:
-                        yield return redeemScript;
-                        break;
-                    case TxOutType.TX_PUBKEY:
-                        yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash.ScriptPubKey;
-                        break;
-                    case TxOutType.TX_SCRIPTHASH:
-                        yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).ScriptPubKey;
-                        break;
-                    case TxOutType.TX_SEGWIT:
-                        TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
-                        if (txDestination != null)
-                            yield return new KeyId(txDestination.ToBytes()).ScriptPubKey;
-                        break;
-                    default:
-                        if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
-                        {
-                            foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(this.network, redeemScript))
-                            {
-                                yield return destination.ScriptPubKey;
-                            }
-                        }
-                        else
-                        {
-                            string address = this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, redeemScript);
-                            TxDestination destination = ScriptDestinationReader.GetDestinationForAddress(address, this.network);
-                            if (destination != null)
-                                yield return destination.ScriptPubKey;
-                        }
+                destinations = redeemScript.GetDestinationPublicKeys(this.network)
+                                                    .Select(p => p.Hash)
+                                                    .ToList<TxDestination>();
+            }
 
-                        break;
+            if (destinations.Count == 1)
+            {
+                yield return (destinations[0], new KeyId(destinations[0].ToBytes()));
+            }
+            else
+            {
+                ScriptTemplate scriptTemplate = this.network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(redeemScript);
+
+                if (scriptTemplate != null)
+                {
+                    if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
+                    {
+                        foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(this.network, redeemScript))
+                        {
+                            yield return (destination, new KeyId(destination.ToBytes()));
+                        }
+                    }
+                    else
+                    {
+                        string address = this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, redeemScript);
+                        TxDestination destination = ScriptDestinationReader.GetDestinationForAddress(address, this.network);
+                        if (destination != null)
+                            yield return (destination, new KeyId(destination.ToBytes()));
+                    }
                 }
             }
         }
@@ -122,18 +117,20 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                     if (scriptPubKeyBytes.Length == 0 || scriptPubKeyBytes[0] == (byte)OpcodeType.OP_RETURN)
                         continue;
 
-                    var destinations = this.GetDestinations(txOut.ScriptPubKey);
+                    var destinations = this.GetDestinations(txOut.ScriptPubKey).Select(d => (d.destination, d.keyId.ScriptPubKey));
 
-                    bool isChange = destinations.Any(d => addressesOfInterest.Contains(d, out AddressIdentifier address2) && address2.AddressType == 1);
+                    bool isChange = destinations.Any(d => addressesOfInterest.Contains(d.ScriptPubKey, out AddressIdentifier address2) && address2.AddressType == 1);
 
                     if (addSpendTx)
                     {
                         // TODO: Why is this done? If the receipt is not to one of our addresses (i.e. identified in the loop coming next) then why bother trying to record it?
-                        this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, isChange);
+                        this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, "", isChange);
                     }
 
-                    foreach (Script pubKeyScript in destinations)
+                    foreach ((TxDestination destination, Script pubKeyScript) in destinations)
                     {
+                        var addressStr = destination.GetAddress(this.network).ToString();
+
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier address);
 
                         // Paying to one of our addresses?
@@ -162,7 +159,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             // will most likely have unintended consequences on areas of the code that do expect the outputs to have a value, such as staking.
 
                             // Record outputs received by our wallets.
-                            this.RecordReceipt(block, pubKeyScript, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, containsAddress && address.AddressType == 1);
+                            this.RecordReceipt(block, pubKeyScript, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, addressStr, containsAddress && address.AddressType == 1);
 
                             additions = true;
 
@@ -208,13 +205,14 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         new HashHeightPair(transactionData.BlockHash ?? 0, (int)transactionData.BlockHeight);
 
                     Script scriptPubKey = transactionData.ScriptPubKey;
-                    foreach (Script pubKeyScript in this.GetDestinations(scriptPubKey))
+                    foreach ((TxDestination destination, Script pubKeyScript) in this.GetDestinations(scriptPubKey).Select(d => (d.destination, d.keyId.ScriptPubKey)))
                     {
+                        var addressStr = destination.GetAddress(this.network).ToString();
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier targetAddress);
 
                         this.RecordReceipt(block, pubKeyScript, new TxOut(transactionData.Amount ?? 0, scriptPubKey),
                             (transactionData.IsCoinBase ?? false) || (transactionData.IsCoinStake ?? false),
-                            transactionData.CreationTime.ToUnixTimeSeconds(), transactionData.Id, transactionData.Index, address.AddressType == 1);
+                            transactionData.CreationTime.ToUnixTimeSeconds(), transactionData.Id, transactionData.Index, addressStr, address.AddressType == 1);
 
                         if (containsAddress)
                             transactionsOfInterest.AddTentative(new OutPoint(transactionData.Id, transactionData.Index), targetAddress);

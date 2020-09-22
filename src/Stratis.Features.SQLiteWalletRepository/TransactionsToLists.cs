@@ -40,7 +40,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             this.processBlocksInfo.PrevOuts.Add(prevOut);
         }
 
-        public override void RecordReceipt(HashHeightPair block, Script pubKeyScript, TxOut txOut, bool isCoinBase, long creationTime, uint256 outputTxId, int outputIndex, bool isChange)
+        public override void RecordReceipt(HashHeightPair block, Script pubKeyScript, TxOut txOut, bool isCoinBase, long creationTime, uint256 outputTxId, int outputIndex, string addressStr, bool isChange)
         {
             // Record outputs received by our wallets.
             var output = new TempOutput()
@@ -51,7 +51,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 // The ScriptPubKey from the txOut.
                 RedeemScript = txOut.ScriptPubKey.ToHex(),
 
-                Address = pubKeyScript?.GetDestinationAddress(this.conn.Repository.Network).ToString() ?? "",
+                Address = addressStr,
                 OutputBlockHeight = block?.Height,
                 OutputBlockHash = block?.Hash.ToString(),
                 OutputTxIsCoinBase = isCoinBase ? 1 : 0,
