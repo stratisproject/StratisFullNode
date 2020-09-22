@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         public void GetAllTransactionsReturnsTransactionsFromWallet()
         {
             var wallet = new Wallet();
-            AccountRoot stratisAccountRoot = CreateAccountRootWithHdAccountHavingAddresses(wallet, "StratisAccount", CoinType.Stratis);
+            AccountRoot stratisAccountRoot = CreateAccountRootWithHdAccountHavingAddresses(wallet, "StraxAccount", CoinType.Strax);
 
             TransactionData transaction1 = CreateTransaction(new uint256(1), new Money(15000), 1);
             TransactionData transaction2 = CreateTransaction(new uint256(2), new Money(91209), 1);
