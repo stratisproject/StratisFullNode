@@ -55,8 +55,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private const string hotWalletAddress1 = "XBi2GPJuP77KUVAsNddyJehjt2ZwbgGkE6";
         private const string coldWalletAddress2 = "XG7qNGZKXu5wZ7B1H5UN4nYBeUwXzGD5LB";
         private const string hotWalletAddress2 = "XBr725uHFeRWFcZzYFyPsDh9go5ViKZn7o";
-        private const string hotWalletSegwitAddress1 = "strat1qjrzc9ju366mdwa7rrjy36j2rlm2wmtp63vre6g";
-        private const string coldWalletSegwitAddress2 = "strat1qjt0ms2wnrnh7dgrnru6r9h4yzkt2y7xedlgcp9";
+        private const string hotWalletSegwitAddress1 = "strax1qq0hrkucp54wm2xksh38gfqwrgk0k99j8q57zsh";
+        private const string coldWalletSegwitAddress2 = "strax1qx38ea6az68v8szduwnlkwk7n7r29wl7hakf90q";
 
         private ColdStakingManager coldStakingManager;
         private ColdStakingController coldStakingController;
@@ -301,6 +301,22 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal(hotWalletAddress1, hotAddress1.Address);
             Assert.Equal(coldWalletAddress2, coldAddress2.Address);
             Assert.Equal(hotWalletAddress2, hotAddress2.Address);
+
+            PubKey ExtractPubKey(HdAddress address)
+            {
+                return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(address.Pubkey);
+            }
+
+            string Bech32Address(HdAddress address)
+            {
+                var witScript = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(ExtractPubKey(address));
+                var addressStr = witScript.GetDestinationAddress(KnownNetworks.StraxMain).ToString();
+                Assert.Equal(address.Bech32Address, addressStr);
+                return addressStr;
+            }
+
+            Assert.Equal(hotWalletSegwitAddress1, Bech32Address(hotAddress1));
+            Assert.Equal(coldWalletSegwitAddress2, Bech32Address(coldAddress2));
         }
 
         /// <summary>
@@ -571,8 +587,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             IActionResult result = this.coldStakingController.SetupColdStaking(new SetupColdStakingRequest
             {
-                HotWalletAddress = wallet1.GetAccount(walletAccount).ExternalAddresses.First().Bech32Address,
-                ColdWalletAddress = new Key().PubKey.GetSegwitAddress(this.Network).ToString(),
+                HotWalletAddress = hotWalletSegwitAddress1,
+                ColdWalletAddress = coldWalletSegwitAddress2,
                 WalletName = walletName1,
                 WalletAccount = walletAccount,
                 WalletPassword = walletPassword,
@@ -588,9 +604,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
             Assert.Equal(2, transaction.Outputs.Count);
             Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
-            Assert.Equal("OP_DUP OP_HASH160 970e19fc2f6565b0b1c65fd88ef1512cb3da4d7b OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 7655ed76b27b3d4efe2458d9999501c705bcfe3e OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
             Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
-            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 90c582cb91d6b6d777c31c891d4943fed4edac3a OP_ELSE 92dfb829d31cefe6a0731f3432dea41596a278d9 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
             Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
 
             // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
@@ -730,9 +746,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
             Assert.Equal(2, transaction.Outputs.Count);
             Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
-            Assert.Equal("OP_DUP OP_HASH160 3d36028dc0fd3d3e433c801d9ebfff05ea663816 OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 92189d7328a0981693f0af855a43b7b14e95f478 OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
             Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
-            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 90c582cb91d6b6d777c31c891d4943fed4edac3a OP_ELSE 92dfb829d31cefe6a0731f3432dea41596a278d9 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
             Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
 
             // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
