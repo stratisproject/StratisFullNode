@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Networks
                 new NetworkAddress(IPAddress.Parse("82.146.153.140"), 27105), // Iain
             };
 
-            this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new StraxStandardScriptsRegistry();
 
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 

@@ -9,14 +9,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
     public class HdAccountTest
     {
         [Fact]
-        public void GetCoinTypeHavingHdPathReturnsCointType()
+        public void GetCoinTypeHavingHdPathReturnsCoinType()
         {
             var account = new HdAccount();
-            account.HdPath = "1/2/105";
+            account.HdPath = "1/2/105105";
 
             CoinType result = account.GetCoinType();
 
-            Assert.Equal(CoinType.Stratis, result);
+            Assert.Equal(CoinType.Strax, result);
         }
 
         [Fact]

@@ -323,7 +323,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             if (thisIsColdWallet && thisIsHotWallet)
             {
                 this.logger.LogTrace("(-)[COLDSTAKE_BOTH_HOT_AND_COLD]");
-                throw new WalletException("You can't use this wallet as both hot wallet and cold wallet.");
+                throw new WalletException("You can't use this wallet as both the hot wallet and cold wallet.");
             }
 
             if (!thisIsColdWallet && !thisIsHotWallet)

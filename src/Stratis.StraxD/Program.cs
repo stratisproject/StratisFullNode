@@ -29,7 +29,7 @@ namespace Stratis.StraxD
             {
                 var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
                 {
-                    MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
+                    MinProtocolVersion = ProtocolVersion.PROVEN_HEADER_VERSION
                 };
 
                 IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
