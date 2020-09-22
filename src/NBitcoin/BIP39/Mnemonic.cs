@@ -26,9 +26,11 @@ namespace NBitcoin
             if(wordlist == null)
                 wordlist = Wordlist.AutoDetect(mnemonic) ?? Wordlist.English;
 
-            string[] words = mnemonic.Split(new char[] { ' ', '　' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] words = mnemonic.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            _Mnemonic = string.Join(wordlist.Space.ToString(), words);
+
             //if the sentence is not at least 12 characters or cleanly divisible by 3, it is bad!
-            if(!CorrectWordCount(words.Length))
+            if (!CorrectWordCount(words.Length))
             {
                 throw new FormatException("Word count should be equals to 12,15,18,21 or 24");
             }
