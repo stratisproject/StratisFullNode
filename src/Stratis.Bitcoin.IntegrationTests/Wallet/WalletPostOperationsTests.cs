@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Act.
                 string newAddedAccountName = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("wallet/account")
-                    .PostJsonAsync(new { walletName = this.walletWithFundsName, password = "password" })
+                    .PostJsonAsync(new { walletName = this.walletWithFundsName, password = this.walletWithFundsPassword  })
                     .ReceiveJson<string>();
 
                 // Assert.
