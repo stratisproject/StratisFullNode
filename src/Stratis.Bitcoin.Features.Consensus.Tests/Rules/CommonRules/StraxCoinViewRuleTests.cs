@@ -182,8 +182,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             // Coinstake marker.
             coinstakeTransaction.Outputs.Add(new TxOut(Money.Zero, (IDestination)null));
 
-            // Just assign the entire reward amount to the Cirrus reward script; this test isn't testing the reward logic.
-            coinstakeTransaction.Outputs.Add(new TxOut(this.network.Consensus.ProofOfStakeReward, StraxCoinstakeRule.CirrusRewardScript));
+            // Cirrus reward output
+            coinstakeTransaction.Outputs.Add(new TxOut(this.network.Consensus.ProofOfStakeReward * StraxCoinviewRule.CirrusRewardPercentage / 100, StraxCoinstakeRule.CirrusRewardScript));
             
             // Normal pay to public key that belongs to the second miner with value that
             // equals to the sum of the inputs.

@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             Transaction tx = this.Network.CreateTransaction();
             tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
 
-            var ops = new Op[StratisStandardScriptsRegistry.MaxOpReturnRelay];
+            var ops = new Op[StraxStandardScriptsRegistry.MaxOpReturnRelay];
             ops[0] = OpcodeType.OP_RETURN;
 
             for (int i = 1; i < ops.Length; i++)
@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             Transaction tx = this.Network.CreateTransaction();
             tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
 
-            var ops = new Op[StratisStandardScriptsRegistry.MaxOpReturnRelay + 1];
+            var ops = new Op[StraxStandardScriptsRegistry.MaxOpReturnRelay + 1];
             ops[0] = OpcodeType.OP_RETURN;
 
             for (int i = 1; i < ops.Length; i++)
