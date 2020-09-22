@@ -1106,7 +1106,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             walletManager.Start();
 
             (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            wallet.AccountsRoot.ElementAt(0).CoinType = CoinType.Stratis;
+            wallet.AccountsRoot.ElementAt(0).CoinType = CoinType.Strax;
 
             int result = walletManager.LastBlockHeight();
 
@@ -2882,17 +2882,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void CreateBip44PathWithChangeAddressReturnsPath()
         {
-            string result = HdOperations.CreateHdPath((int)CoinType.Stratis, 4, true, 3);
+            string result = HdOperations.CreateHdPath((int)CoinType.Strax, 4, true, 3);
 
-            Assert.Equal("m/44'/105'/4'/1/3", result);
+            Assert.Equal("m/44'/105105'/4'/1/3", result);
         }
 
         [Fact]
         public void CreateBip44PathWithoutChangeAddressReturnsPath()
         {
-            string result = HdOperations.CreateHdPath((int)CoinType.Stratis, 4, false, 3);
+            string result = HdOperations.CreateHdPath((int)CoinType.Strax, 4, false, 3);
 
-            Assert.Equal("m/44'/105'/4'/0/3", result);
+            Assert.Equal("m/44'/105105'/4'/0/3", result);
         }
 
         // TODO: Investigate the relevance of this test and remove it or fix it.

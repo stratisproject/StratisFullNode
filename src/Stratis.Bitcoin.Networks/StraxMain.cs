@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.Networks
             {
             };
 
-            this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new StraxStandardScriptsRegistry();
 
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
