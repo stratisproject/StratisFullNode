@@ -573,7 +573,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// <summary>
         /// Confirms that cold staking setup with the hot wallet will succeed if no issues (as per above test cases) are encountered.
         /// </summary>
-        [Fact(Skip = "Fixing segwit cold staking in separate PR")]
         public void SetupColdStakingWithHotWalletSegwitSucceeds()
         {
             this.Initialize();
@@ -715,7 +714,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// <summary>
         /// Confirms that cold staking setup with the cold wallet and segwit address will succeed if no issues (as per above test cases) are encountered.
         /// </summary>
-        [Fact(Skip="Fixing segwit cold staking in separate PR")]
         public void SetupColdStakingWithColdWalletSegwitSucceeds()
         {
             this.Initialize();
