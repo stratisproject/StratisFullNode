@@ -16,7 +16,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SQLiteWalletRepository;
 
-namespace Stratis.StratisDnsD
+namespace Stratis.StraxDnsD
 {
     /// <summary>
     /// Main entry point.
@@ -24,7 +24,7 @@ namespace Stratis.StratisDnsD
     public class Program
     {
         /// <summary>
-        /// The async entry point for the Stratis Dns process.
+        /// The async entry point for the Strax Dns process.
         /// </summary>
         /// <param name="args">Command line arguments.</param>
         /// <returns>A task used to await the operation.</returns>
@@ -32,9 +32,9 @@ namespace Stratis.StratisDnsD
         {
             try
             {
-                var nodeSettings = new NodeSettings(networksSelector:Networks.Stratis, protocolVersion:ProtocolVersion.PROVEN_HEADER_VERSION, args:args)
+                var nodeSettings = new NodeSettings(networksSelector:Networks.Strax, protocolVersion:ProtocolVersion.PROVEN_HEADER_VERSION, args:args)
                 {
-                    MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
+                    MinProtocolVersion = ProtocolVersion.PROVEN_HEADER_VERSION
                 };
 
                 var dnsSettings = new DnsSettings(nodeSettings);
@@ -54,7 +54,7 @@ namespace Stratis.StratisDnsD
                         .UseMempool()
                         .UseWallet()
                         .AddSQLiteWalletRepository()
-                        .AddPowPosMining(false)
+                        .AddPowPosMining(true)
                         .UseApi()
                         .AddRPC()
                         .UseDns()
