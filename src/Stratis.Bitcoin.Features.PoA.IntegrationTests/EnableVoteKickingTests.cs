@@ -9,7 +9,6 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 {
     public class EnableVoteKickingTests
     {
-
         [Fact]
         public async Task EnableAutoKick()
         {
