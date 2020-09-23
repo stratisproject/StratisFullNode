@@ -121,8 +121,7 @@ namespace SwapExtractionTool
 
         private async Task ProcessBlockForVoteTransactionsAsync(BlockTransactionDetailsModel block, int blockHeight)
         {
-            var totalNoVotes = 0;
-            var totalYesVotes = 0;
+            var castVotes = new List<CastVote>();
 
             // Inspect each transaction
             foreach (TransactionVerboseModel transaction in block.Transactions)
@@ -150,15 +149,20 @@ namespace SwapExtractionTool
                             .SetQueryParams(new { address = potentialStratAddress })
                             .GetJsonAsync();
 
+                        AddressBalancesResult balance = await $"http://localhost:{this.stratisNetworkApiPort}/api"
+                            .AppendPathSegment("blockstore/getaddressesbalances")
+                            .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 1 })
+                            .GetJsonAsync<AddressBalancesResult>();
+
                         if (isVoteValue == "0")
                         {
-                            totalNoVotes++;
+                            castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false });
                             Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : no");
                         }
 
                         if (isVoteValue == "1")
                         {
-                            totalYesVotes++;
+                            castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true });
                             Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : yes");
                         }
                     }
@@ -168,8 +172,8 @@ namespace SwapExtractionTool
                 }
             }
 
-            Console.WriteLine($"Total No Votes: {totalNoVotes}");
-            Console.WriteLine($"Total Yes Votes: {totalYesVotes}");
+            Console.WriteLine($"Total No Votes: {castVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(castVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
+            Console.WriteLine($"Total Yes Votes: {castVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(castVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
         }
 
         private async Task BuildAndSendDistributionTransactionsAsync()
