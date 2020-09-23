@@ -10,7 +10,7 @@ using Flurl;
 using Flurl.Http;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
-using NBitcoin.DataEncoders;
+using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -22,7 +22,7 @@ namespace SwapExtractionTool
         private const string walletName = "";
         private const string walletPassword = "";
 
-        private readonly Network stratisNetwork;
+        private readonly int stratisNetworkApiPort;
         private readonly Network straxNetwork;
 
         private readonly List<SwapTransaction> swapTransactions;
@@ -30,65 +30,71 @@ namespace SwapExtractionTool
         /// <summary>
         /// This is the block height from which to start scanning from.
         /// </summary>
-        private const int StartHeight = 1_487_140;
-        private const int EndHeight = 1_487_160;
+        private const int StartHeight = 1494786;
+        private const int EndHeight = 1494787;
 
-        public SwapExtractionService(Network stratisNetwork, Network straxNetwork)
+        public SwapExtractionService(int stratisNetworkApiPort, Network straxNetwork)
         {
-            this.stratisNetwork = stratisNetwork;
+            this.stratisNetworkApiPort = stratisNetworkApiPort;
             this.straxNetwork = straxNetwork;
             this.swapTransactions = new List<SwapTransaction>();
         }
 
-        public async Task RunAsync(bool distribute = false)
+        public async Task RunAsync(ExtractionType extractionType, bool distribute = false)
         {
             for (int height = StartHeight; height < EndHeight; height++)
             {
-                Block block = await RetrieveBlockAtHeightAsync(height);
-                ProcessBlockForSwapTransactions(block, height);
+                BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
+
+                if (extractionType == ExtractionType.Swap)
+                    ProcessBlockForSwapTransactions(block, height);
+
+                if (extractionType == ExtractionType.Vote)
+                    await ProcessBlockForVoteTransactionsAsync(block, height);
             }
 
-            Console.WriteLine($"Writing {this.swapTransactions.Count} swap transactions.");
-
-            using (var writer = new StreamWriter(Path.Combine("c:", "[StratisWork]", "swaps.csv")))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            if (extractionType == ExtractionType.Swap)
             {
-                foreach (SwapTransaction swapTransaction in this.swapTransactions)
-                {
-                    csv.WriteRecord(swapTransaction);
-                }
-            }
+                Console.WriteLine($"Writing {this.swapTransactions.Count} swap transactions.");
 
-            if (distribute)
-                await BuildAndSendDistributionTransactionsAsync();
+                using (var writer = new StreamWriter(Path.Combine("c:", "[StratisWork]", "swaps.csv")))
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    foreach (SwapTransaction swapTransaction in this.swapTransactions)
+                    {
+                        csv.WriteRecord(swapTransaction);
+                    }
+                }
+
+                if (distribute)
+                    await BuildAndSendDistributionTransactionsAsync();
+            }
         }
 
-        private async Task<Block> RetrieveBlockAtHeightAsync(int blockHeight)
+        private async Task<BlockTransactionDetailsModel> RetrieveBlockAtHeightAsync(int blockHeight)
         {
-            var blockHash = await $"http://localhost:{this.stratisNetwork.DefaultAPIPort}/api"
+            var blockHash = await $"http://localhost:{this.stratisNetworkApiPort}/api"
                 .AppendPathSegment("consensus/getblockhash")
                 .SetQueryParams(new { height = blockHeight })
                 .GetJsonAsync<string>();
 
-            var blockHex = await $"http://localhost:{this.stratisNetwork.DefaultAPIPort}/api"
+            BlockTransactionDetailsModel blockModel = await $"http://localhost:{this.stratisNetworkApiPort}/api"
                 .AppendPathSegment("blockstore/block")
-                .SetQueryParams(new SearchByHashRequest() { Hash = blockHash })
-                .GetJsonAsync<string>();
+                .SetQueryParams(new SearchByHashRequest() { Hash = blockHash, ShowTransactionDetails = true, OutputJson = true })
+                .GetJsonAsync<BlockTransactionDetailsModel>();
 
-            var block = Block.Load(Encoders.Hex.DecodeData(blockHex), this.stratisNetwork.Consensus.ConsensusFactory);
-
-            return block;
+            return blockModel;
         }
 
-        private void ProcessBlockForSwapTransactions(Block block, int blockHeight)
+        private void ProcessBlockForSwapTransactions(BlockTransactionDetailsModel block, int blockHeight)
         {
             // Inspect each transaction
-            foreach (Transaction transaction in block.Transactions)
+            foreach (TransactionVerboseModel transaction in block.Transactions)
             {
-                // Find all the OP_RETURN outputs.
-                foreach (TxOut output in transaction.Outputs.Where(o => o.ScriptPubKey.IsUnspendable))
+                //Find all the OP_RETURN outputs.
+                foreach (Vout output in transaction.VOut.Where(o => o.ScriptPubKey.Type == "nulldata"))
                 {
-                    IList<Op> ops = output.ScriptPubKey.ToOps();
+                    IList<Op> ops = new NBitcoin.Script(output.ScriptPubKey.Asm).ToOps();
                     var potentialStraxAddress = Encoding.ASCII.GetString(ops.Last().PushData);
                     try
                     {
@@ -99,8 +105,8 @@ namespace SwapExtractionTool
                         {
                             BlockHeight = blockHeight,
                             StraxAddress = validStraxAddress.ToString(),
-                            SenderAmount = output.Value,
-                            TransactionHash = transaction.GetHash().ToString()
+                            SenderAmount = Money.Coins(output.Value),
+                            TransactionHash = transaction.Hash
                         };
 
                         this.swapTransactions.Add(swapTransaction);
@@ -108,6 +114,57 @@ namespace SwapExtractionTool
                     catch (Exception)
                     {
                     }
+                }
+            }
+
+        }
+
+        private async Task ProcessBlockForVoteTransactionsAsync(BlockTransactionDetailsModel block, int blockHeight)
+        {
+            var totalNoVotes = 0;
+            var totalYesVotes = 0;
+
+            // Inspect each transaction
+            foreach (TransactionVerboseModel transaction in block.Transactions)
+            {
+                // Find the first the OP_RETURN output.
+                Vout opReturnOutput = transaction.VOut.FirstOrDefault(v => v.ScriptPubKey.Type == "nulldata");
+                if (opReturnOutput == null)
+                    continue;
+
+                IList<Op> ops = new NBitcoin.Script(opReturnOutput.ScriptPubKey.Asm).ToOps();
+                var potentialVote = Encoding.ASCII.GetString(ops.Last().PushData);
+                try
+                {
+                    var isVote = potentialVote.Substring(0, 1);
+                    if (isVote != "V")
+                        continue;
+
+                    var isVoteValue = potentialVote.Substring(1, 1);
+                    if (isVoteValue == "1" || isVoteValue == "0")
+                    {
+                        // Verify the sender address is a valid Strat address
+                        var potentialStratAddress = potentialVote.Substring(2);
+                        dynamic validateResult = await $"http://localhost:{this.stratisNetworkApiPort}/api"
+                            .AppendPathSegment("node/validateaddress")
+                            .SetQueryParams(new { address = potentialStratAddress })
+                            .GetJsonAsync();
+
+                        if (isVoteValue == "0")
+                        {
+                            totalNoVotes++;
+                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : no");
+                        }
+
+                        if (isVoteValue == "1")
+                        {
+                            totalYesVotes++;
+                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : yes");
+                        }
+                    }
+                }
+                catch (Exception)
+                {
                 }
             }
         }
@@ -187,6 +244,12 @@ namespace SwapExtractionTool
                 }
             }
         }
+    }
+
+    public enum ExtractionType
+    {
+        Swap,
+        Vote
     }
 
     public sealed class SwapTransaction

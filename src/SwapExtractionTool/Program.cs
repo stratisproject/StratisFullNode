@@ -9,21 +9,21 @@ namespace SwapExtractionTool
     {
         static async Task Main(string[] args)
         {
-            Network stratisNetwork;
+            int stratisNetworkApiPort;
             Network straxNetwork;
             if (args.Contains("-testnet"))
             {
-                stratisNetwork = new StratisTest();
+                stratisNetworkApiPort = 38221;
                 straxNetwork = new StraxTest();
             }
             else
             {
-                stratisNetwork = new StratisMain();
+                stratisNetworkApiPort = 37221;
                 straxNetwork = new StraxMain();
             }
 
-            var service = new SwapExtractionService(stratisNetwork, straxNetwork);
-            await service.RunAsync();
+            var service = new SwapExtractionService(stratisNetworkApiPort, straxNetwork);
+            await service.RunAsync(ExtractionType.Vote);
         }
     }
 }
