@@ -167,6 +167,9 @@ namespace SwapExtractionTool
                 {
                 }
             }
+
+            Console.WriteLine($"Total No Votes: {totalNoVotes}");
+            Console.WriteLine($"Total Yes Votes: {totalYesVotes}");
         }
 
         private async Task BuildAndSendDistributionTransactionsAsync()
