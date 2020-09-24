@@ -23,7 +23,7 @@ namespace Stratis.Features.Collateral
 
         private readonly ISlotsManager slotsManager;
 
-        private readonly IConsensusManager consensusManager;
+        private readonly IFullNode fullNode;
 
         private readonly IDateTimeProvider dateTime;
 
@@ -33,13 +33,13 @@ namespace Stratis.Features.Collateral
         private readonly int collateralCheckBanDurationSeconds;
 
         public CheckCollateralFullValidationRule(IInitialBlockDownloadState ibdState, ICollateralChecker collateralChecker,
-            ISlotsManager slotsManager, IConsensusManager consensusManager, IDateTimeProvider dateTime, Network network)
+            ISlotsManager slotsManager, IFullNode fullNode, IDateTimeProvider dateTime, Network network)
         {
             this.network = network;
             this.ibdState = ibdState;
             this.collateralChecker = collateralChecker;
             this.slotsManager = slotsManager;
-            this.consensusManager = consensusManager;
+            this.fullNode = fullNode;
             this.dateTime = dateTime;
 
             this.collateralCheckBanDurationSeconds = (int)(this.network.Consensus.Options as PoAConsensusOptions).TargetSpacingSeconds / 2;
@@ -75,6 +75,7 @@ namespace Stratis.Features.Collateral
             {
                 // Confirm that the majority of nodes are still on Stratis.
                 // Do this by checking the commitment heights of the previous round.
+                IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
                 int memberCount = 0;
                 int membersOnStratis = 0;
                 ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
@@ -84,7 +85,7 @@ namespace Stratis.Features.Collateral
                     chainedHeader = chainedHeader.Previous;
 
                     if (chainedHeader.Block == null)
-                        chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+                        chainedHeader.Block = consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
 
                     int? commitmentHeight2 = commitmentHeightEncoder.DecodeCommitmentHeight(chainedHeader.Block.Transactions.First());
                     if (commitmentHeight2 == null)
