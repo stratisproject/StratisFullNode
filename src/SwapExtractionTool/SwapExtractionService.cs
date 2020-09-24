@@ -28,11 +28,7 @@ namespace SwapExtractionTool
         private readonly List<CastVote> castVotes = new List<CastVote>();
         private readonly List<SwapTransaction> swapTransactions;
 
-        /// <summary>
-        /// This is the block height from which to start scanning from.
-        /// </summary>
-        private const int StartHeight = 1494786;
-        private const int EndHeight = 1495865;
+        private const int EndHeight = 2000000;
 
         public SwapExtractionService(int stratisNetworkApiPort, Network straxNetwork)
         {
@@ -41,13 +37,13 @@ namespace SwapExtractionTool
             this.swapTransactions = new List<SwapTransaction>();
         }
 
-        public async Task RunAsync(ExtractionType extractionType, bool distribute = false)
+        public async Task RunAsync(ExtractionType extractionType, int startBlock, bool distribute = false)
         {
             if (extractionType == ExtractionType.Swap)
             {
                 Console.WriteLine($"Scanning for swap transactions...");
 
-                for (int height = StartHeight; height < EndHeight; height++)
+                for (int height = startBlock; height < EndHeight; height++)
                 {
                     BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
                     ProcessBlockForSwapTransactions(block, height);
@@ -72,9 +68,12 @@ namespace SwapExtractionTool
             {
                 Console.WriteLine($"Scanning for votes...");
 
-                for (int height = StartHeight; height < EndHeight; height++)
+                for (int height = startBlock; height < EndHeight; height++)
                 {
                     BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
+                    if (block == null)
+                        break;
+
                     await ProcessBlockForVoteTransactionsAsync(block, height);
                 }
 
@@ -97,6 +96,9 @@ namespace SwapExtractionTool
                 .AppendPathSegment("consensus/getblockhash")
                 .SetQueryParams(new { height = blockHeight })
                 .GetJsonAsync<string>();
+
+            if (blockHash == null)
+                return null;
 
             BlockTransactionDetailsModel blockModel = await $"http://localhost:{this.stratisNetworkApiPort}/api"
                 .AppendPathSegment("blockstore/block")
