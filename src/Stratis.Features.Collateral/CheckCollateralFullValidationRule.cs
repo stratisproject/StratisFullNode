@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.PoA;
@@ -21,6 +23,8 @@ namespace Stratis.Features.Collateral
 
         private readonly ISlotsManager slotsManager;
 
+        private readonly IConsensusManager consensusManager;
+
         private readonly IDateTimeProvider dateTime;
 
         private readonly Network network;
@@ -29,12 +33,13 @@ namespace Stratis.Features.Collateral
         private readonly int collateralCheckBanDurationSeconds;
 
         public CheckCollateralFullValidationRule(IInitialBlockDownloadState ibdState, ICollateralChecker collateralChecker,
-            ISlotsManager slotsManager, IDateTimeProvider dateTime, Network network)
+            ISlotsManager slotsManager, IConsensusManager consensusManager, IDateTimeProvider dateTime, Network network)
         {
             this.network = network;
             this.ibdState = ibdState;
             this.collateralChecker = collateralChecker;
             this.slotsManager = slotsManager;
+            this.consensusManager = consensusManager;
             this.dateTime = dateTime;
 
             this.collateralCheckBanDurationSeconds = (int)(this.network.Consensus.Options as PoAConsensusOptions).TargetSpacingSeconds / 2;
@@ -63,12 +68,40 @@ namespace Stratis.Features.Collateral
 
             int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
 
-            // Remove this hack after switchover!
-            // If the block contains Stratis commitment heights when Strax is expected.
+            // Skip Strax-based collateral validation while at least 50% of miners are still connected to a Stratis mainchain.
+            // TODO: This code can be removed after most nodes have switched their mainchain to Strax.
+            // If the block contains Stratis commitment heights when Strax is expected...
             if (this.network.Name.StartsWith("Cirrus") && counterChainHeight < commitmentHeight)
             {
-                this.Logger.LogTrace("(-)SKIPPED_DURING_SWITCHOVER]");
-                return Task.CompletedTask;
+                // Confirm that the majority of nodes are still on Stratis.
+                // Do this by checking the commitment heights of the previous round.
+                int memberCount = 0;
+                int membersOnStratis = 0;
+                ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
+                PubKey currentMember = this.slotsManager.GetFederationMemberForTimestamp(chainedHeader.Block.Header.Time).PubKey;
+                do
+                {
+                    chainedHeader = chainedHeader.Previous;
+
+                    if (chainedHeader.Block == null)
+                        chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+
+                    int? commitmentHeight2 = commitmentHeightEncoder.DecodeCommitmentHeight(chainedHeader.Block.Transactions.First());
+                    if (commitmentHeight2 == null)
+                        continue;
+
+                    if (counterChainHeight < commitmentHeight2)
+                        membersOnStratis++;
+
+                    memberCount++;
+                } while (currentMember != this.slotsManager.GetFederationMemberForTimestamp(chainedHeader.Block.Header.Time).PubKey);
+
+                // Skip.
+                if (membersOnStratis * 2 >= memberCount)
+                {
+                    this.Logger.LogTrace("(-)SKIPPED_DURING_SWITCHOVER]");
+                    return Task.CompletedTask;
+                }
             }
 
             int maxReorgLength = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(this.network);
