@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using SQLite;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 
 namespace Stratis.Features.SQLiteWalletRepository.Tables
 {
@@ -144,7 +146,15 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             public long ConfirmedBalance { get; set; }
         }
 
-        internal static (long total, long confirmed, long spendable) GetBalance(DBConnection conn, int walletId, int accountIndex, (int type, int index)? address, int currentChainHeight, int coinbaseMaturity, int confirmations = 0)
+        public class BalanceDataByAddress : BalanceData
+        {
+            public int AddressType { get; set; }
+            public int AddressIndex { get; set; }
+            public string ScriptPubKey { get; set; }
+            public string PubKey { get; set; }
+        }
+
+        private static string GetBalancesQuery(int walletId, int accountIndex, (int type, int index)? address, int currentChainHeight, int coinbaseMaturity, int confirmations = 0, bool groupByAddress = false)
         {
             int maxConfirmationHeight = (currentChainHeight + 1) - confirmations;
             int maxCoinBaseHeight = currentChainHeight - (int)coinbaseMaturity;
@@ -156,22 +166,49 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
             // If confirmations is 0, then we want no restrictions on the max confirmation height. Even NULL height is allowed. (aka unconfirmed).
             // IF confirmations is 1 or more, then we don't want NULL height and the restriction should be applied.
-            string confirmationsQuery = confirmations == 0
-                                        ? ""
-                                        : $"OutputBlockHeight <= {strMaxConfirmationHeight} AND ";
+            string confirmationsQuery = confirmations == 0 ? "" : $"OutputBlockHeight <= {strMaxConfirmationHeight} AND ";
 
-            var balanceData = conn.FindWithQuery<BalanceData>($@"
+            return $@"
                 SELECT SUM(Value) TotalBalance
                 ,      SUM(CASE WHEN {confirmationsQuery} (OutputTxIsCoinBase = 0 OR OutputBlockHeight <= {strMaxCoinBaseHeight})
                        THEN Value ELSE 0 END) SpendableBalance
-                ,      SUM(CASE WHEN OutputBlockHeight IS NOT NULL THEN Value ELSE 0 END) ConfirmedBalance
-                FROM   HDTransactionData
-                WHERE  (WalletId, AccountIndex) IN (SELECT {strWalletId}, {strAccountIndex})
+                ,      SUM(CASE WHEN OutputBlockHeight IS NOT NULL THEN Value ELSE 0 END) ConfirmedBalance{(groupByAddress ? $@"
+                ,      addr.AddressType
+                ,      addr.AddressIndex
+                ,	   addr.ScriptPubKey
+				,	   addr.PubKey" : "")}
+                FROM   HDTransactionData txdata{(groupByAddress ? $@"
+                JOIN   HDAddress addr
+				ON	   addr.WalletId = txData.WalletId
+				AND	   addr.ScriptPubKey = txData.ScriptPubKey" : "")}
+                WHERE  (txdata.WalletId, txdata.AccountIndex) IN (SELECT {strWalletId}, {strAccountIndex})
                 AND    SpendTxTime IS NULL { ((address == null) ? "" : $@"
                 AND    (AddressType, AddressIndex) IN (SELECT {DBParameter.Create(address?.type)}, {DBParameter.Create(address?.index)})")}
-                AND    Value > 0");
+                AND    Value > 0{(groupByAddress ? $@"
+                GROUP  BY txdata.AddressType, txdata.AddressIndex" : "")}";
+        }
+
+        internal static (long total, long confirmed, long spendable) GetBalance(DBConnection conn, int walletId, int accountIndex, (int type, int index)? address, int currentChainHeight, int coinbaseMaturity, int confirmations = 0)
+        {
+            var balanceQuery = GetBalancesQuery(walletId, accountIndex, address, currentChainHeight, coinbaseMaturity, confirmations, false);
+            var balanceData = conn.FindWithQuery<BalanceData>(balanceQuery);
 
             return (balanceData.TotalBalance, balanceData.ConfirmedBalance, balanceData.SpendableBalance);
+        }
+
+        internal static IEnumerable<(long total, long confirmed, long spendable, AddressIdentifier address)> GetBalancesByAddress(DBConnection conn, int walletId, int accountIndex, (int type, int index)? address, int currentChainHeight, int coinbaseMaturity, int confirmations = 0)
+        {
+            var balanceQuery = GetBalancesQuery(walletId, accountIndex, address, currentChainHeight, coinbaseMaturity, confirmations, true);
+            return conn.Query<BalanceDataByAddress>(balanceQuery)
+                .Select(b => (b.TotalBalance, b.ConfirmedBalance, b.SpendableBalance, new AddressIdentifier()
+                {
+                    WalletId = walletId,
+                    AccountIndex = accountIndex,
+                    AddressType = b.AddressType,
+                    AddressIndex = b.AddressIndex,
+                    PubKeyScript = b.PubKey,
+                    ScriptPubKey = b.ScriptPubKey
+                }));
         }
 
         // Finds account transactions acting as inputs to other wallet transactions - i.e. not a complete list of transaction inputs.
