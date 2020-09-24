@@ -78,8 +78,8 @@ namespace Stratis.Features.Collateral
                 IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
                 int memberCount = 0;
                 int membersOnStratis = 0;
+                uint targetSpacing = this.slotsManager.GetRoundLengthSeconds();
                 ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
-                PubKey currentMember = this.slotsManager.GetFederationMemberForTimestamp(chainedHeader.Block.Header.Time).PubKey;
                 do
                 {
                     chainedHeader = chainedHeader.Previous;
@@ -95,7 +95,7 @@ namespace Stratis.Features.Collateral
                         membersOnStratis++;
 
                     memberCount++;
-                } while (currentMember != this.slotsManager.GetFederationMemberForTimestamp(chainedHeader.Block.Header.Time).PubKey);
+                } while ((chainedHeader.Block.Header.Time + targetSpacing) > context.ValidationContext.BlockToValidate.Header.Time);
 
                 // Skip.
                 if (membersOnStratis * 2 >= memberCount)
