@@ -25,13 +25,14 @@ namespace SwapExtractionTool
         private readonly int stratisNetworkApiPort;
         private readonly Network straxNetwork;
 
+        private readonly List<CastVote> castVotes = new List<CastVote>();
         private readonly List<SwapTransaction> swapTransactions;
 
         /// <summary>
         /// This is the block height from which to start scanning from.
         /// </summary>
         private const int StartHeight = 1494786;
-        private const int EndHeight = 1494787;
+        private const int EndHeight = 1495640;
 
         public SwapExtractionService(int stratisNetworkApiPort, Network straxNetwork)
         {
@@ -42,20 +43,17 @@ namespace SwapExtractionTool
 
         public async Task RunAsync(ExtractionType extractionType, bool distribute = false)
         {
-            for (int height = StartHeight; height < EndHeight; height++)
-            {
-                BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
-
-                if (extractionType == ExtractionType.Swap)
-                    ProcessBlockForSwapTransactions(block, height);
-
-                if (extractionType == ExtractionType.Vote)
-                    await ProcessBlockForVoteTransactionsAsync(block, height);
-            }
-
             if (extractionType == ExtractionType.Swap)
             {
-                Console.WriteLine($"Writing {this.swapTransactions.Count} swap transactions.");
+                Console.WriteLine($"Scanning for swap transactions...");
+
+                for (int height = StartHeight; height < EndHeight; height++)
+                {
+                    BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
+                    ProcessBlockForSwapTransactions(block, height);
+                }
+
+                Console.WriteLine($"Found {this.swapTransactions.Count} swap transactions.");
 
                 using (var writer = new StreamWriter(Path.Combine("c:", "[StratisWork]", "swaps.csv")))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
@@ -68,6 +66,20 @@ namespace SwapExtractionTool
 
                 if (distribute)
                     await BuildAndSendDistributionTransactionsAsync();
+            }
+
+            if (extractionType == ExtractionType.Vote)
+            {
+                Console.WriteLine($"Scanning for votes...");
+
+                for (int height = StartHeight; height < EndHeight; height++)
+                {
+                    BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
+                    await ProcessBlockForVoteTransactionsAsync(block, height);
+                }
+
+                Console.WriteLine($"Total No Votes: {this.castVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(this.castVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
+                Console.WriteLine($"Total Yes Votes: {this.castVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(this.castVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
             }
         }
 
@@ -116,13 +128,10 @@ namespace SwapExtractionTool
                     }
                 }
             }
-
         }
 
         private async Task ProcessBlockForVoteTransactionsAsync(BlockTransactionDetailsModel block, int blockHeight)
         {
-            var castVotes = new List<CastVote>();
-
             // Inspect each transaction
             foreach (TransactionVerboseModel transaction in block.Transactions)
             {
@@ -156,13 +165,13 @@ namespace SwapExtractionTool
 
                         if (isVoteValue == "0")
                         {
-                            castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false });
+                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false });
                             Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : no");
                         }
 
                         if (isVoteValue == "1")
                         {
-                            castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true });
+                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true });
                             Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : yes");
                         }
                     }
@@ -171,9 +180,6 @@ namespace SwapExtractionTool
                 {
                 }
             }
-
-            Console.WriteLine($"Total No Votes: {castVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(castVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
-            Console.WriteLine($"Total Yes Votes: {castVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(castVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
         }
 
         private async Task BuildAndSendDistributionTransactionsAsync()
@@ -257,26 +263,5 @@ namespace SwapExtractionTool
     {
         Swap,
         Vote
-    }
-
-    public sealed class SwapTransaction
-    {
-        public SwapTransaction() { }
-
-        public SwapTransaction(SwapTransaction swapTransaction)
-        {
-            this.BlockHeight = swapTransaction.BlockHeight;
-            this.StraxAddress = swapTransaction.StraxAddress;
-            this.SenderAmount = swapTransaction.SenderAmount;
-            this.TransactionHash = swapTransaction.TransactionHash;
-        }
-
-        public int BlockHeight { get; set; }
-        public string StraxAddress { get; set; }
-        public Money SenderAmount { get; set; }
-        public string TransactionHash { get; set; }
-        public bool TransactionBuilt { get; set; }
-        public bool TransactionSent { get; set; }
-        public string TransactionSentHash { get; set; }
     }
 }
