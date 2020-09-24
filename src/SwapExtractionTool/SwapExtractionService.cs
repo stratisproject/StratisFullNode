@@ -32,7 +32,7 @@ namespace SwapExtractionTool
         /// This is the block height from which to start scanning from.
         /// </summary>
         private const int StartHeight = 1494786;
-        private const int EndHeight = 1495640;
+        private const int EndHeight = 1495865;
 
         public SwapExtractionService(int stratisNetworkApiPort, Network straxNetwork)
         {
@@ -78,8 +78,16 @@ namespace SwapExtractionTool
                     await ProcessBlockForVoteTransactionsAsync(block, height);
                 }
 
-                Console.WriteLine($"Total No Votes: {this.castVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(this.castVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
-                Console.WriteLine($"Total Yes Votes: {this.castVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(this.castVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
+                IEnumerable<IGrouping<string, CastVote>> grouped = this.castVotes.GroupBy(a => a.Address);
+                var finalVotes = new List<CastVote>();
+                foreach (IGrouping<string, CastVote> group in grouped)
+                {
+                    IOrderedEnumerable<CastVote> finalVote = group.OrderByDescending(t => t.BlockHeight);
+                    finalVotes.Add(finalVote.First());
+                }
+
+                Console.WriteLine($"Total No Votes: {finalVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(finalVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
+                Console.WriteLine($"Total Yes Votes: {finalVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(finalVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
             }
         }
 
@@ -153,26 +161,32 @@ namespace SwapExtractionTool
                     {
                         // Verify the sender address is a valid Strat address
                         var potentialStratAddress = potentialVote.Substring(2);
-                        dynamic validateResult = await $"http://localhost:{this.stratisNetworkApiPort}/api"
+                        ValidatedAddress validateResult = await $"http://localhost:{this.stratisNetworkApiPort}/api"
                             .AppendPathSegment("node/validateaddress")
                             .SetQueryParams(new { address = potentialStratAddress })
-                            .GetJsonAsync();
+                            .GetJsonAsync<ValidatedAddress>();
+
+                        if (!validateResult.IsValid)
+                        {
+                            Console.WriteLine($"Invalid STRAT address: '{potentialStratAddress}'");
+                            continue;
+                        }
 
                         AddressBalancesResult balance = await $"http://localhost:{this.stratisNetworkApiPort}/api"
-                            .AppendPathSegment("blockstore/getaddressesbalances")
-                            .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 1 })
-                            .GetJsonAsync<AddressBalancesResult>();
+                                .AppendPathSegment("blockstore/getaddressesbalances")
+                                .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
+                                .GetJsonAsync<AddressBalancesResult>();
 
                         if (isVoteValue == "0")
                         {
-                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false });
-                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : no");
+                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false, BlockHeight = blockHeight });
+                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' : Balance [{balance.Balances[0].Balance}] voted : no");
                         }
 
                         if (isVoteValue == "1")
                         {
-                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true });
-                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' voted : yes");
+                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true, BlockHeight = blockHeight });
+                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' : Balance [{balance.Balances[0].Balance}] voted : yes");
                         }
                     }
                 }

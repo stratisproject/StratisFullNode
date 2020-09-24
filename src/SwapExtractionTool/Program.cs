@@ -23,7 +23,12 @@ namespace SwapExtractionTool
             }
 
             var service = new SwapExtractionService(stratisNetworkApiPort, straxNetwork);
-            await service.RunAsync(ExtractionType.Swap);
+
+            if (args.Contains("-swap"))
+                await service.RunAsync(ExtractionType.Swap);
+
+            if (args.Contains("-vote"))
+                await service.RunAsync(ExtractionType.Vote);
         }
     }
 }
