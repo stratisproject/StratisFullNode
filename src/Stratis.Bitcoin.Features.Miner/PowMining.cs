@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -237,21 +238,43 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </summary>
         private bool MineBlock(MineBlockContext context)
         {
-            context.ExtraNonce = this.IncrementExtraNonce(context.BlockTemplate.Block, context.ChainTip, context.ExtraNonce);
-
-            Block block = context.BlockTemplate.Block;
-            while ((context.MaxTries > 0) && (block.Header.Nonce < InnerLoopCount) && !block.CheckProofOfWork())
-            {
-                this.miningCancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                ++block.Header.Nonce;
-                --context.MaxTries;
-            }
-
-            if (context.MaxTries == 0)
+            context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
+            if (context.ChainTip.Height > this.network.Consensus.LastPOWBlock)
                 return false;
 
-            return true;
+            context.ExtraNonce = this.IncrementExtraNonce(context.BlockTemplate.Block, context.ChainTip, context.ExtraNonce);
+
+            byte[] bytes = context.BlockTemplate.Block.ToBytes(this.network.Consensus.ConsensusFactory);
+
+            int threadCount = Environment.ProcessorCount;
+
+            Parallel.ForEach(Enumerable.Range(0, threadCount), threadNum =>
+            {
+                var block = Block.Load(bytes, this.network.Consensus.ConsensusFactory);
+
+                for (block.Header.Nonce = (uint)threadNum; block.Header.Nonce < InnerLoopCount; block.Header.Nonce += (uint)threadCount)
+                {
+                    lock (context)
+                    {
+                        if (context.MaxTries == 0)
+                            break;
+                        context.MaxTries--;
+                    }
+
+                    if (block.CheckProofOfWork())
+                    {
+                        context.BlockTemplate.Block = block;
+                        break;
+                    }
+
+                    if (this.miningCancellationTokenSource.Token.IsCancellationRequested)
+                        break;
+                }
+            });
+
+            this.miningCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            return context.MaxTries != 0;
         }
 
         /// <summary>
