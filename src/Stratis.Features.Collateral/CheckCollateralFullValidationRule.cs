@@ -75,7 +75,7 @@ namespace Stratis.Features.Collateral
             // block is connected to a larger and different mainchain (Stratis).
             if (this.network.Name.StartsWith("Cirrus") && commitmentHeight /* Strax/Stratis? */ > counterChainHeight /* Strax */)
             {
-                // The above condition establishes that the commitmentHeight came from Stratis - hence the block was mined by a node connecte to Stratis.
+                // The above condition establishes that the commitmentHeight came from Stratis - hence the block was mined by a node connected to Stratis.
 
                 // If the majority of nodes are still on Stratis then the block should be deemed valid. Being on a Strax mainchain we are not able
                 // to invalidate the block ayway. Determine this by also checking the commitment heights of all members in the previous round.
