@@ -73,9 +73,9 @@ namespace Stratis.Features.Collateral
             // Here we skip Strax-based collateral validation while at least 50% of miners are still connected to a Stratis mainchain.
             // Key insight: Normally the commitment height would be less than the chain height. If it isn't then the node that mined the 
             // block is connected to a larger and different mainchain (Stratis).
-            if (this.network.Name.StartsWith("Cirrus") && commitmentHeight > counterChainHeight /* Strax */)
+            if (this.network.Name.StartsWith("Cirrus") && commitmentHeight /* Strax/Stratis? */ > counterChainHeight /* Strax */)
             {
-                // The above condition establishes that the node that mined the block is on Stratis.
+                // The above condition establishes that the commitmentHeight came from Stratis - hence the block was mined by a node connecte to Stratis.
 
                 // If the majority of nodes are still on Stratis then the block should be deemed valid. Being on a Strax mainchain we are not able
                 // to invalidate the block ayway. Determine this by also checking the commitment heights of all members in the previous round.
