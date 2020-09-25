@@ -68,13 +68,17 @@ namespace Stratis.Features.Collateral
 
             int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
 
-            // Skip Strax-based collateral validation while at least 50% of miners are still connected to a Stratis mainchain.
-            // TODO: This code can be removed after most nodes have switched their mainchain to Strax.
-            // If the block contains Stratis commitment heights when Strax is expected...
-            if (this.network.Name.StartsWith("Cirrus") && counterChainHeight < commitmentHeight)
+            // TODO: The code contained in the following "if" can be removed after most nodes have switched their mainchain to Strax.
+
+            // Here we skip Strax-based collateral validation while at least 50% of miners are still connected to a Stratis mainchain.
+            // Key insight: Normally the commitment height would be less than the chain height. If it isn't then the node that mined the 
+            // block is connected to a larger and different mainchain (Stratis).
+            if (this.network.Name.StartsWith("Cirrus") && commitmentHeight > counterChainHeight /* Strax */)
             {
-                // Confirm that the majority of nodes are still on Stratis.
-                // Do this by checking the commitment heights of the previous round.
+                // The above condition establishes that the node that mined the block is on Stratis.
+
+                // If the majority of nodes are still on Stratis then the block should be deemed valid. Being on a Strax mainchain we are not able
+                // to invalidate the block ayway. Determine this by also checking the commitment heights of all members in the previous round.
                 IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
                 int memberCount = 0;
                 int membersOnStratis = 0;
