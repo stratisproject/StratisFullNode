@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.Configuration
         /// is met. For this reason, the minimum relay transaction fee is usually lower than the minimum fee.
         /// </summary>
         public FeeRate MinRelayTxFeeRate { get; private set; }
-        
+
         /// <summary>
         /// If true then the node will add and start the SignalR feature.
         /// </summary>
@@ -132,7 +132,7 @@ namespace Stratis.Bitcoin.Configuration
         ///   name would be determined. In this case we first need to determine the network.
         /// </remarks>
         public NodeSettings(Network network = null, ProtocolVersion protocolVersion = SupportedProtocolVersion,
-            string agent = "StratisNode", string[] args = null, NetworksSelector networksSelector = null)
+            string agent = "StratisFullNode", string[] args = null, NetworksSelector networksSelector = null)
         {
             // Create the default logger factory and logger.
             var loggerFactory = ExtendedLoggerFactory.Create();
@@ -233,7 +233,7 @@ namespace Stratis.Bitcoin.Configuration
                     this.ReadConfigurationFile();
             }
 
-            this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR",  false, this.Logger);
+            this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR", false, this.Logger);
 
             // Create the custom logger factory.
             this.LoggerFactory.AddFilters(this.Log, this.DataFolder);
