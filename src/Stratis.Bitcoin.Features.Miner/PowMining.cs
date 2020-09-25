@@ -238,9 +238,12 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </summary>
         private bool MineBlock(MineBlockContext context)
         {
-            context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
+            //context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
             if (this.network.Consensus.LastPOWBlock != 0 && context.ChainTip.Height > this.network.Consensus.LastPOWBlock)
+            {
+                context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
                 return false;
+            }
 
             context.ExtraNonce = this.IncrementExtraNonce(context.BlockTemplate.Block, context.ChainTip, context.ExtraNonce);
 
@@ -248,11 +251,13 @@ namespace Stratis.Bitcoin.Features.Miner
 
             int threadCount = Environment.ProcessorCount;
 
+            bool found = false;
+
             Parallel.ForEach(Enumerable.Range(0, threadCount), threadNum =>
             {
                 var block = Block.Load(bytes, this.network.Consensus.ConsensusFactory);
 
-                for (block.Header.Nonce = (uint)threadNum; block.Header.Nonce < InnerLoopCount; block.Header.Nonce += (uint)threadCount)
+                for (block.Header.Nonce = (uint)threadNum; !found && block.Header.Nonce < InnerLoopCount; block.Header.Nonce += (uint)threadCount)
                 {
                     lock (context)
                     {
@@ -264,6 +269,7 @@ namespace Stratis.Bitcoin.Features.Miner
                     if (block.CheckProofOfWork())
                     {
                         context.BlockTemplate.Block = block;
+                        found = true;
                         break;
                     }
 
@@ -271,6 +277,9 @@ namespace Stratis.Bitcoin.Features.Miner
                         break;
                 }
             });
+
+            if (!found)
+                context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
 
             this.miningCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
