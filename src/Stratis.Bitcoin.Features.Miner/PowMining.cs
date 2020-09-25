@@ -238,7 +238,6 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </summary>
         private bool MineBlock(MineBlockContext context)
         {
-            //context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
             if (this.network.Consensus.LastPOWBlock != 0 && context.ChainTip.Height > this.network.Consensus.LastPOWBlock)
             {
                 context.BlockTemplate.Block.Header.Nonce = InnerLoopCount;
