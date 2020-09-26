@@ -2,7 +2,9 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using LiteDB;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
@@ -11,6 +13,7 @@ using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
@@ -21,6 +24,38 @@ using Script = NBitcoin.Script;
 
 namespace Stratis.Bitcoin.Features.BlockStore.Tests
 {
+    public class TestAddressIndexer : AddressIndexer
+    {
+        private readonly IConsensusManager consensusManager;
+        private readonly ChainIndexer chainIndexer;
+
+        public TestAddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
+            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider) 
+            : base(storeSettings, dataFolder, loggerFactory, network, nodeStats, consensusManager, asyncProvider, chainIndexer, dateTimeProvider, null)
+        {
+            this.consensusManager = consensusManager;
+            this.chainIndexer = chainIndexer;
+        }
+
+        public override IBatchedBlockProvider CreateBatchedBlockProvider(IBlockStore blockStore)
+        {
+            var batchedBlockProvider = new Mock<IBatchedBlockProvider>();
+            batchedBlockProvider.Setup(x => x.BatchBlocksFrom(It.IsAny<int>(), It.IsAny<CancellationTokenSource>())).Returns((int startHeight, CancellationTokenSource token) => 
+                Enumerable.Range(startHeight, this.consensusManager.Tip.Height)
+                    .Select(n =>
+                    {
+                        ChainedHeader header = this.consensusManager.Tip;
+
+                        for (; n < header.Height; header = header.Previous) ;
+
+                        ChainedHeaderBlock chainedHeaderBlock = this.consensusManager.GetBlockData(header.HashBlock);
+                        return (chainedHeaderBlock.ChainedHeader, chainedHeaderBlock.Block);
+                    }));
+
+            return batchedBlockProvider.Object;
+        }
+    }
+
     public class AddressIndexerTests
     {
         private readonly IAddressIndexer addressIndexer;
@@ -50,7 +85,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.asyncProviderMock = new Mock<IAsyncProvider>();
 
-            this.addressIndexer = new AddressIndexer(storeSettings, dataFolder, new ExtendedLoggerFactory(), this.network, stats.Object,
+            this.addressIndexer = new TestAddressIndexer(storeSettings, dataFolder, new ExtendedLoggerFactory(), this.network, stats.Object,
                 this.consensusManagerMock.Object, this.asyncProviderMock.Object, indexer, new DateTimeProvider());
 
             this.genesisHeader = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().Header.GetHash(), 0);
