@@ -27,14 +27,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
     public class TestAddressIndexer : AddressIndexer
     {
         private readonly IConsensusManager consensusManager;
-        private readonly ChainIndexer chainIndexer;
 
         public TestAddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
             IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider) 
             : base(storeSettings, dataFolder, loggerFactory, network, nodeStats, consensusManager, asyncProvider, chainIndexer, dateTimeProvider, null)
         {
             this.consensusManager = consensusManager;
-            this.chainIndexer = chainIndexer;
         }
 
         public override IBatchedBlockProvider CreateBatchedBlockProvider(IBlockStore blockStore)
