@@ -115,8 +115,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <summary>Last time rewind data was purged.</summary>
         private DateTime lastPurgeTime;
 
-        private Task<ChainedHeaderBlock> prefetchingTask;
-
         /// <summary>Indexer height at the last save.</summary>
         /// <remarks>Should be protected by <see cref="lockObject"/>.</remarks>
         private int lastSavedHeight;
@@ -131,8 +129,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         public const int SyncBuffer = 50;
 
+        private readonly IBatchedBlockProvider batchedBlockProvider;
+
         public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
-            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider)
+            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IBlockStoreQueue blockStoreQueue)
         {
             this.storeSettings = storeSettings;
             this.network = network;
@@ -155,6 +155,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             int maxReorgLength = GetMaxReorgOrFallbackMaxReorg(this.network);
 
             this.compactionTriggerDistance = maxReorgLength * 2 + SyncBuffer + 1000;
+
+            this.batchedBlockProvider = new BatchedBlockProvider(chainIndexer, blockStoreQueue);
         }
 
         /// <summary>Returns maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
@@ -224,23 +226,56 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
             while (!this.cancellation.IsCancellationRequested)
             {
-                if (this.dateTimeProvider.GetUtcNow() - this.lastFlushTime > this.flushChangesInterval)
+                foreach ((ChainedHeader nextHeader, Block blockToProcess) in this.batchedBlockProvider.BatchBlocksFrom(this.IndexerTip.Height + 1, this.cancellation))
                 {
-                    this.logger.LogDebug("Flushing changes.");
+                    if (this.dateTimeProvider.GetUtcNow() - this.lastFlushTime > this.flushChangesInterval)
+                    {
+                        this.logger.LogDebug("Flushing changes.");
 
-                    this.SaveAll();
+                        this.SaveAll();
 
-                    this.lastFlushTime = this.dateTimeProvider.GetUtcNow();
+                        this.lastFlushTime = this.dateTimeProvider.GetUtcNow();
 
-                    this.logger.LogDebug("Flush completed.");
+                        this.logger.LogDebug("Flush completed.");
+                    }
+
+                    if (nextHeader.Previous.HashBlock != this.IndexerTip.HashBlock)
+                    {
+                        ChainedHeader lastCommonHeader = nextHeader.FindFork(this.IndexerTip);
+
+                        this.logger.LogDebug("Reorganization detected. Rewinding till '{0}'.", lastCommonHeader);
+
+                        this.RewindAndSave(lastCommonHeader);
+
+                        break;
+                    }
+
+                    watch.Restart();
+
+                    bool success = this.ProcessBlock(blockToProcess, nextHeader);
+
+                    watch.Stop();
+                    this.averageTimePerBlock.AddSample(watch.Elapsed.TotalMilliseconds);
+
+                    if (!success)
+                    {
+                        this.logger.LogDebug("Failed to process next block. Waiting.");
+
+                        try
+                        {
+                            await Task.Delay(DelayTimeMs, this.cancellation.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+
+                        continue;
+                    }
+
+                    this.IndexerTip = nextHeader;
                 }
 
-                if (this.cancellation.IsCancellationRequested)
-                    break;
-
-                ChainedHeader nextHeader = this.consensusManager.Tip.GetAncestor(this.IndexerTip.Height + 1);
-
-                if (nextHeader == null)
+                if (!this.cancellation.IsCancellationRequested)
                 {
                     this.logger.LogDebug("Next header wasn't found. Waiting.");
 
@@ -251,75 +286,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                     catch (OperationCanceledException)
                     {
                     }
-
-                    continue;
                 }
 
-                if (nextHeader.Previous.HashBlock != this.IndexerTip.HashBlock)
-                {
-                    ChainedHeader lastCommonHeader = nextHeader.FindFork(this.IndexerTip);
-
-                    this.logger.LogDebug("Reorganization detected. Rewinding till '{0}'.", lastCommonHeader);
-
-                    this.RewindAndSave(lastCommonHeader);
-
-                    continue;
-                }
-
-                // First try to see if it's prefetched.
-                ChainedHeaderBlock prefetchedBlock = this.prefetchingTask == null ? null : await this.prefetchingTask.ConfigureAwait(false);
-
-                Block blockToProcess;
-
-                if (prefetchedBlock != null && prefetchedBlock.ChainedHeader == nextHeader)
-                    blockToProcess = prefetchedBlock.Block;
-                else
-                    blockToProcess = this.consensusManager.GetBlockData(nextHeader.HashBlock).Block;
-
-                if (blockToProcess == null)
-                {
-                    this.logger.LogDebug("Next block wasn't found. Waiting.");
-
-                    try
-                    {
-                        await Task.Delay(DelayTimeMs, this.cancellation.Token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-
-                    continue;
-                }
-
-                // Schedule prefetching of the next block;
-                ChainedHeader headerToPrefetch = this.consensusManager.Tip.GetAncestor(nextHeader.Height + 1);
-
-                if (headerToPrefetch != null)
-                    this.prefetchingTask = Task.Run(() => this.consensusManager.GetBlockData(headerToPrefetch.HashBlock));
-
-                watch.Restart();
-
-                bool success = this.ProcessBlock(blockToProcess, nextHeader);
-
-                watch.Stop();
-                this.averageTimePerBlock.AddSample(watch.Elapsed.TotalMilliseconds);
-
-                if (!success)
-                {
-                    this.logger.LogDebug("Failed to process next block. Waiting.");
-
-                    try
-                    {
-                        await Task.Delay(DelayTimeMs, this.cancellation.Token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-
-                    continue;
-                }
-
-                this.IndexerTip = nextHeader;
+                continue;
             }
 
             this.SaveAll();
