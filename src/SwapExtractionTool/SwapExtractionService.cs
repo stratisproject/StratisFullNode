@@ -182,13 +182,13 @@ namespace SwapExtractionTool
                         if (isVoteValue == "0")
                         {
                             this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false, BlockHeight = blockHeight });
-                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' : Balance [{balance.Balances[0].Balance}] voted : no");
+                            Console.WriteLine($"'No' vote found at height {blockHeight}.");
                         }
 
                         if (isVoteValue == "1")
                         {
                             this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true, BlockHeight = blockHeight });
-                            Console.WriteLine($"Vote found at height {blockHeight}: '{potentialStratAddress}' : Balance [{balance.Balances[0].Balance}] voted : yes");
+                            Console.WriteLine($"'Yes' vote found at height {blockHeight}.");
                         }
                     }
                 }
