@@ -156,7 +156,13 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
             this.compactionTriggerDistance = maxReorgLength * 2 + SyncBuffer + 1000;
 
-            this.batchedBlockProvider = new BatchedBlockProvider(chainIndexer, blockStoreQueue);
+            this.batchedBlockProvider = this.CreateBatchedBlockProvider(blockStoreQueue);
+        }
+
+        /// <summary>Provides a place for tests to hook in.</summary>
+        public virtual IBatchedBlockProvider CreateBatchedBlockProvider(IBlockStore blockStore)
+        {
+            return new BatchedBlockProvider(this.chainIndexer, blockStore);
         }
 
         /// <summary>Returns maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
