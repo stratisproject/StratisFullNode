@@ -34,7 +34,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
             this.dateTimeProvider = dateTimeProvider;
         }
 
-        internal IEnumerable<KeyId> GetDestinations(Script redeemScript)
+        internal IEnumerable<TxDestination> GetDestinations(Script redeemScript)
         {
             ScriptTemplate scriptTemplate = this.network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(redeemScript);
 
@@ -50,7 +50,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash;
                         break;
                     case TxOutType.TX_SCRIPTHASH:
-                        yield return (KeyId)(TxDestination)PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
+                        yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
                         break;
                     case TxOutType.TX_SEGWIT:
                         TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
@@ -62,7 +62,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         {
                             foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(this.network, redeemScript))
                             {
-                                yield return (KeyId)destination;
+                                yield return destination;
                             }
                         }
                         else
@@ -70,7 +70,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             string address = this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, redeemScript);
                             TxDestination destination = ScriptDestinationReader.GetDestinationForAddress(address, this.network);
                             if (destination != null)
-                                yield return (KeyId)destination;
+                                yield return destination;
                         }
 
                         break;
@@ -132,9 +132,9 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, isChange);
                     }
 
-                    foreach (KeyId keyId in destinations)
+                    foreach (TxDestination destination in destinations)
                     {
-                        Script pubKeyScript = keyId.ScriptPubKey;
+                        var pubKeyScript = destination.ScriptPubKey;
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier address);
 
                         // Paying to one of our addresses?
@@ -147,7 +147,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                                 // This feature, by design, is agnostic of the type of template being processed.
                                 // This type of check is good to have for cold staking though but is catered for in broader terms.
                                 // I.e. don't allow any funny business with keys being used with accounts they were not intended for.
-                                if (keyId is AccountRestrictedKeyId accountRestrictedKey && accountRestrictedKey.AccountId != address.AccountIndex)
+                                if (destination is AccountRestrictedKeyId accountRestrictedKey && accountRestrictedKey.AccountId != address.AccountIndex)
                                     continue;
 
                                 // Get the top-up tracker that applies to this account and address type.
