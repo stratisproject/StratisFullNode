@@ -93,7 +93,7 @@ namespace Stratis.Bitcoin.Networks
                 maxMoney: long.MaxValue,
                 coinbaseMaturity: 50,
                 premineHeight: 2,
-                premineReward: Money.Coins(130000000),
+                premineReward: Money.Coins(125000000),
                 proofOfWorkReward: Money.Coins(18),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60),
                 targetSpacing: TimeSpan.FromSeconds(45),
