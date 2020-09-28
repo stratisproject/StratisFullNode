@@ -34,7 +34,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
             this.dateTimeProvider = dateTimeProvider;
         }
 
-        internal IEnumerable<Script> GetDestinations(Script redeemScript)
+        internal IEnumerable<TxDestination> GetDestinations(Script redeemScript)
         {
             ScriptTemplate scriptTemplate = this.network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(redeemScript);
 
@@ -44,25 +44,25 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                 switch (scriptTemplate.Type)
                 {
                     case TxOutType.TX_PUBKEYHASH:
-                        yield return redeemScript;
+                        yield return PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
                         break;
                     case TxOutType.TX_PUBKEY:
-                        yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash.ScriptPubKey;
+                        yield return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).Hash;
                         break;
                     case TxOutType.TX_SCRIPTHASH:
-                        yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript).ScriptPubKey;
+                        yield return PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript);
                         break;
                     case TxOutType.TX_SEGWIT:
                         TxDestination txDestination = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(this.network, redeemScript);
                         if (txDestination != null)
-                            yield return new KeyId(txDestination.ToBytes()).ScriptPubKey;
+                            yield return new KeyId(txDestination.ToBytes());
                         break;
                     default:
                         if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
                         {
                             foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(this.network, redeemScript))
                             {
-                                yield return destination.ScriptPubKey;
+                                yield return destination;
                             }
                         }
                         else
@@ -70,7 +70,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             string address = this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, redeemScript);
                             TxDestination destination = ScriptDestinationReader.GetDestinationForAddress(address, this.network);
                             if (destination != null)
-                                yield return destination.ScriptPubKey;
+                                yield return destination;
                         }
 
                         break;
@@ -124,7 +124,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
 
                     var destinations = this.GetDestinations(txOut.ScriptPubKey);
 
-                    bool isChange = destinations.Any(d => addressesOfInterest.Contains(d, out AddressIdentifier address2) && address2.AddressType == 1);
+                    bool isChange = destinations.Any(d => addressesOfInterest.Contains(d.ScriptPubKey, out AddressIdentifier address2) && address2.AddressType == 1);
 
                     if (addSpendTx)
                     {
@@ -132,42 +132,51 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         this.RecordReceipt(block, null, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, isChange);
                     }
 
-                    foreach (Script pubKeyScript in destinations)
+                    foreach (TxDestination destination in destinations)
                     {
+                        var pubKeyScript = destination.ScriptPubKey;
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier address);
 
                         // Paying to one of our addresses?
-                        if (containsAddress)
+                        if (containsAddress && address != null)
                         {
-                            // Check if top-up is required.
-                            if (containsAddress && address != null)
+                            // This feature, by design, is agnostic of the type of template being processed.
+                            // This type of check is good to have for cold staking though but is catered for in broader terms.
+                            // I.e. don't allow any funny business with keys being used with accounts they were not intended for.
+                            if (destination is IAccountRestrictedKeyId accountRestrictedKey)
                             {
-                                // Get the top-up tracker that applies to this account and address type.
-                                ITopUpTracker tracker = this.GetTopUpTracker(address);
-                                if (!tracker.IsWatchOnlyAccount)
-                                {
-                                    // If an address inside the address buffer is being used then top-up the buffer.
-                                    while (address.AddressIndex >= tracker.NextAddressIndex)
-                                    {
-                                        AddressIdentifier newAddress = tracker.CreateAddress();
+                                if (accountRestrictedKey.AccountId != address.AccountIndex)
+                                    continue;
+                            }
+                            else
+                            {
+                                // This tests the converse. 
+                                // Don't allow special-purpose accounts (e.g. coldstaking) to be used like normal accounts.
+                                if (address.AccountIndex >= Wallet.SpecialPurposeAccountIndexesStart)
+                                    continue;
+                            }
 
-                                        // Add the new address to our addresses of interest.
-                                        addressesOfInterest.AddTentative(Script.FromHex(newAddress.ScriptPubKey), newAddress);
-                                    }
+                            // Check if top-up is required.
+                            // Get the top-up tracker that applies to this account and address type.
+                            ITopUpTracker tracker = this.GetTopUpTracker(address);
+                            if (!tracker.IsWatchOnlyAccount)
+                            {
+                                // If an address inside the address buffer is being used then top-up the buffer.
+                                while (address.AddressIndex >= tracker.NextAddressIndex)
+                                {
+                                    AddressIdentifier newAddress = tracker.CreateAddress();
+
+                                    // Add the new address to our addresses of interest.
+                                    addressesOfInterest.AddTentative(Script.FromHex(newAddress.ScriptPubKey), newAddress);
                                 }
                             }
 
-                            // TODO: This is a bit of a conundrum - by recording a coldstaking output as having a value, we cause all the effects that the filtration at the higher
-                            // layers is intended to prevent. So it would be a lot simpler if we could just set the output value to 0 here if it is a coldstaking script. But that
-                            // will most likely have unintended consequences on areas of the code that do expect the outputs to have a value, such as staking.
-
                             // Record outputs received by our wallets.
-                            this.RecordReceipt(block, pubKeyScript, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, containsAddress && address.AddressType == 1);
+                            this.RecordReceipt(block, pubKeyScript, txOut, tx.IsCoinBase | tx.IsCoinStake, blockTime ?? currentTime, txId, i, address.AddressType == 1);
 
                             additions = true;
 
-                            if (containsAddress)
-                                transactionsOfInterest.AddTentative(new OutPoint(txId, i), address);
+                            transactionsOfInterest.AddTentative(new OutPoint(txId, i), address);
                         }
                     }
                 }
@@ -208,7 +217,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         new HashHeightPair(transactionData.BlockHash ?? 0, (int)transactionData.BlockHeight);
 
                     Script scriptPubKey = transactionData.ScriptPubKey;
-                    foreach (Script pubKeyScript in this.GetDestinations(scriptPubKey))
+                    foreach (Script pubKeyScript in this.GetDestinations(scriptPubKey).Select(d => d.ScriptPubKey))
                     {
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier targetAddress);
 

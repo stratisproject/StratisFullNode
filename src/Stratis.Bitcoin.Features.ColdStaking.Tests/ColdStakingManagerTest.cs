@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Money balance = walletManager.GetSpendableTransactionsInAccount(new WalletAccountReference(coldWallet.Name, coldWalletAccount.Name), 0).Sum(x => x.Transaction.Amount);
             var coldStakeAddress = coldWallet.GetAccounts(Wallet.Wallet.AllAccounts).ElementAt(0).ExternalAddresses.ElementAt(0);
             Transaction withdrawalTransaction = this.CreateColdStakingWithdrawalTransaction(coldWallet, "password", coldStakeAddress,
-                withdrawalPubKey, ColdStakingScriptTemplate.Instance.GenerateScriptPubKey(destinationColdPubKey.Hash, destinationHotPubKey.Hash),
+                withdrawalPubKey, ColdStakingScriptTemplate.Instance.GenerateScriptPubKey(destinationHotPubKey.Hash, destinationColdPubKey.Hash),
                 new Money(750), new Money(263));
 
             // Process the transaction.
