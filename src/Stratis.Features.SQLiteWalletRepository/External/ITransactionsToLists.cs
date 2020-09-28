@@ -143,8 +143,18 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             // This feature, by design, is agnostic of the type of template being processed.
                             // This type of check is good to have for cold staking though but is catered for in broader terms.
                             // I.e. don't allow any funny business with keys being used with accounts they were not intended for.
-                            if (destination is IAccountRestrictedKeyId accountRestrictedKey && accountRestrictedKey.AccountId != address.AccountIndex)
-                                continue;
+                            if (destination is IAccountRestrictedKeyId accountRestrictedKey)
+                            {
+                                if (accountRestrictedKey.AccountId != address.AccountIndex)
+                                    continue;
+                            }
+                            else
+                            {
+                                // This tests the converse. 
+                                // Don't allow special-purpose accounts (e.g. coldstaking) to be used like normal accounts.
+                                if (address.AccountIndex >= Wallet.SpecialPurposeAccountIndexesStart)
+                                    continue;
+                            }
 
                             // Check if top-up is required.
                             // Get the top-up tracker that applies to this account and address type.
