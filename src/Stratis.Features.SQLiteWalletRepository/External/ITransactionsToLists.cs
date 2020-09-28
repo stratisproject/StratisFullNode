@@ -138,30 +138,26 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                         bool containsAddress = addressesOfInterest.Contains(pubKeyScript, out AddressIdentifier address);
 
                         // Paying to one of our addresses?
-                        if (containsAddress)
+                        if (containsAddress && address != null)
                         {
+                            // This feature, by design, is agnostic of the type of template being processed.
+                            // This type of check is good to have for cold staking though but is catered for in broader terms.
+                            // I.e. don't allow any funny business with keys being used with accounts they were not intended for.
+                            if (destination is AccountRestrictedKeyId accountRestrictedKey && accountRestrictedKey.AccountId != address.AccountIndex)
+                                continue;
+
                             // Check if top-up is required.
-                            if (address != null)
+                            // Get the top-up tracker that applies to this account and address type.
+                            ITopUpTracker tracker = this.GetTopUpTracker(address);
+                            if (!tracker.IsWatchOnlyAccount)
                             {
-
-                                // This feature, by design, is agnostic of the type of template being processed.
-                                // This type of check is good to have for cold staking though but is catered for in broader terms.
-                                // I.e. don't allow any funny business with keys being used with accounts they were not intended for.
-                                if (destination is AccountRestrictedKeyId accountRestrictedKey && accountRestrictedKey.AccountId != address.AccountIndex)
-                                    continue;
-
-                                // Get the top-up tracker that applies to this account and address type.
-                                ITopUpTracker tracker = this.GetTopUpTracker(address);
-                                if (!tracker.IsWatchOnlyAccount)
+                                // If an address inside the address buffer is being used then top-up the buffer.
+                                while (address.AddressIndex >= tracker.NextAddressIndex)
                                 {
-                                    // If an address inside the address buffer is being used then top-up the buffer.
-                                    while (address.AddressIndex >= tracker.NextAddressIndex)
-                                    {
-                                        AddressIdentifier newAddress = tracker.CreateAddress();
+                                    AddressIdentifier newAddress = tracker.CreateAddress();
 
-                                        // Add the new address to our addresses of interest.
-                                        addressesOfInterest.AddTentative(Script.FromHex(newAddress.ScriptPubKey), newAddress);
-                                    }
+                                    // Add the new address to our addresses of interest.
+                                    addressesOfInterest.AddTentative(Script.FromHex(newAddress.ScriptPubKey), newAddress);
                                 }
                             }
 
