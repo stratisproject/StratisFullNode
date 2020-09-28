@@ -131,8 +131,8 @@ namespace Stratis.Features.FederatedPeg
 
             // These values are only configurable for tests at the moment. Fed members on live networks shouldn't play with them.
             this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
-            this.FasterDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(FasterDepositThresholdAmountParam, 100));
-            this.FasterDepositMinimumConfirmations = configReader.GetOrDefault(FasterDepositMinimumConfirmationsParam, 10);
+            this.FasterDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(FasterDepositThresholdAmountParam, 50));
+            this.FasterDepositMinimumConfirmations = configReader.GetOrDefault(FasterDepositMinimumConfirmationsParam, 25);
             this.MinimumDepositConfirmations = configReader.GetOrDefault(MinimumDepositConfirmationsParam, (int)nodeSettings.Network.Consensus.MaxReorgLength + 1);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, federatedPegOptions?.WalletSyncFromHeight ?? 0);
         }
