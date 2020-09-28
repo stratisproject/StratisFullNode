@@ -2,7 +2,12 @@
 
 namespace Stratis.Bitcoin.Features.Wallet
 {
-    public class AccountRestrictedKeyId : KeyId
+    public interface IAccountRestrictedKeyId
+    {
+        int AccountId { get; }
+    }
+
+    public class AccountRestrictedKeyId : KeyId, IAccountRestrictedKeyId
     {
         public int AccountId { get; private set; }
 
