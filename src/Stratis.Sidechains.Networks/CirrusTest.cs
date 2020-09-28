@@ -105,7 +105,8 @@ namespace Stratis.Sidechains.Networks
             {
                 [BuriedDeployments.BIP34] = 0,
                 [BuriedDeployments.BIP65] = 0,
-                [BuriedDeployments.BIP66] = 0
+                [BuriedDeployments.BIP66] = 0,
+                [BuriedDeployments.CFMS] = int.MaxValue // TODO: Need to set this to a lower value closer to StraxMain launch
             };
 
             var bip9Deployments = new NoBIP9Deployments();

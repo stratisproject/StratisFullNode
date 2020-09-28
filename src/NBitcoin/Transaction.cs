@@ -1150,6 +1150,12 @@ namespace NBitcoin
     //https://en.bitcoin.it/wiki/Protocol_specification
     public class Transaction : IBitcoinSerializable
     {
+        /// <summary>
+        /// Flag set during script evaluation. It indicates that at least one output of the transaction contains an OP_CHECKFEDMULTISIG opcode
+        /// and should therefore be evaluated against the appropriate consensus rules.
+        /// </summary>
+        public bool IsFederationWithdrawal { get; set; }
+
         public bool RBF
         {
             get
@@ -1310,7 +1316,6 @@ namespace NBitcoin
         }
 
         #endregion
-
 
         public uint256 GetHash()
         {

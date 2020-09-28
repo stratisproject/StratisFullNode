@@ -54,7 +54,8 @@ namespace Stratis.Bitcoin.Networks
             {
                 [BuriedDeployments.BIP34] = 227931,
                 [BuriedDeployments.BIP65] = 388381,
-                [BuriedDeployments.BIP66] = 363725
+                [BuriedDeployments.BIP66] = 363725,
+                [BuriedDeployments.CFMS] = int.MaxValue
             };
 
             var bip9Deployments = new BitcoinBIP9Deployments

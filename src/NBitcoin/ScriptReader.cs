@@ -236,10 +236,12 @@ namespace NBitcoin
                     return "OP_CLTV";
                 case OpcodeType.OP_CHECKSEQUENCEVERIFY:
                     return "OP_CSV";
+                case OpcodeType.OP_CHECKFEDMULTISIG:
+                    return "OP_CHECKFEDMULTISIG";
                 case OpcodeType.OP_CHECKCOLDSTAKEVERIFY:
                     return "OP_CHECKCOLDSTAKEVERIFY";
 
-                // expanson
+                // expansion
                 case OpcodeType.OP_NOP1:
                     return "OP_NOP1";
                 case OpcodeType.OP_NOP4:
@@ -252,8 +254,6 @@ namespace NBitcoin
                     return "OP_NOP7";
                 case OpcodeType.OP_NOP8:
                     return "OP_NOP8";
-                case OpcodeType.OP_NOP9:
-                    return "OP_NOP9";
 
                 default:
                     return Enum.GetName(typeof(OpcodeType), opcode);

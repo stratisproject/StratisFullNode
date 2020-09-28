@@ -27,6 +27,7 @@ namespace NBitcoin
         CheckMultiSigVerify,
         CheckSigVerify,
         NumEqualVerify,
+        CheckFedMultisig,
         CheckColdStakeVerify,
 
         /* Logical/Format/Canonical errors */
@@ -837,12 +838,39 @@ namespace NBitcoin
                                 case OpcodeType.OP_NOP6:
                                 case OpcodeType.OP_NOP7:
                                 case OpcodeType.OP_NOP8:
-                                case OpcodeType.OP_NOP9:
-                                    if((this.ScriptVerify & ScriptVerify.DiscourageUpgradableNops) != 0)
+
+                                // OP_NOP9 has been redefined as OP_CHECKFEDMULTISIG.
+                                case OpcodeType.OP_CHECKFEDMULTISIG:
                                     {
-                                        return SetError(ScriptError.DiscourageUpgradableNops);
+                                        // Revert to OP_NOP9 behavior if the federation multisig verification bit isn't active.
+                                        if ((this.ScriptVerify & ScriptVerify.CheckFedMultisig) == 0)
+                                        {
+                                            // not enabled; treat as a NOP9.
+                                            if ((this.ScriptVerify & ScriptVerify.DiscourageUpgradableNops) != 0)
+                                            {
+                                                return SetError(ScriptError.DiscourageUpgradableNops);
+                                            }
+
+                                            break;
+                                        }
+
+                                        // If the stack is empty the federation identifier is not present in the script, so set an error.
+                                        // TODO: When the scriptSig is concatenated for evaluation this is likely not the case, depending on what we decide to require its contents to be. Need to make unit tests testing the typical scenario & variants
+                                        if (this._stack.Count < 1)
+                                            return SetError(ScriptError.CheckFedMultisig);
+
+                                        // If the stack has more than one entry, there is additional spurious information other than the federation identifier, so set an error.
+                                        // TODO: When the scriptSig is concatenated for evaluation this is likely not the case, depending on what we decide to require its contents to be. Need to make unit tests testing the typical scenario & variants
+                                        if (this._stack.Count > 1)
+                                            return SetError(ScriptError.CheckFedMultisig);
+                                        
+                                        // Set a flag on the transaction so that the consensus rule engine will apply the necessary federation processing.
+                                        // The consensus engine is responsible for maintaining the list of valid federation pubkeys.
+                                        checker.Transaction.IsFederationWithdrawal = true;
+
+                                        // If the above-mentioned checks pass, the instruction does nothing.                                        
+                                        break;
                                     }
-                                    break;
 
                                 // OP_NOP10 has been redefined as OP_CHECKCOLDSTAKEVERIFY.
                                 case OpcodeType.OP_CHECKCOLDSTAKEVERIFY:

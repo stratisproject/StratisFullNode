@@ -119,6 +119,11 @@ namespace NBitcoin
         WitnessPubkeyType = (1U << 15),
 
         /// <summary>
+        /// This flag is set when checking federation withdrawals is enabled on the network.
+        /// </summary>
+        CheckFedMultisig = (1U << 30),
+
+        /// <summary>
         /// This flag is set for POS when we reach the block height where cold staking is enabled.
         /// </summary>
         CheckColdStakeVerify = (1U << 31),

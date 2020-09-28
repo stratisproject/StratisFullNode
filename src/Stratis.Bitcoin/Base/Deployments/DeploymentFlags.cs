@@ -19,6 +19,8 @@ namespace Stratis.Bitcoin.Base.Deployments
 
         public DeploymentFlags(ChainedHeader nextBlock, ThresholdState[] prevBlockStates, IConsensus chainparams, ChainIndexer chainIndexer)
         {
+            // TODO: It would be much cleaner to have a network-specific version of this class. So that BIP16 activation etc. is not dependent on an unrelated timestamp
+
             this.EnforceBIP30 = EnforceBIP30ForBlock(nextBlock);
 
             // Once BIP34 activated it was not possible to create new duplicate coinbases and thus other than starting
@@ -49,6 +51,12 @@ namespace Stratis.Bitcoin.Base.Deployments
             if (nextBlock.Height >= chainparams.BuriedDeployments[BuriedDeployments.BIP65])
             {
                 this.ScriptFlags |= ScriptVerify.CheckLockTimeVerify;
+            }
+
+            // Set the CFMS script verify flag if applicable.
+            if (nextBlock.Height >= chainparams.BuriedDeployments[BuriedDeployments.CFMS])
+            {
+                this.ScriptFlags |= ScriptVerify.CheckFedMultisig;
             }
 
             // Set the relevant flags for active BIP9 deployments.

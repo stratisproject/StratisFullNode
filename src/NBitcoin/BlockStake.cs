@@ -163,6 +163,9 @@ namespace NBitcoin
     /// </remarks>
     public class PosTransaction : Transaction
     {
+        /// <summary>
+        /// This gets set during script evaluation for the transaction, and indicates to the consensus rules that cold staking logic needs to be applied to the transaction.
+        /// </summary>
         public bool IsColdCoinStake { get; set; }
 
         public PosTransaction() : base()

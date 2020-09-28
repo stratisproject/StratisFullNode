@@ -55,7 +55,8 @@ namespace Stratis.SmartContracts.Networks
             {
                 [BuriedDeployments.BIP34] = 100000000,
                 [BuriedDeployments.BIP65] = 100000000,
-                [BuriedDeployments.BIP66] = 100000000
+                [BuriedDeployments.BIP66] = 100000000,
+                [BuriedDeployments.CFMS] = int.MaxValue
             };
 
             var bip9Deployments = new NoBIP9Deployments();
