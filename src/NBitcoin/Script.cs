@@ -156,6 +156,18 @@ namespace NBitcoin
             | MinimalIf,
 
         /// <summary>
+        /// Strict consensus script verification flags that are checked by the Bitcoin Core
+        /// consensus library before validating the transaction.
+        /// </summary>
+        Consensus =
+            ScriptVerify.DerSig
+            | ScriptVerify.P2SH
+            | ScriptVerify.NullDummy
+            | ScriptVerify.CheckLockTimeVerify
+            | ScriptVerify.CheckSequenceVerify
+            | ScriptVerify.Witness,
+
+        /// <summary>
         /// For convenience, standard but not mandatory verify flags
         /// </summary>
         StandardNotMandatory = Standard & ~Mandatory
@@ -312,6 +324,7 @@ namespace NBitcoin
 
         OP_CHECKLOCKTIMEVERIFY = 0xb1,
         OP_CHECKSEQUENCEVERIFY = 0xb2,
+        OP_CHECKFEDMULTISIG = 0xb8,
         OP_CHECKCOLDSTAKEVERIFY = 0xb9,
 
         // expansion
@@ -627,6 +640,7 @@ namespace NBitcoin
             }
         }
 
+        // TODO: Move these SignatureHash methods to Transaction to match NBitcoin Transaction.GetSignatureHash
         //https://en.bitcoin.it/wiki/OP_CHECKSIG
         public static uint256 SignatureHash(Network network, ICoin coin, Transaction txTo, SigHash nHashType = SigHash.All)
         {
@@ -1025,6 +1039,9 @@ namespace NBitcoin
             }
             return result.ToArray();
         }
+
+        public PubKey[] GetAllPubKeys() =>
+            ToOps().Where(op => op.PushData != null && PubKey.Check(op.PushData, true)).Select(op => new PubKey(op.PushData)).ToArray();
 
         /// <summary>
         /// Get script byte array
