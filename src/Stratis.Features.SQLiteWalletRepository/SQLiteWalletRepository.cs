@@ -667,7 +667,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         while (addresses.Count < count)
                         {
                             AddressIdentifier addressIdentifier = tracker.CreateAddress();
-                            HDAddress address = this.CreateAddress(account, (int) addressIdentifier.AddressType, (int) addressIdentifier.AddressIndex);
+                            HDAddress address = this.CreateAddress(account, (int)addressIdentifier.AddressType, (int)addressIdentifier.AddressIndex);
                             conn.Insert(address);
                             addresses.Add(address);
                         }
@@ -1195,14 +1195,22 @@ namespace Stratis.Features.SQLiteWalletRepository
             Wallet hdWallet = this.GetWallet(walletAccountReference.WalletName);
             HdAccount hdAccount = this.GetAccounts(hdWallet, walletAccountReference.AccountName).FirstOrDefault();
 
-            ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+            var extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
-            foreach (HDTransactionData transactionData in conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations))
+            var spendable = conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations);
+
+            var cachedPubKeys = new Dictionary<KeyPath, PubKey>();
+
+            foreach (HDTransactionData transactionData in spendable)
             {
-                // TODO: There were some performance concerns noted here with the derivation of the pubkey for each address
                 var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
-                
-                PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                PubKey pubKey = null;
+                if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                {
+                    pubKey = extPubKey.Derive(keyPath).PubKey;
+                    cachedPubKeys.Add(keyPath, pubKey);
+                }
+
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
@@ -1304,7 +1312,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             return this.GetWalletContainer(walletName).TransactionsOfInterest;
         }
-        
+
         /// <inheritdoc />
         public int GetTransactionCount(string walletName, string accountName = null)
         {
