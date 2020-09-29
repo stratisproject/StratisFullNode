@@ -106,7 +106,7 @@ namespace Stratis.Features.FederatedPeg
 
             this.MultiSigRedeemScript = new Script(redeemScriptRaw);
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            PubKey federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
+            byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
             (PubKey[] pubKeys, int reqSigCnt) = nodeSettings.Network.Federation.GetFederationDetails(federationId);
             this.MultiSigM = reqSigCnt;
             this.MultiSigN = pubKeys.Length;
