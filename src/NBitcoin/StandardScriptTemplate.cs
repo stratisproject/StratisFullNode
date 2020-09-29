@@ -313,7 +313,7 @@ namespace NBitcoin
         public Script GenerateScriptPubKey(IFederationId federationId)
         {
             var ops = new List<Op>();
-            Op push = Op.GetPushOp(federationId.ToBytes());
+            ops.Add(Op.GetPushOp(federationId.ToBytes()));
             ops.Add(OpcodeType.OP_FEDERATION);
             ops.Add(OpcodeType.OP_CHECKMULTISIG);
             return new Script(ops);
