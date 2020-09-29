@@ -33,9 +33,6 @@ namespace Stratis.Bitcoin.Networks
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
-            // TODO: Update this later
-            this.FederationMultisigScript = new Script();
-
             var powLimit = new Target(new uint256("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
 
             var consensusFactory = new PosConsensusFactory();

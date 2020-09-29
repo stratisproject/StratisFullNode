@@ -1,20 +1,29 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Moq;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
+using Stratis.Sidechains.Networks;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
 {
+    public class TestNetwork : StraxMain
+    {
+        public TestNetwork(PubKey[] federationMembers) : base()
+        {
+            this.Federation = new Federation(federationMembers);
+        }
+    }
+
     public class MofNMultiSigTests
     {
         [Fact]
         public void Eight_Of_Fifteen_SufficientlyFunded()
         {
-            var network = new StraxMain();
-
             const int n = 15;
             const int m = 8;
 
@@ -27,7 +36,9 @@ namespace Stratis.Features.FederatedPeg.Tests
                 keys[i] = new Key();
             }
 
-            Script redeemScript = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(m, keys.Select(x => x.PubKey).ToArray());
+            Network network = new TestNetwork(keys.Select(x => x.PubKey).ToArray());
+
+            Script redeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(network.Federation.Id);
 
             const int inputCount = 50;
             const decimal fundingInputAmount = 100;

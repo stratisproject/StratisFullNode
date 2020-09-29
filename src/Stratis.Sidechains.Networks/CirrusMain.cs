@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -14,10 +15,46 @@ using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
+    public class Federation : IFederation
+    {
+        private PubKey[] GenesisMembers;
+
+        public Script MultisigScript { get; private set; }
+
+        public PubKey Id { get; private set; }
+
+        public Federation(PubKey[] federationPubKeys)
+        {
+            this.GenesisMembers = federationPubKeys;
+
+            // The federationId is derived by XOR'ing all the genesis federation members.
+            byte[] federationId = this.GenesisMembers.First().ToBytes();
+            foreach (PubKey pubKey in this.GenesisMembers.Skip(1))
+            {
+                byte[] pubKeyBytes = pubKey.ToBytes();
+                for (int i = 0; i < federationId.Length; i++)
+                    federationId[i] ^= pubKeyBytes[i];
+            }
+
+            this.Id = new PubKey(federationId);
+            this.MultisigScript = new Script(this.Id.ToHex() + " OP_FEDERATION OP_CHECKMULTISIG");
+        }
+
+        public (PubKey[], int signaturesRequired) GetFederationDetails(PubKey federationId)
+        {
+            // For now, we only support the one federation.
+            Guard.Assert(federationId == this.Id);
+
+            // Until dynamic membership is implemented we just return the genesis members.
+            return (this.GenesisMembers, (this.GenesisMembers.Length + 1) / 2);
+        }
+    }
+
     /// <summary>
     /// <see cref="PoANetwork"/>.
     /// </summary>
@@ -133,6 +170,8 @@ namespace Stratis.Sidechains.Networks
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = NBitcoin.Protocol.ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
             };
+
+            this.Federation = new Federation(genesisFederationMembers.Where(f => ((CollateralFederationMember)f).IsMultisigMember).Select(f => ((CollateralFederationMember)f).PubKey).ToArray());
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

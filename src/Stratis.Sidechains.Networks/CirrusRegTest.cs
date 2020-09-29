@@ -78,6 +78,8 @@ namespace Stratis.Sidechains.Networks
 
             List<PubKey> federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
+            this.Federation = new Federation(federationPubKeys.ToArray());
+
             var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
 
             foreach (PubKey pubKey in federationPubKeys)

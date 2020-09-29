@@ -18,7 +18,7 @@ namespace FederationSetup
         {
             var output = new StringBuilder();
 
-            Script payToMultiSig = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(quorum, pubKeys);
+            Script payToMultiSig = PayToFederationTemplate.Instance.GenerateScriptPubKey(sidechainNetwork.Federation.Id);
             output.AppendLine("Redeem script: " + payToMultiSig.ToString());
 
             BitcoinAddress sidechainMultisigAddress = payToMultiSig.Hash.GetAddress(sidechainNetwork);

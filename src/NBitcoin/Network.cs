@@ -60,6 +60,14 @@ namespace NBitcoin
         public Func<Network> Regtest { get; }
     }
 
+    public interface IFederation
+    {
+        Script MultisigScript { get; }
+        PubKey Id { get; }
+
+        (PubKey[], int signaturesRequired) GetFederationDetails(PubKey federationId);
+    }
+
     public abstract class Network
     {
         protected Block Genesis;
@@ -271,7 +279,7 @@ namespace NBitcoin
         /// </summary>
         public IStandardScriptsRegistry StandardScriptsRegistry { get; protected set; }
 
-        public Script FederationMultisigScript { get; protected set; }
+        public IFederation Federation { get; protected set; }
 
         /// <summary>
         /// Mines a new genesis block, to use with a new network.

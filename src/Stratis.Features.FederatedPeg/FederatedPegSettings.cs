@@ -106,10 +106,11 @@ namespace Stratis.Features.FederatedPeg
 
             this.MultiSigRedeemScript = new Script(redeemScriptRaw);
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            PayToMultiSigTemplateParameters payToMultisigScriptParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
-            this.MultiSigM = payToMultisigScriptParams.SignatureCount;
-            this.MultiSigN = payToMultisigScriptParams.PubKeys.Length;
-            this.FederationPublicKeys = payToMultisigScriptParams.PubKeys;
+            PubKey federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
+            (PubKey[] pubKeys, int reqSigCnt) = nodeSettings.Network.Federation.GetFederationDetails(federationId);
+            this.MultiSigM = reqSigCnt;
+            this.MultiSigN = pubKeys.Length;
+            this.FederationPublicKeys = pubKeys;
 
             this.PublicKey = configReader.GetOrDefault<string>(PublicKeyParam, null);
 

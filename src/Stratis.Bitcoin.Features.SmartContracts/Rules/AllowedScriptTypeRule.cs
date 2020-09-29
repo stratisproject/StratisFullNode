@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
                 return;
 
             // For cross-chain transfers
-            if (PayToMultiSigTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
+            if (PayToFederationTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
             // For cross-chain transfers
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
                 return;
 
             // For cross-chain transfers
-            if (PayToMultiSigTemplate.Instance.CheckScriptSig(network, input.ScriptSig, null))
+            if (PayToFederationTemplate.Instance.CheckScriptSig(network, input.ScriptSig, null))
                 return;
 
             new ConsensusError("disallowed-input-script", "Only the following script types are allowed on smart contracts network: P2PKH, P2SH, P2MultiSig, OP_RETURN and smart contracts").Throw();
