@@ -744,7 +744,13 @@ namespace NBitcoin
         public TransactionSignature Sign(Network network, Key key, ICoin coin, SigHash sigHash)
         {
             uint256 hash = GetSignatureHash(network, coin, sigHash);
-            return key.Sign(hash, sigHash);
+            TransactionSignature signature = key.Sign(hash, sigHash);
+            if (!key.PubKey.Verify(hash, signature.Signature))
+            {
+
+            }
+
+            return signature;
         }
 
         public uint256 GetSignatureHash(Network network, ICoin coin, SigHash sigHash = SigHash.All)

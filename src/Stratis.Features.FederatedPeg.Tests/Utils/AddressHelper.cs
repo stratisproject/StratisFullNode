@@ -65,6 +65,8 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
         public MultisigAddressHelper(Network targetChainNetwork, Network sourceChainNetwork, int quorum = 2, int sigCount = 3)
             : base(targetChainNetwork, sourceChainNetwork)
         {
+            // TODO: This still needs some work.
+
             this.MultisigMnemonics = Enumerable.Range(0, sigCount)
                 .Select(i => new Mnemonic(Wordlist.English, WordCount.Twelve))
                 .ToArray();
@@ -73,8 +75,10 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
                 .Select(m => m.DeriveExtKey(Passphrase).PrivateKey)
                 .ToArray();
 
-            this.PayToMultiSig = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
-                quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());
+            IFederationId federationId = targetChainNetwork.Federation.Id;
+            this.PayToMultiSig = PayToFederationTemplate.Instance.GenerateScriptPubKey(federationId);                
+                //PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
+                //quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());
 
             this.SourceChainMultisigAddress = this.PayToMultiSig.Hash.GetAddress(this.SourceChainNetwork);
             this.SourceChainPayToScriptHash = this.SourceChainMultisigAddress.ScriptPubKey;

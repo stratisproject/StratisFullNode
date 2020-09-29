@@ -13,6 +13,7 @@ namespace NBitcoin
             PayToPubkeyTemplate.Instance,
             PayToScriptHashTemplate.Instance,
             PayToMultiSigTemplate.Instance,
+            PayToFederationTemplate.Instance,
             TxNullDataTemplate.Instance,
             PayToWitTemplate.Instance
         };

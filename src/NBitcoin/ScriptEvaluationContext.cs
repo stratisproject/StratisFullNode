@@ -1407,9 +1407,6 @@ namespace NBitcoin
                                             return SetError(ScriptError.UnknownError);
                                         }
 
-                                        if (this._stack.Count < (sigsReq + 2))
-                                            return SetError(ScriptError.InvalidStackOperation);
-
                                         this._stack.Pop();
 
                                         // First push the signature requirement.

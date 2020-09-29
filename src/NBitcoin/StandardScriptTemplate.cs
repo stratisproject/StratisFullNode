@@ -493,7 +493,7 @@ namespace NBitcoin
         }
         public PayToScriptHashSigParameters ExtractScriptSigParameters(Network network, Script scriptSig, ScriptId expectedScriptId)
         {
-            if(expectedScriptId == null)
+            if (expectedScriptId == null)
                 return ExtractScriptSigParameters(network, scriptSig, null as Script);
             return ExtractScriptSigParameters(network, scriptSig, expectedScriptId.ScriptPubKey);
         }
@@ -501,7 +501,7 @@ namespace NBitcoin
         {
             Op[] ops = scriptSig.ToOps().ToArray();
             Op[] ops2 = scriptPubKey == null ? null : scriptPubKey.ToOps().ToArray();
-            if(!CheckScriptSigCore(network, scriptSig, ops, scriptPubKey, ops2))
+            if (!CheckScriptSigCore(network, scriptSig, ops, scriptPubKey, ops2))
                 return null;
 
             var result = new PayToScriptHashSigParameters();
@@ -512,7 +512,7 @@ namespace NBitcoin
         public Script GenerateScriptSig(byte[][] pushes, Script redeemScript)
         {
             var ops = new List<Op>();
-            foreach(byte[] push in pushes)
+            foreach (byte[] push in pushes)
                 ops.Add(Op.GetPushOp(push));
             ops.Add(Op.GetPushOp(redeemScript.ToBytes(true)));
             return new Script(ops);
@@ -521,8 +521,7 @@ namespace NBitcoin
         public Script GenerateScriptSig(Network network, TransactionSignature[] signatures, Script redeemScript)
         {
             var ops = new List<Op>();
-            var multiSigTemplate = new PayToMultiSigTemplate();
-            bool multiSig = multiSigTemplate.CheckScriptPubKey(redeemScript);
+            bool multiSig = PayToMultiSigTemplate.Instance.CheckScriptPubKey(redeemScript) || PayToFederationTemplate.Instance.CheckScriptPubKey(redeemScript);
             if(multiSig)
                 ops.Add(OpcodeType.OP_0);
             foreach(TransactionSignature sig in signatures)

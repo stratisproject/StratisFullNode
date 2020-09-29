@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using NBitcoin.Crypto;
@@ -446,7 +447,7 @@ namespace NBitcoin
 
         public Script(byte[] data, bool compressed)
         {
-            if(!compressed)
+            if (!compressed)
                 this._Script = data.ToArray();
             else
             {
@@ -471,20 +472,20 @@ namespace NBitcoin
         /// <returns></returns>
         public Script ExtractScriptCode(int codeSeparatorIndex)
         {
-            if(codeSeparatorIndex == -1)
+            if (codeSeparatorIndex == -1)
                 return this;
-            if(codeSeparatorIndex < -1)
+            if (codeSeparatorIndex < -1)
                 throw new ArgumentOutOfRangeException("codeSeparatorIndex");
             int separatorIndex = -1;
             var ops = new List<Op>();
-            foreach(Op op in ToOps())
+            foreach (Op op in ToOps())
             {
-                if(op.Code == OpcodeType.OP_CODESEPARATOR)
+                if (op.Code == OpcodeType.OP_CODESEPARATOR)
                     separatorIndex++;
-                if(separatorIndex >= codeSeparatorIndex && !(separatorIndex == codeSeparatorIndex && op.Code == OpcodeType.OP_CODESEPARATOR))
+                if (separatorIndex >= codeSeparatorIndex && !(separatorIndex == codeSeparatorIndex && op.Code == OpcodeType.OP_CODESEPARATOR))
                     ops.Add(op);
             }
-            if(separatorIndex < codeSeparatorIndex)
+            if (separatorIndex < codeSeparatorIndex)
                 throw new ArgumentOutOfRangeException("codeSeparatorIndex");
             return new Script(ops.ToArray());
         }
@@ -510,7 +511,7 @@ namespace NBitcoin
 
         internal int FindAndDelete(byte[] pushedData)
         {
-            if(pushedData.Length == 0)
+            if (pushedData.Length == 0)
                 return 0;
             Op standardOp = Op.GetPushOp(pushedData);
             return FindAndDelete(op =>
@@ -521,17 +522,17 @@ namespace NBitcoin
         {
             int nFound = 0;
             var operations = new List<Op>();
-            foreach(Op op in ToOps())
+            foreach (Op op in ToOps())
             {
                 bool shouldDelete = predicate(op);
-                if(!shouldDelete)
+                if (!shouldDelete)
                 {
                     operations.Add(op);
                 }
                 else
                     nFound++;
             }
-            if(nFound == 0)
+            if (nFound == 0)
                 return 0;
             this._Script = new Script(operations)._Script;
             return nFound;
@@ -605,22 +606,22 @@ namespace NBitcoin
             {
                 using (ScriptReader reader = CreateReader())
                 {
-                    foreach(Op op in reader.ToEnumerable())
+                    foreach (Op op in reader.ToEnumerable())
                     {
-                        if(op.IsInvalid)
+                        if (op.IsInvalid)
                             return false;
-                        if(op.Code > OpcodeType.OP_16)
+                        if (op.Code > OpcodeType.OP_16)
                             continue;
-                        if(op.Code < OpcodeType.OP_PUSHDATA1 && op.Code > OpcodeType.OP_0 && (op.PushData.Length == 1 && op.PushData[0] <= 16))
+                        if (op.Code < OpcodeType.OP_PUSHDATA1 && op.Code > OpcodeType.OP_0 && (op.PushData.Length == 1 && op.PushData[0] <= 16))
                             // Could have used an OP_n code, rather than a 1-byte push.
                             return false;
-                        if(op.Code == OpcodeType.OP_PUSHDATA1 && op.PushData.Length < (byte)OpcodeType.OP_PUSHDATA1)
+                        if (op.Code == OpcodeType.OP_PUSHDATA1 && op.PushData.Length < (byte)OpcodeType.OP_PUSHDATA1)
                             // Could have used a normal n-byte push, rather than OP_PUSHDATA1.
                             return false;
-                        if(op.Code == OpcodeType.OP_PUSHDATA2 && op.PushData.Length <= 0xFF)
+                        if (op.Code == OpcodeType.OP_PUSHDATA2 && op.PushData.Length <= 0xFF)
                             // Could have used an OP_PUSHDATA1.
                             return false;
-                        if(op.Code == OpcodeType.OP_PUSHDATA4 && op.PushData.Length <= 0xFFFF)
+                        if (op.Code == OpcodeType.OP_PUSHDATA4 && op.PushData.Length <= 0xFFFF)
                             // Could have used an OP_PUSHDATA2.
                             return false;
                     }
@@ -633,7 +634,7 @@ namespace NBitcoin
         public static uint256 SignatureHash(Network network, ICoin coin, Transaction txTo, SigHash nHashType = SigHash.All)
         {
             IndexedTxIn input = txTo.Inputs.AsIndexedInputs().FirstOrDefault(i => i.PrevOut == coin.Outpoint);
-            if(input == null)
+            if (input == null)
                 throw new ArgumentException("coin should be spent spent in txTo", "coin");
             return input.GetSignatureHash(network, coin, nHashType);
         }
@@ -648,30 +649,30 @@ namespace NBitcoin
         {
             if (sigversion == HashVersion.Witness)
             {
-                if(amount == null)
+                if (amount == null)
                     throw new ArgumentException("The amount of the output being signed must be provided", "amount");
                 uint256 hashPrevouts = uint256.Zero;
                 uint256 hashSequence = uint256.Zero;
                 uint256 hashOutputs = uint256.Zero;
 
-                if((nHashType & SigHash.AnyoneCanPay) == 0)
+                if ((nHashType & SigHash.AnyoneCanPay) == 0)
                 {
                     hashPrevouts = precomputedTransactionData == null ?
                                    GetHashPrevouts(txTo) : precomputedTransactionData.HashPrevouts;
                 }
 
-                if((nHashType & SigHash.AnyoneCanPay) == 0 && ((uint)nHashType & 0x1f) != (uint)SigHash.Single && ((uint)nHashType & 0x1f) != (uint)SigHash.None)
+                if ((nHashType & SigHash.AnyoneCanPay) == 0 && ((uint)nHashType & 0x1f) != (uint)SigHash.Single && ((uint)nHashType & 0x1f) != (uint)SigHash.None)
                 {
                     hashSequence = precomputedTransactionData == null ?
                                    GetHashSequence(txTo) : precomputedTransactionData.HashSequence;
                 }
 
-                if(((uint)nHashType & 0x1f) != (uint)SigHash.Single && ((uint)nHashType & 0x1f) != (uint)SigHash.None)
+                if (((uint)nHashType & 0x1f) != (uint)SigHash.Single && ((uint)nHashType & 0x1f) != (uint)SigHash.None)
                 {
                     hashOutputs = precomputedTransactionData == null ?
                                     GetHashOutputs(txTo) : precomputedTransactionData.HashOutputs;
                 }
-                else if(((uint)nHashType & 0x1f) == (uint)SigHash.Single && nIn < txTo.Outputs.Count)
+                else if (((uint)nHashType & 0x1f) == (uint)SigHash.Single && nIn < txTo.Outputs.Count)
                 {
                     BitcoinStream ss = CreateHashWriter(sigversion);
                     ss.ReadWrite(txTo.Outputs[nIn]);
@@ -701,7 +702,7 @@ namespace NBitcoin
                 return GetHash(sss);
             }
 
-            if(nIn >= txTo.Inputs.Count)
+            if (nIn >= txTo.Inputs.Count)
             {
                 Utils.log("ERROR: SignatureHash() : nIn=" + nIn + " out of range\n");
                 return uint256.One;
@@ -712,7 +713,7 @@ namespace NBitcoin
             // Check for invalid use of SIGHASH_SINGLE.
             if (hashType == SigHash.Single)
             {
-                if(nIn >= txTo.Outputs.Count)
+                if (nIn >= txTo.Outputs.Count)
                 {
                     Utils.log("ERROR: SignatureHash() : nOut=" + nIn + " out of range\n");
                     return uint256.One;
@@ -725,40 +726,40 @@ namespace NBitcoin
             Transaction txCopy = network.CreateTransaction(txTo.ToBytes());
 
             //Set all TxIn script to empty string
-            foreach(TxIn txin in txCopy.Inputs)
+            foreach (TxIn txin in txCopy.Inputs)
             {
                 txin.ScriptSig = new Script();
             }
             //Copy subscript into the txin script you are checking
             txCopy.Inputs[nIn].ScriptSig = scriptCopy;
 
-            if(hashType == SigHash.None)
+            if (hashType == SigHash.None)
             {
                 //The output of txCopy is set to a vector of zero size.
                 txCopy.Outputs.Clear();
 
                 //All other inputs aside from the current input in txCopy have their nSequence index set to zero
-                foreach(TxIn input in txCopy.Inputs.Where((x, i) => i != nIn))
+                foreach (TxIn input in txCopy.Inputs.Where((x, i) => i != nIn))
                     input.Sequence = 0;
             }
-            else if(hashType == SigHash.Single)
+            else if (hashType == SigHash.Single)
             {
                 //The output of txCopy is resized to the size of the current input index+1.
                 txCopy.Outputs.RemoveRange(nIn + 1, txCopy.Outputs.Count - (nIn + 1));
                 //All other txCopy outputs aside from the output that is the same as the current input index are set to a blank script and a value of (long) -1.
-                for(int i = 0; i < txCopy.Outputs.Count; i++)
+                for (int i = 0; i < txCopy.Outputs.Count; i++)
                 {
-                    if(i == nIn)
+                    if (i == nIn)
                         continue;
                     txCopy.Outputs[i] = new TxOut();
                 }
                 //All other txCopy inputs aside from the current input are set to have an nSequence index of zero.
-                foreach(TxIn input in txCopy.Inputs.Where((x, i) => i != nIn))
+                foreach (TxIn input in txCopy.Inputs.Where((x, i) => i != nIn))
                     input.Sequence = 0;
             }
 
 
-            if((nHashType & SigHash.AnyoneCanPay) != 0)
+            if ((nHashType & SigHash.AnyoneCanPay) != 0)
             {
                 //The txCopy input vector is resized to a length of one.
                 TxIn script = txCopy.Inputs[nIn];
@@ -773,7 +774,8 @@ namespace NBitcoin
             BitcoinStream stream = CreateHashWriter(sigversion);
             txCopy.ReadWrite(stream);
             stream.ReadWrite((uint)nHashType);
-            return GetHash(stream);
+            uint256 hash = GetHash(stream);
+            return hash;
         }
 
         private static uint256 GetHash(BitcoinStream stream)
@@ -787,7 +789,7 @@ namespace NBitcoin
         {
             uint256 hashOutputs;
             BitcoinStream ss = CreateHashWriter(HashVersion.Witness);
-            foreach(TxOut txout in txTo.Outputs)
+            foreach (TxOut txout in txTo.Outputs)
             {
                 ss.ReadWrite(txout);
             }
@@ -799,7 +801,7 @@ namespace NBitcoin
         {
             uint256 hashSequence;
             BitcoinStream ss = CreateHashWriter(HashVersion.Witness);
-            foreach(TxIn input in txTo.Inputs)
+            foreach (TxIn input in txTo.Inputs)
             {
                 ss.ReadWrite((uint)input.Sequence);
             }
@@ -811,7 +813,7 @@ namespace NBitcoin
         {
             uint256 hashPrevouts;
             BitcoinStream ss = CreateHashWriter(HashVersion.Witness);
-            foreach(TxIn input in txTo.Inputs)
+            foreach (TxIn input in txTo.Inputs)
             {
                 ss.ReadWrite(input.PrevOut);
             }
@@ -830,7 +832,7 @@ namespace NBitcoin
 
         public static Script operator +(Script a, IEnumerable<byte> bytes)
         {
-            if(a == null)
+            if (a == null)
                 return new Script(Op.GetPushOp(bytes.ToArray()));
             return a + Op.GetPushOp(bytes.ToArray());
         }
@@ -856,13 +858,13 @@ namespace NBitcoin
         {
             uint n = 0;
             Op lastOpcode = null;
-            foreach(Op op in ToOps())
+            foreach (Op op in ToOps())
             {
-                if(op.Code == OpcodeType.OP_CHECKSIG || op.Code == OpcodeType.OP_CHECKSIGVERIFY)
+                if (op.Code == OpcodeType.OP_CHECKSIG || op.Code == OpcodeType.OP_CHECKSIGVERIFY)
                     n++;
-                else if(op.Code == OpcodeType.OP_CHECKMULTISIG || op.Code == OpcodeType.OP_CHECKMULTISIGVERIFY)
+                else if (op.Code == OpcodeType.OP_CHECKMULTISIG || op.Code == OpcodeType.OP_CHECKMULTISIGVERIFY)
                 {
-                    if(fAccurate && lastOpcode != null && lastOpcode.Code >= OpcodeType.OP_1 && lastOpcode.Code <= OpcodeType.OP_16)
+                    if (fAccurate && lastOpcode != null && lastOpcode.Code >= OpcodeType.OP_1 && lastOpcode.Code <= OpcodeType.OP_16)
                         n += (lastOpcode.PushData == null || lastOpcode.PushData.Length == 0) ? 0U : (uint)lastOpcode.PushData[0];
                     else
                         n += 20;
@@ -892,7 +894,7 @@ namespace NBitcoin
 
         public BitcoinScriptAddress GetScriptAddress(Network network)
         {
-            return (BitcoinScriptAddress) this.Hash.GetAddress(network);
+            return (BitcoinScriptAddress)this.Hash.GetAddress(network);
         }
 
         [Obsolete("Use IsScriptType instead")]
@@ -904,13 +906,13 @@ namespace NBitcoin
 
         public BitcoinWitScriptAddress GetWitScriptAddress(Network network)
         {
-            return (BitcoinWitScriptAddress) this.WitHash.GetAddress(network);
+            return (BitcoinWitScriptAddress)this.WitHash.GetAddress(network);
         }
 
         public uint GetSigOpCount(Network network, Script scriptSig)
         {
             // TODO: Is the network needed?
-            if(!IsPayToScriptHash(network))
+            if (!IsPayToScriptHash(network))
                 return GetSigOpCount(true);
             // This is a pay-to-script-hash scriptPubKey;
             // get the last item that the scriptSig
@@ -970,7 +972,7 @@ namespace NBitcoin
         public TxDestination GetSigner(Network network)
         {
             PayToPubkeyHashScriptSigParameters pubKey = PayToPubkeyHashTemplate.Instance.ExtractScriptSigParameters(network, this);
-            if(pubKey != null)
+            if (pubKey != null)
             {
                 return pubKey.PublicKey.Hash;
             }
@@ -997,10 +999,10 @@ namespace NBitcoin
         public TxDestination GetDestination(Network network)
         {
             KeyId pubKeyHashParams = PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(this);
-            if(pubKeyHashParams != null)
+            if (pubKeyHashParams != null)
                 return pubKeyHashParams;
             ScriptId scriptHashParams = PayToScriptHashTemplate.Instance.ExtractScriptPubKeyParameters(this);
-            if(scriptHashParams != null)
+            if (scriptHashParams != null)
                 return scriptHashParams;
             TxDestination wit = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters(network, this);
             return wit;
@@ -1015,16 +1017,25 @@ namespace NBitcoin
         {
             var result = new List<PubKey>();
             PubKey single = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(this);
-            if(single != null)
+            if (single != null)
             {
                 result.Add(single);
             }
             else
             {
                 PayToMultiSigTemplateParameters multiSig = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this);
-                if(multiSig != null)
+                if (multiSig != null)
                 {
                     result.AddRange(multiSig.PubKeys);
+                }
+                else
+                {
+                    byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this);
+                    if (federationId != null)
+                    {
+                        (PubKey[] pubKeys, int signatureCount) = network.Federation.GetFederationDetails(federationId);
+                        result.AddRange(pubKeys);
+                    }
                 }
             }
             return result.ToArray();
@@ -1188,9 +1199,9 @@ namespace NBitcoin
         }
         public static bool operator ==(Script a, Script b)
         {
-            if(ReferenceEquals(a, b))
+            if (ReferenceEquals(a, b))
                 return true;
-            if(((object)a == null) || ((object)b == null))
+            if (((object)a == null) || ((object)b == null))
                 return false;
             return Utils.ArrayEqual(a._Script, b._Script);
         }
@@ -1222,14 +1233,14 @@ namespace NBitcoin
         }
         public static ScriptSigs CombineSignatures(Network network, Script scriptPubKey, TransactionChecker checker, ScriptSigs input1, ScriptSigs input2)
         {
-            if(scriptPubKey == null)
+            if (scriptPubKey == null)
                 scriptPubKey = new Script();
 
             Script scriptSig1 = input1.ScriptSig;
             Script scriptSig2 = input2.ScriptSig;
             var hashVersion = HashVersion.Original;
             bool isWitness = input1.WitSig != WitScript.Empty || input2.WitSig != WitScript.Empty;
-            if(isWitness)
+            if (isWitness)
             {
                 scriptSig1 = input1.WitSig.ToScript();
                 scriptSig2 = input2.WitSig.ToScript();
@@ -1247,9 +1258,9 @@ namespace NBitcoin
 
             byte[][] stack2 = context.Stack.AsInternalArray();
             Script result = CombineSignatures(network, scriptPubKey, checker, stack1, stack2, hashVersion);
-            if(result == null)
+            if (result == null)
                 return scriptSig1.Length < scriptSig2.Length ? input2 : input1;
-            if(!isWitness)
+            if (!isWitness)
             {
                 return new ScriptSigs()
                 {
@@ -1271,28 +1282,28 @@ namespace NBitcoin
         {
             ScriptTemplate template = StandardScripts.GetTemplateFromScriptPubKey(scriptPubKey);
 
-            if(template is PayToWitPubKeyHashTemplate)
+            if (template is PayToWitPubKeyHashTemplate)
             {
                 scriptPubKey = new KeyId(scriptPubKey.ToBytes(true).SafeSubarray(1, 20)).ScriptPubKey;
                 template = StandardScripts.GetTemplateFromScriptPubKey(scriptPubKey);
             }
-            if(template == null || template is TxNullDataTemplate)
+            if (template == null || template is TxNullDataTemplate)
                 return PushAll(Max(sigs1, sigs2));
 
-            if(template is PayToPubkeyTemplate || template is PayToPubkeyHashTemplate)
+            if (template is PayToPubkeyTemplate || template is PayToPubkeyHashTemplate)
             {
-                if(sigs1.Length == 0 || sigs1[0].Length == 0)
+                if (sigs1.Length == 0 || sigs1[0].Length == 0)
                     return PushAll(sigs2);
                 else
                     return PushAll(sigs1);
             }
 
-            if(template is PayToScriptHashTemplate || template is PayToWitTemplate)
+            if (template is PayToScriptHashTemplate || template is PayToWitTemplate)
             {
-                if(sigs1.Length == 0 || sigs1[sigs1.Length - 1].Length == 0)
+                if (sigs1.Length == 0 || sigs1[sigs1.Length - 1].Length == 0)
                     return PushAll(sigs2);
 
-                if(sigs2.Length == 0 || sigs2[sigs2.Length - 1].Length == 0)
+                if (sigs2.Length == 0 || sigs2[sigs2.Length - 1].Length == 0)
                     return PushAll(sigs1);
 
                 byte[] redeemBytes = sigs1[sigs1.Length - 1];
@@ -1304,7 +1315,7 @@ namespace NBitcoin
                 return result;
             }
 
-            if(template is PayToMultiSigTemplate)
+            if (template is PayToMultiSigTemplate || template is PayToFederationTemplate)
             {
                 return CombineMultisig(network, scriptPubKey, checker, sigs1, sigs2, hashVersion);
             }
@@ -1333,15 +1344,29 @@ namespace NBitcoin
                 }
             }
 
-            PayToMultiSigTemplateParameters multiSigParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
-            if(multiSigParams == null)
-                throw new InvalidOperationException("The scriptPubKey is not a valid multi sig");
+            PubKey[] pubKeys;
+            int signatureCount;
+            {
+                PayToMultiSigTemplateParameters multiSigParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+                if (multiSigParams != null)
+                {
+                    pubKeys = multiSigParams.PubKeys;
+                    signatureCount = multiSigParams.SignatureCount;
+                }
+                else
+                {
+                    byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+                    if (federationId == null)
+                        throw new InvalidOperationException("The scriptPubKey is not a valid multi sig");
+                    (pubKeys, signatureCount) = network.Federation.GetFederationDetails(federationId);
+                }
+            }
 
             var sigs = new Dictionary<PubKey, TransactionSignature>();
 
             foreach(TransactionSignature sig in allsigs)
             {
-                foreach(PubKey pubkey in multiSigParams.PubKeys)
+                foreach(PubKey pubkey in pubKeys)
                 {
                     if(sigs.ContainsKey(pubkey))
                         continue; // Already got a sig for this pubkey
@@ -1358,19 +1383,19 @@ namespace NBitcoin
             // Now build a merged CScript:
             int nSigsHave = 0;
             var result = new Script(OpcodeType.OP_0); // pop-one-too-many workaround
-            foreach(PubKey pubkey in multiSigParams.PubKeys)
+            foreach(PubKey pubkey in pubKeys)
             {
                 if(sigs.ContainsKey(pubkey))
                 {
                     result += Op.GetPushOp(sigs[pubkey].ToBytes());
                     nSigsHave++;
                 }
-                if(nSigsHave >= multiSigParams.SignatureCount)
+                if(nSigsHave >= signatureCount)
                     break;
             }
 
             // Fill any missing with OP_0:
-            for(int i = nSigsHave; i < multiSigParams.SignatureCount; i++)
+            for(int i = nSigsHave; i < signatureCount; i++)
                 result += OpcodeType.OP_0;
 
             return result;
