@@ -342,7 +342,8 @@ namespace NBitcoin
         P2PK,
         P2WPKH,
         P2WSH,
-        MultiSig
+        MultiSig,
+        Federation
     }
 
     public class ScriptSigs
@@ -944,6 +945,8 @@ namespace NBitcoin
                     return PayToWitScriptHashTemplate.Instance.CheckScriptPubKey(this);
                 case ScriptType.MultiSig:
                     return PayToMultiSigTemplate.Instance.CheckScriptPubKey(this);
+                case ScriptType.Federation:
+                    return PayToFederationTemplate.Instance.CheckScriptPubKey(this);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, "The value is not a valid script type");
             }

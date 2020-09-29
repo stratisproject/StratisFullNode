@@ -1393,11 +1393,24 @@ namespace NBitcoin
                                             return SetError(ScriptError.InvalidStackOperation);
 
                                         // Get the federation identifier.
-                                        byte[] federationId = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getvch();
+                                        byte[] federationId = this._stack.Top(-1);
 
-                                        // TODO: Decide how to handle errors here.
                                         // Get the federation details.
-                                        (PubKey[] members, int sigsReq) = this.Network.Federation.GetFederationDetails(federationId);
+                                        PubKey[] members;
+                                        int sigsReq;
+                                        try
+                                        {
+                                            (members, sigsReq) = this.Network.Federation.GetFederationDetails(federationId);
+                                        }
+                                        catch (Exception)
+                                        {
+                                            return SetError(ScriptError.UnknownError);
+                                        }
+
+                                        if (this._stack.Count < (sigsReq + 2))
+                                            return SetError(ScriptError.InvalidStackOperation);
+
+                                        this._stack.Pop();
 
                                         // First push the signature requirement.
                                         this._stack.Push(new CScriptNum(sigsReq).getvch());

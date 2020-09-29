@@ -57,7 +57,8 @@ namespace Stratis.Sidechains.Networks
 
         public Federation(PubKey[] federationPubKeys)
         {
-            this.GenesisMembers = federationPubKeys;
+            // Ensures that the federation id will always map to the same members in the same order.
+            this.GenesisMembers = federationPubKeys.OrderBy(k => k.ToHex()).ToArray();
 
             // The federationId is derived by XOR'ing all the genesis federation members.
             byte[] federationId = this.GenesisMembers.First().ToBytes();

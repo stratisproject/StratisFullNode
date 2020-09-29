@@ -98,7 +98,7 @@ namespace NBitcoin.BuilderExtensions
             {
                 sigs = sigs.Where(s => s != TransactionSignature.Empty && s != null);
             }
-            return PayToMultiSigTemplate.Instance.GenerateScriptSig(sigs);
+            return PayToFederationTemplate.Instance.GenerateScriptSig(sigs);
         }
     }
 }
