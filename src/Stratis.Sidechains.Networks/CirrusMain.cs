@@ -38,7 +38,7 @@ namespace Stratis.Sidechains.Networks
 
         public override bool Equals(object obj)
         {
-            return this.comparer.Equals((byte[])obj, this.federationId);
+            return this.comparer.Equals(((FederationId)obj).federationId, this.federationId);
         }
 
         public override int GetHashCode()
