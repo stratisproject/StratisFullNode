@@ -28,7 +28,9 @@ namespace NBitcoin.BuilderExtensions
 
         public override Script CombineScriptSig(Network network, Script scriptPubKey, Script a, Script b)
         {
-            PayToMultiSigTemplateParameters para = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+            byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+            (PubKey[] pubKeys, int signatureCount) = network.Federation.GetFederationDetails(federationId);
+
             // Combine all the signatures we've got:
             TransactionSignature[] aSigs = PayToFederationTemplate.Instance.ExtractScriptSigParameters(network, a);
             if (aSigs == null)
@@ -37,8 +39,8 @@ namespace NBitcoin.BuilderExtensions
             if (bSigs == null)
                 return a;
             int sigCount = 0;
-            var sigs = new TransactionSignature[para.PubKeys.Length];
-            for (int i = 0; i < para.PubKeys.Length; i++)
+            var sigs = new TransactionSignature[pubKeys.Length];
+            for (int i = 0; i < pubKeys.Length; i++)
             {
                 TransactionSignature aSig = i < aSigs.Length ? aSigs[i] : null;
                 TransactionSignature bSig = i < bSigs.Length ? bSigs[i] : null;
@@ -48,10 +50,10 @@ namespace NBitcoin.BuilderExtensions
                     sigs[i] = sig;
                     sigCount++;
                 }
-                if (sigCount == para.SignatureCount)
+                if (sigCount == signatureCount)
                     break;
             }
-            if (sigCount == para.SignatureCount)
+            if (sigCount == signatureCount)
                 sigs = sigs.Where(s => s != null && s != TransactionSignature.Empty).ToArray();
             return PayToFederationTemplate.Instance.GenerateScriptSig(sigs);
         }
