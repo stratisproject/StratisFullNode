@@ -42,7 +42,7 @@ namespace Stratis.Sidechains.Networks
             }
 
             this.Id = new PubKey(federationId);
-            this.MultisigScript = new Script(this.Id.ToHex() + " OP_FEDERATION OP_CHECKMULTISIG");
+            this.MultisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(this.Id);
         }
 
         public (PubKey[], int signaturesRequired) GetFederationDetails(PubKey federationId)
