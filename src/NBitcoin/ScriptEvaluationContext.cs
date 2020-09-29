@@ -1397,7 +1397,7 @@ namespace NBitcoin
 
                                         // TODO: Decide how to handle errors here.
                                         // Get the federation details.
-                                        (PubKey[] members, int sigsReq) = this.Network.Federation.GetFederationDetails(new PubKey(federationId));
+                                        (PubKey[] members, int sigsReq) = this.Network.Federation.GetFederationDetails(federationId);
 
                                         // First push the signature requirement.
                                         this._stack.Push(new CScriptNum(sigsReq).getvch());

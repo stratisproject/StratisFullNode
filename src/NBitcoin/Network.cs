@@ -60,12 +60,18 @@ namespace NBitcoin
         public Func<Network> Regtest { get; }
     }
 
+    public interface IFederationId : IBitcoinSerializable
+    {
+        bool Equals(object obj);
+    }
+
     public interface IFederation
     {
         Script MultisigScript { get; }
-        PubKey Id { get; }
+        IFederationId Id { get; }
 
-        (PubKey[], int signaturesRequired) GetFederationDetails(PubKey federationId);
+        (PubKey[], int signaturesRequired) GetFederationDetails(byte[] federationId);
+        (PubKey[], int signaturesRequired) GetFederationDetails(IFederationId federationId);
     }
 
     public abstract class Network

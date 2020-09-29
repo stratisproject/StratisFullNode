@@ -310,7 +310,7 @@ namespace NBitcoin
             }
         }
 
-        public Script GenerateScriptPubKey(PubKey federationId)
+        public Script GenerateScriptPubKey(IFederationId federationId)
         {
             var ops = new List<Op>();
             Op push = Op.GetPushOp(federationId.ToBytes());
@@ -326,10 +326,12 @@ namespace NBitcoin
                 return false;
 
             byte[] federationId = ops[0].PushData;
-            return PubKey.Check(federationId, false) && ops[1].Code == OpcodeType.OP_FEDERATION && ops[2].Code == OpcodeType.OP_CHECKMULTISIG;
+
+            // TODO: Validate the federation id.
+            return ops[1].Code == OpcodeType.OP_FEDERATION && ops[2].Code == OpcodeType.OP_CHECKMULTISIG;
         }
 
-        public PubKey ExtractScriptPubKeyParameters(Script scriptPubKey)
+        public byte[] ExtractScriptPubKeyParameters(Script scriptPubKey)
         {
             bool needMoreCheck;
             if (!FastCheckScriptPubKey(scriptPubKey, out needMoreCheck))
@@ -339,7 +341,7 @@ namespace NBitcoin
                 return null;
 
             byte[] federationId = ops[0].PushData;
-            return new PubKey(federationId);
+            return federationId;
         }
 
         protected override bool FastCheckScriptSig(Script scriptSig, Script scriptPubKey, out bool needMoreCheck)
@@ -371,8 +373,7 @@ namespace NBitcoin
                 if (!CheckScriptPubKeyCore(scriptPubKey, scriptPubKeyOps))
                     return false;
 
-                PubKey federationId = new PubKey(scriptPubKeyOps[0].PushData);
-                (PubKey[] pubKeys, int sigCountExpected) = network.Federation.GetFederationDetails(federationId);
+                (PubKey[] pubKeys, int sigCountExpected) = network.Federation.GetFederationDetails(scriptPubKeyOps[0].PushData);
                 return sigCountExpected == scriptSigOps.Length + 1;
             }
             return true;

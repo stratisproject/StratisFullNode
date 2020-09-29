@@ -20,13 +20,40 @@ using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
+    public class FederationId : IFederationId
+    {
+        byte[] federationId;
+        ByteArrayComparer comparer;
+
+        public FederationId(byte[] value)
+        {
+            this.federationId = value;
+            this.comparer = new ByteArrayComparer();
+        }
+
+        public void ReadWrite(BitcoinStream s)
+        {
+            s.ReadWrite(ref this.federationId);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ByteArrayComparer.Equals(obj, this.federationId);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.comparer.GetHashCode(this.federationId);
+        }
+    }
+
     public class Federation : IFederation
     {
         private PubKey[] GenesisMembers;
 
         public Script MultisigScript { get; private set; }
 
-        public PubKey Id { get; private set; }
+        public IFederationId Id { get; private set; }
 
         public Federation(PubKey[] federationPubKeys)
         {
@@ -41,17 +68,21 @@ namespace Stratis.Sidechains.Networks
                     federationId[i] ^= pubKeyBytes[i];
             }
 
-            this.Id = new PubKey(federationId);
+            this.Id = new FederationId(federationId);
             this.MultisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(this.Id);
         }
 
-        public (PubKey[], int signaturesRequired) GetFederationDetails(PubKey federationId)
+        public (PubKey[], int signaturesRequired) GetFederationDetails(IFederationId federationId)
         {
             // For now, we only support the one federation.
-            Guard.Assert(federationId == this.Id);
+            Guard.Assert(federationId.Equals(this.Id));
 
             // Until dynamic membership is implemented we just return the genesis members.
             return (this.GenesisMembers, (this.GenesisMembers.Length + 1) / 2);
+        }
+        public (PubKey[], int signaturesRequired) GetFederationDetails(byte[] federationId)
+        {
+            return this.GetFederationDetails(new FederationId(federationId));
         }
     }
 

@@ -304,7 +304,7 @@ namespace Stratis.Bitcoin.Controllers.Models
                 }
                 else
                 {
-                    PubKey federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(script);
+                    byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(script);
                     (PubKey[] pubKeys, int reqSigs) = network.Federation.GetFederationDetails(federationId);
 
                     this.ReqSigs = reqSigs;
