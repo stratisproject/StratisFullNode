@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
             Transaction transaction = this.network.CreateTransaction();
             transaction.Inputs.Add(GetP2PKHInput());
-            Script script = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, new PubKey[] {new Key().PubKey, new Key().PubKey, new Key().PubKey});
+            Script script = PayToFederationTemplate.Instance.GenerateScriptPubKey(new Stratis.Sidechains.Networks.FederationId(new byte[10]));
             transaction.Outputs.Add(new TxOut(100, script));
 
             // No exception when checking
