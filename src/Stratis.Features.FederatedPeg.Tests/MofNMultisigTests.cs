@@ -75,7 +75,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var txBuilder = new TransactionBuilder(network);
             Transaction tx = txBuilder
                 .AddCoins(multiSigCoins)
-                .AddKeys(keys.OrderBy(k => k.PubKey.ToHex()).Take(m).ToArray())
+                .AddKeys(keys.Take(m).ToArray())
                 .Send(ultimateReceiver.PubKey.Hash, Money.Coins(inputCount * fundingAmount - 1))
                 .SetChange(redeemScript.Hash)
                 .SendFees(fedPegSettings.GetWithdrawalTransactionFee(inputCount))
