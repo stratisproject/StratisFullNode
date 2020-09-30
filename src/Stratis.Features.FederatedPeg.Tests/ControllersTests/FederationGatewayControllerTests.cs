@@ -102,7 +102,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             // Minimum deposit confirmations : 2
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
-            federatedPegSettings.MinimumDepositConfirmations.Returns(2);
+            federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(2);
             FederationGatewayController controller = this.CreateController(federatedPegSettings);
 
             int maturedHeight = (int)(tip.Height - 2);
@@ -131,7 +131,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             // Minimum deposit confirmations : 2
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
-            federatedPegSettings.MinimumDepositConfirmations.Returns(minConfirmations);
+            federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(minConfirmations);
             FederationGatewayController controller = this.CreateController(federatedPegSettings);
 
             ChainedHeader earlierBlock = tip.GetAncestor(minConfirmations);

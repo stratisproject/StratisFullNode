@@ -51,9 +51,9 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
-            this.federatedPegSettings.FasterDepositMinimumConfirmations.Returns(5);
-            this.federatedPegSettings.FasterDepositThresholdAmount.Returns(Money.Coins(10));
-            this.federatedPegSettings.MinimumDepositConfirmations.Returns(10);
+            this.federatedPegSettings.MinimumConfirmationsSmallDeposits.Returns(5);
+            this.federatedPegSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
+            this.federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(10);
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
 
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
-            federatedPegSettings.MinimumDepositConfirmations.Returns(0);
+            federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(0);
 
             var deposits = new List<IDeposit>() { new Deposit(new uint256(0), DepositRetrievalType.Normal, 100, "test", 0, new uint256(1)) };
 
@@ -141,7 +141,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal));
 
             // Faster Deposits
-            Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Faster).Count());
+            Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small).Count());
         }
 
         /// <summary>
@@ -197,7 +197,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal).Count());
 
             // Faster Deposits
-            Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Faster).Count());
+            Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small).Count());
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.Equal(11, depositsResult.Value.SelectMany(b => b.Deposits).Count());
 
             // Faster Deposits
-            Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Faster).Count());
+            Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small).Count());
 
             // Normal Deposits
             Assert.Equal(5, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal).Count());
@@ -306,7 +306,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Count());
 
             // Faster Deposits
-            Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Faster));
+            Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small));
 
             // Normal Deposits
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal).Count());

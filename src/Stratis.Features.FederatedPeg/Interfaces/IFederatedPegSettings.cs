@@ -62,20 +62,39 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         int CounterChainDepositStartBlock { get; }
 
         /// <summary>
-        /// Similar to <see cref="MinimumDepositConfirmations"/> but this settings allows us to specify how mature faster (smaller) deposits need to be in order
-        /// to be considered for a cross chain transfer.
+        /// Similar to <see cref="MinimumConfirmationsNormalDeposits"/> and <see cref="MinimumConfirmationsLargeDeposits"/> but this settings allows us to specify 
+        /// how mature small deposits needs to be in order to be considered for a cross chain transfer.
+        /// <para>
+        /// Transactions less than or equal to an amont of <see cref="SmallDepositThresholdAmount"/> will be processed.
+        /// </para>
         /// </summary>
-        int FasterDepositMinimumConfirmations { get; }
-
-        /// <summary>
-        /// Deposits under or equal to this value will be processed faster (earlier) on the counter-chain.
-        /// </summary>
-        Money FasterDepositThresholdAmount { get; }
+        int MinimumConfirmationsSmallDeposits { get; }
 
         /// <summary>
         /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
+        /// <para>
+        /// Transactions with a value of more than <see cref="NormalDepositThresholdAmount"/> and less than or equal to an amont of <see cref="LargeDepositThresholdAmount"/> will be processed.
+        /// </para>
         /// </summary>
-        int MinimumDepositConfirmations { get; }
+        int MinimumConfirmationsNormalDeposits { get; }
+
+        /// <summary>
+        /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
+        /// <para>
+        /// Transactions with a value of more than <see cref="NormalDepositThresholdAmount"/> will be processed.
+        /// </para>
+        /// </summary>
+        int MinimumConfirmationsLargeDeposits { get; }
+
+        /// <summary>
+        /// Deposits under or equal to this value will be processed after <see cref="MinimumConfirmationsSmallDeposits"/> blocks on the counter-chain.
+        /// </summary>
+        Money SmallDepositThresholdAmount { get; }
+
+        /// <summary>
+        /// Deposits under or equal to this value will be processed after <see cref="MinimumConfirmationsNormalDeposits"/> blocks on the counter-chain.
+        /// </summary>
+        Money NormalDepositThresholdAmount { get; }
 
         /// <summary>
         /// Address for the MultiSig script.

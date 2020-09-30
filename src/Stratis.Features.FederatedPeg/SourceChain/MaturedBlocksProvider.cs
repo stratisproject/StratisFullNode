@@ -61,55 +61,46 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             var messageBuilder = new StringBuilder();
 
-            // Retrieve faster deposits.
-            var fasterRetrievalHeight = DetermineApplicableRetrievalHeight(DepositRetrievalType.Faster, retrieveFromHeight, out string message);
-            if (fasterRetrievalHeight == null)
-            {
-                this.logger.LogDebug(message);
-                messageBuilder.AppendLine(message);
-            }
-            else
-            {
-                List<MaturedBlockDepositsModel> fasterDeposits = RetrieveDepositsFromHeight(DepositRetrievalType.Faster, fasterRetrievalHeight.Value, retrieveFromHeight);
-                if (fasterDeposits.Any())
-                    result.Value.AddRange(fasterDeposits);
-            }
-
-            // Retrieve normal deposits.
-            var normalRetrievalHeight = DetermineApplicableRetrievalHeight(DepositRetrievalType.Normal, retrieveFromHeight, out message);
-            if (normalRetrievalHeight == null)
-            {
-                this.logger.LogDebug(message);
-                messageBuilder.AppendLine(message);
-            }
-            else
-            {
-                List<MaturedBlockDepositsModel> normalDeposits = RetrieveDepositsFromHeight(DepositRetrievalType.Normal, normalRetrievalHeight.Value, retrieveFromHeight);
-                if (normalDeposits.Any())
-                    result.Value.AddRange(normalDeposits);
-            }
+            RetrieveDeposits(DepositRetrievalType.Small, retrieveFromHeight, messageBuilder, result);
+            RetrieveDeposits(DepositRetrievalType.Normal, retrieveFromHeight, messageBuilder, result);
+            RetrieveDeposits(DepositRetrievalType.Large, retrieveFromHeight, messageBuilder, result);
 
             result.Message = messageBuilder.ToString();
 
             return result;
         }
 
-        private List<MaturedBlockDepositsModel> RetrieveDepositsFromHeight(DepositRetrievalType retrievalType, int applicableHeight, int retrieveFromHeight)
+        private void RetrieveDeposits(DepositRetrievalType retrievalType, int retrieveFromHeight, StringBuilder messageBuilder, SerializableResult<List<MaturedBlockDepositsModel>> result)
         {
-            List<ChainedHeader> applicableHeaders = RetrieveApplicableHeaders(applicableHeight, retrieveFromHeight);
+            var retrieveUpToHeight = DetermineApplicableRetrievalHeight(retrievalType, retrieveFromHeight, out string message);
+            if (retrieveUpToHeight == null)
+            {
+                this.logger.LogDebug(message);
+                messageBuilder.AppendLine(message);
+            }
+            else
+            {
+                List<MaturedBlockDepositsModel> deposits = RetrieveDepositsFromHeight(retrievalType, retrieveFromHeight, retrieveUpToHeight.Value);
+                if (deposits.Any())
+                    result.Value.AddRange(deposits);
+            }
+        }
+
+        private List<MaturedBlockDepositsModel> RetrieveDepositsFromHeight(DepositRetrievalType retrievalType, int retrieveFromHeight, int retrieveToHeight)
+        {
+            List<ChainedHeader> applicableHeaders = RetrieveApplicableHeaders(retrieveFromHeight, retrieveToHeight);
 
             var depositBlockModels = new List<MaturedBlockDepositsModel>();
 
             // Half of the timeout, we will also need time to convert it to json.
             using (var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2)))
             {
+                // Process 100 headers at a time.
                 for (int headerIndex = 0; headerIndex < applicableHeaders.Count; headerIndex += 100)
                 {
-                    List<ChainedHeader> currentHeaders = applicableHeaders.GetRange(headerIndex, Math.Min(100, applicableHeaders.Count - headerIndex));
+                    List<ChainedHeader> subsetOfHeaders = applicableHeaders.GetRange(headerIndex, Math.Min(100, applicableHeaders.Count - headerIndex));
 
-                    var hashes = currentHeaders.Select(h => h.HashBlock).ToList();
-
-                    ChainedHeaderBlock[] blocks = this.consensusManager.GetBlockData(hashes);
+                    ChainedHeaderBlock[] blocks = this.consensusManager.GetBlockData(subsetOfHeaders.Select(h => h.HashBlock).ToList());
 
                     foreach (ChainedHeaderBlock chainedHeaderBlock in blocks)
                     {
@@ -147,9 +138,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return depositBlockModels;
         }
 
-        private List<ChainedHeader> RetrieveApplicableHeaders(int applicableHeight, int retrieveFromHeight)
+        private List<ChainedHeader> RetrieveApplicableHeaders(int retrieveFromHeight, int retrieveToHeight)
         {
-            int maxBlockHeight = Math.Min(applicableHeight, retrieveFromHeight + MaturedBlocksSyncManager.MaxBlocksToRequest - 1);
+            int maxBlockHeight = Math.Min(retrieveToHeight, retrieveFromHeight + MaturedBlocksSyncManager.MaxBlocksToRequest - 1);
 
             var headers = new List<ChainedHeader>();
             ChainedHeader header = this.consensusTip.GetAncestor(maxBlockHeight);
@@ -169,10 +160,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             message = string.Empty;
 
             int applicableMaturityHeight;
-            if (retrievalType == DepositRetrievalType.Faster)
-                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.FasterDepositMinimumConfirmations;
+            if (retrievalType == DepositRetrievalType.Small)
+                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsSmallDeposits;
+            else if (retrievalType == DepositRetrievalType.Normal)
+                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
             else
-                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumDepositConfirmations;
+                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
 
             if (retrieveFromHeight > applicableMaturityHeight)
             {
@@ -187,12 +180,14 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     }
 
     /// <summary>
-    /// Normal deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumDepositConfirmations"/>) confirmations (blocks).
-    /// Faster deposits are processed after <see cref="IFederatedPegSettings.FasterDepositMinimumConfirmations"/> confirmations (blocks).
+    /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposit"/> confirmations (blocks).
+    /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposit"/>) confirmations (blocks).
+    /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposit"/>) confirmations (blocks).
     /// </summary>
     public enum DepositRetrievalType
     {
+        Small,
         Normal,
-        Faster
+        Large,
     }
 }

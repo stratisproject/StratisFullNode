@@ -113,7 +113,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     FederationMiningPubKeys = isMainchain ? null : this.federationManager.GetFederationMembers().Select(k => k.ToString()),
                     MultiSigAddress = this.federatedPegSettings.MultiSigAddress,
                     MultiSigRedeemScript = this.federatedPegSettings.MultiSigRedeemScript.ToString(),
-                    MinimumDepositConfirmations = (uint)this.federatedPegSettings.MinimumDepositConfirmations
+                    MinimumDepositConfirmations = (uint)this.federatedPegSettings.MinimumConfirmationsNormalDeposits
                 };
 
                 return this.Json(model);
