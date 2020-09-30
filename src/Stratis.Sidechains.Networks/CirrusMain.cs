@@ -73,7 +73,7 @@ namespace Stratis.Sidechains.Networks
             this.MultisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(this.Id);
         }
 
-        public (PubKey[], int signaturesRequired) GetFederationDetails(IFederationId federationId)
+        public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(IFederationId federationId)
         {
             // For now, we only support the one federation.
             Guard.Assert(federationId.Equals(this.Id));
@@ -81,7 +81,7 @@ namespace Stratis.Sidechains.Networks
             // Until dynamic membership is implemented we just return the genesis members.
             return (this.GenesisMembers, (this.GenesisMembers.Length + 1) / 2);
         }
-        public (PubKey[], int signaturesRequired) GetFederationDetails(byte[] federationId)
+        public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(byte[] federationId)
         {
             return this.GetFederationDetails(new FederationId(federationId));
         }

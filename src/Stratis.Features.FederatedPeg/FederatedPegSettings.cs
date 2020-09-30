@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using Stratis.Features.Collateral.CounterChain;
@@ -105,7 +106,7 @@ namespace Stratis.Features.FederatedPeg
             if (redeemScriptRaw == null)
                 throw new ConfigurationException($"Could not find {RedeemScriptParam} configuration parameter.");
 
-            Network sideChainNetwork = this.IsMainChain ? counterChainNetworkWrapper?.CounterChainNetwork : nodeSettings.Network;
+            Network sideChainNetwork = (nodeSettings.Network is PoANetwork) ? nodeSettings.Network : counterChainNetworkWrapper?.CounterChainNetwork;
             if (sideChainNetwork == null)
                 throw new ConfigurationException($"The counter-chain network has not been specified.");
 

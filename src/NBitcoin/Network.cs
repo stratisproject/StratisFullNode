@@ -70,8 +70,8 @@ namespace NBitcoin
         Script MultisigScript { get; }
         IFederationId Id { get; }
 
-        (PubKey[], int signaturesRequired) GetFederationDetails(byte[] federationId);
-        (PubKey[], int signaturesRequired) GetFederationDetails(IFederationId federationId);
+        (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(byte[] federationId);
+        (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(IFederationId federationId);
     }
 
     public abstract class Network
