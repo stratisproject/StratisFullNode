@@ -1388,6 +1388,17 @@ namespace NBitcoin
                                 // to the stack. Typically preceeds an OP_CHECKMULTISIG operation.
                                 case OpcodeType.OP_FEDERATION:
                                     {
+                                        if (this.Network.Federation == null)
+                                        {
+                                            // not enabled; treat as a NOP9.
+                                            if ((this.ScriptVerify & ScriptVerify.DiscourageUpgradableNops) != 0)
+                                            {
+                                                return SetError(ScriptError.DiscourageUpgradableNops);
+                                            }
+
+                                            break;
+                                        }
+
                                         int i = 1;
                                         if (this._stack.Count < i)
                                             return SetError(ScriptError.InvalidStackOperation);
