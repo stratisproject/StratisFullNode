@@ -1413,7 +1413,7 @@ namespace NBitcoin
                                         this._stack.Push(new CScriptNum(sigsReq).getvch());
 
                                         // Push the public keys to the stack for this opcode.
-                                        foreach (PubKey pubKey in members.Reverse())
+                                        foreach (PubKey pubKey in members)
                                             this._stack.Push(pubKey.ToBytes());
 
                                         // Push the number of public keys to the stack.
