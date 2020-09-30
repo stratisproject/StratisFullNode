@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg
@@ -89,7 +90,7 @@ namespace Stratis.Features.FederatedPeg
         /// </summary>
         public const int StratisMainDepositStartBlock = 1_100_000;
 
-        public FederatedPegSettings(NodeSettings nodeSettings, IFederatedPegOptions federatedPegOptions = null)
+        public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper = null, IFederatedPegOptions federatedPegOptions = null)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
@@ -102,15 +103,18 @@ namespace Stratis.Features.FederatedPeg
             string redeemScriptRaw = configReader.GetOrDefault<string>(RedeemScriptParam, null);
             Console.WriteLine(redeemScriptRaw);
             if (redeemScriptRaw == null)
-                throw new ConfigurationException($"could not find {RedeemScriptParam} configuration parameter");
+                throw new ConfigurationException($"Could not find {RedeemScriptParam} configuration parameter.");
+
+            Network sideChainNetwork = this.IsMainChain ? counterChainNetworkWrapper?.CounterChainNetwork : nodeSettings.Network;
+            if (sideChainNetwork == null)
+                throw new ConfigurationException($"The counter-chain network has not been specified.");
 
             this.MultiSigRedeemScript = new Script(redeemScriptRaw);
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
-            (PubKey[] pubKeys, int reqSigCnt) = nodeSettings.Network.Federation.GetFederationDetails(federationId);
-            this.MultiSigM = reqSigCnt;
-            this.MultiSigN = pubKeys.Length;
-            this.FederationPublicKeys = pubKeys;
+            PayToMultiSigTemplateParameters para = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript, sideChainNetwork);
+            this.MultiSigM = para.SignatureCount;
+            this.MultiSigN = para.PubKeys.Length;
+            this.FederationPublicKeys = para.PubKeys;
 
             this.PublicKey = configReader.GetOrDefault<string>(PublicKeyParam, null);
 
