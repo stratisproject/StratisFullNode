@@ -4,19 +4,21 @@ using Moq;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Tests.Common;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
 {
-    public class TestNetwork : StraxMain
+    public class TestNetwork : CirrusRegTest
     {
-        public TestNetwork(PubKey[] federationMembers) : base()
+        internal TestNetwork(PubKey[] federationMembers) : base()
         {
             this.Federation = new Federation(federationMembers);
-            this.Name = "TestStraxMain";
+            this.Name = "TestCirrusRegTest";
         }
     }
 
@@ -37,9 +39,10 @@ namespace Stratis.Features.FederatedPeg.Tests
                 keys[i] = new Key();
             }
 
-            Network network = new TestNetwork(keys.Select(x => x.PubKey).ToArray());
+            Network network = KnownNetworks.StraxRegTest;
+            Network sidechainNetwork = new TestNetwork(keys.Select(x => x.PubKey).ToArray());
 
-            Script redeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(network.Federation.Id);
+            Script redeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(sidechainNetwork.Federation.Id);
 
             const int inputCount = 50;
             const decimal fundingInputAmount = 100;
@@ -69,10 +72,10 @@ namespace Stratis.Features.FederatedPeg.Tests
                 "redeemscript=" + redeemScript.ToString(),
                 "publickey=" + keys[0].PubKey.ToHex(),
                 "federationips=0.0.0.0"
-            }));
+            }), counterChainNetworkWrapper: new Collateral.CounterChain.CounterChainNetworkWrapper(sidechainNetwork));
 
             // Construct the withdrawal tx
-            var txBuilder = new TransactionBuilder(network);
+            var txBuilder = new TransactionBuilder(sidechainNetwork);
             Transaction tx = txBuilder
                 .AddCoins(multiSigCoins)
                 .AddKeys(keys.Take(m).ToArray())
