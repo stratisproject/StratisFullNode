@@ -51,9 +51,13 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
+
             this.federatedPegSettings.MinimumConfirmationsSmallDeposits.Returns(5);
-            this.federatedPegSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
             this.federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(10);
+            this.federatedPegSettings.MinimumConfirmationsLargeDeposits.Returns(20);
+
+            this.federatedPegSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
+            this.federatedPegSettings.NormalDepositThresholdAmount.Returns(Money.Coins(100));
         }
 
         [Fact]
@@ -85,16 +89,16 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // This will be double the amount of blocks because the mocked depositExtractor will always return a set of blocks
             // as that is how it has been configured.
-            Assert.Equal(22, depositsResult.Value.Count);
+            Assert.Equal(33, depositsResult.Value.Count);
         }
 
         /// <summary>
         /// Scenario 1
         /// 
         /// Tip                     = 20
-        /// Faster Deposits from    = 5 to 9
-        /// Normal Deposists from   = 11 to 17
-        /// Faster Min Confirms     = 5
+        /// Small Deposits from     = 5 to 9
+        /// Normal Deposits from    = 11 to 17
+        /// Small Min Confirms      = 5
         /// Normal Min Confirms     = 10
         /// Retrieve from           = 5
         /// 
@@ -102,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 4 faster deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsFasterAndNormalDeposits_Scenario1()
+        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario1()
         {
             // Create a "chain" of 20 blocks.
             List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
@@ -140,7 +144,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Normal Deposits
             Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal));
 
-            // Faster Deposits
+            // Small Deposits
             Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small).Count());
         }
 
@@ -148,9 +152,9 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Scenario 2
         /// 
         /// Tip                     = 30
-        /// Faster Deposits from    = 5 to 9
-        /// Normal Deposists from   = 11 to 17
-        /// Faster Min Confirms     = 5
+        /// Small Deposits from     = 5 to 9
+        /// Normal Deposits from    = 11 to 17
+        /// Small Min Confirms      = 5
         /// Normal Min Confirms     = 10
         /// Retrieve from heigt     = 5
         /// 
@@ -158,7 +162,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 4 faster deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsFasterAndNormalDeposits_Scenario2()
+        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario2()
         {
             // Create a "chain" of 30 blocks.
             List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
@@ -170,7 +174,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
             }
 
-            // Add 4 faster deposits to blocks 5 through to 9 (the amounts are less than 10).
+            // Add 4 small deposits to blocks 5 through to 9 (the amounts are less than 10).
             for (int i = 5; i < 9; i++)
             {
                 blocks[i].Block.AddTransaction(new Transaction());
@@ -196,7 +200,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Normal Deposits
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal).Count());
 
-            // Faster Deposits
+            // Small Deposits
             Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small).Count());
         }
 
@@ -204,22 +208,25 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Scenario 3 (Overlaps)
         /// 
         /// Tip                     = 30
-        /// Faster Deposits from    = 8 to 13
-        /// Normal Deposists from   = 11 to 15
-        /// Faster Min Confirms     = 5
+        /// 
+        /// Small Deposits from     = 8 to 13
+        /// Normal Deposits from    = 11 to 15
+        /// 
+        /// Small Min Confirms      = 5
         /// Normal Min Confirms     = 10
+        /// 
         /// Retrieve from heigt     = 5
         /// 
         /// Returns 6 faster deposits
         /// Returns 5 normal deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsFasterAndNormalDeposits_Scenario3()
+        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario3()
         {
             // Create a "chain" of 30 blocks.
             List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
 
-            // Add 6 faster deposits to blocks 8 through to 13 (the amounts are less than 10).
+            // Add 6 small deposits to blocks 8 through to 13 (the amounts are less than 10).
             for (int i = 8; i <= 13; i++)
             {
                 blocks[i].Block.AddTransaction(new Transaction());
@@ -249,7 +256,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Total deposits
             Assert.Equal(11, depositsResult.Value.SelectMany(b => b.Deposits).Count());
 
-            // Faster Deposits
+            // Small Deposits
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small).Count());
 
             // Normal Deposits
@@ -260,22 +267,22 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Scenario 4
         /// 
         /// Tip                     = 30
-        /// Faster Deposits from    = 5 to 9
-        /// Normal Deposists from   = 11 to 17
-        /// Faster Min Confirms     = 5
+        /// Small Deposits from     = 5 to 9
+        /// Normal Deposits from    = 11 to 17
+        /// Small Min Confirms      = 5
         /// Normal Min Confirms     = 10
         /// Retrieve from           = 10
         /// 
         /// Returns 6 normal deposits
-        /// Returns 0 faster deposits
+        /// Returns 0 small deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsFasterAndNormalDeposits_Scenario4()
+        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4()
         {
             // Create a "chain" of 20 blocks.
             List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
 
-            // Add 4 faster deposits to blocks 5 through to 8 (the amounts are less than 10).
+            // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
             for (int i = 5; i <= 8; i++)
             {
                 blocks[i].Block.AddTransaction(new Transaction());
@@ -305,7 +312,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Total deposits
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Count());
 
-            // Faster Deposits
+            // Small Deposits
             Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small));
 
             // Normal Deposits
@@ -313,25 +320,26 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         /// <summary>
-        /// Scenario 4
+        /// Scenario 5
         /// 
         /// Tip                     = 20
-        /// Faster Deposits from    = 5 to 8
-        /// Normal Deposists from   = 11 to 16
-        /// Faster Min Confirms     = 5
+        /// Small Deposits from     = 5 to 8
+        /// Normal Deposits from    = 11 to 16
+        /// Small Min Confirms      = 5
         /// Normal Min Confirms     = 10
+        /// 
         /// Retrieve from           = 10
         /// 
         /// Returns 0 normal deposits
-        /// Returns 0 faster deposits
+        /// Returns 0 small deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsFasterAndNormalDeposits_Scenario5()
+        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario5()
         {
             // Create a "chain" of 20 blocks.
             List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
 
-            // Add 4 faster deposits to blocks 5 through to 8 (the amounts are less than 10).
+            // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
             for (int i = 5; i <= 8; i++)
             {
                 blocks[i].Block.AddTransaction(new Transaction());
@@ -360,6 +368,202 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // Total deposits
             Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits));
+        }
+
+        /// <summary>
+        /// Scenario 6
+        /// 
+        /// Tip                     = 20
+        /// Small Deposits from     = 5 to 8
+        /// Normal Deposits from    = 11 to 16
+        /// Large Deposits from     = 11 to 16
+        /// 
+        /// Small Min Confirms      = 5
+        /// Normal Min Confirms     = 10
+        /// Large Min Confirms      = 20
+        /// 
+        /// Retrieve from           = 10
+        /// 
+        /// Returns 0 small deposits
+        /// Returns 0 normal deposits
+        /// Returns 0 large deposits
+        /// </summary>
+        [Fact]
+        public void RetrieveDeposits_ReturnsLargeDeposits_Scenario6()
+        {
+            // Create a "chain" of 20 blocks.
+            List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
+
+            // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
+            for (int i = 5; i <= 8; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+
+            // Add 6 normal deposits to block 11 through to 16.
+            for (int i = 11; i <= 16; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+
+            // Add 6 large deposits to block 11 through to 16.
+            for (int i = 11; i <= 16; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins((long)this.federatedPegSettings.NormalDepositThresholdAmount + 1), this.opReturnBytes);
+            }
+
+            this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).Returns(delegate (CallInfo info)
+            {
+                var hashes = (List<uint256>)info[0];
+                return hashes.Select((hash) => blocks.Single(x => x.ChainedHeader.HashBlock == hash)).ToArray();
+            });
+            this.consensusManager.Tip.Returns(blocks.Last().ChainedHeader);
+
+            var depositExtractor = new DepositExtractor(this.loggerFactory, this.federatedPegSettings, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+
+            // Total deposits
+            Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits));
+        }
+
+        /// <summary>
+        /// Scenario 7
+        /// 
+        /// Tip                     = 40
+        /// Small Deposits from     = 5 to 8
+        /// Normal Deposits from    = 11 to 16
+        /// Large Deposits from     = 11 to 16
+        /// 
+        /// Small Min Confirms      = 5
+        /// Normal Min Confirms     = 10
+        /// Large Min Confirms      = 20
+        /// 
+        /// Retrieve from           = 10
+        /// 
+        /// Returns 0 small deposits
+        /// Returns 6 normal deposits
+        /// Returns 6 large deposits
+        /// </summary>
+        [Fact]
+        public void RetrieveDeposits_ReturnsLargeDeposits_Scenario7()
+        {
+            // Create a "chain" of 40 blocks.
+            List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, null, true);
+
+            // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
+            for (int i = 5; i <= 8; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+
+            // Add 6 normal deposits to block 11 through to 16.
+            for (int i = 11; i <= 16; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+
+            // Add 6 large deposits to block 11 through to 16.
+            for (int i = 11; i <= 16; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins((long)this.federatedPegSettings.NormalDepositThresholdAmount + 1), this.opReturnBytes);
+            }
+
+            this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).Returns(delegate (CallInfo info)
+            {
+                var hashes = (List<uint256>)info[0];
+                return hashes.Select((hash) => blocks.Single(x => x.ChainedHeader.HashBlock == hash)).ToArray();
+            });
+            this.consensusManager.Tip.Returns(blocks.Last().ChainedHeader);
+
+            var depositExtractor = new DepositExtractor(this.loggerFactory, this.federatedPegSettings, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+
+            // Total deposits
+            Assert.Equal(12, depositsResult.Value.SelectMany(b => b.Deposits).Count());
+
+            // Small Deposits
+            Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small));
+
+            // Normal Deposits
+            Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal).Count());
+
+            // Large Deposits
+            Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Large).Count());
+        }
+
+        /// <summary>
+        /// Scenario 8
+        /// 
+        /// Tip                     = 40
+        /// Normal Deposits from    = 11 to 16
+        /// Large Deposits from     = 14 to 23
+        /// 
+        /// Small Min Confirms      = 5
+        /// Normal Min Confirms     = 10
+        /// Large Min Confirms      = 20
+        /// 
+        /// Retrieve from           = 10
+        /// 
+        /// Returns 0 small deposits
+        /// Returns 6 normal deposits
+        /// Returns 7 large deposits
+        /// </summary>
+        [Fact]
+        public void RetrieveDeposits_ReturnsLargeDeposits_Scenario8()
+        {
+            // Create a "chain" of 40 blocks.
+            List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, null, true);
+
+            // Add 6 normal deposits to block 11 through to 16.
+            for (int i = 11; i <= 16; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+
+            // Add 10 large deposits to block 14 through to 23.
+            for (int i = 14; i <= 23; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins((long)this.federatedPegSettings.NormalDepositThresholdAmount + 1), this.opReturnBytes);
+            }
+
+            this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).Returns(delegate (CallInfo info)
+            {
+                var hashes = (List<uint256>)info[0];
+                return hashes.Select((hash) => blocks.Single(x => x.ChainedHeader.HashBlock == hash)).ToArray();
+            });
+            this.consensusManager.Tip.Returns(blocks.Last().ChainedHeader);
+
+            var depositExtractor = new DepositExtractor(this.loggerFactory, this.federatedPegSettings, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+
+            // Total deposits
+            Assert.Equal(13, depositsResult.Value.SelectMany(b => b.Deposits).Count());
+
+            // Small Deposits
+            Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Small));
+
+            // Normal Deposits
+            Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Normal).Count());
+
+            // Large Deposits
+            Assert.Equal(7, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Large).Count());
         }
 
         private Transaction CreateDepositTransaction(BitcoinPubKeyAddress targetAddress, Block block, Money depositAmount, byte[] opReturnBytes)
