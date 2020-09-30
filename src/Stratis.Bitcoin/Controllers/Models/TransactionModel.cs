@@ -296,19 +296,12 @@ namespace Stratis.Bitcoin.Controllers.Models
             }
             else if (destinations.Count > 1)
             {
-                PayToMultiSigTemplateParameters multi = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(script);
+                PayToMultiSigTemplateParameters multi = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(script) ??
+                    PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(script, network);
                 if (multi != null)
                 {
                     this.ReqSigs = multi.SignatureCount;
                     this.Addresses = multi.PubKeys.Select(m => m.GetAddress(network).ToString()).ToList();
-                }
-                else
-                {
-                    byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(script);
-                    (PubKey[] pubKeys, int reqSigs) = network.Federation.GetFederationDetails(federationId);
-
-                    this.ReqSigs = reqSigs;
-                    this.Addresses = pubKeys.Select(m => m.GetAddress(network).ToString()).ToList();
                 }
             }
         }

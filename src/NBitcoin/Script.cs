@@ -1023,19 +1023,11 @@ namespace NBitcoin
             }
             else
             {
-                PayToMultiSigTemplateParameters multiSig = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this);
+                PayToMultiSigTemplateParameters multiSig = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this) ?? 
+                    PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this, network);
                 if (multiSig != null)
                 {
                     result.AddRange(multiSig.PubKeys);
-                }
-                else
-                {
-                    byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this);
-                    if (federationId != null)
-                    {
-                        (PubKey[] pubKeys, int signatureCount) = network.Federation.GetFederationDetails(federationId);
-                        result.AddRange(pubKeys);
-                    }
                 }
             }
             return result.ToArray();
@@ -1344,29 +1336,16 @@ namespace NBitcoin
                 }
             }
 
-            PubKey[] pubKeys;
-            int signatureCount;
-            {
-                PayToMultiSigTemplateParameters multiSigParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
-                if (multiSigParams != null)
-                {
-                    pubKeys = multiSigParams.PubKeys;
-                    signatureCount = multiSigParams.SignatureCount;
-                }
-                else
-                {
-                    byte[] federationId = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
-                    if (federationId == null)
-                        throw new InvalidOperationException("The scriptPubKey is not a valid multi sig");
-                    (pubKeys, signatureCount) = network.Federation.GetFederationDetails(federationId);
-                }
-            }
+            PayToMultiSigTemplateParameters multiSigParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey) ??
+                PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey, network);
+            if (multiSigParams == null)
+                throw new InvalidOperationException("The scriptPubKey is not a valid multi sig");
 
             var sigs = new Dictionary<PubKey, TransactionSignature>();
 
             foreach(TransactionSignature sig in allsigs)
             {
-                foreach(PubKey pubkey in pubKeys)
+                foreach(PubKey pubkey in multiSigParams.PubKeys)
                 {
                     if(sigs.ContainsKey(pubkey))
                         continue; // Already got a sig for this pubkey
@@ -1383,19 +1362,19 @@ namespace NBitcoin
             // Now build a merged CScript:
             int nSigsHave = 0;
             var result = new Script(OpcodeType.OP_0); // pop-one-too-many workaround
-            foreach(PubKey pubkey in pubKeys)
+            foreach(PubKey pubkey in multiSigParams.PubKeys)
             {
                 if(sigs.ContainsKey(pubkey))
                 {
                     result += Op.GetPushOp(sigs[pubkey].ToBytes());
                     nSigsHave++;
                 }
-                if(nSigsHave >= signatureCount)
+                if(nSigsHave >= multiSigParams.SignatureCount)
                     break;
             }
 
             // Fill any missing with OP_0:
-            for(int i = nSigsHave; i < signatureCount; i++)
+            for(int i = nSigsHave; i < multiSigParams.SignatureCount; i++)
                 result += OpcodeType.OP_0;
 
             return result;

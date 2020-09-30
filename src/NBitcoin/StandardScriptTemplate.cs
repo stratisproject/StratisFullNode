@@ -331,7 +331,7 @@ namespace NBitcoin
             return ops[1].Code == OpcodeType.OP_FEDERATION && ops[2].Code == OpcodeType.OP_CHECKMULTISIG;
         }
 
-        public byte[] ExtractScriptPubKeyParameters(Script scriptPubKey)
+        public PayToMultiSigTemplateParameters ExtractScriptPubKeyParameters(Script scriptPubKey, Network network)
         {
             bool needMoreCheck;
             if (!FastCheckScriptPubKey(scriptPubKey, out needMoreCheck))
@@ -341,7 +341,8 @@ namespace NBitcoin
                 return null;
 
             byte[] federationId = ops[0].PushData;
-            return federationId;
+            (PubKey[] pubKeys, int signatureCount) = network.Federation.GetFederationDetails(federationId);
+            return new PayToMultiSigTemplateParameters() { PubKeys = pubKeys, SignatureCount = signatureCount };
         }
 
         protected override bool FastCheckScriptSig(Script scriptSig, Script scriptPubKey, out bool needMoreCheck)
