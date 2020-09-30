@@ -25,19 +25,20 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         public DepositExtractorTests()
         {
-            this.network = CirrusNetwork.NetworksSelector.Regtest();
+            this.network = new CirrusRegTest();
 
             ILoggerFactory loggerFactory = Substitute.For<ILoggerFactory>();
 
-            this.addressHelper = new MultisigAddressHelper(this.network, Networks.Strax.Regtest());
+            this.addressHelper = new MultisigAddressHelper(this.network, new StraxRegTest());
 
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
-            this.federationSettings.FasterDepositThresholdAmount.Returns(Money.Coins(10));
+            this.federationSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
+            this.federationSettings.NormalDepositThresholdAmount.Returns(Money.Coins(20));
+
             this.federationSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
             this.federationSettings.GetWithdrawalTransactionFee(Arg.Any<int>()).ReturnsForAnyArgs((x) =>
             {
                 int numInputs = x.ArgAt<int>(0);
-
                 return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
             });
 
@@ -57,6 +58,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
 
+            // Create a deposit above the small deposit threshold.
             Transaction depositTransaction = CreateDepositTransaction(targetAddress, block, Money.Coins(11), opReturnBytes);
 
             Transaction nonDepositTransactionToMultisig = this.transactionBuilder.BuildTransaction(this.addressHelper.SourceChainMultisigAddress);
@@ -92,15 +94,16 @@ namespace Stratis.Features.FederatedPeg.Tests
             BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
 
+            // Create a "normal" deposit.
             Transaction depositTransaction = CreateDepositTransaction(targetAddress, block, Money.Coins(11), opReturnBytes);
 
-            //add another deposit to the same address
+            // Create another "normal" deposit to the same address.
             Transaction secondDepositTransaction = CreateDepositTransaction(targetAddress, block, Money.Coins(12), opReturnBytes);
 
-            //add another deposit to a different address
+            // Create another "normal" deposit to a different address.
             BitcoinPubKeyAddress newTargetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             byte[] newOpReturnBytes = Encoding.UTF8.GetBytes(newTargetAddress.ToString());
-            Transaction thirdDepositTransaction = CreateDepositTransaction(newTargetAddress, block, Money.Coins(34), newOpReturnBytes);
+            Transaction thirdDepositTransaction = CreateDepositTransaction(newTargetAddress, block, Money.Coins(12), newOpReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
@@ -122,7 +125,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 .Be(targetAddress.ToString());
 
             extractedTransaction = extractedDeposits[2];
-            extractedTransaction.Amount.Satoshi.Should().Be(Money.Coins(34));
+            extractedTransaction.Amount.Satoshi.Should().Be(Money.Coins(12));
             extractedTransaction.Id.Should().Be(thirdDepositTransaction.GetHash());
             extractedTransaction.TargetAddress.Should().Be(newTargetAddress.ToString());
         }
@@ -136,29 +139,64 @@ namespace Stratis.Features.FederatedPeg.Tests
             BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
 
-            // Set amount to be less than the faster threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.FasterDepositThresholdAmount - 1, opReturnBytes);
+            // Set amount to be less than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
 
-            // Set amount to be exactly the faster threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.FasterDepositThresholdAmount, opReturnBytes);
+            // Set amount to be exactly the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
 
-            // Set amount to be greater than the faster threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.FasterDepositThresholdAmount + 1, opReturnBytes);
+            // Set amount to be greater than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
 
-            // Should only be two, with the value just over the withdrawal fee.
+            // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
             foreach (IDeposit extractedDeposit in extractedDeposits)
             {
-                Assert.True(extractedDeposit.Amount >= this.federationSettings.FasterDepositThresholdAmount);
+                Assert.True(extractedDeposit.Amount >= this.federationSettings.SmallDepositThresholdAmount);
             }
         }
 
-        // Faster Deposits
+        // Normal Deposits
         [Fact]
-        public void ExtractFasterDeposits_ReturnDeposits_BelowFasterThreshold_AboveMinimum()
+        public void ExtractNormalDeposits_ReturnDeposits_AboveSmallThreshold_BelowEqualToNormalThreshold()
+        {
+            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
+
+            BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
+            byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
+
+            // Set amount to be less than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
+
+            // Set amount to be exactly the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
+
+            // Set amount to be less than the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount - 1, opReturnBytes);
+
+            // Set amount to be exactly the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+
+            // Set amount to be greater than the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+
+            int blockHeight = 12345;
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
+
+            // Should be 2, with the value just over the withdrawal fee.
+            extractedDeposits.Count.Should().Be(2);
+            foreach (IDeposit extractedDeposit in extractedDeposits)
+            {
+                Assert.True(extractedDeposit.Amount >= this.federationSettings.SmallDepositThresholdAmount);
+            }
+        }
+
+        // Small Deposits
+        [Fact]
+        public void ExtractSmallDeposits_ReturnDeposits_BelowSmallThreshold_AboveMinimum()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -169,23 +207,62 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Set amount to be less than deposit minimum
             CreateDepositTransaction(targetAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
 
-            // Set amount to be less than the faster threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.FasterDepositThresholdAmount - 1, opReturnBytes);
+            // Set amount to be less than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
 
-            // Set amount to be exactly the faster threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.FasterDepositThresholdAmount, opReturnBytes);
+            // Set amount to be exactly the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
 
-            // Set amount to be greater than the faster threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.FasterDepositThresholdAmount + 1, opReturnBytes);
+            // Set amount to be greater than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
+
+            // Set amount to be greater than the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Faster);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Small);
 
             // Should only be two, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(2);
             foreach (IDeposit extractedDeposit in extractedDeposits)
             {
-                Assert.True(extractedDeposit.Amount <= this.federationSettings.FasterDepositThresholdAmount);
+                Assert.True(extractedDeposit.Amount <= this.federationSettings.SmallDepositThresholdAmount);
+            }
+        }
+
+        // Large Deposits
+        [Fact]
+        public void ExtractLargeDeposits_ReturnDeposits_AboveNormalThreshold()
+        {
+            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
+
+            // Create the target address.
+            BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
+            byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
+
+            // Set amount to be less than deposit minimum
+            CreateDepositTransaction(targetAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
+
+            // Set amount to be less than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
+
+            // Set amount to be exactly the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+
+            // Set amount to be equal to thee normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+
+            // Set amount to be greater than the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+
+            int blockHeight = 12345;
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Large);
+
+            // Should only be 1, with the value just over the withdrawal fee.
+            extractedDeposits.Count.Should().Be(1);
+            foreach (IDeposit extractedDeposit in extractedDeposits)
+            {
+                Assert.True(extractedDeposit.Amount > this.federationSettings.NormalDepositThresholdAmount);
             }
         }
 

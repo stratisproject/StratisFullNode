@@ -102,7 +102,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             // Minimum deposit confirmations : 2
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
-            federatedPegSettings.MinimumDepositConfirmations.Returns(2);
+            federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(2);
             FederationGatewayController controller = this.CreateController(federatedPegSettings);
 
             int maturedHeight = (int)(tip.Height - 2);
@@ -131,7 +131,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             // Minimum deposit confirmations : 2
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
-            federatedPegSettings.MinimumDepositConfirmations.Returns(minConfirmations);
+            federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(minConfirmations);
             FederationGatewayController controller = this.CreateController(federatedPegSettings);
 
             ChainedHeader earlierBlock = tip.GetAncestor(minConfirmations);
@@ -195,7 +195,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             model.MultiSigRedeemScript.Should().Be(redeemScript);
             string.Join(",", model.FederationNodeIpEndPoints).Should().Be(federationIps);
             model.IsActive.Should().BeTrue();
-            model.MinimumDepositConfirmations.Should().Be(1);
+            model.MinimumDepositConfirmationsSmallDeposits.Should().Be(25);
+            model.MinimumDepositConfirmationsNormalDeposits.Should().Be(80);
             model.MultisigPublicKey.Should().Be(multisigPubKey);
         }
 
@@ -231,7 +232,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             model.MultiSigRedeemScript.Should().Be(redeemScript);
             string.Join(",", model.FederationNodeIpEndPoints).Should().Be(federationIps);
             model.IsActive.Should().BeTrue();
-            model.MinimumDepositConfirmations.Should().Be(1);
+            model.MinimumDepositConfirmationsSmallDeposits.Should().Be(25);
+            model.MinimumDepositConfirmationsNormalDeposits.Should().Be(80);
             model.MultisigPublicKey.Should().Be(multisigPubKey);
         }
     }

@@ -57,23 +57,36 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             foreach (Transaction transaction in block.Transactions)
             {
                 IDeposit deposit = this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash, depositRetrievalType);
-                if (deposit != null)
-                {
-                    if (depositRetrievalType == DepositRetrievalType.Faster && deposit.Amount <= this.federatedPegSettings.FasterDepositThresholdAmount)
-                        deposits.Add(deposit);
+                if (deposit == null)
+                    continue;
 
-                    if (depositRetrievalType == DepositRetrievalType.Normal && deposit.Amount > this.federatedPegSettings.FasterDepositThresholdAmount)
-                        deposits.Add(deposit);
+                if (depositRetrievalType == DepositRetrievalType.Small && deposit.Amount <= this.federatedPegSettings.SmallDepositThresholdAmount)
+                {
+                    deposits.Add(deposit);
+                    continue;
+                }
+
+                if (depositRetrievalType == DepositRetrievalType.Normal && deposit.Amount > this.federatedPegSettings.SmallDepositThresholdAmount && deposit.Amount <= this.federatedPegSettings.NormalDepositThresholdAmount)
+                {
+                    deposits.Add(deposit);
+                    continue;
+                }
+
+                if (depositRetrievalType == DepositRetrievalType.Large && deposit.Amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                {
+                    deposits.Add(deposit);
+                    continue;
                 }
             }
 
             return deposits;
         }
 
+
         /// <inheritdoc />
         public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash, DepositRetrievalType depositRetrievalType)
         {
-            // Coinbases can't have deposits.
+            // Coinbase transactions can't have deposits.
             if (transaction.IsCoinBase)
                 return null;
 
