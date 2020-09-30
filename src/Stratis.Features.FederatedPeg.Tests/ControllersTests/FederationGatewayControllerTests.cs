@@ -165,11 +165,17 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         [Fact]
         public void Call_Sidechain_Gateway_Get_Info()
         {
-            string redeemScript = "2 02fad5f3c4fdf4c22e8be4cfda47882fff89aaa0a48c1ccad7fa80dc5fee9ccec3 02503f03243d41c141172465caca2f5cef7524f149e965483be7ce4e44107d7d35 03be943c3a31359cd8e67bedb7122a0898d2c204cf2d0119e923ded58c429ef97c 3 OP_CHECKMULTISIG";
+            Network sidechainNetwork = new TestNetwork(new[] { 
+                new PubKey("02fad5f3c4fdf4c22e8be4cfda47882fff89aaa0a48c1ccad7fa80dc5fee9ccec3"),
+                new PubKey("02503f03243d41c141172465caca2f5cef7524f149e965483be7ce4e44107d7d35"),
+                new PubKey("03be943c3a31359cd8e67bedb7122a0898d2c204cf2d0119e923ded58c429ef97c")
+            });
+
+            string redeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(sidechainNetwork.Federation.Id).ToString();
             string federationIps = "127.0.0.1:36201,127.0.0.1:36202,127.0.0.1:36203";
-            string multisigPubKey = "03be943c3a31359cd8e67bedb7122a0898d2c204cf2d0119e923ded58c429ef97c";
+            string multisigPubKey = sidechainNetwork.Federation.GetFederationDetails(sidechainNetwork.Federation.Id).pubKeys.TakeLast(1).First().ToHex();
             string[] args = new[] { "-sidechain", "-regtest", $"-federationips={federationIps}", $"-redeemscript={redeemScript}", $"-publickey={multisigPubKey}", "-mincoinmaturity=1", "-mindepositconfirmations=1" };
-            var nodeSettings = new NodeSettings(CirrusNetwork.NetworksSelector.Regtest(), ProtocolVersion.ALT_PROTOCOL_VERSION, args: args);
+            var nodeSettings = new NodeSettings(sidechainNetwork, ProtocolVersion.ALT_PROTOCOL_VERSION, args: args);
 
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
 
