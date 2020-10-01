@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
@@ -183,7 +184,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             this.federationManager.Initialize();
 
-            var settings = new FederatedPegSettings(nodeSettings);
+            var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
                 this.loggerFactory,
@@ -238,7 +239,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
 
-            var settings = new FederatedPegSettings(nodeSettings);
+            var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
                 this.loggerFactory,

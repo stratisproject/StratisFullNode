@@ -141,20 +141,23 @@ namespace NBitcoin
 
     public class Federation : IFederation
     {
-        private PubKey[] GenesisMembers;
+        private PubKey[] genesisMembers;
+
+        private int signaturesRequired;
 
         public Script MultisigScript { get; private set; }
 
         public FederationId Id { get; private set; }
 
-        public Federation(IEnumerable<PubKey> federationPubKeys)
+        public Federation(IEnumerable<PubKey> federationPubKeys, int? signaturesRequired = null)
         {
             // Ensures that the federation id will always map to the same members in the same order.
-            this.GenesisMembers = federationPubKeys.OrderBy(k => k.ToHex()).ToArray();
+            this.genesisMembers = federationPubKeys.OrderBy(k => k.ToHex()).ToArray();
+            this.signaturesRequired = signaturesRequired ?? (this.genesisMembers.Length + 1) / 2;
 
             // The federationId is derived by XOR'ing all the genesis federation members.
-            byte[] federationId = this.GenesisMembers.First().ToBytes();
-            foreach (PubKey pubKey in this.GenesisMembers.Skip(1))
+            byte[] federationId = this.genesisMembers.First().ToBytes();
+            foreach (PubKey pubKey in this.genesisMembers.Skip(1))
             {
                 byte[] pubKeyBytes = pubKey.ToBytes();
                 for (int i = 0; i < federationId.Length; i++)
@@ -168,7 +171,7 @@ namespace NBitcoin
         public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails()
         {
             // Until dynamic membership is implemented we just return the genesis members.
-            return (this.GenesisMembers, (this.GenesisMembers.Length + 1) / 2);
+            return (this.genesisMembers, this.signaturesRequired);
         }
     }
 
@@ -210,6 +213,9 @@ namespace NBitcoin
 
         public void RegisterFederation(IFederation federation)
         {
+            // TODO: Remove this when multiple federations are supported.
+            this.federations.Clear();
+
             this.federations[federation.Id] = federation;
         }
     }

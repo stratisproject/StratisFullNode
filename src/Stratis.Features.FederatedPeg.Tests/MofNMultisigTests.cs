@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Moq;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
@@ -71,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 "redeemscript=" + redeemScript.ToString(),
                 "publickey=" + keys[0].PubKey.ToHex(),
                 "federationips=0.0.0.0"
-            }));
+            }), new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Regtest()));
 
             // Construct the withdrawal tx
             var txBuilder = new TransactionBuilder(network);
@@ -148,7 +145,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 "redeemscript=" + redeemScript.ToString(),
                 "publickey=" + keys[0].PubKey.ToHex(),
                 "federationips=0.0.0.0"
-            }));
+            }), new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Regtest()));
 
             // Construct the withdrawal tx
             var txBuilder = new TransactionBuilder(network);
