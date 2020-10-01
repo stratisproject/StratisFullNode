@@ -113,6 +113,10 @@ namespace NBitcoin
         byte[] federationId;
         ByteArrayComparer comparer;
 
+        public FederationId()
+        {
+        }
+
         public FederationId(byte[] value)
         {
             this.federationId = value;
