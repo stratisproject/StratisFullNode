@@ -95,7 +95,7 @@ namespace FederationSetup
             PayToMultiSigTemplateParameters oldMultisigParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(oldRedeemScript);
 
             model.oldMultisigAddress = oldRedeemScript.Hash.GetAddress(network);
-            model.newMultisigAddress = redeemScript.Hash.GetAddress(network);
+            model.newMultisigAddress = redeemScript.Hash.GetAddress(targetNetwork);
 
             // Create dummy inputs to avoid errors when constructing FederatedPegSettings.
             var extraArgs = new Dictionary<string, string>();
