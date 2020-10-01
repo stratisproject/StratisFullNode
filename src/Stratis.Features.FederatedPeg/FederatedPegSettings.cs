@@ -91,7 +91,7 @@ namespace Stratis.Features.FederatedPeg
         /// </summary>
         public const int StratisMainDepositStartBlock = 1_100_000;
 
-        public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper = null, IFederatedPegOptions federatedPegOptions = null)
+        public FederatedPegSettings(NodeSettings nodeSettings, IFederatedPegOptions federatedPegOptions = null)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
@@ -106,13 +106,10 @@ namespace Stratis.Features.FederatedPeg
             if (redeemScriptRaw == null)
                 throw new ConfigurationException($"Could not find {RedeemScriptParam} configuration parameter.");
 
-            Network sideChainNetwork = (nodeSettings.Network is PoANetwork) ? nodeSettings.Network : counterChainNetworkWrapper?.CounterChainNetwork;
-            if (sideChainNetwork == null)
-                throw new ConfigurationException($"The counter-chain network has not been specified.");
-
             this.MultiSigRedeemScript = new Script(redeemScriptRaw);
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            PayToMultiSigTemplateParameters para = PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript, sideChainNetwork);
+            PayToMultiSigTemplateParameters para = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript) ?? 
+                PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript, nodeSettings.Network);
             this.MultiSigM = para.SignatureCount;
             this.MultiSigN = para.PubKeys.Length;
             this.FederationPublicKeys = para.PubKeys;

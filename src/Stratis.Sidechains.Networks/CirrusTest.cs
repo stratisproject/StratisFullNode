@@ -86,7 +86,11 @@ namespace Stratis.Sidechains.Networks
                 new CollateralFederationMember(new PubKey("02f9b73070474b7cfb3e6c2624c069cdbd211954f82862505f10cf0a2c3a45e7c5"), true, new Money(50000_00000000), "TB2Cnd34fauqheApsJS1PKemDDVV4QRYGW"),
             };
 
-            this.Federation = new Federation(genesisFederationMembers.Where(f => ((CollateralFederationMember)f).IsMultisigMember).Select(f => ((CollateralFederationMember)f).PubKey).ToArray());
+            this.Federations = new Federations();
+            this.Federations.RegisterFederation(new Federation(genesisFederationMembers
+                .Where(f => ((CollateralFederationMember)f).IsMultisigMember)
+                .Select(f => ((CollateralFederationMember)f).PubKey)
+                .ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,

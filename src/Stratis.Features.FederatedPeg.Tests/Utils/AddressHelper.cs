@@ -75,7 +75,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
                 .Select(m => m.DeriveExtKey(Passphrase).PrivateKey)
                 .ToArray();
 
-            IFederationId federationId = targetChainNetwork.Federation.Id;
+            FederationId federationId = targetChainNetwork.Federations.GetOnlyFederation().Id;
             this.PayToMultiSig = PayToFederationTemplate.Instance.GenerateScriptPubKey(federationId);                
                 //PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
                 //quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());

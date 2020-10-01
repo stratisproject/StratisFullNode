@@ -67,7 +67,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             get
             {
-                return PayToFederationTemplate.Instance.GenerateScriptPubKey(this.network.Federation.Id);
+                return PayToFederationTemplate.Instance.GenerateScriptPubKey(this.network.Federations.GetOnlyFederation().Id);
             }
         }
 

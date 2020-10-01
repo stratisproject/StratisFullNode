@@ -33,6 +33,26 @@ namespace Stratis.Bitcoin.Networks
             this.CoinTicker = "STRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
+            // To successfully process the OP_FEDERATION opcode the federations should be known.
+            this.Federations = new Federations();
+            this.Federations.RegisterFederation(new Federation(new[]
+            {
+                new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"),
+                new PubKey("021043aacac5c8805e3bc62eb40e8d3c04070c56b21032d4bb14200ed6e4facf93"),
+                new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
+                new PubKey("037b5f0a88a477d9fba812826a3bf43104ca078fc51b62c0eaad15d0f9a724a4b2"),
+                new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
+                new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
+                new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
+                new PubKey("0200c70e46cd94012caaae3fcc124e5f280f63a29cd2b3e15c15bac9d371da1e0d"),
+                new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
+                new PubKey("03d8b5580b7ec709c006ef497327db27ea323bd358ca45412171c644214483b74f"),
+                new PubKey("02ace4fbe6a622cdfc922a447c3253e8635f3fecb69241f73629e6f0596a567907"),
+                new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
+                new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
+                new PubKey("0336312e7dce4f9ff8449a5d7d140be26eea7849f8ba13bb07b57b154a74aa7600"),
+                new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92")}));
+
             var consensusFactory = new PosConsensusFactory();
 
             // Create the genesis block.

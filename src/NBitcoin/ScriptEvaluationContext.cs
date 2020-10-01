@@ -1388,7 +1388,7 @@ namespace NBitcoin
                                 // to the stack. Typically preceeds an OP_CHECKMULTISIG operation.
                                 case OpcodeType.OP_FEDERATION:
                                     {
-                                        if (this.Network.Federation == null)
+                                        if (this.Network.Federations == null)
                                         {
                                             // not enabled; treat as a NOP9.
                                             if ((this.ScriptVerify & ScriptVerify.DiscourageUpgradableNops) != 0)
@@ -1411,7 +1411,7 @@ namespace NBitcoin
                                         int sigsReq;
                                         try
                                         {
-                                            (members, sigsReq) = this.Network.Federation.GetFederationDetails(federationId);
+                                            (members, sigsReq) = this.Network.Federations.GetFederation(federationId).GetFederationDetails();
                                         }
                                         catch (Exception)
                                         {

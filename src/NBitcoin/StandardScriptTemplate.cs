@@ -310,7 +310,7 @@ namespace NBitcoin
             }
         }
 
-        public Script GenerateScriptPubKey(IFederationId federationId)
+        public Script GenerateScriptPubKey(FederationId federationId)
         {
             var ops = new List<Op>();
             ops.Add(Op.GetPushOp(federationId.ToBytes()));
@@ -341,7 +341,7 @@ namespace NBitcoin
                 return null;
 
             byte[] federationId = ops[0].PushData;
-            (PubKey[] pubKeys, int signatureCount) = network.Federation.GetFederationDetails(federationId);
+            (PubKey[] pubKeys, int signatureCount) = network.Federations.GetFederation(federationId).GetFederationDetails();
             return new PayToMultiSigTemplateParameters() { PubKeys = pubKeys, SignatureCount = signatureCount };
         }
 
@@ -374,7 +374,7 @@ namespace NBitcoin
                 if (!CheckScriptPubKeyCore(scriptPubKey, scriptPubKeyOps))
                     return false;
 
-                (PubKey[] pubKeys, int sigCountExpected) = network.Federation.GetFederationDetails(scriptPubKeyOps[0].PushData);
+                (PubKey[] pubKeys, int sigCountExpected) = network.Federations.GetFederation(scriptPubKeyOps[0].PushData).GetFederationDetails();
                 return sigCountExpected == scriptSigOps.Length + 1;
             }
             return true;

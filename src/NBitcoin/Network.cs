@@ -60,18 +60,154 @@ namespace NBitcoin
         public Func<Network> Regtest { get; }
     }
 
-    public interface IFederationId : IBitcoinSerializable
-    {
-        bool Equals(object obj);
-    }
-
     public interface IFederation
     {
         Script MultisigScript { get; }
-        IFederationId Id { get; }
+        FederationId Id { get; }
 
-        (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(byte[] federationId);
-        (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(IFederationId federationId);
+        (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails();
+    }
+
+    /// <summary>
+    /// Compares two byte arrays for equality.
+    /// </summary>
+    public sealed class ByteArrayComparer : IEqualityComparer<byte[]>, IComparer<byte[]>
+    {
+        public int Compare(byte[] first, byte[] second)
+        {
+            int firstLen = first?.Length ?? -1;
+            int secondLen = second?.Length ?? -1;
+            int commonLen = Math.Min(firstLen, secondLen);
+
+            for (int i = 0; i < commonLen; i++)
+            {
+                if (first[i] == second[i])
+                    continue;
+
+                return (first[i] < second[i]) ? -1 : 1;
+            }
+
+            return firstLen.CompareTo(secondLen);
+        }
+
+        public bool Equals(byte[] first, byte[] second)
+        {
+            return this.Compare(first, second) == 0;
+        }
+
+        public int GetHashCode(byte[] obj)
+        {
+            ulong hash = 17;
+
+            foreach (byte objByte in obj)
+            {
+                hash = (hash << 5) - hash + objByte;
+            }
+
+            return (int)hash;
+        }
+    }
+
+    public class FederationId : IBitcoinSerializable
+    {
+        byte[] federationId;
+        ByteArrayComparer comparer;
+
+        public FederationId(byte[] value)
+        {
+            this.federationId = value;
+            this.comparer = new ByteArrayComparer();
+        }
+
+        public void ReadWrite(BitcoinStream s)
+        {
+            s.ReadWrite(ref this.federationId);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return this.comparer.Equals(((FederationId)obj).federationId, this.federationId);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.comparer.GetHashCode(this.federationId);
+        }
+    }
+
+    public class Federation : IFederation
+    {
+        private PubKey[] GenesisMembers;
+
+        public Script MultisigScript { get; private set; }
+
+        public FederationId Id { get; private set; }
+
+        public Federation(IEnumerable<PubKey> federationPubKeys)
+        {
+            // Ensures that the federation id will always map to the same members in the same order.
+            this.GenesisMembers = federationPubKeys.OrderBy(k => k.ToHex()).ToArray();
+
+            // The federationId is derived by XOR'ing all the genesis federation members.
+            byte[] federationId = this.GenesisMembers.First().ToBytes();
+            foreach (PubKey pubKey in this.GenesisMembers.Skip(1))
+            {
+                byte[] pubKeyBytes = pubKey.ToBytes();
+                for (int i = 0; i < federationId.Length; i++)
+                    federationId[i] ^= pubKeyBytes[i];
+            }
+
+            this.Id = new FederationId(federationId);
+            this.MultisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(this.Id);
+        }
+
+        public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails()
+        {
+            // Until dynamic membership is implemented we just return the genesis members.
+            return (this.GenesisMembers, (this.GenesisMembers.Length + 1) / 2);
+        }
+    }
+
+    public interface IFederations
+    {
+        void RegisterFederation(IFederation federation);
+
+        IFederation GetFederation(FederationId federationId);
+
+        IFederation GetFederation(byte[] federationId);
+
+        IFederation GetOnlyFederation();
+    }
+
+    public class Federations : IFederations
+    {
+        private Dictionary<FederationId, IFederation> federations;
+
+        public Federations()
+        {
+            this.federations = new Dictionary<FederationId, IFederation>();
+        }
+
+        public IFederation GetFederation(FederationId federationId)
+        {
+            return this.federations.TryGetValue(federationId, out IFederation federation) ? federation : null;
+        }
+
+        public IFederation GetFederation(byte[] federationId)
+        {
+            return this.federations.TryGetValue(new FederationId(federationId), out IFederation federation) ? federation : null;
+        }
+
+        // TODO: Deprectate this method when multiple federations are supported.
+        public IFederation GetOnlyFederation()
+        {
+            return this.federations.First().Value;
+        }
+
+        public void RegisterFederation(IFederation federation)
+        {
+            this.federations[federation.Id] = federation;
+        }
     }
 
     public abstract class Network
@@ -285,7 +421,7 @@ namespace NBitcoin
         /// </summary>
         public IStandardScriptsRegistry StandardScriptsRegistry { get; protected set; }
 
-        public IFederation Federation { get; protected set; }
+        public IFederations Federations { get; protected set; }
 
         /// <summary>
         /// Mines a new genesis block, to use with a new network.

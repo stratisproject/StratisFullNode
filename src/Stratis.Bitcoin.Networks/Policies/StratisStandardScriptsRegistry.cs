@@ -20,7 +20,6 @@ namespace Stratis.Bitcoin.Networks.Policies
             PayToPubkeyTemplate.Instance,
             PayToScriptHashTemplate.Instance,
             PayToMultiSigTemplate.Instance,
-            PayToFederationTemplate.Instance,
             new TxNullDataTemplate(MaxOpReturnRelay),
             PayToWitTemplate.Instance
         };

@@ -20,73 +20,6 @@ using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
-    public class FederationId : IFederationId
-    {
-        byte[] federationId;
-        ByteArrayComparer comparer;
-
-        public FederationId(byte[] value)
-        {
-            this.federationId = value;
-            this.comparer = new ByteArrayComparer();
-        }
-
-        public void ReadWrite(BitcoinStream s)
-        {
-            s.ReadWrite(ref this.federationId);
-        }
-
-        public override bool Equals(object obj)
-        {
-            return this.comparer.Equals(((FederationId)obj).federationId, this.federationId);
-        }
-
-        public override int GetHashCode()
-        {
-            return this.comparer.GetHashCode(this.federationId);
-        }
-    }
-
-    public class Federation : IFederation
-    {
-        private PubKey[] GenesisMembers;
-
-        public Script MultisigScript { get; private set; }
-
-        public IFederationId Id { get; private set; }
-
-        public Federation(PubKey[] federationPubKeys)
-        {
-            // Ensures that the federation id will always map to the same members in the same order.
-            this.GenesisMembers = federationPubKeys.OrderBy(k => k.ToHex()).ToArray();
-
-            // The federationId is derived by XOR'ing all the genesis federation members.
-            byte[] federationId = this.GenesisMembers.First().ToBytes();
-            foreach (PubKey pubKey in this.GenesisMembers.Skip(1))
-            {
-                byte[] pubKeyBytes = pubKey.ToBytes();
-                for (int i = 0; i < federationId.Length; i++)
-                    federationId[i] ^= pubKeyBytes[i];
-            }
-
-            this.Id = new FederationId(federationId);
-            this.MultisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(this.Id);
-        }
-
-        public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(IFederationId federationId)
-        {
-            // For now, we only support the one federation.
-            Guard.Assert(federationId.Equals(this.Id));
-
-            // Until dynamic membership is implemented we just return the genesis members.
-            return (this.GenesisMembers, (this.GenesisMembers.Length + 1) / 2);
-        }
-        public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails(byte[] federationId)
-        {
-            return this.GetFederationDetails(new FederationId(federationId));
-        }
-    }
-
     /// <summary>
     /// <see cref="PoANetwork"/>.
     /// </summary>
@@ -203,7 +136,11 @@ namespace Stratis.Sidechains.Networks
                 EnforcedMinProtocolVersion = NBitcoin.Protocol.ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
             };
 
-            this.Federation = new Federation(genesisFederationMembers.Where(f => ((CollateralFederationMember)f).IsMultisigMember).Select(f => ((CollateralFederationMember)f).PubKey).ToArray());
+            this.Federations = new Federations();
+            this.Federations.RegisterFederation(new Federation(genesisFederationMembers
+                .Where(f => ((CollateralFederationMember)f).IsMultisigMember)
+                .Select(f => ((CollateralFederationMember)f).PubKey)
+                .ToArray()));
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
