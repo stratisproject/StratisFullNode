@@ -23,7 +23,6 @@ namespace FederationSetup
         private const string SwitchMineGenesisBlock = "g";
         private const string SwitchGenerateFedPublicPrivateKeys = "p";
         private const string SwitchGenerateMultiSigAddresses = "m";
-        private const string SwitchGenerateRecoveryTransaction = "r";
         private const string SwitchMenu = "menu";
         private const string SwitchExit = "exit";
 
@@ -101,11 +100,6 @@ namespace FederationSetup
                 case SwitchGenerateMultiSigAddresses:
                 {
                     HandleSwitchGenerateMultiSigAddressesCommand(args);
-                    break;
-                }
-                case SwitchGenerateRecoveryTransaction:
-                {
-                    HandleSwitchGenerateFundsRecoveryTransaction(args);
                     break;
                 }
             }
@@ -255,40 +249,6 @@ namespace FederationSetup
             Console.WriteLine(Environment.NewLine);
         }
 
-        private static int GetQuorumFromArguments()
-        {
-            int quorum = ConfigReader.GetOrDefault("quorum", 0);
-
-            if (quorum == 0)
-                throw new ArgumentException("Please specify a quorum.");
-
-            if (quorum < 0)
-                throw new ArgumentException("Please specify a positive number for the quorum.");
-
-            return quorum;
-        }
-
-        private static string[] GetFederatedPublicKeysFromArguments()
-        {
-            string[] pubKeys = null;
-
-            int federatedPublicKeyCount = 0;
-
-            if (ConfigReader.GetAll("fedpubkeys").FirstOrDefault() != null)
-            {
-                pubKeys = ConfigReader.GetAll("fedpubkeys").FirstOrDefault().Split(',');
-                federatedPublicKeyCount = pubKeys.Count();
-            }
-
-            if (federatedPublicKeyCount == 0)
-                throw new ArgumentException("No federation member public keys specified.");
-
-            if (federatedPublicKeyCount > 15)
-                throw new ArgumentException("The federation can only have up to fifteen members.");
-
-            return pubKeys;
-        }
-
         private static (Network mainChain, Network sideChain, Network targetMainChain) GetMainAndSideChainNetworksFromArguments()
         {
             string network = ConfigReader.GetOrDefault("network", (string)null);
@@ -320,67 +280,6 @@ namespace FederationSetup
             }
 
             return (mainchainNetwork, sideChainNetwork, targetMainchainNetwork);
-        }
-
-        private static string GetDataDirFromArguments()
-        {
-            return ConfigReader.GetOrDefault<string>("datadir", Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-        }
-
-        private static string GetPasswordFromArguments()
-        {
-            return ConfigReader.GetOrDefault<string>("password", null);
-        }
-
-        private static Script GetRedeemScriptFromArguments(Network targetNetwork)
-        {
-            Script script = PayToFederationTemplate.Instance.GenerateScriptPubKey(targetNetwork.Federations.GetOnlyFederation().Id);
-            return script;
-        }
-
-        private static DateTime GetTransactionTimeFromArguments()
-        {
-            string strTime = ConfigReader.GetOrDefault<string>("txtime", null);
-
-            if (strTime == null)
-                throw new ArgumentException("Please enter a transaction time.");
-
-            try
-            {
-                return DateTime.Parse(strTime, null, System.Globalization.DateTimeStyles.None);
-            }
-            catch (Exception)
-            {
-                throw new ArgumentException("Please enter a valid transaction time.");
-            }
-        }
-
-        private static void HandleSwitchGenerateFundsRecoveryTransaction(string[] args)
-        {
-            ConfigReader = new TextFileConfiguration(args);
-
-            // datadir = Directory of old federation.
-            ConfirmArguments(ConfigReader, "network", "datadir", "password", "txtime");
-
-            (Network mainChain, Network sideChain, Network targetMainChain) = GetMainAndSideChainNetworksFromArguments();
-
-            Script newRedeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(targetMainChain.Federations.GetOnlyFederation().Id);
-
-            string password = GetPasswordFromArguments();
-
-            string dataDirPath = GetDataDirFromArguments();
-
-            DateTime txTime = GetTransactionTimeFromArguments();
-
-            string burnAddress = "";
-
-            Console.WriteLine($"Creating funds recovery transaction for {sideChain.Name}.");
-            FundsRecoveryTransactionModel sideChainInfo = (new RecoveryTransactionCreator()).CreateFundsRecoveryTransaction(true, sideChain, mainChain, targetMainChain, dataDirPath, newRedeemScript, password, txTime);
-            sideChainInfo.DisplayInfo();
-
-            Console.WriteLine($"Creating funds recovery transaction for {mainChain.Name}.");
-            FundsRecoveryTransactionModel mainChainInfo = (new RecoveryTransactionCreator()).CreateFundsRecoveryTransaction(false, mainChain, sideChain, sideChain, dataDirPath, newRedeemScript, password, txTime, burnAddress);
-            mainChainInfo.DisplayInfo();
         }
     }
 }
