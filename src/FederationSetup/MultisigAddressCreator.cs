@@ -14,7 +14,7 @@ namespace FederationSetup
             this.output = output;
         }
 
-        public string CreateMultisigAddresses(Network mainchainNetwork, Network sidechainNetwork, PubKey[] pubKeys, int quorum = 3)
+        public string CreateMultisigAddresses(Network mainchainNetwork, Network sidechainNetwork)
         {
             var output = new StringBuilder();
 

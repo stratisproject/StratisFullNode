@@ -201,21 +201,12 @@ namespace FederationSetup
         {
             ConfigReader = new TextFileConfiguration(args);
 
-            ConfirmArguments(ConfigReader, "network", "quorum", "fedpubkeys");
+            ConfirmArguments(ConfigReader, "network");
 
-            int quorum = GetQuorumFromArguments();
-            string[] federatedPublicKeys = GetFederatedPublicKeysFromArguments();
+            (_, Network sideChain, Network targetMainChain) = GetMainAndSideChainNetworksFromArguments();
 
-            if (quorum > federatedPublicKeys.Length)
-                throw new ArgumentException("Quorum has to be smaller than the number of members within the federation.");
-
-            if (quorum < federatedPublicKeys.Length / 2)
-                throw new ArgumentException("Quorum has to be greater than half of the members within the federation.");
-
-            (Network mainChain, Network sideChain) = GetMainAndSideChainNetworksFromArguments();
-
-            Console.WriteLine($"Creating multisig addresses for {mainChain.Name} and {sideChain.Name}.");
-            Console.WriteLine(new MultisigAddressCreator().CreateMultisigAddresses(mainChain, sideChain, federatedPublicKeys.Select(f => new PubKey(f)).ToArray(), quorum));
+            Console.WriteLine($"Creating multisig addresses for {targetMainChain.Name} and {sideChain.Name}.");
+            Console.WriteLine(new MultisigAddressCreator().CreateMultisigAddresses(targetMainChain, sideChain));
         }
 
         private static void GeneratePublicPrivateKeys(string passphrase, String keyPath, bool isMultiSigOutput = true)
@@ -298,34 +289,37 @@ namespace FederationSetup
             return pubKeys;
         }
 
-        private static (Network mainChain, Network sideChain) GetMainAndSideChainNetworksFromArguments()
+        private static (Network mainChain, Network sideChain, Network targetMainChain) GetMainAndSideChainNetworksFromArguments()
         {
             string network = ConfigReader.GetOrDefault("network", (string)null);
 
             if (string.IsNullOrEmpty(network))
                 throw new ArgumentException("Please specify a network.");
 
-            Network mainchainNetwork, sideChainNetwork;
+            Network mainchainNetwork, sideChainNetwork, targetMainchainNetwork;
             switch (network)
             {
                 case "mainnet":
                     mainchainNetwork = Networks.Stratis.Mainnet();
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Mainnet();
+                    targetMainchainNetwork = Networks.Strax.Mainnet();
                     break;
                 case "testnet":
                     mainchainNetwork = Networks.Stratis.Testnet();
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Testnet();
+                    targetMainchainNetwork = Networks.Strax.Testnet();
                     break;
                 case "regtest":
                     mainchainNetwork = Networks.Stratis.Regtest();
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Regtest();
+                    targetMainchainNetwork = Networks.Strax.Regtest();
                     break;
                 default:
                     throw new ArgumentException("Please specify a network such as: mainnet, testnet or regtest.");
 
             }
 
-            return (mainchainNetwork, sideChainNetwork);
+            return (mainchainNetwork, sideChainNetwork, targetMainchainNetwork);
         }
 
         private static string GetDataDirFromArguments()
@@ -338,21 +332,10 @@ namespace FederationSetup
             return ConfigReader.GetOrDefault<string>("password", null);
         }
 
-        private static Script GetRedeemScriptFromArguments()
+        private static Script GetRedeemScriptFromArguments(Network targetNetwork)
         {
-            string[] pubkeys = GetFederatedPublicKeysFromArguments();
-            int quorum = GetQuorumFromArguments();
-
-            try
-            {
-                Script script = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(quorum, pubkeys.Select(p => new PubKey(p)).ToArray());
-
-                return script;
-            }
-            catch (Exception)
-            {
-                throw new ArgumentException($"Please specify a valid comma-separated list of public keys.");
-            }
+            Script script = PayToFederationTemplate.Instance.GenerateScriptPubKey(targetNetwork.Federations.GetOnlyFederation().Id);
+            return script;
         }
 
         private static DateTime GetTransactionTimeFromArguments()
@@ -377,23 +360,26 @@ namespace FederationSetup
             ConfigReader = new TextFileConfiguration(args);
 
             // datadir = Directory of old federation.
-            ConfirmArguments(ConfigReader, "network", "datadir", "fedpubkeys", "quorum", "password", "txtime");
+            ConfirmArguments(ConfigReader, "network", "datadir", "password", "txtime");
 
-            Script newRedeemScript = GetRedeemScriptFromArguments();
+            (Network mainChain, Network sideChain, Network targetMainChain) = GetMainAndSideChainNetworksFromArguments();
+
+            Script newRedeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(targetMainChain.Federations.GetOnlyFederation().Id);
+
             string password = GetPasswordFromArguments();
 
             string dataDirPath = GetDataDirFromArguments();
 
-            (Network mainChain, Network sideChain) = GetMainAndSideChainNetworksFromArguments();
-
             DateTime txTime = GetTransactionTimeFromArguments();
 
+            string burnAddress = "";
+
             Console.WriteLine($"Creating funds recovery transaction for {sideChain.Name}.");
-            FundsRecoveryTransactionModel sideChainInfo = (new RecoveryTransactionCreator()).CreateFundsRecoveryTransaction(true, sideChain, mainChain, dataDirPath, newRedeemScript, password, txTime);
+            FundsRecoveryTransactionModel sideChainInfo = (new RecoveryTransactionCreator()).CreateFundsRecoveryTransaction(true, sideChain, mainChain, targetMainChain, dataDirPath, newRedeemScript, password, txTime);
             sideChainInfo.DisplayInfo();
 
             Console.WriteLine($"Creating funds recovery transaction for {mainChain.Name}.");
-            FundsRecoveryTransactionModel mainChainInfo = (new RecoveryTransactionCreator()).CreateFundsRecoveryTransaction(false, mainChain, sideChain, dataDirPath, newRedeemScript, password, txTime);
+            FundsRecoveryTransactionModel mainChainInfo = (new RecoveryTransactionCreator()).CreateFundsRecoveryTransaction(false, mainChain, sideChain, sideChain, dataDirPath, newRedeemScript, password, txTime, burnAddress);
             mainChainInfo.DisplayInfo();
         }
     }

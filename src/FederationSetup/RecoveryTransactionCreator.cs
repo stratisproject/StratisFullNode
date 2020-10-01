@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Microsoft.EntityFrameworkCore.Internal;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
@@ -70,12 +71,13 @@ namespace FederationSetup
         /// <param name="isSideChain">Indicates whether the <paramref name="network"/> is the sidechain.</param>
         /// <param name="network">The network that we are creating the recovery transaction for.</param>
         /// <param name="counterChainNetwork">The counterchain network.</param>
+        /// <param name="targetNetwork">The network where the funds are expected to end up.</param>
         /// <param name="dataDirPath">The root folder containing the old federation.</param>
         /// <param name="redeemScript">The new redeem script.</param>
         /// <param name="password">The password required to generate transactions using the federation wallet.</param>
         /// <param name="txTime">Any deposits beyond this UTC date will be ignored when selecting coin inputs.</param>
         /// <returns>A funds recovery transaction that moves funds to the new redeem script.</returns>
-        public FundsRecoveryTransactionModel CreateFundsRecoveryTransaction(bool isSideChain, Network network, Network counterChainNetwork, string dataDirPath, Script redeemScript, string password, DateTime txTime)
+        public FundsRecoveryTransactionModel CreateFundsRecoveryTransaction(bool isSideChain, Network network, Network counterChainNetwork, Network targetNetwork, string dataDirPath, Script redeemScript, string password, DateTime txTime, string burnAddress = null)
         {
             var model = new FundsRecoveryTransactionModel() { Network = network, IsSideChain = isSideChain, RedeemScript = redeemScript };
 
@@ -84,7 +86,11 @@ namespace FederationSetup
             string theChain = isSideChain ? "sidechain" : "mainchain";
             var nodeSettings = new NodeSettings(network, args: new string[] { $"datadir={dataDirPath}", $"redeemscript={redeemScript}", $"-{theChain}" });
             var walletFileStorage = new FileStorage<FederationWallet>(nodeSettings.DataFolder.WalletPath);
-            FederationWallet wallet = walletFileStorage.LoadByFileName("multisig_wallet.json");
+            string walletName = "multisig_wallet.json";
+            FederationWallet wallet = walletFileStorage.LoadByFileName(walletName);
+            if (wallet.Network.Name != network.Name)
+                throw new ArgumentException($"The wallet ('{walletName}') in the supplied data folder was expected to be from {network} but is from {wallet.Network}");
+            
             Script oldRedeemScript = wallet.MultiSigAddress.RedeemScript;
             PayToMultiSigTemplateParameters oldMultisigParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(oldRedeemScript);
 
@@ -139,16 +145,32 @@ namespace FederationSetup
             builder.AddKeys(privateKey);
             builder.AddCoins(coinRefs.Select(c => ScriptCoin.Create(network, c.Transaction.Id, (uint)c.Transaction.Index, c.Transaction.Amount, c.Transaction.ScriptPubKey, oldRedeemScript)));
 
+            // For the Stratis network burn the funds and fund the multisig's Strax address.
+            bool sendToBurnAddress = network.Name != targetNetwork.Name;
+            if (sendToBurnAddress && burnAddress == null)
+                throw new ArgumentException($"A burn address needs to be specified when sending funds from {network} to {targetNetwork}.");
+
             // Split the coins into multiple outputs.
             Money amount = coinRefs.Sum(r => r.Transaction.Amount) - fee;
             const int numberOfSplits = 10;
             Money splitAmount = new Money((long)amount / numberOfSplits);
-            var recipients = new List<Stratis.Features.FederatedPeg.Wallet.Recipient>();
+            Script recipient = redeemScript.PaymentScript;
+
+            // Burn the funds.
+            if (sendToBurnAddress)            
+                recipient = BitcoinAddress.Create(burnAddress, network).ScriptPubKey;
+
             for (int i = 0; i < numberOfSplits; i++)
             {
                 Money sendAmount = (i != (numberOfSplits - 1)) ? splitAmount : amount - splitAmount * (numberOfSplits - 1);
+                builder.Send(recipient, sendAmount);
+            }
 
-                builder.Send(redeemScript.PaymentScript, sendAmount);
+            if (sendToBurnAddress)
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(redeemScript.PaymentScript.GetDestinationAddress(targetNetwork).ToString());
+                Script opReturnScript = TxNullDataTemplate.Instance.GenerateScriptPubKey(bytes);
+                builder.Send(opReturnScript, Money.Zero);
             }
 
             builder.SetTimeStamp((uint)(new DateTimeOffset(txTime)).ToUnixTimeSeconds());
