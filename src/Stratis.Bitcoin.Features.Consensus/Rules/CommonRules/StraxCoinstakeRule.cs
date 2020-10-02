@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,17 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         // The actual percentage of the reward sent to this script is checked within the coinview rule.
         // This is an anyone-can-spend scriptPubKey as no signature is required for the redeem script to be valid.
         // Recall that a scriptPubKey is not network-specific, only the address format that it translates into would depend on the version bytes etc. defined by the network.
-        public static readonly Script CirrusRewardScript = new Script(new List<Op>() { OpcodeType.OP_TRUE }).PaymentScript;
+
+        // The redeem script is defined first (and separately) because it is needed for claiming the reward.
+        // It is not the scriptPubKey that must appear in the reward transaction output.
+        public static readonly Script CirrusRewardScriptRedeem = new Script(new List<Op>() { OpcodeType.OP_TRUE });
+
+        // This payment script is what must actually be checked against in the consensus rule i.e. the reward transaction has this as an output's scriptPubKey.
+        public static readonly Script CirrusRewardScript = CirrusRewardScriptRedeem.PaymentScript;
+
+        // This is not used within consensus, but it makes sense to keep the value close to the other script definitions so that it isn't buried inside the reward claimer.
+        // TODO: This is a placeholder value, need to decide whether it should be an 'actual' Cirrus address with valid checksum, or simply a marker string
+        public static readonly Script CirrusTransactionTag = new Script();
 
         /// <summary>Allow access to the POS parent.</summary>
         protected PosConsensusRuleEngine PosParent;
@@ -34,7 +43,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <exception cref="ConsensusErrors.BadStakeBlock">The coinbase output (first transaction) is not empty.</exception>
         /// <exception cref="ConsensusErrors.BadStakeBlock">The second transaction is not a coinstake transaction.</exception>
         /// <exception cref="ConsensusErrors.BadMultipleCoinstake">There are multiple coinstake tranasctions in the block.</exception>
-        /// <exception cref="ConsensusErrors.BlockTimeBeforeTrx">The block contains a transaction with a timestamp after the block timestamp.</exception>
         public override Task RunAsync(RuleContext context)
         {
             if (context.SkipValidation)
