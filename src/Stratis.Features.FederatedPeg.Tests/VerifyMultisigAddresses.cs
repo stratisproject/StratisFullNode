@@ -1,9 +1,8 @@
 ﻿using System.Linq;
-using Microsoft.JSInterop;
 using NBitcoin;
 using NBitcoin.DataEncoders;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.SmartContracts;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
@@ -16,7 +15,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             // If this test fails due to changes in the way addresses are determined then make corresponding changes
             // in the FederationSetup tool in the legacy Stratis (SBFN) code-base!!!
-            Network[] networks = new[] { KnownNetworks.StraxMain, KnownNetworks.StraxTest, KnownNetworks.StraxRegTest };
+            var networks = new Network[] { new StraxMain(), new StraxTest(), new StraxRegTest() };
             string[] expectedFederationIds = new[] {
                 "0272ef88df1ac2bc9b14b05ced742c2a9c2f76e48ccb92258136750d0ae2af3859",
                 "022c7d264dd56381d51526365f8e439a68fb8b5cd0272e073ee4047999e0bb034f",
