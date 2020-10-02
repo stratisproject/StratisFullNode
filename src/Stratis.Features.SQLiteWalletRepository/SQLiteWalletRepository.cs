@@ -284,6 +284,10 @@ namespace Stratis.Features.SQLiteWalletRepository
             conn.BeginTransaction();
             try
             {
+                // Add the UTXOs being freed up. If rewinding to start there will be nothing to add.
+                if (lastBlockSynced != null)
+                    walletContainer.TransactionsOfInterest.AddAll(wallet.WalletId, fromBlock: lastBlockSynced.Height);
+
                 IEnumerable<(string txId, long creationTime)> res = conn.SetLastBlockSynced(wallet, lastBlockSynced).ToList();
                 conn.Commit();
 
