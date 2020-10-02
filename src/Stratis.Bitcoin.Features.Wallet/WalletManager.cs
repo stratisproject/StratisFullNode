@@ -254,11 +254,8 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // A wallet ahead of consensus should be truncated.
                 ChainedHeader fork = this.WalletRepository.FindFork(walletName, this.ChainIndexer.Tip);
 
-                if (fork?.HashBlock != this.ChainIndexer.Tip?.HashBlock)
-                {
-                    this.logger.LogDebug("Rewinding wallet, {0}='{1}', {2}='{3}'", nameof(fork), fork, nameof(this.ChainIndexer.Tip), this.ChainIndexer.Tip?.HashBlock);
-                    this.WalletRepository.RewindWallet(walletName, fork);
-                }
+                if (this.WalletRepository.RewindWallet(walletName, fork).Item1)
+                    this.logger.LogDebug("Rewound wallet, {0}='{1}', {2}='{3}'", nameof(fork), fork, nameof(this.ChainIndexer.Tip), this.ChainIndexer.Tip?.HashBlock);
             }
 
             if (this.walletSettings.IsDefaultWalletEnabled())
