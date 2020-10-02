@@ -67,7 +67,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             get
             {
-                return PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, this.federationKeys.Select(k => k.PrivateKey.PubKey).ToArray());
+                return PayToFederationTemplate.Instance.GenerateScriptPubKey(this.network.Federations.GetOnlyFederation().Id);
             }
         }
 

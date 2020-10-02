@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
@@ -32,9 +33,6 @@ namespace Stratis.Bitcoin.Networks
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
-
-            // TODO: Update this later
-            this.FederationMultisigScript = new Script();
 
             var powLimit = new Target(new uint256("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
 
@@ -75,6 +73,22 @@ namespace Stratis.Bitcoin.Networks
                 [StraxBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultRegTestThreshold),
                 [StraxBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
+
+            // To successfully process the OP_FEDERATION opcode the federations should be known.
+            this.Federations = new Federations();
+
+            // Cirrus federation.
+            var cirrusFederationMnemonics = new[] {
+                   "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+                   "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
+                   "exchange rent bronze pole post hurry oppose drama eternal voice client state"
+               }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            var cirrusFederationKeys = cirrusFederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
+
+            List<PubKey> cirrusFederationPubKeys = cirrusFederationKeys.Select(k => k.PubKey).ToList();
+
+            this.Federations.RegisterFederation(new Federation(cirrusFederationPubKeys.ToArray()));
 
             this.Consensus = new NBitcoin.Consensus(
                 consensusFactory: consensusFactory,

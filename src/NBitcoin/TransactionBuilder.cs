@@ -589,6 +589,7 @@ namespace NBitcoin
         {
             this.Extensions.Add(new P2PKHBuilderExtension());
             this.Extensions.Add(new P2MultiSigBuilderExtension());
+            this.Extensions.Add(new P2FederationBuilderExtension());
             this.Extensions.Add(new P2PKBuilderExtension());
             this.Extensions.Add(new OPTrueExtension());
         }

@@ -19,6 +19,7 @@ namespace Stratis.Bitcoin.Features.PoA.Policies
             PayToPubkeyTemplate.Instance,
             PayToScriptHashTemplate.Instance,
             PayToMultiSigTemplate.Instance,
+            PayToFederationTemplate.Instance,
             new TxNullDataTemplate(MaxOpReturnRelay),
             PayToWitTemplate.Instance
         };

@@ -4,8 +4,10 @@ using System.Linq;
 using System.Net;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg
@@ -91,7 +93,7 @@ namespace Stratis.Features.FederatedPeg
         /// </summary>
         public const int StratisMainDepositStartBlock = 1_100_000;
 
-        public FederatedPegSettings(NodeSettings nodeSettings, IFederatedPegOptions federatedPegOptions = null)
+        public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederatedPegOptions federatedPegOptions = null)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
@@ -104,14 +106,15 @@ namespace Stratis.Features.FederatedPeg
             string redeemScriptRaw = configReader.GetOrDefault<string>(RedeemScriptParam, null);
             Console.WriteLine(redeemScriptRaw);
             if (redeemScriptRaw == null)
-                throw new ConfigurationException($"could not find {RedeemScriptParam} configuration parameter");
+                throw new ConfigurationException($"Could not find {RedeemScriptParam} configuration parameter.");
 
             this.MultiSigRedeemScript = new Script(redeemScriptRaw);
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            PayToMultiSigTemplateParameters payToMultisigScriptParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
-            this.MultiSigM = payToMultisigScriptParams.SignatureCount;
-            this.MultiSigN = payToMultisigScriptParams.PubKeys.Length;
-            this.FederationPublicKeys = payToMultisigScriptParams.PubKeys;
+            PayToMultiSigTemplateParameters para = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript) ?? 
+                PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript, nodeSettings.Network);
+            this.MultiSigM = para.SignatureCount;
+            this.MultiSigN = para.PubKeys.Length;
+            this.FederationPublicKeys = para.PubKeys;
 
             this.PublicKey = configReader.GetOrDefault<string>(PublicKeyParam, null);
 
@@ -119,6 +122,9 @@ namespace Stratis.Features.FederatedPeg
             {
                 throw new ConfigurationException("Please make sure the public key passed as parameter was used to generate the multisig redeem script.");
             }
+
+            nodeSettings.Network.Federations.RegisterFederation(new Federation(para.PubKeys, para.SignatureCount));
+            counterChainNetworkWrapper.CounterChainNetwork.Federations.RegisterFederation(new Federation(para.PubKeys, para.SignatureCount));
 
             // Federation IPs - These are required to receive and sign withdrawal transactions.
             string federationIpsRaw = configReader.GetOrDefault<string>(FederationIpsParam, null);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
@@ -84,6 +85,12 @@ namespace Stratis.Sidechains.Networks
                 new CollateralFederationMember(new PubKey("020432898887bcc515b20d5d3dcea0ee86c700a3279c8d773caf37b5c317b4e2b4"), true, new Money(50000_00000000), "TMG96zyTMGVcaXgJntq7JZmKx2csJx7h75"),
                 new CollateralFederationMember(new PubKey("02f9b73070474b7cfb3e6c2624c069cdbd211954f82862505f10cf0a2c3a45e7c5"), true, new Money(50000_00000000), "TB2Cnd34fauqheApsJS1PKemDDVV4QRYGW"),
             };
+
+            this.Federations = new Federations();
+            this.Federations.RegisterFederation(new Federation(genesisFederationMembers
+                .Where(f => ((CollateralFederationMember)f).IsMultisigMember)
+                .Select(f => ((CollateralFederationMember)f).PubKey)
+                .ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,

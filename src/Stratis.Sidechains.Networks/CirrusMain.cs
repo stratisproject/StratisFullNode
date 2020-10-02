@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -14,6 +15,7 @@ using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
@@ -133,6 +135,12 @@ namespace Stratis.Sidechains.Networks
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = NBitcoin.Protocol.ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
             };
+
+            this.Federations = new Federations();
+            this.Federations.RegisterFederation(new Federation(genesisFederationMembers
+                .Where(f => ((CollateralFederationMember)f).IsMultisigMember)
+                .Select(f => ((CollateralFederationMember)f).PubKey)
+                .ToArray()));
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

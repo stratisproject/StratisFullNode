@@ -81,7 +81,21 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
             Transaction transaction = this.network.CreateTransaction();
             transaction.Inputs.Add(GetP2PKHInput());
-            Script script = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, new PubKey[] {new Key().PubKey, new Key().PubKey, new Key().PubKey});
+            Script script = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, new PubKey[] { new Key().PubKey, new Key().PubKey, new Key().PubKey });
+            transaction.Outputs.Add(new TxOut(100, script));
+
+            // No exception when checking
+            AllowedScriptTypeRule.CheckTransaction(this.network, transaction);
+        }
+
+        [Fact]
+        public void P2PKHInput_MultiSigOutput_Passes_With_Federation()
+        {
+            // This occurs when sending funds to the federation on our sidechain
+
+            Transaction transaction = this.network.CreateTransaction();
+            transaction.Inputs.Add(GetP2PKHInput());
+            Script script = PayToFederationTemplate.Instance.GenerateScriptPubKey(new FederationId(new byte[10]));
             transaction.Outputs.Add(new TxOut(100, script));
 
             // No exception when checking
