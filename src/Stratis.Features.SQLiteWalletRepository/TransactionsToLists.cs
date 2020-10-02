@@ -52,7 +52,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 RedeemScript = txOut.ScriptPubKey.ToHex(),
 
                 // By using the script that is associated with the targetAddress we hope to extract the same (even Bech32).
-                Address = txOut.ScriptPubKey.GetDestinationAddress(this.conn.Repository.Network).ToString() ?? "",
+                Address = txOut.ScriptPubKey.GetDestinationAddress(this.conn.Repository.Network)?.ToString() ?? "",
                 OutputBlockHeight = block?.Height,
                 OutputBlockHash = block?.Hash.ToString(),
                 OutputTxIsCoinBase = isCoinBase ? 1 : 0,
