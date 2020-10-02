@@ -39,7 +39,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             return res;
         }
 
-        internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address, Network network)
+        internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address)
         {
             Script pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
             Script scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
@@ -77,7 +77,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                                   && (bytes[48] == (byte)0x68) // OP_ENDIF
                                   && (bytes[49] == (byte)0x88) // OP_EQUALVERIFY
                                   && (bytes[50] == (byte)0xac)); // OP_CHECKSIG
-            
+
             // TODO: Need to make a central determination of whether a UTXO is Segwit or not (i.e. it pays to a P2WPKH scriptPubKey)
 
             var res = new TransactionData()

@@ -667,8 +667,9 @@ namespace Stratis.Features.SQLiteWalletRepository
                         while (addresses.Count < count)
                         {
                             AddressIdentifier addressIdentifier = tracker.CreateAddress();
-                            HDAddress address = this.CreateAddress(account, (int)addressIdentifier.AddressType, (int)addressIdentifier.AddressIndex);
-                            conn.Insert(address);
+                            conn.Insert(this.CreateAddress(addressIdentifier));
+
+                            var address = HDAddress.GetAddress(conn, addressIdentifier.WalletId, (int)addressIdentifier.AccountIndex, (int)addressIdentifier.AddressType, (int)addressIdentifier.AddressIndex);
                             addresses.Add(address);
                         }
 
@@ -683,7 +684,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     }
                 }
 
-                return addresses.Select(a => this.ToHdAddress(a, this.Network));
+                return addresses.Select(a => this.ToHdAddress(a));
             }
             finally
             {
@@ -702,7 +703,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 throw new WalletException($"No account with the name '{accountReference.AccountName}' could be found.");
 
             return conn.GetUsedAddresses(account.WalletId, account.AccountIndex, isChange ? 1 : 0, int.MaxValue).Select(a =>
-                (this.ToHdAddress(a, this.Network), new Money(a.ConfirmedAmount), new Money(a.TotalAmount)));
+                (this.ToHdAddress(a), new Money(a.ConfirmedAmount), new Money(a.TotalAmount)));
         }
 
         /// <inheritdoc />
@@ -715,7 +716,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             if (account == null)
                 throw new WalletException($"No account with the name '{accountReference.AccountName}' could be found.");
 
-            return conn.GetUnusedAddresses(account.WalletId, account.AccountIndex, isChange ? 1 : 0, int.MaxValue).Select(a => this.ToHdAddress(a, this.Network));
+            return conn.GetUnusedAddresses(account.WalletId, account.AccountIndex, isChange ? 1 : 0, int.MaxValue).Select(a => this.ToHdAddress(a));
         }
 
         /// <inheritdoc />
@@ -724,13 +725,11 @@ namespace Stratis.Features.SQLiteWalletRepository
             WalletContainer walletContainer = this.GetWalletContainer(accountReference.WalletName);
             DBConnection conn = walletContainer.Conn;
 
-            int walletId = this.GetWalletId(accountReference.WalletName);
+            AddressIdentifier addressIdentifier = this.GetAddressIdentifier(accountReference.WalletName, accountReference.AccountName, addressType);
 
-            HDAccount account = conn.GetAccountByName(accountReference.WalletName, accountReference.AccountName);
-
-            foreach (HDAddress address in HDAddress.GetAccountAddresses(conn, walletId, account.AccountIndex, addressType, count))
+            foreach (HDAddress address in HDAddress.GetAccountAddresses(conn, addressIdentifier.WalletId, (int)addressIdentifier.AccountIndex, (int)addressIdentifier.AddressType, count))
             {
-                yield return this.ToHdAddress(address, this.Network);
+                yield return this.ToHdAddress(address);
             }
         }
 
@@ -1012,11 +1011,11 @@ namespace Stratis.Features.SQLiteWalletRepository
                         return false;
                     }
 
-                    // Initialize round.
-                    round.PrevTip = (header.Previous == null) ? new HashHeightPair(0, -1) : new HashHeightPair(header.Previous);
-                    round.NewTip = null;
-                    round.Trackers = new Dictionary<TopUpTracker, TopUpTracker>();
-                    round.BatchDeadline = DateTime.Now.AddSeconds(MaxBatchDurationSeconds).Ticks;
+                // Initialize round.
+                round.PrevTip = (header.Previous == null) ? new HashHeightPair(0, -1) : new HashHeightPair(header.Previous);
+                round.NewTip = null;
+                round.Trackers = new Dictionary<TopUpTracker, TopUpTracker>();
+                round.BatchDeadline = DateTime.Now.AddSeconds(MaxBatchDurationSeconds).Ticks;
 
                     return true;
                 }
@@ -1194,7 +1193,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             Wallet hdWallet = this.GetWallet(walletAccountReference.WalletName);
             HdAccount hdAccount = this.GetAccounts(hdWallet, walletAccountReference.AccountName).FirstOrDefault();
-
+            
             var extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
             var spendable = conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations);
@@ -1210,7 +1209,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     pubKey = extPubKey.Derive(keyPath).PubKey;
                     cachedPubKeys.Add(keyPath, pubKey);
                 }
-
+                
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
@@ -1227,28 +1226,14 @@ namespace Stratis.Features.SQLiteWalletRepository
                     ScriptPubKey = scriptPubKey.ToHex(),
                     Address = scriptPubKey.GetDestinationAddress(this.Network).ToString(),
                     Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString()
-                }, this.Network);
+                });
 
                 hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
-
-                TransactionData txData = this.ToTransactionData(transactionData, hdAddress.Transactions);
-
-                // Check if this wallet is a normal purpose wallet (not cold staking, etc).
-                if (hdAccount.IsNormalAccount())
-                {
-                    bool isColdCoinStake = txData.IsColdCoinStake ?? false;
-
-                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as an cold coin stake.
-                    if (isColdCoinStake)
-                    {
-                        continue;
-                    }
-                }
 
                 yield return new UnspentOutputReference()
                 {
                     Account = hdAccount,
-                    Transaction = txData,
+                    Transaction = this.ToTransactionData(transactionData, hdAddress.Transactions),
                     Confirmations = tdConfirmations,
                     Address = hdAddress
                 };
@@ -1293,7 +1278,9 @@ namespace Stratis.Features.SQLiteWalletRepository
         /// <inheritdoc />
         public (Money totalAmount, Money confirmedAmount, Money spendableAmount) GetAccountBalance(WalletAccountReference walletAccountReference, int currentChainHeight, int confirmations = 0, int? coinBaseMaturity = null, (int, int)? address = null)
         {
-            DBConnection conn = this.GetConnection(walletAccountReference.WalletName);
+            WalletContainer walletContainer = this.GetWalletContainer(walletAccountReference.WalletName);
+
+            DBConnection conn = walletContainer.Conn;
             HDAccount account = conn.GetAccountByName(walletAccountReference.WalletName, walletAccountReference.AccountName);
 
             (long total, long confirmed, long spendable) = HDTransactionData.GetBalance(conn, account.WalletId, account.AccountIndex, address, currentChainHeight, coinBaseMaturity ?? (int)this.Network.Consensus.CoinbaseMaturity, confirmations);
@@ -1312,17 +1299,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             return this.GetWalletContainer(walletName).TransactionsOfInterest;
         }
-
+        
         /// <inheritdoc />
         public int GetTransactionCount(string walletName, string accountName = null)
         {
-            int walletId = this.GetWalletId(walletName);
+            var identifier = this.GetAddressIdentifier(walletName, accountName);
 
-            DBConnection conn = this.GetConnection(walletName);
-
-            HDAccount account = conn.GetAccountByName(walletName, accountName);
-
-            return HDTransactionData.GetTransactionCount(conn, walletId, account.AccountIndex);
+            return HDTransactionData.GetTransactionCount(this.GetConnection(walletName), identifier.WalletId, identifier.AccountIndex);
         }
 
         /// <inheritdoc />
@@ -1396,7 +1379,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.External, int.MaxValue)
                 .Concat(conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.Internal, int.MaxValue)))
             {
-                HdAddress hdAddress = this.ToHdAddress(address, this.Network);
+                HdAddress hdAddress = this.ToHdAddress(address);
 
                 hdAddress.AddressCollection = (address.AddressType == 0) ? account.ExternalAddresses : account.InternalAddresses;
 
@@ -1432,7 +1415,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.External, int.MaxValue)
                     .Concat(conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.Internal, int.MaxValue)))
                 {
-                    HdAddress hdAddress = this.ToHdAddress(address, this.Network);
+                    HdAddress hdAddress = this.ToHdAddress(address);
 
                     foreach (var transaction in conn.GetTransactionsForAddress(wallet.WalletId, account.AccountIndex, address.AddressType, address.AddressIndex))
                     {
@@ -1476,11 +1459,8 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
-
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
-
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                    PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(new Script(addressIdentifier.PubKeyScript));
+                    Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
@@ -1490,8 +1470,9 @@ namespace Stratis.Features.SQLiteWalletRepository
                         AddressIndex = (int)addressIdentifier.AddressIndex,
                         ScriptPubKey = addressIdentifier.ScriptPubKey,
                         PubKey = pubKey.ScriptPubKey.ToHex(),
-                        Address = tranData.Address
-                    }, this.Network);
+                        Address = pubKey.Hash.ScriptPubKey.GetDestinationAddress(this.Network).ToString(),
+                        Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString()
+                    });
 
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
                     hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
@@ -1527,11 +1508,8 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
-
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
-
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                    PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(new Script(addressIdentifier.PubKeyScript));
+                    Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
@@ -1541,8 +1519,9 @@ namespace Stratis.Features.SQLiteWalletRepository
                         AddressIndex = (int)addressIdentifier.AddressIndex,
                         ScriptPubKey = addressIdentifier.ScriptPubKey,
                         PubKey = pubKey.ScriptPubKey.ToHex(),
-                        Address = tranData.Address
-                    }, this.Network);
+                        Address = pubKey.Hash.ScriptPubKey.GetDestinationAddress(this.Network).ToString(),
+                        Bech32Address = witScriptPubKey.GetDestinationAddress(this.Network).ToString()
+                    });
 
                     hdAddress.Transactions = new TransactionCollection(hdAddress);
                     hdAddress.AddressCollection = (hdAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
