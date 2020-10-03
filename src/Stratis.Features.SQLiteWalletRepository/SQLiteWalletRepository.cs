@@ -750,13 +750,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                 else
                     walletContainer = new WalletContainer(this.GetConnection(walletName), null, this.processBlocksInfo);
 
-                walletContainer.LockUpdateWallet.Wait();
+                walletContainer.WriteLockWait();
 
                 this.Wallets[walletName] = walletContainer;
             }
             else
             {
-                walletContainer.LockUpdateWallet.Wait();
+                walletContainer.WriteLockRelease();
             }
 
             return new TransactionContext(walletContainer);
@@ -993,13 +993,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                     {
                         WalletContainer walletContainer = this.Wallets[walletName];
 
-                        if (walletContainer.LockUpdateWallet.Wait(false))
-                        {
-                            if (walletContainer.ReaderCount == 0)
-                                return;
-
-                            walletContainer.LockUpdateWallet.Release();
-                        }
+                        if (walletContainer.WriteLockWait(true))
+                            return;
 
                         this.logger.LogDebug("Could not obtain lock for wallet '{0}'.", walletName);
 
@@ -1011,7 +1006,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     if (failed)
                     {
                         this.logger.LogDebug("Releasing locks and postponing until next sync event.");
-                        Parallel.ForEach(round.ParticipatingWallets, walletName => this.Wallets[walletName].LockUpdateWallet.Release());
+                        Parallel.ForEach(round.ParticipatingWallets, walletName => this.Wallets[walletName].WriteLockRelease());
                         round.LockProcessBlocks.Release();
                         return false;
                     }
@@ -1135,7 +1130,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             WalletContainer walletContainer = this.GetWalletContainer(walletName);
             (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            walletContainer.LockUpdateWallet.Wait();
+            walletContainer.WriteLockWait();
             walletContainer.LockProcessBlocks.Wait();
 
             ProcessBlocksInfo processBlocksInfo = walletContainer;
@@ -1186,7 +1181,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 processBlocksInfo.PrevOuts.Clear();
 
                 walletContainer.LockProcessBlocks.Release();
-                walletContainer.LockUpdateWallet.Release();
+                walletContainer.WriteLockRelease();
             }
         }
 

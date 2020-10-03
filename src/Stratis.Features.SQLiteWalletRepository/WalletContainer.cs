@@ -47,8 +47,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
     internal class WalletContainer : ProcessBlocksInfo
     {
-        internal readonly DBLock LockUpdateWallet;
-        internal int ReaderCount;
+        private readonly DBLock LockUpdateWallet;
+        private int ReaderCount;
+
         public bool HaveWaitingThreads => this.LockUpdateWallet.WaitingThreads > 0;
 
         internal WalletContainer(DBConnection conn, HDWallet wallet, ProcessBlocksInfo processBlocksInfo = null) : base(conn, processBlocksInfo, wallet)
@@ -59,15 +60,17 @@ namespace Stratis.Features.SQLiteWalletRepository
             this.Conn = conn;
         }
 
-        internal void WriteLockWait()
+        internal bool WriteLockWait(bool dontWait = false)
         {
             // Only take the write lock if there are no readers.
             while (true)
             {
                 this.LockUpdateWallet.Wait();
                 if (this.ReaderCount == 0)
-                    break;
+                    return true;
                 this.LockUpdateWallet.Release();
+                if (dontWait)
+                    return false;
                 Thread.Sleep(100);
             }
         }
