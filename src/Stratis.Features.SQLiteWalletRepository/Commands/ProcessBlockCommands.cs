@@ -124,8 +124,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
                 ,       O.IsChange SpendIsChange
                 FROM    temp.TempPrevOut T
                 JOIN    temp.TempOutput O
-                ON      O.OutputTxTime = T.SpendTxTime
-                AND     O.OutputTxId = T.SpendTxId
+                ON      O.OutputTxId = T.SpendTxId
                 AND     O.ScriptPubKey IS NULL
                 JOIN    HDTransactionData TD
                 ON      TD.OutputTxId = T.OutputTxId

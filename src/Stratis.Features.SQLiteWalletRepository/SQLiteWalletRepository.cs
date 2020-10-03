@@ -1264,7 +1264,6 @@ namespace Stratis.Features.SQLiteWalletRepository
             SpendingDetails spendingDetails = transactionData.SpendingDetails;
 
             var res = HDPayment.GetAllPayments(conn,
-                spendingDetails.CreationTime.ToUnixTimeSeconds(),
                 spendingDetails.TransactionId.ToString(),
                 transactionData.Id.ToString(),
                 transactionData.Index,

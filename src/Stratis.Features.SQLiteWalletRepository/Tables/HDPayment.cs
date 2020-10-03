@@ -26,7 +26,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 SpendScriptPubKey   TEXT,
                 SpendValue          INTEGER NOT NULL,
                 SpendIsChange       INTEGER NOT NULL,
-                PRIMARY KEY(SpendTxTime, SpendTxId, OutputTxId, OutputIndex, ScriptPubKey, SpendIndex)
+                PRIMARY KEY(SpendTxId, OutputTxId, OutputIndex, ScriptPubKey, SpendIndex)
             )";
         }
 
@@ -36,18 +36,16 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 conn.Execute(command);
         }
 
-        internal static IEnumerable<HDPayment> GetAllPayments(DBConnection conn, long spendTxTime, string spendTxId, string outputTxId, int outputIndex, string scriptPubKey)
+        internal static IEnumerable<HDPayment> GetAllPayments(DBConnection conn, string spendTxId, string outputTxId, int outputIndex, string scriptPubKey)
         {
             return conn.Query<HDPayment>($@"
                 SELECT  *
                 FROM    HDPayment
-                WHERE   SpendTxTime = ?
-                AND     SpendTxId = ?
+                WHERE   SpendTxId = ?
                 AND     OutputTxId = ?
                 AND     OutputIndex = ?
                 AND     ScriptPubKey = ?
                 ORDER   BY SpendIndex",
-                spendTxTime,
                 spendTxId,
                 outputTxId,
                 outputIndex,
