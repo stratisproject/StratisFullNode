@@ -645,6 +645,25 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
+        /// Gets the private key of a specified wallet address.
+        /// </summary>
+        /// <param name="request">An object containing the necessary parameters to retrieve.</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>A JSON object containing the private key of the address in WIF representation.</returns>
+        /// <response code="200">Returns private key</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
+        [Route("privatekey")]
+        [HttpPost]
+        public async Task<IActionResult> RetrievePrivateKey([FromBody] RetrievePrivateKeyModel request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.ExecuteAsAsync(request, cancellationToken,
+                (req, token) =>
+                    this.Json(this.walletManager.RetrievePrivateKey(request.Password, request.WalletName, request.Address)));
+        }
+
+        /// <summary>
         /// Requests the node resyncs from a block specified by its block hash.
         /// Internally, the specified block is taken as the new wallet tip
         /// and all blocks after it are resynced.
