@@ -29,7 +29,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             this.CleanupUnusedWalletFile();
 
-            this.walletContainer.LockUpdateWallet.Release();
+            this.walletContainer.WriteLockRelease();
         }
 
         internal void CleanupUnusedWalletFile()
@@ -57,7 +57,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             this.CleanupUnusedWalletFile();
 
-            this.walletContainer.LockUpdateWallet.Release();
+            this.walletContainer.WriteLockRelease();
         }
 
         public void Dispose()
@@ -67,7 +67,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 this.walletContainer.Conn.Rollback();
             }
 
-            this.walletContainer.LockUpdateWallet.Release();
+            this.walletContainer.WriteLockRelease();
         }
     }
 }

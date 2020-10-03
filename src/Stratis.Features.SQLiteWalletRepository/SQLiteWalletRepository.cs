@@ -756,7 +756,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
             else
             {
-                walletContainer.WriteLockRelease();
+                walletContainer.WriteLockWait();
             }
 
             return new TransactionContext(walletContainer);
