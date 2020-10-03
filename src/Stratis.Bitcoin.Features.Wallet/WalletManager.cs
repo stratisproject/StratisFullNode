@@ -1046,7 +1046,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        public void ProcessBlocks(Func<int, IEnumerable<(ChainedHeader, Block)>> blockProvider)
+        public void ProcessBlocks(Func<ChainedHeader, IEnumerable<(ChainedHeader, Block)>> blockProvider)
         {
             lock (this.lockProcess)
             {
@@ -1086,7 +1086,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                         walletTip = genesisHeader;
                     }
 
-                    this.WalletRepository.ProcessBlocks(blockProvider(walletTip.Height + 1));
+                    this.WalletRepository.ProcessBlocks(blockProvider(walletTip));
                 }
                 catch (Exception err)
                 {
@@ -1109,7 +1109,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             chainedHeader = chainedHeader ?? this.ChainIndexer.GetHeader(block.GetHash());
 
-            this.ProcessBlocks((height) => (height == chainedHeader.Height) ? new[] { (chainedHeader, block) } : new (ChainedHeader, Block)[] { });
+            this.ProcessBlocks((previousBlock) => (previousBlock.HashBlock == chainedHeader.Previous.HashBlock) ? new[] { (chainedHeader, block) } : new (ChainedHeader, Block)[] { });
         }
 
         /// <inheritdoc />

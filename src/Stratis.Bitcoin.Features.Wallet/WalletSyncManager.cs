@@ -150,7 +150,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private void ProcessBlocks()
         {
-            this.walletManager.ProcessBlocks((height) => { return this.BatchBlocksFrom(height); });
+            this.walletManager.ProcessBlocks((previousBlock) => { return this.BatchBlocksFrom(previousBlock); });
         }
 
         private void OnBlockConnected(BlockConnected blockConnected)
@@ -199,9 +199,9 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
         }
 
-        private IEnumerable<(ChainedHeader, Block)> BatchBlocksFrom(int leftBoundry)
+        private IEnumerable<(ChainedHeader, Block)> BatchBlocksFrom(ChainedHeader previousBlock)
         {
-            for (int height = leftBoundry; !this.syncCancellationToken.IsCancellationRequested;)
+            for (int height = previousBlock.Height + 1; !this.syncCancellationToken.IsCancellationRequested;)
             {
                 var hashes = new List<uint256>();
                 for (int i = 0; i < 100; i++)
@@ -210,13 +210,16 @@ namespace Stratis.Bitcoin.Features.Wallet
                     if (header == null)
                         break;
 
+                    if (header.Previous != previousBlock)
+                        break;
+
                     hashes.Add(header.HashBlock);
+
+                    previousBlock = header;
                 }
 
                 if (hashes.Count == 0)
                     yield break;
-
-                long flagFall = DateTime.Now.Ticks;
 
                 List<Block> blocks = this.blockStore.GetBlocks(hashes);
 
