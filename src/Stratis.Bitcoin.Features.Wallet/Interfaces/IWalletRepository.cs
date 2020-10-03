@@ -208,7 +208,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="lastBlockSynced">The last block synced to set.</param>
         /// <returns>A flag indicating success and a list of transactions removed from the wallet.</returns>
         /// <remarks>The value of lastBlockSynced must match a block that was conceivably processed by the wallet (or be null).</remarks>
-        (bool, IEnumerable<(uint256, DateTimeOffset)>) RewindWallet(string walletName, ChainedHeader lastBlockSynced);
+        (bool RewindExecuted, IEnumerable<(uint256, DateTimeOffset)> RemovedTransactions) RewindWallet(string walletName, ChainedHeader lastBlockSynced);
 
         /// <summary>
         /// Allows multiple interface calls to be grouped into a transaction.

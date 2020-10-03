@@ -40,7 +40,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public void AddAll(int? walletId = null, int? accountIndex = null)
+        public void AddSpendableTransactions(int? walletId = null, int? accountIndex = null, int? fromBlock = null)
         {
             Guard.Assert((walletId ?? this.walletId) == (this.walletId ?? walletId));
 
@@ -51,9 +51,10 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             List<HDTransactionData> spendableTransactions = this.conn.Query<HDTransactionData>($@"
                 SELECT  *
-                FROM    HDTransactionData
+                FROM    HDTransactionData{((fromBlock == null) ? $@"
                 WHERE   SpendBlockHash IS NULL
-                AND     SpendBlockHeight IS NULL {
+                AND     SpendBlockHeight IS NULL" : $@"
+                WHERE   SpendBlockHeight > {fromBlock} ")}{
                 // Restrict to wallet if provided.
                 ((walletId != null) ? $@"
                 AND      WalletId = {strWalletId}" : "")}{

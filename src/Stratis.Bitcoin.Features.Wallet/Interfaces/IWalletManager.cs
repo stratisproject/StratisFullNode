@@ -277,7 +277,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="chainedHeader">The blocks chain of headers.</param>
         void ProcessBlock(Block block, ChainedHeader chainedHeader = null);
 
-        void ProcessBlocks(Func<int, IEnumerable<(ChainedHeader, Block)>> blockProvider);
+        void ProcessBlocks(Func<ChainedHeader, IEnumerable<(ChainedHeader, Block)>> blockProvider);
 
         /// <summary>
         /// Processes a transaction received from the network.

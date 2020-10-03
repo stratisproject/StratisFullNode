@@ -251,7 +251,11 @@ namespace Stratis.Bitcoin.Features.Wallet
             // the next WalletSyncManager.OrchestrateWalletSync invocation.
             foreach (string walletName in this.WalletRepository.GetWalletNames())
             {
-                this.WalletRepository.RewindWallet(walletName, this.ChainIndexer.Tip);
+                // A wallet ahead of consensus should be truncated.
+                ChainedHeader fork = this.WalletRepository.FindFork(walletName, this.ChainIndexer.Tip);
+
+                if (this.WalletRepository.RewindWallet(walletName, fork).RewindExecuted)
+                    this.logger.LogDebug("Rewound wallet, {0}='{1}', {2}='{3}'", nameof(fork), fork, nameof(this.ChainIndexer.Tip), this.ChainIndexer.Tip?.HashBlock);
             }
 
             if (this.walletSettings.IsDefaultWalletEnabled())
@@ -1042,7 +1046,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        public void ProcessBlocks(Func<int, IEnumerable<(ChainedHeader, Block)>> blockProvider)
+        public void ProcessBlocks(Func<ChainedHeader, IEnumerable<(ChainedHeader, Block)>> blockProvider)
         {
             lock (this.lockProcess)
             {
@@ -1064,12 +1068,9 @@ namespace Stratis.Bitcoin.Features.Wallet
                         // A wallet ahead of consensus should be truncated.
                         ChainedHeader fork = this.WalletRepository.FindFork(walletName, this.ChainIndexer.Tip);
 
-                        if (fork?.HashBlock != this.ChainIndexer.Tip?.HashBlock)
-                        {
-                            this.logger.LogDebug("Rewinding wallet, {0}='{1}', {2}='{3}'", nameof(fork), fork, nameof(this.ChainIndexer.Tip), this.ChainIndexer.Tip?.HashBlock);
-                            this.WalletRepository.RewindWallet(walletName, fork);
-                        }
-
+                        if (this.WalletRepository.RewindWallet(walletName, fork).RewindExecuted)
+                            this.logger.LogDebug("Rewound wallet, {0}='{1}', {2}='{3}'", nameof(fork), fork, nameof(this.ChainIndexer.Tip), this.ChainIndexer.Tip?.HashBlock);
+                            
                         // Update the lowest common tip.
                         walletTip = (fork == null) ? null : walletTip?.FindFork(fork);
                     }
@@ -1085,7 +1086,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                         walletTip = genesisHeader;
                     }
 
-                    this.WalletRepository.ProcessBlocks(blockProvider(walletTip.Height + 1));
+                    this.WalletRepository.ProcessBlocks(blockProvider(walletTip));
                 }
                 catch (Exception err)
                 {
@@ -1108,7 +1109,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             chainedHeader = chainedHeader ?? this.ChainIndexer.GetHeader(block.GetHash());
 
-            this.ProcessBlocks((height) => (height == chainedHeader.Height) ? new[] { (chainedHeader, block) } : new (ChainedHeader, Block)[] { });
+            this.ProcessBlocks((previousBlock) => (previousBlock.HashBlock == chainedHeader.Previous.HashBlock) ? new[] { (chainedHeader, block) } : new (ChainedHeader, Block)[] { });
         }
 
         /// <inheritdoc />

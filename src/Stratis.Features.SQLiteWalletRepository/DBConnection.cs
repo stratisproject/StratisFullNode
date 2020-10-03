@@ -384,6 +384,8 @@ namespace Stratis.Features.SQLiteWalletRepository
             {
                 if (typeof(T) == typeof(HDAddress))
                     HDAddress.MigrateTable(this);
+                else if (typeof(T) == typeof(HDPayment))
+                    HDPayment.MigrateTable(this);
             }
         }
 

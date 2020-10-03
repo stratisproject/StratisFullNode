@@ -22,6 +22,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
         /// </summary>
         /// <param name="walletId">The wallet to look in.</param>
         /// <param name="accountIndex">The account to look in.</param>
-        void AddAll(int? walletId = null, int? accountIndex = null);
+        /// <param name="fromBlock">Adds outpoints where <c>SpendBlockHeight > fromBlock</c> otherwise where SpendBlockHeight is <c>null</c>.</param>
+        void AddSpendableTransactions(int? walletId = null, int? accountIndex = null, int? fromBlock = null);
     }
 }

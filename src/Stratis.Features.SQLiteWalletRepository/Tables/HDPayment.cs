@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using SQLite;
 
 namespace Stratis.Features.SQLiteWalletRepository.Tables
@@ -26,8 +27,37 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 SpendScriptPubKey   TEXT,
                 SpendValue          INTEGER NOT NULL,
                 SpendIsChange       INTEGER NOT NULL,
-                PRIMARY KEY(SpendTxTime, SpendTxId, OutputTxId, OutputIndex, ScriptPubKey, SpendIndex)
+                PRIMARY KEY(SpendTxId, OutputTxId, OutputIndex, ScriptPubKey, SpendIndex)
             )";
+        }
+
+        internal static IEnumerable<string> MigrateScript()
+        {
+            yield return $@"
+                PRAGMA foreign_keys=off;
+            ";
+
+            yield return CreateScript().First().Replace("HDPayment", "new_HDPayment");
+
+            // TODO: Copy the data.
+            yield return $@"
+                INSERT INTO new_HDPayment SELECT MAX(SpendTxTime), SpendTxId, OutputTxId, OutputIndex, ScriptPubKey, SpendIndex, MAX(SpendScriptPubKey), MAX(SpendValue), MAX(SpendIsChange) FROM HDPayment GROUP BY SpendTxId, OutputTxId, OutputIndex, ScriptPubKey, SpendIndex;
+            ";
+
+            yield return $@"
+                DROP TABLE HDPayment;
+            ";
+
+            yield return $@"
+                ALTER TABLE new_HDPayment RENAME TO HDPayment;
+            ";
+
+            foreach (var indexScript in CreateScript().Skip(1))
+                yield return indexScript;
+
+            yield return $@"
+                PRAGMA foreign_keys=on;
+            ";
         }
 
         internal static void CreateTable(SQLiteConnection conn)
@@ -36,18 +66,23 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 conn.Execute(command);
         }
 
-        internal static IEnumerable<HDPayment> GetAllPayments(DBConnection conn, long spendTxTime, string spendTxId, string outputTxId, int outputIndex, string scriptPubKey)
+        internal static void MigrateTable(SQLiteConnection conn)
+        {
+            if (conn.ExecuteScalar<int>("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('HDPayment') WHERE name='SpendTxTime' AND pk = 1") != 0)
+                foreach (string command in MigrateScript())
+                    conn.Execute(command);
+        }
+
+        internal static IEnumerable<HDPayment> GetAllPayments(DBConnection conn, string spendTxId, string outputTxId, int outputIndex, string scriptPubKey)
         {
             return conn.Query<HDPayment>($@"
                 SELECT  *
                 FROM    HDPayment
-                WHERE   SpendTxTime = ?
-                AND     SpendTxId = ?
+                WHERE   SpendTxId = ?
                 AND     OutputTxId = ?
                 AND     OutputIndex = ?
                 AND     ScriptPubKey = ?
                 ORDER   BY SpendIndex",
-                spendTxTime,
                 spendTxId,
                 outputTxId,
                 outputIndex,

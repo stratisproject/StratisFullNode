@@ -77,7 +77,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             // Mock wallet repository's 'RewindWallet'.
             this.walletRepository.Setup(r => r.RewindWallet(It.IsAny<string>(), It.IsAny<ChainedHeader>())).Returns((string name, ChainedHeader chainedHeader) =>
             {
-                this.walletTip = (chainedHeader == null) ? null : this.walletTip.FindFork(chainedHeader);
+                var fork = (chainedHeader == null) ? null : this.walletTip.FindFork(chainedHeader);
+
+                // If nothing to do then exit. Tips match.
+                if (chainedHeader?.HashBlock == this.walletTip.HashBlock &&
+                    chainedHeader?.Height == this.walletTip.Height)
+                    return (false, new List<(uint256, DateTimeOffset)>());
+
+                this.walletTip = fork;
+
                 return (true, new List<(uint256, DateTimeOffset)>());
             });
 
@@ -169,9 +177,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             (ChainIndexer Chain, List<Block> Blocks) result = WalletTestsHelpers.GenerateChainAndBlocksWithHeight(5, new StraxMain());
             this.SetupMockObjects(result.Chain, result.Blocks);
 
-            walletSyncManager.OrchestrateWalletSync();
-
-            this.walletRepository.Verify(r => r.RewindWallet(It.IsAny<string>(), It.IsAny<ChainedHeader>()), Times.Never());
+            var oldTip = this.walletTip;
+            this.walletSyncManager.OrchestrateWalletSync();
+            Assert.Equal(oldTip.Height, this.walletTip.Height);
         }
 
         /// <summary>
