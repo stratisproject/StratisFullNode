@@ -380,7 +380,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     new WalletAccountReference(walletName, a.Name), 1, Int32.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
             }
 
-            ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress);
+            ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey.GetWif(this.network);
             return privateKey.ToString();
         }
 
