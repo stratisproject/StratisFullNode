@@ -186,7 +186,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
 
             walletContainer.AddressesOfInterest.AddAll(wallet.WalletId);
-            walletContainer.TransactionsOfInterest.AddAll(wallet.WalletId);
+            walletContainer.TransactionsOfInterest.AddSpendableTransactions(wallet.WalletId);
             this.Wallets[wallet.Name] = walletContainer;
             this.logger.LogDebug("Wallet '{0}' added to collection.", wallet.Name);
         }
@@ -257,7 +257,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public (bool, IEnumerable<(uint256, DateTimeOffset)>) RewindWallet(string walletName, ChainedHeader lastBlockSynced)
+        public (bool RewindExecuted, IEnumerable<(uint256, DateTimeOffset)> RemovedTransactions) RewindWallet(string walletName, ChainedHeader lastBlockSynced)
         {
             WalletContainer walletContainer = this.GetWalletContainer(walletName);
 
@@ -286,7 +286,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             {
                 // Add the UTXOs being freed up. If rewinding to start there will be nothing to add.
                 if (lastBlockSynced != null)
-                    walletContainer.TransactionsOfInterest.AddAll(wallet.WalletId, fromBlock: lastBlockSynced.Height);
+                    walletContainer.TransactionsOfInterest.AddSpendableTransactions(wallet.WalletId, fromBlock: lastBlockSynced.Height);
 
                 IEnumerable<(string txId, long creationTime)> res = conn.SetLastBlockSynced(wallet, lastBlockSynced).ToList();
                 conn.Commit();
@@ -563,7 +563,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 conn.AddTransactions(account, address, transactions);
                 conn.Commit();
 
-                walletContainer.TransactionsOfInterest.AddAll(account.WalletId, account.AccountIndex);
+                walletContainer.TransactionsOfInterest.AddSpendableTransactions(account.WalletId, account.AccountIndex);
                 walletContainer.WriteLockRelease();
             }
             catch (Exception)

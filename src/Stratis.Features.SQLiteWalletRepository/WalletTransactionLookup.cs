@@ -40,7 +40,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public void AddAll(int? walletId = null, int? accountIndex = null, int? fromBlock = null)
+        public void AddSpendableTransactions(int? walletId = null, int? accountIndex = null, int? fromBlock = null)
         {
             Guard.Assert((walletId ?? this.walletId) == (this.walletId ?? walletId));
 
