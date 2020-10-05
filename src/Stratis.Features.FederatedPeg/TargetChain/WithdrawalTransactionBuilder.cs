@@ -30,7 +30,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederationWalletTransactionHandler federationWalletTransactionHandler;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ISignals signals;
-        private readonly IDistributionManager distributionManager;
+        private readonly IRewardDistributionManager distributionManager;
 
         public WithdrawalTransactionBuilder(
             ILoggerFactory loggerFactory,
@@ -39,7 +39,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederationWalletTransactionHandler federationWalletTransactionHandler,
             IFederatedPegSettings federatedPegSettings,
             ISignals signals,
-            IDistributionManager distributionManager)
+            IRewardDistributionManager distributionManager)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;

@@ -4,7 +4,7 @@ using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {
-    public interface IDistributionManager
+    public interface IRewardDistributionManager
     {
         /// <summary>
         /// Finds the proportion of blocks mined by each miner.

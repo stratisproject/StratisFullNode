@@ -405,7 +405,11 @@ namespace Stratis.Features.FederatedPeg
                         services.AddSingleton<IFederatedPegBroadcaster, FederatedPegBroadcaster>();
                         services.AddSingleton<IInputConsolidator, InputConsolidator>();
 
-                        services.AddSingleton<IDistributionManager, DistributionManager>();
+                        // The reward distribution manager only runs on the side chain.
+                        if (!isMainChain)
+                            services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
+
+                        // The reward claimer only runs on the main chain.
                         if (isMainChain)
                             services.AddSingleton<RewardClaimer>();
 

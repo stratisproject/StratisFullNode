@@ -9,18 +9,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
 {
     /// <summary>
     /// Constructs the list of recipients for the mainchain reward sharing.
-    /// Runs on the sidechain.
+    /// Only runs on the sidechain.
     /// </summary>
-    public class DistributionManager : IDistributionManager
+    public sealed class RewardDistributionManager : IRewardDistributionManager
     {
         private const int DefaultEpoch = 240;
-        
+
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
         private readonly ILogger logger;
 
-        private int epoch;
-        private int lastDistributionHeight;
+        private readonly int epoch;
 
         // The reward each miner receives upon distribution is computed as a proportion of the overall accumulated reward since the last distribution.
         // The proportion is based on how many blocks that miner produced in the period (each miner is identified by their block's coinbase's scriptPubKey).
@@ -28,14 +27,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
         // We pay no attention to whether a miner has been kicked since the last distribution or not.
         // If they produced an accepted block, they get their reward.
 
-        public DistributionManager(Network network, ChainIndexer chainIndexer, ILoggerFactory loggerFactory)
+        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, ILoggerFactory loggerFactory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
-            this.lastDistributionHeight = 0;
         }
 
         private int GetDistributionEpochStart(int blockHeight)
@@ -57,6 +55,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         /// <inheritdoc />
         public List<Recipient> Distribute(int mainChainHeight, Money totalReward)
         {
+            // Take a local copy of the chain tip as it might change during execution of this method.
             ChainedHeader tip = this.chainIndexer.Tip;
 
             // We need to determine which block on the sidechain contains a commitment to the height of the mainchain block that originated the reward transfer.
@@ -68,10 +67,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             int blockHeight = 0;
 
-            ChainedHeader currentHeader = this.chainIndexer.Height > (2 * this.epoch) ? this.chainIndexer.GetHeader(this.chainIndexer.Height - (2 * this.epoch)) : this.chainIndexer.Genesis;
+            ChainedHeader currentHeader = tip.Height > (2 * this.epoch) ? this.chainIndexer.GetHeader(tip.Height - (2 * this.epoch)) : this.chainIndexer.Genesis;
 
             // Cap the maximum number of iterations.
-            int iterations = this.chainIndexer.Height - currentHeader.Height;
+            int iterations = tip.Height - currentHeader.Height;
 
             var encoder = new CollateralHeightCommitmentEncoder(this.logger);
 
@@ -85,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (commitmentHeight >= mainChainHeight)
                 {
                     blockHeight = commitmentHeight.Value;
-                    
+
                     break;
                 }
 
@@ -129,7 +128,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             {
                 Money amount = totalReward * blocksMinedEach[scriptPubKey] / totalBlocks;
 
-                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey});
+                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey });
             }
 
             return recipients;
