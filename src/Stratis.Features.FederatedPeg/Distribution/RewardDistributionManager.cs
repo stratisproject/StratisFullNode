@@ -53,10 +53,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
         }
 
         /// <inheritdoc />
-        public List<Recipient> Distribute(int mainChainHeight, Money totalReward)
+        public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward)
         {
             // Take a local copy of the chain tip as it might change during execution of this method.
-            ChainedHeader tip = this.chainIndexer.Tip;
+            ChainedHeader sidechainTip = this.chainIndexer.Tip;
 
             // We need to determine which block on the sidechain contains a commitment to the height of the mainchain block that originated the reward transfer.
             // We otherwise do not have a common reference point from which to compute the epoch.
@@ -65,48 +65,45 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // To avoid miners trying to disrupt the chain by committing to the same height in multiple blocks, we loop forwards and use the first occurrence
             // of a commitment with height >= the search height.
 
-            int blockHeight = 0;
-
-            ChainedHeader currentHeader = tip.Height > (2 * this.epoch) ? this.chainIndexer.GetHeader(tip.Height - (2 * this.epoch)) : this.chainIndexer.Genesis;
+            ChainedHeader currentHeader = sidechainTip.Height > (2 * this.epoch) ? this.chainIndexer.GetHeader(sidechainTip.Height - (2 * this.epoch)) : this.chainIndexer.Genesis;
 
             // Cap the maximum number of iterations.
-            int iterations = tip.Height - currentHeader.Height;
+            int iterations = sidechainTip.Height - currentHeader.Height;
 
             var encoder = new CollateralHeightCommitmentEncoder(this.logger);
 
+            // The side chain height at which the height of the deposit was found.
+            int? sidechainCommitmentBlockHeight = 0;
+
             for (int i = 0; i < iterations; i++)
             {
-                int? commitmentHeight = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+                sidechainCommitmentBlockHeight = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
 
-                if (commitmentHeight == null)
+                if (sidechainCommitmentBlockHeight == null)
                     continue;
 
-                if (commitmentHeight >= mainChainHeight)
-                {
-                    blockHeight = commitmentHeight.Value;
-
+                if (sidechainCommitmentBlockHeight >= heightOfRecordedDistributionDeposit)
                     break;
-                }
 
                 // We need to ensure we walk forwards along the headers to the original tip, so if there is more than one, find the one on the common fork.
                 foreach (ChainedHeader candidateHeader in currentHeader.Next)
                 {
-                    if (candidateHeader.FindFork(tip) != null)
+                    if (candidateHeader.FindFork(sidechainTip) != null)
                         currentHeader = candidateHeader;
                 }
             }
 
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
-            int startHeight = this.GetDistributionEpochStart(blockHeight);
-            int endHeight = this.GetDistributionEpochEnd(blockHeight);
+            int sidechainStartHeight = this.GetDistributionEpochStart(sidechainCommitmentBlockHeight ?? 0);
+            int sidechainEndHeight = this.GetDistributionEpochEnd(sidechainCommitmentBlockHeight ?? 0);
 
             var blocksMinedEach = new Dictionary<Script, long>();
 
             long totalBlocks = 0;
-            for (int i = startHeight; i <= endHeight; i++)
+            for (int currentHeight = sidechainStartHeight; currentHeight <= sidechainEndHeight; currentHeight++)
             {
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(i);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
                 Block block = chainedHeader.Block;
 
                 Transaction coinBase = block.Transactions.First();
