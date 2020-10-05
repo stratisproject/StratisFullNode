@@ -8,38 +8,36 @@ using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Signals;
-using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {
     /// <summary>
-    /// Automatically constructs cross-chain transfer transactions for the Cirrus block rewards.
-    /// This runs on the mainchain only.
+    /// Automatically constructs cross-chain transfer transactions for the Cirrus block rewards (mainchain execution only).
+    /// <para>
+    /// Rewards have to be 'sent' over to the sidechain by spending the anyone-can-spend reward outputs from each mainchain block.
+    /// It is already enforced by consensus that these outputs can only be spent directly into the federation multisig.
+    /// Therefore any node can initiate this cross-chain transfer. We just put the functionality into the federation nodes as they are definitely running mainchain nodes.
+    /// The miners could run nodes themselves to claim the reward, for instance.
+    /// The reward cross chain transfer does not have to be initiated every block, in future it could be batched a few blocks at a time to save a small amount of transaction throughput/fees if desired.
+    /// </para>
     /// </summary>
     public class RewardClaimer : IDisposable
     {
-        private readonly Network network;
-        private readonly ChainIndexer chainIndexer;
-        private readonly ISignals signals;
         private readonly IBroadcasterManager broadcasterManager;
+        private readonly ChainIndexer chainIndexer;
         private readonly ILogger logger;
+        private readonly Network network;
+        private readonly ISignals signals;
 
         private readonly SubscriptionToken blockConnectedSubscription;
 
-        // Rewards have to be 'sent' over to the sidechain by spending the anyone-can-spend reward outputs from each mainchain block.
-        // It is already enforced by consensus that these outputs can only be spent directly into the federation multisig.
-        // Therefore any node can initiate this cross-chain transfer. We just put the functionality into the federation nodes as they are definitely running mainchain nodes.
-        // The miners could run nodes themselves to claim the reward, for instance.
-
-        // The reward cross chain transfer does not have to be initiated every block, in future it could be batched a few blocks at a time to save a small amount of transaction throughput/fees if desired.
-
-        public RewardClaimer(Network network, ChainIndexer chainIndexer, ISignals signals, IBroadcasterManager broadcasterManager, ILoggerFactory loggerFactory)
+        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, ILoggerFactory loggerFactory, Network network, ISignals signals)
         {
-            this.network = network;
-            this.chainIndexer = chainIndexer;
-            this.signals = signals;
             this.broadcasterManager = broadcasterManager;
+            this.chainIndexer = chainIndexer;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.network = network;
+            this.signals = signals;
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
@@ -49,14 +47,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Get the minimum stake confirmations for the current network.
             int minStakeConfirmations = ((PosConsensusOptions)this.network.Consensus.Options).GetStakeMinConfirmations(this.chainIndexer.Height, this.network);
 
-            if (this.chainIndexer.Height < minStakeConfirmations)
+            // Take a local copy of the tip.
+            ChainedHeader chainTip = this.chainIndexer.Tip;
+
+            if (chainTip.Height < minStakeConfirmations)
             {
                 // If the chain is not at least minStakeConfirmations long then just do nothing.
                 return;
             }
 
             // Get the block that is minStakeConfirmations behind the current tip.
-            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(this.chainIndexer.Height - minStakeConfirmations);
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(chainTip.Height - minStakeConfirmations);
 
             Block maturedBlock = chainedHeader.Block;
 
