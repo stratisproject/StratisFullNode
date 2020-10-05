@@ -57,16 +57,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
             var encoder = new CollateralHeightCommitmentEncoder(this.logger);
 
             // The side chain height at which the height of the deposit was found.
-            int? sidechainCommitmentBlockHeight = 0;
+            int? heightOfMainChainCommitment = 0;
 
             for (int i = 0; i < iterations; i++)
             {
-                sidechainCommitmentBlockHeight = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+                heightOfMainChainCommitment = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
 
-                if (sidechainCommitmentBlockHeight == null)
+                if (heightOfMainChainCommitment == null)
                     continue;
 
-                if (sidechainCommitmentBlockHeight >= heightOfRecordedDistributionDeposit)
+                if (heightOfMainChainCommitment >= heightOfRecordedDistributionDeposit)
                     break;
 
                 // We need to ensure we walk forwards along the headers to the original tip, so if there is more than one, find the one on the common fork.
@@ -79,7 +79,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
-            int sidechainStartHeight = sidechainCommitmentBlockHeight ?? 0;
+            int sidechainStartHeight = heightOfMainChainCommitment ?? 0;
 
             // This is a special case which will not be the case on the live network.
             if (sidechainStartHeight < this.epoch)
@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (sidechainStartHeight > this.epoch)
                 sidechainStartHeight -= this.epoch;
 
-            int sidechainEndHeight = sidechainCommitmentBlockHeight ?? 0;
+            int sidechainEndHeight = heightOfMainChainCommitment ?? 0;
 
             var blocksMinedEach = new Dictionary<Script, long>();
 
