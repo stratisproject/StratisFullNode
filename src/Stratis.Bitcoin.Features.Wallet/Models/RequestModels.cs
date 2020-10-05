@@ -672,8 +672,32 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         /// <summary>
         /// The name of the account for which to get the extended public key.
-        /// <summary>
+        /// </summary>
         public string AccountName { get; set; }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for a private key retrieval request.  
+    /// </summary>
+    public class RetrievePrivateKeyModel : RequestModel
+    {
+        /// <summary>
+        /// The password for the wallet.
+        /// </summary>
+        [Required]
+        public string Password { get; set; }
+
+        /// <summary>
+        /// The name of the wallet from which to get the private key.
+        /// </summary>
+        [Required]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The address to retrieve the private key for.
+        /// </summary>
+        [Required]
+        public string Address { get; set; }
     }
 
     /// <summary>

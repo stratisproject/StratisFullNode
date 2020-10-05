@@ -364,6 +364,31 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public string RetrievePrivateKey(string password, string walletName, string address)
+        {
+            Guard.NotEmpty(password, nameof(password));
+            Guard.NotEmpty(walletName, nameof(walletName));
+            Guard.NotEmpty(address, nameof(address));
+
+            Wallet wallet = this.GetWallet(walletName);
+
+            // Locate the address based on its base58 string representation.
+            // Check external addresses first.
+            HdAddress hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
+                new WalletAccountReference(walletName, a.Name), 0, Int32.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
+
+            // Then check change addresses if needed.
+            if (hdAddress == null)
+            {
+                hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
+                    new WalletAccountReference(walletName, a.Name), 1, Int32.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
+            }
+
+            ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey.GetWif(this.network);
+            return privateKey.ToString();
+        }
+
+        /// <inheritdoc />
         public string SignMessage(string password, string walletName, string externalAddress, string message)
         {
             Guard.NotEmpty(password, nameof(password));
