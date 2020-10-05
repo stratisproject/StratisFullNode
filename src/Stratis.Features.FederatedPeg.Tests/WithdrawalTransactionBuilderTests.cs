@@ -87,7 +87,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.federationWalletManager.Object,
                 this.federationWalletTransactionHandler.Object,
                 this.federationGatewaySettings.Object,
-                this.signals.Object
+                this.signals.Object,
+                null
                 );
 
             var recipient = new Recipient
@@ -96,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 ScriptPubKey = new Script()
             };
 
-            Transaction ret = txBuilder.BuildWithdrawalTransaction(uint256.One, 100, recipient);
+            Transaction ret = txBuilder.BuildWithdrawalTransaction(0, uint256.One, 100, recipient);
 
             Assert.NotNull(ret);
 
@@ -122,7 +123,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.federationWalletManager.Object,
                 this.federationWalletTransactionHandler.Object,
                 this.federationGatewaySettings.Object,
-                this.signals.Object
+                this.signals.Object,
+                null
             );
 
             var recipient = new Recipient
@@ -131,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 ScriptPubKey = new Script()
             };
 
-            Transaction ret = txBuilder.BuildWithdrawalTransaction(uint256.One, 100, recipient);
+            Transaction ret = txBuilder.BuildWithdrawalTransaction(0, uint256.One, 100, recipient);
 
             // Log out a warning in this case, not an error.
             this.logger
@@ -155,7 +157,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.federationWalletManager.Object,
                 this.federationWalletTransactionHandler.Object,
                 this.federationGatewaySettings.Object,
-                this.signals.Object
+                this.signals.Object,
+                null
             );
 
             var recipient = new Recipient
@@ -164,7 +167,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 ScriptPubKey = new Script()
             };
 
-            Transaction ret = txBuilder.BuildWithdrawalTransaction(uint256.One, 100, recipient);
+            Transaction ret = txBuilder.BuildWithdrawalTransaction(0, uint256.One, 100, recipient);
 
             // Log out a warning in this case, not an error.
             this.logger

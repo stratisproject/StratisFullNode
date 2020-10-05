@@ -61,6 +61,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             var messageBuilder = new StringBuilder();
 
+            // Check for distributions first, as they are identified more by their destination than their output size or maturity.
+            // They can only occur on the main chain.
+            if (this.federatedPegSettings.IsMainChain)
+                RetrieveDeposits(DepositRetrievalType.Distribution, retrieveFromHeight, messageBuilder, result);
+
             RetrieveDeposits(DepositRetrievalType.Small, retrieveFromHeight, messageBuilder, result);
             RetrieveDeposits(DepositRetrievalType.Normal, retrieveFromHeight, messageBuilder, result);
             RetrieveDeposits(DepositRetrievalType.Large, retrieveFromHeight, messageBuilder, result);
@@ -164,6 +169,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsSmallDeposits;
             else if (retrievalType == DepositRetrievalType.Normal)
                 applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
+            else if (retrievalType == DepositRetrievalType.Distribution)
+                applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
             else
                 applicableMaturityHeight = this.consensusTip.Height - this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
 
@@ -180,14 +187,16 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     }
 
     /// <summary>
-    /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposit"/> confirmations (blocks).
-    /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposit"/>) confirmations (blocks).
-    /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposit"/>) confirmations (blocks).
+    /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposits"/> confirmations (blocks).
+    /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposits"/>) confirmations (blocks).
+    /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposits"/>) confirmations (blocks).
+    /// Similarly, reward distribution deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
     /// </summary>
     public enum DepositRetrievalType
     {
         Small,
         Normal,
         Large,
+        Distribution
     }
 }

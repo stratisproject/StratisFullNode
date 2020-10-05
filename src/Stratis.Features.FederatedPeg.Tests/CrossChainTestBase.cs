@@ -223,7 +223,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // TODO: The transaction builder, cross-chain store and fed wallet tx handler should be tested individually.
             this.FederationWalletTransactionHandler = new FederationWalletTransactionHandler(this.loggerFactory, this.federationWalletManager, this.walletFeePolicy, this.network, this.federatedPegSettings);
             this.stateRepositoryRoot = Substitute.For<IStateRepositoryRoot>();
-            this.withdrawalTransactionBuilder = new WithdrawalTransactionBuilder(this.loggerFactory, this.network, this.federationWalletManager, this.FederationWalletTransactionHandler, this.federatedPegSettings, this.signals);
+            this.withdrawalTransactionBuilder = new WithdrawalTransactionBuilder(this.loggerFactory, this.network, this.federationWalletManager, this.FederationWalletTransactionHandler, this.federatedPegSettings, this.signals, null);
 
             var storeSettings = (StoreSettings)FormatterServices.GetUninitializedObject(typeof(StoreSettings));
 

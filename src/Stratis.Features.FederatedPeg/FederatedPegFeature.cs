@@ -32,6 +32,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
+using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.InputConsolidation;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
@@ -366,7 +367,7 @@ namespace Stratis.Features.FederatedPeg
     public static class FullNodeBuilderSidechainRuntimeFeatureExtension
     {
         [NoTrace]
-        public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, IFederatedPegOptions federatedPegOptions = null)
+        public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, IFederatedPegOptions federatedPegOptions = null, bool isMainChain = false)
         {
             LoggingConfiguration.RegisterFeatureNamespace<FederatedPegFeature>(
                 FederatedPegFeature.FederationGatewayFeatureNamespace);
@@ -403,6 +404,14 @@ namespace Stratis.Features.FederatedPeg
 
                         services.AddSingleton<IFederatedPegBroadcaster, FederatedPegBroadcaster>();
                         services.AddSingleton<IInputConsolidator, InputConsolidator>();
+
+                        // The reward distribution manager only runs on the side chain.
+                        if (!isMainChain)
+                            services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
+
+                        // The reward claimer only runs on the main chain.
+                        if (isMainChain)
+                            services.AddSingleton<RewardClaimer>();
 
                         // Set up events.
                         services.AddSingleton<TransactionObserver>();

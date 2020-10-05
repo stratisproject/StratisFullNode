@@ -479,7 +479,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     }
                                     else
                                     {
-                                        transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient);
+                                        transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(maturedDeposit.BlockInfo.BlockHeight, deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient);
 
                                         if (transaction != null)
                                         {

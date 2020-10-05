@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using Stratis.Features.Collateral.CounterChain;
@@ -146,6 +145,7 @@ namespace Stratis.Features.FederatedPeg
             this.MinimumConfirmationsSmallDeposits = configReader.GetOrDefault(MinimumConfirmationsSmallDepositsParam, 25);
             this.MinimumConfirmationsNormalDeposits = configReader.GetOrDefault(MinimumConfirmationsNormalDepositsParam, 80);
             this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
+            this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, federatedPegOptions?.WalletSyncFromHeight ?? 0);
         }
@@ -161,6 +161,8 @@ namespace Stratis.Features.FederatedPeg
 
         /// <inheritdoc />
         public int MinimumConfirmationsLargeDeposits { get; }
+
+        public int MinimumConfirmationsDistributionDeposits { get; }
 
         /// <inheritdoc />
         public Money SmallDepositThresholdAmount { get; }

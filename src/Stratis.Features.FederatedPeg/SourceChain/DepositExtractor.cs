@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -48,7 +49,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         {
             var deposits = new List<IDeposit>();
 
-            // If it's an empty block, there's no deposits inside.
+            // If it's an empty block (i.e. only the coinbase transaction is present), there's no deposits inside.
             if (block.Transactions.Count <= 1)
                 return deposits;
 
@@ -77,6 +78,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     deposits.Add(deposit);
                     continue;
                 }
+
+                if (depositRetrievalType == DepositRetrievalType.Distribution)
+                {
+                    deposits.Add(deposit);
+                }
             }
 
             return deposits;
@@ -104,7 +110,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
                 return null;
 
-            this.logger.LogDebug("Processing a received deposit transaction with address: {0}. Transaction hash: {1}.", targetAddress, transaction.GetHash());
+            // Check if this deposit is intended for distribution to the miners. This is identified by a specific destination address in the deposit OP_RETURN.
+            // A distribution deposit is otherwise exactly the same as a regular deposit transaction.
+            if (targetAddress == StraxCoinstakeRule.CirrusDummyAddress && depositRetrievalType != DepositRetrievalType.Distribution)
+            {
+                // Distribution transactions are special and take precedence over all the other types.
+                return null;
+            }
+
+            this.logger.LogDebug("Processing a received deposit transaction of type {0} with address: {1}. Transaction hash: {2}.", depositRetrievalType, targetAddress, transaction.GetHash());
 
             return new Deposit(transaction.GetHash(), depositRetrievalType, depositsToMultisig.Sum(o => o.Value), targetAddress, blockHeight, blockHash);
         }

@@ -86,6 +86,8 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         int MinimumConfirmationsLargeDeposits { get; }
 
+        int MinimumConfirmationsDistributionDeposits { get; }
+
         /// <summary>
         /// Deposits under or equal to this value will be processed after <see cref="MinimumConfirmationsSmallDeposits"/> blocks on the counter-chain.
         /// </summary>
