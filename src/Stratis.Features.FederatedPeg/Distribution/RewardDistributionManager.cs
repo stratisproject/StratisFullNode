@@ -56,12 +56,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             var encoder = new CollateralHeightCommitmentEncoder(this.logger);
 
-            // The side chain height at which the height of the deposit was found.
-            int? heightOfMainChainCommitment = 0;
-
             for (int i = 0; i < iterations; i++)
             {
-                heightOfMainChainCommitment = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+                int? heightOfMainChainCommitment = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
 
                 if (heightOfMainChainCommitment == null)
                     continue;
@@ -79,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
-            int sidechainStartHeight = heightOfMainChainCommitment ?? 0;
+            int sidechainStartHeight = currentHeader.Height;
 
             // This is a special case which will not be the case on the live network.
             if (sidechainStartHeight < this.epoch)
@@ -89,7 +86,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (sidechainStartHeight > this.epoch)
                 sidechainStartHeight -= this.epoch;
 
-            int sidechainEndHeight = heightOfMainChainCommitment ?? 0;
+            int sidechainEndHeight = currentHeader.Height;
 
             var blocksMinedEach = new Dictionary<Script, long>();
 
