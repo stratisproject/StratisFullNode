@@ -36,22 +36,6 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
         }
 
-        private int GetDistributionEpochStart(int blockHeight)
-        {
-            // This is a special case which will not be the case on the live network.
-            if (blockHeight < this.epoch)
-            {
-                return 0;
-            }
-
-            return blockHeight - (blockHeight % this.epoch) - this.epoch;
-        }
-
-        private int GetDistributionEpochEnd(int blockHeight)
-        {
-            return blockHeight - (blockHeight % this.epoch);
-        }
-
         /// <inheritdoc />
         public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward)
         {
@@ -95,8 +79,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
-            int sidechainStartHeight = this.GetDistributionEpochStart(sidechainCommitmentBlockHeight ?? 0);
-            int sidechainEndHeight = this.GetDistributionEpochEnd(sidechainCommitmentBlockHeight ?? 0);
+            int sidechainStartHeight = sidechainCommitmentBlockHeight ?? 0;
+
+            // This is a special case which will not be the case on the live network.
+            if (sidechainStartHeight < this.epoch)
+                sidechainStartHeight = 0;
+
+            // If the sidechain start is more than the epoch, then deduct the epoch window.
+            if (sidechainStartHeight > this.epoch)
+                sidechainStartHeight -= this.epoch;
+
+            int sidechainEndHeight = sidechainCommitmentBlockHeight ?? 0;
 
             var blocksMinedEach = new Dictionary<Script, long>();
 
@@ -116,6 +109,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     minerBlockCount = 0;
 
                 blocksMinedEach[minerScript] = ++minerBlockCount;
+
                 totalBlocks++;
             }
 
