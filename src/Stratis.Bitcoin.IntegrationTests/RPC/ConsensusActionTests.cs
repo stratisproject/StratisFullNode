@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Xunit;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Tests.Common;
 
 namespace Stratis.Bitcoin.IntegrationTests.RPC
 {
@@ -40,7 +41,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             string dir = CreateTestDir(this);
 
-            IFullNode fullNode = this.BuildServicedNode(dir);
+            IFullNode fullNode = this.BuildServicedNode(dir, KnownNetworks.StraxMain);
             var isIBDProvider = fullNode.NodeService<IInitialBlockDownloadState>(true);
             var chainState = fullNode.NodeService<IChainState>(true);
             chainState.ConsensusTip = new ChainedHeader(fullNode.Network.GetGenesis().Header, fullNode.Network.GenesisHash, 0);

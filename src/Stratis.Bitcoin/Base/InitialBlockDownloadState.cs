@@ -60,7 +60,17 @@ namespace Stratis.Bitcoin.Base
                 return true;
 
             if (this.chainState.ConsensusTip.Header.BlockTime < (this.dateTimeProvider.GetUtcNow().AddSeconds(-this.consensusSettings.MaxTipAge)))
-                return true;
+            {
+                if (!this.network.IsRegTest())
+                    return true;
+
+                // RegTest networks may experience long periods of no mining.
+                // If this happens we don't want to be in IBD because we can't
+                // mine new blocks in IBD and our nodes will be frozen at the
+                // current height. Also note that in RegTest its typical for one
+                // machine to control all (local) nodes and hence we are in control
+                // of any side-effects that may arise from returning false here.
+            }
 
             if (this.chainState.ConsensusTip.ChainWork < this.minimumChainWork)
                 return true;
