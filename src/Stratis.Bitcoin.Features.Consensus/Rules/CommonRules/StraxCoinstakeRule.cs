@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         // This is not used within consensus, but it makes sense to keep the value close to the other script definitions so that it isn't buried inside the reward claimer.
         // TODO: Replace this & its script with a vanity/burn address with unknowable private key
         public static readonly string CirrusDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
-        public static readonly Script CirrusTransactionTag = new Script("OP_DUP OP_HASH160 50f5ab5aef22f0fd6699bb60ce39fd7764456e5f OP_EQUALVERIFY OP_CHECKSIG");
+        public static readonly Script CirrusTransactionTag = new Script("OP_RETURN 43507178766e7a66586e674469373578424a4b716934653659724673696e724a6b61");
 
         /// <summary>Allow access to the POS parent.</summary>
         protected PosConsensusRuleEngine PosParent;
