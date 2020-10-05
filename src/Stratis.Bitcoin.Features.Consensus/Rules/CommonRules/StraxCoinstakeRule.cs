@@ -25,8 +25,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         public static readonly Script CirrusRewardScript = CirrusRewardScriptRedeem.PaymentScript;
 
         // This is not used within consensus, but it makes sense to keep the value close to the other script definitions so that it isn't buried inside the reward claimer.
-        // TODO: This is a placeholder value, need to decide whether it should be an 'actual' Cirrus address with valid checksum, or simply a marker string
-        public static readonly Script CirrusTransactionTag = new Script();
+        // TODO: Replace this & its script with a vanity/burn address with unknowable private key
+        public static readonly string CirrusDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
+        public static readonly Script CirrusTransactionTag = new Script("OP_DUP OP_HASH160 50f5ab5aef22f0fd6699bb60ce39fd7764456e5f OP_EQUALVERIFY OP_CHECKSIG");
 
         /// <summary>Allow access to the POS parent.</summary>
         protected PosConsensusRuleEngine PosParent;

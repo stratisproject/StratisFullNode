@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
+using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -28,6 +30,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederationWalletTransactionHandler federationWalletTransactionHandler;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ISignals signals;
+        private readonly IDistributionManager distributionManager;
 
         public WithdrawalTransactionBuilder(
             ILoggerFactory loggerFactory,
@@ -35,7 +38,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederationWalletManager federationWalletManager,
             IFederationWalletTransactionHandler federationWalletTransactionHandler,
             IFederatedPegSettings federatedPegSettings,
-            ISignals signals)
+            ISignals signals,
+            IDistributionManager distributionManager)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
@@ -43,10 +47,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.federationWalletTransactionHandler = federationWalletTransactionHandler;
             this.federatedPegSettings = federatedPegSettings;
             this.signals = signals;
+            this.distributionManager = distributionManager;
         }
 
         /// <inheritdoc />
-        public Transaction BuildWithdrawalTransaction(uint256 depositId, uint blockTime, Recipient recipient)
+        public Transaction BuildWithdrawalTransaction(int blockHeight, uint256 depositId, uint blockTime, Recipient recipient)
         {
             try
             {
@@ -67,7 +72,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?) null
                 };
 
-                multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) }; // The fee known to the user is taken.
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag)
+                {
+                    // Use the distribution manager to determine the actual list of recipients.
+                    // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
+                    multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
+                }
+                else
+                {
+                    multiSigContext.Recipients = new List<Recipient> {recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee)}; // The fee known to the user is taken.
+                }
 
                 // TODO: Amend this so we're not picking coins twice.
                 (List<Coin> coins, List<Wallet.UnspentOutputReference> unspentOutputs) = FederationWalletTransactionHandler.DetermineCoins(this.federationWalletManager, this.network, multiSigContext, this.federatedPegSettings);

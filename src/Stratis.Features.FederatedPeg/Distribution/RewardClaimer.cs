@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
@@ -7,6 +8,7 @@ using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Signals;
+using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {
@@ -14,7 +16,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
     /// Automatically constructs cross-chain transfer transactions for the Cirrus block rewards.
     /// This runs on the mainchain only.
     /// </summary>
-    public class RewardClaimer
+    public class RewardClaimer : IDisposable
     {
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
@@ -22,14 +24,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly IBroadcasterManager broadcasterManager;
         private readonly ILogger logger;
 
-        private SubscriptionToken blockConnectedSubscription;
+        private readonly SubscriptionToken blockConnectedSubscription;
 
         // Rewards have to be 'sent' over to the sidechain by spending the anyone-can-spend reward outputs from each mainchain block.
         // It is already enforced by consensus that these outputs can only be spent directly into the federation multisig.
-        // Therefore any node can initiate this cross-chain transfer. We just put it into the federation nodes as they are definitely running mainchain nodes.
+        // Therefore any node can initiate this cross-chain transfer. We just put the functionality into the federation nodes as they are definitely running mainchain nodes.
         // The miners could run nodes themselves to claim the reward, for instance.
 
-        // The reward does not have to be claimed every block, in future it could be batched a few blocks at a time to save a small amount of transaction throughput/fees if desired.
+        // The reward cross chain transfer does not have to be initiated every block, in future it could be batched a few blocks at a time to save a small amount of transaction throughput/fees if desired.
 
         public RewardClaimer(Network network, ChainIndexer chainIndexer, ISignals signals, IBroadcasterManager broadcasterManager, ILoggerFactory loggerFactory)
         {
@@ -44,11 +46,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         private void OnBlockConnected(BlockConnected blockConnected)
         {
-            if (!(this.network.Consensus.Options is PosConsensusOptions options))
-                return;
-
             // Get the minimum stake confirmations for the current network.
-            int minStakeConfirmations = options.GetStakeMinConfirmations(this.chainIndexer.Height, this.network);
+            int minStakeConfirmations = ((PosConsensusOptions)this.network.Consensus.Options).GetStakeMinConfirmations(this.chainIndexer.Height, this.network);
 
             if (this.chainIndexer.Height < minStakeConfirmations)
             {
@@ -89,8 +88,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // An OP_RETURN for a dummy Cirrus address that tells the sidechain federation they can distribute the transaction.
             builder.Send(StraxCoinstakeRule.CirrusTransactionTag, Money.Zero);
 
-            // TODO: Revisit the handling of fees here
-            builder.Send(this.network.FederationMultisigScript, rewardOutputs.Sum(o => o.Value));
+            // TODO: Revisit the handling of fees here - the consensus rules won't allow the fee to be paid from the actual reward
+            builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript, rewardOutputs.Sum(o => o.Value));
 
             Transaction builtTransaction = builder.BuildTransaction(true);
 
@@ -108,6 +107,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // It does not really matter whether the reward has been claimed already, as the transaction will simply be rejected by the other nodes on the network if it has.
             // So just broadcast it anyway.
             this.broadcasterManager.BroadcastTransactionAsync(builtTransaction);
+        }
+
+        public void Dispose()
+        {
+            if (this.blockConnectedSubscription != null)
+            {
+                this.signals.Unsubscribe(this.blockConnectedSubscription);
+            }
         }
     }
 }

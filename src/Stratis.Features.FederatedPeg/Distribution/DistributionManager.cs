@@ -1,77 +1,138 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.EventBus;
-using Stratis.Bitcoin.EventBus.CoreEvents;
-using Stratis.Bitcoin.Signals;
 using Stratis.Features.Collateral;
+using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {
-    public enum DistributionState
-    {
-        Started,
-        Signing,
-        Broadcasting,
-        Finalised
-    }
-
     /// <summary>
-    /// Constructs the distribution transactions for signing by the federation collectively.
+    /// Constructs the list of recipients for the mainchain reward sharing.
     /// Runs on the sidechain.
     /// </summary>
     public class DistributionManager : IDistributionManager
     {
+        private const int DefaultEpoch = 240;
+        
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
-        private readonly ISignals signals;
         private readonly ILogger logger;
 
-        private SubscriptionToken blockConnectedSubscription;
-        
-        /// <summary>
-        /// Tracks height on the sidechain of the last distribution orchestration attempt.
-        /// </summary>
+        private int epoch;
         private int lastDistributionHeight;
 
-        /// <summary>
-        /// Track state of last distribution (we need to ensure that a previous attempt has completed before initiating a new one).
-        /// </summary>
-        private DistributionState lastDistributionState;
-        
-        public DistributionManager(Network network, ChainIndexer chainIndexer, ISignals signals, ILoggerFactory loggerFactory, IDistributionStore distributionStore)
+        // The reward each miner receives upon distribution is computed as a proportion of the overall accumulated reward since the last distribution.
+        // The proportion is based on how many blocks that miner produced in the period (each miner is identified by their block's coinbase's scriptPubKey).
+        // It is therefore not in any miner's advantage to delay or skip producing their blocks as it will affect their proportion of the produced blocks.
+        // We pay no attention to whether a miner has been kicked since the last distribution or not.
+        // If they produced an accepted block, they get their reward.
+
+        public DistributionManager(Network network, ChainIndexer chainIndexer, ILoggerFactory loggerFactory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
-            this.signals = signals;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
-            this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
+            this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
+            this.lastDistributionHeight = 0;
+        }
+
+        private int GetDistributionEpochStart(int blockHeight)
+        {
+            // This is a special case which will not be the case on the live network.
+            if (blockHeight < this.epoch)
+            {
+                return 0;
+            }
+
+            return blockHeight - (blockHeight % this.epoch) - this.epoch;
+        }
+
+        private int GetDistributionEpochEnd(int blockHeight)
+        {
+            return blockHeight - (blockHeight % this.epoch);
         }
 
         /// <inheritdoc />
-        public void Distribute(DistributionRecord record)
+        public List<Recipient> Distribute(int mainChainHeight, Money totalReward)
         {
-            // Get the set of miners (more specifically, their pubkeys) of the blocks in the previous epoch
-        }
+            ChainedHeader tip = this.chainIndexer.Tip;
 
-        private void OnBlockConnected(BlockConnected blockConnected)
-        {
-            // First check for reward transactions that need to be distributed
+            // We need to determine which block on the sidechain contains a commitment to the height of the mainchain block that originated the reward transfer.
+            // We otherwise do not have a common reference point from which to compute the epoch.
+            // Look back at most 2x epoch lengths to avoid searching from genesis every time.
 
-            // Check for commitment height in the block - is it a distribution block or higher?
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.logger);
+            // To avoid miners trying to disrupt the chain by committing to the same height in multiple blocks, we loop forwards and use the first occurrence
+            // of a commitment with height >= the search height.
 
-            int? commitmentHeight = commitmentHeightEncoder.DecodeCommitmentHeight(blockConnected.ConnectedBlock.Block.Transactions.First());
+            int blockHeight = 0;
 
-            // We trust the consensus rules to be kicking out blocks that are meant to have valid commitments.
-            // So if there isn't one, there is a good reason (e.g. the sidechain is below the commitment activation height) and we can just ignore this block for distribution purposes.
-            if (commitmentHeight == null)
-                return;
+            ChainedHeader currentHeader = this.chainIndexer.Height > (2 * this.epoch) ? this.chainIndexer.GetHeader(this.chainIndexer.Height - (2 * this.epoch)) : this.chainIndexer.Genesis;
 
-            // Need to wait for the distribution store height to catch up to this received block so that we have all the 
+            // Cap the maximum number of iterations.
+            int iterations = this.chainIndexer.Height - currentHeader.Height;
 
-            // If so, can we initiate a new distribution?
+            var encoder = new CollateralHeightCommitmentEncoder(this.logger);
+
+            for (int i = 0; i < iterations; i++)
+            {
+                int? commitmentHeight = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+
+                if (commitmentHeight == null)
+                    continue;
+
+                if (commitmentHeight >= mainChainHeight)
+                {
+                    blockHeight = commitmentHeight.Value;
+                    
+                    break;
+                }
+
+                // We need to ensure we walk forwards along the headers to the original tip, so if there is more than one, find the one on the common fork.
+                foreach (ChainedHeader candidateHeader in currentHeader.Next)
+                {
+                    if (candidateHeader.FindFork(tip) != null)
+                        currentHeader = candidateHeader;
+                }
+            }
+
+            // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
+            // Based on the computed 'common block height' we define the distribution epoch:
+            int startHeight = this.GetDistributionEpochStart(blockHeight);
+            int endHeight = this.GetDistributionEpochEnd(blockHeight);
+
+            var blocksMinedEach = new Dictionary<Script, long>();
+
+            long totalBlocks = 0;
+            for (int i = startHeight; i <= endHeight; i++)
+            {
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(i);
+                Block block = chainedHeader.Block;
+
+                Transaction coinBase = block.Transactions.First();
+
+                // Regard the first 'spendable' scriptPubKey in the coinbase as belonging to the miner's wallet.
+                // This avoids trying to recover the pubkey from the block signature.
+                Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
+
+                if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
+                    minerBlockCount = 0;
+
+                blocksMinedEach[minerScript] = ++minerBlockCount;
+                totalBlocks++;
+            }
+
+            var recipients = new List<Recipient>();
+
+            foreach (Script scriptPubKey in blocksMinedEach.Keys)
+            {
+                Money amount = totalReward * blocksMinedEach[scriptPubKey] / totalBlocks;
+
+                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey});
+            }
+
+            return recipients;
         }
     }
 }

@@ -41,5 +41,8 @@ namespace Stratis.Features.FederatedPeg.Models
 
         [JsonProperty(PropertyName = "minconflargedeposits")]
         public uint MinimumDepositConfirmationsLargeDeposits { get; set; }
+
+        [JsonProperty(PropertyName = "minconfdistributiondeposits")]
+        public uint MinimumDepositConfirmationsDistributionDeposits { get; set; }
     }
 }
