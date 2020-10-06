@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -39,7 +40,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederationWalletTransactionHandler federationWalletTransactionHandler,
             IFederatedPegSettings federatedPegSettings,
             ISignals signals,
-            IRewardDistributionManager distributionManager)
+            IRewardDistributionManager distributionManager = null)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
@@ -48,6 +49,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.federatedPegSettings = federatedPegSettings;
             this.signals = signals;
             this.distributionManager = distributionManager;
+            if (!this.federatedPegSettings.IsMainChain)
+                Guard.NotNull(distributionManager, nameof(distributionManager));
         }
 
         /// <inheritdoc />
