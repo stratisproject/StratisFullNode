@@ -28,17 +28,21 @@ namespace SwapExtractionTool
                 straxNetwork = new StraxMain();
             }
 
-            var service = new ExtractionTool(stratisNetworkApiPort, straxNetwork);
-
             var arg = args.FirstOrDefault(a => a.StartsWith("-startfrom"));
             if (arg != null)
                 int.TryParse(arg.Split('=')[1], out startBlock);
 
             if (args.Contains("-swap"))
-                await service.RunAsync(ExtractionType.Swap, startBlock);
+            {
+                var service = new SwapExtractionService(stratisNetworkApiPort, straxNetwork);
+                await service.RunAsync(startBlock, true, false);
+            }
 
             if (args.Contains("-vote"))
-                await service.RunAsync(ExtractionType.Vote, startBlock);
+            {
+                var service = new VoteExtractionService(stratisNetworkApiPort, straxNetwork);
+                await service.RunAsync(startBlock);
+            }
         }
     }
 }
