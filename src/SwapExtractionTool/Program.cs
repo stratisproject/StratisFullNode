@@ -28,7 +28,7 @@ namespace SwapExtractionTool
                 straxNetwork = new StraxMain();
             }
 
-            var service = new SwapExtractionService(stratisNetworkApiPort, straxNetwork);
+            var service = new ExtractionTool(stratisNetworkApiPort, straxNetwork);
 
             var arg = args.FirstOrDefault(a => a.StartsWith("-startfrom"));
             if (arg != null)
