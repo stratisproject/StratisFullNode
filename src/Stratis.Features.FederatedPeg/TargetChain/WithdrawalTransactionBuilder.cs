@@ -49,8 +49,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.federatedPegSettings = federatedPegSettings;
             this.signals = signals;
             this.distributionManager = distributionManager;
-            if (!this.federatedPegSettings.IsMainChain)
-                Guard.NotNull(distributionManager, nameof(distributionManager));
         }
 
         /// <inheritdoc />
