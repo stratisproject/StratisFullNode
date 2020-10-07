@@ -246,10 +246,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 Network = NetworkHelpers.GetNetwork("mainnet")
             };
 
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(
-                (mock) =>
-                    mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                        It.IsAny<DateTime>(), null, null)).Returns(wallet));
+            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
+            {
+                mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                    It.IsAny<DateTime>(), null, null)).Returns(wallet);
+                mock.Setup(w => w.IsStarted).Returns(true);
+            });
 
             this.ConfigureMock<IWalletSyncManager>(mock =>
                 mock.Setup(w => w.WalletTip).Returns(new ChainedHeader(this.Network.GetGenesis().Header,
@@ -283,11 +285,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 Network = NetworkHelpers.GetNetwork("mainnet")
             };
 
-            DateTime lastBlockDateTime = chainIndexer.Tip.Header.BlockTime.DateTime;
+            DateTime lastBlockDateTime = this.chainIndexer.Tip.Header.BlockTime.DateTime;
 
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
+            {
                 mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                    It.IsAny<DateTime>(), null, null)).Returns(wallet));
+                    It.IsAny<DateTime>(), null, null)).Returns(wallet);
+                mock.Setup(w => w.IsStarted).Returns(true);
+            });
 
             Mock<IWalletSyncManager> walletSyncManager = this.ConfigureMock<IWalletSyncManager>(mock =>
                 mock.Setup(w => w.WalletTip).Returns(new ChainedHeader(this.Network.GetGenesis().Header,
@@ -340,9 +345,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             string errorMessage = "An error occurred.";
 
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
+            {
                 mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                         It.IsAny<DateTime>(), null, null))
-                    .Throws(new WalletException(errorMessage)));
+                    .Throws(new WalletException(errorMessage));
+                mock.Setup(w => w.IsStarted).Returns(true);
+            });
 
             var controller = this.GetWalletController();
 
@@ -367,9 +375,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         public async Task RecoverWalletWithFileNotFoundExceptionReturnsNotFound()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
+            {
                 mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                         It.IsAny<DateTime>(), null, null))
-                    .Throws(new FileNotFoundException("File not found.")));
+                    .Throws(new FileNotFoundException("File not found."));
+                mock.Setup(w => w.IsStarted).Returns(true);
+            });
 
             var controller = this.GetWalletController();
 
@@ -394,10 +405,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public async Task RecoverWalletWithExceptionReturnsBadRequest()
         {
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
+            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock => {
                 mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                         It.IsAny<DateTime>(), null, null))
-                    .Throws(new FormatException("Formatting failed.")));
+                    .Throws(new FormatException("Formatting failed."));
+                mock.Setup(w => w.IsStarted).Returns(true);
+            });
 
             var controller = this.GetWalletController();
 

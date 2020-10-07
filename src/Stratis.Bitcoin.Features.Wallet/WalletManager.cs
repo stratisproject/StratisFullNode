@@ -158,7 +158,10 @@ namespace Stratis.Bitcoin.Features.Wallet
         public IWalletRepository WalletRepository { get; private set; }
 
         public uint256 WalletTipHash => this.WalletCommonTip(this.ChainIndexer.Tip)?.HashBlock ?? 0;
+
         public int WalletTipHeight => this.WalletCommonTip(this.ChainIndexer.Tip)?.Height ?? -1;
+
+        public bool IsStarted { get; private set; }
 
         public WalletManager(
             ILoggerFactory loggerFactory,
@@ -275,11 +278,15 @@ namespace Stratis.Bitcoin.Features.Wallet
                     this.UnlockWallet(this.walletSettings.DefaultWalletPassword, this.walletSettings.DefaultWalletName, MaxWalletUnlockDurationInSeconds);
                 }
             }
+
+            this.IsStarted = true;
         }
 
         /// <inheritdoc />
         public void Stop()
         {
+            this.IsStarted = false;
+
             this.WalletRepository.Shutdown();
 
             this.logger.LogInformation("WalletManager stopped.");

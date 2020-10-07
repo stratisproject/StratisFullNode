@@ -10,6 +10,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
     /// </summary>
     public interface IWalletManager
     {
+        bool IsStarted { get; }
+
         /// <summary>
         /// Starts this wallet manager.
         /// </summary>
