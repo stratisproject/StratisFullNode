@@ -3,109 +3,118 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
+using CsvHelper.Configuration;
 using Flurl;
 using Flurl.Http;
-using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
-using Stratis.Bitcoin.Utilities.JsonErrors;
 
 namespace SwapExtractionTool
 {
-    public sealed class SwapExtractionService
+    public sealed class SwapExtractionService : ExtractionBase
     {
-        private const string walletName = "";
-        private const string walletPassword = "";
+        private readonly string swapFilePath;
+        private const string distributedSwapTransactionsFile = "DistributedSwaps.csv";
+        private const string walletName = "swapfunds";
+        private const string walletPassword = "password";
 
-        private readonly int stratisNetworkApiPort;
-        private readonly Network straxNetwork;
+        private List<DistributedSwapTransaction> distributedSwapTransactions;
+        private List<SwapTransaction> swapTransactions;
 
-        private readonly List<CastVote> castVotes = new List<CastVote>();
-        private readonly List<SwapTransaction> swapTransactions;
-
-        private const int EndHeight = 2000000;
-
-        public SwapExtractionService(int stratisNetworkApiPort, Network straxNetwork)
+        public SwapExtractionService(int stratisNetworkApiPort, Network straxNetwork) : base(stratisNetworkApiPort, straxNetwork)
         {
-            this.stratisNetworkApiPort = stratisNetworkApiPort;
-            this.straxNetwork = straxNetwork;
+            this.distributedSwapTransactions = new List<DistributedSwapTransaction>();
             this.swapTransactions = new List<SwapTransaction>();
+            this.swapFilePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         }
 
-        public async Task RunAsync(ExtractionType extractionType, int startBlock, bool distribute = false)
+        public async Task RunAsync(int startBlock, bool scan, bool distribute)
         {
-            if (extractionType == ExtractionType.Swap)
+            await this.LoadAlreadyDistributedSwapTransactionsAsync();
+            await this.LoadSwapTransactionFileAsync();
+
+            if (scan)
+                await ScanForSwapTransactionsAsync(startBlock);
+
+            if (distribute)
+                await BuildAndSendDistributionTransactionsAsync();
+        }
+
+        private async Task LoadAlreadyDistributedSwapTransactionsAsync()
+        {
+            Console.WriteLine($"Loading already distributed swap transactions...");
+
+            if (File.Exists(Path.Combine(this.swapFilePath, distributedSwapTransactionsFile)))
             {
-                Console.WriteLine($"Scanning for swap transactions...");
-
-                for (int height = startBlock; height < EndHeight; height++)
+                using (var reader = new StreamReader(Path.Combine(this.swapFilePath, distributedSwapTransactionsFile)))
+                using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false }))
                 {
-                    BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
-                    ProcessBlockForSwapTransactions(block, height);
+                    this.distributedSwapTransactions = await csv.GetRecordsAsync<DistributedSwapTransaction>().ToListAsync();
                 }
-
-                Console.WriteLine($"Found {this.swapTransactions.Count} swap transactions.");
-
-                using (var writer = new StreamWriter(Path.Combine("c:", "[StratisWork]", "swaps.csv")))
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    foreach (SwapTransaction swapTransaction in this.swapTransactions)
-                    {
-                        csv.WriteRecord(swapTransaction);
-                    }
-                }
-
-                if (distribute)
-                    await BuildAndSendDistributionTransactionsAsync();
             }
-
-            if (extractionType == ExtractionType.Vote)
+            else
             {
-                Console.WriteLine($"Scanning for votes...");
-
-                for (int height = startBlock; height < EndHeight; height++)
+                // Created it.
+                using (FileStream file = File.Create(Path.Combine(this.swapFilePath, distributedSwapTransactionsFile)))
                 {
-                    BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
-                    if (block == null)
-                        break;
-
-                    await ProcessBlockForVoteTransactionsAsync(block, height);
+                    file.Close();
                 }
-
-                IEnumerable<IGrouping<string, CastVote>> grouped = this.castVotes.GroupBy(a => a.Address);
-                var finalVotes = new List<CastVote>();
-                foreach (IGrouping<string, CastVote> group in grouped)
-                {
-                    IOrderedEnumerable<CastVote> finalVote = group.OrderByDescending(t => t.BlockHeight);
-                    finalVotes.Add(finalVote.First());
-                }
-
-                Console.WriteLine($"Total No Votes: {finalVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(finalVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
-                Console.WriteLine($"Total Yes Votes: {finalVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(finalVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
             }
         }
 
-        private async Task<BlockTransactionDetailsModel> RetrieveBlockAtHeightAsync(int blockHeight)
+        private async Task LoadSwapTransactionFileAsync()
         {
-            var blockHash = await $"http://localhost:{this.stratisNetworkApiPort}/api"
-                .AppendPathSegment("consensus/getblockhash")
-                .SetQueryParams(new { height = blockHeight })
-                .GetJsonAsync<string>();
+            Console.WriteLine($"Loading swap transaction file...");
 
-            if (blockHash == null)
-                return null;
+            // First check if the swap file has been created.
+            if (File.Exists(Path.Combine(this.swapFilePath, "swaps.csv")))
+            {
+                // If so populate the list from disk.
+                using (var reader = new StreamReader(Path.Combine(this.swapFilePath, "swaps.csv")))
+                using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)))
+                {
+                    this.swapTransactions = await csv.GetRecordsAsync<SwapTransaction>().ToListAsync();
+                }
+            }
+            else
+            {
+                Console.WriteLine("A swap distribution file has not been created, is this correct? (y/n)");
+                int result = Console.Read();
+                if (result != 121 && result != 89)
+                {
+                    Console.WriteLine("Exiting...");
+                    return;
+                }
+            }
+        }
 
-            BlockTransactionDetailsModel blockModel = await $"http://localhost:{this.stratisNetworkApiPort}/api"
-                .AppendPathSegment("blockstore/block")
-                .SetQueryParams(new SearchByHashRequest() { Hash = blockHash, ShowTransactionDetails = true, OutputJson = true })
-                .GetJsonAsync<BlockTransactionDetailsModel>();
+        private async Task ScanForSwapTransactionsAsync(int startBlock)
+        {
+            Console.WriteLine($"Scanning for swap transactions...");
 
-            return blockModel;
+            for (int height = startBlock; height < EndHeight; height++)
+            {
+                BlockTransactionDetailsModel block = await RetrieveBlockAtHeightAsync(height);
+                if (block == null)
+                    break;
+
+                ProcessBlockForSwapTransactions(block, height);
+            }
+
+            Console.WriteLine($"{this.swapTransactions.Count} swap transactions to process...");
+
+            using (var writer = new StreamWriter(Path.Combine(this.swapFilePath, "swaps.csv")))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                csv.WriteRecords(this.swapTransactions);
+            }
         }
 
         private void ProcessBlockForSwapTransactions(BlockTransactionDetailsModel block, int blockHeight)
@@ -121,94 +130,50 @@ namespace SwapExtractionTool
                     try
                     {
                         // Verify the sender address is a valid Strax address
-                        var validStraxAddress = BitcoinAddress.Create(potentialStraxAddress, this.straxNetwork);
-                        Console.WriteLine($"Swap found: {validStraxAddress}:{output.Value}");
-                        var swapTransaction = new SwapTransaction()
-                        {
-                            BlockHeight = blockHeight,
-                            StraxAddress = validStraxAddress.ToString(),
-                            SenderAmount = Money.Coins(output.Value),
-                            TransactionHash = transaction.Hash
-                        };
+                        var validStraxAddress = BitcoinAddress.Create(potentialStraxAddress, this.StraxNetwork);
+                        Console.WriteLine($"Swap address found: {validStraxAddress}:{output.Value}");
 
-                        this.swapTransactions.Add(swapTransaction);
+                        if (this.swapTransactions.Any(s => s.TransactionHash == transaction.Hash))
+                            Console.WriteLine($"Swap transaction already exists: {validStraxAddress}:{output.Value}");
+                        else
+                        {
+                            var swapTransaction = new SwapTransaction()
+                            {
+                                BlockHeight = blockHeight,
+                                StraxAddress = validStraxAddress.ToString(),
+                                SenderAmount = (long)Money.Coins(output.Value),
+                                TransactionHash = transaction.Hash
+                            };
+
+                            this.swapTransactions.Add(swapTransaction);
+
+                            Console.WriteLine($"Swap address added to file: {validStraxAddress}:{output.Value}");
+                        }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        Console.WriteLine($"Swap address invalid: {potentialStraxAddress}:{output.Value}");
+                        Console.WriteLine($"Error: {ex.Message}");
                     }
-                }
-            }
-        }
-
-        private async Task ProcessBlockForVoteTransactionsAsync(BlockTransactionDetailsModel block, int blockHeight)
-        {
-            // Inspect each transaction
-            foreach (TransactionVerboseModel transaction in block.Transactions)
-            {
-                // Find the first the OP_RETURN output.
-                Vout opReturnOutput = transaction.VOut.FirstOrDefault(v => v.ScriptPubKey.Type == "nulldata");
-                if (opReturnOutput == null)
-                    continue;
-
-                IList<Op> ops = new NBitcoin.Script(opReturnOutput.ScriptPubKey.Asm).ToOps();
-                var potentialVote = Encoding.ASCII.GetString(ops.Last().PushData);
-                try
-                {
-                    var isVote = potentialVote.Substring(0, 1);
-                    if (isVote != "V")
-                        continue;
-
-                    var isVoteValue = potentialVote.Substring(1, 1);
-                    if (isVoteValue == "1" || isVoteValue == "0")
-                    {
-                        // Verify the sender address is a valid Strat address
-                        var potentialStratAddress = potentialVote.Substring(2);
-                        ValidatedAddress validateResult = await $"http://localhost:{this.stratisNetworkApiPort}/api"
-                            .AppendPathSegment("node/validateaddress")
-                            .SetQueryParams(new { address = potentialStratAddress })
-                            .GetJsonAsync<ValidatedAddress>();
-
-                        if (!validateResult.IsValid)
-                        {
-                            Console.WriteLine($"Invalid STRAT address: '{potentialStratAddress}'");
-                            continue;
-                        }
-
-                        AddressBalancesResult balance = await $"http://localhost:{this.stratisNetworkApiPort}/api"
-                                .AppendPathSegment("blockstore/getaddressesbalances")
-                                .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
-                                .GetJsonAsync<AddressBalancesResult>();
-
-                        if (isVoteValue == "0")
-                        {
-                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = false, BlockHeight = blockHeight });
-                            Console.WriteLine($"'No' vote found at height {blockHeight}.");
-                        }
-
-                        if (isVoteValue == "1")
-                        {
-                            this.castVotes.Add(new CastVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, InFavour = true, BlockHeight = blockHeight });
-                            Console.WriteLine($"'Yes' vote found at height {blockHeight}.");
-                        }
-                    }
-                }
-                catch (Exception)
-                {
                 }
             }
         }
 
         private async Task BuildAndSendDistributionTransactionsAsync()
         {
-            var distributedSwaps = new List<SwapTransaction>();
-
             foreach (SwapTransaction swapTransaction in this.swapTransactions)
             {
-                var distributedSwap = new SwapTransaction(swapTransaction);
+                if (this.distributedSwapTransactions.Any(d => d.TransactionHash == swapTransaction.TransactionHash))
+                {
+                    Console.WriteLine($"Swap already distributed: {swapTransaction.StraxAddress}:{Money.Satoshis(swapTransaction.SenderAmount).ToUnit(MoneyUnit.BTC)}");
+                    continue;
+                }
 
                 try
                 {
-                    IActionResult result = await $"http://localhost:{this.straxNetwork.DefaultAPIPort}/api"
+                    var distributedSwapTransaction = new DistributedSwapTransaction(swapTransaction);
+
+                    var result = await $"http://localhost:{this.StraxNetwork.DefaultAPIPort}/api"
                         .AppendPathSegment("wallet/build-transaction")
                         .PostJsonAsync(new BuildTransactionRequest
                         {
@@ -216,42 +181,49 @@ namespace SwapExtractionTool
                             AccountName = "account 0",
                             FeeType = "medium",
                             Password = walletPassword,
-                            Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = swapTransaction.StraxAddress, Amount = Money.Satoshis(swapTransaction.SenderAmount).ToUnit(MoneyUnit.BTC).ToString() } }
+                            Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = distributedSwapTransaction.StraxAddress, Amount = Money.Satoshis(distributedSwapTransaction.SenderAmount).ToUnit(MoneyUnit.BTC).ToString() } }
                         })
-                        .ReceiveJson<IActionResult>();
+                        .ReceiveBytes();
 
-                    if (result is ErrorResult errorResult)
+                    WalletBuildTransactionModel buildTransactionModel = null;
+
+                    try
                     {
-                        var response = errorResult.Value as ErrorResponse;
-                        throw new Exception($"Failed to build swap transaction {swapTransaction.TransactionHash} : {response.Errors.First().Description}");
+                        buildTransactionModel = JsonConvert.DeserializeObject<WalletBuildTransactionModel>(Encoding.ASCII.GetString(result));
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine($"An error occurred processing swap {distributedSwapTransaction.TransactionHash}");
+                        break;
                     }
 
-                    var buildResult = (result as JsonResult).Value as WalletBuildTransactionModel;
+                    distributedSwapTransaction.TransactionBuilt = true;
 
-                    distributedSwap.TransactionBuilt = true;
-
-                    IActionResult sendActionResult = await $"http://localhost:{this.straxNetwork.DefaultAPIPort}/api"
+                    WalletSendTransactionModel sendActionResult = await $"http://localhost:{this.StraxNetwork.DefaultAPIPort}/api"
                         .AppendPathSegment("wallet/send-transaction")
                         .PostJsonAsync(new SendTransactionRequest
                         {
-                            Hex = buildResult.Hex
+                            Hex = buildTransactionModel.Hex
                         })
-                        .ReceiveJson<IActionResult>();
+                        .ReceiveJson<WalletSendTransactionModel>();
 
-                    if (sendActionResult is ErrorResult sendErrorResult)
+                    distributedSwapTransaction.TransactionSent = true;
+                    distributedSwapTransaction.TransactionSentHash = sendActionResult.TransactionId.ToString();
+
+                    Console.WriteLine($"Swap transaction built and sent to {distributedSwapTransaction.StraxAddress}:{Money.Satoshis(distributedSwapTransaction.SenderAmount).ToUnit(MoneyUnit.BTC)}");
+
+                    // Append to the file.
+                    using (FileStream stream = File.Open(Path.Combine(this.swapFilePath, distributedSwapTransactionsFile), FileMode.Append))
+                    using (var writer = new StreamWriter(stream))
+                    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
                     {
-                        var response = sendErrorResult.Value as ErrorResponse;
-                        throw new Exception($"Failed to send swap transaction {swapTransaction.TransactionHash} : {response.Errors.First().Description}");
+                        csv.WriteRecord(distributedSwapTransaction);
+                        csv.NextRecord();
                     }
 
-                    var sendResult = (sendActionResult as JsonResult).Value as WalletSendTransactionModel;
+                    this.distributedSwapTransactions.Add(distributedSwapTransaction);
 
-                    distributedSwap.TransactionSent = true;
-                    distributedSwap.TransactionSentHash = sendResult.TransactionId.ToString();
-
-                    Console.WriteLine($"Swap trasnction built and sent to {swapTransaction.StraxAddress}:{swapTransaction.SenderAmount}");
-
-                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    await Task.Delay(TimeSpan.FromSeconds(1));
                 }
                 catch (Exception ex)
                 {
@@ -260,24 +232,8 @@ namespace SwapExtractionTool
                 }
                 finally
                 {
-                    distributedSwaps.Add(distributedSwap);
-                }
-            }
-
-            using (var writer = new StreamWriter(Path.Combine("c:", "[StratisWork]", "distributedSwaps.csv")))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            {
-                foreach (SwapTransaction swapTransaction in distributedSwaps)
-                {
-                    csv.WriteRecord(swapTransaction);
                 }
             }
         }
-    }
-
-    public enum ExtractionType
-    {
-        Swap,
-        Vote
     }
 }
