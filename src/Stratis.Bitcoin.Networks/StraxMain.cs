@@ -157,6 +157,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.SeedNodes = new List<NetworkAddress>
             {
+                new DNSSeedData("mainnet1.stratisnetwork.com", "mainnet1.stratisnetwork.com")
             };
 
             this.StandardScriptsRegistry = new StraxStandardScriptsRegistry();
