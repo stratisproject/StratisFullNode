@@ -40,8 +40,13 @@ namespace SwapExtractionTool
                 finalVotes.Add(finalVote.First());
             }
 
-            Console.WriteLine($"Total No Votes: {finalVotes.Count(v => !v.InFavour)} [Weight : {Money.Satoshis(finalVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
-            Console.WriteLine($"Total Yes Votes: {finalVotes.Count(v => v.InFavour)} [Weight : {Money.Satoshis(finalVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC)}]");
+            var totalWeight = Money.Satoshis(finalVotes.Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC);
+            var noWeight = Money.Satoshis(finalVotes.Where(v => !v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC);
+            var yesWeight = Money.Satoshis(finalVotes.Where(v => v.InFavour).Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC);
+
+            Console.WriteLine($"Total Weight: {totalWeight} STRAT");
+            Console.WriteLine($"Total No Weight: {(noWeight / totalWeight * 100).ToString("F")}% [{noWeight}]");
+            Console.WriteLine($"Total Yes Weight: {(yesWeight / totalWeight * 100).ToString("F")}% [{yesWeight}]");
         }
 
         private async Task ProcessBlockForVoteTransactionsAsync(BlockTransactionDetailsModel block, int blockHeight)
