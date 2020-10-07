@@ -771,6 +771,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             {
                 try
                 {
+                    if (!this.walletManager.IsStarted)
+                        throw new WalletException("The wallet manager has not yet finished initializing.");
+
                     this.walletManager.RecoverWallet(request.Password, request.Name, request.Mnemonic,
                         request.CreationDate, passphrase: request.Passphrase);
                 }
