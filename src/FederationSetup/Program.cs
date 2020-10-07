@@ -78,30 +78,30 @@ namespace FederationSetup
             switch (command)
             {
                 case SwitchExit:
-                {
-                   Environment.Exit(0);
-                   break;
-                }
+                    {
+                        Environment.Exit(0);
+                        break;
+                    }
                 case SwitchMenu:
-                {
-                    HandleSwitchMenuCommand(args);
-                    break;
-                }
+                    {
+                        HandleSwitchMenuCommand(args);
+                        break;
+                    }
                 case SwitchMineGenesisBlock:
-                {
-                    HandleSwitchMineGenesisBlockCommand(userInput);
-                    break;
-                }
+                    {
+                        HandleSwitchMineGenesisBlockCommand(userInput);
+                        break;
+                    }
                 case SwitchGenerateFedPublicPrivateKeys:
-                {
-                    HandleSwitchGenerateFedPublicPrivateKeysCommand(args);
-                    break;
-                }
+                    {
+                        HandleSwitchGenerateFedPublicPrivateKeysCommand(args);
+                        break;
+                    }
                 case SwitchGenerateMultiSigAddresses:
-                {
-                    HandleSwitchGenerateMultiSigAddressesCommand(args);
-                    break;
-                }
+                    {
+                        HandleSwitchGenerateMultiSigAddressesCommand(args);
+                        break;
+                    }
             }
         }
 
@@ -151,17 +151,17 @@ namespace FederationSetup
             isMultisig = Array.Find(args, element =>
                 element.StartsWith("-ismultisig=", StringComparison.Ordinal));
 
-            if (String.IsNullOrEmpty(passphrase))
+            if (string.IsNullOrEmpty(passphrase))
                 throw new ArgumentException("The -passphrase=\"<passphrase>\" argument is missing.");
 
             passphrase = passphrase.Replace("-passphrase=", string.Empty);
 
             //ToDo wont allow for datadir with equal sign
-            dataDirPath = String.IsNullOrEmpty(dataDirPath)
+            dataDirPath = string.IsNullOrEmpty(dataDirPath)
                 ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-                : dataDirPath.Replace("-datadir=", String.Empty);
+                : dataDirPath.Replace("-datadir=", string.Empty);
 
-            if (String.IsNullOrEmpty(isMultisig) || isMultisig.Replace("-ismultisig=", String.Empty) == "true")
+            if (string.IsNullOrEmpty(isMultisig) || isMultisig.Replace("-ismultisig=", string.Empty) == "true")
             {
                 GeneratePublicPrivateKeys(passphrase, dataDirPath);
             }
@@ -203,7 +203,7 @@ namespace FederationSetup
             Console.WriteLine(new MultisigAddressCreator().CreateMultisigAddresses(targetMainChain, sideChain));
         }
 
-        private static void GeneratePublicPrivateKeys(string passphrase, String keyPath, bool isMultiSigOutput = true)
+        private static void GeneratePublicPrivateKeys(string passphrase, string keyPath, bool isMultiSigOutput = true)
         {
             // Generate keys for signing.
             var mnemonicForSigningKey = new Mnemonic(Wordlist.English, WordCount.Twelve);
