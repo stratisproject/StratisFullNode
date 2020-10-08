@@ -325,7 +325,6 @@ namespace NBitcoin.Tests
             Network network = this.straxMain;
 
             Assert.Empty(network.Checkpoints);
-            Assert.Empty(network.DNSSeeds);
             Assert.Empty(network.SeedNodes);
 
             Assert.Equal("StraxMain", network.Name);
@@ -400,7 +399,6 @@ namespace NBitcoin.Tests
             Network network = this.straxTest;
 
             Assert.Empty(network.Checkpoints);
-            Assert.Empty(network.DNSSeeds);
             Assert.Single(network.SeedNodes);
 
             Assert.Equal("StraxTest", network.Name);

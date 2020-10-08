@@ -153,6 +153,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.DNSSeeds = new List<DNSSeedData>
             {
+                new DNSSeedData("mainnet1.stratisnetwork.com", "mainnet1.stratisnetwork.com")
             };
 
             this.SeedNodes = new List<NetworkAddress>
