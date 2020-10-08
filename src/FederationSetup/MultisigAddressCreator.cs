@@ -1,19 +1,10 @@
 ﻿using System.Text;
 using NBitcoin;
-using Xunit.Abstractions;
 
 namespace FederationSetup
 {
     public class MultisigAddressCreator
     {
-        private readonly ITestOutputHelper output;
-
-        public MultisigAddressCreator(ITestOutputHelper output = null)
-        {
-            if (output == null) return;
-            this.output = output;
-        }
-
         public string CreateMultisigAddresses(Network mainchainNetwork, Network sidechainNetwork)
         {
             var output = new StringBuilder();

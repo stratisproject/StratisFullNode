@@ -15,7 +15,7 @@ namespace FederationSetup
             var builder = new StringBuilder();
 
             builder.AppendLine($"Stratis Federation Set up v{Assembly.GetEntryAssembly().GetName().Version}");
-            builder.AppendLine("Copyright (c) 2018 Stratis Group Limited");
+            builder.AppendLine("Copyright (c) 2020 Stratis Group Limited");
 
             Console.WriteLine(builder);
         }
