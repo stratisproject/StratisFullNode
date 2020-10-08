@@ -367,7 +367,7 @@ namespace Stratis.Features.FederatedPeg
     public static class FullNodeBuilderSidechainRuntimeFeatureExtension
     {
         [NoTrace]
-        public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, IFederatedPegOptions federatedPegOptions = null, bool isMainChain = false)
+        public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, bool isMainChain = false)
         {
             LoggingConfiguration.RegisterFeatureNamespace<FederatedPegFeature>(
                 FederatedPegFeature.FederationGatewayFeatureNamespace);
@@ -382,7 +382,6 @@ namespace Stratis.Features.FederatedPeg
                         // This should be transient as we want to create a new instance everytime with creation of the FederationGateWayController.
                         services.AddTransient<IMaturedBlocksProvider, MaturedBlocksProvider>();
 
-                        services.AddSingleton(federatedPegOptions ?? new FederatedPegOptions());
                         services.AddSingleton<IFederatedPegSettings, FederatedPegSettings>();
                         services.AddSingleton<IOpReturnDataReader, OpReturnDataReader>();
                         services.AddSingleton<IDepositExtractor, DepositExtractor>();

@@ -583,30 +583,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
         }
 
-        [Fact]
-        public void NextMatureDepositStartsHigherOnMain()
-        {
-            // This should really be 2 tests in separate classes but we'll fit in with what is already happening for now.
-
-            // Start querying counter-chain for deposits from first non-genesis block on main chain and a higher number on side chain.
-            int depositHeight = (this.network.Name == new StraxRegTest().Name)
-                ? 1
-                : FederatedPegSettings.StratisMainDepositStartBlock;
-
-            this.federatedPegSettings.CounterChainDepositStartBlock.Returns(depositHeight);
-
-            var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
-
-            this.Init(dataFolder);
-
-            using (ICrossChainTransferStore crossChainTransferStore = this.CreateStore())
-            {
-                crossChainTransferStore.Initialize();
-
-                Assert.Equal(depositHeight, crossChainTransferStore.NextMatureDepositHeight);
-            }
-        }
-
         [Fact(Skip = "Requires main chain user to be running.")]
         public void DoTest()
         {

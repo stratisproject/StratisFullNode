@@ -86,15 +86,11 @@ namespace Stratis.CirrusPegD
 
             NetworkType networkType = nodeSettings.Network.NetworkType;
 
-            var fedPegOptions = new FederatedPegOptions(
-                walletSyncFromHeight: new int[] { FederatedPegSettings.StratisMainDepositStartBlock, 1, 1 }[(int)networkType]
-            );
-
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(SidechainNetworks[nodeSettings.Network.NetworkType]())
-                .AddFederatedPeg(fedPegOptions, isMainChain: true)
+                .AddFederatedPeg(isMainChain: true)
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -116,16 +112,12 @@ namespace Stratis.CirrusPegD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
-            var fedPegOptions = new FederatedPegOptions(
-                walletSyncFromHeight: new int[] { 1, 1, 1 }[(int)nodeSettings.Network.NetworkType]
-            );
-
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseFederatedPegPoAMining()
-                .AddFederatedPeg(fedPegOptions)
+                .AddFederatedPeg()
                 .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
