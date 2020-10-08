@@ -33,10 +33,6 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Filter" Version="1.1.2" />
 		<PackageReference Include="System.Xml.XmlSerializer" Version="4.3.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
-		<PackageReference Include="Tracer.Fody" Version="3.2.2">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>
