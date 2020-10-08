@@ -591,7 +591,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Start querying counter-chain for deposits from first non-genesis block on main chain and a higher number on side chain.
             int depositHeight = (this.network.Name == new StraxRegTest().Name)
                 ? 1
-                : FederatedPegSettings.StratisMainDepositStartBlock;
+                : FederatedPegSettings.StraxMainDepositStartBlock;
 
             this.federatedPegSettings.CounterChainDepositStartBlock.Returns(depositHeight);
 

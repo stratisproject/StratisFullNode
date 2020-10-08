@@ -86,11 +86,9 @@ namespace Stratis.Features.FederatedPeg
         public const int MaxInputs = 50;
 
         /// <summary>
-        /// Sidechains to STRAT don't need to check for deposits for the whole main chain. Only from when they begun.
-        ///
-        /// This block was mined on 5th Dec 2018. Further optimisations could be more specific per network.
+        /// The block from which to start checking for deposits.
         /// </summary>
-        public const int StratisMainDepositStartBlock = 1_100_000;
+        public const int StraxMainDepositStartBlock = 1;
 
         public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederatedPegOptions federatedPegOptions = null)
         {
@@ -137,7 +135,7 @@ namespace Stratis.Features.FederatedPeg
             this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x => x.Address), new IPAddressComparer());
 
             // These values are only configurable for tests at the moment. Fed members on live networks shouldn't play with them.
-            this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
+            this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, this.IsMainChain ? 1 : StraxMainDepositStartBlock);
 
             this.SmallDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(ThresholdAmountSmallDepositParam, 50));
             this.NormalDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(ThresholdAmountNormalDepositParam, 1000));
