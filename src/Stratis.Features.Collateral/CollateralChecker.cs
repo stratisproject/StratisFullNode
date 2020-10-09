@@ -30,6 +30,8 @@ namespace Stratis.Features.Collateral
         bool CheckCollateral(IFederationMember federationMember, int heightToCheckAt);
 
         int GetCounterChainConsensusHeight();
+
+        uint GetCounterChainGenesisBlockTime();
     }
 
     public class CollateralChecker : ICollateralChecker
@@ -64,6 +66,8 @@ namespace Stratis.Features.Collateral
         /// <summary>Consensus tip height of a counter chain.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private int counterChainConsensusTipHeight;
+
+        private uint counterChainGenesisBlockTime;
 
         private Task updateCollateralContinuouslyTask;
 
@@ -119,6 +123,14 @@ namespace Stratis.Features.Collateral
             lock (this.locker)
             {
                 return this.counterChainConsensusTipHeight;
+            }
+        }
+
+        public uint GetCounterChainGenesisBlockTime()
+        {
+            lock (this.locker)
+            {
+                return this.counterChainGenesisBlockTime;
             }
         }
 
@@ -198,6 +210,7 @@ namespace Stratis.Features.Collateral
                 }
 
                 this.counterChainConsensusTipHeight = verboseAddressBalanceResult.ConsensusTipHeight;
+                this.counterChainGenesisBlockTime = verboseAddressBalanceResult.GenesisBlockTime;
             }
 
             this.collateralUpdated = true;
