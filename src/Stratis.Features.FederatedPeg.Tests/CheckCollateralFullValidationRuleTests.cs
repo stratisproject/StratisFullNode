@@ -41,7 +41,9 @@ namespace Stratis.Features.FederatedPeg.Tests
                 .Returns(new CollateralFederationMember(new Key().PubKey, false, new Money(1), "addr1"));
 
             this.ruleContext = new RuleContext(new ValidationContext(), DateTimeOffset.Now);
-            this.ruleContext.ValidationContext.BlockToValidate = new Block(new BlockHeader() { Time = 5234 });
+            var header = new BlockHeader() { Time = 5234 };
+            this.ruleContext.ValidationContext.BlockToValidate = new Block(header);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(header, header.GetHash(), 0);
 
             Block block = this.ruleContext.ValidationContext.BlockToValidate;
             block.AddTransaction(new Transaction());
