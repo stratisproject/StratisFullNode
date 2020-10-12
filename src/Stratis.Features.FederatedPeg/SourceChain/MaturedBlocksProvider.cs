@@ -118,12 +118,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                         MaturedBlockDepositsModel depositBlockModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock, retrievalType);
 
                         if (depositBlockModel != null && depositBlockModel.Deposits != null)
-                        {
                             this.logger.LogDebug("{0} '{1}' deposits extracted at block '{2}'", depositBlockModel.Deposits.Count, retrievalType, chainedHeaderBlock.ChainedHeader);
 
-                            if (depositBlockModel.Deposits.Any())
-                                depositBlockModels.Add(depositBlockModel);
-                        }
+                        depositBlockModels.Add(depositBlockModel);
 
                         if (depositBlockModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest || depositBlockModels.SelectMany(d => d.Deposits).Count() >= int.MaxValue)
                         {

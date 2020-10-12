@@ -566,6 +566,49 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.Equal(7, depositsResult.Value.SelectMany(b => b.Deposits).Where(d => d.RetrievalType == DepositRetrievalType.Large).Count());
         }
 
+        [Fact]
+        public void RetrieveDeposits_ReturnsDataToAdvanceNextMaturedBlockHeight()
+        {
+            // Create a "chain" of 20 blocks.
+            List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
+
+            // Add 6 normal deposits to block 11 through to 16.
+            for (int i = 11; i < 17; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+            // Add 4 faster deposits to blocks 5 through to 9 (the amounts are less than 10).
+            for (int i = 5; i < 9; i++)
+            {
+                blocks[i].Block.AddTransaction(new Transaction());
+                CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
+            }
+            this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).Returns(delegate (CallInfo info)
+            {
+                var hashes = (List<uint256>)info[0];
+                return hashes.Select((hash) => blocks.Single(x => x.ChainedHeader.HashBlock == hash && x.ChainedHeader.Height <= this.consensusManager.Tip.Height)).ToArray();
+            });
+
+            int nextMaturedBlockHeight = 1;
+            for (int i = 1; i < blocks.Count; i++)
+            {
+                this.consensusManager.Tip.Returns(blocks[i].ChainedHeader);
+
+                var depositExtractor = new DepositExtractor(this.loggerFactory, this.federatedPegSettings, this.opReturnDataReader);
+                var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(nextMaturedBlockHeight);
+                if (depositsResult?.Value != null && depositsResult.Value.Any() && nextMaturedBlockHeight == depositsResult.Value.Min(b => b.BlockInfo.BlockHeight))
+                {
+                    nextMaturedBlockHeight = depositsResult.Value.Max(b => b.BlockInfo.BlockHeight) + 1;
+                }
+            }
+
+            // Test whether the returned data is able to advance the NextMaturedBlockHeight.
+            Assert.NotEqual(1, nextMaturedBlockHeight);
+        }
+
         private Transaction CreateDepositTransaction(BitcoinPubKeyAddress targetAddress, Block block, Money depositAmount, byte[] opReturnBytes)
         {
             // Create the deposit transaction.
