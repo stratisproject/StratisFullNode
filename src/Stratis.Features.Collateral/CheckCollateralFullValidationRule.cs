@@ -48,6 +48,11 @@ namespace Stratis.Features.Collateral
                 return Task.CompletedTask;
             }
 
+            // If the time on this block is earlier than the STRAX genesis block then ignore this rule.
+            uint counterChainGenesisBlockTime = this.collateralChecker.GetCounterChainGenesisBlockTime();
+            if (context.ValidationContext.ChainedHeaderToValidate.Header.Time < counterChainGenesisBlockTime)
+                return Task.CompletedTask;                
+
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
             int? commitmentHeight = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)
