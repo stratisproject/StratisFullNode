@@ -122,9 +122,16 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         depositBlockModels.Add(depositBlockModel);
 
-                        if (depositBlockModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest || depositBlockModels.SelectMany(d => d.Deposits).Count() >= int.MaxValue)
+                        if (depositBlockModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest)
                         {
-                            this.logger.LogDebug("Stopping matured blocks collection, thresholds reached; {0}={1}, numberOfDeposits={2}", nameof(depositBlockModels), depositBlockModels.Count, depositBlockModels.SelectMany(d => d.Deposits).Count());
+                            this.logger.LogDebug("Stopping matured blocks collection, max block thresholds reached; {0}={1}", nameof(depositBlockModels), depositBlockModels.Count);
+                            break;
+                        }
+
+                        IEnumerable<MaturedBlockDepositsModel> blocksWithDeposits = depositBlockModels.Where(d => d != null);
+                        if (blocksWithDeposits.Any() && blocksWithDeposits.Where(d => d.Deposits != null).SelectMany(d => d.Deposits).Count() >= int.MaxValue)
+                        {
+                            this.logger.LogDebug("Stopping matured blocks collection, deposit thresholds reached; numberOfDeposits={0}", blocksWithDeposits.SelectMany(d => d.Deposits).Count());
                             break;
                         }
 
