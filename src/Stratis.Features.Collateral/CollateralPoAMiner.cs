@@ -155,7 +155,7 @@ namespace Stratis.Features.Collateral
             }
 
             if (commitmentData != null)
-                return (BitConverter.ToInt32(commitmentData), BitConverter.ToUInt32(magic));
+                return (BitConverter.ToInt32(commitmentData), ((magic == null) ? (uint?)null : BitConverter.ToUInt32(magic)));
 
             return (null, null);
         }
