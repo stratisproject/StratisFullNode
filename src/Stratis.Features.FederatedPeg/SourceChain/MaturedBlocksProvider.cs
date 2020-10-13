@@ -85,9 +85,26 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
             else
             {
-                List<MaturedBlockDepositsModel> deposits = RetrieveDepositsFromHeight(retrievalType, retrieveFromHeight, retrieveUpToHeight.Value);
-                if (deposits.Any())
-                    result.Value.AddRange(deposits);
+                List<MaturedBlockDepositsModel> blockDeposits = RetrieveDepositsFromHeight(retrievalType, retrieveFromHeight, retrieveUpToHeight.Value);
+                if (blockDeposits.Any())
+                {
+                    if (!result.Value.Any())
+                        result.Value.AddRange(blockDeposits);
+                    else
+                    {
+                        // Add the deposits to the block height if it exists already.
+                        foreach (MaturedBlockDepositsModel blockDeposit in blockDeposits.Where(b => b.Deposits.Any()))
+                        {
+                            MaturedBlockDepositsModel existingBlockDeposit = result.Value.FirstOrDefault(b => b.BlockInfo.BlockHash == blockDeposit.BlockInfo.BlockHash);
+                            if (existingBlockDeposit != null)
+                            {
+                                var added = existingBlockDeposit.Deposits.ToList();
+                                added.AddRange(blockDeposit.Deposits);
+                                existingBlockDeposit.Deposits = added;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -124,14 +141,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                         if (depositBlockModels.Count >= MaturedBlocksSyncManager.MaxBlocksToRequest)
                         {
-                            this.logger.LogDebug("Stopping matured blocks collection, max block thresholds reached; {0}={1}", nameof(depositBlockModels), depositBlockModels.Count);
+                            this.logger.LogDebug("Stopping matured blocks collection, max block threshold reached; {0}={1}", nameof(depositBlockModels), depositBlockModels.Count);
                             break;
                         }
 
-                        IEnumerable<MaturedBlockDepositsModel> blocksWithDeposits = depositBlockModels.Where(d => d != null);
-                        if (blocksWithDeposits.Any() && blocksWithDeposits.Where(d => d.Deposits != null).SelectMany(d => d.Deposits).Count() >= int.MaxValue)
+                        if (depositBlockModels.Where(d => d.Deposits != null).SelectMany(d => d.Deposits).Count() >= int.MaxValue)
                         {
-                            this.logger.LogDebug("Stopping matured blocks collection, deposit thresholds reached; numberOfDeposits={0}", blocksWithDeposits.SelectMany(d => d.Deposits).Count());
+                            this.logger.LogDebug("Stopping matured blocks collection, deposit threshold reached; numberOfDeposits={0}", depositBlockModels.SelectMany(d => d.Deposits).Count());
                             break;
                         }
 

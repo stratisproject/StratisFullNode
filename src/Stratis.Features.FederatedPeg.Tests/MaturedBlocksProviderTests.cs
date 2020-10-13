@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // This will be double the amount of blocks because the mocked depositExtractor will always return a set of blocks
             // as that is how it has been configured.
-            Assert.Equal(33, depositsResult.Value.Count);
+            Assert.Equal(11, depositsResult.Value.Count);
         }
 
         /// <summary>
@@ -137,6 +137,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
+
+            // Total blocks (5 through to 15)
+            Assert.Equal(11, depositsResult.Value.Count);
+            Assert.Equal(5, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(15, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
 
             // Total deposits
             Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -193,6 +198,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
+
+            // Total blocks (5 through to 25)
+            Assert.Equal(21, depositsResult.Value.Count);
+            Assert.Equal(5, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(25, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
 
             // Total deposits
             Assert.Equal(10, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -253,6 +263,11 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
 
+            // Total blocks (5 through to 25)
+            Assert.Equal(21, depositsResult.Value.Count);
+            Assert.Equal(5, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(25, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
+
             // Total deposits
             Assert.Equal(11, depositsResult.Value.SelectMany(b => b.Deposits).Count());
 
@@ -279,7 +294,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         [Fact]
         public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4()
         {
-            // Create a "chain" of 20 blocks.
+            // Create a "chain" of 30 blocks.
             List<ChainedHeaderBlock> blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
 
             // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
@@ -308,6 +323,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+
+            // Total blocks (10 through to 25)
+            Assert.Equal(16, depositsResult.Value.Count);
+            Assert.Equal(10, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(25, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
 
             // Total deposits
             Assert.Equal(6, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -365,6 +385,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+
+            // Total blocks (10 through to 15)
+            Assert.Equal(6, depositsResult.Value.Count);
+            Assert.Equal(10, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(15, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
 
             // Total deposits
             Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits));
@@ -428,6 +453,11 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
+            // Total blocks (10 through to 15)
+            Assert.Equal(6, depositsResult.Value.Count);
+            Assert.Equal(10, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(15, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
+
             // Total deposits
             Assert.Empty(depositsResult.Value.SelectMany(b => b.Deposits));
         }
@@ -489,6 +519,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+
+            // Total blocks (10 through to 35)
+            Assert.Equal(26, depositsResult.Value.Count);
+            Assert.Equal(10, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(35, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
 
             // Total deposits
             Assert.Equal(12, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -553,6 +588,11 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
+            // Total blocks (10 through to 35)
+            Assert.Equal(26, depositsResult.Value.Count);
+            Assert.Equal(10, depositsResult.Value.Min(b => b.BlockInfo.BlockHeight));
+            Assert.Equal(35, depositsResult.Value.Max(b => b.BlockInfo.BlockHeight));
+
             // Total deposits
             Assert.Equal(13, depositsResult.Value.SelectMany(b => b.Deposits).Count());
 
@@ -578,12 +618,14 @@ namespace Stratis.Features.FederatedPeg.Tests
                 blocks[i].Block.AddTransaction(new Transaction());
                 CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
             }
+
             // Add 4 faster deposits to blocks 5 through to 9 (the amounts are less than 10).
             for (int i = 5; i < 9; i++)
             {
                 blocks[i].Block.AddTransaction(new Transaction());
                 CreateDepositTransaction(this.targetAddress, blocks[i].Block, Money.Coins(i), this.opReturnBytes);
             }
+
             this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).Returns(delegate (CallInfo info)
             {
                 var hashes = (List<uint256>)info[0];
