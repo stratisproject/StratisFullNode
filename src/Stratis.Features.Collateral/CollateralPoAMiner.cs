@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
 {
@@ -31,13 +32,16 @@ namespace Stratis.Features.Collateral
 
         private readonly ICollateralChecker collateralChecker;
 
+        private readonly Network counterChainNetwork;
+
         public CollateralPoAMiner(IConsensusManager consensusManager, IDateTimeProvider dateTimeProvider, Network network, INodeLifetime nodeLifetime, ILoggerFactory loggerFactory,
             IInitialBlockDownloadState ibdState, BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager,
             PoABlockHeaderValidator poaHeaderValidator, IFederationManager federationManager, IIntegrityValidator integrityValidator, IWalletManager walletManager,
-            INodeStats nodeStats, VotingManager votingManager, PoAMinerSettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider)
+            INodeStats nodeStats, VotingManager votingManager, PoAMinerSettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings)
             : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager, connectionManager,
             poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider)
         {
+            this.counterChainNetwork = counterChainSettings.CounterChainNetwork;
             this.collateralChecker = collateralChecker;
             this.encoder = new CollateralHeightCommitmentEncoder(this.logger);
         }
@@ -84,7 +88,7 @@ namespace Stratis.Features.Collateral
             // Add height commitment.
             byte[] encodedHeight = this.encoder.EncodeCommitmentHeight(commitmentHeight);
 
-            var heightCommitmentScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedHeight));
+            var heightCommitmentScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedHeight), Op.GetPushOp(this.counterChainNetwork.MagicBytes));
             blockTemplate.Block.Transactions[0].AddOutput(Money.Zero, heightCommitmentScript);
         }
     }
@@ -116,22 +120,23 @@ namespace Stratis.Features.Collateral
         /// <summary>Extracts the height commitment data from a transaction's coinbase <see cref="TxOut"/>.</summary>
         /// <param name="coinbaseTx">The transaction that should contain the height commitment data.</param>
         /// <returns>The commitment height, <c>null</c> if not found.</returns>
-        public int? DecodeCommitmentHeight(Transaction coinbaseTx)
+        public (int? height, uint? magic) DecodeCommitmentHeight(Transaction coinbaseTx)
         {
             IEnumerable<Script> opReturnOutputs = coinbaseTx.Outputs.Where(x => (x.ScriptPubKey.Length > 0) && (x.ScriptPubKey.ToBytes(true)[0] == (byte)OpcodeType.OP_RETURN)).Select(x => x.ScriptPubKey);
 
             byte[] commitmentData = null;
+            byte[] magic = null;
 
             this.logger.LogDebug("Transaction contains {0} OP_RETURN outputs.", opReturnOutputs.Count());
 
             foreach (Script script in opReturnOutputs)
             {
-                IEnumerable<Op> ops = script.ToOps();
+                Op[] ops = script.ToOps().ToArray();
 
-                if (ops.Count() != 2)
+                if (ops.Length != 2 && ops.Length != 3)
                     continue;
 
-                byte[] data = ops.Last().PushData;
+                byte[] data = ops[1].PushData;
 
                 bool correctPrefix = data.Take(HeightCommitmentOutputPrefixBytes.Length).SequenceEqual(HeightCommitmentOutputPrefixBytes);
 
@@ -142,13 +147,17 @@ namespace Stratis.Features.Collateral
                 }
 
                 commitmentData = data.Skip(HeightCommitmentOutputPrefixBytes.Length).ToArray();
+
+                if (ops.Length == 3)
+                    magic = ops[2].PushData;
+
                 break;
             }
 
             if (commitmentData != null)
-                return BitConverter.ToInt32(commitmentData);
+                return (BitConverter.ToInt32(commitmentData), BitConverter.ToUInt32(magic));
 
-            return null;
+            return (null, null);
         }
     }
 }
