@@ -2,7 +2,11 @@
   "profiles": {
     "Stratis.CirrusPegD": {
       "commandName": "Project",
-      "commandLineArgs": "-mainchain"
+      "commandLineArgs": "-mainchain -regtest -mine -walletPassword=test -walletName=test -stake=1 -mineaddress=qd2k86nAbEsCugyUNZHfG4VZUdJZQVTgLv -addressindex -txindex -mindepositconfirmations=5 -mincoinmaturity=1 -agentprefix=fed1main -datadir=E:\\RunNodes\\StraxSideChains\\Data\\gateway1 -port=36101 -apiport=38101 -counterchainapiport=38201 -federationips=127.0.0.1:36101,127.0.0.1:36102 -redeemscript=\"2 02eef7619de25578c9717a289d08c61d4598b2bd81d2ee5db3072a07fa2d121e65 027ce19209dd1212a6a4fc2b7ddf678c6dea40b596457f934f73f3dcc5d0d9ee55 2 OP_CHECKMULTISIG\" -publickey=02eef7619de25578c9717a289d08c61d4598b2bd81d2ee5db3072a07fa2d121e65 -whitebind=127.0.0.1 -addnode=127.0.0.1:36102 -addnode=82.146.153.140"
+    },
+    "Stratis.CirrusPegD Side1": {
+      "commandName": "Project",
+      "commandLineArgs": "-sidechain -bootstrap -counterchaindepositblock=1 -regtest -txindex -addressindex -agentprefix=fed1side -datadir=E:\\RunNodes\\StraxSideChains\\Data\\gateway1 -mine=1 -mineaddress=xNXCDnD5mNtNGxLPEPzjyCxEzYjv7JEJpL -port=36201 -apiport=38201 -counterchainapiport=38101 -federationips=127.0.0.1:36201,127.0.0.1:36202,127.0.0.1:36203 -redeemscript=\"2 02eef7619de25578c9717a289d08c61d4598b2bd81d2ee5db3072a07fa2d121e65 027ce19209dd1212a6a4fc2b7ddf678c6dea40b596457f934f73f3dcc5d0d9ee55 2 OP_CHECKMULTISIG\" -publickey=02eef7619de25578c9717a289d08c61d4598b2bd81d2ee5db3072a07fa2d121e65 -whitebind=127.0.0.1 -addnode=127.0.0.1:36202 -mincoinmaturity=1 -mindepositconfirmations=1"
     }
   }
 }

@@ -59,15 +59,18 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Get the block that is minStakeConfirmations behind the current tip.
             ChainedHeader chainedHeader = this.chainIndexer.GetHeader(chainTip.Height - minStakeConfirmations);
 
-            Block maturedBlock = chainedHeader.Block;
+            Block connectedBlock = blockConnected.ConnectedBlock.Block;
 
             // As this runs on the mainchain we presume there will be a coinstake transaction in the block (but during the PoW era there obviously may not be).
             // If not, just do nothing with this block.
-            if (maturedBlock.Transactions.Count < 2 || !blockConnected.ConnectedBlock.Block.Transactions[1].IsCoinStake)
+            if (connectedBlock.Transactions.Count < 2)
                 return;
 
+            Transaction coinStake = connectedBlock.Transactions[1];
+
             // We are only interested in the coinstake, as it is the only transaction that we expect to contain outputs paying the reward script.
-            Transaction coinStake = blockConnected.ConnectedBlock.Block.Transactions[1];
+            if (!coinStake.IsCoinStake)
+                return;
 
             // Identify any outputs paying the reward script a nonzero amount.
             TxOut[] rewardOutputs = coinStake.Outputs.Where(o => o.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript && o.Value != 0).ToArray();

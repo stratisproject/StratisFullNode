@@ -59,6 +59,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 [DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits,
                 [DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits
             };
+
+            if (this.federatedPegSettings.IsMainChain)
+                this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
         }
 
         /// <inheritdoc />
@@ -71,15 +74,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             {
                 Value = new List<MaturedBlockDepositsModel>()
             };
-
-            if (this.federatedPegSettings.IsMainChain)
-                this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
-
+            
             int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
-            ChainedHeader firstBlock = this.consensusManager.Tip.GetAncestor(maturityHeight - maxConfirmations);
-
+            int startHeight = maturityHeight - maxConfirmations;
+            ChainedHeader firstBlock = this.consensusManager.Tip.GetAncestor(maturityHeight);
+            firstBlock = firstBlock.EnumerateToGenesis().SkipWhile(h => h.Height > startHeight && (!this.deposits.TryGetValue(h.Height, out BlockDeposits blockDeposits) || blockDeposits.BlockHash != h.HashBlock)).FirstOrDefault();
             var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
-
             DepositRetrievalType[] retrievalTypes = this.retrievalTypeConfirmations.Keys.ToArray();
 
             foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlockDataFromHeight(firstBlock, MaturedBlocksBatchSize, cancellationToken))

@@ -121,8 +121,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
             maturedBlockDepositsResult.Should().NotBeNull();
             maturedBlockDepositsResult.Value.Count().Should().Be(0);
-            // TODO: Fix this.
-            // maturedBlockDepositsResult.Message.Should().Contain(string.Format("The submitted block height of {0} is not mature enough for '{1}' deposits, blocks below {2} can be returned.", earlierBlock.Height, DepositRetrievalType.Normal, maturedHeight));
+            Assert.NotNull(maturedBlockDepositsResult.Message);
         }
 
         [Fact]
