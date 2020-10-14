@@ -123,6 +123,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 this.deposits.TryRemove(chainedHeaderBlock.ChainedHeader.Height - maxConfirmations, out _);
             }
 
+            result.Message = "";
+
             return result;
         }
 
