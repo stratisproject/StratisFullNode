@@ -658,7 +658,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 foreach (RecipientModel recipientModel in request.Recipients)
                 {
-                    if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) || string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
+                    if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
                         throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
 
                     Script destination;
