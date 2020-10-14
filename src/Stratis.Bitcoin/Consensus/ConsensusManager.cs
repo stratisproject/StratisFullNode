@@ -1308,7 +1308,7 @@ namespace Stratis.Bitcoin.Consensus
         }
 
         /// <inheritdoc />
-        public IEnumerable<ChainedHeaderBlock> GetBlockDataFromHeight(ChainedHeader previousHeader, int batchSize, CancellationTokenSource cancellationTokenSource)
+        public IEnumerable<ChainedHeaderBlock> GetBlocksAfterBlock(ChainedHeader previousHeader, int batchSize, CancellationTokenSource cancellationTokenSource)
         {
             // If previous header is null, start from genesis.
             if (previousHeader == null)

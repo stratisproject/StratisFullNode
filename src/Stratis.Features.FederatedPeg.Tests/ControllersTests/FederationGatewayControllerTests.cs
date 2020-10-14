@@ -146,14 +146,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 depositExtractorCallCount++;
             });
 
-            this.consensusManager.GetBlockDataFromHeight(Arg.Any<ChainedHeader>(), MaturedBlocksProvider.MaturedBlocksBatchSize, Arg.Any<CancellationTokenSource>()).Returns(delegate (CallInfo info)
+            this.consensusManager.GetBlocksAfterBlock(Arg.Any<ChainedHeader>(), MaturedBlocksProvider.MaturedBlocksBatchSize, Arg.Any<CancellationTokenSource>()).Returns(delegate (CallInfo info)
             {
                 var chainedHeader = (ChainedHeader)info[0];
-                chainedHeader = tip.GetAncestor(chainedHeader.Height);
-
                 var blocks = new List<ChainedHeaderBlock>();
 
-                for (int i = chainedHeader.Height; i <= this.consensusManager.Tip.Height; i++)
+                int startHeight = (chainedHeader == null) ? 0 : (chainedHeader.Height + 1);
+
+                for (int i = startHeight; i <= this.consensusManager.Tip.Height; i++)
                     blocks.Add(new ChainedHeaderBlock(new Block(), tip.GetAncestor(i)));
 
                 return blocks;
