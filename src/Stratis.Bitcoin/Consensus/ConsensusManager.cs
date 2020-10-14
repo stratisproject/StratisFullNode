@@ -1307,36 +1307,39 @@ namespace Stratis.Bitcoin.Consensus
             return blockHashes.Select(h => chainedHeaderBlocks[h]).ToArray();
         }
 
-        public IEnumerable<ChainedHeaderBlock> GetBlockDataFrom(ChainedHeader previousBlock, CancellationTokenSource cancellationTokenSource)
+        /// <inheritdoc />
+        public IEnumerable<ChainedHeaderBlock> GetBlockDataFromHeight(ChainedHeader previousHeader, int batchSize, CancellationTokenSource cancellationTokenSource)
         {
-            if (previousBlock == null)
-                previousBlock = this.chainIndexer.GetHeader(0);
+            // If previous header is null, start from genesis.
+            if (previousHeader == null)
+                previousHeader = this.chainIndexer.GetHeader(0);
 
-            for (int height = previousBlock.Height + 1; !cancellationTokenSource.IsCancellationRequested;)
+            for (int height = previousHeader.Height + 1; !cancellationTokenSource.IsCancellationRequested;)
             {
-                var hashes = new List<uint256>();
-                for (int i = 0; i < 100; i++)
+                // Add hashes in a batch.
+                var headerHashes = new List<uint256>();
+                for (int batchIndex = 0; batchIndex < batchSize; batchIndex++)
                 {
-                    ChainedHeader header = this.chainIndexer.GetHeader(height + i);
-                    if (header == null)
+                    ChainedHeader currentHeader = this.chainIndexer.GetHeader(height + batchIndex);
+                    if (currentHeader == null)
                         break;
 
-                    if (header.Previous != previousBlock)
+                    if (currentHeader.Previous != previousHeader)
                         break;
 
-                    hashes.Add(header.HashBlock);
+                    headerHashes.Add(currentHeader.HashBlock);
 
-                    previousBlock = header;
+                    previousHeader = currentHeader;
                 }
 
-                if (hashes.Count == 0)
+                if (headerHashes.Count == 0)
                     yield break;
 
-                ChainedHeaderBlock[] blocks = this.GetBlockData(hashes);
+                ChainedHeaderBlock[] blocks = this.GetBlockData(headerHashes);
 
-                for (int i = 0; i < blocks.Length && !cancellationTokenSource.IsCancellationRequested; height++, i++)
+                for (int blockIndex = 0; blockIndex < blocks.Length && !cancellationTokenSource.IsCancellationRequested; height++, blockIndex++)
                 {
-                    yield return blocks[i];
+                    yield return blocks[blockIndex];
                 }
             }
         }

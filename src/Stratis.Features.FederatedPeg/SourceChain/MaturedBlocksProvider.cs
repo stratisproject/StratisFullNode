@@ -34,38 +34,110 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
     public sealed class MaturedBlocksProvider : IMaturedBlocksProvider
     {
+        public const int MaturedBlocksBatchSize = 100;
         public const string UnableToRetrieveBlockDataFromConsensusMessage = "Stopping mature block collection and sending what we've collected. Reason: Unable to get block data for {0} from consensus.";
 
         private readonly IConsensusManager consensusManager;
         private readonly ChainedHeader consensusTip;
         private readonly IDepositExtractor depositExtractor;
+        private readonly ConcurrentDictionary<int, BlockDeposits> deposits;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
-        private readonly ConcurrentDictionary<int, BlockDeposits> deposits;
+        private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
 
         public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings, ILoggerFactory loggerFactory)
         {
             this.consensusManager = consensusManager;
             this.depositExtractor = depositExtractor;
             this.federatedPegSettings = federatedPegSettings;
-
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             // Take a copy of the tip upfront so that we work with the same tip later.
             this.consensusTip = this.consensusManager.Tip;
             this.deposits = new ConcurrentDictionary<int, BlockDeposits>();
+            this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
+            {
+                [DepositRetrievalType.Small] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits,
+                [DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits,
+                [DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits
+            };
+        }
+
+        /// <inheritdoc />
+        public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int maturityHeight)
+        {
+            if (this.consensusTip == null)
+                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (it is un-initialized or still starting up).");
+
+            var result = new SerializableResult<List<MaturedBlockDepositsModel>>
+            {
+                Value = new List<MaturedBlockDepositsModel>()
+            };
+
+            if (this.federatedPegSettings.IsMainChain)
+                this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+
+            int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
+            ChainedHeader firstBlock = this.consensusTip.GetAncestor(maturityHeight - maxConfirmations);
+
+            var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
+
+            DepositRetrievalType[] retrievalTypes = this.retrievalTypeConfirmations.Keys.ToArray();
+
+            foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlockDataFromHeight(firstBlock, MaturedBlocksBatchSize, cancellationToken))
+            {
+                // Find all deposits in the given block.
+                RecordBlockDeposits(chainedHeaderBlock, retrievalTypes);
+
+                // Don't process blocks below the requested maturity height.
+                if (chainedHeaderBlock.ChainedHeader.Height < maturityHeight)
+                {
+                    this.logger.LogDebug($"{chainedHeaderBlock.ChainedHeader} below maturity height of {maturityHeight}.");
+                    continue;
+                }
+
+                var maturedDeposits = new List<IDeposit>();
+
+                // Inspect the deposits in the block for each retrieval type (validate against the retrieval type's confirmation requirement).
+                foreach ((DepositRetrievalType retrievalType, int requiredConfirmations) in this.retrievalTypeConfirmations)
+                {
+                    // If the block height is more than the required confirmations, then the potential deposits
+                    // contained within are valid for the given retrieval type.
+                    if (chainedHeaderBlock.ChainedHeader.Height > requiredConfirmations)
+                    {
+                        foreach (IDeposit deposit in this.RecallBlockDeposits(chainedHeaderBlock.ChainedHeader.Height - requiredConfirmations, retrievalType))
+                            maturedDeposits.Add(deposit);
+                    }
+                }
+
+                this.logger.LogDebug($"{maturedDeposits.Count} mature deposits retrieved from block '{chainedHeaderBlock.ChainedHeader}'.");
+
+                result.Value.Add(new MaturedBlockDepositsModel(new MaturedBlockInfoModel()
+                {
+                    BlockHash = chainedHeaderBlock.ChainedHeader.HashBlock,
+                    BlockHeight = chainedHeaderBlock.ChainedHeader.Height,
+                    BlockTime = chainedHeaderBlock.ChainedHeader.Header.Time
+                }, maturedDeposits));
+
+                // Clean-up.
+                this.deposits.TryRemove(chainedHeaderBlock.ChainedHeader.Height - maxConfirmations, out _);
+            }
+
+            return result;
         }
 
         private void RecordBlockDeposits(ChainedHeaderBlock chainedHeaderBlock, DepositRetrievalType[] retrievalTypes)
         {
-            // Already have  this recorded?
-            if (this.deposits.TryGetValue(chainedHeaderBlock.ChainedHeader.Height, out BlockDeposits blockDeposits)
-                && blockDeposits.BlockHash == chainedHeaderBlock.ChainedHeader.HashBlock)
+            // Already have this recorded?
+            if (this.deposits.TryGetValue(chainedHeaderBlock.ChainedHeader.Height, out BlockDeposits blockDeposits) && blockDeposits.BlockHash == chainedHeaderBlock.ChainedHeader.HashBlock)
             {
+                this.logger.LogDebug($"Deposits already recorded for '{chainedHeaderBlock.ChainedHeader}'.");
                 return;
             }
 
             IReadOnlyList<IDeposit> deposits = this.depositExtractor.ExtractDepositsFromBlock(chainedHeaderBlock.Block, chainedHeaderBlock.ChainedHeader.Height, retrievalTypes);
+
+            this.logger.LogDebug($"{deposits.Count} potential deposits extracted from block '{chainedHeaderBlock.ChainedHeader}'.");
 
             this.deposits[chainedHeaderBlock.ChainedHeader.Height] = new BlockDeposits()
             {
@@ -77,58 +149,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private IEnumerable<IDeposit> RecallBlockDeposits(int blockHeight, DepositRetrievalType retrievalType)
         {
             return this.deposits[blockHeight].Deposits.Where(d => d.RetrievalType == retrievalType);
-        }
-
-        /// <inheritdoc />
-        public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int retrieveFromHeight)
-        {
-            if (this.consensusManager.Tip == null)
-                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (it is un-initialized or still starting up).");
-
-            var result = new SerializableResult<List<MaturedBlockDepositsModel>>
-            {
-                Value = new List<MaturedBlockDepositsModel>()
-            };
-
-            var retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>();
-            retrievalTypeConfirmations[DepositRetrievalType.Small] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits;
-            retrievalTypeConfirmations[DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
-            retrievalTypeConfirmations[DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
-
-            if (this.federatedPegSettings.IsMainChain)
-                retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
-            
-            int maxConfirmations = retrievalTypeConfirmations.Values.Max();
-            ChainedHeader firstBlock = this.consensusManager.Tip.GetAncestor(retrieveFromHeight - maxConfirmations);
-
-            CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
-
-            DepositRetrievalType[] retrievalTypes = retrievalTypeConfirmations.Keys.ToArray();
-
-            foreach (ChainedHeaderBlock chb in this.consensusManager.GetBlockDataFrom(firstBlock, cancellationToken))
-            {
-                this.RecordBlockDeposits(chb, retrievalTypes);
-
-                if (chb.ChainedHeader.Height < retrieveFromHeight)
-                    continue;
-
-                var maturedDeposits = new List<IDeposit>();
-
-                foreach ((DepositRetrievalType retrievalType, int requiredConfirmations) in retrievalTypeConfirmations)
-                    if (chb.ChainedHeader.Height > requiredConfirmations)
-                        foreach (IDeposit deposit in this.RecallBlockDeposits(chb.ChainedHeader.Height - requiredConfirmations, retrievalType))
-                            maturedDeposits.Add(deposit);
-
-                result.Value.Add(new MaturedBlockDepositsModel(new MaturedBlockInfoModel() { 
-                    BlockHash = chb.ChainedHeader.HashBlock, 
-                    BlockHeight = chb.ChainedHeader.Height, 
-                    BlockTime = chb.ChainedHeader.Header.Time }, maturedDeposits));
-
-                // Clean-up.
-                this.deposits.TryRemove(chb.ChainedHeader.Height - maxConfirmations, out _);
-            }
-
-            return result;
         }
     }
 

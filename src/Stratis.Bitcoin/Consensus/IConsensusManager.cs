@@ -73,10 +73,11 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="blockHashes">The block hashes.</param>
         ChainedHeaderBlock[] GetBlockData(List<uint256> blockHashes);
 
-        /// <summary>Loads block data from <see cref="ChainedHeaderTree"/> or block store if it's enabled.</summary>
+        /// <summary>Retrieves block data in batches from a given height.</summary>
         /// <param name="previousBlock">The block preceding the blocks to retrieve.</param>
+        /// <param name="batchSize">The amount of blocks to retrieve.</param>
         /// <param name="cancellationTokenSource">A cancellation token source for cancellation.</param>
-        IEnumerable<ChainedHeaderBlock> GetBlockDataFrom(ChainedHeader previousBlock, CancellationTokenSource cancellationTokenSource);
+        IEnumerable<ChainedHeaderBlock> GetBlockDataFromHeight(ChainedHeader previousBlock, int batchSize, CancellationTokenSource cancellationTokenSource);
 
         /// <summary>
         /// A new block was mined by the node and is attempted to connect to tip.

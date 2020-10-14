@@ -61,7 +61,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
             this.federatedPegSettings.NormalDepositThresholdAmount.Returns(Money.Coins(100));
 
-            this.consensusManager.GetBlockDataFrom(Arg.Any<ChainedHeader>(), Arg.Any<CancellationTokenSource>()).Returns(delegate (CallInfo info)
+            this.consensusManager.GetBlockDataFromHeight(Arg.Any<ChainedHeader>(), Arg.Any<CancellationTokenSource>()).Returns(delegate (CallInfo info)
             {
                 var chainedHeader = (ChainedHeader)info[0];
                 if (chainedHeader == null)
