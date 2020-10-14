@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -1304,6 +1305,40 @@ namespace Stratis.Bitcoin.Consensus
 
             // Return the blocks in the requested order.
             return blockHashes.Select(h => chainedHeaderBlocks[h]).ToArray();
+        }
+
+        public IEnumerable<ChainedHeaderBlock> GetBlockDataFrom(ChainedHeader previousBlock, CancellationTokenSource cancellationTokenSource)
+        {
+            if (previousBlock == null)
+                previousBlock = this.chainIndexer.GetHeader(0);
+
+            for (int height = previousBlock.Height + 1; !cancellationTokenSource.IsCancellationRequested;)
+            {
+                var hashes = new List<uint256>();
+                for (int i = 0; i < 100; i++)
+                {
+                    ChainedHeader header = this.chainIndexer.GetHeader(height + i);
+                    if (header == null)
+                        break;
+
+                    if (header.Previous != previousBlock)
+                        break;
+
+                    hashes.Add(header.HashBlock);
+
+                    previousBlock = header;
+                }
+
+                if (hashes.Count == 0)
+                    yield break;
+
+                ChainedHeaderBlock[] blocks = this.GetBlockData(hashes);
+
+                for (int i = 0; i < blocks.Length && !cancellationTokenSource.IsCancellationRequested; height++, i++)
+                {
+                    yield return blocks[i];
+                }
+            }
         }
 
         /// <summary>

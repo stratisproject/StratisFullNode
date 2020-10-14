@@ -369,7 +369,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         public Task<RecordLatestMatureDepositsResult> RecordLatestMatureDepositsAsync(IList<MaturedBlockDepositsModel> maturedBlockDeposits)
         {
             Guard.NotNull(maturedBlockDeposits, nameof(maturedBlockDeposits));
-            Guard.Assert(!maturedBlockDeposits.Any(m => m.Deposits.Any(d => d.BlockNumber != m.BlockInfo.BlockHeight || d.BlockHash != m.BlockInfo.BlockHash)));
 
             return Task.Run(() =>
             {
@@ -509,7 +508,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                 if (transfers[i] == null || transaction == null)
                                 {
-                                    transfers[i] = new CrossChainTransfer(status, deposit.Id, scriptPubKey, deposit.Amount, deposit.BlockNumber, transaction, null, null);
+                                    transfers[i] = new CrossChainTransfer(status, deposit.Id, scriptPubKey, deposit.Amount, maturedDeposit.BlockInfo.BlockHeight, transaction, null, null);
                                     tracker.SetTransferStatus(transfers[i]);
                                 }
                                 else

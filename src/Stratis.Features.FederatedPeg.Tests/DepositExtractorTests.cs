@@ -73,7 +73,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             block.AddTransaction(nonDepositTransactionToOtherAddress);
 
             int blockHeight = 230;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             extractedDeposits.Count.Should().Be(1);
             IDeposit extractedTransaction = extractedDeposits[0];
@@ -106,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Transaction thirdDepositTransaction = CreateDepositTransaction(newTargetAddress, block, Money.Coins(12), newOpReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             extractedDeposits.Count.Should().Be(3);
             extractedDeposits.Select(d => d.BlockNumber).Should().AllBeEquivalentTo(blockHeight);
@@ -149,7 +149,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
@@ -184,7 +184,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Normal);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             // Should be 2, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(2);
@@ -220,7 +220,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Small);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Small });
 
             // Should only be two, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(2);
@@ -256,7 +256,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, DepositRetrievalType.Large);
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Large });
 
             // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
