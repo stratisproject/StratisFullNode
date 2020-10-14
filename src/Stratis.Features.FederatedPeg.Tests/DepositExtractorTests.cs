@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin.Networks;
@@ -27,8 +26,6 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             this.network = new CirrusRegTest();
 
-            ILoggerFactory loggerFactory = Substitute.For<ILoggerFactory>();
-
             this.addressHelper = new MultisigAddressHelper(this.network, new StraxRegTest());
 
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
@@ -45,7 +42,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
-            this.depositExtractor = new DepositExtractor(loggerFactory, this.federationSettings, this.opReturnDataReader);
+            this.depositExtractor = new DepositExtractor(this.federationSettings, this.opReturnDataReader);
             this.transactionBuilder = new TestTransactionBuilder();
         }
 

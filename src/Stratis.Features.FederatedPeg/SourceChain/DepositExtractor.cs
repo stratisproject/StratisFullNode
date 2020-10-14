@@ -1,15 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Features.FederatedPeg.Interfaces;
-using TracerAttributes;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
-    [NoTrace]
-    public class DepositExtractor : IDepositExtractor
+    public sealed class DepositExtractor : IDepositExtractor
     {
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
@@ -22,16 +19,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         private readonly Script depositScript;
         private readonly IFederatedPegSettings federatedPegSettings;
-        private readonly ILogger logger;
         private readonly IOpReturnDataReader opReturnDataReader;
 
-        public DepositExtractor(
-            ILoggerFactory loggerFactory,
-            IFederatedPegSettings federatedPegSettings,
-            IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, IOpReturnDataReader opReturnDataReader)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-
             // Note: MultiSigRedeemScript.PaymentScript equals MultiSigAddress.ScriptPubKey
             this.depositScript =
                 federatedPegSettings.MultiSigRedeemScript?.PaymentScript ??
