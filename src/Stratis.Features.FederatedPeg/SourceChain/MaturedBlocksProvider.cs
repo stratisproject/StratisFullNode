@@ -82,7 +82,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
             DepositRetrievalType[] retrievalTypes = this.retrievalTypeConfirmations.Keys.ToArray();
 
-            foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlockDataFromHeight(firstBlock, MaturedBlocksBatchSize, cancellationToken))
+            foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlockDataFromHeight(firstBlock?.Previous, MaturedBlocksBatchSize, cancellationToken))
             {
                 // Find all deposits in the given block.
                 RecordBlockDeposits(chainedHeaderBlock, retrievalTypes);

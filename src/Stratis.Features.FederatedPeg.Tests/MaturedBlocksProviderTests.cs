@@ -93,7 +93,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(0);
 
-            Assert.Equal(10, depositsResult.Value.Count);
+            Assert.Equal(11, depositsResult.Value.Count);
         }
 
         /// <summary>
