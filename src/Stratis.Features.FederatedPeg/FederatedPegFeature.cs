@@ -379,9 +379,7 @@ namespace Stratis.Features.FederatedPeg
                     .DependOn<CounterChainFeature>()
                     .FeatureServices(services =>
                     {
-                        // This should be transient as we want to create a new instance everytime with creation of the FederationGateWayController.
-                        services.AddTransient<IMaturedBlocksProvider, MaturedBlocksProvider>();
-
+                        services.AddSingleton<IMaturedBlocksProvider, MaturedBlocksProvider>();
                         services.AddSingleton<IFederatedPegSettings, FederatedPegSettings>();
                         services.AddSingleton<IOpReturnDataReader, OpReturnDataReader>();
                         services.AddSingleton<IDepositExtractor, DepositExtractor>();

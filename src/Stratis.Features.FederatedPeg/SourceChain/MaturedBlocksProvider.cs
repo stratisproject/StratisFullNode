@@ -38,7 +38,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         public const string UnableToRetrieveBlockDataFromConsensusMessage = "Stopping mature block collection and sending what we've collected. Reason: Unable to get block data for {0} from consensus.";
 
         private readonly IConsensusManager consensusManager;
-        private readonly ChainedHeader consensusTip;
         private readonly IDepositExtractor depositExtractor;
         private readonly ConcurrentDictionary<int, BlockDeposits> deposits;
         private readonly IFederatedPegSettings federatedPegSettings;
@@ -53,7 +52,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             // Take a copy of the tip upfront so that we work with the same tip later.
-            this.consensusTip = this.consensusManager.Tip;
             this.deposits = new ConcurrentDictionary<int, BlockDeposits>();
             this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
             {
@@ -66,7 +64,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc />
         public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int maturityHeight)
         {
-            if (this.consensusTip == null)
+            if (this.consensusManager.Tip == null)
                 return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (it is un-initialized or still starting up).");
 
             var result = new SerializableResult<List<MaturedBlockDepositsModel>>
@@ -78,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
 
             int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
-            ChainedHeader firstBlock = this.consensusTip.GetAncestor(maturityHeight - maxConfirmations);
+            ChainedHeader firstBlock = this.consensusManager.Tip.GetAncestor(maturityHeight - maxConfirmations);
 
             var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
 
