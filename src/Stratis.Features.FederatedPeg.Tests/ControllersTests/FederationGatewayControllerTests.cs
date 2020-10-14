@@ -147,12 +147,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 depositExtractorCallCount++;
             });
 
-            this.consensusManager.GetBlockData(Arg.Any<List<uint256>>()).ReturnsForAnyArgs((x) =>
-            {
-                List<uint256> hashes = x.ArgAt<List<uint256>>(0);
-                return hashes.Select((h) => new ChainedHeaderBlock(new Block(), earlierBlock)).ToArray();
-            });
-
             this.consensusManager.GetBlockDataFrom(Arg.Any<ChainedHeader>(), Arg.Any<CancellationTokenSource>()).Returns(delegate (CallInfo info)
             {
                 var chainedHeader = (ChainedHeader)info[0];

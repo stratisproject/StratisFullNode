@@ -67,22 +67,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash, DepositRetrievalType depositRetrievalType)
-        {
-            IDeposit deposit = ExtractDepositFromTransaction(transaction, blockHeight, blockHash);
-
-            if (deposit == null)
-                return null;
-
-            if (deposit.RetrievalType != depositRetrievalType)
-                return null;
-
-            this.logger.LogDebug("Processing a received deposit transaction of type {0} with address: {1}. Transaction hash: {2}.", depositRetrievalType, deposit.TargetAddress, transaction.GetHash());
-
-            return deposit;
-        }
-
-        /// <inheritdoc />
         public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
             // Coinbase transactions can't have deposits.
