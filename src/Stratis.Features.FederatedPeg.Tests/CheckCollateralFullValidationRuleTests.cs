@@ -73,7 +73,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var commitmentHeightData = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedHeight));
             block.Transactions[0].AddOutput(Money.Zero, commitmentHeightData);
 
-            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork())
+            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, null, new Mock<IDateTimeProvider>().Object, new PoANetwork())
             {
                 Logger = logger
             };
