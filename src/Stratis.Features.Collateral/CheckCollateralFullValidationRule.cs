@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
 {
@@ -74,7 +75,8 @@ namespace Stratis.Features.Collateral
             // 3. The miner is on STRAT and most nodes were on STRAX(prev round).Fail the rule.
 
             // 1. If the block miner is on STRAX then skip this code and go check the collateral.
-            if (this.network.Name.StartsWith("Cirrus") && magic != this.network.Magic)
+            Network counterChainNetwork = this.fullNode.NodeService<CounterChainNetworkWrapper>().CounterChainNetwork;
+            if (this.network.Name.StartsWith("Cirrus") && magic != counterChainNetwork.Magic)
             {
                 // 2. The block miner is on STRAT.
                 IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
@@ -93,7 +95,7 @@ namespace Stratis.Features.Collateral
                     if (commitmentHeight2 == null)
                         continue;
 
-                    if (magic2 != this.network.Magic)
+                    if (magic2 != counterChainNetwork.Magic)
                         membersOnStratis++;
 
                     memberCount++;
