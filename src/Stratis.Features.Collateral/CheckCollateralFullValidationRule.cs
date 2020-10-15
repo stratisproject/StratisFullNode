@@ -55,7 +55,7 @@ namespace Stratis.Features.Collateral
             }
 
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
-            (int? commitmentHeight, uint? magic) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
+            (int? commitmentHeight, uint? commitmentNetworkMagic) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)
             {
                 // We return here as it is CheckCollateralCommitmentHeightRule's responsibility to perform this check.
@@ -63,7 +63,7 @@ namespace Stratis.Features.Collateral
                 return Task.CompletedTask;
             }
 
-            this.Logger.LogDebug("Commitment is: {0}. Magic is: {1}", commitmentHeight, magic);
+            this.Logger.LogDebug("Commitment is: {0}. Magic is: {1}", commitmentHeight, commitmentNetworkMagic);
 
             // TODO: The code contained in the following "if" can be removed after most nodes have switched their mainchain to Strax.
 
@@ -74,7 +74,7 @@ namespace Stratis.Features.Collateral
 
             // 1. If the block miner is on STRAX then skip this code and go check the collateral.
             Network counterChainNetwork = this.fullNode.NodeService<CounterChainNetworkWrapper>().CounterChainNetwork;
-            if (this.network.Name.StartsWith("Cirrus") && magic != counterChainNetwork.Magic)
+            if (this.network.Name.StartsWith("Cirrus") && commitmentNetworkMagic != counterChainNetwork.Magic)
             {
                 // 2. The block miner is on STRAT.
                 IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
