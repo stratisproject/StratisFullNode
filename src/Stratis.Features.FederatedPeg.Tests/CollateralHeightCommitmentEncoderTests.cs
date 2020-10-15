@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Tests.Common;
 using Stratis.Features.Collateral;
 using Xunit;
 
@@ -29,13 +30,14 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 byte[] encodedWithPrefix = this.encoder.EncodeCommitmentHeight(randomValue);
 
-                var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedWithPrefix));
+                var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedWithPrefix), Op.GetPushOp(KnownNetworks.StraxMain.MagicBytes));
                 var tx = new Transaction();
                 tx.AddOutput(Money.Zero, votingOutputScript);
 
-                int? decodedValue = this.encoder.DecodeCommitmentHeight(tx);
+                (int? decodedValue, uint? magic) = this.encoder.DecodeCommitmentHeight(tx);
 
                 Assert.Equal(randomValue, decodedValue);
+                Assert.Equal(KnownNetworks.StraxMain.Magic, magic);
             }
         }
     }

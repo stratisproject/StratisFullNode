@@ -54,7 +54,7 @@ namespace Stratis.Features.Collateral
                 return Task.CompletedTask;                
 
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
-            int? commitmentHeight = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
+            (int? commitmentHeight, _) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)
             {
                 // We return here as it is CheckCollateralCommitmentHeightRule's responsibility to perform this check.
