@@ -1311,10 +1311,10 @@ namespace Stratis.Bitcoin.Consensus
         public IEnumerable<ChainedHeaderBlock> GetBlocksAfterBlock(ChainedHeader previousHeader, int batchSize, CancellationTokenSource cancellationTokenSource)
         {
             // If previous header is null, start from genesis.
-            if (previousHeader == null)
-                previousHeader = this.chainIndexer.GetHeader(0);
+            int nextHeight = (previousHeader == null) ? 0 : previousHeader.Height + 1;
 
-            for (int height = previousHeader.Height + 1; !cancellationTokenSource.IsCancellationRequested;)
+            // If previous header is null, start from genesis.
+            for (int height = nextHeight; !cancellationTokenSource.IsCancellationRequested;)
             {
                 // Add hashes in a batch.
                 var headerHashes = new List<uint256>();

@@ -72,17 +72,28 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             var result = new SerializableResult<List<MaturedBlockDepositsModel>>
             {
-                Value = new List<MaturedBlockDepositsModel>()
+                Value = new List<MaturedBlockDepositsModel>(),
+                Message = ""
             };
-            
+
+            // If we're asked for blocks beyond the tip then let the caller know that there are no new blocks available.
+            if (maturityHeight > this.consensusManager.Tip.Height)
+                return result;
+
             int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
             int startHeight = maturityHeight - maxConfirmations;
-            ChainedHeader firstBlock = this.consensusManager.Tip.GetAncestor(maturityHeight);
-            firstBlock = firstBlock.EnumerateToGenesis().SkipWhile(h => h.Height > startHeight && (!this.deposits.TryGetValue(h.Height, out BlockDeposits blockDeposits) || blockDeposits.BlockHash != h.HashBlock)).FirstOrDefault();
+
+            // Determine the first block to extract deposits for.
+            ChainedHeader firstToProcess = this.consensusManager.Tip.GetAncestor(maturityHeight);
+            for (ChainedHeader verifyBlock = firstToProcess?.Previous; verifyBlock != null && verifyBlock.Height >= startHeight; verifyBlock = verifyBlock.Previous)
+                if (!this.deposits.TryGetValue(verifyBlock.Height, out BlockDeposits blockDeposits) || blockDeposits.BlockHash != verifyBlock.HashBlock)
+                    firstToProcess = verifyBlock;
+
             var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
             DepositRetrievalType[] retrievalTypes = this.retrievalTypeConfirmations.Keys.ToArray();
 
-            foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlocksAfterBlock(firstBlock?.Previous, MaturedBlocksBatchSize, cancellationToken))
+            // Process the blocks after the previous block until the last available block or time expires.
+            foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlocksAfterBlock(firstToProcess?.Previous, MaturedBlocksBatchSize, cancellationToken))
             {
                 // Find all deposits in the given block.
                 RecordBlockDeposits(chainedHeaderBlock, retrievalTypes);
@@ -120,8 +131,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 // Clean-up.
                 this.deposits.TryRemove(chainedHeaderBlock.ChainedHeader.Height - maxConfirmations, out _);
             }
-
-            result.Message = "";
 
             return result;
         }
