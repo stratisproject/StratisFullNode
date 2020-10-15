@@ -65,8 +65,6 @@ namespace Stratis.Features.Collateral
 
             this.Logger.LogDebug("Commitment is: {0}. Magic is: {1}", commitmentHeight, magic);
 
-            int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
-
             // TODO: The code contained in the following "if" can be removed after most nodes have switched their mainchain to Strax.
 
             // Strategy:
@@ -114,6 +112,7 @@ namespace Stratis.Features.Collateral
             }
 
             // TODO: Both this and CollateralPoAMiner are using this chain's MaxReorg instead of the Counter chain's MaxReorg. Beware: fixing requires fork.
+            int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
             int maxReorgLength = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(this.network);
 
             // Check if commitment height is less than `mainchain consensus tip height - MaxReorg`.
