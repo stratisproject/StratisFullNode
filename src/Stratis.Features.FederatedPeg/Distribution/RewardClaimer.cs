@@ -63,11 +63,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // As this runs on the mainchain we presume there will be a coinstake transaction in the block (but during the PoW era there obviously may not be).
             // If not, just do nothing with this block.
-            if (maturedBlock.Transactions.Count < 2 || !blockConnected.ConnectedBlock.Block.Transactions[1].IsCoinStake)
+            if (maturedBlock.Transactions.Count < 2 || !maturedBlock.Transactions[1].IsCoinStake)
                 return;
 
             // We are only interested in the coinstake, as it is the only transaction that we expect to contain outputs paying the reward script.
-            Transaction coinStake = blockConnected.ConnectedBlock.Block.Transactions[1];
+            Transaction coinStake = maturedBlock.Transactions[1];
 
             // Identify any outputs paying the reward script a nonzero amount.
             TxOut[] rewardOutputs = coinStake.Outputs.Where(o => o.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript && o.Value != 0).ToArray();
