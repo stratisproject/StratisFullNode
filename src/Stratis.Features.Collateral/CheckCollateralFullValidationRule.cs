@@ -86,12 +86,10 @@ namespace Stratis.Features.Collateral
                 // Check the block being validated and any prior blocks in the same round.
                 // We already know at this point that block will not be null so this loop executes 
                 // at least once and memberCount will be at least 1.
-                for (Block block = context.ValidationContext.BlockToValidate; block != null; )
+                for (Block block = context.ValidationContext.BlockToValidate; 
+                    block != null && (block.Header.Time + targetSpacing) >= context.ValidationContext.BlockToValidate.Header.Time;
+                    chainedHeader = chainedHeader.Previous, block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block)
                 {
-                    // If we've retreated to a block outside the current round then exit the loop.
-                    if ((block.Header.Time + targetSpacing) < context.ValidationContext.BlockToValidate.Header.Time)
-                        break;
-
                     (int? commitmentHeight2, uint? magic2) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Transactions.First());
                     if (commitmentHeight2 == null)
                         continue;
@@ -99,10 +97,7 @@ namespace Stratis.Features.Collateral
                     if (magic2 != counterChainNetwork.Magic)
                         membersOnDifferentCounterChain++;
 
-                    memberCount++;
-
-                    chainedHeader = chainedHeader.Previous;
-                    block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+                    memberCount++;                    
                 };
 
                 // If most nodes were on STRAT(prev round) then they will check the rule. Pass the rule.
