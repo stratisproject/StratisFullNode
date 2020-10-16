@@ -8,13 +8,13 @@ using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules;
+using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -105,7 +105,7 @@ namespace Stratis.Sidechains.Networks
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = NBitcoin.Protocol.ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -180,7 +180,7 @@ namespace Stratis.Sidechains.Networks
 
             this.SeedNodes = new List<NetworkAddress>();
 
-            this.StandardScriptsRegistry = new SmartContractsStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
             this.CollateralCommitmentActivationHeight = 25810;
 
@@ -247,7 +247,7 @@ namespace Stratis.Sidechains.Networks
             // ------------------------------------------------------
         }
 
-        private void RegisterMempoolRules(IConsensus consensus)
+        protected override void RegisterMempoolRules(IConsensus consensus)
         {
             consensus.MempoolRules = new List<Type>()
             {
