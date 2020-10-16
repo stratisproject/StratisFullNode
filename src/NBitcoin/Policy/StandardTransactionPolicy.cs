@@ -48,11 +48,11 @@ namespace NBitcoin.Policy
         /// </summary>
         public bool CheckScriptPubKey { get; set; }
 
-        private readonly Network network;
+        protected readonly Network Network;
 
         public StandardTransactionPolicy(Network network)
         {
-            this.network = network;
+            this.Network = network;
             this.ScriptVerify = NBitcoin.ScriptVerify.Standard;
             this.MaxTransactionSize = 100000;
             // TODO: replace fee params with whats in Network.
@@ -78,7 +78,7 @@ namespace NBitcoin.Policy
                 {
                     if (this.ScriptVerify != null)
                     {
-                        if (!input.VerifyScript(this.network, coin.TxOut.ScriptPubKey, coin.TxOut.Value, this.ScriptVerify.Value, out ScriptError error))
+                        if (!input.VerifyScript(this.Network, coin.TxOut.ScriptPubKey, coin.TxOut.Value, this.ScriptVerify.Value, out ScriptError error))
                         {
                             errors.Add(new ScriptPolicyError(input, error, this.ScriptVerify.Value, coin.TxOut.ScriptPubKey));
                         }
@@ -105,7 +105,7 @@ namespace NBitcoin.Policy
                 foreach (IndexedTxIn input in transaction.Inputs.AsIndexedInputs())
                 {
                     ICoin coin = spentCoins.FirstOrDefault(s => s.Outpoint == input.PrevOut);
-                    if (coin != null && coin.GetHashVersion(this.network) != HashVersion.Witness)
+                    if (coin != null && coin.GetHashVersion(this.Network) != HashVersion.Witness)
                         errors.Add(new InputPolicyError("Malleable input detected", input));
                 }
             }
@@ -158,7 +158,7 @@ namespace NBitcoin.Policy
             {
                 foreach (Coin txout in transaction.Outputs.AsCoins())
                 {
-                    ScriptTemplate template = this.network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(txout.ScriptPubKey);
+                    ScriptTemplate template = this.Network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(txout.ScriptPubKey);
 
                     if (template == null)
                         errors.Add(new OutputPolicyError("Non-Standard scriptPubKey", (int)txout.Outpoint.N));
@@ -187,7 +187,7 @@ namespace NBitcoin.Policy
 
         public StandardTransactionPolicy Clone()
         {
-            return new StandardTransactionPolicy(this.network)
+            return new StandardTransactionPolicy(this.Network)
             {
                 MaxTransactionSize = this.MaxTransactionSize,
                 MaxTxFee = this.MaxTxFee,

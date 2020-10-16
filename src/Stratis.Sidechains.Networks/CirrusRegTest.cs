@@ -8,13 +8,13 @@ using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules;
+using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -76,7 +76,7 @@ namespace Stratis.Sidechains.Networks
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
-            List<PubKey> federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
+            var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
             this.Federations = new Federations();
             this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
@@ -166,7 +166,7 @@ namespace Stratis.Sidechains.Networks
             this.DNSSeeds = new List<DNSSeedData>();
             this.SeedNodes = new List<NetworkAddress>();
 
-            this.StandardScriptsRegistry = new SmartContractsStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
             // 16 below should be changed to TargetSpacingSeconds when we move that field.
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
@@ -232,7 +232,7 @@ namespace Stratis.Sidechains.Networks
             // ------------------------------------------------------
         }
 
-        private void RegisterMempoolRules(IConsensus consensus)
+        protected override void RegisterMempoolRules(IConsensus consensus)
         {
             consensus.MempoolRules = new List<Type>()
             {

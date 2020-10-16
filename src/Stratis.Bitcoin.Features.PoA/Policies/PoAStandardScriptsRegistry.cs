@@ -10,7 +10,6 @@ namespace Stratis.Bitcoin.Features.PoA.Policies
     /// </summary>
     public class PoAStandardScriptsRegistry : StandardScriptsRegistry
     {
-        // No legacy clients exist for this network with the constraint of 40 bytes
         public const int MaxOpReturnRelay = 153;
 
         private readonly List<ScriptTemplate> standardTemplates = new List<ScriptTemplate>

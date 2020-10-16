@@ -22,7 +22,7 @@ namespace SwapExtractionTool
             }
             else
             {
-                startBlock = 1_949_800;
+                startBlock = 1975500;
 
                 stratisNetworkApiPort = 37221;
                 straxNetwork = new StraxMain();
