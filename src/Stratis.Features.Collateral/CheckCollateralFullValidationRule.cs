@@ -3,11 +3,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
 {
@@ -21,6 +24,8 @@ namespace Stratis.Features.Collateral
 
         private readonly ISlotsManager slotsManager;
 
+        private readonly IFullNode fullNode;
+
         private readonly IDateTimeProvider dateTime;
 
         private readonly Network network;
@@ -29,12 +34,13 @@ namespace Stratis.Features.Collateral
         private readonly int collateralCheckBanDurationSeconds;
 
         public CheckCollateralFullValidationRule(IInitialBlockDownloadState ibdState, ICollateralChecker collateralChecker,
-            ISlotsManager slotsManager, IDateTimeProvider dateTime, Network network)
+            ISlotsManager slotsManager, IFullNode fullNode, IDateTimeProvider dateTime, Network network)
         {
             this.network = network;
             this.ibdState = ibdState;
             this.collateralChecker = collateralChecker;
             this.slotsManager = slotsManager;
+            this.fullNode = fullNode;
             this.dateTime = dateTime;
 
             this.collateralCheckBanDurationSeconds = (int)(this.network.Consensus.Options as PoAConsensusOptions).TargetSpacingSeconds / 2;
@@ -48,13 +54,8 @@ namespace Stratis.Features.Collateral
                 return Task.CompletedTask;
             }
 
-            // If the time on this block is earlier than the STRAX genesis block then ignore this rule.
-            uint counterChainGenesisBlockTime = this.collateralChecker.GetCounterChainGenesisBlockTime();
-            if (context.ValidationContext.ChainedHeaderToValidate.Header.Time < counterChainGenesisBlockTime)
-                return Task.CompletedTask;                
-
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
-            (int? commitmentHeight, _) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
+            (int? commitmentHeight, uint? commitmentNetworkMagic) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)
             {
                 // We return here as it is CheckCollateralCommitmentHeightRule's responsibility to perform this check.
@@ -62,10 +63,54 @@ namespace Stratis.Features.Collateral
                 return Task.CompletedTask;
             }
 
-            this.Logger.LogDebug("Commitment is: {0}.", commitmentHeight);
+            this.Logger.LogDebug("Commitment is: {0}. Magic is: {1}", commitmentHeight, commitmentNetworkMagic);
+
+            // Strategy:
+            // 1. I'm a Cirrus miner on STRAX. If the block's miner is also on STRAX then check the collateral. Pass or Fail as appropriate.
+            // 2. The block miner is on STRAT. If most nodes were on STRAT(prev round) then they will check the rule. Pass the rule.
+            // 3. The miner is on STRAT and most nodes were on STRAX(prev round).Fail the rule.
+
+            // 1. If the block miner is on STRAX then skip this code and go check the collateral.
+            Network counterChainNetwork = this.fullNode.NodeService<CounterChainNetworkWrapper>().CounterChainNetwork;
+            if (this.network.Name.StartsWith("Cirrus") && commitmentNetworkMagic != counterChainNetwork.Magic)
+            {
+                // 2. The block miner is on STRAT.
+                IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+                int memberCount = 1;
+                int membersOnDifferentCounterChain = 1;
+                uint minimumRoundLength = this.slotsManager.GetRoundLengthSeconds() - ((PoAConsensusOptions)this.network.Consensus.Options).TargetSpacingSeconds / 2;
+
+                // Check and any prior blocks in the same round.
+                foreach (ChainedHeader chainedHeader in context.ValidationContext.ChainedHeaderToValidate.EnumerateToGenesis().Skip(1))
+                {
+                    Block block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+                    if (block == null || (block.Header.Time + minimumRoundLength) < context.ValidationContext.BlockToValidate.Header.Time)
+                        break;
+
+                    (int? commitmentHeight2, uint? magic2) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Transactions.First());
+                    if (commitmentHeight2 == null)
+                        continue;
+
+                    if (magic2 != counterChainNetwork.Magic)
+                        membersOnDifferentCounterChain++;
+
+                    memberCount++;                    
+                };
+
+                // If most nodes were on STRAT(prev round) then they will check the rule. Pass the rule.
+                // This condition will execute if everyone is still on STRAT.
+                if (membersOnDifferentCounterChain * 2 > memberCount)
+                {
+                    this.Logger.LogTrace("(-)SKIPPED_DURING_SWITCHOVER]");
+                    return Task.CompletedTask;
+                }
+
+                // 3. The miner is on STRAT and most nodes were on STRAX(prev round). Fail the rule.
+                this.Logger.LogTrace("(-)[DISALLOW_STRAT_MINER]");
+                PoAConsensusErrors.InvalidCollateralAmount.Throw();
+            }
 
             // TODO: Both this and CollateralPoAMiner are using this chain's MaxReorg instead of the Counter chain's MaxReorg. Beware: fixing requires fork.
-
             int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
             int maxReorgLength = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(this.network);
 

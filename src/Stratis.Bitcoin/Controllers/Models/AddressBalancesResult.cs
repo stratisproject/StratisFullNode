@@ -62,17 +62,14 @@ namespace Stratis.Bitcoin.Controllers.Models
             this.BalancesData = new List<AddressIndexerData>();
         }
 
-        public VerboseAddressBalancesResult(int consensusTipHeight, uint genesisBlockTime) : this()
+        public VerboseAddressBalancesResult(int consensusTipHeight) : this()
         {
             this.ConsensusTipHeight = consensusTipHeight;
-            this.GenesisBlockTime = genesisBlockTime;
         }
 
         public List<AddressIndexerData> BalancesData { get; set; }
 
         public int ConsensusTipHeight { get; set; }
-
-        public uint GenesisBlockTime { get; set; }
 
         [JsonProperty("reason")]
         public string Reason { get; private set; }

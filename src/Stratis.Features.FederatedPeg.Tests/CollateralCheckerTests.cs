@@ -80,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             var blockStoreClientMock = new Mock<IBlockStoreClient>();
 
-            var collateralData = new VerboseAddressBalancesResult(this.collateralCheckHeight + 1000, 0)
+            var collateralData = new VerboseAddressBalancesResult(this.collateralCheckHeight + 1000)
             {
                 BalancesData = new List<AddressIndexerData>()
                 {

@@ -600,10 +600,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <inheritdoc />
         public VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses)
         {
-            var result = new VerboseAddressBalancesResult(this.consensusManager.Tip.Height, this.chainIndexer.GetHeader(0).Header.Time);
-
-            if (this.chainIndexer.Tip.Height >= 1)
-                result.GenesisBlockTime = this.chainIndexer.GetHeader(1).Header.Time - (uint)this.network.Consensus.PowTargetTimespan.Seconds;
+            var result = new VerboseAddressBalancesResult(this.consensusManager.Tip.Height);
 
             if (addresses.Length == 0)
                 return result;
