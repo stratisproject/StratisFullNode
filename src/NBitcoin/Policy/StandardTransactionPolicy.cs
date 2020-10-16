@@ -48,7 +48,7 @@ namespace NBitcoin.Policy
         /// </summary>
         public bool CheckScriptPubKey { get; set; }
 
-        public readonly Network Network;
+        protected readonly Network Network;
 
         public StandardTransactionPolicy(Network network)
         {
