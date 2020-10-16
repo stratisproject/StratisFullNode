@@ -1174,6 +1174,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     Address = this.federatedPegSettings.MultiSigAddress.ToString(),
                     M = this.federatedPegSettings.MultiSigM,
                     ScriptPubKey = this.federatedPegSettings.MultiSigAddress.ScriptPubKey,
+                    Pubkeys = this.federatedPegSettings.FederationPublicKeys.Select(k => k.ToHex()).ToArray(),
                     RedeemScript = this.federatedPegSettings.MultiSigRedeemScript,
                     Transactions = new MultiSigTransactions()
                 }
