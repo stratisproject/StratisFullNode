@@ -80,7 +80,7 @@ namespace Stratis.Features.Collateral
                 int membersOnDifferentCounterChain = 1;
                 uint minimumRoundLength = this.slotsManager.GetRoundLengthSeconds() - ((PoAConsensusOptions)this.network.Consensus.Options).TargetSpacingSeconds / 2;
 
-                // Check the block being validated and any prior blocks in the same round.
+                // Check and any prior blocks in the same round.
                 foreach (ChainedHeader chainedHeader in context.ValidationContext.ChainedHeaderToValidate.EnumerateToGenesis().Skip(1))
                 {
                     Block block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
