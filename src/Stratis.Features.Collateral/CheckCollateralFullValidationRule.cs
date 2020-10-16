@@ -76,18 +76,17 @@ namespace Stratis.Features.Collateral
             {
                 // 2. The block miner is on STRAT.
                 IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
-                int memberCount = 0;
-                int membersOnDifferentCounterChain = 0;
+                int memberCount = 1;
+                int membersOnDifferentCounterChain = 1;
                 uint targetSpacing = this.slotsManager.GetRoundLengthSeconds();
-                ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
                 // Check the block being validated and any prior blocks in the same round.
-                // We already know at this point that block will not be null so this loop executes 
-                // at least once and memberCount will be at least 1.
-                for (Block block = context.ValidationContext.BlockToValidate; 
-                    block != null && (block.Header.Time + targetSpacing) >= context.ValidationContext.BlockToValidate.Header.Time;
-                    chainedHeader = chainedHeader.Previous, block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block)
+                foreach (ChainedHeader chainedHeader in context.ValidationContext.ChainedHeaderToValidate.EnumerateToGenesis().Skip(1))
                 {
+                    Block block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+                    if (block == null || (block.Header.Time + targetSpacing) < context.ValidationContext.BlockToValidate.Header.Time)
+                        break;
+
                     (int? commitmentHeight2, uint? magic2) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Transactions.First());
                     if (commitmentHeight2 == null)
                         continue;
