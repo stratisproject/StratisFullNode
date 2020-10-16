@@ -78,13 +78,13 @@ namespace Stratis.Features.Collateral
                 IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
                 int memberCount = 1;
                 int membersOnDifferentCounterChain = 1;
-                uint targetSpacing = this.slotsManager.GetRoundLengthSeconds();
+                uint minimumRoundLength = this.slotsManager.GetRoundLengthSeconds() - ((PoAConsensusOptions)this.network.Consensus.Options).TargetSpacingSeconds / 2;
 
                 // Check the block being validated and any prior blocks in the same round.
                 foreach (ChainedHeader chainedHeader in context.ValidationContext.ChainedHeaderToValidate.EnumerateToGenesis().Skip(1))
                 {
                     Block block = chainedHeader?.Block ?? consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
-                    if (block == null || (block.Header.Time + targetSpacing) < context.ValidationContext.BlockToValidate.Header.Time)
+                    if (block == null || (block.Header.Time + minimumRoundLength) < context.ValidationContext.BlockToValidate.Header.Time)
                         break;
 
                     (int? commitmentHeight2, uint? magic2) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Transactions.First());
