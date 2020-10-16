@@ -28,14 +28,14 @@ namespace Stratis.SmartContracts.CLR.Tests.Logs
         [Fact]
         public void RawLog_With_Null_Value_Serializes()
         {
-            var serializer = new ContractPrimitiveSerializer(new SmartContractPosRegTest());
+            var serializer = new ContractPrimitiveSerializer(new SmartContractsPoARegTest());
             var exampleLog = new Example(null, 0);
 
             var rawLog = new RawLog(uint160.One, exampleLog);
             var log = rawLog.ToLog(serializer);
 
             Assert.Equal(3, log.Topics.Count);
-            Assert.Equal((string) nameof(Example), (string) Encoding.UTF8.GetString(log.Topics[0]));
+            Assert.Equal((string)nameof(Example), (string)Encoding.UTF8.GetString(log.Topics[0]));
 
             // Check that null has been serialized correctly
             Assert.Equal(new byte[0], log.Topics[1]);
