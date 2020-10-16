@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -25,16 +26,18 @@ namespace Stratis.Features.FederatedPeg.Distribution
     {
         private readonly IBroadcasterManager broadcasterManager;
         private readonly ChainIndexer chainIndexer;
+        private readonly IConsensusManager consensusManager;
         private readonly ILogger logger;
         private readonly Network network;
         private readonly ISignals signals;
 
         private readonly SubscriptionToken blockConnectedSubscription;
 
-        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, ILoggerFactory loggerFactory, Network network, ISignals signals)
+        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, IConsensusManager consensusManager, ILoggerFactory loggerFactory, Network network, ISignals signals)
         {
             this.broadcasterManager = broadcasterManager;
             this.chainIndexer = chainIndexer;
+            this.consensusManager = consensusManager;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.signals = signals;
@@ -60,6 +63,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
             ChainedHeader chainedHeader = this.chainIndexer.GetHeader(chainTip.Height - minStakeConfirmations);
 
             Block maturedBlock = chainedHeader.Block;
+            if (maturedBlock == null)
+                maturedBlock = this.consensusManager.GetBlockData(maturedBlock.GetHash()).Block;
 
             // As this runs on the mainchain we presume there will be a coinstake transaction in the block (but during the PoW era there obviously may not be).
             // If not, just do nothing with this block.
