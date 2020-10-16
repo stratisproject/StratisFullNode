@@ -108,7 +108,8 @@ namespace SwapExtractionTool
                 ProcessBlockForSwapTransactions(block, height);
             }
 
-            Console.WriteLine($"{this.swapTransactions.Count} swap transactions to process...");
+            Console.WriteLine($"{this.swapTransactions.Count} swap transactions to process.");
+            Console.WriteLine($"{Money.Satoshis(this.swapTransactions.Sum(s => s.SenderAmount)).ToUnit(MoneyUnit.BTC)} STRAT swapped.");
 
             using (var writer = new StreamWriter(Path.Combine(this.swapFilePath, "swaps.csv")))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))

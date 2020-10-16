@@ -2,7 +2,7 @@
 {
     public sealed class DistributedSwapTransaction
     {
-        public int BlockHeight { get; set; }
+        public long BlockHeight { get; set; }
         public string StraxAddress { get; set; }
         public decimal SenderAmount { get; set; }
         public string TransactionHash { get; set; }
