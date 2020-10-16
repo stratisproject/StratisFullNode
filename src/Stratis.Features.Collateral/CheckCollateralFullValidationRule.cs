@@ -65,8 +65,6 @@ namespace Stratis.Features.Collateral
 
             this.Logger.LogDebug("Commitment is: {0}. Magic is: {1}", commitmentHeight, commitmentNetworkMagic);
 
-            // TODO: The code contained in the following "if" can be removed after most nodes have switched their mainchain to Strax.
-
             // Strategy:
             // 1. I'm a Cirrus miner on STRAX. If the block's miner is also on STRAX then check the collateral. Pass or Fail as appropriate.
             // 2. The block miner is on STRAT. If most nodes were on STRAT(prev round) then they will check the rule. Pass the rule.
