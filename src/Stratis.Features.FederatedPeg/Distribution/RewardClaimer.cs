@@ -66,6 +66,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (maturedBlock == null)
                 maturedBlock = this.consensusManager.GetBlockData(maturedBlock.GetHash()).Block;
 
+            // If we still don't have the block data, just return.
+            if (maturedBlock == null)
+            {
+                this.logger.LogDebug("Consensus does not have the block data for '{0}'", chainedHeader);
+                return;
+            }
+
             // As this runs on the mainchain we presume there will be a coinstake transaction in the block (but during the PoW era there obviously may not be).
             // If not, just do nothing with this block.
             if (maturedBlock.Transactions.Count < 2 || !maturedBlock.Transactions[1].IsCoinStake)
