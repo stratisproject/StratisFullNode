@@ -64,7 +64,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             Block maturedBlock = chainedHeader.Block;
             if (maturedBlock == null)
-                maturedBlock = this.consensusManager.GetBlockData(maturedBlock.GetHash()).Block;
+                maturedBlock = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
 
             // If we still don't have the block data, just return.
             if (maturedBlock == null)
