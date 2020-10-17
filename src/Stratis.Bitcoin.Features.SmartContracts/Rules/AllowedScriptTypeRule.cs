@@ -58,9 +58,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (output.ScriptPubKey.IsSmartContractInternalCall())
                 return;
 
-            if (network.StandardScriptsRegistry.IsStandardScriptPubKey(network, output.ScriptPubKey))
-                return;
-
             if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
