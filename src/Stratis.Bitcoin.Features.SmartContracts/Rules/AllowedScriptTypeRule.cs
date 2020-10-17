@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             {
                 foreach (TxOut output in transaction.Outputs)
                 {
-                    CheckOutput(output);
+                    CheckOutput(network, output);
                 }
 
                 foreach (TxIn input in transaction.Inputs)
@@ -50,7 +50,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             }
         }
 
-        private static void CheckOutput(TxOut output)
+        private static void CheckOutput(Network network, TxOut output)
         {
             if (output.ScriptPubKey.IsSmartContractExec())
                 return;
@@ -61,20 +61,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
-            // For cross-chain transfers
+            // For cross-chain transfers	
             if (PayToScriptHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
-            // For cross-chain transfers
+            // For cross-chain transfers	
             if (PayToMultiSigTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
-            // For cross-chain transfers
+            // For cross-chain transfers	
             if (PayToFederationTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
-            // For cross-chain transfers
-            if (TxNullDataTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
+            // For cross-chain transfers	
+            if (network.StandardScriptsRegistry[typeof(TxNullDataTemplate)].CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
             new ConsensusError("disallowed-output-script", "Only the following script types are allowed on smart contracts network: P2PKH, P2SH, P2MultiSig, OP_RETURN and smart contracts").Throw();
@@ -88,20 +88,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (PayToPubkeyHashTemplate.Instance.CheckScriptSig(network, input.ScriptSig))
                 return;
 
-            // Currently necessary to spend premine. Could be stricter.
+            // Currently necessary to spend premine. Could be stricter.	
             if (PayToPubkeyTemplate.Instance.CheckScriptSig(network, input.ScriptSig, null))
                 return;
 
             if (PayToScriptHashTemplate.Instance.CheckScriptSig(network, input.ScriptSig, null))
                 return;
 
-            // For cross-chain transfers
+            // For cross-chain transfers	
             if (PayToMultiSigTemplate.Instance.CheckScriptSig(network, input.ScriptSig, null))
                 return;
 
-            // For cross-chain transfers
+            // For cross-chain transfers	
             if (PayToFederationTemplate.Instance.CheckScriptSig(network, input.ScriptSig, null))
-            return;
+                return;
 
             new ConsensusError("disallowed-input-script", "Only the following script types are allowed on smart contracts network: P2PKH, P2SH, P2MultiSig, OP_RETURN and smart contracts").Throw();
         }
