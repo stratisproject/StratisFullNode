@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
@@ -324,29 +325,25 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.logger.LogDebug("Fed member '{0}' already voted for this poll. Ignoring his vote. Poll: '{1}'.", fedMemberKeyHex, poll);
                     }
 
-                    List<string> fedMembersHex = this.federationManager.GetFederationMembers().Select(x => x.PubKey.ToHex()).ToList();
+                    var fedMembersHex = new ConcurrentHashSet<string>(this.federationManager.GetFederationMembers().Select(x => x.PubKey.ToHex()));
+
+                    // Member that were about to be kicked when voting started don't participate.
+                    if (this.idleFederationMembersKicker != null)
+                    {
+                        ChainedHeader chainedHeader = chBlock.ChainedHeader.GetAncestor(poll.PollStartBlockData.Height);
+
+                        foreach (string pubKey in fedMembersHex)
+                        {
+                            if (this.idleFederationMembersKicker.ShouldBeKicked(new PubKey(pubKey), chainedHeader.Header.Time, out _))
+                            {
+                                fedMembersHex.TryRemove(pubKey);
+                            }
+                        }
+                    }
 
                     // It is possible that there is a vote from a federation member that was deleted from the federation.
                     // Do not count votes from entities that are not active fed members.
                     int validVotesCount = poll.PubKeysHexVotedInFavor.Count(x => fedMembersHex.Contains(x));
-
-                    // In a federation containing only two members we would normally require both members to
-                    // vote in favor of removing one of the members. However, in the "auto-kick" scenario where 
-                    // one member is inactive we will add the required vote on behalf of the missing member.
-                    if (poll.VotingData.Key == VoteKey.KickFederationMember && this.idleFederationMembersKicker != null)
-                    {
-                        IFederationMember federationMember = this.GetMemberVotedOn(data);
-                        if (federationMember != null && !poll.PubKeysHexVotedInFavor.Any(k => k == federationMember.PubKey.ToHex()))
-                        {
-                            ChainedHeader chainedHeader = chBlock.ChainedHeader.GetAncestor(poll.PollStartBlockData.Height);
-                            if (this.idleFederationMembersKicker.ShouldBeKicked(federationMember.PubKey, chainedHeader.Header.Time, out _))
-                            {
-                                // Add "ghost" vote.
-                                this.logger.LogDebug("Counting a vote on behalf of the inactive or retired federation member: {0}.", federationMember.PubKey.ToHex());
-                                validVotesCount++;
-                            }
-                        }
-                    }
 
                     int requiredVotesCount = (fedMembersHex.Count / 2) + 1;
 
