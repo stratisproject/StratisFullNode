@@ -68,10 +68,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
-            var idleFederationMembersKicker = new Mock<IdleFederationMembersKicker>();
-
             this.votingManager = new VotingManager(this.federationManager, this.loggerFactory, this.slotsManager, this.resultExecutorMock.Object, new NodeStats(timeProvider, this.loggerFactory),
-                 dataFolder, this.dBreezeSerializer, this.signals, finalizedBlockRepo, this.network, idleFederationMembersKicker.Object);
+                 dataFolder, this.dBreezeSerializer, this.signals, finalizedBlockRepo, this.network);
 
             this.votingManager.Initialize();
 

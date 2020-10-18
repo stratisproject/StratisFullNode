@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private readonly PollsRepository pollsRepository;
 
-        private readonly IdleFederationMembersKicker idleFederationMembersKicker;
+        private IdleFederationMembersKicker idleFederationMembersKicker;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -57,8 +57,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private bool isInitialized;
 
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, ISlotsManager slotsManager, IPollResultExecutor pollResultExecutor,
-            INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, IFinalizedBlockInfoRepository finalizedBlockInfo, 
-            Network network, IdleFederationMembersKicker idleFederationMembersKicker)
+            INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, IFinalizedBlockInfoRepository finalizedBlockInfo, Network network)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.slotsManager = Guard.NotNull(slotsManager, nameof(slotsManager));
@@ -73,13 +72,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.pollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer);
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
-            this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.isInitialized = false;
         }
 
-        public void Initialize()
+        public void Initialize(IdleFederationMembersKicker idleFederationMembersKicker = null)
         {
+            this.idleFederationMembersKicker = idleFederationMembersKicker;
+
             this.pollsRepository.Initialize();
 
             this.polls = this.pollsRepository.GetAllPolls();
@@ -333,7 +333,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // In a federation containing only two members we would normally require both members to
                     // vote in favor of removing one of the members. However, in the "auto-kick" scenario where 
                     // one member is inactive we will add the required vote on behalf of the missing member.
-                    if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    if (poll.VotingData.Key == VoteKey.KickFederationMember && this.idleFederationMembersKicker != null)
                     {
                         IFederationMember federationMember = this.GetMemberVotedOn(data);
                         if (federationMember != null && !poll.PubKeysHexVotedInFavor.Any(k => k == federationMember.PubKey.ToHex()))
