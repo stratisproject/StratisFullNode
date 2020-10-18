@@ -41,6 +41,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private readonly PollsRepository pollsRepository;
 
+        private readonly IdleFederationMembersKicker idleFederationMembersKicker;
+
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private List<Poll> polls;
@@ -55,7 +57,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private bool isInitialized;
 
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, ISlotsManager slotsManager, IPollResultExecutor pollResultExecutor,
-            INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, IFinalizedBlockInfoRepository finalizedBlockInfo, Network network)
+            INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, IFinalizedBlockInfoRepository finalizedBlockInfo, 
+            Network network, IdleFederationMembersKicker idleFederationMembersKicker)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.slotsManager = Guard.NotNull(slotsManager, nameof(slotsManager));
@@ -70,6 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.pollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer);
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
+            this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.isInitialized = false;
         }
@@ -231,18 +235,23 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
         }
 
-        private bool IsVotingOnMultisigMember(VotingData votingData)
+        private IFederationMember GetMemberVotedOn(VotingData votingData)
         {
             if (votingData.Key != VoteKey.AddFederationMember && votingData.Key != VoteKey.KickFederationMember)
-                return false;
+                return null;
 
             if (!(this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory))
-                return false;
+                return null;
 
-            IFederationMember member = poaConsensusFactory.DeserializeFederationMember(votingData.Data);
+            return poaConsensusFactory.DeserializeFederationMember(votingData.Data);
+        }
+
+        private bool IsVotingOnMultisigMember(VotingData votingData)
+        {
+            IFederationMember member = GetMemberVotedOn(votingData);
 
             // Ignore votes on multisig-members.
-            return FederationVotingController.IsMultisigMember(this.network, member.PubKey);
+            return member != null && FederationVotingController.IsMultisigMember(this.network, member.PubKey);
         }
 
         private void OnBlockConnected(BlockConnected blockConnected)
@@ -320,6 +329,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // It is possible that there is a vote from a federation member that was deleted from the federation.
                     // Do not count votes from entities that are not active fed members.
                     int validVotesCount = poll.PubKeysHexVotedInFavor.Count(x => fedMembersHex.Contains(x));
+
+                    // In a federation containing only two members we would normally require both members to
+                    // vote in favor of removing one of the members. However, in the "auto-kick" scenario where 
+                    // one member is inactive we will add the required vote on behalf of the missing member.
+                    if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    {
+                        IFederationMember federationMember = this.GetMemberVotedOn(data);
+                        if (federationMember != null && !poll.PubKeysHexVotedInFavor.Any(k => k == federationMember.PubKey.ToHex()))
+                        {
+                            ChainedHeader chainedHeader = chBlock.ChainedHeader.GetAncestor(poll.PollStartBlockData.Height);
+                            if (this.idleFederationMembersKicker.ShouldBeKicked(federationMember.PubKey, chainedHeader.Header.Time, out _))
+                            {
+                                // Add "ghost" vote.
+                                this.logger.LogDebug("Counting a vote on behalf of the inactive or retired federation member: {0}.", federationMember.PubKey.ToHex());
+                                validVotesCount++;
+                            }
+                        }
+                    }
 
                     int requiredVotesCount = (fedMembersHex.Count / 2) + 1;
 
