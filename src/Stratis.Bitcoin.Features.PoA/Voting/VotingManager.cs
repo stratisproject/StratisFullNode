@@ -264,7 +264,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return modifiedFederation;
         }
 
-        private bool IsVotingOnMultisigMember(VotingData votingData)
+        private IFederationMember GetMemberVotedOn(VotingData votingData)
         {
             if (votingData.Key != VoteKey.AddFederationMember && votingData.Key != VoteKey.KickFederationMember)
                 return null;
