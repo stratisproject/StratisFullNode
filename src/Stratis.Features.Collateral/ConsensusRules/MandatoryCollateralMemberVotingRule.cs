@@ -109,24 +109,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
         public PubKey GetBlockMiner(ChainedHeader currentHeader)
         {
-            List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
-            var consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
-
-            foreach (Poll poll in this.ruleEngine.VotingManager.GetFinishedPolls().Where(x => !x.IsExecuted &&
-                ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
-            {
-                if ((currentHeader.Height - poll.PollVotedInFavorBlockData.Height) <= this.network.Consensus.MaxReorgLength)
-                    // Not applied yet.
-                    continue;
-
-                IFederationMember federationMember = consensusFactory.DeserializeFederationMember(poll.VotingData.Data);
-
-                if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                    modifiedFederation.Add(federationMember);
-                else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                    modifiedFederation.Remove(federationMember);
-            }
-
+            List<IFederationMember> modifiedFederation = this.ruleEngine.VotingManager.GetModifiedFederation(currentHeader);
             return this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey;
         }
     }
