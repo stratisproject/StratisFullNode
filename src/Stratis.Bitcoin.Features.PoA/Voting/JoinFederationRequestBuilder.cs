@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Wallet;
@@ -11,7 +10,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public static class JoinFederationRequestBuilder
     {
-        public const decimal VotingRequestTransferAmount = 0.01m;
+        public const decimal VotingRequestTransferAmount = 500m;
         public const int VotingRequestExpectedInputCount = 1;
         public const int VotingRequestExpectedOutputCount = 2;
 
@@ -48,6 +47,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             IList<Op> ops = trx.Outputs[1].ScriptPubKey.ToOps();
 
             if (ops[0].Code != OpcodeType.OP_RETURN)
+                return null;
+
+            if (trx.Outputs[1].Value.ToDecimal(MoneyUnit.BTC) != VotingRequestTransferAmount)
                 return null;
 
             return encoder.Decode(ops[1].PushData);
