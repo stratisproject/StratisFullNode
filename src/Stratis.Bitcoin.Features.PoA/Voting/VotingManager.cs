@@ -231,6 +231,34 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
         }
 
+        public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader)
+        {
+            // Starting with the current federation...
+            List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
+
+            if (this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory)
+            {
+                // ...reverse executed polls that would not have been executed yet at the currentHeader height.
+                foreach (Poll poll in this.GetFinishedPolls().Where(x => x.IsExecuted &&
+                    ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                {
+                    if ((poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) < chainedHeader.Height)
+                        // This poll does not require reversal as it would have been applied before the currentHeader height.
+                        continue;
+
+                    IFederationMember federationMember = poaConsensusFactory.DeserializeFederationMember(poll.VotingData.Data);
+
+                    // Reverse addition/removal.
+                    if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                        modifiedFederation.Remove(federationMember);
+                    else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                        modifiedFederation.Add(federationMember);
+                }
+            }
+
+            return modifiedFederation;
+        }
+
         private bool IsVotingOnMultisigMember(VotingData votingData)
         {
             if (votingData.Key != VoteKey.AddFederationMember && votingData.Key != VoteKey.KickFederationMember)
@@ -271,7 +299,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             // Pub key of a fed member that created voting data.
-            string fedMemberKeyHex = this.slotsManager.GetFederationMemberForTimestamp(chBlock.Block.Header.Time).PubKey.ToHex();
+            List<IFederationMember> modifiedFederation = this.GetModifiedFederation(chBlock.ChainedHeader);
+            string fedMemberKeyHex = this.slotsManager.GetFederationMemberForTimestamp(chBlock.Block.Header.Time, modifiedFederation).PubKey.ToHex();
 
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(rawVotingData);
 

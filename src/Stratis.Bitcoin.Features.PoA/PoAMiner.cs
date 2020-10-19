@@ -362,7 +362,8 @@ namespace Stratis.Bitcoin.Features.PoA
             for (int i = tip.Height; (i > 0) && (i > tip.Height - maxDepth); i--)
             {
                 // Add stats for current header.
-                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentTime).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                List<IFederationMember> modifiedFederation = this.votingManager.GetModifiedFederation(currentHeader);
+                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentTime, modifiedFederation).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
                 log.Append("[" + pubKeyRepresentation + "]-");
                 depthReached++;
