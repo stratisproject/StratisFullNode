@@ -137,7 +137,7 @@ namespace Stratis.Features.Collateral
             Poll poll = votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
                   x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
-            joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.ToBytes());
+            joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().Take(16).ToArray());
 
             // Get the signature by calling the counter-chain "signmessage" API.
             var signMessageRequest = new SignMessageRequest()
