@@ -49,7 +49,7 @@ namespace NBitcoin
         public virtual bool IsStandardScriptSig(Network network, Script scriptSig, Script scriptPubKey = null)
         {
             if (scriptPubKey == null)
-                return this.GetScriptTemplates.Any(template => template.CheckScriptSig(network, scriptSig, null));
+                return this.GetScriptTemplates.Any(x => x.CheckScriptSig(network, scriptSig, null));
 
             ScriptTemplate template = this.GetTemplateFromScriptPubKey(scriptPubKey);
             if (template == null)
