@@ -284,11 +284,11 @@ namespace Stratis.Features.FederatedPeg
             }
 
             IMaturedBlocksProvider maturedBlocksProvider = this.fullNode.NodeService<IMaturedBlocksProvider>();
-            (int blocksBeforeMature, IDeposit deposit)[] maturingDeposits = maturedBlocksProvider.GetMaturingDeposits(20);
+            (int blocksBeforeMature, IDeposit deposit)[] maturingDeposits = maturedBlocksProvider.GetMaturingDeposits(21);
             if (maturingDeposits.Length > 0)
             {
                 benchLog.AppendLine("--- Maturing Deposits ---");
-                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d => $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {d.deposit.TargetAddress} ({d.deposit.RetrievalType})")));
+                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d => $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {d.deposit.TargetAddress} ({d.deposit.RetrievalType})").Take(20)));
                 if (maturingDeposits.Length > 20)
                     benchLog.AppendLine("...");
                 benchLog.AppendLine();
