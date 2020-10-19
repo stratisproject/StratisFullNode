@@ -27,7 +27,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <summary>
         /// Retrieves the list of maturing deposits from the cache (if available).
         /// </summary>
-        /// <param name="maxToReturn">The maxiumum number of deposits to return.</param>
+        /// <param name="maxToReturn">The maximum number of deposits to return.</param>
         /// <returns>A list of maturing deposits ordered by first maturing.</returns>
         (int blocksBeforeMature, IDeposit deposit)[] GetMaturingDeposits(int maxToReturn);
     }
