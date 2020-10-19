@@ -94,7 +94,7 @@ namespace Stratis.Features.Collateral
                     Poll poll = this.votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
                           x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
-                    request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().Take(16).ToArray());
+                    request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());
 
                     // Check the signature.
                     PubKey key = PubKey.RecoverFromMessage(request.SignatureMessage, request.Signature);
