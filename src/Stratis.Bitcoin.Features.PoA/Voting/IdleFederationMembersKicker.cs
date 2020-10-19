@@ -112,6 +112,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        public bool ShouldBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds)
+        {
+            if (!this.fedPubKeysByLastActiveTime.TryGetValue(pubKey, out uint lastActiveTime))
+            {
+                inactiveForSeconds = 0;
+                return false;
+            }
+            
+            inactiveForSeconds = blockTime - lastActiveTime;
+
+            return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !FederationVotingController.IsMultisigMember(this.network, pubKey));
+        }
+
         private void OnBlockConnected(BlockConnected blockConnectedData)
         {
             // Update last active time.
@@ -122,14 +135,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.SaveMembersByLastActiveTime();
 
             // Check if any fed member was idle for too long.
-            ChainedHeader tip = this.consensusManager.Tip;
-
             foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.fedPubKeysByLastActiveTime)
             {
-                uint inactiveForSeconds = tip.Header.Time - fedMemberToActiveTime.Value;
-
-                if (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && this.federationManager.IsFederationMember && 
-                    !FederationVotingController.IsMultisigMember(this.network, fedMemberToActiveTime.Key))
+                // Check if any fed member was idle for too long. Use the timestamp of the connecting block.
+                if (this.ShouldBeKicked(fedMemberToActiveTime.Key, timestamp, out uint inactiveForSeconds))
                 {
                     IFederationMember memberToKick = this.federationManager.GetFederationMembers().SingleOrDefault(x => x.PubKey == fedMemberToActiveTime.Key);
 
