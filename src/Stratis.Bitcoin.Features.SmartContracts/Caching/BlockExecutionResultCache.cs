@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Caching
         /// <inheritdoc />
         public void StoreExecutionResult(uint256 blockHash, BlockExecutionResultModel result)
         {
-            this.cachedExecutions.Add(blockHash, result);
+            this.cachedExecutions[blockHash] = result;
         }
     }
 }

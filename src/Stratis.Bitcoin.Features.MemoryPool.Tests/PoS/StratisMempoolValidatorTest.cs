@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
 using NBitcoin.Crypto;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Policies;
@@ -979,6 +980,166 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             Assert.True(state.MissingInputs);
 
             // TODO: Also need test for !context.View.HaveInputs(context.Transaction) case. It is not immediately obvious how to trigger the one failure but not the other. Maybe by messing with the spentness?
+        }
+
+        [Fact]
+        public async Task AcceptToMemoryPool_RewardTxToValidDestination_ReturnsTrueAsync()
+        {
+            string dataDir = GetTestDirectoryPath(this);
+
+            var minerSecret = new BitcoinSecret(new Key(), this.Network);
+            ITestChainContext context = await TestChainFactory.CreatePosAsync(this.Network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
+            IMempoolValidator validator = context.MempoolValidator;
+            Assert.NotNull(validator);
+
+            Transaction tx = this.Network.CreateTransaction();
+
+            // The current chain factory only gives blocks from the PoW phase of the network, which are not required to have the
+            // reward split. So create a dummy reward output to spend from first.
+            tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
+            tx.AddOutput(new TxOut(Money.Coins(1), StraxCoinstakeRule.CirrusRewardScript));
+            tx.Sign(this.Network, minerSecret, false);
+
+            var state = new MempoolValidationState(false);
+
+            bool isSuccess = await validator.AcceptToMemoryPool(state, tx);
+            Assert.True(isSuccess, "Valid precursor transaction should have been accepted.");
+
+            // Now try spend the 'reward' output to the correct destination.
+            Transaction tx2 = this.Network.CreateTransaction();
+
+            tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
+
+            // These transactions must be acceptable with zero fees, so spend the entire value of the precursor transaction.
+            tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript));
+
+            // Without the marker output a zero fee would not be allowed as the transaction is not in the proper cross-chain format.
+            tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag));
+
+            tx2.Sign(this.Network, minerSecret, true);
+
+            isSuccess = await validator.AcceptToMemoryPool(state, tx2);
+
+            Assert.True(isSuccess, "Transaction spending reward output to valid destination should have been accepted.");
+        }
+
+        [Fact]
+        public async Task AcceptToMemoryPool_RewardTxToValidDestinationWithNonzeroOpreturn_ReturnsFalseAsync()
+        {
+            string dataDir = GetTestDirectoryPath(this);
+
+            var minerSecret = new BitcoinSecret(new Key(), this.Network);
+            ITestChainContext context = await TestChainFactory.CreatePosAsync(this.Network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
+            IMempoolValidator validator = context.MempoolValidator;
+            Assert.NotNull(validator);
+
+            Transaction tx = this.Network.CreateTransaction();
+
+            // The current chain factory only gives blocks from the PoW phase of the network, which are not required to have the
+            // reward split. So create a dummy reward output to spend from first.
+            tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
+            tx.AddOutput(new TxOut(Money.Coins(1), StraxCoinstakeRule.CirrusRewardScript));
+            tx.Sign(this.Network, minerSecret, false);
+
+            var state = new MempoolValidationState(false);
+
+            bool isSuccess = await validator.AcceptToMemoryPool(state, tx);
+            Assert.True(isSuccess, "Valid precursor transaction should have been accepted.");
+
+            // Now try spend the 'reward' output to the correct destination.
+            Transaction tx2 = this.Network.CreateTransaction();
+
+            tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
+            tx2.AddOutput(new TxOut(tx.Outputs.First().Value - Money.Coins(0.05m), this.Network.Federations.GetOnlyFederation().MultisigScript));
+
+            // Assign some of the value to the unspendable output.
+            tx2.AddOutput(new TxOut(Money.Coins(0.05m), StraxCoinstakeRule.CirrusTransactionTag));
+
+            tx2.Sign(this.Network, minerSecret, true);
+
+            isSuccess = await validator.AcceptToMemoryPool(state, tx2);
+
+            Assert.False(isSuccess, "Transaction with nonzero OP_RETURN value should not have been accepted.");
+            Assert.Equal("bad-txns-script-failed", state.Error.ConsensusError.Code);
+        }
+
+        [Fact]
+        public async Task AcceptToMemoryPool_RewardTxToValidDestinationWithoutMarkerOutput_ReturnsFalseAsync()
+        {
+            string dataDir = GetTestDirectoryPath(this);
+
+            var minerSecret = new BitcoinSecret(new Key(), this.Network);
+            ITestChainContext context = await TestChainFactory.CreatePosAsync(this.Network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
+            IMempoolValidator validator = context.MempoolValidator;
+            Assert.NotNull(validator);
+
+            Transaction tx = this.Network.CreateTransaction();
+
+            // The current chain factory only gives blocks from the PoW phase of the network, which are not required to have the
+            // reward split. So create a dummy reward output to spend from first.
+            tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
+            tx.AddOutput(new TxOut(Money.Coins(1), StraxCoinstakeRule.CirrusRewardScript));
+            tx.Sign(this.Network, minerSecret, false);
+
+            var state = new MempoolValidationState(false);
+
+            bool isSuccess = await validator.AcceptToMemoryPool(state, tx);
+            Assert.True(isSuccess, "Valid precursor transaction should have been accepted.");
+
+            // Now try spend the 'reward' output to the correct destination.
+            Transaction tx2 = this.Network.CreateTransaction();
+
+            tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
+
+            // We do not have the marker output, so a zero fee transaction will be rejected, as the fee logic bypass conditions aren't met.
+            tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript));
+
+            tx2.Sign(this.Network, minerSecret, true);
+
+            isSuccess = await validator.AcceptToMemoryPool(state, tx2);
+
+            Assert.False(isSuccess, "Transaction with zero fee and no marker output should not have been accepted.");
+            Assert.Equal("insufficient-priority", state.Error.Code);
+            Assert.Equal(66, state.Error.RejectCode);
+        }
+
+        [Fact]
+        public async Task AcceptToMemoryPool_RewardTxToInvalidDestination_ReturnsFalseAsync()
+        {
+            string dataDir = GetTestDirectoryPath(this);
+
+            var minerSecret = new BitcoinSecret(new Key(), this.Network);
+            ITestChainContext context = await TestChainFactory.CreatePosAsync(this.Network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
+            IMempoolValidator validator = context.MempoolValidator;
+            Assert.NotNull(validator);
+
+            Transaction tx = this.Network.CreateTransaction();
+
+            // The current chain factory only gives blocks from the PoW phase of the network, which are not required to have the
+            // reward split. So create a dummy reward output to spend from first.
+            tx.AddInput(new TxIn(new OutPoint(context.SrcTxs[0].GetHash(), 0), PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(minerSecret.PubKey)));
+            tx.AddOutput(new TxOut(Money.Coins(1), StraxCoinstakeRule.CirrusRewardScript));
+            tx.Sign(this.Network, minerSecret, false);
+
+            var state = new MempoolValidationState(false);
+
+            bool isSuccess = await validator.AcceptToMemoryPool(state, tx);
+            Assert.True(isSuccess, "Valid precursor transaction should have been accepted.");
+
+            // Now try spend the 'reward' output in a disallowed way.
+            var destSecret = new BitcoinSecret(new Key(), this.Network);
+            Transaction tx2 = this.Network.CreateTransaction();
+
+            tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
+            tx2.AddOutput(new TxOut(Money.Coins(0.99m), destSecret.PubKeyHash));
+            tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag));
+
+            tx2.Sign(this.Network, minerSecret, true);
+
+            isSuccess = await validator.AcceptToMemoryPool(state, tx2);
+
+            Assert.False(isSuccess, "Transaction spending reward output to invalid destination should not have been accepted.");
+            Assert.Equal("bad-txns-script-failed", state.Error.ConsensusError.Code);
         }
 
         [Fact]

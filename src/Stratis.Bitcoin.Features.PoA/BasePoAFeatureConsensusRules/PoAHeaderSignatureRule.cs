@@ -67,22 +67,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
 
-                    List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
-
-                    foreach (Poll poll in this.votingManager.GetFinishedPolls().Where(x => !x.IsExecuted &&
-                        ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
-                    {
-                        if (currentHeader.Height - poll.PollVotedInFavorBlockData.Height <= this.maxReorg)
-                            // Not applied yet.
-                            continue;
-
-                        IFederationMember federationMember = this.consensusFactory.DeserializeFederationMember(poll.VotingData.Data);
-
-                        if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                            modifiedFederation.Add(federationMember);
-                        else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                            modifiedFederation.Remove(federationMember);
-                    }
+                    // Get the federation as it was at currentHeader.
+                    List<IFederationMember> modifiedFederation = this.votingManager.GetModifiedFederation(currentHeader);
 
                     pubKey = this.slotsManager.GetFederationMemberForTimestamp(header.Time, modifiedFederation).PubKey;
 
