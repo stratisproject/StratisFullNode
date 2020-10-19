@@ -101,7 +101,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // An OP_RETURN for a dummy Cirrus address that tells the sidechain federation they can distribute the transaction.
             builder.Send(StraxCoinstakeRule.CirrusTransactionTag, Money.Zero);
 
-            // TODO: Revisit the handling of fees here - the consensus rules won't allow the fee to be paid from the actual reward
+            // The mempool will accept a zero-fee transaction as long as it matches this structure, paying to the federation.
             builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript, rewardOutputs.Sum(o => o.Value));
 
             Transaction builtTransaction = builder.BuildTransaction(true);

@@ -132,10 +132,10 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var mempoolRules = new List<MempoolRule>
             {
                 new CheckConflictsMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
-                new CheckCoinViewMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
+                new StraxCoinViewMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CreateMempoolEntryMempoolRule(network, mempool, mempoolSettings, chain, consensusRules, loggerFactory),
                 new CheckSigOpsMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
-                new CheckFeeMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
+                new StraxTransactionFeeMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckRateLimitMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckAncestorsMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),
                 new CheckReplacementMempoolRule(network, mempool, mempoolSettings, chain, loggerFactory),

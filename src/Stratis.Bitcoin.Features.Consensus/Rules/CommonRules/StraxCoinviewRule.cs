@@ -73,8 +73,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <inheritdoc />
         protected override void AllowSpend(TxOut prevOut, Transaction tx)
         {
-            // TODO: Make a mempool rule for this too
-
             // We further need to check that any transactions that spend outputs from the reward script only go to the cross-chain multisig.
             // This check is not isolated to PoS specifically.
             if (prevOut.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
