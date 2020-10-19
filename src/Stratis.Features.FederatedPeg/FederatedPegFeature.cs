@@ -283,6 +283,17 @@ namespace Stratis.Features.FederatedPeg
                 benchLog.AppendLine();
             }
 
+            IMaturedBlocksProvider maturedBlocksProvider = this.fullNode.NodeService<IMaturedBlocksProvider>();
+            (int blocksBeforeMature, IDeposit deposit)[] maturingDeposits = maturedBlocksProvider.GetMaturingDeposits(20);
+            if (maturingDeposits.Length > 0)
+            {
+                benchLog.AppendLine("--- Maturing Deposits ---");
+                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d => $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {d.deposit.TargetAddress} ({d.deposit.RetrievalType})")));
+                if (maturingDeposits.Length > 20)
+                    benchLog.AppendLine("...");
+                benchLog.AppendLine();
+            }
+
             try
             {
                 List<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPending();

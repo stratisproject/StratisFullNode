@@ -23,6 +23,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// 
         /// <returns>A list of mature block deposits.</returns>
         SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int retrieveFromHeight);
+
+        /// <summary>
+        /// Retrieves the list of maturing deposits from the cache (if available).
+        /// </summary>
+        /// <param name="maxToReturn">The maxiumum number of deposits to return.</param>
+        /// <returns>A list of maturing deposits ordered by first maturing.</returns>
+        (int blocksBeforeMature, IDeposit deposit)[] GetMaturingDeposits(int maxToReturn);
     }
 
     public sealed class BlockDeposits
@@ -133,6 +140,30 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
 
             return result;
+        }
+
+        public (int blocksBeforeMature, IDeposit deposit)[] GetMaturingDeposits(int maxToReturn)
+        {
+            ChainedHeader tip = this.consensusManager.Tip;
+
+            int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
+
+            var deposits = new SortedDictionary<int, IDeposit>();
+
+            for (int offset = -maxConfirmations; offset < 0; offset++)
+            {
+                if (this.deposits.TryGetValue(tip.Height + offset, out BlockDeposits blockDeposits))
+                {
+                    foreach (IDeposit deposit in blockDeposits.Deposits)
+                    {
+                        int blocksBeforeMature = (deposit.BlockNumber + this.retrievalTypeConfirmations[deposit.RetrievalType]) - tip.Height;
+                        if (blocksBeforeMature >= 0)
+                            deposits[blocksBeforeMature] = deposit;
+                    }
+                }
+            }
+
+            return deposits.Keys.Take(maxToReturn).Select(d => (d, deposits[d])).ToArray();
         }
 
         private void RecordBlockDeposits(ChainedHeaderBlock chainedHeaderBlock, DepositRetrievalType[] retrievalTypes)
