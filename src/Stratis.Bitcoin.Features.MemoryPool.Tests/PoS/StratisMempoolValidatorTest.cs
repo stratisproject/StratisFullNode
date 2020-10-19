@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.IIS.Core;
 using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
 using NBitcoin.Crypto;
@@ -680,7 +679,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
 
             // It is not necessary to sign the transaction as we are testing a standardness
             // requirement which is evaluated before signatures in the mempool.
-            
+
             var state = new MempoolValidationState(false);
 
             // Tests the transaction size standardness check in PreMempoolChecks CheckStandardTransaction
