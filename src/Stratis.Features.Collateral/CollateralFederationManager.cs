@@ -238,6 +238,7 @@ namespace Stratis.Features.Collateral
                 ?? BinaryFindFirst(array, func, first + 1, pivot - 1);
         }
 
+        /// <inheritdoc />
         public override int? GetMultisigMinersApplicabilityHeight()
         {
             IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();

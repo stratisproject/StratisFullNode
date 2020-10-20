@@ -18,7 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Current federation member's private key. <c>null</c> if <see cref="IsFederationMember"/> is <c>false</c>.</summary>
         Key CurrentFederationKey { get; }
 
-        /// <summary>This method updates the multisig miners from the "multisigminers" on the command-line once the Cirrus chain reaches the STRAX-era blocks.</summary>
+        /// <summary>This method updates the <see cref="CollateralFederationMember.IsMultisigMember"/> from 
+        /// <see cref="PoANetwork.StraxMiningMultisigMembers"/> once the Cirrus chain reaches the STRAX-era blocks.</summary>
         void UpdateMultisigMiners();
 
         void Initialize();
@@ -35,7 +36,7 @@ namespace Stratis.Bitcoin.Features.PoA
         void RemoveFederationMember(IFederationMember federationMember);
 
         /// <summary>Gets the height at which the Strax-era started.</summary>
-        /// <remarks>This is the height for which the "multisigminers" command-line-argument is applicable.</remarks>
+        /// <remarks>This is the height for which <see cref="PoANetwork.StraxMiningMultisigMembers"/> is applicable.</remarks>
         int? GetMultisigMinersApplicabilityHeight();
 
         /// <summary>Provides federation member of this node or <c>null</c> if <see cref="IsFederationMember"/> is <c>false</c>.</summary>
@@ -213,6 +214,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Loads saved collection of federation members from the database.</summary>
         protected abstract List<IFederationMember> LoadFederation();
 
+        /// <inheritdoc />
         public virtual int? GetMultisigMinersApplicabilityHeight()
         {
             return 1;
