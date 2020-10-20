@@ -90,10 +90,11 @@ namespace Stratis.Features.Collateral
             foreach (CollateralFederationMemberModel fedMemberModel in fedMemberModels)
             {
                 PubKey pubKey = new PubKey(fedMemberModel.PubKeyHex);
-                bool isMultisigMember = FederationVotingController.IsMultisigMember(this.network, pubKey);
-                federation.Add(new CollateralFederationMember(pubKey, isMultisigMember, new Money(fedMemberModel.CollateralAmountSatoshis),
+                federation.Add(new CollateralFederationMember(pubKey, false, new Money(fedMemberModel.CollateralAmountSatoshis),
                     fedMemberModel.CollateralMainchainAddress));
             }
+
+            this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
 
             return federation;
         }

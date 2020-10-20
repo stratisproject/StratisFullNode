@@ -298,7 +298,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             IFederationMember member = GetMemberVotedOn(votingData);
 
             // Ignore votes on multisig-members.
-            return member != null && FederationVotingController.IsMultisigMember(this.network, member.PubKey);
+            return member != null && this.federationManager.IsMultisigMember(member.PubKey);
         }
 
         private void OnBlockConnected(BlockConnected blockConnected)

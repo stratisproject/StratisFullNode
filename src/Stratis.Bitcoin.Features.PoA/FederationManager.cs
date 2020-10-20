@@ -33,6 +33,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </remarks>
         List<IFederationMember> GetFederationMembers();
 
+        bool IsMultisigMember(PubKey pubKey);
+
         void AddFederationMember(IFederationMember federationMember);
 
         void RemoveFederationMember(IFederationMember federationMember);
@@ -228,6 +230,11 @@ namespace Stratis.Bitcoin.Features.PoA
         public virtual int? GetMultisigMinersApplicabilityHeight()
         {
             return 1;
+        }
+
+        public bool IsMultisigMember(PubKey pubKey)
+        {
+            return this.GetFederationMembers().Any(m => m.PubKey == pubKey && ((CollateralFederationMember)m).IsMultisigMember);
         }
     }
 

@@ -67,14 +67,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.VoteAddKickFedMember(request, false);
         }
 
-        public static bool IsMultisigMember(Network network, PubKey pubKey)
-        {
-            var options = (PoAConsensusOptions)network.Consensus.Options;
-            return options.GenesisFederationMembers
-                .Where(m => m is CollateralFederationMember cm && cm.IsMultisigMember)
-                .Any(m => m.PubKey == pubKey);
-        }
-
         private IActionResult VoteAddKickFedMember(HexPubKeyModel request, bool addMember)
         {
             Guard.NotNull(request, nameof(request));
@@ -89,7 +81,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 var key = new PubKey(request.PubKeyHex);
 
-                if (IsMultisigMember(this.network, key))
+                if (this.fedManager.IsMultisigMember(key))
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Multisig members can't be voted on", string.Empty);
 
                 IFederationMember federationMember = new FederationMember(key);
