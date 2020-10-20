@@ -270,6 +270,8 @@ namespace Stratis.Features.Collateral
             this.lastBlockChecked = headers.Last();
             this.multisigMinersApplicabilityHeight = first?.Height;
 
+            this.UpdateMultisigMiners(first != null);
+
             return this.multisigMinersApplicabilityHeight;
         }
     }

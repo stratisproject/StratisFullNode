@@ -18,9 +18,11 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Current federation member's private key. <c>null</c> if <see cref="IsFederationMember"/> is <c>false</c>.</summary>
         Key CurrentFederationKey { get; }
 
-        /// <summary>This method updates the <see cref="CollateralFederationMember.IsMultisigMember"/> from 
-        /// <see cref="PoANetwork.StraxMiningMultisigMembers"/> once the Cirrus chain reaches the STRAX-era blocks.</summary>
-        void UpdateMultisigMiners();
+        /// <summary>This method updates the <see cref="CollateralFederationMember.IsMultisigMember"/> flags from 
+        /// <see cref="PoANetwork.StraxMiningMultisigMembers"/> or <see cref="PoAConsensusOptions.GenesisFederationMembers"/>
+        /// depending on whether the Cirrus chain has reached the STRAX-era blocks.</summary>
+        /// <param name="straxEra">This is set to <c>true</c> for the Strax-era flag values and <c>false</c> for the Stratis era.</param>
+        void UpdateMultisigMiners(bool straxEra);
 
         void Initialize();
 
@@ -128,14 +130,22 @@ namespace Stratis.Bitcoin.Features.PoA
             this.logger.LogInformation("Federation key pair was successfully loaded. Your public key is: '{0}'.", this.CurrentFederationKey.PubKey);
         }
 
-        public void UpdateMultisigMiners()
+        public void UpdateMultisigMiners(bool straxEra)
         {
             if (this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory)
             {
                 // Update member types by using the multisig mining keys supplied on the command-line. Don't add/remove members.
                 foreach (CollateralFederationMember federationMember in this.federationMembers)
                 {
-                    federationMember.IsMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
+                    if (straxEra)
+                    {
+                        federationMember.IsMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
+                    }
+                    else
+                    {
+                        federationMember.IsMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
+                            .Any(m => m.PubKey == federationMember.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
+                    }
                     // Collateral amounts can only be changed when voting members in/out so that we have 
                     // an on-chain history of what was required and when.
                 }
