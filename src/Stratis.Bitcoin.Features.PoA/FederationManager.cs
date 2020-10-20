@@ -38,6 +38,10 @@ namespace Stratis.Bitcoin.Features.PoA
 
         void RemoveFederationMember(IFederationMember federationMember);
 
+        /// <summary>Gets the height at which the Strax-era started.</summary>
+        /// <remarks>This is the height for which the "multisigminers" command-line-argument is applicable.</remarks>
+        int? GetMultisigMinersApplicabilityHeight();
+
         /// <summary>Provides federation member of this node or <c>null</c> if <see cref="IsFederationMember"/> is <c>false</c>.</summary>
         IFederationMember GetCurrentFederationMember();
     }
@@ -232,6 +236,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Loads saved collection of federation members from the database.</summary>
         protected abstract List<IFederationMember> LoadFederation();
+
+        public virtual int? GetMultisigMinersApplicabilityHeight()
+        {
+            return 1;
+        }
     }
 
     public class FederationManager : FederationManagerBase

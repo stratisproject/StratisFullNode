@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -16,6 +17,7 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.PoA.Features.Voting;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
@@ -28,6 +30,8 @@ namespace Stratis.Features.Collateral
         private readonly ILoggerFactory loggerFactory;
         private readonly IFullNode fullNode;
         private readonly IHttpClientFactory httpClientFactory;
+        private int? multisigMinersApplicabilityHeight;
+        private ChainedHeader lastBlockChecked;
 
         public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals, 
             ICounterChainSettings counterChainSettings, IFullNode fullNode, IHttpClientFactory httpClientFactory)
@@ -210,6 +214,52 @@ namespace Stratis.Features.Collateral
                 .FirstOrDefault(x => x.CollateralMainchainAddress == address);
 
             return member;
+        }
+
+        private T BinaryFindFirst<T>(T[] array, Func<T, bool> func, int first = 0, int? span = null)
+        {
+            int length = span ?? array.Length;
+
+            if (length == 0 || !func(array[first + length - 1]))
+                return default;
+
+            if (length == 1)
+                return array[first];
+
+            int pivot = length / 2;
+
+            return BinaryFindFirst(array, func, first, pivot) ?? BinaryFindFirst(array, func, first + pivot, length - pivot);
+        }
+
+        public override int? GetMultisigMinersApplicabilityHeight()
+        {
+            IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+            ChainedHeader fork = (this.lastBlockChecked == null) ? null : consensusManager.Tip.FindFork(this.lastBlockChecked);
+
+            if (this.multisigMinersApplicabilityHeight != null && fork?.HashBlock == this.lastBlockChecked?.HashBlock)
+                return this.multisigMinersApplicabilityHeight;
+
+            this.lastBlockChecked = fork;
+            this.multisigMinersApplicabilityHeight = null;
+            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.logger);
+
+            ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked).Reverse().ToArray();
+
+            ChainedHeader first = BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
+            {
+                ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
+                if (block == null)
+                    return false;
+
+                // Finding the height of the first STRAX collateral commitment height.
+                (int? commitmentHeight, uint? magic) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Block.Transactions.First());
+                return commitmentHeight != null && magic == this.counterChainSettings.CounterChainNetwork.Magic;
+            });
+
+            this.lastBlockChecked = headers.Last();
+            this.multisigMinersApplicabilityHeight = first?.Height;
+
+            return this.multisigMinersApplicabilityHeight;
         }
     }
 }
