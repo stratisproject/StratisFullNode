@@ -259,6 +259,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     else if (poll.VotingData.Key == VoteKey.KickFederationMember)
                         modifiedFederation.Add(federationMember);
                 }
+
+                int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight();
+                if (multisigMinersApplicabilityHeight != null && chainedHeader.Height < multisigMinersApplicabilityHeight)
+                {
+                    // If we are accessing blocks prior to STRAX activation then the IsMultisigMember values for the members may be different. 
+                    foreach (CollateralFederationMember member in modifiedFederation)
+                    {
+                        bool wasMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
+                            .Any(m => m.PubKey == member.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
+
+                        if (member.IsMultisigMember != wasMultisigMember)
+                        {
+                            // Clone the member if we will be changing the flag.
+                            modifiedFederation[modifiedFederation.IndexOf(member)] = new CollateralFederationMember(member.PubKey,
+                                wasMultisigMember, member.CollateralAmount, member.CollateralMainchainAddress);
+                        }
+                    }
+                }
             }
 
             return modifiedFederation;
