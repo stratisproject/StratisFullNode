@@ -122,7 +122,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             
             inactiveForSeconds = blockTime - lastActiveTime;
 
-            return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !FederationVotingController.IsMultisigMember(this.network, pubKey));
+            return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !this.federationManager.IsMultisigMember(pubKey));
         }
 
         private void OnBlockConnected(BlockConnected blockConnectedData)
