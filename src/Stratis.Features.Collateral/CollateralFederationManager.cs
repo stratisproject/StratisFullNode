@@ -271,7 +271,7 @@ namespace Stratis.Features.Collateral
                 return magic == this.counterChainSettings.CounterChainNetwork.Magic;
             });
 
-            this.lastBlockChecked = headers.Last();
+            this.lastBlockChecked = headers.LastOrDefault();
             this.multisigMinersApplicabilityHeight = first?.Height;
 
             this.UpdateMultisigMiners(first != null);
