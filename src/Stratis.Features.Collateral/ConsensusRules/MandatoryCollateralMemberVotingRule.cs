@@ -43,6 +43,9 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
+            // TODO: Determine the effect of this rule on manual voting!
+            // TODO: This rule should probably be limited to the Strax era.
+
             // Determine the members that this node is currently in favor of adding.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
@@ -81,9 +84,12 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 foreach (VotingData votingData in votingDataList)
                 {
                     var member = (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(votingData.Data);
-                    
+
+                    var expectedCollateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == member.PubKey)
+                        ? CollateralPoAMiner.MultisigMinerCollateralAmount : CollateralPoAMiner.MinerCollateralAmount;
+
                     // Check collateral amount.
-                    if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)
+                    if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != expectedCollateralAmount)
                     {
                         this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
                         PoAConsensusErrors.InvalidCollateralRequirement.Throw();

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Linq;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -39,14 +40,17 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             if (request == null)
                 return;
 
-            if (FederationVotingController.IsMultisigMember(this.network, request.PubKey))
+            if (this.federationManager.IsMultisigMember(request.PubKey))
             {
                 this.logger.LogTrace("(-)[INVALID_MULTISIG_VOTING]");
                 context.State.Fail(MempoolErrors.VotingRequestInvalidMultisig, $"{context.Transaction.GetHash()} has an invalid voting request for a multisig member.").Throw();
             }
 
-            // Check collateral amount?
-            if (request.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)
+            // Check collateral amount.
+            var collateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == request.PubKey) 
+                ? CollateralPoAMiner.MultisigMinerCollateralAmount : CollateralPoAMiner.MinerCollateralAmount;
+
+            if (request.CollateralAmount.ToDecimal(MoneyUnit.BTC) != collateralAmount)
             {
                 this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
                 context.State.Fail(MempoolErrors.InvalidCollateralRequirement, $"{context.Transaction.GetHash()} has a voting request with an invalid colateral requirement.").Throw();

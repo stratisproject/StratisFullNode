@@ -68,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             {
                 var key = new PubKey(request.PubKeyHex);
 
-                if (FederationVotingController.IsMultisigMember(this.network, key))
+                if (this.fedManager.IsMultisigMember(key))
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Multisig members can't be voted on", string.Empty);
 
                 IFederationMember federationMember = new CollateralFederationMember(key, false, new Money(request.CollateralAmountSatoshis), request.CollateralMainchainAddress);
