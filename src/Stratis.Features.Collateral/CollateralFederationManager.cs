@@ -216,19 +216,26 @@ namespace Stratis.Features.Collateral
             return member;
         }
 
-        private T BinaryFindFirst<T>(T[] array, Func<T, bool> func, int first = 0, int? span = null)
+        private T BinaryFindFirst<T>(T[] array, Func<T, bool?> func, int first = 0, int? span = null)
         {
             int length = span ?? array.Length;
 
-            if (length == 0 || !func(array[first + length - 1]))
+            // If the last item does not fit the criteria then don't bother looking any further.
+            if (length == 0 || func(array[first + length - 1]) == false)
                 return default;
 
-            if (length == 1)
+            // If the first item matches the criteria then take it and don't bother looking beyond it.
+            if (func(array[first]) == true)
                 return array[first];
+
+            // If there are no other items then return.
+            if (length <= 2)
+                return default;
 
             int pivot = length / 2;
 
-            return BinaryFindFirst(array, func, first, pivot) ?? BinaryFindFirst(array, func, first + pivot, length - pivot);
+            return BinaryFindFirst(array, func, first + pivot, length - pivot - 1)
+                ?? BinaryFindFirst(array, func, first + 1, pivot - 1);
         }
 
         public override int? GetMultisigMinersApplicabilityHeight()
@@ -249,11 +256,14 @@ namespace Stratis.Features.Collateral
             {
                 ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
                 if (block == null)
-                    return false;
+                    return null;
 
                 // Finding the height of the first STRAX collateral commitment height.
                 (int? commitmentHeight, uint? magic) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Block.Transactions.First());
-                return commitmentHeight != null && magic == this.counterChainSettings.CounterChainNetwork.Magic;
+                if (commitmentHeight == null)
+                    return null;
+
+                return magic == this.counterChainSettings.CounterChainNetwork.Magic;
             });
 
             this.lastBlockChecked = headers.Last();

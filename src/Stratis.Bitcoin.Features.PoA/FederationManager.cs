@@ -18,10 +18,6 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Current federation member's private key. <c>null</c> if <see cref="IsFederationMember"/> is <c>false</c>.</summary>
         Key CurrentFederationKey { get; }
 
-        /// <summary>The mining pubkeys of miners that are also multisig members. These miners have a higher collateral requirement.</summary>
-        /// <remarks>This should be used when voting in new members to determine if they are multisig members or not.</remarks>
-        HashSet<PubKey> MultisigMiners { get; }
-
         /// <summary>This method updates the multisig miners from the "multisigminers" on the command-line once the Cirrus chain reaches the STRAX-era blocks.</summary>
         void UpdateMultisigMiners();
 
@@ -54,9 +50,6 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public Key CurrentFederationKey { get; private set; }
 
-        /// <inheritdoc />
-        public HashSet<PubKey> MultisigMiners { get; private set; }
-
         protected readonly IKeyValueRepository keyValueRepo;
 
         protected readonly ILogger logger;
@@ -86,15 +79,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.locker = new object();
-
-            var multisigMiners = nodeSettings.ConfigReader.GetOrDefault<string>("multisigminers", null);
-            if (multisigMiners != null)
-            {
-                this.MultisigMiners = multisigMiners
-                    .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                    .Select(m => new PubKey(m.Trim()))
-                    .ToHashSet();
-            }
         }
 
         public virtual void Initialize()
@@ -148,22 +132,14 @@ namespace Stratis.Bitcoin.Features.PoA
             if (this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory)
             {
                 // Update member types by using the multisig mining keys supplied on the command-line. Don't add/remove members.
-                if (this.MultisigMiners != null)
+                foreach (CollateralFederationMember federationMember in this.federationMembers)
                 {
-                    foreach (CollateralFederationMember federationMember in this.federationMembers)
-                    {
-                        federationMember.IsMultisigMember = this.MultisigMiners.Contains(federationMember.PubKey);
-                        // Collateral amounts can only be changed when voting members in/out so that we have 
-                        // an on-chain history of what was required and when.
-                    }
-
-                    this.SaveFederation(this.federationMembers);
+                    federationMember.IsMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
+                    // Collateral amounts can only be changed when voting members in/out so that we have 
+                    // an on-chain history of what was required and when.
                 }
 
-                this.MultisigMiners = this.MultisigMiners ?? this.federationMembers
-                    .Where(m => m is CollateralFederationMember federationMember && federationMember.IsMultisigMember)
-                    .Select(m => m.PubKey)
-                    .ToHashSet();
+                this.SaveFederation(this.federationMembers);
             }
         }
 
