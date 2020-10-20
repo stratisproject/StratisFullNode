@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 genesisFederation.Count, $"{Environment.NewLine}{string.Join(Environment.NewLine, genesisFederation)}");
 
             // Load federation from the db.
-            this.federationMembers = this.LoadFederation();
+            this.LoadFederation();
 
             if (this.federationMembers == null)
             {
@@ -224,7 +224,7 @@ namespace Stratis.Bitcoin.Features.PoA
         protected abstract void SaveFederation(List<IFederationMember> federation);
 
         /// <summary>Loads saved collection of federation members from the database.</summary>
-        protected abstract List<IFederationMember> LoadFederation();
+        protected abstract void LoadFederation();
 
         /// <inheritdoc />
         public virtual int? GetMultisigMinersApplicabilityHeight()
@@ -253,7 +253,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        protected override List<IFederationMember> LoadFederation()
+        protected override void LoadFederation()
         {
             List<string> hexList = this.keyValueRepo.LoadValueJson<List<string>>(federationMembersDbKey);
 
@@ -262,7 +262,7 @@ namespace Stratis.Bitcoin.Features.PoA
             if (keys == null)
             {
                 this.logger.LogTrace("(-)[NOT_FOUND]:null");
-                return null;
+                this.federationMembers = null;
             }
 
             var loadedFederation = new List<IFederationMember>(keys.Count);
@@ -270,7 +270,7 @@ namespace Stratis.Bitcoin.Features.PoA
             foreach (PubKey key in keys)
                 loadedFederation.Add(new FederationMember(key));
 
-            return loadedFederation;
+            this.federationMembers = loadedFederation;
         }
     }
 }

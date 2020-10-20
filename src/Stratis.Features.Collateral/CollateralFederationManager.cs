@@ -75,14 +75,14 @@ namespace Stratis.Features.Collateral
             base.AddFederationMemberLocked(federationMember);
         }
 
-        protected override List<IFederationMember> LoadFederation()
+        protected override void LoadFederation()
         {
             List<CollateralFederationMemberModel> fedMemberModels = this.keyValueRepo.LoadValueJson<List<CollateralFederationMemberModel>>(federationMembersDbKey);
 
             if (fedMemberModels == null)
             {
                 this.logger.LogTrace("(-)[NOT_FOUND]:null");
-                return null;
+                this.federationMembers = null;
             }
 
             var federation = new List<IFederationMember>(fedMemberModels.Count);
@@ -94,9 +94,9 @@ namespace Stratis.Features.Collateral
                     fedMemberModel.CollateralMainchainAddress));
             }
 
-            this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
+            this.federationMembers = federation;
 
-            return federation;
+            this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
         }
 
         protected override void SaveFederation(List<IFederationMember> federation)
@@ -238,8 +238,8 @@ namespace Stratis.Features.Collateral
 
             int pivot = length / 2;
 
-            return BinaryFindFirst(array, func, first + pivot, length - pivot - 1)
-                ?? BinaryFindFirst(array, func, first + 1, pivot - 1);
+            return BinaryFindFirst(array, func, first + 1, pivot - 1)
+                ?? BinaryFindFirst(array, func, first + pivot, length - pivot - 1);
         }
 
         /// <inheritdoc />

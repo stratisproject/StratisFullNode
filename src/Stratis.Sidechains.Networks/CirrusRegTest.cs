@@ -92,7 +92,7 @@ namespace Stratis.Sidechains.Networks
             var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
 
             // TODO: In this special case we assume that the mining keys equal the multisig keys.
-            var straxMiningMultisigMembers = newFederationPubKeys;
+            this.StraxMiningMultisigMembers = newFederationPubKeys;
 
             // Register only the new federation as we won't be doing anything with the old federation.
             this.Federations = new Federations();

@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.PoA
         public int CollateralCommitmentActivationHeight { get; set; }
 
         /// <summary> The mining keys of the new multisig members to become active with the first Strax-era Cirrus collateral block mined.</summary>
-        public IList<PubKey> StraxMiningMultisigMembers { get; private set; }
+        public IList<PubKey> StraxMiningMultisigMembers { get; protected set; }
 
         public PoANetwork()
         {
