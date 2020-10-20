@@ -32,6 +32,8 @@ namespace Stratis.Features.Collateral
 
         private readonly Network network;
 
+        private bool updatedMultisigMiners;
+
         /// <summary>For how many seconds the block should be banned in case collateral check failed.</summary>
         private readonly int collateralCheckBanDurationSeconds;
 
@@ -113,6 +115,14 @@ namespace Stratis.Features.Collateral
                 // 3. The miner is on STRAT and most nodes were on STRAX(prev round). Fail the rule.
                 this.Logger.LogTrace("(-)[DISALLOW_STRAT_MINER]");
                 PoAConsensusErrors.InvalidCollateralAmount.Throw();
+            }
+
+            // Only update the multsig-miners once we're on STRAX.
+            if (!this.updatedMultisigMiners)
+            {
+                IFederationManager federationManager = this.fullNode.NodeService<IFederationManager>();
+                federationManager.UpdateMultisigMiners();
+                this.updatedMultisigMiners = true;
             }
 
             // TODO: Both this and CollateralPoAMiner are using this chain's MaxReorg instead of the Counter chain's MaxReorg. Beware: fixing requires fork.

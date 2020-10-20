@@ -116,7 +116,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public override string ToString()
         {
-            return base.ToString() + $",{nameof(this.CollateralAmount)}:{this.CollateralAmount},{nameof(this.CollateralMainchainAddress)}:{this.CollateralMainchainAddress ?? "null"}";
+            return base.ToString() + $",{nameof(this.CollateralAmount)}:{this.CollateralAmount},{nameof(this.CollateralMainchainAddress)}:{this.CollateralMainchainAddress ?? "null"}{(this.IsMultisigMember ? " (Multisig)":"")}";
         }
     }
 }
