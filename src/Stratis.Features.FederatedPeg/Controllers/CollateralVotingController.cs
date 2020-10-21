@@ -40,6 +40,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult VoteAddFedMember([FromBody]CollateralFederationMemberModel request)
         {
+            if (this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory)
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Use a voting request to add federation members.", string.Empty);
+
             return this.VoteAddKickFedMember(request, true);
         }
 

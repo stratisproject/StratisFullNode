@@ -149,8 +149,9 @@ namespace Stratis.Bitcoin.Features.PoA
                             .Any(m => m.PubKey == federationMember.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
                     }
 
-                    federationMember.CollateralAmount = new Money(federationMember.IsMultisigMember ? 
-                        CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC);
+                    if (federationMember.CollateralAmount != Money.Zero)
+                        federationMember.CollateralAmount = new Money(federationMember.IsMultisigMember ? 
+                            CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC);
                 }
 
                 this.SaveFederation(this.federationMembers);

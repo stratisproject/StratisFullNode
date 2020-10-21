@@ -7,7 +7,6 @@ using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
-using Stratis.Features.Collateral;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
@@ -46,7 +45,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         public override Task RunAsync(RuleContext context)
         {
             // TODO: Determine the effect of this rule on manual voting!
-            // TODO: This rule should probably be limited to the Strax era.
 
             // Determine the members that this node is currently in favor of adding.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
@@ -61,7 +59,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 return Task.CompletedTask;
 
             // Determine who mined the block.
-            PubKey blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate);
+            PubKey blockMiner = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
 
             // Check that the miner is in favor of adding the same member(s).
             Dictionary<string, bool> checkList = newMembers.ToDictionary(x => x.ToHex(), x => false);
@@ -113,11 +111,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
             return Task.CompletedTask;
-        }
-
-        public PubKey GetBlockMiner(ChainedHeader currentHeader)
-        {
-            return this.slotsManager.GetFederationMemberForBlock(currentHeader, this.votingManager).PubKey;
         }
     }
 }
