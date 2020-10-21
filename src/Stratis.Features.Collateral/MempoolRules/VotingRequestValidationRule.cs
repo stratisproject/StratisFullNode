@@ -47,8 +47,7 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             }
 
             // Check collateral amount.
-            var collateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == request.PubKey) 
-                ? CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount;
+            var collateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey((PoANetwork)this.network, request.PubKey);
 
             if (request.CollateralAmount.ToDecimal(MoneyUnit.BTC) != collateralAmount)
             {

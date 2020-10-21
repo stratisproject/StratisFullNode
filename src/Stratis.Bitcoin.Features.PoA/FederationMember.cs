@@ -1,4 +1,6 @@
-﻿using NBitcoin;
+﻿using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA
@@ -83,6 +85,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Mainchain address that should have the collateral.</summary>
         public string CollateralMainchainAddress { get; set; }
+
+        public static decimal GetCollateralAmountForPubKey(PoANetwork network, PubKey pubKey)
+        {
+            return network.StraxMiningMultisigMembers.Any(m => m == pubKey) ? MultisigMinerCollateralAmount : MinerCollateralAmount;
+        }
 
         /// <inheritdoc />
         public override bool Equals(object obj)
