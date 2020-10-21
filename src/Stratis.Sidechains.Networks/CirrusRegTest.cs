@@ -91,11 +91,13 @@ namespace Stratis.Sidechains.Networks
             var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
             var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
 
-            // TODO: In this special case we assume that the mining keys equal the multisig keys.
+            // Mining keys!
             this.StraxMiningMultisigMembers = newFederationPubKeys;
 
             // Register only the new federation as we won't be doing anything with the old federation.
             this.Federations = new Federations();
+
+            // Default transaction-signing keys!
             this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(

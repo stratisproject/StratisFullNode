@@ -88,6 +88,7 @@ namespace Stratis.Bitcoin.Networks
 
             List<PubKey> cirrusFederationPubKeys = cirrusFederationKeys.Select(k => k.PubKey).ToList();
 
+            // Transaction-signing keys!
             this.Federations.RegisterFederation(new Federation(cirrusFederationPubKeys.ToArray()));
 
             this.Consensus = new NBitcoin.Consensus(
