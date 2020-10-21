@@ -15,7 +15,7 @@ namespace SwapExtractionTool
 
             if (args.Contains("-testnet"))
             {
-                startBlock = 1_450_000;
+                startBlock = 1528858;
 
                 stratisNetworkApiPort = 38221;
                 straxNetwork = new StraxTest();
@@ -38,10 +38,15 @@ namespace SwapExtractionTool
                 await service.RunAsync(startBlock, true, false);
             }
 
-            if (args.Contains("-vote"))
+            if (args.Contains("-swapvote") || args.Contains("-collateralvote"))
             {
                 var service = new VoteExtractionService(stratisNetworkApiPort, straxNetwork);
-                await service.RunAsync(startBlock);
+
+                if (args.Contains("-collateralvote"))
+                    await service.RunAsync(VoteType.CollateralVote, startBlock);
+
+                if (args.Contains("-swapvote"))
+                    await service.RunAsync(VoteType.SwapVote, startBlock);
             }
         }
     }
