@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DBreeze.Utils;
@@ -94,7 +95,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         // Checks that node can sync from scratch if federation voted in favor of adding a new fed member.
         public async Task CanSyncIfFedMemberAddedAsync()
         {
-            int originalFedMembersCount = this.node1.FullNode.NodeService<IFederationManager>().GetFederationMembers().Count;
+            List<IFederationMember> originalFedMembers = this.node1.FullNode.NodeService<IFederationManager>().GetFederationMembers();
 
             TestHelper.Connect(this.node1, this.node2);
 
@@ -108,7 +109,9 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             await this.node2.MineBlocksAsync((int)this.network.Consensus.MaxReorgLength * 3);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
-            Assert.Equal(originalFedMembersCount + 1, this.node1.FullNode.NodeService<IFederationManager>().GetFederationMembers().Count);
+            List<IFederationMember> newFedMembers = this.node1.FullNode.NodeService<IFederationManager>().GetFederationMembers();
+
+            Assert.Equal(originalFedMembers.Count + 1, newFedMembers.Count);
 
             TestHelper.Connect(this.node2, this.node3);
 
@@ -418,7 +421,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 // Create voting-request transaction.
                 var minerKey = new Key();
                 var collateralKey = new Key();
-                var request = new JoinFederationRequest(minerKey.PubKey, new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC), collateralKey.PubKey.Hash);
+                var request = new JoinFederationRequest(minerKey.PubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), collateralKey.PubKey.Hash);
 
                 // In practice this signature will come from calling the counter-chain "signmessage" API.
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));

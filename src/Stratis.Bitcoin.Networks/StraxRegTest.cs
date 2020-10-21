@@ -81,13 +81,14 @@ namespace Stratis.Bitcoin.Networks
             var cirrusFederationMnemonics = new[] {
                    "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
                    "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                   "exchange rent bronze pole post hurry oppose drama eternal voice client state"
+                   "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
                }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             var cirrusFederationKeys = cirrusFederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
             List<PubKey> cirrusFederationPubKeys = cirrusFederationKeys.Select(k => k.PubKey).ToList();
 
+            // Transaction-signing keys!
             this.Federations.RegisterFederation(new Federation(cirrusFederationPubKeys.ToArray()));
 
             this.Consensus = new NBitcoin.Consensus(

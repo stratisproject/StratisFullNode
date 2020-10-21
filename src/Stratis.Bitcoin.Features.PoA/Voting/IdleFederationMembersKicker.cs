@@ -122,14 +122,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             
             inactiveForSeconds = blockTime - lastActiveTime;
 
-            return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !FederationVotingController.IsMultisigMember(this.network, pubKey));
+            return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !this.federationManager.IsMultisigMember(pubKey));
         }
 
         private void OnBlockConnected(BlockConnected blockConnectedData)
         {
             // Update last active time.
             uint timestamp = blockConnectedData.ConnectedBlock.ChainedHeader.Header.Time;
-            PubKey key = this.slotsManager.GetFederationMemberForTimestamp(timestamp).PubKey;
+            PubKey key = this.slotsManager.GetFederationMemberForBlock(blockConnectedData.ConnectedBlock.ChainedHeader, this.votingManager).PubKey;
             this.fedPubKeysByLastActiveTime.AddOrReplace(key, timestamp);
 
             this.SaveMembersByLastActiveTime();

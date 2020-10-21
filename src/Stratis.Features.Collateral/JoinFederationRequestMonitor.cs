@@ -66,11 +66,12 @@ namespace Stratis.Features.Collateral
                         continue;
 
                     // Check if the collateral amount is valid.
-                    // Voting only works on non-multisig members.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
-                    if (collateralAmount != CollateralPoAMiner.MinerCollateralAmount)
+                    var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey((PoANetwork)this.network, request.PubKey);
+
+                    if (collateralAmount != expectedCollateralAmount)
                     {
-                        this.logger.LogDebug("Ignoring voting request with invalid collateral amount '{0}'.", collateralAmount);
+                        this.logger.LogDebug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
 
                         continue;
                     }

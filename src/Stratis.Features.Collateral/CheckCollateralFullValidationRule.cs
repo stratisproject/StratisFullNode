@@ -133,8 +133,7 @@ namespace Stratis.Features.Collateral
                 PoAConsensusErrors.InvalidCollateralAmountCommitmentTooNew.Throw();
             }
 
-            List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate);
-            IFederationMember federationMember = this.slotsManager.GetFederationMemberForTimestamp(context.ValidationContext.BlockToValidate.Header.Time, modifiedFederation);
+            IFederationMember federationMember = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager);
             if (!this.collateralChecker.CheckCollateral(federationMember, commitmentHeight.Value))
             {
                 // By setting rejectUntil we avoid banning a peer that provided a block.

@@ -78,13 +78,27 @@ namespace Stratis.Sidechains.Networks
 
             var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
-            this.Federations = new Federations();
-            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
-
             var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
-
             foreach (PubKey pubKey in federationPubKeys)
                 genesisFederationMembers.Add(new CollateralFederationMember(pubKey, true, new Money(0), null));
+
+            // Will replace the last multisig member.
+            var newFederationMemberMnemonics = new string[]
+            {
+                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
+            var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
+
+            // Mining keys!
+            this.StraxMiningMultisigMembers = newFederationPubKeys;
+
+            // Register only the new federation as we won't be doing anything with the old federation.
+            this.Federations = new Federations();
+
+            // Default transaction-signing keys!
+            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,

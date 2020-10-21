@@ -26,8 +26,6 @@ namespace Stratis.Features.Collateral
     /// </summary>
     public class CollateralPoAMiner : PoAMiner
     {
-        public const decimal MinerCollateralAmount = 10_000m;
-
         private readonly CollateralHeightCommitmentEncoder encoder;
 
         private readonly ICollateralChecker collateralChecker;
