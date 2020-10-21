@@ -20,6 +20,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private PoAConsensusRuleEngine ruleEngine;
         private Network network;
         private IFederationManager federationManager;
+        private VotingManager votingManager;
         private ISlotsManager slotsManager;
         private CollateralPoAConsensusFactory consensusFactory;
         private ILoggerFactory loggerFactory;
@@ -34,6 +35,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.logger = this.loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = this.Parent.Network;
             this.federationManager = this.ruleEngine.FederationManager;
+            this.votingManager = this.ruleEngine.VotingManager;
             this.slotsManager = this.ruleEngine.SlotsManager;
             this.consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
@@ -115,8 +117,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
         public PubKey GetBlockMiner(ChainedHeader currentHeader)
         {
-            List<IFederationMember> modifiedFederation = this.ruleEngine.VotingManager.GetModifiedFederation(currentHeader);
-            return this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey;
+            return this.slotsManager.GetFederationMemberForBlock(currentHeader, this.votingManager).PubKey;
         }
     }
 }

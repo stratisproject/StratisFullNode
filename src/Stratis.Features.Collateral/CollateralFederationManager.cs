@@ -83,6 +83,7 @@ namespace Stratis.Features.Collateral
             {
                 this.logger.LogTrace("(-)[NOT_FOUND]:null");
                 this.federationMembers = null;
+                return;
             }
 
             var federation = new List<IFederationMember>(fedMemberModels.Count);

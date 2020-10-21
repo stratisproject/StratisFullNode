@@ -234,7 +234,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public bool IsMultisigMember(PubKey pubKey)
         {
-            return this.GetFederationMembers().Any(m => m.PubKey == pubKey && ((CollateralFederationMember)m).IsMultisigMember);
+            return this.GetFederationMembers().Any(m => m.PubKey == pubKey && m is CollateralFederationMember member && member.IsMultisigMember);
         }
     }
 
@@ -263,6 +263,7 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 this.logger.LogTrace("(-)[NOT_FOUND]:null");
                 this.federationMembers = null;
+                return;
             }
 
             var loadedFederation = new List<IFederationMember>(keys.Count);

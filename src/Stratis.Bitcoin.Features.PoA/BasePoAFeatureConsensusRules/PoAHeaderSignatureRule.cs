@@ -51,8 +51,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         public override void Run(RuleContext context)
         {
             var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
-
-            PubKey pubKey = this.slotsManager.GetFederationMemberForTimestamp(header.Time).PubKey;
+            
+            PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
 
             if (!this.validator.VerifySignature(pubKey, header))
             {
@@ -68,9 +68,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
 
                     // Get the federation as it was at currentHeader.
-                    List<IFederationMember> modifiedFederation = this.votingManager.GetModifiedFederation(currentHeader);
-
-                    pubKey = this.slotsManager.GetFederationMemberForTimestamp(header.Time, modifiedFederation).PubKey;
+                    pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
 
                     if (this.validator.VerifySignature(pubKey, header))
                     {
