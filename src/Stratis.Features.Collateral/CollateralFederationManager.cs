@@ -221,28 +221,6 @@ namespace Stratis.Features.Collateral
             return member;
         }
 
-        private T BinaryFindFirst<T>(T[] array, Func<T, bool?> func, int first = 0, int? span = null)
-        {
-            int length = span ?? array.Length;
-
-            // If the last item does not fit the criteria then don't bother looking any further.
-            if (length == 0 || func(array[first + length - 1]) == false)
-                return default;
-
-            // If the first item matches the criteria then take it and don't bother looking beyond it.
-            if (func(array[first]) == true)
-                return array[first];
-
-            // If there are no other items then return.
-            if (length <= 2)
-                return default;
-
-            int pivot = length / 2;
-
-            return BinaryFindFirst(array, func, first + 1, pivot - 1)
-                ?? BinaryFindFirst(array, func, first + pivot, length - pivot - 1);
-        }
-
         /// <inheritdoc />
         public override int? GetMultisigMinersApplicabilityHeight()
         {
@@ -258,7 +236,7 @@ namespace Stratis.Features.Collateral
 
             ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked).Reverse().ToArray();
 
-            ChainedHeader first = BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
+            ChainedHeader first = BinarySearch.BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
             {
                 ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
                 if (block == null)
