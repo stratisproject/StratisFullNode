@@ -77,14 +77,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader, VotingManager votingManager)
         {
-            IFederationMember federationMember = this.GetFederationMemberForTimestamp(chainedHeader.Header.Time, votingManager?.GetModifiedFederation(chainedHeader));
-            if (chainedHeader.Height == 8 && federationMember.PubKey.ToHex().StartsWith("02d6"))
-            {
-                if (chainedHeader.Height - this.chainIndexer.Tip.Height <= 5)
-                {
-                }
-            }
-            return federationMember;
+            return this.GetFederationMemberForTimestamp(chainedHeader.Header.Time, votingManager?.GetModifiedFederation(chainedHeader));
         }
 
         /// <inheritdoc />

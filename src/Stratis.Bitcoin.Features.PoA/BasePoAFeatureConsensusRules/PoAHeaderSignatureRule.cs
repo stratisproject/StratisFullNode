@@ -56,26 +56,13 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             if (!this.validator.VerifySignature(pubKey, header))
             {
-                // In case voting is enabled it is possible that federation was modified and another fed member signed
-                // the header. Since voting changes are applied after max reorg blocks are passed we can tell exactly
-                // how federation will look like max reorg blocks ahead. Code below tries to construct federation that is
-                // expected to exist at the moment block that corresponds to header being validated was produced. Then
-                // this federation is used to estimate who was expected to sign a block and then the signature is verified.
                 if (this.votingEnabled)
                 {
                     ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
 
+                    // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
+                    // that we have not yet processed all the votes that may determine the federation make-up.
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-
-                    // Get the federation as it was at currentHeader.
-                    pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
-
-                    if (this.validator.VerifySignature(pubKey, header))
-                    {
-                        this.Logger.LogDebug("Signature verified using updated federation.");
-                        return;
-                    }
-
                     if (mightBeInsufficient)
                     {
                         // Mark header as insufficient to avoid banning the peer that presented it.
