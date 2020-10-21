@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                     var member = (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(votingData.Data);
 
                     var expectedCollateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == member.PubKey)
-                        ? CollateralPoAMiner.MultisigMinerCollateralAmount : CollateralPoAMiner.MinerCollateralAmount;
+                        ? CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount;
 
                     // Check collateral amount.
                     if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != expectedCollateralAmount)

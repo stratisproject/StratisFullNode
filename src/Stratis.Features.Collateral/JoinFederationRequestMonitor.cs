@@ -68,7 +68,7 @@ namespace Stratis.Features.Collateral
                     // Check if the collateral amount is valid.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
                     var expectedCollateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == request.PubKey)
-                        ? CollateralPoAMiner.MultisigMinerCollateralAmount : CollateralPoAMiner.MinerCollateralAmount;
+                        ? CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount;
                     if (collateralAmount != expectedCollateralAmount)
                     {
                         this.logger.LogDebug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);

@@ -421,7 +421,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 // Create voting-request transaction.
                 var minerKey = new Key();
                 var collateralKey = new Key();
-                var request = new JoinFederationRequest(minerKey.PubKey, new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC), collateralKey.PubKey.Hash);
+                var request = new JoinFederationRequest(minerKey.PubKey, new Money(CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC), collateralKey.PubKey.Hash);
 
                 // In practice this signature will come from calling the counter-chain "signmessage" API.
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));

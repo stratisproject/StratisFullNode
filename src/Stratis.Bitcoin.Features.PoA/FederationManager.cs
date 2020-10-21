@@ -148,8 +148,9 @@ namespace Stratis.Bitcoin.Features.PoA
                         federationMember.IsMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
                             .Any(m => m.PubKey == federationMember.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
                     }
-                    // Collateral amounts can only be changed when voting members in/out so that we have 
-                    // an on-chain history of what was required and when.
+
+                    federationMember.CollateralAmount = new Money(federationMember.IsMultisigMember ? 
+                        CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC);
                 }
 
                 this.SaveFederation(this.federationMembers);
