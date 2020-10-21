@@ -44,8 +44,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            // TODO: Determine the effect of this rule on manual voting!
-
             // Determine the members that this node is currently in favor of adding.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
