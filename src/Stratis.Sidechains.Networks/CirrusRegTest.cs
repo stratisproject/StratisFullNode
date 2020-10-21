@@ -8,13 +8,13 @@ using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules;
+using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -76,15 +76,29 @@ namespace Stratis.Sidechains.Networks
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
-            List<PubKey> federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
-
-            this.Federations = new Federations();
-            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
+            var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
             var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
-
             foreach (PubKey pubKey in federationPubKeys)
                 genesisFederationMembers.Add(new CollateralFederationMember(pubKey, true, new Money(0), null));
+
+            // Will replace the last multisig member.
+            var newFederationMemberMnemonics = new string[]
+            {
+                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
+            var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
+
+            // Mining keys!
+            this.StraxMiningMultisigMembers = newFederationPubKeys;
+
+            // Register only the new federation as we won't be doing anything with the old federation.
+            this.Federations = new Federations();
+
+            // Default transaction-signing keys!
+            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
@@ -166,7 +180,7 @@ namespace Stratis.Sidechains.Networks
             this.DNSSeeds = new List<DNSSeedData>();
             this.SeedNodes = new List<NetworkAddress>();
 
-            this.StandardScriptsRegistry = new SmartContractsStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
             // 16 below should be changed to TargetSpacingSeconds when we move that field.
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
@@ -232,7 +246,7 @@ namespace Stratis.Sidechains.Networks
             // ------------------------------------------------------
         }
 
-        private void RegisterMempoolRules(IConsensus consensus)
+        protected override void RegisterMempoolRules(IConsensus consensus)
         {
             consensus.MempoolRules = new List<Type>()
             {

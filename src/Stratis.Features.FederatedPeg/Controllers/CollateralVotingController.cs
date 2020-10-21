@@ -34,17 +34,6 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
         /// <response code="400">Not yet implemented</response>
         /// <response code="500">Request is null</response>
-        [Route("schedulevote-addfedmember")]
-        [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult VoteAddFedMember([FromBody]CollateralFederationMemberModel request)
-        {
-            return this.VoteAddKickFedMember(request, true);
-        }
-
-        /// <response code="400">Not yet implemented</response>
-        /// <response code="500">Request is null</response>
         [Route("schedulevote-kickfedmember")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -68,7 +57,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             {
                 var key = new PubKey(request.PubKeyHex);
 
-                if (FederationVotingController.IsMultisigMember(this.network, key))
+                if (this.fedManager.IsMultisigMember(key))
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Multisig members can't be voted on", string.Empty);
 
                 IFederationMember federationMember = new CollateralFederationMember(key, false, new Money(request.CollateralAmountSatoshis), request.CollateralMainchainAddress);

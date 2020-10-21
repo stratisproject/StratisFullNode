@@ -4,14 +4,17 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
+using Stratis.Features.Collateral.CounterChain;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
@@ -19,13 +22,9 @@ namespace Stratis.Features.FederatedPeg.Tests
     public class CheckCollateralFullValidationRuleTests
     {
         private readonly CheckCollateralFullValidationRule rule;
-
         private readonly Mock<IInitialBlockDownloadState> ibdMock;
-
         private readonly Mock<ICollateralChecker> collateralCheckerMock;
-
         private readonly Mock<ISlotsManager> slotsManagerMock;
-
         private readonly RuleContext ruleContext;
 
         public CheckCollateralFullValidationRuleTests()
@@ -34,14 +33,15 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.collateralCheckerMock = new Mock<ICollateralChecker>();
             this.slotsManagerMock = new Mock<ISlotsManager>();
 
-
             this.ibdMock.Setup(x => x.IsInitialBlockDownload()).Returns(false);
             this.slotsManagerMock
                 .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), null))
                 .Returns(new CollateralFederationMember(new Key().PubKey, false, new Money(1), "addr1"));
 
             this.ruleContext = new RuleContext(new ValidationContext(), DateTimeOffset.Now);
-            this.ruleContext.ValidationContext.BlockToValidate = new Block(new BlockHeader() { Time = 5234 });
+            var header = new BlockHeader() { Time = 5234 };
+            this.ruleContext.ValidationContext.BlockToValidate = new Block(header);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(header, header.GetHash(), 0);
 
             Block block = this.ruleContext.ValidationContext.BlockToValidate;
             block.AddTransaction(new Transaction());
@@ -71,7 +71,12 @@ namespace Stratis.Features.FederatedPeg.Tests
             var commitmentHeightData = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedHeight));
             block.Transactions[0].AddOutput(Money.Zero, commitmentHeightData);
 
-            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork())
+            var fullnode = new Mock<IFullNode>();
+            fullnode.Setup(x => x.NodeService<CounterChainNetworkWrapper>(false)).Returns(new CounterChainNetworkWrapper(new StraxMain()));
+            var consensusManager = new Mock<IConsensusManager>();
+            fullnode.Setup(x => x.NodeService<IConsensusManager>(false)).Returns(consensusManager.Object);
+
+            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, fullnode.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork(), null)
             {
                 Logger = logger
             };

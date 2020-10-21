@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -1304,6 +1305,43 @@ namespace Stratis.Bitcoin.Consensus
 
             // Return the blocks in the requested order.
             return blockHashes.Select(h => chainedHeaderBlocks[h]).ToArray();
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<ChainedHeaderBlock> GetBlocksAfterBlock(ChainedHeader previousHeader, int batchSize, CancellationTokenSource cancellationTokenSource)
+        {
+            // If previous header is null, start from genesis.
+            int nextHeight = (previousHeader == null) ? 0 : previousHeader.Height + 1;
+
+            // If previous header is null, start from genesis.
+            for (int height = nextHeight; !cancellationTokenSource.IsCancellationRequested;)
+            {
+                // Add hashes in a batch.
+                var headerHashes = new List<uint256>();
+                for (int batchIndex = 0; batchIndex < batchSize; batchIndex++)
+                {
+                    ChainedHeader currentHeader = this.chainIndexer.GetHeader(height + batchIndex);
+                    if (currentHeader == null)
+                        break;
+
+                    if (currentHeader.Previous != previousHeader)
+                        break;
+
+                    headerHashes.Add(currentHeader.HashBlock);
+
+                    previousHeader = currentHeader;
+                }
+
+                if (headerHashes.Count == 0)
+                    yield break;
+
+                ChainedHeaderBlock[] blocks = this.GetBlockData(headerHashes);
+
+                for (int blockIndex = 0; blockIndex < blocks.Length && !cancellationTokenSource.IsCancellationRequested; height++, blockIndex++)
+                {
+                    yield return blocks[blockIndex];
+                }
+            }
         }
 
         /// <summary>

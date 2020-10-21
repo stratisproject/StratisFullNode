@@ -58,7 +58,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             for (int i = 0; i < iterations; i++)
             {
-                int? heightOfMainChainCommitment = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+                (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
 
                 if (heightOfMainChainCommitment == null)
                     continue;
