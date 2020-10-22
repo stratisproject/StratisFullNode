@@ -10,7 +10,7 @@ namespace Stratis.Bitcoin.Tests.Utilities
         [Fact]
         public void BinaryFindFirstFindsTheExpectedItem()
         {
-            const int numItems = 1000;
+            const int numItems = 1000000;
             const int numTests = 10000;
 
             int?[] testArray = Enumerable.Range(0, numItems).Select(n => (int?)n).ToArray();
