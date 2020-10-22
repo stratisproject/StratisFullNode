@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                         }
 
                         // Every other (spendable) output must go to the multisig
-                        if (output.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript)
+                        if (output.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript)
                         {
                             this.logger.LogTrace("(-)[INVALID_REWARD_SPEND_DESTINATION]");
                             context.State.Fail(new MempoolError(MempoolErrors.RejectInvalid, "bad-cirrus-reward-tx-reward-dest-invalid"), "Cirrus reward transaction invalid, reward destination invalid.").Throw();

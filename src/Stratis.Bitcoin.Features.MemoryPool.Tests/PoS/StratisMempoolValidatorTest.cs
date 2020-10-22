@@ -1011,7 +1011,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
 
             // These transactions must be acceptable with zero fees, so spend the entire value of the precursor transaction.
-            tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript));
+            tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript));
 
             // Without the marker output a zero fee would not be allowed as the transaction is not in the proper cross-chain format.
             tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag));
@@ -1050,7 +1050,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             Transaction tx2 = this.Network.CreateTransaction();
 
             tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
-            tx2.AddOutput(new TxOut(tx.Outputs.First().Value - Money.Coins(0.05m), this.Network.Federations.GetOnlyFederation().MultisigScript));
+            tx2.AddOutput(new TxOut(tx.Outputs.First().Value - Money.Coins(0.05m), this.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript));
 
             // Assign some of the value to the unspendable output.
             tx2.AddOutput(new TxOut(Money.Coins(0.05m), StraxCoinstakeRule.CirrusTransactionTag));
@@ -1060,7 +1060,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             isSuccess = await validator.AcceptToMemoryPool(state, tx2);
 
             Assert.False(isSuccess, "Transaction with nonzero OP_RETURN value should not have been accepted.");
-            Assert.Equal("bad-txns-script-failed", state.Error.ConsensusError.Code);
+            Assert.Equal("bad-cirrus-reward-tx-opreturn-not-zero", state.Error.Code);
         }
 
         [Fact]
@@ -1092,7 +1092,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
 
             // We do not have the marker output, so a zero fee transaction will be rejected, as the fee logic bypass conditions aren't met.
-            tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript));
+            tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript));
 
             tx2.Sign(this.Network, minerSecret, true);
 
@@ -1139,7 +1139,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             isSuccess = await validator.AcceptToMemoryPool(state, tx2);
 
             Assert.False(isSuccess, "Transaction spending reward output to invalid destination should not have been accepted.");
-            Assert.Equal("bad-txns-script-failed", state.Error.ConsensusError.Code);
+            Assert.Equal("bad-cirrus-reward-tx-reward-dest-invalid", state.Error.Code);
         }
 
         [Fact]

@@ -34,13 +34,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
             }
 
             // At least one other output must be paying to the multisig.
-            if (context.Transaction.Outputs.All(o => o.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript))
+            if (context.Transaction.Outputs.All(o => o.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript))
             {
                 federationPayment = false;
             }
 
             // There must be no other spendable scriptPubKeys.
-            if (context.Transaction.Outputs.Any(o => o.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript && !o.ScriptPubKey.IsUnspendable))
+            if (context.Transaction.Outputs.Any(o => o.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript && !o.ScriptPubKey.IsUnspendable))
             {
                 federationPayment = false;
             }
