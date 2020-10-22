@@ -107,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             Transaction builtTransaction = builder.BuildTransaction(true);
 
-            // Filter out FeeTooLowPolicyError errors are reward transaction's will not contain any fees.
+            // Filter out FeeTooLowPolicyError errors as reward transaction's will not contain any fees.
             IEnumerable<TransactionPolicyError> errors = builder.Check(builtTransaction).Where(e => !(e is FeeTooLowPolicyError));
 
             if (errors.Any())
