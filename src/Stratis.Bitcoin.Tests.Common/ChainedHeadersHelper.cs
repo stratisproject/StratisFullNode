@@ -57,20 +57,24 @@ namespace Stratis.Bitcoin.Tests.Common
             return chainedHeaders;
         }
 
-        public static List<ChainedHeaderBlock> CreateConsecutiveHeadersAndBlocks(int count, bool includePrevBlock, Network network = null, ChainIndexer chainIndexer = null, bool createCirrusReward = false)
+        public static List<ChainedHeaderBlock> CreateConsecutiveHeadersAndBlocks(int count, bool includePrevBlock, Network network = null, ChainIndexer chainIndexer = null, bool withCoinbaseAndCoinStake = false, bool createCirrusReward = false)
         {
             List<ChainedHeader> chainedHeaders = CreateConsecutiveHeaders(count, null, includePrevBlock, network: network, chainIndexer: chainIndexer);
 
             foreach (ChainedHeader chainedHeader in chainedHeaders)
             {
                 var block = new Block(chainedHeader.Header);
-                block.AddTransaction(TransactionsHelper.CreateCoinbase(network, chainedHeader.Height));
 
-                Transaction coinstakeTransaction = TransactionsHelper.CreateCoinStakeTransaction(network, new Key(), chainedHeader.Height, new uint256(0));
-                block.AddTransaction(coinstakeTransaction);
+                if (withCoinbaseAndCoinStake)
+                {
+                    block.AddTransaction(TransactionsHelper.CreateCoinbase(network, chainedHeader.Height));
 
-                if (createCirrusReward)
-                    TransactionsHelper.CreateCirrusRewardOutput(coinstakeTransaction, network);
+                    Transaction coinstakeTransaction = TransactionsHelper.CreateCoinStakeTransaction(network, new Key(), chainedHeader.Height, new uint256(0));
+                    block.AddTransaction(coinstakeTransaction);
+
+                    if (createCirrusReward)
+                        TransactionsHelper.CreateCirrusRewardOutput(coinstakeTransaction, network);
+                }
 
                 chainedHeader.Block = block;
             }

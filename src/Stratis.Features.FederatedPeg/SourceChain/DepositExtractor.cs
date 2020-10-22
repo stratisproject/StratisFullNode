@@ -23,7 +23,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         public DepositExtractor(IFederatedPegSettings federatedPegSettings, IOpReturnDataReader opReturnDataReader)
         {
-            this.depositScript = federatedPegSettings.MultiSigRedeemScript;
+            this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
             this.opReturnDataReader = opReturnDataReader;
         }

@@ -65,7 +65,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public void RewardClaimer_RetrieveDeposits_Scenario1()
         {
             // Create a "chain" of 30 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, createCirrusReward: true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
             var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.loggerFactory, this.network, this.signals);
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);

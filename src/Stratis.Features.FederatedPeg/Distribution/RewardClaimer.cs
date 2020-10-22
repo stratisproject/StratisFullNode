@@ -103,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             builder.Send(StraxCoinstakeRule.CirrusTransactionTag, Money.Zero);
 
             // The mempool will accept a zero-fee transaction as long as it matches this structure, paying to the federation.
-            builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript, rewardOutputs.Sum(o => o.Value));
+            builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript, rewardOutputs.Sum(o => o.Value));
 
             Transaction builtTransaction = builder.BuildTransaction(true);
 

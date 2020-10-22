@@ -48,15 +48,15 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
     {
         public const string Passphrase = "password";
 
-        public Key[] MultisigPrivateKeys { get;  }
+        public Key[] MultisigPrivateKeys { get; }
 
         public Mnemonic[] MultisigMnemonics { get; }
 
-        public Script PayToMultiSig { get;  }
+        public Script PayToMultiSig { get; }
 
-        public Script SourceChainPayToScriptHash { get;  }
+        public Script SourceChainPayToScriptHash { get; }
 
-        public Script TargetChainPayToScriptHash { get;  }
+        public Script TargetChainPayToScriptHash { get; }
 
         public BitcoinAddress SourceChainMultisigAddress { get; }
 
@@ -76,9 +76,9 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
                 .ToArray();
 
             FederationId federationId = targetChainNetwork.Federations.GetOnlyFederation().Id;
-            this.PayToMultiSig = PayToFederationTemplate.Instance.GenerateScriptPubKey(federationId);                
-                //PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
-                //quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());
+            this.PayToMultiSig = targetChainNetwork.Federations.GetOnlyFederation().MultisigScript;
+            //PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
+            //quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());
 
             this.SourceChainMultisigAddress = this.PayToMultiSig.Hash.GetAddress(this.SourceChainNetwork);
             this.SourceChainPayToScriptHash = this.SourceChainMultisigAddress.ScriptPubKey;
