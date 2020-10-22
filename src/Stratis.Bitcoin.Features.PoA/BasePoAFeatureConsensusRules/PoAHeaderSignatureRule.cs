@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -51,8 +53,9 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         public override void Run(RuleContext context)
         {
             var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
-            
-            PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
+
+            List<IFederationMember> modifiedFederation = this.votingManager.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate);
+            PubKey pubKey = this.slotsManager.GetFederationMemberForTimestamp(context.ValidationContext.ChainedHeaderToValidate.Header.Time, modifiedFederation).PubKey;
 
             if (!this.validator.VerifySignature(pubKey, header))
             {
@@ -70,6 +73,27 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                         context.ValidationContext.InsufficientHeaderInformation = true;
                     }
                 }
+
+                try 
+                {
+                    // Try to provide the public key that signed the block.
+                    var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
+                    for (int recId = 0; ; recId++)
+                    {
+                        PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, header.GetHash(), true);
+                        if (pubKeyForSig == null)
+                            break;
+
+                        if (!modifiedFederation.Any(m => m.PubKey == pubKeyForSig))
+                            continue;
+
+                        this.Logger.LogDebug($"Block is signed by '{0}' but expected '{1}' from: {2}.", pubKeyForSig.ToHex(),
+                            pubKey, string.Join(" ", modifiedFederation.Select(m => m.PubKey.ToHex())));
+
+                        break;
+                    };
+                } 
+                catch (Exception) { }
 
                 this.Logger.LogTrace("(-)[INVALID_SIGNATURE]");
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
