@@ -111,9 +111,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     foreach (OutPoint outPoint in utxos)
                     {
                         Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>("Coins", outPoint.ToBytes());
-                        Utilities.Coins outputs = row.Exists ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(row.Value) : null;
+                        Coins outputs = row.Exists ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(row.Value) : null;
 
-                        this.logger.LogDebug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
+                        this.logger.LogTrace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
                         res.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, outputs));
                     }
@@ -267,13 +267,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 foreach (OutPoint outPoint in rewindData.OutputsToRemove)
                 {
-                    this.logger.LogDebug("Outputs of outpoint '{0}' will be removed.", outPoint);
+                    this.logger.LogTrace("Outputs of outpoint '{0}' will be removed.", outPoint);
                     transaction.RemoveKey("Coins", outPoint.ToBytes());
                 }
 
                 foreach (RewindDataOutput rewindDataOutput in rewindData.OutputsToRestore)
                 {
-                    this.logger.LogDebug("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
+                    this.logger.LogTrace("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
                     transaction.Insert("Coins", rewindDataOutput.OutPoint.ToBytes(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
                 }
 
@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 foreach (StakeItem blockStake in blocklist)
                 {
-                    this.logger.LogDebug("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
+                    this.logger.LogTrace("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
                     Row<byte[], byte[]> stakeRow = transaction.Select<byte[], byte[]>("Stake", blockStake.BlockId.ToBytes(false));
 
                     if (stakeRow.Exists)

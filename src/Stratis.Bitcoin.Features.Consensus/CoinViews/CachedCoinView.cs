@@ -200,7 +200,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                             OutPoint = unspentOutput.Key,
                             Coins = unspentOutput.Value.Coins
                         };
-                        this.logger.LogDebug("Prefetch CacheItem added to the cache, UTXO: '{0}', Coin:'{1}'.", cache.OutPoint, cache.Coins);
+                        this.logger.LogTrace("Prefetch CacheItem added to the cache, UTXO: '{0}', Coin:'{1}'.", cache.OutPoint, cache.Coins);
                         this.cachedUtxoItems.Add(cache.OutPoint, cache);
                         this.cacheSizeBytes += cache.GetSize;
                     }
@@ -222,12 +222,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 {
                     if (!this.cachedUtxoItems.TryGetValue(outPoint, out CacheItem cache))
                     {
-                        this.logger.LogDebug("Utxo '{0}' not found in cache.", outPoint);
+                        this.logger.LogTrace("Utxo '{0}' not found in cache.", outPoint);
                         missedOutpoint.Add(outPoint);
                     }
                     else
                     {
-                        this.logger.LogDebug("Utxo '{0}' found in cache, UTXOs:'{1}'.", outPoint, cache.Coins);
+                        this.logger.LogTrace("Utxo '{0}' found in cache, UTXOs:'{1}'.", outPoint, cache.Coins);
                         result.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, cache.Coins));
                     }
                 }
@@ -237,7 +237,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 if (missedOutpoint.Count > 0)
                 {
-                    this.logger.LogDebug("{0} cache missed transaction needs to be loaded from underlying CoinView.", missedOutpoint.Count);
+                    this.logger.LogTrace("{0} cache missed transaction needs to be loaded from underlying CoinView.", missedOutpoint.Count);
                     FetchCoinsResponse fetchedCoins = this.coindb.FetchCoins(missedOutpoint.ToArray());
 
                     foreach (var unspentOutput in fetchedCoins.UnspentOutputs)
@@ -252,7 +252,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                             Coins = unspentOutput.Value.Coins
                         };
 
-                        this.logger.LogDebug("CacheItem added to the cache, UTXO '{0}', Coin:'{1}'.", cache.OutPoint, cache.Coins);
+                        this.logger.LogTrace("CacheItem added to the cache, UTXO '{0}', Coin:'{1}'.", cache.OutPoint, cache.Coins);
                         this.cachedUtxoItems.Add(cache.OutPoint, cache);
                         this.cacheSizeBytes += cache.GetSize;
                     }

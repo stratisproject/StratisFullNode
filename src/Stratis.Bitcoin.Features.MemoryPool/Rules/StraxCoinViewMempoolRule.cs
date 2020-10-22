@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -46,7 +45,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                             if (output.Value != 0)
                             {
                                 this.logger.LogTrace("(-)[INVALID_REWARD_OP_RETURN_SPEND]");
-                                ConsensusErrors.BadTransactionScriptError.Throw();
+                                context.State.Fail(new MempoolError(MempoolErrors.RejectInvalid, "bad-cirrus-reward-tx-opreturn-not-zero"), "Cirrus reward transaction invalid, op_return value is not 0.").Throw();
                             }
 
                             continue;
@@ -56,7 +55,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                         if (output.ScriptPubKey != this.network.Federations.GetOnlyFederation().MultisigScript)
                         {
                             this.logger.LogTrace("(-)[INVALID_REWARD_SPEND_DESTINATION]");
-                            ConsensusErrors.BadTransactionScriptError.Throw();
+                            context.State.Fail(new MempoolError(MempoolErrors.RejectInvalid, "bad-cirrus-reward-tx-reward-dest-invalid"), "Cirrus reward transaction invalid, reward destination invalid.").Throw();
                         }
                     }
                 }

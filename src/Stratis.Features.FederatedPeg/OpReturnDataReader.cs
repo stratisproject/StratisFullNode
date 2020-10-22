@@ -51,7 +51,7 @@ namespace Stratis.Features.FederatedPeg
         /// <inheritdoc />
         public bool TryGetTargetAddress(Transaction transaction, out string address)
         {
-            List<string> opReturnAddresses = SelectBytesContentFromOpReturn(transaction)
+            var opReturnAddresses = SelectBytesContentFromOpReturn(transaction)
                 .Select(this.TryConvertValidOpReturnDataToAddress)
                 .Where(s => s != null)
                 .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
@@ -69,7 +69,7 @@ namespace Stratis.Features.FederatedPeg
         /// <inheritdoc />
         public bool TryGetTransactionId(Transaction transaction, out string txId)
         {
-            List<string> transactionId = SelectBytesContentFromOpReturn(transaction)
+            var transactionId = SelectBytesContentFromOpReturn(transaction)
                 .Select(this.TryConvertValidOpReturnDataToHash)
                 .Where(s => s != null)
                 .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
