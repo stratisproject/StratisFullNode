@@ -84,6 +84,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                         if (pubKeyForSig == null)
                             break;
 
+                        this.Logger.LogDebug($"Matching candidate key '{ pubKeyForSig.ToHex() }' to federation at height { context.ValidationContext.ChainedHeaderToValidate.Height }.");
+
                         if (!modifiedFederation.Any(m => m.PubKey == pubKeyForSig))
                             continue;
 
