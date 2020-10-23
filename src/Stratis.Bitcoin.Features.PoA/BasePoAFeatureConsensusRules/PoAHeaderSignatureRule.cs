@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -30,6 +32,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private PoAConsensusFactory consensusFactory;
 
+        private Network network;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -42,16 +46,17 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.votingManager = engine.VotingManager;
             this.federationManager = engine.FederationManager;
             this.chainState = engine.ChainState;
-            this.consensusFactory = (PoAConsensusFactory)this.Parent.Network.Consensus.ConsensusFactory;
+            this.network = this.Parent.Network;
+            this.consensusFactory = (PoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
-            this.maxReorg = this.Parent.Network.Consensus.MaxReorgLength;
-            this.votingEnabled = ((PoAConsensusOptions) this.Parent.Network.Consensus.Options).VotingEnabled;
+            this.maxReorg = this.network.Consensus.MaxReorgLength;
+            this.votingEnabled = ((PoAConsensusOptions) this.network.Consensus.Options).VotingEnabled;
         }
 
         public override void Run(RuleContext context)
         {
             var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
-            
+
             PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
 
             if (!this.validator.VerifySignature(pubKey, header))
@@ -70,6 +75,42 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                         context.ValidationContext.InsufficientHeaderInformation = true;
                     }
                 }
+
+                try 
+                {
+                    // Gather all past and present mining public keys.
+                    IEnumerable<PubKey> genesisFederation = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Select(m => m.PubKey);
+                    var knownKeys = new HashSet<PubKey>(genesisFederation);
+                    foreach (Poll poll in this.votingManager.GetFinishedPolls().Where(x => ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                    {
+                        IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
+                        knownKeys.Add(federationMember.PubKey);
+                    }
+
+                    // Try to provide the public key that signed the block.
+                    var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
+                    for (int recId = 0; recId < 4; recId++)
+                    {
+                        PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, header.GetHash(), true);
+                        if (pubKeyForSig == null)
+                        {
+                            this.Logger.LogDebug($"Could not match candidate keys to any known key.");
+                            break;
+                        }
+
+                        this.Logger.LogDebug($"Attempting to match candidate key '{ pubKeyForSig.ToHex() }' to known keys.");
+
+                        if (!knownKeys.Any(pk => pk == pubKeyForSig))
+                            continue;
+
+                        IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
+
+                        this.Logger.LogDebug($"Block is signed by '{0}' but expected '{1}' from: {2}.", pubKeyForSig.ToHex(), pubKey, string.Join(" ", modifiedFederation.Select(pk => pk.ToHex())));
+
+                        break;
+                    };
+                } 
+                catch (Exception) { }
 
                 this.Logger.LogTrace("(-)[INVALID_SIGNATURE]");
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
