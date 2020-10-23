@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                     // Try to provide the public key that signed the block.
                     var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
-                    for (int recId = 0; ; recId++)
+                    for (int recId = 0; recId < 4; recId++)
                     {
                         PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, header.GetHash(), true);
                         if (pubKeyForSig == null)
