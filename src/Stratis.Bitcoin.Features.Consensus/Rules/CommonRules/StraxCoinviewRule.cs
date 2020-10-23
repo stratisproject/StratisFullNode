@@ -93,7 +93,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     }
 
                     // Every other (spendable) output must go to the multisig
-                    if (output.ScriptPubKey != this.Parent.Network.Federations.GetOnlyFederation().MultisigScript)
+                    if (output.ScriptPubKey != this.Parent.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript)
                     {
                         this.Logger.LogTrace("(-)[INVALID_REWARD_SPEND_DESTINATION]");
                         ConsensusErrors.BadTransactionScriptError.Throw();

@@ -27,6 +27,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILoggerFactory loggerFactory;
         private readonly ILogger logger;
+        private readonly Network mainChainNetwork;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
         private readonly TestTransactionBuilder transactionBuilder;
@@ -40,14 +41,15 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.logger = Substitute.For<ILogger>();
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
             this.consensusManager = Substitute.For<IConsensusManager>();
-            this.network = CirrusNetwork.NetworksSelector.Regtest();
+            this.network = new CirrusRegTest();
+            this.mainChainNetwork = new StraxRegTest();
 
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
             this.transactionBuilder = new TestTransactionBuilder();
 
-            this.addressHelper = new MultisigAddressHelper(this.network, Networks.Strax.Regtest());
+            this.addressHelper = new MultisigAddressHelper(this.network, this.mainChainNetwork);
             this.targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             this.opReturnBytes = Encoding.UTF8.GetBytes(this.targetAddress.ToString());
 
@@ -74,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         [Fact]
         public void GetMaturedBlocksReturnsDeposits()
         {
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(10, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(10, true, this.mainChainNetwork);
 
             ChainedHeader tip = this.blocks.Last().ChainedHeader;
 
@@ -113,7 +115,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsDataToAdvanceNextMaturedBlockHeight()
         {
             // Create a "chain" of 20 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
 
             // Add 6 normal deposits to block 11 through to 16.
             for (int i = 11; i < 17; i++)
@@ -173,7 +175,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario2()
         {
             // Create a "chain" of 30 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
 
             // Add 6 normal deposits to block 11 through to 16.
             for (int i = 11; i < 17; i++)
@@ -232,7 +234,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario3()
         {
             // Create a "chain" of 30 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
 
             // Add 6 small deposits to blocks 8 through to 13 (the amounts are less than 10).
             for (int i = 8; i <= 13; i++)
@@ -283,7 +285,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4()
         {
             // Create a "chain" of 20 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
 
             // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
             for (int i = 5; i <= 8; i++)
@@ -340,7 +342,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario5()
         {
             // Create a "chain" of 20 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
 
             // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
             for (int i = 5; i <= 8; i++)
@@ -395,7 +397,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsLargeDeposits_Scenario6()
         {
             // Create a "chain" of 20 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
 
             // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
             for (int i = 5; i <= 8; i++)
@@ -452,7 +454,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsLargeDeposits_Scenario7()
         {
             // Create a "chain" of 40 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, true, this.mainChainNetwork);
 
             // Add 4 small deposits to blocks 5 through to 8 (the amounts are less than 10).
             for (int i = 5; i <= 8; i++)
@@ -522,7 +524,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public void RetrieveDeposits_ReturnsLargeDeposits_Scenario8()
         {
             // Create a "chain" of 40 blocks.
-            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, null, true);
+            this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, true, this.mainChainNetwork);
 
             // Add 6 normal deposits to block 11 through to 16.
             for (int i = 11; i <= 16; i++)

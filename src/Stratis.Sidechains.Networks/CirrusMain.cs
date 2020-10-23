@@ -30,7 +30,7 @@ namespace Stratis.Sidechains.Networks
         /// <summary> The default name used for the federated peg configuration file. </summary>
         private const string NetworkDefaultConfigFilename = "cirrus.conf";
 
-        internal CirrusMain()
+        public CirrusMain()
         {
             this.Name = "CirrusMain";
             this.NetworkType = NetworkType.Mainnet;
