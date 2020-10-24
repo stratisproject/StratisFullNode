@@ -234,7 +234,7 @@ namespace Stratis.Features.Collateral
             this.multisigMinersApplicabilityHeight = null;
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.logger);
 
-            ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked).Reverse().ToArray();
+            ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked && h.Height >= this.network.CollateralCommitmentActivationHeight).Reverse().ToArray();
 
             ChainedHeader first = BinarySearch.BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
             {
