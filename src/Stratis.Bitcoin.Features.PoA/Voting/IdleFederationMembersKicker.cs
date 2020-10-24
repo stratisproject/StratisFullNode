@@ -127,10 +127,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private void OnBlockConnected(BlockConnected blockConnectedData)
         {
-            // Do nothing if this is not a mining node on Cirrus.
-            if (this.federationManager is FederationManager)
-                return;
-
             // Update last active time.
             uint timestamp = blockConnectedData.ConnectedBlock.ChainedHeader.Header.Time;
             PubKey key = this.slotsManager.GetFederationMemberForBlock(blockConnectedData.ConnectedBlock.ChainedHeader, this.votingManager).PubKey;

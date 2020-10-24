@@ -88,10 +88,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public virtual void Initialize()
         {
-            List<IFederationMember> genesisFederation = new List<IFederationMember>(this.network.ConsensusOptions.GenesisFederationMembers);
+            var genesisFederation = new List<IFederationMember>(this.network.ConsensusOptions.GenesisFederationMembers);
 
-            this.logger.LogInformation("Genesis federation contains {0} members. Their public keys are: {1}",
-                genesisFederation.Count, $"{Environment.NewLine}{string.Join(Environment.NewLine, genesisFederation)}");
+            this.logger.LogInformation("Genesis federation contains {0} members. Their public keys are: {1}", genesisFederation.Count, $"{Environment.NewLine}{string.Join(Environment.NewLine, genesisFederation)}");
 
             // Load federation from the db.
             this.LoadFederation();
@@ -111,6 +110,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
             // Load key.
             Key key = new KeyTool(this.settings.DataFolder).LoadPrivateKey();
+            if (key == null)
+            {
+                this.logger.LogWarning("No federation key was loaded from 'federationKey.dat'.");
+                return;
+            }
 
             this.CurrentFederationKey = key;
             this.SetIsFederationMember();
@@ -150,7 +154,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     }
 
                     if (federationMember.CollateralAmount != Money.Zero)
-                        federationMember.CollateralAmount = new Money(federationMember.IsMultisigMember ? 
+                        federationMember.CollateralAmount = new Money(federationMember.IsMultisigMember ?
                             CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount, MoneyUnit.BTC);
                 }
 
@@ -243,7 +247,7 @@ namespace Stratis.Bitcoin.Features.PoA
     public class FederationManager : FederationManagerBase
     {
         public FederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals)
-            :base(nodeSettings, network, loggerFactory, keyValueRepo, signals)
+            : base(nodeSettings, network, loggerFactory, keyValueRepo, signals)
         {
         }
 
