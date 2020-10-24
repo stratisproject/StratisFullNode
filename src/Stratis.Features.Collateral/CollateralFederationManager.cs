@@ -25,7 +25,7 @@ using Stratis.Features.Collateral.CounterChain;
 namespace Stratis.Features.Collateral
 {
     public class CollateralFederationManager : FederationManagerBase
-    {  
+    {
         private readonly ICounterChainSettings counterChainSettings;
         private readonly ILoggerFactory loggerFactory;
         private readonly IFullNode fullNode;
@@ -33,7 +33,7 @@ namespace Stratis.Features.Collateral
         private int? multisigMinersApplicabilityHeight;
         private ChainedHeader lastBlockChecked;
 
-        public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals, 
+        public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals,
             ICounterChainSettings counterChainSettings, IFullNode fullNode, IHttpClientFactory httpClientFactory)
             : base(nodeSettings, network, loggerFactory, keyValueRepo, signals)
         {
@@ -151,10 +151,10 @@ namespace Stratis.Features.Collateral
             // Get the signature by calling the counter-chain "signmessage" API.
             var signMessageRequest = new SignMessageRequest()
             {
-                 Message = joinRequest.SignatureMessage,
-                 WalletName = request.CollateralWalletName,
-                 Password = request.CollateralWalletPassword, 
-                 ExternalAddress = request.CollateralAddress
+                Message = joinRequest.SignatureMessage,
+                WalletName = request.CollateralWalletName,
+                Password = request.CollateralWalletPassword,
+                ExternalAddress = request.CollateralAddress
             };
 
             var walletClient = new WalletClient(this.loggerFactory, this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
@@ -184,7 +184,7 @@ namespace Stratis.Features.Collateral
 
             return collateralFederationMember;
         }
-        
+
         public CollateralFederationMember CollateralAddressOwner(VotingManager votingManager, VoteKey voteKey, string address)
         {
             CollateralFederationMember member = (this.federationMembers.Cast<CollateralFederationMember>().FirstOrDefault(x => x.CollateralMainchainAddress == address));

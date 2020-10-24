@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 // Initialize with current timestamp. If we were to initialise with 0, then everyone would be wrong instantly!
                 foreach (IFederationMember federationMember in this.federationManager.GetFederationMembers())
-                    this.fedPubKeysByLastActiveTime.Add(federationMember.PubKey, (uint) this.timeProvider.GetAdjustedTimeAsUnixTimestamp());
+                    this.fedPubKeysByLastActiveTime.Add(federationMember.PubKey, (uint)this.timeProvider.GetAdjustedTimeAsUnixTimestamp());
 
                 this.SaveMembersByLastActiveTime();
             }
@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 inactiveForSeconds = 0;
                 return false;
             }
-            
+
             inactiveForSeconds = blockTime - lastActiveTime;
 
             return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !this.federationManager.IsMultisigMember(pubKey));

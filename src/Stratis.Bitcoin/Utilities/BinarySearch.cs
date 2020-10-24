@@ -17,8 +17,10 @@ namespace Stratis.Bitcoin.Utilities
 
             // Otherwise split the array in two and search each half.
             int pivot = length / 2;
-            return BinaryFindFirst(array, func, first, pivot)
-                ?? BinaryFindFirst(array, func, first + pivot, length - pivot);
+            var result = BinaryFindFirst(array, func, first, pivot);
+            if (result == null)
+                return BinaryFindFirst(array, func, first + pivot, length - pivot);
+            return result;
         }
 
         /// <summary>
