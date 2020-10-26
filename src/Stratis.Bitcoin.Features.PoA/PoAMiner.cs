@@ -79,6 +79,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private Task miningTask;
 
+        private Script walletScriptPubKey;
+
         public PoAMiner(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
@@ -243,15 +245,20 @@ namespace Stratis.Bitcoin.Features.PoA
                 return null;
             }
 
-            Script walletScriptPubKey = this.GetScriptPubKeyFromWallet();
-
-            if (walletScriptPubKey == null)
+            // Only get this once.
+            if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
             {
-                this.logger.LogWarning("Miner wasn't able to get address from the wallet! You will not receive any rewards.");
-                walletScriptPubKey = new Script();
+                this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
+
+                // The node could not have a wallet.
+                if (this.walletScriptPubKey == null)
+                {
+                    this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
+                    this.walletScriptPubKey = new Script();
+                }
             }
 
-            BlockTemplate blockTemplate = this.blockDefinition.Build(tip, walletScriptPubKey);
+            BlockTemplate blockTemplate = this.blockDefinition.Build(tip, this.walletScriptPubKey);
 
             this.FillBlockTemplate(blockTemplate, out bool dropTemplate);
 

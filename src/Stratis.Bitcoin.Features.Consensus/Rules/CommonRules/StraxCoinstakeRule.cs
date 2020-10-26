@@ -25,11 +25,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         // This payment script is what must actually be checked against in the consensus rule i.e. the reward transaction has this as an output's scriptPubKey.
         public static readonly Script CirrusRewardScript = CirrusRewardScriptRedeem.PaymentScript;
 
-        // This is not used within consensus, but it makes sense to keep the value close to the other script definitions so that it isn't buried inside the reward claimer.
-        // TODO: Replace this & its script with a vanity/burn address with unknowable private key
-        public static readonly string CirrusDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
-        public static readonly Script CirrusTransactionTag = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(Encoding.UTF8.GetBytes(CirrusDummyAddress)));
-
         /// <summary>Allow access to the POS parent.</summary>
         protected PosConsensusRuleEngine PosParent;
 
@@ -39,6 +34,16 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             this.PosParent = this.Parent as PosConsensusRuleEngine;
 
             Guard.NotNull(this.PosParent, nameof(this.PosParent));
+        }
+
+        // This is not used within consensus, but it makes sense to keep the value close to the other script definitions so that it isn't buried inside the reward claimer.
+        // TODO: Replace this & its script with a vanity/burn address with unknowable private key
+        public static Script CirrusTransactionTag(string dummyAddress)
+        {
+            if (string.IsNullOrEmpty(dummyAddress))
+                return null;
+
+            return new Script(OpcodeType.OP_RETURN, Op.GetPushOp(Encoding.UTF8.GetBytes(dummyAddress)));
         }
 
         /// <inheritdoc />

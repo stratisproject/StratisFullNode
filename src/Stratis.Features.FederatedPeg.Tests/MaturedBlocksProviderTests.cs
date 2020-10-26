@@ -137,7 +137,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return hashes.Select((hash) => this.blocks.Single(x => x.ChainedHeader.HashBlock == hash && x.ChainedHeader.Height <= this.consensusManager.Tip.Height)).ToArray();
             });
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -198,7 +198,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -252,7 +252,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -308,7 +308,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -365,7 +365,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -422,7 +422,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -484,7 +484,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 
@@ -547,7 +547,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
 

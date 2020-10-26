@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
@@ -35,14 +34,14 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public RewardClaimerTests()
         {
             this.network = new StraxRegTest();
-            this.addressHelper = new MultisigAddressHelper(this.network, new CirrusMain());
+            this.addressHelper = new MultisigAddressHelper(this.network, new CirrusRegTest());
             this.broadCasterManager = Substitute.For<IBroadcasterManager>();
             this.chainIndexer = new ChainIndexer(this.network);
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.signals = new Signals(this.loggerFactory, null);
 
-            this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(new CirrusMain()));
+            this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(new CirrusRegTest()));
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
@@ -68,12 +67,12 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
             var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.loggerFactory, this.network, this.signals);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             // Add 5 distribution deposits from block 11 through to 15.
             for (int i = 11; i <= 15; i++)
             {
-                Transaction rewardTransaction = rewardClaimer.BuildRewardTransaction(new BlockConnected(this.blocks[i]));
+                Transaction rewardTransaction = rewardClaimer.BuildRewardTransaction();
                 IDeposit deposit = depositExtractor.ExtractDepositFromTransaction(rewardTransaction, i, this.blocks[i].Block.GetHash());
                 Assert.NotNull(deposit);
             }

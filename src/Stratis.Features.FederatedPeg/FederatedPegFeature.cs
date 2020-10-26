@@ -288,9 +288,18 @@ namespace Stratis.Features.FederatedPeg
             if (maturingDeposits.Length > 0)
             {
                 benchLog.AppendLine("--- Maturing Deposits ---");
-                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d => $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {d.deposit.TargetAddress} ({d.deposit.RetrievalType})").Take(20)));
+
+                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d =>
+                {
+                    var target = d.deposit.TargetAddress;
+                    if (target == this.network.CirrusRewardDummyAddress)
+                        target = "Reward Distribution";
+                    return $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {target} ({d.deposit.RetrievalType})";
+                }).Take(20)));
+
                 if (maturingDeposits.Length > 20)
                     benchLog.AppendLine("...");
+
                 benchLog.AppendLine();
             }
 

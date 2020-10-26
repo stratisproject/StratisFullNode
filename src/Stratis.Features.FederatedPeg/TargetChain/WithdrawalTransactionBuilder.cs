@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -70,10 +68,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     IgnoreVerify = true,
                     WalletPassword = walletPassword,
                     Sign = sign,
-                    Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?) null
+                    Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?)null
                 };
 
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag)
+                // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey)
                 {
                     // Use the distribution manager to determine the actual list of recipients.
                     // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
@@ -81,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
                 else
                 {
-                    multiSigContext.Recipients = new List<Recipient> {recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee)}; // The fee known to the user is taken.
+                    multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) }; // The fee known to the user is taken.
                 }
 
                 // TODO: Amend this so we're not picking coins twice.

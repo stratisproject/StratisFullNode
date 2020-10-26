@@ -1014,7 +1014,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             tx2.AddOutput(new TxOut(tx.Outputs.First().Value, this.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript));
 
             // Without the marker output a zero fee would not be allowed as the transaction is not in the proper cross-chain format.
-            tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag));
+            tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag(this.Network.CirrusRewardDummyAddress)));
 
             tx2.Sign(this.Network, minerSecret, true);
 
@@ -1053,7 +1053,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
             tx2.AddOutput(new TxOut(tx.Outputs.First().Value - Money.Coins(0.05m), this.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript));
 
             // Assign some of the value to the unspendable output.
-            tx2.AddOutput(new TxOut(Money.Coins(0.05m), StraxCoinstakeRule.CirrusTransactionTag));
+            tx2.AddOutput(new TxOut(Money.Coins(0.05m), StraxCoinstakeRule.CirrusTransactionTag(this.Network.CirrusRewardDummyAddress)));
 
             tx2.Sign(this.Network, minerSecret, true);
 
@@ -1132,7 +1132,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
 
             tx2.AddInput(new TxIn(new OutPoint(tx.GetHash(), 0), StraxCoinstakeRule.CirrusRewardScriptRedeem));
             tx2.AddOutput(new TxOut(Money.Coins(0.99m), destSecret.PubKeyHash));
-            tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag));
+            tx2.AddOutput(new TxOut(Money.Zero, StraxCoinstakeRule.CirrusTransactionTag(this.Network.CirrusRewardDummyAddress)));
 
             tx2.Sign(this.Network, minerSecret, true);
 

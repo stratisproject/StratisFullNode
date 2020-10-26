@@ -99,6 +99,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                         ConsensusErrors.BadTransactionScriptError.Throw();
                     }
                 }
+
+                this.Logger.LogInformation($"Reward distribution transaction validated in consensus, spending to '{prevOut.ScriptPubKey}'.");
             }
 
             // Otherwise allow the spend (do nothing).

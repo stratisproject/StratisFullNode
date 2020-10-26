@@ -406,7 +406,7 @@ namespace Stratis.Bitcoin.Features.Miner
                 }
 
                 // Don't check the package fees if this is a CirrusRewardScript transaction.
-                if (!mempoolEntry.Transaction.Outputs.Any(o => o.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag))
+                if (!mempoolEntry.Transaction.Outputs.Any(o => o.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag(this.Network.CirrusRewardDummyAddress)))
                 {
                     if (packageFees < this.BlockMinFeeRate.GetFee((int)packageSize))
                     {

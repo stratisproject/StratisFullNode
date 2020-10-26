@@ -54,6 +54,8 @@ namespace Stratis.Sidechains.Networks
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -69,10 +71,9 @@ namespace Stratis.Sidechains.Networks
             this.Genesis = genesisBlock;
 
             this.FederationMnemonics = new[] {
-                   "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                   "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                   "exchange rent bronze pole post hurry oppose drama eternal voice client state"
-               }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+                "blame similar caution exit urge combine oak fat maximum link eyebrow elbow"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
@@ -98,7 +99,7 @@ namespace Stratis.Sidechains.Networks
             this.Federations = new Federations();
 
             // Default transaction-signing keys!
-            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
+            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
