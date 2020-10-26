@@ -40,6 +40,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         // TODO: Replace this & its script with a vanity/burn address with unknowable private key
         public static Script CirrusTransactionTag(string dummyAddress)
         {
+            if (string.IsNullOrEmpty(dummyAddress))
+                return null;
+
             return new Script(OpcodeType.OP_RETURN, Op.GetPushOp(Encoding.UTF8.GetBytes(dummyAddress)));
         }
 

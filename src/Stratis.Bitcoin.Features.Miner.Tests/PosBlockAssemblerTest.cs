@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using FluentAssertions.Common;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -37,18 +36,16 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         private readonly Key key;
         private readonly Mock<ITxMempool> mempool;
         private readonly MinerSettings minerSettings;
-        private readonly Network stratisTest;
         private readonly Mock<IStakeChain> stakeChain;
         private readonly Mock<IStakeValidator> stakeValidator;
 
-        public PosBlockAssemblerTest() : base(KnownNetworks.StraxTest)
+        public PosBlockAssemblerTest() : base(new StraxTest())
         {
             this.consensusManager = new Mock<IConsensusManager>();
             this.mempool = new Mock<ITxMempool>();
             this.dateTimeProvider = new Mock<IDateTimeProvider>();
             this.stakeValidator = new Mock<IStakeValidator>();
             this.stakeChain = new Mock<IStakeChain>();
-            this.stratisTest = KnownNetworks.StraxTest;
             this.key = new Key();
             this.minerSettings = new MinerSettings(NodeSettings.Default(this.Network));
             SetupConsensusManager();
@@ -61,13 +58,13 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             {
                 this.dateTimeProvider.Setup(d => d.GetTimeOffset()).Returns(new DateTimeOffset(new DateTime(2017, 1, 7, 0, 0, 0, DateTimeKind.Utc)));
 
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, new Key());
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, new Key());
 
-                this.stakeValidator.Setup(s => s.GetNextTargetRequired(this.stakeChain.Object, chainIndexer.Tip, this.stratisTest.Consensus, true))
+                this.stakeValidator.Setup(s => s.GetNextTargetRequired(this.stakeChain.Object, chainIndexer.Tip, this.Network.Consensus, true))
                     .Returns(new Target(new uint256(1123123123)))
                     .Verifiable();
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 Block block = posBlockAssembler.UpdateHeaders(chainIndexer.Tip);
 
@@ -84,22 +81,22 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         {
             this.ExecuteWithConsensusOptions(new PosConsensusOptions(), () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, this.key);
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, this.key);
                 this.SetupRulesEngine(chainIndexer);
                 var datetime = new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc);
                 this.dateTimeProvider.Setup(d => d.GetAdjustedTimeAsUnixTimestamp()).Returns(datetime.ToUnixTimestamp());
                 // Ensure that the BlockDefinition UpdateBaseHeaders sets the timestamp as required
                 this.dateTimeProvider.Setup(d => d.GetTimeOffset()).Returns(datetime.ToDateTimeOffset());
-                Transaction transaction = CreateTransaction(this.stratisTest, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
+                Transaction transaction = CreateTransaction(this.Network, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
                 var txFee = new Money(1000);
 
-                SetupTxMempool(chainIndexer, this.stratisTest.Consensus.Options as PosConsensusOptions, txFee, transaction);
+                SetupTxMempool(chainIndexer, this.Network.Consensus.Options as PosConsensusOptions, txFee, transaction);
 
-                this.stakeValidator.Setup(s => s.GetNextTargetRequired(this.stakeChain.Object, chainIndexer.Tip, this.stratisTest.Consensus, true))
+                this.stakeValidator.Setup(s => s.GetNextTargetRequired(this.stakeChain.Object, chainIndexer.Tip, this.Network.Consensus, true))
                     .Returns(new Target(new uint256(1123123123)))
                     .Verifiable();
 
-                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.LoggerFactory.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.stratisTest, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.LoggerFactory.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.Network, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.Network, chainIndexer));
                 BlockTemplate blockTemplate = posBlockAssembler.Build(chainIndexer.Tip, this.key.ScriptPubKey);
 
                 Assert.Equal(new Money(1000), blockTemplate.TotalFee);
@@ -140,21 +137,21 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
             this.ExecuteWithConsensusOptions(newOptions, () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, this.key);
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, this.key);
                 this.SetupRulesEngine(chainIndexer);
                 this.dateTimeProvider.Setup(d => d.GetAdjustedTimeAsUnixTimestamp()).Returns(new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc).ToUnixTimestamp());
                 this.consensusManager.Setup(c => c.Tip).Returns(chainIndexer.GetHeader(5));
 
-                this.stakeValidator.Setup(s => s.GetNextTargetRequired(this.stakeChain.Object, chainIndexer.Tip, this.stratisTest.Consensus, true))
+                this.stakeValidator.Setup(s => s.GetNextTargetRequired(this.stakeChain.Object, chainIndexer.Tip, this.Network.Consensus, true))
                     .Returns(new Target(new uint256(1123123123)))
                     .Verifiable();
 
-                Transaction transaction = CreateTransaction(this.stratisTest, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
+                Transaction transaction = CreateTransaction(this.Network, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
                 var txFee = new Money(1000);
 
                 SetupTxMempool(chainIndexer, newOptions, txFee, transaction);
 
-                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.LoggerFactory.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.stratisTest, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosBlockDefinition(this.consensusManager.Object, this.dateTimeProvider.Object, this.LoggerFactory.Object, this.mempool.Object, new MempoolSchedulerLock(), this.minerSettings, this.Network, this.stakeChain.Object, this.stakeValidator.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 BlockTemplate blockTemplate = posBlockAssembler.Build(chainIndexer.Tip, this.key.ScriptPubKey);
 
@@ -169,11 +166,11 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         {
             this.ExecuteWithConsensusOptions(new PosConsensusOptions(), () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, new Key());
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, new Key());
                 this.SetupRulesEngine(chainIndexer);
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings,
-                                                 this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings,
+                                                 this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 (int Height, int Version) result = posBlockAssembler.ComputeBlockVersion(chainIndexer.GetHeader(4));
 
@@ -182,37 +179,29 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             });
         }
 
-        private class StraxOverrideRegTest : StraxRegTest
-        {
-            public StraxOverrideRegTest() : base()
-            {
-                this.Name = Guid.NewGuid().ToString();
-            }
-        }
-
         [Fact]
         public void ComputeBlockVersion_UsingChainTipAndConsensus_Bip9DeploymentActive_UpdatesHeightAndVersion()
         {
-            ConsensusOptions options = this.stratisTest.Consensus.Options;
-            int minerConfirmationWindow = this.stratisTest.Consensus.MinerConfirmationWindow;
+            ConsensusOptions options = this.Network.Consensus.Options;
+            int minerConfirmationWindow = this.Network.Consensus.MinerConfirmationWindow;
 
             try
             {
                 var newOptions = new PosConsensusOptions();
-                this.stratisTest.Consensus.Options = newOptions;
+                this.Network.Consensus.Options = newOptions;
 
                 // Set the BIP9 activation to expire one day from now so that it is still signaled in the blocks.
-                this.stratisTest.Consensus.BIP9Deployments[0] = new BIP9DeploymentsParameters("Test", 19,
+                this.Network.Consensus.BIP9Deployments[0] = new BIP9DeploymentsParameters("Test", 19,
                     new DateTimeOffset(new DateTime(2016, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
                     new DateTimeOffset(DateTime.UtcNow + TimeSpan.FromDays(1)),
                     2);
 
-                this.stratisTest.Consensus.MinerConfirmationWindow = 2;
+                this.Network.Consensus.MinerConfirmationWindow = 2;
 
-                ChainIndexer chainIndexer = GenerateChainWithHeightAndActivatedBip9(5, this.stratisTest, new Key(), this.stratisTest.Consensus.BIP9Deployments[0]);
+                ChainIndexer chainIndexer = GenerateChainWithHeightAndActivatedBip9(5, this.Network, new Key(), this.Network.Consensus.BIP9Deployments[0]);
                 this.SetupRulesEngine(chainIndexer);
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 (int Height, int Version) result = posBlockAssembler.ComputeBlockVersion(chainIndexer.GetHeader(4));
 
@@ -224,9 +213,9 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             finally
             {
                 // This is a static in the global context so be careful updating it. I'm resetting it after being done testing so I don't influence other tests.
-                this.stratisTest.Consensus.Options = options;
-                this.stratisTest.Consensus.BIP9Deployments[0] = null;
-                this.stratisTest.Consensus.MinerConfirmationWindow = minerConfirmationWindow;
+                this.Network.Consensus.Options = options;
+                this.Network.Consensus.BIP9Deployments[0] = null;
+                this.Network.Consensus.MinerConfirmationWindow = minerConfirmationWindow;
             }
         }
 
@@ -235,11 +224,11 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         {
             this.ExecuteWithConsensusOptions(new PosConsensusOptions(), () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, this.key);
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, this.key);
                 this.dateTimeProvider.Setup(d => d.GetAdjustedTimeAsUnixTimestamp())
                     .Returns(new DateTime(2017, 1, 7, 0, 0, 1, DateTimeKind.Utc).ToUnixTimestamp());
-                
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 BlockTemplate result = posBlockAssembler.CreateCoinBase(chainIndexer.Tip, this.key.ScriptPubKey);
 
@@ -267,15 +256,15 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
             this.ExecuteWithConsensusOptions(newOptions, () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, new Key());
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, new Key());
                 this.consensusManager.Setup(c => c.Tip)
                     .Returns(chainIndexer.GetHeader(5));
                 var indexedTransactionSet = new TxMempool.IndexedTransactionSet();
                 this.mempool.Setup(t => t.MapTx)
                     .Returns(indexedTransactionSet);
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings,
-                                                 this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings,
+                                                 this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
                 (Block Block, int Selected, int Updated) result = posBlockAssembler.AddTransactions();
 
@@ -292,7 +281,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
             this.ExecuteWithConsensusOptions(newOptions, () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, this.key);
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, this.key);
                 this.consensusManager.Setup(c => c.Tip)
                     .Returns(chainIndexer.GetHeader(5));
 
@@ -302,16 +291,16 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 this.consensusManager.Setup(c => c.ConsensusRules)
                     .Returns(consensusRuleEngine.Object);
 
-                Transaction transaction = CreateTransaction(this.stratisTest, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
+                Transaction transaction = CreateTransaction(this.Network, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
 
                 this.dateTimeProvider.Setup(s => s.GetAdjustedTimeAsUnixTimestamp()).Returns(chainIndexer.Tip.Header.Time);
 
                 var txFee = new Money(1000);
                 SetupTxMempool(chainIndexer, newOptions, txFee, transaction);
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
 
-                posBlockAssembler.CreateCoinBase(new ChainedHeader(this.stratisTest.GetGenesis().Header, this.stratisTest.GetGenesis().Header.GetHash(), 0), new KeyId().ScriptPubKey);
+                posBlockAssembler.CreateCoinBase(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().Header.GetHash(), 0), new KeyId().ScriptPubKey);
 
                 (Block Block, int Selected, int Updated) result = posBlockAssembler.AddTransactions();
 
@@ -330,14 +319,14 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
             this.ExecuteWithConsensusOptions(newOptions, () =>
             {
-                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.stratisTest, this.key);
+                ChainIndexer chainIndexer = GenerateChainWithHeight(5, this.Network, this.key);
                 this.consensusManager.Setup(c => c.Tip)
                     .Returns(chainIndexer.GetHeader(5));
-                Transaction transaction = CreateTransaction(this.stratisTest, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
+                Transaction transaction = CreateTransaction(this.Network, this.key, 5, new Money(400 * 1000 * 1000), new Key(), new uint256(124124));
                 var txFee = new Money(1000);
                 TxMempoolEntry[] entries = SetupTxMempool(chainIndexer, newOptions, txFee, transaction);
 
-                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.stratisTest, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.stratisTest, chainIndexer));
+                var posBlockAssembler = new PosTestBlockAssembler(this.consensusManager.Object, this.Network, new MempoolSchedulerLock(), this.mempool.Object, this.minerSettings, this.dateTimeProvider.Object, this.stakeChain.Object, this.stakeValidator.Object, this.LoggerFactory.Object, new NodeDeployments(this.Network, chainIndexer));
                 posBlockAssembler.AddInBlockTxEntries(entries);
 
                 (Block Block, int Selected, int Updated) result = posBlockAssembler.AddTransactions();
@@ -350,18 +339,18 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 
         private void ExecuteWithConsensusOptions(PosConsensusOptions newOptions, Action action)
         {
-            ConsensusOptions options = this.stratisTest.Consensus.Options;
+            ConsensusOptions options = this.Network.Consensus.Options;
             try
             {
-                this.stratisTest.Consensus.Options = newOptions;
+                this.Network.Consensus.Options = newOptions;
 
                 action();
             }
             finally
             {
                 // This is a static in the global context so be careful updating it. I'm resetting it after being done testing so I don't influence other tests.
-                this.stratisTest.Consensus.Options = options;
-                this.stratisTest.Consensus.BIP9Deployments[0] = null;
+                this.Network.Consensus.Options = options;
+                this.Network.Consensus.BIP9Deployments[0] = null;
             }
         }
 
@@ -464,12 +453,12 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
 
             var posConsensusRules = new PosConsensusRuleEngine(
-                this.stratisTest,
+                this.Network,
                 this.LoggerFactory.Object,
                 this.dateTimeProvider.Object,
                 chainIndexer,
-                new NodeDeployments(this.stratisTest, chainIndexer),
-                new ConsensusSettings(new NodeSettings(this.stratisTest)),
+                new NodeDeployments(this.Network, chainIndexer),
+                new ConsensusSettings(new NodeSettings(this.Network)),
                 new Checkpoints(),
                 new Mock<ICoinView>().Object,
                 new Mock<IStakeChain>().Object,
@@ -572,6 +561,14 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 {
                     base.inBlock.Add(entry);
                 }
+            }
+        }
+
+        private class StraxOverrideRegTest : StraxRegTest
+        {
+            public StraxOverrideRegTest() : base()
+            {
+                this.Name = Guid.NewGuid().ToString();
             }
         }
     }
