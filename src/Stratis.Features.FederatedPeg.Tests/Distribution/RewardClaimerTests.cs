@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
@@ -73,7 +72,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             // Add 5 distribution deposits from block 11 through to 15.
             for (int i = 11; i <= 15; i++)
             {
-                Transaction rewardTransaction = rewardClaimer.BuildRewardTransaction(new BlockConnected(this.blocks[i]));
+                Transaction rewardTransaction = rewardClaimer.BuildRewardTransaction();
                 IDeposit deposit = depositExtractor.ExtractDepositFromTransaction(rewardTransaction, i, this.blocks[i].Block.GetHash());
                 Assert.NotNull(deposit);
             }

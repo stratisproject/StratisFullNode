@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Features.Collateral;
 using Stratis.Features.FederatedPeg.Wallet;
 
@@ -17,6 +18,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
+        private readonly IConsensusManager consensusManager;
         private readonly ILogger logger;
 
         private readonly int epoch;
@@ -27,10 +29,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
         // We pay no attention to whether a miner has been kicked since the last distribution or not.
         // If they produced an accepted block, they get their reward.
 
-        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, ILoggerFactory loggerFactory)
+        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager, ILoggerFactory loggerFactory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
+            this.consensusManager = consensusManager;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
@@ -58,6 +61,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             for (int i = 0; i < iterations; i++)
             {
+                if (currentHeader.Block == null)
+                    currentHeader.Block = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
+
                 (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
 
                 if (heightOfMainChainCommitment == null)
@@ -102,12 +108,19 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 // This avoids trying to recover the pubkey from the block signature.
                 Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
 
-                if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
-                    minerBlockCount = 0;
+                // If the POA miner at the time did not have a wallet address, the script length can be 0.
+                // In this case the block shouldn't count as it was "not mined by anyone".
+                if (minerScript != Script.Empty)
+                {
+                    if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
+                        minerBlockCount = 0;
 
-                blocksMinedEach[minerScript] = ++minerBlockCount;
+                    blocksMinedEach[minerScript] = ++minerBlockCount;
 
-                totalBlocks++;
+                    totalBlocks++;
+                }
+                else
+                    this.logger.LogDebug($"A block was mined with an empty script at height '{currentHeight}' (the miner probably did not have a wallet at the time.");
             }
 
             var recipients = new List<Recipient>();
@@ -118,6 +131,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey });
             }
+
+            this.logger.LogInformation($"A total reward of {totalReward} will be distibuted between {recipients.Count} recipients");
 
             return recipients;
         }

@@ -38,6 +38,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
 
                 if (unspentOutput.Coins.TxOut.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
                 {
+                    this.logger.LogInformation($"Reward distribution transaction seen in mempool, paying to '{unspentOutput.Coins.TxOut.ScriptPubKey}'.");
+
                     foreach (TxOut output in context.Transaction.Outputs)
                     {
                         if (output.ScriptPubKey.IsUnspendable)

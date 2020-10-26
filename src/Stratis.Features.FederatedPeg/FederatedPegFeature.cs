@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.PoA;
@@ -288,9 +289,18 @@ namespace Stratis.Features.FederatedPeg
             if (maturingDeposits.Length > 0)
             {
                 benchLog.AppendLine("--- Maturing Deposits ---");
-                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d => $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {d.deposit.TargetAddress} ({d.deposit.RetrievalType})").Take(20)));
+
+                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d =>
+                {
+                    var target = d.deposit.TargetAddress;
+                    if (target == StraxCoinstakeRule.CirrusDummyAddress)
+                        target = "Reward Distribution";
+                    return $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {target} ({d.deposit.RetrievalType})";
+                }).Take(20)));
+
                 if (maturingDeposits.Length > 20)
                     benchLog.AppendLine("...");
+
                 benchLog.AppendLine();
             }
 

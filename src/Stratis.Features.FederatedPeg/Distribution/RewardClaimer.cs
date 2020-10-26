@@ -46,7 +46,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
 
-        public Transaction BuildRewardTransaction(BlockConnected blockConnected)
+        public Transaction BuildRewardTransaction()
         {
             // Get the minimum stake confirmations for the current network.
             int minStakeConfirmations = ((PosConsensusOptions)this.network.Consensus.Options).GetStakeMinConfirmations(this.chainIndexer.Height, this.network);
@@ -119,12 +119,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 return null;
             }
 
+            this.logger.LogInformation($"Reward distribution transaction built; payment script to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
+
             return builtTransaction;
         }
 
         private void OnBlockConnected(BlockConnected blockConnected)
         {
-            Transaction transaction = BuildRewardTransaction(blockConnected);
+            Transaction transaction = BuildRewardTransaction();
             if (transaction != null)
             {
                 // It does not really matter whether the reward has been claimed already, as the transaction will simply be rejected by the other nodes on the network if it has.
