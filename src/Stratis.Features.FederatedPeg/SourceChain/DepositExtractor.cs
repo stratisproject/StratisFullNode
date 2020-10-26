@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
@@ -19,12 +18,14 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         private readonly Script depositScript;
         private readonly IFederatedPegSettings federatedPegSettings;
+        private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
         {
             this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
+            this.network = network;
             this.opReturnDataReader = opReturnDataReader;
         }
 
@@ -77,7 +78,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
-            if (targetAddress == StraxCoinstakeRule.CirrusDummyAddress)
+            if (targetAddress == this.network.CirrusRewardDummyAddress)
                 depositRetrievalType = DepositRetrievalType.Distribution;
             else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                 depositRetrievalType = DepositRetrievalType.Large;

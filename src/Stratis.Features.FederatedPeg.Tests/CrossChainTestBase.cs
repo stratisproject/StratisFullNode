@@ -117,8 +117,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationKeys = new[]
             {
                 "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
+                "blame similar caution exit urge combine oak fat maximum link eyebrow elbow",
             }.Select(m => HdOperations.GetExtendedKey(m)).ToArray();
 
             SetExtendedKey(0);

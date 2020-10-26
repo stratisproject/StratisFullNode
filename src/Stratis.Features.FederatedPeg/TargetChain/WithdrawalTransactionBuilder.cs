@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
 using Stratis.Features.FederatedPeg.Distribution;
@@ -73,7 +72,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 };
 
                 // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey == BitcoinAddress.Create(StraxCoinstakeRule.CirrusDummyAddress, this.network).ScriptPubKey)
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey)
                 {
                     // Use the distribution manager to determine the actual list of recipients.
                     // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead

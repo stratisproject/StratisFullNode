@@ -28,7 +28,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
             bool federationPayment = !(context.Transaction.Outputs.Count < 2);
 
             // The OP_RETURN output that marks the transaction as cross-chain (and in particular a reward claiming transaction) must be present.
-            if (context.Transaction.Outputs.All(o => o.ScriptPubKey != StraxCoinstakeRule.CirrusTransactionTag))
+            if (context.Transaction.Outputs.All(o => o.ScriptPubKey != StraxCoinstakeRule.CirrusTransactionTag(this.network.CirrusRewardDummyAddress)))
             {
                 federationPayment = false;
             }

@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Networks
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML"; // Cirrus test address
+
             var powLimit = new Target(new uint256("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
 
             var consensusFactory = new PosConsensusFactory();
@@ -79,9 +81,8 @@ namespace Stratis.Bitcoin.Networks
 
             // Cirrus federation.
             var cirrusFederationMnemonics = new[] {
-                   "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                   "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                   "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+                "blame similar caution exit urge combine oak fat maximum link eyebrow elbow"
                }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             var cirrusFederationKeys = cirrusFederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();

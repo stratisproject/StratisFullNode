@@ -51,6 +51,8 @@ namespace Stratis.Sidechains.Networks
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
+            this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.

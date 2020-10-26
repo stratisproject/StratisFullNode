@@ -31,7 +31,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public WithdrawalTransactionBuilderTests()
         {
             this.loggerFactory = new Mock<ILoggerFactory>();
-            this.network = CirrusNetwork.NetworksSelector.Regtest();
+            this.network = new CirrusRegTest();
             this.federationWalletManager = new Mock<IFederationWalletManager>();
             this.federationWalletTransactionHandler = new Mock<IFederationWalletTransactionHandler>();
             this.federationGatewaySettings = new Mock<IFederatedPegSettings>();
@@ -41,8 +41,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.loggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
                 .Returns(this.logger.Object);
 
-            this.federationGatewaySettings.Setup<Money>(x => x.GetWithdrawalTransactionFee(It.IsAny<int>()))
-                .Returns<int>((numInputs) => {
+            this.federationGatewaySettings.Setup(x => x.GetWithdrawalTransactionFee(It.IsAny<int>()))
+                .Returns<int>((numInputs) =>
+                {
                     return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
                 });
 
@@ -56,7 +57,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         [Fact]
         public void FeeIsTakenFromRecipient()
         {
-            Script redeemScript = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, new[] {new Key().PubKey, new Key().PubKey});
+            Script redeemScript = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, new[] { new Key().PubKey, new Key().PubKey });
 
             this.federationWalletManager.Setup(x => x.GetSpendableTransactionsInWallet(It.IsAny<int>()))
                 .Returns(new List<UnspentOutputReference>
