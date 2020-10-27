@@ -437,7 +437,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         }
 
         /// <inheritdoc />
-        public bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null)
+        public bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null, bool isDistribution = false)
         {
             Guard.NotNull(transaction, nameof(transaction));
             Guard.Assert(blockHash == (blockHash ?? block?.GetHash()));
@@ -470,7 +470,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 }
 
                 // Extract the withdrawal from the transaction (if any).
-                IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
+                IWithdrawal withdrawal = null;
+                if (isDistribution)
+                    withdrawal = this.withdrawalExtractor.ExtractDistributionWithdrawal(transaction, blockHash, blockHeight ?? 0);
+                else
+                    withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
 
                 if (withdrawal != null)
                 {

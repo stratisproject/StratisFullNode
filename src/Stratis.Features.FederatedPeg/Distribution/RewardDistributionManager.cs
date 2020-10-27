@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
@@ -125,11 +126,24 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             var recipients = new List<Recipient>();
 
+            var recipientLog = new StringBuilder();
+            recipientLog.AppendLine($"Total Blocks = {totalBlocks}");
+            recipientLog.AppendLine($"Side Chain Height = {sidechainEndHeight}");
+            foreach (KeyValuePair<Script, long> item in blocksMinedEach)
+            {
+                recipientLog.AppendLine($"{item.Key} - {item.Value}");
+            }
+
+            this.logger.LogDebug(recipientLog.ToString());
+
             foreach (Script scriptPubKey in blocksMinedEach.Keys)
             {
                 Money amount = totalReward * blocksMinedEach[scriptPubKey] / totalBlocks;
 
-                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey });
+                PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+                Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = p2pkh });
             }
 
             this.logger.LogInformation($"A total reward of {totalReward} will be distibuted between {recipients.Count} recipients");
