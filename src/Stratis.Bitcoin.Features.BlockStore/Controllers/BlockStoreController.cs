@@ -23,6 +23,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         public const string GetBlock = "block";
         public const string GetBlockCount = "getblockcount";
         public const string GetUtxoSet = "getutxoset";
+        public const string GetLastBalanceDecreaseTransaction = "getlastbalanceupdatetransaction";
     }
 
     /// <summary>Controller providing operations on a blockstore.</summary>
@@ -266,6 +267,25 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                 }
 
                 return this.Json(outputs);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route(BlockStoreRouteEndPoint.GetLastBalanceDecreaseTransaction)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetLastBalanceUpdateTransaction(string address)
+        {
+            try
+            {
+                LastBalanceDecreaseTransactionModel result = this.addressIndexer.GetLastBalanceDecreaseTransaction(address);
+
+                return this.Json(result);
             }
             catch (Exception e)
             {

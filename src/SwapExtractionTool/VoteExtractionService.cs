@@ -7,6 +7,7 @@ using Flurl;
 using Flurl.Http;
 using NBitcoin;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 
 namespace SwapExtractionTool
@@ -22,7 +23,7 @@ namespace SwapExtractionTool
 
         public async Task RunAsync(VoteType voteType, int startBlock)
         {
-            Console.WriteLine($"Scanning for votes...");
+            Console.WriteLine($"Scanning for {voteType} votes...");
 
             for (int height = startBlock; height < EndHeight; height++)
             {
@@ -62,6 +63,10 @@ namespace SwapExtractionTool
             var eWeight = Money.Satoshis(votes.Where(v => v.Selection == "E").Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC);
 
             Console.WriteLine($"Total Weight: {totalWeight} STRAT");
+
+            if (totalWeight == 0)
+                return;
+
             Console.WriteLine($"Total A Weight: {(aWeight / totalWeight * 100).ToString("F")}% [{aWeight}]");
             Console.WriteLine($"Total B Weight: {(bWeight / totalWeight * 100).ToString("F")}% [{bWeight}]");
             Console.WriteLine($"Total C Weight: {(cWeight / totalWeight * 100).ToString("F")}% [{cWeight}]");
@@ -113,7 +118,7 @@ namespace SwapExtractionTool
                     var collateralVote = potentialVote.Substring(2, 1);
                     if (!new[] { "A", "B", "C", "D", "E" }.Contains(collateralVote))
                     {
-                        Console.WriteLine($"Invalid vote found 'collateralVote'; height {blockHeight}.");
+                        Console.WriteLine($"Invalid vote found '{collateralVote}'; height {blockHeight}.");
                         continue;
                     }
 
@@ -131,11 +136,33 @@ namespace SwapExtractionTool
                     }
 
                     AddressBalancesResult balance = await $"http://localhost:{this.StratisNetworkApiPort}/api"
-                            .AppendPathSegment("blockstore/getaddressesbalances")
-                            .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
-                            .GetJsonAsync<AddressBalancesResult>();
+                        .AppendPathSegment($"blockstore/{BlockStoreRouteEndPoint.GetAddressesBalances}")
+                        .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
+                        .GetJsonAsync<AddressBalancesResult>();
 
-                    this.collateralVotes.Add(new CollateralVote() { Address = potentialStratAddress, Balance = balance.Balances[0].Balance, Selection = collateralVote, BlockHeight = blockHeight });
+                    Money determinedBalance = balance.Balances[0].Balance;
+
+                    // Check if the last transaction that spends from the given address was a burn transaction.
+                    // If so, the amount of the burn takes precedence for the purposes of the vote weight.
+                    LastBalanceDecreaseTransactionModel lastBalanceDecreaseTransaction = await $"http://localhost:{this.StratisNetworkApiPort}/api"
+                        .AppendPathSegment($"blockstore/{BlockStoreRouteEndPoint.GetLastBalanceDecreaseTransaction}")
+                        .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
+                        .GetJsonAsync<LastBalanceDecreaseTransactionModel>();
+
+                    if (lastBalanceDecreaseTransaction.BlockHeight > blockHeight)
+                    {
+                        foreach (Vout txOut in lastBalanceDecreaseTransaction.Transaction.VOut)
+                        {
+                            if (txOut.ScriptPubKey.Type == "nulldata" && Money.Coins(txOut.Value) > determinedBalance)
+                            {
+                                Console.WriteLine($"Detected that address '{potentialStratAddress}' burnt {determinedBalance} at height {lastBalanceDecreaseTransaction.BlockHeight}");
+
+                                determinedBalance = Money.Coins(txOut.Value);
+                            }
+                        }
+                    }
+
+                    this.collateralVotes.Add(new CollateralVote() { Address = potentialStratAddress, Balance = determinedBalance, Selection = collateralVote, BlockHeight = blockHeight });
                     Console.WriteLine($"Collateral vote found at height {blockHeight}; Selection '{collateralVote}'");
                 }
                 catch (Exception)
@@ -179,7 +206,7 @@ namespace SwapExtractionTool
                         }
 
                         AddressBalancesResult balance = await $"http://localhost:{this.StratisNetworkApiPort}/api"
-                                .AppendPathSegment("blockstore/getaddressesbalances")
+                                .AppendPathSegment($"blockstore/{BlockStoreRouteEndPoint.GetAddressesBalances}")
                                 .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
                                 .GetJsonAsync<AddressBalancesResult>();
 
