@@ -697,7 +697,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
                 }
             }
 
-            return foundTransaction == null ? null : new LastBalanceDecreaseTransactionModel() { BlockHeight = lastBalanceHeight, TransactionHex = foundTransaction.ToHex() };
+            return foundTransaction == null ? null : new LastBalanceDecreaseTransactionModel() { BlockHeight = lastBalanceHeight, Transaction = new TransactionVerboseModel(foundTransaction, this.network) };
         }
 
         private (bool isQueryable, string reason) IsQueryable()

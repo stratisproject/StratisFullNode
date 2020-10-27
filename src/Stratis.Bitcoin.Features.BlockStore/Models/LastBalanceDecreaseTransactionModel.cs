@@ -1,11 +1,11 @@
-﻿namespace Stratis.Bitcoin.Features.BlockStore.Models
+﻿using Stratis.Bitcoin.Controllers.Models;
+
+namespace Stratis.Bitcoin.Features.BlockStore.Models
 {
     public class LastBalanceDecreaseTransactionModel
     {
-        public string TransactionHex { get; set; }
+        public TransactionVerboseModel Transaction { get; set; }
 
         public int BlockHeight { get; set; }
-
-        //public long DecreasedBy { get; set; }
     }
 }
