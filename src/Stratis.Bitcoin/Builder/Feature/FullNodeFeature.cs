@@ -57,6 +57,8 @@ namespace Stratis.Bitcoin.Builder.Feature
     /// </summary>
     public abstract class FullNodeFeature : IFullNodeFeature
     {
+        private const float InitializationWaitSeconds = 1.0f;
+
         /// <inheritdoc />
         public bool InitializeBeforeBase { get; set; }
 
@@ -89,7 +91,7 @@ namespace Stratis.Bitcoin.Builder.Feature
             // If this feature is awaiting initialization then wait a bit.
             while (this.State == FeatureInitializationState.Uninitialized || this.State == FeatureInitializationState.Initializing)
             {
-                Thread.Sleep(1000);
+                Thread.Sleep((int)(InitializationWaitSeconds * 1000));
             }
         }
     }
