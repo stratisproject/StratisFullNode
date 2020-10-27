@@ -607,7 +607,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         {
             // If the containing feature is not initialized then wait a bit.
             if (!this.storeSettings.AddressIndex)
-                throw new NotSupportedException("Address indexing is not supported.");
+                throw new NotSupportedException("Address indexing is not enabled.");
 
             this.InitializingFeature?.WaitInitialized();
 
