@@ -62,9 +62,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
-            if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
-                return;
-
             // For cross-chain transfers	
             if (PayToScriptHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
