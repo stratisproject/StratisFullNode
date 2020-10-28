@@ -69,12 +69,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 if (maximumEntriesToReturn-- <= 0)
                     break;
 
-                // Extract the withdrawal details from the recorded "PartialTransaction".
-                IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
+                IWithdrawal withdrawal = null;
 
-                var model = new WithdrawalModel();
-                model.withdrawal = withdrawal;
-                model.TransferStatus = transfer?.Status.ToString();
+                // Extract the withdrawal details from the recorded "PartialTransaction".
+                if (transfer.DepositTargetAddress == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey)
+                    withdrawal = this.withdrawalExtractor.ExtractDistributionWithdrawal(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
+                else
+                    withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
+
+                var model = new WithdrawalModel
+                {
+                    withdrawal = withdrawal,
+                    TransferStatus = transfer?.Status.ToString()
+                };
 
                 result.Add(model);
             }

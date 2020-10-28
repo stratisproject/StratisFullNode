@@ -65,7 +65,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (Transaction transaction in block.Transactions)
             {
-                IWithdrawal withdrawal = this.ExtractWithdrawalFromTransaction(transaction, block.GetHash(), blockHeight);
+                IWithdrawal withdrawal = null;
+                if (transaction.Outputs.Count == ExpectedNumberOfOutputsNoChange || transaction.Outputs.Count == ExpectedNumberOfOutputsChange)
+                    withdrawal = this.ExtractWithdrawalFromTransaction(transaction, block.GetHash(), blockHeight);
+
+                if (transaction.Outputs.Count > ExpectedNumberOfOutputsChange)
+                    withdrawal = this.ExtractDistributionWithdrawal(transaction, block.GetHash(), blockHeight);
 
                 if (withdrawal != null)
                     withdrawals.Add(withdrawal);

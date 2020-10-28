@@ -94,7 +94,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Build the transaction.
                 Transaction transaction = this.federationWalletTransactionHandler.BuildTransaction(multiSigContext);
 
-                this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+                this.logger.LogInformation("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
 
                 return transaction;
 
