@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
+using Microsoft.AspNetCore.Server.IIS.Core;
 using NBitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
@@ -15,10 +16,12 @@ namespace SwapExtractionTool
     public sealed class VoteExtractionService : ExtractionBase
     {
         private readonly List<CastVote> castVotes = new List<CastVote>();
-        private readonly List<CollateralVote> collateralVotes = new List<CollateralVote>();
+        private readonly Dictionary<string, CollateralVote> collateralVotes = new Dictionary<string, CollateralVote>();
+        private readonly BlockExplorerClient blockExplorerClient;
 
-        public VoteExtractionService(int stratisNetworkApiPort, Network straxNetwork) : base(stratisNetworkApiPort, straxNetwork)
+        public VoteExtractionService(int stratisNetworkApiPort, Network straxNetwork, BlockExplorerClient blockExplorerClient) : base(stratisNetworkApiPort, straxNetwork)
         {
+            this.blockExplorerClient = blockExplorerClient;
         }
 
         public async Task RunAsync(VoteType voteType, int startBlock)
@@ -47,13 +50,7 @@ namespace SwapExtractionTool
 
         private void CountCollateralVotes()
         {
-            IEnumerable<IGrouping<string, CollateralVote>> grouped = this.collateralVotes.GroupBy(a => a.Address);
-            var votes = new List<CollateralVote>();
-            foreach (IGrouping<string, CollateralVote> group in grouped)
-            {
-                IOrderedEnumerable<CollateralVote> finalVote = group.OrderByDescending(t => t.BlockHeight);
-                votes.Add(finalVote.First());
-            }
+            var votes = this.collateralVotes.Values;
 
             var totalWeight = Money.Satoshis(votes.Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC);
             var aWeight = Money.Satoshis(votes.Where(v => v.Selection == "A").Sum(v => v.Balance)).ToUnit(MoneyUnit.BTC);
@@ -103,6 +100,62 @@ namespace SwapExtractionTool
                 if (opReturnOutput == null)
                     continue;
 
+                // Before checking if it's a vote, check if it's a swap transaction as we now know it has an OP_RETURN.
+                // Ignore any transactions that have inconsequential OP_RETURN values.
+                if (opReturnOutput.Value >= 1.0m)
+                {
+                    // For the purposes of speeding up this search, it doesn't matter per se whether the burn transaction has a valid destination address in it.
+
+                    TransactionModel tx = this.blockExplorerClient.GetTransaction(transaction.TxId);
+
+                    // Check the inputs of the transaction to see if it was funded by one of the vote addresses.
+                    string address = null;
+                    foreach (In input in tx._in)
+                    {
+                        if (input.hash == null)
+                            continue;
+
+                        // The block explorer calls this 'hash' but it is in fact the address that funded the input.
+                        // It is possible that several voting addresses consolidated together in one swap transaction, so just take the first one.
+                        if (this.collateralVotes.ContainsKey(input.hash))
+                        {
+                            if (address == null)
+                            {
+                                // We will assign the entire burn amount to the first found voting address.
+                                address = input.hash;
+                            }
+                            else
+                            {
+                                // However, we have to recompute the balance of all the vote addresses present in the inputs that we are not going to assign the burn to.
+                                // This is because they will not necessarily be revisited later if there are no further transactions affecting them.
+                                // We presume that since they are participating in a burn subsequent to their initial vote, their balance will drop.
+                                if (!address.Equals(input.hash))
+                                {
+                                    AddressBalancesResult balance = await $"http://localhost:{this.StratisNetworkApiPort}/api"
+                                        .AppendPathSegment($"blockstore/{BlockStoreRouteEndPoint.GetAddressesBalances}")
+                                        .SetQueryParams(new { addresses = input.hash, minConfirmations = 0 })
+                                        .GetJsonAsync<AddressBalancesResult>();
+
+                                    Console.WriteLine($"Reset balance for '{input.hash}' to {balance.Balances[0].Balance} due to burn transaction {transaction.TxId} at height {blockHeight}");
+
+                                    this.collateralVotes[input.hash].Balance = balance.Balances[0].Balance;
+                                }
+                            }
+                        }
+                    }
+
+                    if (address != null)
+                    {
+                        this.collateralVotes[address].BlockHeight = blockHeight;
+                        this.collateralVotes[address].Balance = Money.Coins(opReturnOutput.Value);
+
+                        Console.WriteLine($"Detected that address '{address}' burnt {opReturnOutput.Value} via transaction {transaction.TxId} at height {blockHeight}");
+
+                        // We can now skip checking if this output was a vote.
+                        continue;
+                    }
+                }
+
                 IList<Op> ops = new NBitcoin.Script(opReturnOutput.ScriptPubKey.Asm).ToOps();
                 var potentialVote = Encoding.ASCII.GetString(ops.Last().PushData);
                 try
@@ -142,28 +195,18 @@ namespace SwapExtractionTool
 
                     Money determinedBalance = balance.Balances[0].Balance;
 
-                    // Check if the last transaction that spends from the given address was a burn transaction.
-                    // If so, the amount of the burn takes precedence for the purposes of the vote weight.
-                    LastBalanceDecreaseTransactionModel lastBalanceDecreaseTransaction = await $"http://localhost:{this.StratisNetworkApiPort}/api"
-                        .AppendPathSegment($"blockstore/{BlockStoreRouteEndPoint.GetLastBalanceDecreaseTransaction}")
-                        .SetQueryParams(new { addresses = potentialStratAddress, minConfirmations = 0 })
-                        .GetJsonAsync<LastBalanceDecreaseTransactionModel>();
-
-                    if (lastBalanceDecreaseTransaction.BlockHeight > blockHeight)
+                    if (!this.collateralVotes.ContainsKey(potentialStratAddress))
                     {
-                        foreach (Vout txOut in lastBalanceDecreaseTransaction.Transaction.VOut)
-                        {
-                            if (txOut.ScriptPubKey.Type == "nulldata" && Money.Coins(txOut.Value) > determinedBalance)
-                            {
-                                Console.WriteLine($"Detected that address '{potentialStratAddress}' burnt {determinedBalance} at height {lastBalanceDecreaseTransaction.BlockHeight}");
-
-                                determinedBalance = Money.Coins(txOut.Value);
-                            }
-                        }
+                        Console.WriteLine($"Collateral vote found for {potentialStratAddress} at height {blockHeight}; Selection '{collateralVote}'; Balance {determinedBalance}");
+                        
+                        this.collateralVotes.Add(potentialStratAddress, new CollateralVote() { Address = potentialStratAddress, Balance = determinedBalance, Selection = collateralVote, BlockHeight = blockHeight });
                     }
-
-                    this.collateralVotes.Add(new CollateralVote() { Address = potentialStratAddress, Balance = determinedBalance, Selection = collateralVote, BlockHeight = blockHeight });
-                    Console.WriteLine($"Collateral vote found at height {blockHeight}; Selection '{collateralVote}'");
+                    else
+                    {
+                        Console.WriteLine($"Updating existing vote for {potentialStratAddress} at height {blockHeight}; Selection '{collateralVote}'; Balance {determinedBalance}");
+                        
+                        this.collateralVotes[potentialStratAddress] = new CollateralVote() { Address = potentialStratAddress, Balance = determinedBalance, Selection = collateralVote, BlockHeight = blockHeight };
+                    }
                 }
                 catch (Exception)
                 {
