@@ -23,6 +23,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly ILogger logger;
 
         private readonly int epoch;
+        private readonly int epochWindow;
+
+        private int lastDistributionHeight;
 
         // The reward each miner receives upon distribution is computed as a proportion of the overall accumulated reward since the last distribution.
         // The proportion is based on how many blocks that miner produced in the period (each miner is identified by their block's coinbase's scriptPubKey).
@@ -38,13 +41,22 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
+            this.epochWindow = this.epoch * 2;
+
+            this.lastDistributionHeight = 0;
         }
 
-        /// <inheritdoc />
-        public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward)
+        public List<Recipient> Distribute2(int heightOfRecordedDistributionDeposit, Money totalReward)
         {
             // Take a local copy of the chain tip as it might change during execution of this method.
             ChainedHeader sidechainTip = this.chainIndexer.Tip;
+
+            //// Closest 10th block.
+            //var thisDistributionHeight = sidechainTip.Height - (sidechainTip.Height % 10);
+            //if (thisDistributionHeight == this.lastDistributionHeight)
+            //    return null;
+
+            //sidechainTip = this.chainIndexer.GetHeader(thisDistributionHeight);
 
             // We need to determine which block on the sidechain contains a commitment to the height of the mainchain block that originated the reward transfer.
             // We otherwise do not have a common reference point from which to compute the epoch.
@@ -53,12 +65,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // To avoid miners trying to disrupt the chain by committing to the same height in multiple blocks, we loop forwards and use the first occurrence
             // of a commitment with height >= the search height.
 
-            ChainedHeader currentHeader = sidechainTip.Height > (2 * this.epoch) ? this.chainIndexer.GetHeader(sidechainTip.Height - (2 * this.epoch)) : this.chainIndexer.Genesis;
+            ChainedHeader currentHeader = this.chainIndexer.Genesis;
+            if (sidechainTip.Height > this.epochWindow)
+                currentHeader = this.chainIndexer.GetHeader(sidechainTip.Height - this.epochWindow);
 
             // Cap the maximum number of iterations.
             int iterations = sidechainTip.Height - currentHeader.Height;
 
             var encoder = new CollateralHeightCommitmentEncoder(this.logger);
+
+            this.logger.LogInformation($"{nameof(heightOfRecordedDistributionDeposit)} : {heightOfRecordedDistributionDeposit}");
 
             for (int i = 0; i < iterations; i++)
             {
@@ -69,6 +85,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 if (heightOfMainChainCommitment == null)
                     continue;
+
+                this.logger.LogInformation($"{currentHeader} > {nameof(heightOfMainChainCommitment)}={heightOfMainChainCommitment}");
 
                 if (heightOfMainChainCommitment >= heightOfRecordedDistributionDeposit)
                     break;
@@ -84,14 +102,19 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
             int sidechainStartHeight = currentHeader.Height;
+            this.logger.LogInformation($"Initial {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
 
             // This is a special case which will not be the case on the live network.
             if (sidechainStartHeight < this.epoch)
                 sidechainStartHeight = 0;
 
+            this.logger.LogInformation($"Second {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
+
             // If the sidechain start is more than the epoch, then deduct the epoch window.
             if (sidechainStartHeight > this.epoch)
                 sidechainStartHeight -= this.epoch;
+
+            this.logger.LogInformation($"Third {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
 
             int sidechainEndHeight = currentHeader.Height;
 
@@ -101,9 +124,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
             for (int currentHeight = sidechainStartHeight; currentHeight <= sidechainEndHeight; currentHeight++)
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
-                Block block = chainedHeader.Block;
+                if (chainedHeader.Block == null)
+                    chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
 
-                Transaction coinBase = block.Transactions.First();
+                Transaction coinBase = chainedHeader.Block.Transactions.First();
 
                 // Regard the first 'spendable' scriptPubKey in the coinbase as belonging to the miner's wallet.
                 // This avoids trying to recover the pubkey from the block signature.
@@ -127,14 +151,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
             var recipients = new List<Recipient>();
 
             var recipientLog = new StringBuilder();
-            recipientLog.AppendLine($"Total Blocks = {totalBlocks}");
-            recipientLog.AppendLine($"Side Chain Height = {sidechainEndHeight}");
+            recipientLog.AppendLine($"Total Blocks      = {totalBlocks}");
+            recipientLog.AppendLine($"Side Chain Tip    = {sidechainTip.Height}");
+            recipientLog.AppendLine($"Side Chain Start    = {sidechainStartHeight}");
+            recipientLog.AppendLine($"Side Chain End = {sidechainEndHeight}");
             foreach (KeyValuePair<Script, long> item in blocksMinedEach)
             {
                 recipientLog.AppendLine($"{item.Key} - {item.Value}");
             }
-
-            this.logger.LogDebug(recipientLog.ToString());
 
             foreach (Script scriptPubKey in blocksMinedEach.Keys)
             {
@@ -145,6 +169,144 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = p2pkh });
             }
+
+            foreach (Recipient recipient in recipients)
+            {
+                recipientLog.AppendLine($"{recipient.ScriptPubKey} - {recipient.Amount}");
+            }
+
+            this.logger.LogInformation(recipientLog.ToString());
+
+            this.logger.LogInformation($"A total reward of {totalReward} will be distibuted between {recipients.Count} recipients");
+
+            //this.lastDistributionHeight = thisDistributionHeight;
+
+            return recipients;
+        }
+
+        /// <inheritdoc />
+        public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward)
+        {
+            var encoder = new CollateralHeightCommitmentEncoder(this.logger);
+
+            // First determine the main chain blockheight of the recorded deposit less max reorg
+            var applicableMainChainDepositHeight = heightOfRecordedDistributionDeposit - this.epochWindow;
+            this.logger.LogInformation($"Initial {nameof(applicableMainChainDepositHeight)} : {applicableMainChainDepositHeight}");
+
+            // Then find the header on the sidechain that contains the applicable commitment height.
+            int sidechainTipHeight = this.chainIndexer.Tip.Height;
+
+            ChainedHeader currentHeader = this.chainIndexer.GetHeader(sidechainTipHeight);
+
+            do
+            {
+                if (currentHeader.Block == null)
+                    currentHeader.Block = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
+
+                (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+
+                if (heightOfMainChainCommitment == null)
+                    continue;
+
+                //this.logger.LogInformation($"{currentHeader} > {nameof(heightOfMainChainCommitment)}={heightOfMainChainCommitment}");
+
+                if (heightOfMainChainCommitment <= applicableMainChainDepositHeight)
+                    break;
+
+                currentHeader = currentHeader.Previous;
+
+            } while (true);
+
+            // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
+            // Based on the computed 'common block height' we define the distribution epoch:
+            int sidechainStartHeight = currentHeader.Height;
+            this.logger.LogInformation($"Initial {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
+
+            // This is a special case which will not be the case on the live network.
+            if (sidechainStartHeight < this.epoch)
+                sidechainStartHeight = 0;
+
+            this.logger.LogInformation($"Second {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
+
+            // If the sidechain start is more than the epoch, then deduct the epoch window.
+            if (sidechainStartHeight > this.epoch)
+                sidechainStartHeight -= this.epoch;
+
+            this.logger.LogInformation($"Third {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
+
+            var blocksPerMiner = new Dictionary<Script, long>();
+
+            var totalBlocks = CalculateBlocksMinedPerMiner(blocksPerMiner, sidechainStartHeight, currentHeader.Height);
+            List<Recipient> recipients = ConstructRecipients(blocksPerMiner, totalBlocks, totalReward);
+            return recipients;
+        }
+
+        private long CalculateBlocksMinedPerMiner(Dictionary<Script, long> blocksPerMiner, int sidechainStartHeight, int sidechainEndHeight)
+        {
+            long totalBlocks = 0;
+
+            for (int currentHeight = sidechainStartHeight; currentHeight <= sidechainEndHeight; currentHeight++)
+            {
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
+                if (chainedHeader.Block == null)
+                    chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+
+                Transaction coinBase = chainedHeader.Block.Transactions.First();
+
+                // Regard the first 'spendable' scriptPubKey in the coinbase as belonging to the miner's wallet.
+                // This avoids trying to recover the pubkey from the block signature.
+                Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
+
+                // If the POA miner at the time did not have a wallet address, the script length can be 0.
+                // In this case the block shouldn't count as it was "not mined by anyone".
+                if (minerScript != Script.Empty)
+                {
+                    if (!blocksPerMiner.TryGetValue(minerScript, out long minerBlockCount))
+                        minerBlockCount = 0;
+
+                    blocksPerMiner[minerScript] = ++minerBlockCount;
+
+                    totalBlocks++;
+                }
+                else
+                    this.logger.LogDebug($"A block was mined with an empty script at height '{currentHeight}' (the miner probably did not have a wallet at the time.");
+            }
+
+            var minerLog = new StringBuilder();
+            minerLog.AppendLine($"Total Blocks      = {totalBlocks}");
+            minerLog.AppendLine($"Side Chain Start  = {sidechainStartHeight}");
+            minerLog.AppendLine($"Side Chain End    = {sidechainEndHeight}");
+
+            foreach (KeyValuePair<Script, long> item in blocksPerMiner)
+            {
+                minerLog.AppendLine($"{item.Key} - {item.Value}");
+            }
+
+            this.logger.LogInformation(minerLog.ToString());
+
+            return totalBlocks;
+        }
+
+        private List<Recipient> ConstructRecipients(Dictionary<Script, long> blocksPerMiner, long totalBlocks, Money totalReward)
+        {
+            var recipients = new List<Recipient>();
+
+            foreach (Script scriptPubKey in blocksPerMiner.Keys)
+            {
+                Money amount = totalReward * blocksPerMiner[scriptPubKey] / totalBlocks;
+
+                PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+                Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = p2pkh });
+            }
+
+            var recipientLog = new StringBuilder();
+            foreach (Recipient recipient in recipients)
+            {
+                recipientLog.AppendLine($"{recipient.ScriptPubKey} - {recipient.Amount}");
+            }
+            this.logger.LogInformation(recipientLog.ToString());
 
             this.logger.LogInformation($"A total reward of {totalReward} will be distibuted between {recipients.Count} recipients");
 

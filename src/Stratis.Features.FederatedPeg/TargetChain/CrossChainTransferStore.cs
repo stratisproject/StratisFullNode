@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Exceptions;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -73,12 +74,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ISignals signals;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
 
+        private readonly IRewardDistributionManager distributionManager;
+
         /// <summary>Provider of time functions.</summary>
         private readonly object lockObj;
 
         public CrossChainTransferStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer, IFederatedPegSettings settings, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, IWithdrawalExtractor withdrawalExtractor, IBlockRepository blockRepository, IFederationWalletManager federationWalletManager,
-            IWithdrawalTransactionBuilder withdrawalTransactionBuilder, DBreezeSerializer dBreezeSerializer, ISignals signals, IStateRepositoryRoot stateRepositoryRoot = null)
+            IWithdrawalTransactionBuilder withdrawalTransactionBuilder, DBreezeSerializer dBreezeSerializer, ISignals signals, IRewardDistributionManager distributionManager = null, IStateRepositoryRoot stateRepositoryRoot = null)
         {
             if (!settings.IsMainChain)
             {
@@ -111,6 +114,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.settings = settings;
             this.signals = signals;
             this.stateRepositoryRoot = stateRepositoryRoot;
+            this.distributionManager = distributionManager;
 
             // Future-proof store name.
             string depositStoreName = "federatedTransfers" + settings.MultiSigAddress.ToString();
@@ -478,7 +482,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     }
                                     else
                                     {
-                                        transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(maturedDeposit.BlockInfo.BlockHeight, deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient);
+                                        // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
+                                        if (!this.settings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey)
+                                        {
+                                            List<Recipient> recipients = this.distributionManager.Distribute(maturedDeposit.BlockInfo.BlockHeight, recipient.Amount);
+                                            if (!recipients.Any())
+                                                continue;
+
+                                            transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(maturedDeposit.BlockInfo.BlockHeight, deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient, recipients);
+                                        }
+                                        else
+                                        {
+                                            transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(maturedDeposit.BlockInfo.BlockHeight, deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient);
+                                        }
 
                                         if (transaction != null)
                                         {
