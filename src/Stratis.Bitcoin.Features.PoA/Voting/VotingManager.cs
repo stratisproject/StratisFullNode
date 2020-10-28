@@ -348,7 +348,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 foreach (VotingData data in votingDataList)
                 {
                     if (this.IsVotingOnMultisigMember(data))
-                        return;
+                        continue;
 
                     Poll poll = this.polls.SingleOrDefault(x => x.VotingData == data && x.IsPending);
 
@@ -410,7 +410,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.logger.LogDebug("Fed members count: {0}, valid votes count: {1}, required votes count: {2}.", fedMembersHex.Count, validVotesCount, requiredVotesCount);
 
                     if (validVotesCount < requiredVotesCount)
-                        return;
+                        continue;
 
                     poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader);
                     this.pollsRepository.UpdatePoll(poll);
