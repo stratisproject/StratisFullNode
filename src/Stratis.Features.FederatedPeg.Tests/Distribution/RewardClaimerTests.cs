@@ -4,6 +4,7 @@ using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
@@ -30,6 +31,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         private readonly StraxRegTest network;
         private readonly IOpReturnDataReader opReturnDataReader;
         private readonly Signals signals;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
         public RewardClaimerTests()
         {
@@ -40,6 +42,9 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.signals = new Signals(this.loggerFactory, null);
+
+            this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
+            this.initialBlockDownloadState.IsInitialBlockDownload().Returns(false);
 
             this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(new CirrusRegTest()));
 
@@ -65,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         {
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
-            var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.loggerFactory, this.network, this.signals);
+            var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.loggerFactory, this.network, this.signals, this.initialBlockDownloadState);
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
