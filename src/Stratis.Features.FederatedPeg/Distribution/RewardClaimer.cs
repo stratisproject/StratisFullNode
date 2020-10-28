@@ -9,6 +9,7 @@ using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 
 namespace Stratis.Features.FederatedPeg.Distribution
@@ -31,10 +32,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly ILogger logger;
         private readonly Network network;
         private readonly ISignals signals;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
         private readonly SubscriptionToken blockConnectedSubscription;
 
-        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, IConsensusManager consensusManager, ILoggerFactory loggerFactory, Network network, ISignals signals)
+        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, IConsensusManager consensusManager, ILoggerFactory loggerFactory, Network network, ISignals signals, IInitialBlockDownloadState initialBlockDownloadState)
         {
             this.broadcasterManager = broadcasterManager;
             this.chainIndexer = chainIndexer;
@@ -42,6 +44,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.signals = signals;
+            this.initialBlockDownloadState = initialBlockDownloadState;
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
@@ -126,6 +129,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         private void OnBlockConnected(BlockConnected blockConnected)
         {
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return;
+
             Transaction transaction = BuildRewardTransaction();
             if (transaction != null)
             {

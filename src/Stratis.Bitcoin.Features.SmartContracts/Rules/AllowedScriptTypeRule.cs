@@ -58,6 +58,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (output.ScriptPubKey.IsSmartContractInternalCall())
                 return;
 
+            // Pay to side chain miner.	
             if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
@@ -77,7 +78,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (network.StandardScriptsRegistry[typeof(TxNullDataTemplate)].CheckScriptPubKey(output.ScriptPubKey))
                 return;
 
-            new ConsensusError("disallowed-output-script", "Only the following script types are allowed on smart contracts network: P2PKH, P2SH, P2MultiSig, OP_RETURN and smart contracts").Throw();
+            new ConsensusError("disallowed-output-script", $"Only the following script types are allowed on smart contracts network: P2PKH, P2SH, P2MultiSig, OP_RETURN and smart contracts.").Throw();
         }
 
         private static void CheckInput(Network network, TxIn input)
