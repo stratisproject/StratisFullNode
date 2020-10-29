@@ -354,20 +354,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (poll == null)
                     {
-                        poll = new Poll()
+                        // Ensures that highestPollId can't be changed before the poll is committed.
+                        this.pollsRepository.Synchronous(() =>
                         {
-                            Id = this.pollsRepository.GetHighestPollId() + 1,
-                            PollVotedInFavorBlockData = null,
-                            PollExecutedBlockData = null,
-                            PollStartBlockData = new HashHeightPair(chBlock.ChainedHeader),
-                            VotingData = data,
-                            PubKeysHexVotedInFavor = new List<string>() { fedMemberKeyHex }
-                        };
+                            poll = new Poll()
+                            {
+                                Id = this.pollsRepository.GetHighestPollId() + 1,
+                                PollVotedInFavorBlockData = null,
+                                PollExecutedBlockData = null,
+                                PollStartBlockData = new HashHeightPair(chBlock.ChainedHeader),
+                                VotingData = data,
+                                PubKeysHexVotedInFavor = new List<string>() { fedMemberKeyHex }
+                            };
 
-                        this.polls.Add(poll);
-                        this.pollsRepository.AddPolls(poll);
+                            this.polls.Add(poll);
+                            this.pollsRepository.AddPolls(poll);
 
-                        this.logger.LogDebug("New poll was created: '{0}'.", poll);
+                            this.logger.LogDebug("New poll was created: '{0}'.", poll);
+                        });
                     }
                     else if (!poll.PubKeysHexVotedInFavor.Contains(fedMemberKeyHex))
                     {
