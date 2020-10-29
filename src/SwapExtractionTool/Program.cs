@@ -12,6 +12,7 @@ namespace SwapExtractionTool
             int stratisNetworkApiPort;
             int startBlock = 0;
             Network straxNetwork;
+            string blockExplorerBaseUrl;
 
             if (args.Contains("-testnet"))
             {
@@ -19,6 +20,7 @@ namespace SwapExtractionTool
 
                 stratisNetworkApiPort = 38221;
                 straxNetwork = new StraxTest();
+                blockExplorerBaseUrl = "https://stratistestindexer1.azurewebsites.net/api/v1/";
             }
             else
             {
@@ -26,6 +28,7 @@ namespace SwapExtractionTool
 
                 stratisNetworkApiPort = 37221;
                 straxNetwork = new StraxMain();
+                blockExplorerBaseUrl = "https://stratismainindexer1.azurewebsites.net/api/v1/";
             }
 
             var arg = args.FirstOrDefault(a => a.StartsWith("-startfrom"));
@@ -40,7 +43,8 @@ namespace SwapExtractionTool
 
             if (args.Contains("-swapvote") || args.Contains("-collateralvote"))
             {
-                var service = new VoteExtractionService(stratisNetworkApiPort, straxNetwork);
+                var blockExplorerClient = new BlockExplorerClient(blockExplorerBaseUrl);
+                var service = new VoteExtractionService(stratisNetworkApiPort, straxNetwork, blockExplorerClient);
 
                 if (args.Contains("-collateralvote"))
                     await service.RunAsync(VoteType.CollateralVote, startBlock);
