@@ -90,14 +90,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             this.logger.LogDebug($"Adjusted {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
 
-            var blocksPerMiner = new Dictionary<Script, long>();
+            var blocksMinedEach = new Dictionary<Script, long>();
 
-            var totalBlocks = CalculateBlocksMinedPerMiner(blocksPerMiner, sidechainStartHeight, currentHeader.Height);
-            List<Recipient> recipients = ConstructRecipients(blocksPerMiner, totalBlocks, totalReward);
+            var totalBlocks = CalculateBlocksMinedPerMiner(blocksMinedEach, sidechainStartHeight, currentHeader.Height);
+            List<Recipient> recipients = ConstructRecipients(blocksMinedEach, totalBlocks, totalReward);
             return recipients;
         }
 
-        private long CalculateBlocksMinedPerMiner(Dictionary<Script, long> blocksPerMiner, int sidechainStartHeight, int sidechainEndHeight)
+        private long CalculateBlocksMinedPerMiner(Dictionary<Script, long> blocksMinedEach, int sidechainStartHeight, int sidechainEndHeight)
         {
             long totalBlocks = 0;
 
@@ -117,10 +117,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 // In this case the block shouldn't count as it was "not mined by anyone".
                 if (minerScript != Script.Empty)
                 {
-                    if (!blocksPerMiner.TryGetValue(minerScript, out long minerBlockCount))
+                    if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
                         minerBlockCount = 0;
 
-                    blocksPerMiner[minerScript] = ++minerBlockCount;
+                    blocksMinedEach[minerScript] = ++minerBlockCount;
 
                     totalBlocks++;
                 }
@@ -133,7 +133,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             minerLog.AppendLine($"Side Chain Start  = {sidechainStartHeight}");
             minerLog.AppendLine($"Side Chain End    = {sidechainEndHeight}");
 
-            foreach (KeyValuePair<Script, long> item in blocksPerMiner)
+            foreach (KeyValuePair<Script, long> item in blocksMinedEach)
             {
                 minerLog.AppendLine($"{item.Key} - {item.Value}");
             }
@@ -143,13 +143,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             return totalBlocks;
         }
 
-        private List<Recipient> ConstructRecipients(Dictionary<Script, long> blocksPerMiner, long totalBlocks, Money totalReward)
+        private List<Recipient> ConstructRecipients(Dictionary<Script, long> blocksMinedEach, long totalBlocks, Money totalReward)
         {
             var recipients = new List<Recipient>();
 
-            foreach (Script scriptPubKey in blocksPerMiner.Keys)
+            foreach (Script scriptPubKey in blocksMinedEach.Keys)
             {
-                Money amount = totalReward * blocksPerMiner[scriptPubKey] / totalBlocks;
+                Money amount = totalReward * blocksMinedEach[scriptPubKey] / totalBlocks;
 
                 PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
                 Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
