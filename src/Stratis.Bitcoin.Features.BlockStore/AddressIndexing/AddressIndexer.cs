@@ -612,15 +612,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         public VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses)
         {
             // If the containing feature is not initialized then wait a bit.
-            if (!this.storeSettings.AddressIndex)
-                throw new NotSupportedException("Address indexing is not enabled.");
-
             this.InitializingFeature?.WaitInitialized();
 
             var result = new VerboseAddressBalancesResult(this.consensusManager.Tip.Height);
 
             if (addresses.Length == 0)
                 return result;
+
+            if (!this.storeSettings.AddressIndex)
+                throw new NotSupportedException("Address indexing is not enabled.");
 
             (bool isQueryable, string reason) = this.IsQueryable();
 
