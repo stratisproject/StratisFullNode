@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
-using Microsoft.AspNetCore.Server.IIS.Core;
 using NBitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
