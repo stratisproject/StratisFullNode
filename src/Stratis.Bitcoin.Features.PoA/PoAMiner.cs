@@ -142,10 +142,10 @@ namespace Stratis.Bitcoin.Features.PoA
                         this.ibdState.IsInitialBlockDownload(), this.connectionManager.ConnectedPeers.Any(), this.settings.BootstrappingMode, this.federationManager.IsFederationMember);
 
                     // Don't mine in IBD in case we are connected to any node unless bootstrapping mode is enabled.
-                    if (((this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode)
-                        || !this.federationManager.IsFederationMember)
+                    bool cantMineAtAll = (this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode;
+                    if (cantMineAtAll || !this.federationManager.IsFederationMember)
                     {
-                        if (!this.federationManager.IsFederationMember)
+                        if (!cantMineAtAll)
                         {
                             string cause = (this.federationManager.CurrentFederationKey == null) ? 
                                 $"missing file '{KeyTool.KeyFileDefaultName}'" : 
