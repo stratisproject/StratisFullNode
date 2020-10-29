@@ -83,7 +83,7 @@ namespace Stratis.Bitcoin.Networks
             var cirrusFederationMnemonics = new[] {
                 "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
                 "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
                }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             // Will replace the last multisig member.
