@@ -413,8 +413,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
-                            this.logger.LogDebug($"NextMatureDepositHeight : {this.NextMatureDepositHeight} | maturedDeposit : {maturedDeposit.BlockInfo.BlockHeight}");
-
                             if (maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight)
                                 continue;
 
@@ -440,8 +438,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // If we fail to build a transaction the transfer and subsequent transfers
                             // in the ordered list will be set to suspended.
                             bool haveSuspendedTransfers = false;
-
-                            this.logger.LogInformation($"{nameof(maturedDeposit.BlockInfo.BlockHeight)} : {maturedDeposit.BlockInfo.BlockHeight} | {nameof(maturedDeposit.Deposits)} : : {maturedDeposit.Deposits.Count}");
 
                             for (int i = 0; i < deposits.Count; i++)
                             {
@@ -509,11 +505,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                             haveSuspendedTransfers = true;
                                         }
                                     }
-                                }
-
-                                if (transfers[i] != null && transfers[i].DepositTransactionId == deposits[i].Id)
-                                {
-                                    continue;
                                 }
 
                                 if (transfers[i] == null || transaction == null)
@@ -609,7 +600,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (!this.Synchronize())
                             return null;
 
-                        this.logger.LogDebug("Merging signatures for deopsit : {0}", depositId);
+                        this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
 
                         ICrossChainTransfer transfer = this.ValidateCrossChainTransfers(this.Get(new[] { depositId })).FirstOrDefault();
 
@@ -1249,8 +1240,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     // Transaction is no longer seen and the FederationWalletManager is going to remove the transaction anyhow
                     // So don't prolong - just set to Suspended now.
-                    this.logger.LogInformation("Setting DepositId {0} to Suspended", transfer.DepositTransactionId);
-
+                    this.logger.LogDebug("Setting DepositId {0} to Suspended", transfer.DepositTransactionId);
                     tracker.SetTransferStatus(transfer, CrossChainTransferStatus.Suspended);
 
                     // Write the transfer status to the database.

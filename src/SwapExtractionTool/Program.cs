@@ -15,7 +15,7 @@ namespace SwapExtractionTool
 
             if (args.Contains("-testnet"))
             {
-                startBlock = 1537571;
+                startBlock = 1528858;
 
                 stratisNetworkApiPort = 38221;
                 straxNetwork = new StraxTest();
