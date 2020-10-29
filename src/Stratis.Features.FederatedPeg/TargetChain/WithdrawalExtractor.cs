@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Features.FederatedPeg.Interfaces;
 using TracerAttributes;
@@ -39,17 +38,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private readonly Network network;
 
-        private readonly ILogger logger;
-
         private readonly BitcoinAddress multisigAddress;
 
         public WithdrawalExtractor(
-            ILoggerFactory loggerFactory,
             IFederatedPegSettings federatedPegSettings,
             IOpReturnDataReader opReturnDataReader,
             Network network)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.multisigAddress = federatedPegSettings.MultiSigAddress;
             this.opReturnDataReader = opReturnDataReader;
             this.network = network;
@@ -66,7 +61,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             foreach (Transaction transaction in block.Transactions)
             {
                 IWithdrawal withdrawal = this.ExtractWithdrawalFromTransaction(transaction, block.GetHash(), blockHeight);
-
                 if (withdrawal != null)
                     withdrawals.Add(withdrawal);
             }
@@ -80,25 +74,46 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (transaction.IsCoinBase)
                 return null;
 
-            // Withdrawal has a specific structure.
-            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
-                return null;
-
             if (!this.IsOnlyFromMultisig(transaction))
                 return null;
 
             if (!this.opReturnDataReader.TryGetTransactionId(transaction, out string depositId))
                 return null;
 
-            TxOut targetAddressOutput = transaction.Outputs.SingleOrDefault(this.IsTargetAddressCandidate);
-            if (targetAddressOutput == null)
+            // This is not a withdrawal transaction.
+            if (transaction.Outputs.Count < ExpectedNumberOfOutputsNoChange)
                 return null;
+
+            Money withdrawalAmount = null;
+            string targetAddress = null;
+
+            // Cross Chain transfers either has 2 or 3 outputs.
+            if (transaction.Outputs.Count == ExpectedNumberOfOutputsNoChange || transaction.Outputs.Count == ExpectedNumberOfOutputsChange)
+            {
+                TxOut targetAddressOutput = transaction.Outputs.SingleOrDefault(this.IsTargetAddressCandidate);
+                if (targetAddressOutput == null)
+                    return null;
+
+                withdrawalAmount = targetAddressOutput.Value;
+                targetAddress = targetAddressOutput.ScriptPubKey.GetDestinationAddress(this.network).ToString();
+            }
+
+            // Reward distribution trnsactions will have more than 3 outputs.
+            if (transaction.Outputs.Count > ExpectedNumberOfOutputsChange)
+            {
+                IEnumerable<TxOut> txOuts = transaction.Outputs.Where(output => output.ScriptPubKey != this.multisigAddress.ScriptPubKey && !output.ScriptPubKey.IsUnspendable);
+                if (!txOuts.Any())
+                    return null;
+
+                withdrawalAmount = txOuts.Sum(t => t.Value);
+                targetAddress = this.network.CirrusRewardDummyAddress;
+            }
 
             var withdrawal = new Withdrawal(
                 uint256.Parse(depositId),
                 transaction.GetHash(),
-                targetAddressOutput.Value,
-                targetAddressOutput.ScriptPubKey.GetDestinationAddress(this.network).ToString(),
+                withdrawalAmount,
+                targetAddress,
                 blockHeight,
                 blockHash);
 

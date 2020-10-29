@@ -19,7 +19,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     {
         private readonly Network network;
         private readonly IFederatedPegSettings federatedPegSettings;
-        private readonly IFederationWalletManager federationWalletManager;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IWithdrawalExtractor withdrawalExtractor;
         private readonly MempoolManager mempoolManager;
@@ -29,15 +28,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// </summary>
         /// <param name="network">Network we are running on.</param>
         /// <param name="federatedPegSettings">Federation settings providing access to number of signatures required.</param>
-        /// <param name="federationWalletManager">Wallet manager which provides access to the wallet.</param>
         /// <param name="crossChainTransferStore">Store which provides access to the statuses.</param>
         /// <param name="mempoolManager">Mempool which provides information about transactions in the mempool.</param>
         /// <param name="loggerFactory">Logger factory.</param>
         /// <param name="counterChainNetworkWrapper">Counter chain network.</param>
+        /// 
         public WithdrawalHistoryProvider(
             Network network,
             IFederatedPegSettings federatedPegSettings,
-            IFederationWalletManager federationWalletManager,
             ICrossChainTransferStore crossChainTransferStore,
             MempoolManager mempoolManager,
             ILoggerFactory loggerFactory,
@@ -45,9 +43,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             this.network = network;
             this.federatedPegSettings = federatedPegSettings;
-            this.federationWalletManager = federationWalletManager;
             this.crossChainTransferStore = crossChainTransferStore;
-            this.withdrawalExtractor = new WithdrawalExtractor(loggerFactory, federatedPegSettings, new OpReturnDataReader(loggerFactory, counterChainNetworkWrapper), network);
+            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, new OpReturnDataReader(loggerFactory, counterChainNetworkWrapper), network);
             this.mempoolManager = mempoolManager;
         }
 
@@ -68,13 +65,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 if (maximumEntriesToReturn-- <= 0)
                     break;
-
                 // Extract the withdrawal details from the recorded "PartialTransaction".
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
 
-                var model = new WithdrawalModel();
-                model.withdrawal = withdrawal;
-                model.TransferStatus = transfer?.Status.ToString();
+                var model = new WithdrawalModel
+                {
+                    withdrawal = withdrawal,
+                    TransferStatus = transfer?.Status.ToString()
+                };
 
                 result.Add(model);
             }
@@ -100,15 +98,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ICrossChainTransfer transfer in inProgressTransfers)
             {
-                var model = new WithdrawalModel();
-                model.withdrawal = new Withdrawal(
-                    transfer.DepositTransactionId,
-                    transfer.PartialTransaction?.GetHash(),
-                    transfer.DepositAmount,
-                    transfer.DepositTargetAddress.GetDestinationAddress(this.network).ToString(),
-                    transfer.BlockHeight ?? 0,
-                    transfer.BlockHash
-                    );
+                var model = new WithdrawalModel
+                {
+                    withdrawal = new Withdrawal(
+                        transfer.DepositTransactionId,
+                        transfer.PartialTransaction?.GetHash(),
+                        transfer.DepositAmount,
+                        transfer.DepositTargetAddress.GetDestinationAddress(this.network).ToString(),
+                        transfer.BlockHeight ?? 0,
+                        transfer.BlockHash
+                    )
+                };
 
                 string status = transfer?.Status.ToString();
                 switch (transfer?.Status)

@@ -470,12 +470,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 }
 
                 // Extract the withdrawal from the transaction (if any).
-                IWithdrawal withdrawal = null;
-                if (isDistribution)
-                    withdrawal = this.withdrawalExtractor.ExtractDistributionWithdrawal(transaction, blockHash, blockHeight ?? 0);
-                else
-                    withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
-
+                IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, blockHash, blockHeight ?? 0);
                 if (withdrawal != null)
                 {
                     // Exit if already present and included in a block.
