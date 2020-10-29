@@ -19,24 +19,24 @@ namespace Stratis.Features.FederatedPeg.Tests
             string[] expectedFederationIds = new[] {
                 "0272ef88df1ac2bc9b14b05ced742c2a9c2f76e48ccb92258136750d0ae2af3859",
                 "022c7d264dd56381d51526365f8e439a68fb8b5cd0272e073ee4047999e0bb034f",
-                "009b9de39718cf6042d336e1fff3676fd9a651376399efb5472b0b1733769341e1"
+                "0347f6ba6232037a68ce2b8ac988c07c071eee1e7edd0e6bb9b3dbda22772ad96a"
             };
             string[] expectedMultisigScripts = new[]
             {
                 "0272ef88df1ac2bc9b14b05ced742c2a9c2f76e48ccb92258136750d0ae2af3859 OP_FEDERATION OP_CHECKMULTISIG",
                 "022c7d264dd56381d51526365f8e439a68fb8b5cd0272e073ee4047999e0bb034f OP_FEDERATION OP_CHECKMULTISIG",
-                "009b9de39718cf6042d336e1fff3676fd9a651376399efb5472b0b1733769341e1 OP_FEDERATION OP_CHECKMULTISIG"
+                "0347f6ba6232037a68ce2b8ac988c07c071eee1e7edd0e6bb9b3dbda22772ad96a OP_FEDERATION OP_CHECKMULTISIG"
             };
             string[] expectedPaymentScripts = new[]
             {
                 "OP_HASH160 36f8bb703df2de2b4ddc0448dd28aac5d24a0e6d OP_EQUAL",
                 "OP_HASH160 44026086e900f9f3bdd34ed2e9436ceef05c09b3 OP_EQUAL",
-                "OP_HASH160 a379dfdfd8a6cb4b7fe522fa9d5a695cece3901a OP_EQUAL"
+                "OP_HASH160 9244ef1a1a829e2e94a652e071cb22d600ed4c40 OP_EQUAL"
             };
             string[] expectedAddresses = new[] {
                 "yRL7Jn1Ytgc6g2k5Sidh6K4vf7cKTj6n45",
                 "tD8CqzmXqjcTdX5G2y9WNMzbR5qUqiMFda",
-                "tMpzC3oa7ktseYpvRAihp4F9RJAYSB7WWB"
+                "tLG1HR71iEDKbKkvB8sH3Gy6HLF8o4Pnim"
             };
             string[] federationIds = networks.Select(n => Encoders.Hex.EncodeData(n.Federations.GetOnlyFederation().Id.ToBytes())).ToArray();
             Script[] multisigScripts = federationIds.Select((id, n) => networks[n].Federations.GetOnlyFederation().MultisigScript).ToArray();
