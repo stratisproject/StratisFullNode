@@ -145,7 +145,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     if (((this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode)
                         || !this.federationManager.IsFederationMember)
                     {
-                        if (this.federationManager.IsFederationMember)
+                        if (!this.federationManager.IsFederationMember)
                         {
                             string cause = (this.federationManager.CurrentFederationKey == null) ? 
                                 $"missing file '{KeyTool.KeyFileDefaultName}'" : 
