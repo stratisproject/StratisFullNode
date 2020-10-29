@@ -72,7 +72,8 @@ namespace Stratis.Sidechains.Networks
 
             this.FederationMnemonics = new[] {
                 "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                "blame similar caution exit urge combine oak fat maximum link eyebrow elbow"
+                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
+                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
             }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
@@ -99,7 +100,8 @@ namespace Stratis.Sidechains.Networks
             this.Federations = new Federations();
 
             // Default transaction-signing keys!
-            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
+            // Use the new keys as the old keys should never be used by the new opcode.
+            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
