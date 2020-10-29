@@ -82,10 +82,18 @@ namespace Stratis.Bitcoin.Networks
             // Cirrus federation.
             var cirrusFederationMnemonics = new[] {
                 "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                "blame similar caution exit urge combine oak fat maximum link eyebrow elbow"
+                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
+                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
                }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
-            var cirrusFederationKeys = cirrusFederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
+            // Will replace the last multisig member.
+            var newFederationMemberMnemonics = new string[]
+            {
+                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            // Mimic the code found in CirrusRegTest.
+            var cirrusFederationKeys = cirrusFederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
             List<PubKey> cirrusFederationPubKeys = cirrusFederationKeys.Select(k => k.PubKey).ToList();
 

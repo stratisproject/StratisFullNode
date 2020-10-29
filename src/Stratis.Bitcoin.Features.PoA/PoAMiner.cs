@@ -142,9 +142,22 @@ namespace Stratis.Bitcoin.Features.PoA
                         this.ibdState.IsInitialBlockDownload(), this.connectionManager.ConnectedPeers.Any(), this.settings.BootstrappingMode, this.federationManager.IsFederationMember);
 
                     // Don't mine in IBD in case we are connected to any node unless bootstrapping mode is enabled.
-                    if (((this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode)
-                        || !this.federationManager.IsFederationMember)
+                    bool cantMineAtAll = (this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode;
+                    if (cantMineAtAll || !this.federationManager.IsFederationMember)
                     {
+                        if (!cantMineAtAll)
+                        {
+                            string cause = (this.federationManager.CurrentFederationKey == null) ? 
+                                $"missing file '{KeyTool.KeyFileDefaultName}'" : 
+                                $"the key in '{KeyTool.KeyFileDefaultName}' not being a federation member";
+
+                            var builder1 = new StringBuilder();
+                            builder1.AppendLine("<<==============================================================>>");
+                            builder1.AppendLine($"Can't mine due to {cause}.");
+                            builder1.AppendLine("<<==============================================================>>");
+                            this.logger.LogInformation(builder1.ToString());
+                        }
+
                         int attemptDelayMs = 30_000;
                         await Task.Delay(attemptDelayMs, this.cancellation.Token).ConfigureAwait(false);
 
@@ -162,7 +175,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                     var builder = new StringBuilder();
                     builder.AppendLine("<<==============================================================>>");
-                    builder.AppendLine($"Block was mined {chainedHeader}.");
+                    builder.AppendLine($"Block was mined {chainedHeader} as {this.federationManager.CurrentFederationKey.ToHex(this.network)}.");
                     builder.AppendLine("<<==============================================================>>");
                     this.logger.LogInformation(builder.ToString());
                 }

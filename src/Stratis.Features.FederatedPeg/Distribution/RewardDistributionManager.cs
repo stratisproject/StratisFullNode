@@ -151,10 +151,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
             {
                 Money amount = totalReward * blocksMinedEach[scriptPubKey] / totalBlocks;
 
-                PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
-                Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+                // Only convert to P2PKH if it is a pay-to-pubkey script. Leave the other types alone; the mempool should filter out anything that isn't allowed.
+                // Note that the node wallets can detect transactions with a destination of either the P2PK or P2PKH scriptPubKey corresponding to one of their pubkeys.
+                if (scriptPubKey.IsScriptType(ScriptType.P2PK))
+                {
+                    PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(scriptPubKey);
+                    Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
-                recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = p2pkh });
+                    recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = p2pkh });
+                }
+                else
+                    recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey });
             }
 
             var recipientLog = new StringBuilder();
