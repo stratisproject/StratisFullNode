@@ -138,7 +138,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 minerLog.AppendLine($"{item.Key} - {item.Value}");
             }
 
-            this.logger.LogInformation(minerLog.ToString());
+            this.logger.LogDebug(minerLog.ToString());
 
             return totalBlocks;
         }
