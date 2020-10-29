@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Interfaces
@@ -15,7 +14,5 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="recipient">The address to receive the withdrawal funds.</param>
         /// <returns>The transaction ready to be signed.</returns>
         Transaction BuildWithdrawalTransaction(int blockHeight, uint256 depositId, uint blockTime, Recipient recipient);
-
-        Transaction BuildWithdrawalTransaction(int blockHeight, uint256 depositId, uint blockTime, Recipient recipient, List<Recipient> multiSigRecipients);
     }
 }
