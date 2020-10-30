@@ -141,7 +141,8 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.logger.LogDebug("IsInitialBlockDownload={0}, AnyConnectedPeers={1}, BootstrappingMode={2}, IsFederationMember={3}",
                         this.ibdState.IsInitialBlockDownload(), this.connectionManager.ConnectedPeers.Any(), this.settings.BootstrappingMode, this.federationManager.IsFederationMember);
 
-                    // Don't mine in IBD in case we are connected to any node unless bootstrapping mode is enabled.
+                    // Don't mine in IBD or if we aren't connected to any node (unless bootstrapping mode is enabled).
+                    // Don't try to mine if we aren't a federation member.
                     bool cantMineAtAll = (this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode;
                     if (cantMineAtAll || !this.federationManager.IsFederationMember)
                     {
@@ -178,6 +179,16 @@ namespace Stratis.Bitcoin.Features.PoA
                     builder.AppendLine($"Block was mined {chainedHeader} as {this.federationManager.CurrentFederationKey.ToHex(this.network)}.");
                     builder.AppendLine("<<==============================================================>>");
                     this.logger.LogInformation(builder.ToString());
+
+                    // The purpose of bootstrap mode is to kickstart the network when the last mined block is very old, which would normally put the node in IBD and inhibit mining.
+                    // There is therefore no point keeping this mode enabled once this node has mined successfully.
+                    // Additionally, keeping it enabled may result in network splits if this node becomes disconnected from its peers for a prolonged period.
+                    if (this.settings.BootstrappingMode)
+                    {
+                        this.logger.LogInformation("Disabling bootstrap mode as a block has been successfully mined.");
+
+                        this.settings.DisableBootstrap();
+                    }
                 }
                 catch (OperationCanceledException)
                 {
