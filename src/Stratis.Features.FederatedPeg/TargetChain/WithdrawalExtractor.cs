@@ -13,8 +13,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// </summary>
     public interface IWithdrawalExtractor
     {
-        IWithdrawal ExtractDistributionWithdrawal(Transaction transaction, uint256 blockHash, int blockHeight);
-
         IReadOnlyList<IWithdrawal> ExtractWithdrawalsFromBlock(Block block, int blockHeight);
 
         IWithdrawal ExtractWithdrawalFromTransaction(Transaction transaction, uint256 blockHash, int blockHeight);
@@ -87,7 +85,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Money withdrawalAmount = null;
             string targetAddress = null;
 
-            // Cross Chain transfers either has 2 or 3 outputs.
+            // Cross chain transfers either has 2 or 3 outputs.
             if (transaction.Outputs.Count == ExpectedNumberOfOutputsNoChange || transaction.Outputs.Count == ExpectedNumberOfOutputsChange)
             {
                 TxOut targetAddressOutput = transaction.Outputs.SingleOrDefault(this.IsTargetAddressCandidate);
@@ -97,10 +95,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 withdrawalAmount = targetAddressOutput.Value;
                 targetAddress = targetAddressOutput.ScriptPubKey.GetDestinationAddress(this.network).ToString();
             }
-
-            // Reward distribution trnsactions will have more than 3 outputs.
-            if (transaction.Outputs.Count > ExpectedNumberOfOutputsChange)
+            else
             {
+                // Reward distribution trnsactions will have more than 3 outputs.
                 IEnumerable<TxOut> txOuts = transaction.Outputs.Where(output => output.ScriptPubKey != this.multisigAddress.ScriptPubKey && !output.ScriptPubKey.IsUnspendable);
                 if (!txOuts.Any())
                     return null;
@@ -116,39 +113,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 targetAddress,
                 blockHeight,
                 blockHash);
-
-            return withdrawal;
-        }
-
-        public IWithdrawal ExtractDistributionWithdrawal(Transaction transaction, uint256 blockHash, int blockHeight)
-        {
-            // Coinbase can't contain withdrawals.
-            if (transaction.IsCoinBase)
-                return null;
-
-            // Distribution withdrawal transactions has more outputs.
-            if (transaction.Outputs.Count <= ExpectedNumberOfOutputsChange)
-                return null;
-
-            if (!this.IsOnlyFromMultisig(transaction))
-                return null;
-
-            if (!this.opReturnDataReader.TryGetTransactionId(transaction, out string depositId))
-                return null;
-
-            Withdrawal withdrawal = null;
-            IEnumerable<TxOut> txOuts = transaction.Outputs.Where(output => output.ScriptPubKey != this.multisigAddress.ScriptPubKey && !output.ScriptPubKey.IsUnspendable);
-            if (txOuts.Any())
-            {
-                var targetOutputValue = txOuts.Sum(t => t.Value);
-                withdrawal = new Withdrawal(
-                    uint256.Parse(depositId),
-                    transaction.GetHash(),
-                    targetOutputValue,
-                    this.network.CirrusRewardDummyAddress,
-                    blockHeight,
-                    blockHash);
-            }
 
             return withdrawal;
         }

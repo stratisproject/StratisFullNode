@@ -32,7 +32,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <param name="mempoolManager">Mempool which provides information about transactions in the mempool.</param>
         /// <param name="loggerFactory">Logger factory.</param>
         /// <param name="counterChainNetworkWrapper">Counter chain network.</param>
-        /// 
         public WithdrawalHistoryProvider(
             Network network,
             IFederatedPegSettings federatedPegSettings,
