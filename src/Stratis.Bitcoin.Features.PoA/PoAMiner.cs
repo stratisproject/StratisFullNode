@@ -147,8 +147,8 @@ namespace Stratis.Bitcoin.Features.PoA
                     {
                         if (!cantMineAtAll)
                         {
-                            string cause = (this.federationManager.CurrentFederationKey == null) ? 
-                                $"missing file '{KeyTool.KeyFileDefaultName}'" : 
+                            string cause = (this.federationManager.CurrentFederationKey == null) ?
+                                $"missing file '{KeyTool.KeyFileDefaultName}'" :
                                 $"the key in '{KeyTool.KeyFileDefaultName}' not being a federation member";
 
                             var builder1 = new StringBuilder();
@@ -175,7 +175,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
                     var builder = new StringBuilder();
                     builder.AppendLine("<<==============================================================>>");
-                    builder.AppendLine($"Block was mined {chainedHeader} as {this.federationManager.CurrentFederationKey.ToHex(this.network)}.");
+                    builder.AppendLine($"Block mined hash   : '{chainedHeader}'");
+                    builder.AppendLine($"Block miner pubkey : '{this.federationManager.CurrentFederationKey.PubKey.ToString()}'");
                     builder.AppendLine("<<==============================================================>>");
                     this.logger.LogInformation(builder.ToString());
                 }
