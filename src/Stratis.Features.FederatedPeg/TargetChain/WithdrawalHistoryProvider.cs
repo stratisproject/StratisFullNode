@@ -66,12 +66,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     break;
                 // Extract the withdrawal details from the recorded "PartialTransaction".
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
-                var model = new WithdrawalModel
-                {
-                    withdrawal = withdrawal,
-                    TransferStatus = transfer?.Status.ToString()
-                };
-
+                var model = new WithdrawalModel(this.network, withdrawal, transfer);
                 result.Add(model);
             }
 
@@ -96,23 +91,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ICrossChainTransfer transfer in inProgressTransfers)
             {
-                var model = new WithdrawalModel
-                {
-                    withdrawal = new Withdrawal(
-                        transfer.DepositTransactionId,
-                        transfer.PartialTransaction?.GetHash(),
-                        transfer.DepositAmount,
-                        transfer.DepositTargetAddress.GetDestinationAddress(this.network).ToString(),
-                        transfer.BlockHeight ?? 0,
-                        transfer.BlockHash
-                    )
-                };
-
+                var model = new WithdrawalModel(this.network, transfer);
                 string status = transfer?.Status.ToString();
                 switch (transfer?.Status)
                 {
                     case CrossChainTransferStatus.FullySigned:
-                        if (this.mempoolManager.InfoAsync(model.withdrawal.Id).GetAwaiter().GetResult() != null)
+                        if (this.mempoolManager.InfoAsync(model.Id).GetAwaiter().GetResult() != null)
                             status += "+InMempool";
 
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
