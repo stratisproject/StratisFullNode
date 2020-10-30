@@ -167,7 +167,7 @@ namespace Stratis.Bitcoin.Controllers
                 model.FeaturesData.Add(new FeatureData
                 {
                     Namespace = feature.GetType().ToString(),
-                    State = feature.State
+                    State = feature.State.ToString()
                 });
             }
 

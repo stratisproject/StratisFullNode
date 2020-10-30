@@ -11,6 +11,7 @@ using LiteDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
@@ -40,6 +41,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <summary>Returns verbose balances data.</summary>
         /// <param name="addresses">The set of addresses that will be queried.</param>
         VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses);
+
+        IFullNodeFeature InitializingFeature { set; }
 
         LastBalanceDecreaseTransactionModel GetLastBalanceDecreaseTransaction(string address);
     }
@@ -135,6 +138,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// We assume that nodes usually don't have view that is different from other nodes by that constant of blocks.
         /// </summary>
         public const int SyncBuffer = 50;
+
+        public IFullNodeFeature InitializingFeature { get; set; }
 
         public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
             IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer)
@@ -606,10 +611,16 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <inheritdoc />
         public VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses)
         {
+            // If the containing feature is not initialized then wait a bit.
+            this.InitializingFeature?.WaitInitialized();
+
             var result = new VerboseAddressBalancesResult(this.consensusManager.Tip.Height);
 
             if (addresses.Length == 0)
                 return result;
+
+            if (!this.storeSettings.AddressIndex)
+                throw new NotSupportedException("Address indexing is not enabled.");
 
             (bool isQueryable, string reason) = this.IsQueryable();
 
