@@ -30,6 +30,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ISignals signals;
         private readonly IRewardDistributionManager distributionManager;
+        private readonly IWithdrawalExtractor withdrawalExtractor;
 
         public WithdrawalTransactionBuilder(
             ILoggerFactory loggerFactory,
@@ -38,7 +39,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederationWalletTransactionHandler federationWalletTransactionHandler,
             IFederatedPegSettings federatedPegSettings,
             ISignals signals,
-            IRewardDistributionManager distributionManager = null)
+            IRewardDistributionManager distributionManager = null,
+            IWithdrawalExtractor withdrawalExtractor = null)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
@@ -47,6 +49,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.federatedPegSettings = federatedPegSettings;
             this.signals = signals;
             this.distributionManager = distributionManager;
+            this.withdrawalExtractor = withdrawalExtractor;
         }
 
         /// <inheritdoc />
@@ -100,6 +103,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 // Build the transaction.
                 Transaction transaction = this.federationWalletTransactionHandler.BuildTransaction(multiSigContext);
+
+                if (transaction != null && this.withdrawalExtractor != null)
+                {
+                    if (this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, null, 0)?.DepositId != depositId)
+                    {
+                        this.logger.LogError("Unable to extract withdrawal from withdrawal transaction for deposit {0}.", depositId);
+                        return null;
+                    }
+                }
 
                 this.logger.LogDebug("transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
 

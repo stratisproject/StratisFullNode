@@ -86,24 +86,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             string targetAddress = null;
 
             // Cross chain transfers either has 2 or 3 outputs.
-            if (transaction.Outputs.Count == ExpectedNumberOfOutputsNoChange || transaction.Outputs.Count == ExpectedNumberOfOutputsChange)
+            if (transaction.Outputs.Take(1).Any(output => output.ScriptPubKey == this.multisigAddress.ScriptPubKey))
             {
-                TxOut targetAddressOutput = transaction.Outputs.SingleOrDefault(this.IsTargetAddressCandidate);
+                IEnumerable<TxOut> txOuts = transaction.Outputs.Skip(1).Where(output => !output.ScriptPubKey.IsUnspendable);
+                withdrawalAmount = txOuts.Sum(t => t.Value);
+                targetAddress = this.network.CirrusRewardDummyAddress;
+            }
+            else
+            {
+                if (transaction.Outputs.Count > ExpectedNumberOfOutputsChange)
+                    return null;
+
+                TxOut targetAddressOutput = transaction.Outputs.Skip(1).SingleOrDefault(this.IsTargetAddressCandidate);
                 if (targetAddressOutput == null)
                     return null;
 
                 withdrawalAmount = targetAddressOutput.Value;
                 targetAddress = targetAddressOutput.ScriptPubKey.GetDestinationAddress(this.network).ToString();
-            }
-            else
-            {
-                // Reward distribution trnsactions will have more than 3 outputs.
-                IEnumerable<TxOut> txOuts = transaction.Outputs.Where(output => output.ScriptPubKey != this.multisigAddress.ScriptPubKey && !output.ScriptPubKey.IsUnspendable);
-                if (!txOuts.Any())
-                    return null;
-
-                withdrawalAmount = txOuts.Sum(t => t.Value);
-                targetAddress = this.network.CirrusRewardDummyAddress;
             }
 
             var withdrawal = new Withdrawal(

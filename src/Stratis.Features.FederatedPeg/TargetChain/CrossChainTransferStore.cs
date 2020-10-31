@@ -488,9 +488,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                         transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(maturedDeposit.BlockInfo.BlockHeight, deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient);
 
                                         if (transaction != null)
-                                        {
-                                            Guard.Assert(this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, null, 0)?.DepositId == deposit.Id);
-
+                                        {                                           
                                             // Reserve the UTXOs before building the next transaction.
                                             var isdistribution = recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
                                             walletUpdated |= this.federationWalletManager.ProcessTransaction(transaction, isDistribution: isdistribution);
