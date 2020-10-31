@@ -171,7 +171,6 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
             this.logger.LogDebug(recipientLog.ToString());
 
-
             this.logger.LogInformation($"A total reward of {totalReward} will be distributed between {recipients.Count} recipients");
 
             return recipients;
