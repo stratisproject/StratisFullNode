@@ -157,6 +157,29 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.blockStore = blockStore;
         }
 
+        public ChainedHeader FindOnChainTip()
+        {
+            ChainedHeader walletTip = this.chainIndexer.GetHeader(this.WalletTipHash);
+            if (walletTip != null)
+                return walletTip;
+
+            // The wallet tip was not found in the main chain.
+            // this can happen if the node crashes unexpectedly.
+            // To recover we need to find the first common fork
+            // with the best chain. As the wallet does not have a
+            // list of chain headers, we use a BlockLocator and persist
+            // that in the wallet. The block locator will help finding
+            // a common fork and bringing the wallet back to a good
+            // state (behind the best chain).
+            ICollection<uint256> locators = this.GetWallet().BlockLocator;
+            var blockLocator = new BlockLocator { Blocks = locators.ToList() };
+            ChainedHeader fork = this.chainIndexer.FindFork(blockLocator);
+            this.RemoveBlocks(fork);
+            this.WalletTipHash = fork.HashBlock;
+
+            return fork;
+        }
+
         /// <summary>
         /// The purpose of this method is to retrieve <see cref="Transaction"/> objects for each <see cref="SpendingDetails.TransactionId"/>.
         /// If any transaction can't be resolved the wallet is rewound to remove the corrupt <see cref="TransactionData"/> record containing

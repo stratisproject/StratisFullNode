@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -74,26 +72,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
             if (this.storeSettings.PruningEnabled)
                 throw new WalletException("Wallet can not yet run on a pruned node");
 
-            this.logger.LogInformation("WalletSyncManager initialized. Wallet at block {0}.", this.walletManager.LastBlockSyncedHashHeight().Height);
+            this.walletTip = this.walletManager.FindOnChainTip();
 
-            this.walletTip = this.chain.GetHeader(this.walletManager.WalletTipHash);
-            if (this.walletTip == null)
-            {
-                // The wallet tip was not found in the main chain.
-                // this can happen if the node crashes unexpectedly.
-                // To recover we need to find the first common fork
-                // with the best chain. As the wallet does not have a
-                // list of chain headers, we use a BlockLocator and persist
-                // that in the wallet. The block locator will help finding
-                // a common fork and bringing the wallet back to a good
-                // state (behind the best chain).
-                ICollection<uint256> locators = this.walletManager.GetWallet().BlockLocator;
-                var blockLocator = new BlockLocator { Blocks = locators.ToList() };
-                ChainedHeader fork = this.chain.FindFork(blockLocator);
-                this.walletManager.RemoveBlocks(fork);
-                this.walletManager.WalletTipHash = fork.HashBlock;
-                this.walletTip = fork;
-            }
+            this.logger.LogInformation("WalletSyncManager initialized. Wallet at block {0}.", this.walletManager.LastBlockSyncedHashHeight().Height);
         }
 
         /// <inheritdoc />

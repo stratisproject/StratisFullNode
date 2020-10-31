@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Events;
-using Stratis.Features.FederatedPeg.Exceptions;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -166,7 +165,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 this.federationWalletManager.Synchronous(() =>
                 {
-                    this.Synchronize();
+                    Guard.Assert(this.Synchronize());
                 });
             }
         }
@@ -178,6 +177,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 return this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Count != 0;
             }
+        }
+
+        /// <summary>
+        /// The store will chase the wallet tip. This will ensure that we can rely on
+        /// information recorded in the wallet such as the list of unspent UTXO's.
+        /// </summary>
+        /// <returns>The height to which the wallet has been synced.</returns>
+        private HashHeightPair TipToChase()
+        {
+            return new HashHeightPair(this.federationWalletManager.FindOnChainTip());
         }
 
         /// <summary>
@@ -333,8 +342,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 this.federationWalletManager.Synchronous(() =>
                 {
-                    if (!this.Synchronize())
-                        return;
+                    Guard.Assert(this.Synchronize());
 
                     using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
                     {
@@ -408,8 +416,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.federationWalletManager.Synchronous(() =>
                     {
-                        if (!this.Synchronize())
-                            return;
+                        Guard.Assert(this.Synchronize());
 
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
@@ -482,9 +489,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                         if (transaction != null)
                                         {
+                                            Guard.Assert(this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transaction, null, 0)?.DepositId == deposit.Id);
+
                                             // Reserve the UTXOs before building the next transaction.
                                             var isdistribution = recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
                                             walletUpdated |= this.federationWalletManager.ProcessTransaction(transaction, isDistribution: isdistribution);
+
+                                            if (this.federationWalletManager.FindWithdrawalTransactions(deposit.Id).Count == 0)
+                                                throw new Exception("The added withdrawal could not be found in the wallet");
 
                                             if (!this.ValidateTransaction(transaction))
                                             {
@@ -597,8 +609,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     return this.federationWalletManager.Synchronous(() =>
                     {
-                        if (!this.Synchronize())
-                            return null;
+                        Guard.Assert(this.Synchronize());
 
                         this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
 
@@ -787,39 +798,22 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// Used to handle reorg (if required) and revert status from <see cref="CrossChainTransferStatus.SeenInBlock"/> to
         /// <see cref="CrossChainTransferStatus.FullySigned"/>. Also returns a flag to indicate whether we are behind the current tip.
         /// </summary>
-        private void RewindIfRequiredLocked()
+        /// <returns>Returns <c>true</c> if a rewind was performed and <c>false</c> otherwise.</returns>
+        private bool RewindIfRequired()
         {
-            if (this.TipHashAndHeight == null)
+            // We are dependent on the wallet manager having dealt with any fork by now.
+            HashHeightPair tipToChase = this.TipToChase();
+
+            if (tipToChase.Hash == this.TipHashAndHeight.HashBlock)
             {
-                this.logger.LogTrace("(-)[CCTS_TIP_NOT_SET]");
-                return;
+                // Indicate that we are synchronized.
+                this.logger.LogTrace("(-)[SYNCHRONIZED]:false");
+                return false;
             }
 
-            HashHeightPair tipToChase = this.federationWalletManager.LastBlockSyncedHashHeight();
-
-            // Indicates that the CCTS is synchronized with the Federation Wallet.
-            if (this.TipHashAndHeight.HashBlock == tipToChase.Hash)
-            {
-                this.logger.LogTrace("(-)[SYNCHRONIZED]");
-                return;
-            }
-
-            // If the Federation Wallet's tip is not on chain, rewind.
-            if (this.chainIndexer.GetHeader(tipToChase.Hash) == null)
-            {
-                var blocks = this.federationWalletManager.GetWallet().BlockLocator.ToList();
-                ChainedHeader fork = this.chainIndexer.FindFork(new BlockLocator { Blocks = blocks });
-
-                this.federationWalletManager.RemoveBlocks(fork);
-
-                // Re-set the tip to chase to the federation wallet's new tip.
-                tipToChase = this.federationWalletManager.LastBlockSyncedHashHeight();
-            }
-
-            // If the CCTS's tip is higher than the federation wallet's tip 
-            // OR
-            // the CCTS's tip is not on chain, then rewind.
-            if (this.TipHashAndHeight.Height > tipToChase.Height || this.chainIndexer.GetHeader(this.TipHashAndHeight.HashBlock)?.Height != this.TipHashAndHeight.Height)
+            // If the chain does not contain our tip.
+            if (this.TipHashAndHeight != null && (this.TipHashAndHeight.Height > tipToChase.Height ||
+                this.chainIndexer.GetHeader(this.TipHashAndHeight.HashBlock)?.Height != this.TipHashAndHeight.Height))
             {
                 // We are ahead of the current chain or on the wrong chain.
                 ChainedHeader fork = this.chainIndexer.FindFork(this.TipHashAndHeight.GetLocator()) ?? this.chainIndexer.GetHeader(0);
@@ -871,41 +865,30 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
 
                 this.ValidateCrossChainTransfers();
+                return true;
             }
+
+            // Indicate that we are behind the current chain.
+            return false;
         }
 
-        /// <summary>
-        /// Attempts to synchronizes the store with the chain.
-        /// <para>
-        /// If the synchronization did not happen due to the federation wallet tip not being on chain,
-        /// we exit and the caller needs to stop further execution.
-        /// </para>
-        /// </summary>
+        /// <summary>Attempts to synchronizes the store with the chain.</summary>
         /// <returns>Returns <c>true</c> if the store is in sync or <c>false</c> otherwise.</returns>
         private bool Synchronize()
         {
             lock (this.lockObj)
             {
+                HashHeightPair tipToChase = this.TipToChase();
                 if (this.TipHashAndHeight == null)
                 {
-                    this.logger.LogError("Synchronization failed as the store's tip is null.");
-                    this.logger.LogTrace("(-)[CCTS_TIP_NOT_SET]:false");
+                    this.logger.LogError("Failed to synchronise. Reason: {0} is null.", nameof(this.TipHashAndHeight));
+                    this.logger.LogTrace("(-)[SYNCHRONIZED]:false");
                     return false;
                 }
 
-                HashHeightPair federationWalletTip = this.federationWalletManager.LastBlockSyncedHashHeight();
-
-                // Check if the federation wallet's tip is on chain, if not exit.
-                if (this.chainIndexer.GetHeader(federationWalletTip.Hash) == null)
+                if (tipToChase.Hash == this.TipHashAndHeight.HashBlock)
                 {
-                    this.logger.LogDebug("Synchronization failed as the federation wallet tip is not on chain; {0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
-                    this.logger.LogTrace("(-)[FED_WALLET_TIP_NOT_ONCHAIN]:false");
-                    return false;
-                }
-
-                // If the federation wallet tip matches the store's tip, exit.
-                if (federationWalletTip.Hash == this.TipHashAndHeight.HashBlock)
-                {
+                    // Indicate that we are synchronized.
                     this.logger.LogTrace("(-)[SYNCHRONIZED]:true");
                     return true;
                 }
@@ -918,29 +901,21 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         this.NextMatureDepositHeight = transfers.Min(t => t.DepositHeight) ?? this.NextMatureDepositHeight;
                     }
 
-                    this.RewindIfRequiredLocked();
+                    this.RewindIfRequired();
 
-                    try
+                    if (this.SynchronizeBatch())
                     {
-                        if (this.SynchronizeBatch())
+                        using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
                         {
-                            using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
-                            {
-                                dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
+                            dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
 
-                                this.SaveTipHashAndHeight(dbreezeTransaction, this.TipHashAndHeight);
+                            this.SaveTipHashAndHeight(dbreezeTransaction, this.TipHashAndHeight);
 
-                                dbreezeTransaction.Commit();
-                            }
-
-                            return true;
+                            dbreezeTransaction.Commit();
                         }
-                    }
-                    catch (FederationWalletTipNotOnChainException)
-                    {
-                        return false;
-                    }
 
+                        return true;
+                    }
                 }
 
                 return false;
@@ -953,25 +928,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             // Get a batch of blocks.
             int batchSize = 0;
-
-            HashHeightPair federationWalletTip = this.federationWalletManager.LastBlockSyncedHashHeight();
-
-            if (this.chainIndexer.GetHeader(federationWalletTip.Hash) == null)
-            {
-                // If the federation tip is found to be not on chain, we need to throw an
-                // exception to ensure that we exit the synchronization process.
-                this.logger.LogTrace("(-)[FEDERATION_WALLET_TIP_NOT_ON CHAIN]:{0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
-                throw new FederationWalletTipNotOnChainException();
-            }
-
-            var chainedHeadersSnapshot = new Dictionary<uint256, ChainedHeader>();
+            HashHeightPair tipToChase = this.TipToChase();
+            Dictionary<uint256, ChainedHeader> chainedHeadersSnapshot = new Dictionary<uint256, ChainedHeader>();
 
             foreach (ChainedHeader header in this.chainIndexer.EnumerateToTip(this.TipHashAndHeight.HashBlock).Skip(1))
             {
                 if (this.chainIndexer.GetHeader(header.HashBlock) == null)
                     break;
 
-                if (header.Height > federationWalletTip.Height)
+                if (header.Height > tipToChase.Height)
                     break;
 
                 chainedHeadersSnapshot.Add(header.HashBlock, header);
@@ -1062,8 +1027,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     return this.federationWalletManager.Synchronous(() =>
                     {
-                        if (!this.Synchronize())
-                            return null;
+                        Guard.Assert(this.Synchronize());
 
                         ICrossChainTransfer[] transfers = this.Get(depositIds);
 
@@ -1129,8 +1093,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 return this.federationWalletManager.Synchronous(() =>
                 {
-                    if (!this.Synchronize())
-                        return new ICrossChainTransfer[] { };
+                    Guard.Assert(this.Synchronize());
 
                     var depositIds = new HashSet<uint256>();
                     foreach (CrossChainTransferStatus status in statuses)

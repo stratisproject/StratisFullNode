@@ -62,14 +62,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             this.requestDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestDepositsTask)}", async token =>
             {
-                bool delayRequired = await this.SyncDepositsAsync().ConfigureAwait(false);
-                if (delayRequired)
-                {
-                    // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
-                    // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
-                    // or alt chain node might be started.
-                    await Task.Delay(TimeSpan.FromSeconds(RefreshDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
-                }
+                while (!await this.SyncDepositsAsync().ConfigureAwait(false)) { };
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));

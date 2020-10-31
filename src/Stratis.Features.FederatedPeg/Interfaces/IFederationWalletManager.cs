@@ -148,5 +148,10 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         /// <returns>A tuple containing the confirmed and unconfirmed balances.</returns>
         (Money ConfirmedAmount, Money UnConfirmedAmount) GetSpendableAmount();
+
+        /// <summary>
+        /// Gets the wallet tip with the added guarantee that its on the consensus chain.
+        /// </summary>
+        ChainedHeader FindOnChainTip();
     }
 }
