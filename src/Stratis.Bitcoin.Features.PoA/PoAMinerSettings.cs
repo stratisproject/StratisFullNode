@@ -16,5 +16,10 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.BootstrappingMode = config.GetOrDefault<bool>("bootstrap", false);
         }
+
+        public void DisableBootstrap()
+        {
+            this.BootstrappingMode = false;
+        }
     }
 }
