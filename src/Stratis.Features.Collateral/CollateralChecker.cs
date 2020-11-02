@@ -263,10 +263,12 @@ namespace Stratis.Features.Collateral
                     this.logger.LogDebug("Removing federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
                     if (string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
                         this.balancesDataByAddress.Remove(collateralFederationMember.CollateralMainchainAddress);
+                    else
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
                 }
                 else
                 {
-                    this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
                 }
             }
         }
@@ -280,10 +282,12 @@ namespace Stratis.Features.Collateral
                     this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
                     if (string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
                         this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
+                    else
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
                 }
                 else
                 {
-                    this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                    this.logger.LogError("(-)[NO_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
                 }
             }
         }
