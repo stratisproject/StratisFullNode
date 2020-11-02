@@ -287,7 +287,7 @@ namespace Stratis.Features.Collateral
                 }
                 else
                 {
-                    this.logger.LogError("(-)[NO_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
                 }
             }
         }
