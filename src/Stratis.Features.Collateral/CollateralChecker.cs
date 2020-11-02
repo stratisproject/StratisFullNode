@@ -258,8 +258,18 @@ namespace Stratis.Features.Collateral
         {
             lock (this.locker)
             {
-                this.logger.LogDebug("Removing federation member {0}", ((CollateralFederationMember)fedMemberKicked.KickedMember).CollateralMainchainAddress);
-                this.balancesDataByAddress.Remove(((CollateralFederationMember)fedMemberKicked.KickedMember).CollateralMainchainAddress);
+                if (fedMemberKicked.KickedMember is CollateralFederationMember collateralFederationMember)
+                {
+                    this.logger.LogDebug("Removing federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                        this.balancesDataByAddress.Remove(collateralFederationMember.CollateralMainchainAddress);
+                    else
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                }
+                else
+                {
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                }
             }
         }
 
@@ -267,8 +277,18 @@ namespace Stratis.Features.Collateral
         {
             lock (this.locker)
             {
-                this.logger.LogDebug("Adding federation member {0}", ((CollateralFederationMember)fedMemberAdded.AddedMember).CollateralMainchainAddress);
-                this.balancesDataByAddress.Add(((CollateralFederationMember)fedMemberAdded.AddedMember).CollateralMainchainAddress, null);
+                if (fedMemberAdded.AddedMember is CollateralFederationMember collateralFederationMember)
+                {
+                    this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                        this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
+                    else
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                }
+                else
+                {
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                }
             }
         }
 
