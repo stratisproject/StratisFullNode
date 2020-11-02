@@ -62,18 +62,17 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     currentHeader.Block = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
 
                 (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
+                if (heightOfMainChainCommitment != null)
+                {
+                    this.logger.LogDebug($"{currentHeader} : {nameof(heightOfMainChainCommitment)}={heightOfMainChainCommitment}");
 
-                if (heightOfMainChainCommitment == null)
-                    continue;
-
-                this.logger.LogDebug($"{currentHeader} : {nameof(heightOfMainChainCommitment)}={heightOfMainChainCommitment}");
-
-                if (heightOfMainChainCommitment <= applicableMainChainDepositHeight)
-                    break;
+                    if (heightOfMainChainCommitment <= applicableMainChainDepositHeight)
+                        break;
+                }
 
                 currentHeader = currentHeader.Previous;
 
-            } while (true);
+            } while (currentHeader.Height != 0);
 
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
@@ -115,7 +114,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 // If the POA miner at the time did not have a wallet address, the script length can be 0.
                 // In this case the block shouldn't count as it was "not mined by anyone".
-                if (minerScript != Script.Empty)
+                if (!Script.IsNullOrEmpty(minerScript))
                 {
                     if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
                         minerBlockCount = 0;
@@ -171,7 +170,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
             this.logger.LogDebug(recipientLog.ToString());
 
-            this.logger.LogInformation($"A total reward of {totalReward} will be distibuted between {recipients.Count} recipients");
+            this.logger.LogInformation($"A total reward of {totalReward} will be distributed between {recipients.Count} recipients");
 
             return recipients;
         }
