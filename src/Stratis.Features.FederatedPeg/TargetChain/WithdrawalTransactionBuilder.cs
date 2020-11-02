@@ -81,7 +81,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     // This should never happen as we should always have at least one federation member with a configured wallet.
                     if (multiSigContext.Recipients.Count == 0)
                     {
-                        this.logger.LogError("Could not identify recipents for the distribution transaction. Adding dummy receipient to avoid the CCTS suspending.");
+                        this.logger.LogError("Could not identify recipents for the distribution transaction. Adding dummy recipient to avoid the CCTS suspending irrecoverably.");
                         multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
                     }
                 }
