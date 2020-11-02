@@ -114,7 +114,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 // If the POA miner at the time did not have a wallet address, the script length can be 0.
                 // In this case the block shouldn't count as it was "not mined by anyone".
-                if (minerScript != Script.Empty)
+                if (!Script.IsNullOrEmpty(minerScript))
                 {
                     if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
                         minerBlockCount = 0;
@@ -170,7 +170,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
             this.logger.LogDebug(recipientLog.ToString());
 
-            this.logger.LogInformation($"A total reward of {totalReward} will be distibuted between {recipients.Count} recipients");
+            this.logger.LogInformation($"A total reward of {totalReward} will be distributed between {recipients.Count} recipients");
 
             return recipients;
         }
