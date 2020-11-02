@@ -261,7 +261,7 @@ namespace Stratis.Features.Collateral
                 if (fedMemberKicked.KickedMember is CollateralFederationMember collateralFederationMember)
                 {
                     this.logger.LogDebug("Removing federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
-                    if (string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
                         this.balancesDataByAddress.Remove(collateralFederationMember.CollateralMainchainAddress);
                     else
                         this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
@@ -280,7 +280,7 @@ namespace Stratis.Features.Collateral
                 if (fedMemberAdded.AddedMember is CollateralFederationMember collateralFederationMember)
                 {
                     this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
-                    if (string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
                         this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
                     else
                         this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
