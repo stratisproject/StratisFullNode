@@ -62,7 +62,6 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     currentHeader.Block = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
 
                 (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
-
                 if (heightOfMainChainCommitment != null)
                 {
                     this.logger.LogDebug($"{currentHeader} : {nameof(heightOfMainChainCommitment)}={heightOfMainChainCommitment}");
