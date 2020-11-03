@@ -104,7 +104,7 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
-                federationMemberMaxIdleTimeSeconds: 60 * 60 * 12 // 12 hours
+                federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2 // 2 days
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive

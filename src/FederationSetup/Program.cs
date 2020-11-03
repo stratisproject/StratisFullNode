@@ -260,17 +260,17 @@ namespace FederationSetup
             switch (network)
             {
                 case "mainnet":
-                    mainchainNetwork = Networks.Stratis.Mainnet();
+                    mainchainNetwork = null;
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Mainnet();
                     targetMainchainNetwork = Networks.Strax.Mainnet();
                     break;
                 case "testnet":
-                    mainchainNetwork = Networks.Stratis.Testnet();
+                    mainchainNetwork = null;
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Testnet();
                     targetMainchainNetwork = Networks.Strax.Testnet();
                     break;
                 case "regtest":
-                    mainchainNetwork = Networks.Stratis.Regtest();
+                    mainchainNetwork = null;
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Regtest();
                     targetMainchainNetwork = Networks.Strax.Regtest();
                     break;
