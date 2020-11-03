@@ -71,9 +71,9 @@ namespace Stratis.Sidechains.Networks
             // and should be the same for all nodes operating on this network.
             var genesisFederationMembers = new List<IFederationMember>()
             {
-                new CollateralFederationMember(new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"), true, new Money(50000_00000000), "TH9DJ8nRRpS8y2upTmtyqjKwe5WxvARUnV"),
-                new CollateralFederationMember(new PubKey("022553fb641898be98e6e331d644c1689455536e58ad643d84844e981708da38e9"), true, new Money(50000_00000000), "TTEpaHVm7DZktv6ELbeMjDprhAFeFx72zq"),
-                new CollateralFederationMember(new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"), true, new Money(50000_00000000), "TEsYkDkL5HCJuynJu7gMDHq9bzfgsASQQr"),
+                new CollateralFederationMember(new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"), true, new Money(50000_00000000), "qdKBKmoFWpuuxNHjoXK4tzTtuinwnjwH2Q"),
+                new CollateralFederationMember(new PubKey("022553fb641898be98e6e331d644c1689455536e58ad643d84844e981708da38e9"), true, new Money(50000_00000000), "qPcHHH5ACc8282y95NWtaDz1xGuBvMyfgW"),
+                new CollateralFederationMember(new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"), true, new Money(50000_00000000), "qcEu17QYBmCqXjm9n7uCkaSDXyDAVmNzk2"),
                 new CollateralFederationMember(new PubKey("02fd4f3197c40d41f9f5478d55844f522744258ca4093b5119571de1a5df1bc653"), true, new Money(50000_00000000), "TKwaUhwEWTKEXFSKfPECmdLfwQnG7Np6uL"),
                 new CollateralFederationMember(new PubKey("030ac8e3e119257aff4512ea44450632a6a9b54104f936732d31c28a63a2104064"), true, new Money(50000_00000000), "TX8dS5SbDrXj8XpxEVRTbquDaD61f2JmAG"),
                 new CollateralFederationMember(new PubKey("03348a438f86727c579febfd6a656cfd6477605e5fa00efa5b4f5fe1cab01c49ef"), true, new Money(50000_00000000), "TMTkMb6MFET5WQfDuLdR8SG2Y7z4fJsvVU"),
