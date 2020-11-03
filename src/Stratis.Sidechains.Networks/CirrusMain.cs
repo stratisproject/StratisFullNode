@@ -9,14 +9,13 @@ using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules;
+using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.Bitcoin.Utilities;
-using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -31,7 +30,7 @@ namespace Stratis.Sidechains.Networks
         /// <summary> The default name used for the federated peg configuration file. </summary>
         private const string NetworkDefaultConfigFilename = "cirrus.conf";
 
-        internal CirrusMain()
+        public CirrusMain()
         {
             this.Name = "CirrusMain";
             this.NetworkType = NetworkType.Mainnet;
@@ -52,6 +51,8 @@ namespace Stratis.Sidechains.Networks
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
+            this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -71,7 +72,6 @@ namespace Stratis.Sidechains.Networks
             // and should be the same for all nodes operating on this network.
             var genesisFederationMembers = new List<IFederationMember>()
             {
-
                 new CollateralFederationMember(new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"), true, new Money(50000_00000000),"SNuLYcPoSmY1tmp9X9TRwXoF861sVMe9dP"),
                 new CollateralFederationMember(new PubKey("021043aacac5c8805e3bc62eb40e8d3c04070c56b21032d4bb14200ed6e4facf93"), true, new Money(50000_00000000),"ScrS22tPNxL2q1Q8u9bFPX29WwWfnmTZJ6"),
                 new CollateralFederationMember(new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"), true, new Money(50000_00000000),"SVAKFx4yndzKEh2Q6o5fz5ZGADBXzFayQ4"),
@@ -133,7 +133,7 @@ namespace Stratis.Sidechains.Networks
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = NBitcoin.Protocol.ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
             };
 
             this.Federations = new Federations();
@@ -218,7 +218,7 @@ namespace Stratis.Sidechains.Networks
                 new NetworkAddress(IPAddress.Parse("45.58.55.21"), 16179),
             };
 
-            this.StandardScriptsRegistry = new SmartContractsStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("000005769503496300ec879afd7543dc9f86d3b3d679950b2b83e2f49f525856"));

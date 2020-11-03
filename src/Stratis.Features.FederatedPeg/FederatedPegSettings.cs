@@ -11,24 +11,6 @@ using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg
 {
-    public interface IFederatedPegOptions
-    {
-        int WalletSyncFromHeight { get; }
-    }
-
-    public sealed class FederatedPegOptions : IFederatedPegOptions
-    {
-        /// <summary>
-        /// The height to start syncing the wallet from.
-        /// </summary>
-        public int WalletSyncFromHeight { get; }
-
-        public FederatedPegOptions(int walletSyncFromHeight = 1)
-        {
-            this.WalletSyncFromHeight = walletSyncFromHeight;
-        }
-    }
-
     /// <inheritdoc />
     public sealed class FederatedPegSettings : IFederatedPegSettings
     {
@@ -37,6 +19,10 @@ namespace Stratis.Features.FederatedPeg
         public const string RedeemScriptParam = "redeemscript";
 
         public const string PublicKeyParam = "publickey";
+
+        public const string FederationKeysParam = "federationkeys";
+
+        public const string FederationQuorumParam = "federationquorum";
 
         public const string FederationIpsParam = "federationips";
 
@@ -85,14 +71,7 @@ namespace Stratis.Features.FederatedPeg
         /// </summary>
         public const int MaxInputs = 50;
 
-        /// <summary>
-        /// Sidechains to STRAT don't need to check for deposits for the whole main chain. Only from when they begun.
-        ///
-        /// This block was mined on 5th Dec 2018. Further optimisations could be more specific per network.
-        /// </summary>
-        public const int StratisMainDepositStartBlock = 1_100_000;
-
-        public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederatedPegOptions federatedPegOptions = null)
+        public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
@@ -104,13 +83,35 @@ namespace Stratis.Features.FederatedPeg
 
             string redeemScriptRaw = configReader.GetOrDefault<string>(RedeemScriptParam, null);
             Console.WriteLine(redeemScriptRaw);
-            if (redeemScriptRaw == null)
-                throw new ConfigurationException($"Could not find {RedeemScriptParam} configuration parameter.");
 
-            this.MultiSigRedeemScript = new Script(redeemScriptRaw);
+            PayToMultiSigTemplateParameters para = null;
+
+            if (!string.IsNullOrEmpty(redeemScriptRaw))
+            {
+                var redeemScript = new Script(redeemScriptRaw);
+                para = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript) ??
+                    PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript, nodeSettings.Network);
+            }
+
+            if (para == null)
+            {
+                string pubKeys = configReader.GetOrDefault<string>(FederationKeysParam, null);
+                if (string.IsNullOrEmpty(pubKeys))
+                    throw new ConfigurationException($"Either -{RedeemScriptParam} or -{FederationKeysParam} must be specified.");
+
+                para.PubKeys = pubKeys.Split(",").Select(s => new PubKey(s.Trim())).ToArray();
+                para.SignatureCount = (pubKeys.Length + 1) / 2;
+            }
+
+            para.SignatureCount = configReader.GetOrDefault(FederationQuorumParam, para.SignatureCount);
+
+            IFederation federation;
+            federation = new Federation(para.PubKeys, para.SignatureCount);
+            nodeSettings.Network.Federations.RegisterFederation(federation);
+            counterChainNetworkWrapper.CounterChainNetwork.Federations.RegisterFederation(federation);
+
+            this.MultiSigRedeemScript = federation.MultisigScript;
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            PayToMultiSigTemplateParameters para = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript) ?? 
-                PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript, nodeSettings.Network);
             this.MultiSigM = para.SignatureCount;
             this.MultiSigN = para.PubKeys.Length;
             this.FederationPublicKeys = para.PubKeys;
@@ -121,9 +122,6 @@ namespace Stratis.Features.FederatedPeg
             {
                 throw new ConfigurationException("Please make sure the public key passed as parameter was used to generate the multisig redeem script.");
             }
-
-            nodeSettings.Network.Federations.RegisterFederation(new Federation(para.PubKeys, para.SignatureCount));
-            counterChainNetworkWrapper.CounterChainNetwork.Federations.RegisterFederation(new Federation(para.PubKeys, para.SignatureCount));
 
             // Federation IPs - These are required to receive and sign withdrawal transactions.
             string federationIpsRaw = configReader.GetOrDefault<string>(FederationIpsParam, null);
@@ -137,7 +135,7 @@ namespace Stratis.Features.FederatedPeg
             this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x => x.Address), new IPAddressComparer());
 
             // These values are only configurable for tests at the moment. Fed members on live networks shouldn't play with them.
-            this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
+            this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, 1);
 
             this.SmallDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(ThresholdAmountSmallDepositParam, 50));
             this.NormalDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(ThresholdAmountNormalDepositParam, 1000));
@@ -147,7 +145,7 @@ namespace Stratis.Features.FederatedPeg
             this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
-            this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, federatedPegOptions?.WalletSyncFromHeight ?? 0);
+            this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
 
         /// <inheritdoc/>

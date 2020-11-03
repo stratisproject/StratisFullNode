@@ -26,7 +26,7 @@ namespace Stratis.Features.Collateral
 
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
 
-            int? commitmentHeight = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
+            (int? commitmentHeight, _) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)
             {
                 // Every PoA miner on a sidechain network is forced to include commitment data to the blocks mined.

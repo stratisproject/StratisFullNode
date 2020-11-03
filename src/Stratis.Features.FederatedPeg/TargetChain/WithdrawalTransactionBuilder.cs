@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -56,7 +54,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             try
             {
-                this.logger.LogDebug("BuildDeterministicTransaction depositId(opReturnData)={0} recipient.ScriptPubKey={1} recipient.Amount={2}", depositId, recipient.ScriptPubKey, recipient.Amount);
+                this.logger.LogDebug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
 
                 // Build the multisig transaction template.
                 uint256 opReturnData = depositId;
@@ -70,18 +68,26 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     IgnoreVerify = true,
                     WalletPassword = walletPassword,
                     Sign = sign,
-                    Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?) null
+                    Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?)null
                 };
 
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag)
+                // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey)
                 {
                     // Use the distribution manager to determine the actual list of recipients.
                     // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
                     multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
+
+                    // This should never happen as we should always have at least one federation member with a configured wallet.
+                    if (multiSigContext.Recipients.Count == 0)
+                    {
+                        this.logger.LogError("Could not identify recipents for the distribution transaction. Adding dummy recipient to avoid the CCTS suspending irrecoverably.");
+                        multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
+                    }
                 }
                 else
                 {
-                    multiSigContext.Recipients = new List<Recipient> {recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee)}; // The fee known to the user is taken.
+                    multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) }; // The fee known to the user is taken.
                 }
 
                 // TODO: Amend this so we're not picking coins twice.

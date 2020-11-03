@@ -12,7 +12,6 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Models;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Events;
@@ -583,30 +582,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
         }
 
-        [Fact]
-        public void NextMatureDepositStartsHigherOnMain()
-        {
-            // This should really be 2 tests in separate classes but we'll fit in with what is already happening for now.
-
-            // Start querying counter-chain for deposits from first non-genesis block on main chain and a higher number on side chain.
-            int depositHeight = (this.network.Name == new StraxRegTest().Name)
-                ? 1
-                : FederatedPegSettings.StratisMainDepositStartBlock;
-
-            this.federatedPegSettings.CounterChainDepositStartBlock.Returns(depositHeight);
-
-            var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
-
-            this.Init(dataFolder);
-
-            using (ICrossChainTransferStore crossChainTransferStore = this.CreateStore())
-            {
-                crossChainTransferStore.Initialize();
-
-                Assert.Equal(depositHeight, crossChainTransferStore.NextMatureDepositHeight);
-            }
-        }
-
         [Fact(Skip = "Requires main chain user to be running.")]
         public void DoTest()
         {
@@ -630,8 +605,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             var transaction = new PosTransaction(model.Hex);
 
             var reader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet()));
-            var extractor = new DepositExtractor(this.loggerFactory, this.federatedPegSettings, reader);
-            IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1, DepositRetrievalType.Normal);
+            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader);
+            IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1);
 
             Assert.NotNull(deposit);
             Assert.Equal(transaction.GetHash(), deposit.Id);

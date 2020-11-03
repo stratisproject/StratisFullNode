@@ -406,10 +406,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     {
         /// <summary>
         /// The destination address.
+        /// If both an address and script are specified then the address takes precedence for where funds will ultimately be sent.
         /// </summary>
-        [Required(ErrorMessage = "A destination address is required.")]
         [IsBitcoinAddress()]
         public string DestinationAddress { get; set; }
+
+        /// <summary>
+        /// More specialised use cases may require a recipient to be specified by scriptPubKey rather than by a user-friendly address.
+        /// The script should be in hex format.
+        /// </summary>
+        public string DestinationScript { get; set; }
 
         /// <summary>
         /// The amount that will be sent.
@@ -938,5 +944,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         [Required(ErrorMessage = "A message is required.")]
         public string Message { get; set; }
+    }
+
+    public class SweepRequest : RequestModel
+    {
+        [Required(ErrorMessage = "One or more private keys is required.")]
+        public List<string> PrivateKeys { get; set; }
+
+        [Required(ErrorMessage = "A destination address is required.")]
+        public string DestinationAddress { get; set; }
+
+        public bool Broadcast { get; set; }
     }
 }

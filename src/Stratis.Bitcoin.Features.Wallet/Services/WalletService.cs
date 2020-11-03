@@ -9,9 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Helpers;
@@ -35,6 +37,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly CoinType coinType;
         private readonly ILogger logger;
+        private readonly IUtxoIndexer utxoIndexer;
+        private readonly IWalletFeePolicy walletFeePolicy;
 
         public WalletService(ILoggerFactory loggerFactory,
             IWalletManager walletManager,
@@ -45,7 +49,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             Network network,
             ChainIndexer chainIndexer,
             IBroadcasterManager broadcasterManager,
-            IDateTimeProvider dateTimeProvider)
+            IDateTimeProvider dateTimeProvider,
+            IUtxoIndexer utxoIndexer,
+            IWalletFeePolicy walletFeePolicy)
         {
             this.walletManager = walletManager;
             this.consensusManager = consensusManager;
@@ -58,6 +64,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             this.dateTimeProvider = dateTimeProvider;
             this.coinType = (CoinType)network.Consensus.CoinType;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.utxoIndexer = utxoIndexer;
+            this.walletFeePolicy = walletFeePolicy;
         }
 
         public async Task<IEnumerable<string>> GetWalletNames(
@@ -641,16 +649,35 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 if (request.Recipients == null)
                 {
                     request.Recipients = new List<RecipientModel>();
-
-                    if (request.OpReturnAmount == null || request.OpReturnAmount == Money.Zero)
-                        throw new FeatureException(HttpStatusCode.BadRequest, "No recipients.", "Either one or both of recipients and opReturnAmount must be specified.");
                 }
 
-                var recipients = request.Recipients.Select(recipientModel => new Recipient
+                if (request.Recipients.Count == 0 && (request.OpReturnAmount == null || request.OpReturnAmount == Money.Zero))
+                    throw new FeatureException(HttpStatusCode.BadRequest, "No recipients.", "Either one or both of recipients and opReturnAmount must be specified.");
+
+                var recipients = new List<Recipient>();
+
+                foreach (RecipientModel recipientModel in request.Recipients)
                 {
-                    ScriptPubKey = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network).ScriptPubKey,
-                    Amount = recipientModel.Amount
-                }).ToList();
+                    if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
+                        throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
+
+                    Script destination;
+
+                    if (!string.IsNullOrWhiteSpace(recipientModel.DestinationAddress))
+                    {
+                        destination = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network).ScriptPubKey;
+                    }
+                    else
+                    {
+                        destination = Script.FromHex(recipientModel.DestinationScript);
+                    }
+
+                    recipients.Add(new Recipient
+                    {
+                        ScriptPubKey = destination,
+                        Amount = recipientModel.Amount
+                    });
+                }
 
                 // If specified, get the change address, which must already exist in the wallet.
                 HdAddress changeAddress = null;
@@ -670,7 +697,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     if (changeAddress == null)
                     {
                         throw new FeatureException(HttpStatusCode.BadRequest, "Change address not found.",
-                            $"No changed address '{request.ChangeAddress}' could be found in wallet {wallet.Name}.");
+                            $"No change address '{request.ChangeAddress}' could be found in wallet {wallet.Name}.");
                     }
                 }
 
@@ -1067,6 +1094,105 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 }
 
                 return model;
+            }, cancellationToken);
+        }
+
+        public async Task<List<string>> Sweep(SweepRequest request, CancellationToken cancellationToken)
+        {
+            // Build the set of scriptPubKeys to look for.
+            var scriptList = new HashSet<Script>();
+
+            var keyMap = new Dictionary<Script, Key>();
+
+            // Currently this is only designed to support P2PK and P2PKH, although segwit scripts are probably easily added.
+            foreach (string wif in request.PrivateKeys)
+            {
+                var privateKey = Key.Parse(wif, this.network);
+
+                Script p2pk = PayToPubkeyTemplate.Instance.GenerateScriptPubKey(privateKey.PubKey);
+                Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(privateKey.PubKey);
+
+                keyMap.Add(p2pk, privateKey);
+                keyMap.Add(p2pkh, privateKey);
+
+                scriptList.Add(p2pk);
+                scriptList.Add(p2pkh);
+            }
+
+            return await Task.Run(() =>
+            {
+                var coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
+
+                var builder = new TransactionBuilder(this.network);
+
+                var sweepTransactions = new List<string>();
+
+                Money total = 0;
+                int currentOutputCount = 0;
+
+                foreach (OutPoint outPoint in coinView.UnspentOutputs)
+                {
+                    // Obtain the transaction output in question.
+                    TxOut txOut = coinView.Transactions[outPoint.Hash].Outputs[outPoint.N];
+
+                    // Check if the scriptPubKey matches one of those for the supplied private keys.
+                    if (!scriptList.Contains(txOut.ScriptPubKey))
+                    {
+                        continue;
+                    }
+
+                    // Add the UTXO as an input to the sweeping transaction.
+                    builder.AddCoins(new Coin(outPoint, txOut));
+                    builder.AddKeys(new[] { keyMap[txOut.ScriptPubKey] });
+
+                    currentOutputCount++;
+                    total += txOut.Value;
+
+                    // Not many wallets will have this many inputs, but we have to ensure that the resulting transactions are
+                    // small enough to be broadcast without standardness problems.
+                    // Since there is only 1 output the size of the inputs is the only consideration.
+                    if (total == 0 || currentOutputCount < 500)
+                        continue;
+
+                    BitcoinAddress destination = BitcoinAddress.Create(request.DestinationAddress, this.network);
+
+                    builder.Send(destination, total);
+
+                    // Cause the last destination to pay the fee, as we have no other funds to pay fees with.
+                    builder.SubtractFees();
+
+                    FeeRate feeRate = this.walletFeePolicy.GetFeeRate(FeeType.High.ToConfirmations());
+                    builder.SendEstimatedFees(feeRate);
+
+                    Transaction sweepTransaction = builder.BuildTransaction(true);
+
+                    TransactionPolicyError[] errors = builder.Check(sweepTransaction);
+
+                    // TODO: Perhaps return a model with an errors property to inform the user
+                    if (errors.Length == 0)
+                        sweepTransactions.Add(sweepTransaction.ToHex());
+
+                    // Reset the builder and related state, as we are now creating a fresh transaction.
+                    builder = new TransactionBuilder(this.network);
+
+                    currentOutputCount = 0;
+                    total = 0;
+                }
+
+                if (sweepTransactions.Count == 0)
+                    return sweepTransactions;
+
+                if (request.Broadcast)
+                {
+                    foreach (string sweepTransaction in sweepTransactions)
+                    {
+                        Transaction toBroadcast = this.network.CreateTransaction(sweepTransaction);
+
+                        this.broadcasterManager.BroadcastTransactionAsync(toBroadcast).GetAwaiter().GetResult();
+                    }
+                }
+
+                return sweepTransactions;
             }, cancellationToken);
         }
 

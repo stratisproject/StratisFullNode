@@ -283,6 +283,26 @@ namespace Stratis.Features.FederatedPeg
                 benchLog.AppendLine();
             }
 
+            IMaturedBlocksProvider maturedBlocksProvider = this.fullNode.NodeService<IMaturedBlocksProvider>();
+            (int blocksBeforeMature, IDeposit deposit)[] maturingDeposits = maturedBlocksProvider.GetMaturingDeposits(21);
+            if (maturingDeposits.Length > 0)
+            {
+                benchLog.AppendLine("--- Maturing Deposits ---");
+
+                benchLog.AppendLine(string.Join(Environment.NewLine, maturingDeposits.Select(d =>
+                {
+                    var target = d.deposit.TargetAddress;
+                    if (target == this.network.CirrusRewardDummyAddress)
+                        target = "Reward Distribution";
+                    return $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {target} ({d.deposit.RetrievalType})";
+                }).Take(20)));
+
+                if (maturingDeposits.Length > 20)
+                    benchLog.AppendLine("...");
+
+                benchLog.AppendLine();
+            }
+
             try
             {
                 List<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPending();
@@ -367,7 +387,7 @@ namespace Stratis.Features.FederatedPeg
     public static class FullNodeBuilderSidechainRuntimeFeatureExtension
     {
         [NoTrace]
-        public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, IFederatedPegOptions federatedPegOptions = null, bool isMainChain = false)
+        public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, bool isMainChain = false)
         {
             LoggingConfiguration.RegisterFeatureNamespace<FederatedPegFeature>(
                 FederatedPegFeature.FederationGatewayFeatureNamespace);
@@ -379,10 +399,7 @@ namespace Stratis.Features.FederatedPeg
                     .DependOn<CounterChainFeature>()
                     .FeatureServices(services =>
                     {
-                        // This should be transient as we want to create a new instance everytime with creation of the FederationGateWayController.
-                        services.AddTransient<IMaturedBlocksProvider, MaturedBlocksProvider>();
-
-                        services.AddSingleton(federatedPegOptions ?? new FederatedPegOptions());
+                        services.AddSingleton<IMaturedBlocksProvider, MaturedBlocksProvider>();
                         services.AddSingleton<IFederatedPegSettings, FederatedPegSettings>();
                         services.AddSingleton<IOpReturnDataReader, OpReturnDataReader>();
                         services.AddSingleton<IDepositExtractor, DepositExtractor>();

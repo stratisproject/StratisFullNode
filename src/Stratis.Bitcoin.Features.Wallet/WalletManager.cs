@@ -403,15 +403,22 @@ namespace Stratis.Bitcoin.Features.Wallet
             Guard.NotEmpty(message, nameof(message));
             Guard.NotEmpty(externalAddress, nameof(externalAddress));
 
-            // Get wallet
+            // Get wallet.
             Wallet wallet = this.GetWallet(walletName);
 
-            // Sign the message.
-            HdAddress hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetUsedAddresses(
-                new WalletAccountReference(walletName, a.Name), false)).Select(a => a.address).FirstOrDefault(addr => addr.Address.ToString() == externalAddress);
+            Script scriptPubKey = BitcoinAddress.Create(externalAddress, this.network).ScriptPubKey;
 
-            Key privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey;
-            return privateKey.SignMessage(message);
+            if (!this.WalletRepository.GetWalletAddressLookup(walletName).Contains(scriptPubKey, out AddressIdentifier addressIdentifier))
+                throw new SecurityException("The address does not exist in the wallet.");
+
+            // Get HD Path.
+            string hdPath = $"{HdOperations.GetAccountHdPath(this.network.Consensus.CoinType, (int)addressIdentifier.AccountIndex)}/{addressIdentifier.AddressType}/{addressIdentifier.AddressIndex}";
+
+            // Get extended private key.
+            Key privateKey = HdOperations.DecryptSeed(wallet.EncryptedSeed, password, wallet.Network);
+            Key extendedPrivateKey = HdOperations.GetExtendedPrivateKey(privateKey, wallet.ChainCode, hdPath, wallet.Network).PrivateKey;
+
+            return extendedPrivateKey.SignMessage(message);
         }
 
         /// <inheritdoc />

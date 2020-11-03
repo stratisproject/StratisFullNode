@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Networks
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML"; // Cirrus test address
+
             var consensusFactory = new PosConsensusFactory();
 
             // Create the genesis block.
@@ -155,6 +157,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.DNSSeeds = new List<DNSSeedData>
             {
+                new DNSSeedData("testnet1.stratisnetwork.com", "testnet1.stratisnetwork.com")
             };
 
             this.SeedNodes = new List<NetworkAddress>

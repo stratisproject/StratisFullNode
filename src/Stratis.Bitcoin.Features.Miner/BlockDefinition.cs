@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -333,7 +331,7 @@ namespace Stratis.Bitcoin.Features.Miner
 
             List<TxMempoolEntry> ancestorScoreList = this.MempoolLock.ReadAsync(() => this.Mempool.MapTx.AncestorScore).ConfigureAwait(false).GetAwaiter().GetResult().ToList();
 
-            TxMempoolEntry iter;
+            TxMempoolEntry mempoolEntry;
 
             int nConsecutiveFailed = 0;
             while (ancestorScoreList.Any() || mapModifiedTx.Any())
@@ -367,39 +365,39 @@ namespace Stratis.Bitcoin.Features.Miner
                 if (mi == null)
                 {
                     modit = mapModifiedTx.Values.OrderBy(o => o, compare).First();
-                    iter = modit.MempoolEntry;
+                    mempoolEntry = modit.MempoolEntry;
                     fUsingModified = true;
                 }
                 else
                 {
                     // Try to compare the mapTx entry to the mapModifiedTx entry
-                    iter = mi;
+                    mempoolEntry = mi;
 
                     modit = mapModifiedTx.Values.OrderBy(o => o, compare).FirstOrDefault();
-                    if ((modit != null) && (compare.Compare(modit, new TxMemPoolModifiedEntry(iter)) < 0))
+                    if ((modit != null) && (compare.Compare(modit, new TxMemPoolModifiedEntry(mempoolEntry)) < 0))
                     {
                         // The best entry in mapModifiedTx has higher score
                         // than the one from mapTx..
                         // Switch which transaction (package) to consider.
 
-                        iter = modit.MempoolEntry;
+                        mempoolEntry = modit.MempoolEntry;
                         fUsingModified = true;
                     }
                     else
                     {
                         // Either no entry in mapModifiedTx, or it's worse than mapTx.
                         // Increment mi for the next loop iteration.
-                        ancestorScoreList.Remove(iter);
+                        ancestorScoreList.Remove(mempoolEntry);
                     }
                 }
 
                 // We skip mapTx entries that are inBlock, and mapModifiedTx shouldn't
                 // contain anything that is inBlock.
-                Guard.Assert(!this.inBlock.Contains(iter));
+                Guard.Assert(!this.inBlock.Contains(mempoolEntry));
 
-                long packageSize = iter.SizeWithAncestors;
-                Money packageFees = iter.ModFeesWithAncestors;
-                long packageSigOpsCost = iter.SigOpCostWithAncestors;
+                long packageSize = mempoolEntry.SizeWithAncestors;
+                Money packageFees = mempoolEntry.ModFeesWithAncestors;
+                long packageSigOpsCost = mempoolEntry.SigOpCostWithAncestors;
                 if (fUsingModified)
                 {
                     packageSize = modit.SizeWithAncestors;
@@ -407,13 +405,17 @@ namespace Stratis.Bitcoin.Features.Miner
                     packageSigOpsCost = modit.SigOpCostWithAncestors;
                 }
 
-                if (packageFees < this.BlockMinFeeRate.GetFee((int)packageSize))
+                // Don't check the package fees if this is a CirrusRewardScript transaction.
+                if (!mempoolEntry.Transaction.Outputs.Any(o => o.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag(this.Network.CirrusRewardDummyAddress)))
                 {
-                    // Everything else we might consider has a lower fee rate
-                    return;
+                    if (packageFees < this.BlockMinFeeRate.GetFee((int)packageSize))
+                    {
+                        // Everything else we might consider has a lower fee rate
+                        return;
+                    }
                 }
 
-                if (!this.TestPackage(iter, packageSize, packageSigOpsCost))
+                if (!this.TestPackage(mempoolEntry, packageSize, packageSigOpsCost))
                 {
                     if (fUsingModified)
                     {
@@ -421,7 +423,7 @@ namespace Stratis.Bitcoin.Features.Miner
                         // we must erase failed entries so that we can consider the
                         // next best entry on the next loop iteration
                         mapModifiedTx.Remove(modit.MempoolEntry.TransactionHash);
-                        failedTx.Add(iter);
+                        failedTx.Add(mempoolEntry);
                     }
 
                     nConsecutiveFailed++;
@@ -438,10 +440,10 @@ namespace Stratis.Bitcoin.Features.Miner
                 long nNoLimit = long.MaxValue;
                 string dummy;
 
-                this.MempoolLock.ReadAsync(() => this.Mempool.CalculateMemPoolAncestors(iter, ancestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, out dummy, false)).ConfigureAwait(false).GetAwaiter().GetResult();
+                this.MempoolLock.ReadAsync(() => this.Mempool.CalculateMemPoolAncestors(mempoolEntry, ancestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, out dummy, false)).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 this.OnlyUnconfirmed(ancestors);
-                ancestors.Add(iter);
+                ancestors.Add(mempoolEntry);
 
                 // Test if all tx's are Final.
                 if (!this.TestPackageTransactions(ancestors))
@@ -449,7 +451,7 @@ namespace Stratis.Bitcoin.Features.Miner
                     if (fUsingModified)
                     {
                         mapModifiedTx.Remove(modit.MempoolEntry.TransactionHash);
-                        failedTx.Add(iter);
+                        failedTx.Add(mempoolEntry);
                     }
                     continue;
                 }

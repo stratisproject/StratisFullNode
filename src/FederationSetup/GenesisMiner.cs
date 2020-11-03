@@ -5,21 +5,11 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Sidechains.Networks;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace FederationSetup
 {
     public class GenesisMiner
     {
-        private readonly ITestOutputHelper output;
-
-        public GenesisMiner(ITestOutputHelper output = null)
-        {
-            if (output == null) return;
-            this.output = output;
-        }
-
         public string MineGenesisBlocks(SmartContractPoAConsensusFactory consensusFactory, string coinbaseText)
         {
             var output = new StringBuilder();
@@ -50,7 +40,7 @@ namespace FederationSetup
 
         private string NetworkOutput(Block genesisBlock, string network, string coinbaseText)
         {
-            var header = (SmartContractPoABlockHeader) genesisBlock.Header;
+            var header = (SmartContractPoABlockHeader)genesisBlock.Header;
 
             var output = new StringBuilder();
             output.AppendLine(network);
@@ -82,7 +72,6 @@ namespace FederationSetup
                 throw new ArgumentException($"Parameter '{nameof(genesisReward)}' cannot be null. Example use: 'Money.Coins(50m)'.");
 
             DateTimeOffset time = DateTimeOffset.Now;
-            uint unixTime = Utils.DateTimeToUnixTime(time);
 
             Transaction txNew = consensusFactory.CreateTransaction();
             txNew.Version = (uint)version;

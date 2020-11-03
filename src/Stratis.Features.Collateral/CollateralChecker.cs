@@ -92,7 +92,7 @@ namespace Stratis.Features.Collateral
             foreach (CollateralFederationMember federationMember in this.federationManager.GetFederationMembers()
                 .Cast<CollateralFederationMember>().Where(x => x.CollateralAmount != null && x.CollateralAmount > 0))
             {
-                this.logger.LogDebug("Initializing federation member {0} with amount {1}.", federationMember.CollateralMainchainAddress, federationMember.CollateralAmount);
+                this.logger.LogInformation("Initializing federation member {0} with amount {1}.", federationMember.CollateralMainchainAddress, federationMember.CollateralAmount);
                 this.balancesDataByAddress.Add(federationMember.CollateralMainchainAddress, null);
             }
 
@@ -208,7 +208,7 @@ namespace Stratis.Features.Collateral
         {
             if (!this.collateralUpdated)
             {
-                this.logger.LogTrace("(-)[NOT_INITIALIZED]");
+                this.logger.LogDebug("(-)[NOT_INITIALIZED]");
                 throw new Exception("Component is not initialized!");
             }
 
@@ -216,7 +216,7 @@ namespace Stratis.Features.Collateral
 
             if (member == null)
             {
-                this.logger.LogTrace("(-)[WRONG_TYPE]");
+                this.logger.LogDebug("(-)[WRONG_TYPE]");
                 throw new ArgumentException($"{nameof(federationMember)} should be of type: {nameof(CollateralFederationMember)}.");
             }
 
@@ -224,14 +224,14 @@ namespace Stratis.Features.Collateral
             {
                 if (heightToCheckAt > this.counterChainConsensusTipHeight - this.maxReorgLength)
                 {
-                    this.logger.LogTrace("(-)[INVALID_CHECK_HEIGHT]:false");
+                    this.logger.LogDebug("(-)[HEIGHTTOCHECK_HIGHER_THAN_COUNTER_TIP_LESS_MAXREORG]:{0}={1}, {2}={3}:false", nameof(heightToCheckAt), heightToCheckAt, nameof(this.counterChainConsensusTipHeight), this.counterChainConsensusTipHeight);
                     return false;
                 }
             }
 
             if ((member.CollateralAmount == null) || (member.CollateralAmount == 0))
             {
-                this.logger.LogTrace("(-)[NO_COLLATERAL_REQUIREMENT]:true");
+                this.logger.LogDebug("(-)[NO_COLLATERAL_REQUIREMENT]:true");
                 return true;
             }
 
@@ -242,13 +242,13 @@ namespace Stratis.Features.Collateral
                 if (balanceData == null)
                 {
                     // No data. Assume collateral is 0. It's ok if there is no collateral set for that fed member.
-                    this.logger.LogTrace("(-)[NO_DATA]");
+                    this.logger.LogDebug("(-)[NO_DATA]:{0}={1}", nameof(this.balancesDataByAddress.Count), this.balancesDataByAddress.Count);
                     return 0 >= member.CollateralAmount;
                 }
 
                 long balance = balanceData.BalanceChanges.Where(x => x.BalanceChangedHeight <= heightToCheckAt).CalculateBalance();
 
-                this.logger.LogDebug("Calculated balance at {0} is {1}, collateral requirement is {2}.", heightToCheckAt, balance, member.CollateralAmount);
+                this.logger.LogInformation("Calculated balance for '{0}' at {1} is {2}, collateral requirement is {3}.", member.CollateralMainchainAddress, heightToCheckAt, Money.Satoshis(balance).ToUnit(MoneyUnit.BTC), member.CollateralAmount);
 
                 return balance >= member.CollateralAmount.Satoshi;
             }
@@ -258,8 +258,18 @@ namespace Stratis.Features.Collateral
         {
             lock (this.locker)
             {
-                this.logger.LogDebug("Removing federation member {0}", ((CollateralFederationMember)fedMemberKicked.KickedMember).CollateralMainchainAddress);
-                this.balancesDataByAddress.Remove(((CollateralFederationMember)fedMemberKicked.KickedMember).CollateralMainchainAddress);
+                if (fedMemberKicked.KickedMember is CollateralFederationMember collateralFederationMember)
+                {
+                    this.logger.LogDebug("Removing federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                        this.balancesDataByAddress.Remove(collateralFederationMember.CollateralMainchainAddress);
+                    else
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                }
+                else
+                {
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberKicked.KickedMember.PubKey), fedMemberKicked.KickedMember.PubKey);
+                }
             }
         }
 
@@ -267,8 +277,18 @@ namespace Stratis.Features.Collateral
         {
             lock (this.locker)
             {
-                this.logger.LogDebug("Adding federation member {0}", ((CollateralFederationMember)fedMemberAdded.AddedMember).CollateralMainchainAddress);
-                this.balancesDataByAddress.Add(((CollateralFederationMember)fedMemberAdded.AddedMember).CollateralMainchainAddress, null);
+                if (fedMemberAdded.AddedMember is CollateralFederationMember collateralFederationMember)
+                {
+                    this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                        this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
+                    else
+                        this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                }
+                else
+                {
+                    this.logger.LogError("(-)[NOT_A_COLLATERAL_MEMBER]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                }
             }
         }
 

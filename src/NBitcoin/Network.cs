@@ -285,7 +285,7 @@ namespace NBitcoin
         /// The default port on which nodes of this network communicate with external clients.
         /// </summary>
         public int DefaultPort { get; protected set; }
-        
+
         /// <summary>
         /// The default port on which SignalR broadcasts for this network.
         /// </summary>
@@ -432,6 +432,9 @@ namespace NBitcoin
         public IStandardScriptsRegistry StandardScriptsRegistry { get; protected set; }
 
         public IFederations Federations { get; protected set; }
+
+        /// <summary> This is used for reward distribution transactions. </summary>
+        public string CirrusRewardDummyAddress { get; protected set; }
 
         /// <summary>
         /// Mines a new genesis block, to use with a new network.

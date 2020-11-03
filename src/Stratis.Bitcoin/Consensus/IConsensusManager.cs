@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.P2P.Peer;
@@ -71,6 +72,12 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Loads the block data from <see cref="ChainedHeaderTree"/> or block store if it's enabled.</summary>
         /// <param name="blockHashes">The block hashes.</param>
         ChainedHeaderBlock[] GetBlockData(List<uint256> blockHashes);
+
+        /// <summary>Retrieves block data in batches after the passed <paramref name="previousBlock"/>. It is up to the caller to decide when to stop reading blocks.</summary>
+        /// <param name="previousBlock">The block preceding the blocks to retrieve. Pass <c>null</c> to retrieve blocks from genesis.</param>
+        /// <param name="batchSize">The internal batch size to use when reading blocks. Larger values lead to greater efficiency but consume more memory.</param>
+        /// <param name="cancellationTokenSource">A cancellation token source for cancellation.</param>
+        IEnumerable<ChainedHeaderBlock> GetBlocksAfterBlock(ChainedHeader previousBlock, int batchSize, CancellationTokenSource cancellationTokenSource);
 
         /// <summary>
         /// A new block was mined by the node and is attempted to connect to tip.

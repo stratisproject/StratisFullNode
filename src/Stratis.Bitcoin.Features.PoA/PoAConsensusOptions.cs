@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Makes federation members kick idle members.</summary>
         /// <remarks>Requires voting to be enabled to be set <c>true</c>.</remarks>
-        public bool AutoKickIdleMembers { get; protected set; }
+        public bool AutoKickIdleMembers { get; set; }
 
         /// <summary>Time that federation member has to be idle to be kicked by others in case <see cref="AutoKickIdleMembers"/> is enabled.</summary>
         public uint FederationMemberMaxIdleTimeSeconds { get; protected set; }

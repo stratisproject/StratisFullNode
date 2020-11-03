@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -30,6 +32,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private PoAConsensusFactory consensusFactory;
 
+        private Network network;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -42,56 +46,28 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.votingManager = engine.VotingManager;
             this.federationManager = engine.FederationManager;
             this.chainState = engine.ChainState;
-            this.consensusFactory = (PoAConsensusFactory)this.Parent.Network.Consensus.ConsensusFactory;
+            this.network = this.Parent.Network;
+            this.consensusFactory = (PoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
-            this.maxReorg = this.Parent.Network.Consensus.MaxReorgLength;
-            this.votingEnabled = ((PoAConsensusOptions) this.Parent.Network.Consensus.Options).VotingEnabled;
+            this.maxReorg = this.network.Consensus.MaxReorgLength;
+            this.votingEnabled = ((PoAConsensusOptions) this.network.Consensus.Options).VotingEnabled;
         }
 
         public override void Run(RuleContext context)
         {
             var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
 
-            PubKey pubKey = this.slotsManager.GetFederationMemberForTimestamp(header.Time).PubKey;
+            PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
 
             if (!this.validator.VerifySignature(pubKey, header))
             {
-                // In case voting is enabled it is possible that federation was modified and another fed member signed
-                // the header. Since voting changes are applied after max reorg blocks are passed we can tell exactly
-                // how federation will look like max reorg blocks ahead. Code below tries to construct federation that is
-                // expected to exist at the moment block that corresponds to header being validated was produced. Then
-                // this federation is used to estimate who was expected to sign a block and then the signature is verified.
                 if (this.votingEnabled)
                 {
                     ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
 
+                    // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
+                    // that we have not yet processed all the votes that may determine the federation make-up.
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-
-                    List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
-
-                    foreach (Poll poll in this.votingManager.GetFinishedPolls().Where(x => !x.IsExecuted &&
-                        ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
-                    {
-                        if (currentHeader.Height - poll.PollVotedInFavorBlockData.Height <= this.maxReorg)
-                            // Not applied yet.
-                            continue;
-
-                        IFederationMember federationMember = this.consensusFactory.DeserializeFederationMember(poll.VotingData.Data);
-
-                        if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                            modifiedFederation.Add(federationMember);
-                        else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                            modifiedFederation.Remove(federationMember);
-                    }
-
-                    pubKey = this.slotsManager.GetFederationMemberForTimestamp(header.Time, modifiedFederation).PubKey;
-
-                    if (this.validator.VerifySignature(pubKey, header))
-                    {
-                        this.Logger.LogDebug("Signature verified using updated federation.");
-                        return;
-                    }
-
                     if (mightBeInsufficient)
                     {
                         // Mark header as insufficient to avoid banning the peer that presented it.
@@ -99,6 +75,42 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                         context.ValidationContext.InsufficientHeaderInformation = true;
                     }
                 }
+
+                try 
+                {
+                    // Gather all past and present mining public keys.
+                    IEnumerable<PubKey> genesisFederation = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Select(m => m.PubKey);
+                    var knownKeys = new HashSet<PubKey>(genesisFederation);
+                    foreach (Poll poll in this.votingManager.GetFinishedPolls().Where(x => ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                    {
+                        IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
+                        knownKeys.Add(federationMember.PubKey);
+                    }
+
+                    // Try to provide the public key that signed the block.
+                    var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
+                    for (int recId = 0; recId < 4; recId++)
+                    {
+                        PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, header.GetHash(), true);
+                        if (pubKeyForSig == null)
+                        {
+                            this.Logger.LogDebug($"Could not match candidate keys to any known key.");
+                            break;
+                        }
+
+                        this.Logger.LogDebug($"Attempting to match candidate key '{ pubKeyForSig.ToHex() }' to known keys.");
+
+                        if (!knownKeys.Any(pk => pk == pubKeyForSig))
+                            continue;
+
+                        IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
+
+                        this.Logger.LogDebug($"Block is signed by '{0}' but expected '{1}' from: {2}.", pubKeyForSig.ToHex(), pubKey, string.Join(" ", modifiedFederation.Select(pk => pk.ToHex())));
+
+                        break;
+                    };
+                } 
+                catch (Exception) { }
 
                 this.Logger.LogTrace("(-)[INVALID_SIGNATURE]");
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();

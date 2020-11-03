@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using NBitcoin.BitcoinCore;
+using NBitcoin.Policy;
 
 namespace NBitcoin
 {
@@ -14,37 +17,77 @@ namespace NBitcoin
         /// <param name="scriptTemplate">The standard script template to register.</param>
         public virtual void RegisterStandardScriptTemplate(ScriptTemplate scriptTemplate)
         {
-            StandardScripts.RegisterStandardScriptTemplate(scriptTemplate);
+            if (!this.GetScriptTemplates.Any(template => (template.Type == scriptTemplate.Type)))
+                this.GetScriptTemplates.Add(scriptTemplate);
+        }
+
+        public ScriptTemplate this[Type key]
+        {
+            get => this.GetScriptTemplates.FirstOrDefault(template => template.GetType() == key);
         }
 
         public virtual bool IsStandardTransaction(Transaction tx, Network network)
         {
-            return StandardScripts.IsStandardTransaction(tx, network);
+            return new StandardTransactionPolicy(network).Check(tx, null).Length == 0;
         }
 
         public virtual bool AreOutputsStandard(Network network, Transaction tx)
         {
-            return StandardScripts.AreOutputsStandard(network, tx);
+            return tx.Outputs.All(vout => this.IsStandardScriptPubKey(network, vout.ScriptPubKey));
         }
 
         public virtual ScriptTemplate GetTemplateFromScriptPubKey(Script script)
         {
-            return StandardScripts.GetTemplateFromScriptPubKey(script);
+            return this.GetScriptTemplates.FirstOrDefault(t => t.CheckScriptPubKey(script));
         }
 
         public virtual bool IsStandardScriptPubKey(Network network, Script scriptPubKey)
         {
-            return StandardScripts.IsStandardScriptPubKey(network, scriptPubKey);
+            return this.GetScriptTemplates.Any(template => template.CheckScriptPubKey(scriptPubKey));
         }
 
+        public virtual bool IsStandardScriptSig(Network network, Script scriptSig, Script scriptPubKey = null)
+        {
+            if (scriptPubKey == null)
+                return this.GetScriptTemplates.Any(x => x.CheckScriptSig(network, scriptSig, null));
+
+            ScriptTemplate template = this.GetTemplateFromScriptPubKey(scriptPubKey);
+            if (template == null)
+                return false;
+
+            return template.CheckScriptSig(network, scriptSig, scriptPubKey);
+        }
+
+        // Check transaction inputs, and make sure any
+        // pay-to-script-hash transactions are evaluating IsStandard scripts
+        //
+        // Why bother? To avoid denial-of-service attacks; an attacker
+        // can submit a standard HASH... OP_EQUAL transaction,
+        // which will get accepted into blocks. The redemption
+        // script can be anything; an attacker could use a very
+        // expensive-to-check-upon-redemption script like:
+        //   DUP CHECKSIG DROP ... repeated 100 times... OP_1
         public virtual bool AreInputsStandard(Network network, Transaction tx, CoinsView coinsView)
         {
-            return StandardScripts.AreInputsStandard(network, tx, coinsView);
+            if (tx.IsCoinBase)
+                return true; // Coinbases don't use vin normally
+
+            foreach (TxIn input in tx.Inputs)
+            {
+                TxOut prev = coinsView.GetOutputFor(input);
+                if (prev == null)
+                    return false;
+
+                if (!this.IsStandardScriptSig(network, input.ScriptSig, prev.ScriptPubKey))
+                    return false;
+            }
+
+            return true;
         }
 
         public virtual List<ScriptTemplate> GetScriptTemplates
         {
-            get { return null; }
+            get { throw new NotImplementedException(); }
         }
     }
 }

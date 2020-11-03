@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
             /// <inheritdoc />
             public bool InitializeBeforeBase { get; set; }
 
-            public string State { get; set; }
+            public FeatureInitializationState State { get; set; }
 
             public void LoadConfiguration()
             {
@@ -48,6 +48,16 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
             {
                 throw new NotImplementedException();
             }
+
+            public void WaitInitialized()
+            {
+            }
+
+            public bool IsEnabled()
+            {
+                return true;
+            }
+
         }
 
         /// <inheritdoc />
