@@ -71,21 +71,21 @@ namespace Stratis.Sidechains.Networks
             // and should be the same for all nodes operating on this network.
             var genesisFederationMembers = new List<IFederationMember>()
             {
-                new CollateralFederationMember(new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"), true, new Money(50000_00000000), "qdKBKmoFWpuuxNHjoXK4tzTtuinwnjwH2Q"),//Node1
-                new CollateralFederationMember(new PubKey("022553fb641898be98e6e331d644c1689455536e58ad643d84844e981708da38e9"), true, new Money(50000_00000000), "qPcHHH5ACc8282y95NWtaDz1xGuBvMyfgW"),//Node2
-                new CollateralFederationMember(new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"), true, new Money(50000_00000000), "qcEu17QYBmCqXjm9n7uCkaSDXyDAVmNzk2"),//Node3
-                new CollateralFederationMember(new PubKey("02fd4f3197c40d41f9f5478d55844f522744258ca4093b5119571de1a5df1bc653"), true, new Money(50000_00000000), "qNBd9pwrPoJ3noK9SVUo2vuzrkAQ2uqd3u"),//Node4
-                new CollateralFederationMember(new PubKey("030ac8e3e119257aff4512ea44450632a6a9b54104f936732d31c28a63a2104064"), true, new Money(50000_00000000), "qViLjFAvpEh7J1yGfPwC1bmPPEGN4vDkY6"),//Node5
-                new CollateralFederationMember(new PubKey("03348a438f86727c579febfd6a656cfd6477605e5fa00efa5b4f5fe1cab01c49ef"), true, new Money(50000_00000000), null),                                //Node6
-                new CollateralFederationMember(new PubKey("024142689f38fdb5e8faf3bc7bc5065ecaad6be93a34055ffce0554f9268639c98"), true, new Money(50000_00000000), "qNS4f96BMzE8Z48ib5fprHxXgoTAXEqQck"),//Node7
-                new CollateralFederationMember(new PubKey("03382ceb0a59b9b922aca6be9959ae51dabda159e79465393a308ee267ecebcaa5"), true, new Money(50000_00000000), "qgWAP4RQmuv6EB7ijtGFG4pDgD9qBKMWwY"),//Node8
-                new CollateralFederationMember(new PubKey("027d31e9dc3ee5a42b1273ae8184e716fc616fed6d7b62323fa0a33901d188cfeb"), true, new Money(50000_00000000), null),                                //Node9
-                new CollateralFederationMember(new PubKey("02ef5a8167276ade598460e0c102cb216071e8430d55f10788979d8820fe2440b6"), true, new Money(50000_00000000), null),                                //Node10
-                new CollateralFederationMember(new PubKey("03d8e88797b56894a0d8ce6421defd4572fc8d19e18321d07ea22a6adec59f7fd1"), true, new Money(50000_00000000), null),                                //Node11
-                new CollateralFederationMember(new PubKey("0357c1f34d11e6a93d4e158e109ed5309ae77981a4968c23c975aa7640fe913429"), true, new Money(50000_00000000), null),                                //Node12
-                new CollateralFederationMember(new PubKey("0260c88a2fed5b615abcbde67e62762e2aa224460bd7918ca9d9f42ddfc1f63d08"), true, new Money(50000_00000000), null),                                //Node13
-                new CollateralFederationMember(new PubKey("020432898887bcc515b20d5d3dcea0ee86c700a3279c8d773caf37b5c317b4e2b4"), true, new Money(50000_00000000), null),                                //Node14
-                new CollateralFederationMember(new PubKey("02f9b73070474b7cfb3e6c2624c069cdbd211954f82862505f10cf0a2c3a45e7c5"), true, new Money(50000_00000000), null),                                //Node15
+                new CollateralFederationMember(new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"), true, new Money(50000_00000000), "qdKBKmoFWpuuxNHjoXK4tzTtuinwnjwH2Q"), //Node1
+                new CollateralFederationMember(new PubKey("022553fb641898be98e6e331d644c1689455536e58ad643d84844e981708da38e9"), true, new Money(50000_00000000), "qPcHHH5ACc8282y95NWtaDz1xGuBvMyfgW"), //Node2
+                new CollateralFederationMember(new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"), true, new Money(50000_00000000), "qcEu17QYBmCqXjm9n7uCkaSDXyDAVmNzk2"), //Node3
+                new CollateralFederationMember(new PubKey("02fd4f3197c40d41f9f5478d55844f522744258ca4093b5119571de1a5df1bc653"), true, new Money(50000_00000000), "qNBd9pwrPoJ3noK9SVUo2vuzrkAQ2uqd3u"), //Node4
+                new CollateralFederationMember(new PubKey("030ac8e3e119257aff4512ea44450632a6a9b54104f936732d31c28a63a2104064"), false, new Money(50000_00000000), "qViLjFAvpEh7J1yGfPwC1bmPPEGN4vDkY6"),//Node5
+                new CollateralFederationMember(new PubKey("03348a438f86727c579febfd6a656cfd6477605e5fa00efa5b4f5fe1cab01c49ef"), false, new Money(50000_00000000), null),                                //Node6
+                new CollateralFederationMember(new PubKey("024142689f38fdb5e8faf3bc7bc5065ecaad6be93a34055ffce0554f9268639c98"), true, new Money(50000_00000000), "qNS4f96BMzE8Z48ib5fprHxXgoTAXEqQck"), //Node7
+                new CollateralFederationMember(new PubKey("03382ceb0a59b9b922aca6be9959ae51dabda159e79465393a308ee267ecebcaa5"), true, new Money(50000_00000000), "qgWAP4RQmuv6EB7ijtGFG4pDgD9qBKMWwY"), //Node8
+                new CollateralFederationMember(new PubKey("027d31e9dc3ee5a42b1273ae8184e716fc616fed6d7b62323fa0a33901d188cfeb"), false, new Money(50000_00000000), null),                                //Node9
+                new CollateralFederationMember(new PubKey("02ef5a8167276ade598460e0c102cb216071e8430d55f10788979d8820fe2440b6"), false, new Money(50000_00000000), null),                                //Node10
+                new CollateralFederationMember(new PubKey("03d8e88797b56894a0d8ce6421defd4572fc8d19e18321d07ea22a6adec59f7fd1"), false, new Money(50000_00000000), null),                                //Node11
+                new CollateralFederationMember(new PubKey("0357c1f34d11e6a93d4e158e109ed5309ae77981a4968c23c975aa7640fe913429"), false, new Money(50000_00000000), null),                                //Node12
+                new CollateralFederationMember(new PubKey("0260c88a2fed5b615abcbde67e62762e2aa224460bd7918ca9d9f42ddfc1f63d08"), false, new Money(50000_00000000), null),                                //Node13
+                new CollateralFederationMember(new PubKey("020432898887bcc515b20d5d3dcea0ee86c700a3279c8d773caf37b5c317b4e2b4"), false, new Money(50000_00000000), null),                                //Node14
+                new CollateralFederationMember(new PubKey("02f9b73070474b7cfb3e6c2624c069cdbd211954f82862505f10cf0a2c3a45e7c5"), false, new Money(50000_00000000), null),                                //Node15
             };
 
             this.Federations = new Federations();
