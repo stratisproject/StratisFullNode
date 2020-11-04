@@ -65,7 +65,7 @@ namespace NBitcoin
         Script MultisigScript { get; }
         FederationId Id { get; }
 
-        (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails();
+        (PubKey[] transactionSigningKeys, int signaturesRequired) GetFederationDetails();
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ namespace NBitcoin
 
     public class Federation : IFederation
     {
-        private PubKey[] genesisMembers;
+        private PubKey[] transactionSigningKeys;
 
         private int signaturesRequired;
 
@@ -149,15 +149,20 @@ namespace NBitcoin
 
         public FederationId Id { get; private set; }
 
-        public Federation(IEnumerable<PubKey> federationPubKeys, int? signaturesRequired = null)
+        /// <summary>
+        /// Creates a new federation from a set of transaction signing keys.
+        /// </summary>
+        /// <param name="transactionSigningPubKeys">A list of transaction signing PubKeys.</param>
+        /// <param name="signaturesRequired">The amount of signatures required to ensure that the transaction is fully signed.</param>
+        public Federation(IEnumerable<PubKey> transactionSigningPubKeys, int? signaturesRequired = null)
         {
             // Ensures that the federation id will always map to the same members in the same order.
-            this.genesisMembers = federationPubKeys.OrderBy(k => k.ToHex()).ToArray();
-            this.signaturesRequired = signaturesRequired ?? (this.genesisMembers.Length + 1) / 2;
+            this.transactionSigningKeys = transactionSigningPubKeys.OrderBy(k => k.ToHex()).ToArray();
+            this.signaturesRequired = signaturesRequired ?? (this.transactionSigningKeys.Length + 1) / 2;
 
             // The federationId is derived by XOR'ing all the genesis federation members.
-            byte[] federationId = this.genesisMembers.First().ToBytes();
-            foreach (PubKey pubKey in this.genesisMembers.Skip(1))
+            byte[] federationId = this.transactionSigningKeys.First().ToBytes();
+            foreach (PubKey pubKey in this.transactionSigningKeys.Skip(1))
             {
                 byte[] pubKeyBytes = pubKey.ToBytes();
                 for (int i = 0; i < federationId.Length; i++)
@@ -168,15 +173,19 @@ namespace NBitcoin
             this.MultisigScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(this.Id);
         }
 
-        public (PubKey[] pubKeys, int signaturesRequired) GetFederationDetails()
+        public (PubKey[] transactionSigningKeys, int signaturesRequired) GetFederationDetails()
         {
             // Until dynamic membership is implemented we just return the genesis members.
-            return (this.genesisMembers, this.signaturesRequired);
+            return (this.transactionSigningKeys, this.signaturesRequired);
         }
     }
 
     public interface IFederations
     {
+        /// <summary>
+        /// Registers a new federation with transaction signing keys.
+        /// </summary>
+        /// <param name="federation">The federation to be registered.</param>
         void RegisterFederation(IFederation federation);
 
         IFederation GetFederation(FederationId federationId);
@@ -188,7 +197,7 @@ namespace NBitcoin
 
     public class Federations : IFederations
     {
-        private Dictionary<FederationId, IFederation> federations;
+        private readonly Dictionary<FederationId, IFederation> federations;
 
         public Federations()
         {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
@@ -66,7 +65,7 @@ namespace Stratis.Sidechains.Networks
 
             this.Genesis = genesisBlock;
 
-            // Configure federation public keys used to sign blocks.
+            // Configure federation public keys (mining keys) used to sign blocks.
             // Keep in mind that order in which keys are added to this list is important
             // and should be the same for all nodes operating on this network.
             var genesisFederationMembers = new List<IFederationMember>()
@@ -89,10 +88,31 @@ namespace Stratis.Sidechains.Networks
             };
 
             this.Federations = new Federations();
-            this.Federations.RegisterFederation(new Federation(genesisFederationMembers
-                .Where(f => ((CollateralFederationMember)f).IsMultisigMember)
-                .Select(f => ((CollateralFederationMember)f).PubKey)
-                .ToArray()));
+            var straxFederationTransactionSigningKeys = new List<PubKey>()
+            {
+               new PubKey("021040ef28c82fcffb63028e69081605ed4712910c8384d5115c9ffeacd9dbcae4"),//Node1
+               new PubKey("0244290a31824ba7d53e59c7a29d13dbeca15a9b0d36fdd4d28fce426753107bfc"),//Node2
+               new PubKey("032df4a2d62c0db12cd1d66201819a10788637c9b90a1cd2a5a3f5196fdab7a621"),//Node3
+               new PubKey("028ed190eb4ed6e46440ac6af21d8a67a537bd1bd7edb9cc5177d36d5a0972244d"),//Node4
+               new PubKey("02ff9923324399a188daf4310825a85dd3b89e2301d0ad073295b6f33ae1c72f7a"),//Node5
+               new PubKey("030e03b808ddb51701d4d3dbc0a74a6f9aedfecf23d5f874914641fc81197b239a"),//Node7
+               new PubKey("02270d6c20d3393fad7f74c59d2d26b0824ed016ccbc15e698e7354314459a60a5"),//Node8
+            };
+
+            // Register the new set of federation members.
+            this.Federations.RegisterFederation(new Federation(straxFederationTransactionSigningKeys));
+
+            // Set the list of Strax Era mining keys.
+            this.StraxMiningMultisigMembers = new List<PubKey>()
+            {
+                new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"),//Node1
+                new PubKey("022553fb641898be98e6e331d644c1689455536e58ad643d84844e981708da38e9"),//Node2
+                new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"),//Node3
+                new PubKey("02fd4f3197c40d41f9f5478d55844f522744258ca4093b5119571de1a5df1bc653"),//Node4
+                new PubKey("030ac8e3e119257aff4512ea44450632a6a9b54104f936732d31c28a63a2104064"),//Node5
+                new PubKey("024142689f38fdb5e8faf3bc7bc5065ecaad6be93a34055ffce0554f9268639c98"),//Node7
+                new PubKey("03382ceb0a59b9b922aca6be9959ae51dabda159e79465393a308ee267ecebcaa5"),//Node8
+            };
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
