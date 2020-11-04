@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -8,6 +9,7 @@ using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 
 namespace Stratis.Features.FederatedPeg.Distribution
@@ -22,7 +24,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
     /// The reward cross chain transfer does not have to be initiated every block, in future it could be batched a few blocks at a time to save a small amount of transaction throughput/fees if desired.
     /// </para>
     /// </summary>
-    public class RewardClaimer : IDisposable
+    public sealed class RewardClaimer : IDisposable
     {
         private readonly IBroadcasterManager broadcasterManager;
         private readonly ChainIndexer chainIndexer;
@@ -30,10 +32,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly ILogger logger;
         private readonly Network network;
         private readonly ISignals signals;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
         private readonly SubscriptionToken blockConnectedSubscription;
 
-        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, IConsensusManager consensusManager, ILoggerFactory loggerFactory, Network network, ISignals signals)
+        public RewardClaimer(IBroadcasterManager broadcasterManager, ChainIndexer chainIndexer, IConsensusManager consensusManager, ILoggerFactory loggerFactory, Network network, ISignals signals, IInitialBlockDownloadState initialBlockDownloadState)
         {
             this.broadcasterManager = broadcasterManager;
             this.chainIndexer = chainIndexer;
@@ -41,11 +44,12 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.signals = signals;
+            this.initialBlockDownloadState = initialBlockDownloadState;
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
         }
 
-        private void OnBlockConnected(BlockConnected blockConnected)
+        public Transaction BuildRewardTransaction()
         {
             // Get the minimum stake confirmations for the current network.
             int minStakeConfirmations = ((PosConsensusOptions)this.network.Consensus.Options).GetStakeMinConfirmations(this.chainIndexer.Height, this.network);
@@ -56,7 +60,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (chainTip.Height < minStakeConfirmations)
             {
                 // If the chain is not at least minStakeConfirmations long then just do nothing.
-                return;
+                return null;
             }
 
             // Get the block that is minStakeConfirmations behind the current tip.
@@ -70,13 +74,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (maturedBlock == null)
             {
                 this.logger.LogDebug("Consensus does not have the block data for '{0}'", chainedHeader);
-                return;
+                return null;
             }
 
             // As this runs on the mainchain we presume there will be a coinstake transaction in the block (but during the PoW era there obviously may not be).
             // If not, just do nothing with this block.
             if (maturedBlock.Transactions.Count < 2 || !maturedBlock.Transactions[1].IsCoinStake)
-                return;
+                return null;
 
             // We are only interested in the coinstake, as it is the only transaction that we expect to contain outputs paying the reward script.
             Transaction coinStake = maturedBlock.Transactions[1];
@@ -86,7 +90,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // This shouldn't be the case but check anyway.
             if (rewardOutputs.Length == 0)
-                return;
+                return null;
 
             // Build a transaction using these inputs, paying the federation.
             var builder = new TransactionBuilder(this.network);
@@ -99,27 +103,42 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
 
             // An OP_RETURN for a dummy Cirrus address that tells the sidechain federation they can distribute the transaction.
-            builder.Send(StraxCoinstakeRule.CirrusTransactionTag, Money.Zero);
+            builder.Send(StraxCoinstakeRule.CirrusTransactionTag(this.network.CirrusRewardDummyAddress), Money.Zero);
 
-            // TODO: Revisit the handling of fees here - the consensus rules won't allow the fee to be paid from the actual reward
-            builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript, rewardOutputs.Sum(o => o.Value));
+            // The mempool will accept a zero-fee transaction as long as it matches this structure, paying to the federation.
+            builder.Send(this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript, rewardOutputs.Sum(o => o.Value));
 
             Transaction builtTransaction = builder.BuildTransaction(true);
 
-            TransactionPolicyError[] errors = builder.Check(builtTransaction);
+            // Filter out FeeTooLowPolicyError errors as reward transaction's will not contain any fees.
+            IEnumerable<TransactionPolicyError> errors = builder.Check(builtTransaction).Where(e => !(e is FeeTooLowPolicyError));
 
-            if (errors.Length > 0)
+            if (errors.Any())
             {
                 foreach (TransactionPolicyError error in errors)
                     this.logger.LogWarning("Unable to validate reward claim transaction '{0}', error: {1}", builtTransaction.ToHex(), error.ToString());
 
                 // Not much further can be done at this point.
-                return;
+                return null;
             }
 
-            // It does not really matter whether the reward has been claimed already, as the transaction will simply be rejected by the other nodes on the network if it has.
-            // So just broadcast it anyway.
-            this.broadcasterManager.BroadcastTransactionAsync(builtTransaction);
+            this.logger.LogInformation($"Reward distribution transaction built; payment script to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
+
+            return builtTransaction;
+        }
+
+        private void OnBlockConnected(BlockConnected blockConnected)
+        {
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return;
+
+            Transaction transaction = BuildRewardTransaction();
+            if (transaction != null)
+            {
+                // It does not really matter whether the reward has been claimed already, as the transaction will simply be rejected by the other nodes on the network if it has.
+                // So just broadcast it anyway.
+                this.broadcasterManager.BroadcastTransactionAsync(transaction);
+            }
         }
 
         public void Dispose()

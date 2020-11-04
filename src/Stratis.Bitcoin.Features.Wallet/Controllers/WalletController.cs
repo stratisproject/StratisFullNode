@@ -771,6 +771,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.DistributeUtxos(req, token)));
         }
 
+        [HttpPost]
+        [Route("sweep")]
+        public async Task<IActionResult> Sweep([FromBody] SweepRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) => this.Json(await this.walletService.Sweep(req, token)));
+        }
+
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
             TransactionData transaction)
         {

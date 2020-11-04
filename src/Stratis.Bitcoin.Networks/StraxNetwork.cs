@@ -75,10 +75,10 @@ namespace Stratis.Bitcoin.Networks
             consensus.MempoolRules = new List<Type>()
             {
                 typeof(CheckConflictsMempoolRule),
-                typeof(CheckCoinViewMempoolRule),
+                typeof(StraxCoinViewMempoolRule),
                 typeof(CreateMempoolEntryMempoolRule),
                 typeof(CheckSigOpsMempoolRule),
-                typeof(CheckFeeMempoolRule),
+                typeof(StraxTransactionFeeMempoolRule),
                 typeof(CheckRateLimitMempoolRule),
                 typeof(CheckAncestorsMempoolRule),
                 typeof(CheckReplacementMempoolRule),

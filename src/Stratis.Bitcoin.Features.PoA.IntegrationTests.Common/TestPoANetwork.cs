@@ -30,6 +30,10 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 new FederationMember(this.FederationKey3.PubKey)  // 02d6792cf941b68edd1e9056653573917cbaf974d46e9eeb9801d6fcedf846477a
             };
 
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+
+            this.StraxMiningMultisigMembers = genesisFederationMembers.Select(m => m.PubKey).ToArray();
+
             var baseOptions = this.Consensus.Options as PoAConsensusOptions;
 
             this.Consensus.Options = new PoAConsensusOptions(

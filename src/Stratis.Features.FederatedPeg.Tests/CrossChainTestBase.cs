@@ -166,7 +166,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.redeemScript);
             this.federatedPegSettings.MultiSigAddress.Returns(this.redeemScript.Hash.GetAddress(this.network));
             this.federatedPegSettings.PublicKey.Returns(this.extendedKey.PrivateKey.PubKey.ToHex());
-            this.withdrawalExtractor = new WithdrawalExtractor(this.loggerFactory, this.federatedPegSettings, this.opReturnDataReader, this.network);
+            this.withdrawalExtractor = new WithdrawalExtractor(this.federatedPegSettings, this.opReturnDataReader, this.network);
         }
 
         protected (Transaction, ChainedHeader) AddFundingTransaction(Money[] amounts)

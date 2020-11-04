@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using LevelDB;
@@ -113,7 +112,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     byte[] row = this.leveldb.Get(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
                     Utilities.Coins outputs = row != null ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(row) : null;
 
-                    this.logger.LogDebug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
+                    this.logger.LogTrace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
                     res.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, outputs));
                 }
@@ -261,7 +260,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             foreach (StakeItem blockStake in blocklist)
             {
-                this.logger.LogDebug("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
+                this.logger.LogTrace("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
                 byte[] stakeRow = this.leveldb.Get(new byte[] { stakeTable }.Concat(blockStake.BlockId.ToBytes(false)).ToArray());
 
                 if (stakeRow != null)

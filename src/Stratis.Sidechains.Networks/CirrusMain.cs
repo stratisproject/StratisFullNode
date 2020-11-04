@@ -30,7 +30,7 @@ namespace Stratis.Sidechains.Networks
         /// <summary> The default name used for the federated peg configuration file. </summary>
         private const string NetworkDefaultConfigFilename = "cirrus.conf";
 
-        internal CirrusMain()
+        public CirrusMain()
         {
             this.Name = "CirrusMain";
             this.NetworkType = NetworkType.Mainnet;
@@ -50,6 +50,8 @@ namespace Stratis.Sidechains.Networks
             this.DefaultConfigFilename = NetworkDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
+
+            this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
 
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 

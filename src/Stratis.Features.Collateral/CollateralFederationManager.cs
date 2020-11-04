@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -16,6 +17,7 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.PoA.Features.Voting;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
@@ -23,13 +25,15 @@ using Stratis.Features.Collateral.CounterChain;
 namespace Stratis.Features.Collateral
 {
     public class CollateralFederationManager : FederationManagerBase
-    {  
+    {
         private readonly ICounterChainSettings counterChainSettings;
         private readonly ILoggerFactory loggerFactory;
         private readonly IFullNode fullNode;
         private readonly IHttpClientFactory httpClientFactory;
+        private int? multisigMinersApplicabilityHeight;
+        private ChainedHeader lastBlockChecked;
 
-        public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals, 
+        public CollateralFederationManager(NodeSettings nodeSettings, Network network, ILoggerFactory loggerFactory, IKeyValueRepository keyValueRepo, ISignals signals,
             ICounterChainSettings counterChainSettings, IFullNode fullNode, IHttpClientFactory httpClientFactory)
             : base(nodeSettings, network, loggerFactory, keyValueRepo, signals)
         {
@@ -71,14 +75,15 @@ namespace Stratis.Features.Collateral
             base.AddFederationMemberLocked(federationMember);
         }
 
-        protected override List<IFederationMember> LoadFederation()
+        protected override void LoadFederation()
         {
             List<CollateralFederationMemberModel> fedMemberModels = this.keyValueRepo.LoadValueJson<List<CollateralFederationMemberModel>>(federationMembersDbKey);
 
             if (fedMemberModels == null)
             {
                 this.logger.LogTrace("(-)[NOT_FOUND]:null");
-                return null;
+                this.federationMembers = null;
+                return;
             }
 
             var federation = new List<IFederationMember>(fedMemberModels.Count);
@@ -86,12 +91,13 @@ namespace Stratis.Features.Collateral
             foreach (CollateralFederationMemberModel fedMemberModel in fedMemberModels)
             {
                 PubKey pubKey = new PubKey(fedMemberModel.PubKeyHex);
-                bool isMultisigMember = FederationVotingController.IsMultisigMember(this.network, pubKey);
-                federation.Add(new CollateralFederationMember(pubKey, isMultisigMember, new Money(fedMemberModel.CollateralAmountSatoshis),
+                federation.Add(new CollateralFederationMember(pubKey, false, new Money(fedMemberModel.CollateralAmountSatoshis),
                     fedMemberModel.CollateralMainchainAddress));
             }
 
-            return federation;
+            this.federationMembers = federation;
+
+            this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
         }
 
         protected override void SaveFederation(List<IFederationMember> federation)
@@ -125,7 +131,10 @@ namespace Stratis.Features.Collateral
             if (minerKey == null)
                 throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName}) has not been configured.");
 
-            Money collateralAmount = new Money(CollateralPoAMiner.MinerCollateralAmount, MoneyUnit.BTC);
+            var expectedCollateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == minerKey.PubKey)
+                ? CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount;
+
+            Money collateralAmount = new Money(expectedCollateralAmount, MoneyUnit.BTC);
 
             var joinRequest = new JoinFederationRequest(minerKey.PubKey, collateralAmount, addressKey);
 
@@ -137,15 +146,15 @@ namespace Stratis.Features.Collateral
             Poll poll = votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
                   x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
-            joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.ToBytes());
+            joinRequest.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());
 
             // Get the signature by calling the counter-chain "signmessage" API.
             var signMessageRequest = new SignMessageRequest()
             {
-                 Message = joinRequest.SignatureMessage,
-                 WalletName = request.CollateralWalletName,
-                 Password = request.CollateralWalletPassword, 
-                 ExternalAddress = request.CollateralAddress
+                Message = joinRequest.SignatureMessage,
+                WalletName = request.CollateralWalletName,
+                Password = request.CollateralWalletPassword,
+                ExternalAddress = request.CollateralAddress
             };
 
             var walletClient = new WalletClient(this.loggerFactory, this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
@@ -175,7 +184,7 @@ namespace Stratis.Features.Collateral
 
             return collateralFederationMember;
         }
-        
+
         public CollateralFederationMember CollateralAddressOwner(VotingManager votingManager, VoteKey voteKey, string address)
         {
             CollateralFederationMember member = (this.federationMembers.Cast<CollateralFederationMember>().FirstOrDefault(x => x.CollateralMainchainAddress == address));
@@ -210,6 +219,43 @@ namespace Stratis.Features.Collateral
                 .FirstOrDefault(x => x.CollateralMainchainAddress == address);
 
             return member;
+        }
+
+        /// <inheritdoc />
+        public override int? GetMultisigMinersApplicabilityHeight()
+        {
+            IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+            ChainedHeader fork = (this.lastBlockChecked == null) ? null : consensusManager.Tip.FindFork(this.lastBlockChecked);
+
+            if (this.multisigMinersApplicabilityHeight != null && fork?.HashBlock == this.lastBlockChecked?.HashBlock)
+                return this.multisigMinersApplicabilityHeight;
+
+            this.lastBlockChecked = fork;
+            this.multisigMinersApplicabilityHeight = null;
+            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.logger);
+
+            ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked && h.Height >= this.network.CollateralCommitmentActivationHeight).Reverse().ToArray();
+
+            ChainedHeader first = BinarySearch.BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
+            {
+                ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
+                if (block == null)
+                    return null;
+
+                // Finding the height of the first STRAX collateral commitment height.
+                (int? commitmentHeight, uint? magic) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Block.Transactions.First());
+                if (commitmentHeight == null)
+                    return null;
+
+                return magic == this.counterChainSettings.CounterChainNetwork.Magic;
+            });
+
+            this.lastBlockChecked = headers.LastOrDefault();
+            this.multisigMinersApplicabilityHeight = first?.Height;
+
+            this.UpdateMultisigMiners(first != null);
+
+            return this.multisigMinersApplicabilityHeight;
         }
     }
 }

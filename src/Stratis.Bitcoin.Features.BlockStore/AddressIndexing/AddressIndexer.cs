@@ -11,10 +11,12 @@ using LiteDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
@@ -39,6 +41,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <summary>Returns verbose balances data.</summary>
         /// <param name="addresses">The set of addresses that will be queried.</param>
         VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses);
+
+        IFullNodeFeature InitializingFeature { set; }
+
+        LastBalanceDecreaseTransactionModel GetLastBalanceDecreaseTransaction(string address);
     }
 
     public class AddressIndexer : IAddressIndexer
@@ -106,6 +112,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private readonly IDateTimeProvider dateTimeProvider;
 
+        private readonly IUtxoIndexer utxoIndexer;
+
         private Task indexingTask;
 
         private DateTime lastFlushTime;
@@ -131,8 +139,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// </summary>
         public const int SyncBuffer = 50;
 
+        public IFullNodeFeature InitializingFeature { get; set; }
+
         public AddressIndexer(StoreSettings storeSettings, DataFolder dataFolder, ILoggerFactory loggerFactory, Network network, INodeStats nodeStats,
-            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider)
+            IConsensusManager consensusManager, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer)
         {
             this.storeSettings = storeSettings;
             this.network = network;
@@ -141,6 +151,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.consensusManager = consensusManager;
             this.asyncProvider = asyncProvider;
             this.dateTimeProvider = dateTimeProvider;
+            this.utxoIndexer = utxoIndexer;
             this.loggerFactory = loggerFactory;
             this.scriptAddressReader = new ScriptAddressReader();
 
@@ -600,10 +611,16 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
         /// <inheritdoc />
         public VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses)
         {
+            // If the containing feature is not initialized then wait a bit.
+            this.InitializingFeature?.WaitInitialized();
+
             var result = new VerboseAddressBalancesResult(this.consensusManager.Tip.Height);
 
             if (addresses.Length == 0)
                 return result;
+
+            if (!this.storeSettings.AddressIndex)
+                throw new NotSupportedException("Address indexing is not enabled.");
 
             (bool isQueryable, string reason) = this.IsQueryable();
 
@@ -627,6 +644,71 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             }
 
             return result;
+        }
+
+        public LastBalanceDecreaseTransactionModel GetLastBalanceDecreaseTransaction(string address)
+        {
+            if (address == null)
+                return null;
+
+            (bool isQueryable, string reason) = this.IsQueryable();
+
+            if (!isQueryable)
+                return null;
+
+            int lastBalanceHeight;
+
+            lock (this.lockObject)
+            {
+                AddressIndexerData indexData = this.addressIndexRepository.GetOrCreateAddress(address);
+
+                AddressBalanceChange lastBalanceUpdate = indexData.BalanceChanges.Where(a => !a.Deposited).OrderByDescending(b => b.BalanceChangedHeight).FirstOrDefault();
+
+                if (lastBalanceUpdate == null)
+                    return null;
+
+                lastBalanceHeight = lastBalanceUpdate.BalanceChangedHeight;
+            }
+
+            // Height 0 is used as a placeholder height for compacted address balance records, so ignore them if they are the only record.
+            if (lastBalanceHeight == 0)
+                return null;
+            
+            ChainedHeader header = this.chainIndexer.GetHeader(lastBalanceHeight);
+
+            if (header == null)
+                return null;
+
+            Block block = this.consensusManager.GetBlockData(header.HashBlock).Block;
+
+            if (block == null)
+                return null;
+
+            // Get the UTXO snapshot as of one block lower than the last balance change, so that we are definitely able to look up the inputs of each transaction in the next block.
+            ReconstructedCoinviewContext utxos = this.utxoIndexer.GetCoinviewAtHeight(lastBalanceHeight - 1);
+
+            Transaction foundTransaction = null;
+
+            foreach (Transaction transaction in block.Transactions)
+            {
+                if (transaction.IsCoinBase)
+                    continue;
+
+                foreach (TxIn txIn in transaction.Inputs)
+                {
+                    Transaction prevTx = utxos.Transactions[txIn.PrevOut.Hash];
+
+                    foreach (TxOut txOut in prevTx.Outputs)
+                    {
+                        if (this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, txOut.ScriptPubKey) == address)
+                        {
+                            foundTransaction = transaction;
+                        }
+                    }
+                }
+            }
+
+            return foundTransaction == null ? null : new LastBalanceDecreaseTransactionModel() { BlockHeight = lastBalanceHeight, Transaction = new TransactionVerboseModel(foundTransaction, this.network) };
         }
 
         private (bool isQueryable, string reason) IsQueryable()

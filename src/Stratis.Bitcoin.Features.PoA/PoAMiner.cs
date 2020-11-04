@@ -79,6 +79,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private Task miningTask;
 
+        private Script walletScriptPubKey;
+
         public PoAMiner(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
@@ -139,10 +141,24 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.logger.LogDebug("IsInitialBlockDownload={0}, AnyConnectedPeers={1}, BootstrappingMode={2}, IsFederationMember={3}",
                         this.ibdState.IsInitialBlockDownload(), this.connectionManager.ConnectedPeers.Any(), this.settings.BootstrappingMode, this.federationManager.IsFederationMember);
 
-                    // Don't mine in IBD in case we are connected to any node unless bootstrapping mode is enabled.
-                    if (((this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode)
-                        || !this.federationManager.IsFederationMember)
+                    // Don't mine in IBD or if we aren't connected to any node (unless bootstrapping mode is enabled).
+                    // Don't try to mine if we aren't a federation member.
+                    bool cantMineAtAll = (this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode;
+                    if (cantMineAtAll || !this.federationManager.IsFederationMember)
                     {
+                        if (!cantMineAtAll)
+                        {
+                            string cause = (this.federationManager.CurrentFederationKey == null) ?
+                                $"missing file '{KeyTool.KeyFileDefaultName}'" :
+                                $"the key in '{KeyTool.KeyFileDefaultName}' not being a federation member";
+
+                            var builder1 = new StringBuilder();
+                            builder1.AppendLine("<<==============================================================>>");
+                            builder1.AppendLine($"Can't mine due to {cause}.");
+                            builder1.AppendLine("<<==============================================================>>");
+                            this.logger.LogInformation(builder1.ToString());
+                        }
+
                         int attemptDelayMs = 30_000;
                         await Task.Delay(attemptDelayMs, this.cancellation.Token).ConfigureAwait(false);
 
@@ -160,9 +176,20 @@ namespace Stratis.Bitcoin.Features.PoA
 
                     var builder = new StringBuilder();
                     builder.AppendLine("<<==============================================================>>");
-                    builder.AppendLine($"Block was mined {chainedHeader}.");
+                    builder.AppendLine($"Block mined hash   : '{chainedHeader}'");
+                    builder.AppendLine($"Block miner pubkey : '{this.federationManager.CurrentFederationKey.PubKey.ToString()}'");
                     builder.AppendLine("<<==============================================================>>");
                     this.logger.LogInformation(builder.ToString());
+
+                    // The purpose of bootstrap mode is to kickstart the network when the last mined block is very old, which would normally put the node in IBD and inhibit mining.
+                    // There is therefore no point keeping this mode enabled once this node has mined successfully.
+                    // Additionally, keeping it enabled may result in network splits if this node becomes disconnected from its peers for a prolonged period.
+                    if (this.settings.BootstrappingMode)
+                    {
+                        this.logger.LogInformation("Disabling bootstrap mode as a block has been successfully mined.");
+
+                        this.settings.DisableBootstrap();
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -243,15 +270,20 @@ namespace Stratis.Bitcoin.Features.PoA
                 return null;
             }
 
-            Script walletScriptPubKey = this.GetScriptPubKeyFromWallet();
-
-            if (walletScriptPubKey == null)
+            // Only get this once.
+            if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
             {
-                this.logger.LogWarning("Miner wasn't able to get address from the wallet! You will not receive any rewards.");
-                walletScriptPubKey = new Script();
+                this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
+
+                // The node could not have a wallet.
+                if (this.walletScriptPubKey == null)
+                {
+                    this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
+                    this.walletScriptPubKey = new Script();
+                }
             }
 
-            BlockTemplate blockTemplate = this.blockDefinition.Build(tip, walletScriptPubKey);
+            BlockTemplate blockTemplate = this.blockDefinition.Build(tip, this.walletScriptPubKey);
 
             this.FillBlockTemplate(blockTemplate, out bool dropTemplate);
 
@@ -362,7 +394,7 @@ namespace Stratis.Bitcoin.Features.PoA
             for (int i = tip.Height; (i > 0) && (i > tip.Height - maxDepth); i--)
             {
                 // Add stats for current header.
-                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentTime).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForBlock(currentHeader, this.votingManager).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
                 log.Append("[" + pubKeyRepresentation + "]-");
                 depthReached++;

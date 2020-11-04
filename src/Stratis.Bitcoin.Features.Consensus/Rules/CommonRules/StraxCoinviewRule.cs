@@ -73,8 +73,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <inheritdoc />
         protected override void AllowSpend(TxOut prevOut, Transaction tx)
         {
-            // TODO: Make a mempool rule for this too
-
             // We further need to check that any transactions that spend outputs from the reward script only go to the cross-chain multisig.
             // This check is not isolated to PoS specifically.
             if (prevOut.ScriptPubKey == StraxCoinstakeRule.CirrusRewardScript)
@@ -95,12 +93,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     }
 
                     // Every other (spendable) output must go to the multisig
-                    if (output.ScriptPubKey != this.Parent.Network.Federations.GetOnlyFederation().MultisigScript)
+                    if (output.ScriptPubKey != this.Parent.Network.Federations.GetOnlyFederation().MultisigScript.PaymentScript)
                     {
                         this.Logger.LogTrace("(-)[INVALID_REWARD_SPEND_DESTINATION]");
                         ConsensusErrors.BadTransactionScriptError.Throw();
                     }
                 }
+
+                this.Logger.LogInformation($"Reward distribution transaction validated in consensus, spending to '{prevOut.ScriptPubKey}'.");
             }
 
             // Otherwise allow the spend (do nothing).

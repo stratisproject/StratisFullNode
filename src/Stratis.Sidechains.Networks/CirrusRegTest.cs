@@ -54,6 +54,8 @@ namespace Stratis.Sidechains.Networks
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -69,22 +71,37 @@ namespace Stratis.Sidechains.Networks
             this.Genesis = genesisBlock;
 
             this.FederationMnemonics = new[] {
-                   "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                   "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                   "exchange rent bronze pole post hurry oppose drama eternal voice client state"
-               }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
+                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
             var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
-            this.Federations = new Federations();
-            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
-
             var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
-
             foreach (PubKey pubKey in federationPubKeys)
                 genesisFederationMembers.Add(new CollateralFederationMember(pubKey, true, new Money(0), null));
+
+            // Will replace the last multisig member.
+            var newFederationMemberMnemonics = new string[]
+            {
+                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
+            var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
+
+            // Mining keys!
+            this.StraxMiningMultisigMembers = newFederationPubKeys;
+
+            // Register only the new federation as we won't be doing anything with the old federation.
+            this.Federations = new Federations();
+
+            // Default transaction-signing keys!
+            // Use the new keys as the old keys should never be used by the new opcode.
+            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,

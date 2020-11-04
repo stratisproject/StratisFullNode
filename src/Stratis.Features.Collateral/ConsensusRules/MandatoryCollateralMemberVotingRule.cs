@@ -7,7 +7,6 @@ using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
-using Stratis.Features.Collateral;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
@@ -20,6 +19,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private PoAConsensusRuleEngine ruleEngine;
         private Network network;
         private IFederationManager federationManager;
+        private VotingManager votingManager;
         private ISlotsManager slotsManager;
         private CollateralPoAConsensusFactory consensusFactory;
         private ILoggerFactory loggerFactory;
@@ -34,6 +34,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.logger = this.loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = this.Parent.Network;
             this.federationManager = this.ruleEngine.FederationManager;
+            this.votingManager = this.ruleEngine.VotingManager;
             this.slotsManager = this.ruleEngine.SlotsManager;
             this.consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
@@ -56,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 return Task.CompletedTask;
 
             // Determine who mined the block.
-            PubKey blockMiner = this.GetBlockMiner(context.ValidationContext.ChainedHeaderToValidate);
+            PubKey blockMiner = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
 
             // Check that the miner is in favor of adding the same member(s).
             Dictionary<string, bool> checkList = newMembers.ToDictionary(x => x.ToHex(), x => false);
@@ -81,9 +82,12 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 foreach (VotingData votingData in votingDataList)
                 {
                     var member = (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(votingData.Data);
-                    
+
+                    var expectedCollateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == member.PubKey)
+                        ? CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount;
+
                     // Check collateral amount.
-                    if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != CollateralPoAMiner.MinerCollateralAmount)
+                    if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != expectedCollateralAmount)
                     {
                         this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
                         PoAConsensusErrors.InvalidCollateralRequirement.Throw();
@@ -105,29 +109,6 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
             return Task.CompletedTask;
-        }
-
-        public PubKey GetBlockMiner(ChainedHeader currentHeader)
-        {
-            List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
-            var consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
-
-            foreach (Poll poll in this.ruleEngine.VotingManager.GetFinishedPolls().Where(x => !x.IsExecuted &&
-                ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
-            {
-                if ((currentHeader.Height - poll.PollVotedInFavorBlockData.Height) <= this.network.Consensus.MaxReorgLength)
-                    // Not applied yet.
-                    continue;
-
-                IFederationMember federationMember = consensusFactory.DeserializeFederationMember(poll.VotingData.Data);
-
-                if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                    modifiedFederation.Add(federationMember);
-                else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                    modifiedFederation.Remove(federationMember);
-            }
-
-            return this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey;
         }
     }
 }
