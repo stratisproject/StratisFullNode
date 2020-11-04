@@ -66,8 +66,8 @@ namespace Stratis.Bitcoin.Features.PoA
     /// <summary>Class that contains data that defines a federation member on federated peg sidechain.</summary>
     public class CollateralFederationMember : FederationMember
     {
-        public const decimal MinerCollateralAmount = 10_000m;
-        public const decimal MultisigMinerCollateralAmount = 50_000m;
+        public const decimal MinerCollateralAmount = 100_000m;
+        public const decimal MultisigMinerCollateralAmount = 100_000m;
 
         public CollateralFederationMember(PubKey miningPubKey, bool isMultiSigMember, Money collateralAmount, string collateralMainchainAddress) : base(miningPubKey)
         {

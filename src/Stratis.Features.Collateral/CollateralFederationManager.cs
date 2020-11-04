@@ -131,8 +131,7 @@ namespace Stratis.Features.Collateral
             if (minerKey == null)
                 throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName}) has not been configured.");
 
-            var expectedCollateralAmount = ((PoANetwork)this.network).StraxMiningMultisigMembers.Any(m => m == minerKey.PubKey)
-                ? CollateralFederationMember.MultisigMinerCollateralAmount : CollateralFederationMember.MinerCollateralAmount;
+            var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey(this.network, minerKey.PubKey);
 
             Money collateralAmount = new Money(expectedCollateralAmount, MoneyUnit.BTC);
 
