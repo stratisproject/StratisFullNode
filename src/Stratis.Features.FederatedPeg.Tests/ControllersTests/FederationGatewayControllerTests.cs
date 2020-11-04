@@ -183,7 +183,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             string redeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).ToString();
             string federationIps = "127.0.0.1:36201,127.0.0.1:36202,127.0.0.1:36203";
-            string multisigPubKey = federation.GetFederationDetails().pubKeys.TakeLast(1).First().ToHex();
+            string multisigPubKey = federation.GetFederationDetails().transactionSigningKeys.TakeLast(1).First().ToHex();
             string[] args = new[] { "-sidechain", "-regtest", $"-federationips={federationIps}", $"-redeemscript={redeemScript}", $"-publickey={multisigPubKey}", "-mincoinmaturity=1", "-mindepositconfirmations=1" };
             var nodeSettings = new NodeSettings(sidechainNetwork, ProtocolVersion.ALT_PROTOCOL_VERSION, args: args);
 
@@ -241,7 +241,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             string redeemScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).ToString();
 
             string federationIps = "127.0.0.1:36201,127.0.0.1:36202,127.0.0.1:36203";
-            string multisigPubKey = federation.GetFederationDetails().pubKeys.TakeLast(1).First().ToHex();
+            string multisigPubKey = federation.GetFederationDetails().transactionSigningKeys.TakeLast(1).First().ToHex();
             string[] args = new[] { "-mainchain", "-testnet", $"-federationips={federationIps}", $"-redeemscript={redeemScript}", $"-publickey={multisigPubKey}", "-mincoinmaturity=1", "-mindepositconfirmations=1" };
             var nodeSettings = new NodeSettings(sideChainNetwork, ProtocolVersion.ALT_PROTOCOL_VERSION, args: args);
 
