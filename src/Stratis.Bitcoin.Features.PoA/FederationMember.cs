@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 
@@ -8,7 +7,7 @@ namespace Stratis.Bitcoin.Features.PoA
     /// <summary>Interface that contains data that defines a federation member.</summary>
     public interface IFederationMember
     {
-        /// <summary>Public key of a federation member.</summary>
+        /// <summary>Public key of a federation member used for mining.</summary>
         PubKey PubKey { get; }
     }
 
@@ -70,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA
         public const decimal MinerCollateralAmount = 10_000m;
         public const decimal MultisigMinerCollateralAmount = 50_000m;
 
-        public CollateralFederationMember(PubKey pubKey, bool isMultiSigMember, Money collateralAmount, string collateralMainchainAddress) : base(pubKey)
+        public CollateralFederationMember(PubKey miningPubKey, bool isMultiSigMember, Money collateralAmount, string collateralMainchainAddress) : base(miningPubKey)
         {
             this.IsMultisigMember = isMultiSigMember;
             this.CollateralAmount = collateralAmount;
@@ -126,7 +125,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public override string ToString()
         {
-            return base.ToString() + $",{nameof(this.CollateralAmount)}:{this.CollateralAmount},{nameof(this.CollateralMainchainAddress)}:{this.CollateralMainchainAddress ?? "null"}{(this.IsMultisigMember ? " (Multisig)":"")}";
+            return base.ToString() + $",{nameof(this.CollateralAmount)}:{this.CollateralAmount},{nameof(this.CollateralMainchainAddress)}:{this.CollateralMainchainAddress ?? "null"}{(this.IsMultisigMember ? " (Multisig)" : "")}";
         }
     }
 }
