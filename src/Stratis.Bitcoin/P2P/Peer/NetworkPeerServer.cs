@@ -155,7 +155,7 @@ namespace Stratis.Bitcoin.P2P.Peer
                     if (!successful)
                     {
                         this.signals.Publish(new PeerConnectionAttemptFailed(true, (IPEndPoint)tcpClient.Client.RemoteEndPoint, reason));
-                        this.logger.LogInformation("Connection from client '{0}' was rejected and will be closed, reason: {1}", tcpClient.Client.RemoteEndPoint, reason);
+                        this.logger.LogDebug("Connection from client '{0}' was rejected and will be closed, reason: {1}", tcpClient.Client.RemoteEndPoint, reason);
                         tcpClient.Close();
                         continue;
                     }
