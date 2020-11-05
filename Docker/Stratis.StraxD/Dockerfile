@@ -12,4 +12,4 @@ COPY strax.conf.docker /root/.stratisnode/strax/StraxMain/strax.conf
 
 EXPOSE 17103 17104 17105
 
-CMD ["dotnet", "run", "-rpcuser=username", "-rpcpassword=password"]
+CMD ["dotnet", "run"]
