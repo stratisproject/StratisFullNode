@@ -127,40 +127,48 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private void OnBlockConnected(BlockConnected blockConnectedData)
         {
-            // Update last active time.
-            uint timestamp = blockConnectedData.ConnectedBlock.ChainedHeader.Header.Time;
-            PubKey key = this.slotsManager.GetFederationMemberForBlock(blockConnectedData.ConnectedBlock.ChainedHeader, this.votingManager).PubKey;
-            this.fedPubKeysByLastActiveTime.AddOrReplace(key, timestamp);
-
-            this.SaveMembersByLastActiveTime();
-
-            // Check if any fed member was idle for too long.
-            foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.fedPubKeysByLastActiveTime)
+            try
             {
-                // Check if any fed member was idle for too long. Use the timestamp of the connecting block.
-                if (this.ShouldBeKicked(fedMemberToActiveTime.Key, timestamp, out uint inactiveForSeconds))
+                // Update last active time.
+                uint timestamp = blockConnectedData.ConnectedBlock.ChainedHeader.Header.Time;
+                PubKey key = this.slotsManager.GetFederationMemberForBlock(blockConnectedData.ConnectedBlock.ChainedHeader, this.votingManager).PubKey;
+                this.fedPubKeysByLastActiveTime.AddOrReplace(key, timestamp);
+
+                this.SaveMembersByLastActiveTime();
+
+                // Check if any fed member was idle for too long.
+                foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.fedPubKeysByLastActiveTime)
                 {
-                    IFederationMember memberToKick = this.federationManager.GetFederationMembers().SingleOrDefault(x => x.PubKey == fedMemberToActiveTime.Key);
-
-                    byte[] federationMemberBytes = this.consensusFactory.SerializeFederationMember(memberToKick);
-
-                    bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
-
-                    if (!alreadyKicking)
+                    // Check if any fed member was idle for too long. Use the timestamp of the connecting block.
+                    if (this.ShouldBeKicked(fedMemberToActiveTime.Key, timestamp, out uint inactiveForSeconds))
                     {
-                        this.logger.LogWarning("Federation member '{0}' was inactive for {1} seconds and will be scheduled to be kicked.", fedMemberToActiveTime.Key, inactiveForSeconds);
+                        IFederationMember memberToKick = this.federationManager.GetFederationMembers().SingleOrDefault(x => x.PubKey == fedMemberToActiveTime.Key);
 
-                        this.votingManager.ScheduleVote(new VotingData()
+                        byte[] federationMemberBytes = this.consensusFactory.SerializeFederationMember(memberToKick);
+
+                        bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
+
+                        if (!alreadyKicking)
                         {
-                            Key = VoteKey.KickFederationMember,
-                            Data = federationMemberBytes
-                        });
-                    }
-                    else
-                    {
-                        this.logger.LogDebug("Skipping because kicking is already voted for.");
+                            this.logger.LogWarning("Federation member '{0}' was inactive for {1} seconds and will be scheduled to be kicked.", fedMemberToActiveTime.Key, inactiveForSeconds);
+
+                            this.votingManager.ScheduleVote(new VotingData()
+                            {
+                                Key = VoteKey.KickFederationMember,
+                                Data = federationMemberBytes
+                            });
+                        }
+                        else
+                        {
+                            this.logger.LogDebug("Skipping because kicking is already voted for.");
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, ex.ToString());
+                throw;
             }
         }
 
