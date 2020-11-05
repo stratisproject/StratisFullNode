@@ -165,7 +165,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 this.logger.LogError(ex, ex.ToString());
                 throw;
