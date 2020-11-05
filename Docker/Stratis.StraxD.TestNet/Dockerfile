@@ -8,8 +8,8 @@ VOLUME /root/.stratisfullnode
 
 WORKDIR /StratisFullNode/src/Stratis.StraxD
 
-COPY strax.conf.docker /root/.stratisnode/strax/StraxTest/stratis.conf
+COPY strax.conf.docker /root/.stratisnode/strax/StraxTest/strax.conf
 
 EXPOSE 27103 27104 27105
 
-CMD ["dotnet", "run", "-testnet"]
+CMD ["dotnet", "run", "-testnet", "-rpcuser=username", "-rpcpassword=password"]
