@@ -99,8 +99,6 @@ namespace Stratis.Features.FederatedPeg
 
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
         {
-            this.logger.LogInformation($"{message.Message.Payload.GetType().Name} received from {peer.PeerEndPoint.Address}.");
-
             if (!(message.Message.Payload is RequestPartialTransactionPayload payload))
                 return;
 
@@ -112,7 +110,7 @@ namespace Stratis.Features.FederatedPeg
                 return;
             }
 
-            this.logger.LogInformation($"RequestPartialTransactionPayload received from {peer.PeerEndPoint.Address}.");
+            this.logger.LogInformation($"RequestPartialTransactionPayload received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}'.");
 
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
 
