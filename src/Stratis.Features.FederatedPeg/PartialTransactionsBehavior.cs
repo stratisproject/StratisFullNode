@@ -74,7 +74,10 @@ namespace Stratis.Features.FederatedPeg
         protected override void DetachCore()
         {
             if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
+            {
+                this.logger.LogInformation($"Detaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
                 this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
+            }
         }
 
         /// <summary>
