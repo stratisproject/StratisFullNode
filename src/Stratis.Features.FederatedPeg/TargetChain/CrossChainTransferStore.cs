@@ -621,7 +621,27 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         var builder = new TransactionBuilder(this.network);
                         Transaction oldTransaction = transfer.PartialTransaction;
 
-                        transfer.CombineSignatures(builder, partialTransactions, this.logger);
+                        foreach (Transaction partial in partialTransactions)
+                        {
+                            this.logger.LogInformation($"Partial inputs:{partial.Inputs.Count} = Partial inputs:{partial.Inputs.Count}");
+                            this.logger.LogInformation($"Partial outputs:{partial.Outputs.Count} = Partial outputs:{partial.Outputs.Count}");
+
+                            for (int i = 0; i < partial.Inputs.Count; i++)
+                            {
+                                TxIn input = partial.Inputs[i];
+                                this.logger.LogInformation($"input N:{input.PrevOut.N} : input Hash:{input.PrevOut.Hash}");
+                            }
+
+                            for (int i = 0; i < partial.Outputs.Count; i++)
+                            {
+                                TxOut output = partial.Outputs[i];
+                                this.logger.LogInformation($"output1 Value:{output.Value} ScriptPubKey:{output.ScriptPubKey}");
+                            }
+                        }
+
+                        this.logger.LogInformation("Merging signatures for deposit : {0}", depositId);
+
+                        transfer.CombineSignatures(builder, partialTransactions);
 
                         if (transfer.PartialTransaction.GetHash() == oldTransaction.GetHash())
                         {

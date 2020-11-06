@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
 using TracerAttributes;
@@ -158,11 +157,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public void CombineSignatures(TransactionBuilder builder, Transaction[] partialTransactions, ILogger logger)
+        public void CombineSignatures(TransactionBuilder builder, Transaction[] partialTransactions)
         {
             Guard.Assert(this.status == CrossChainTransferStatus.Partial);
 
-            this.partialTransaction = SigningUtils.CheckTemplateAndCombineSignatures(builder, this.partialTransaction, partialTransactions, logger);
+            this.partialTransaction = SigningUtils.CheckTemplateAndCombineSignatures(builder, this.partialTransaction, partialTransactions);
         }
 
         /// <inheritdoc />

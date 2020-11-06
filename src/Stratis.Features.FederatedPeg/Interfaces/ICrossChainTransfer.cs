@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NBitcoin;
+﻿using NBitcoin;
 
 namespace Stratis.Features.FederatedPeg.Interfaces
 {
@@ -82,7 +81,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         /// <param name="builder">The transaction builder to use.</param>
         /// <param name="partialTransactions">Partial transactions received from other federation members.</param>
-        void CombineSignatures(TransactionBuilder builder, Transaction[] partialTransactions, ILogger logger = null);
+        void CombineSignatures(TransactionBuilder builder, Transaction[] partialTransactions);
 
         /// <summary>
         /// Sets the partial transaction.
