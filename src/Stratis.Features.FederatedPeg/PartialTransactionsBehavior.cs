@@ -60,24 +60,24 @@ namespace Stratis.Features.FederatedPeg
 
         protected override void AttachCore()
         {
-            if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
-            {
-                this.logger.LogInformation($"Attaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
-                this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
-            }
-            else
-            {
-                this.logger.LogInformation($"Attaching behaviour failed for {this.AttachedPeer.PeerEndPoint.Address}, federation IP not in list.");
-            }
+            //if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
+            //{
+            this.logger.LogInformation($"Attaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
+            this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
+            //}
+            //else
+            //{
+            //    this.logger.LogInformation($"Attaching behaviour failed for {this.AttachedPeer.PeerEndPoint.Address}, federation IP not in list.");
+            //}
         }
 
         protected override void DetachCore()
         {
-            if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
-            {
-                this.logger.LogInformation($"Detaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
-                this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
-            }
+            //if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
+            //{
+            this.logger.LogInformation($"Detaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
+            this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
+            //}
         }
 
         /// <summary>
@@ -86,15 +86,15 @@ namespace Stratis.Features.FederatedPeg
         /// <param name="payload">The payload to broadcast.</param>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
-            if (this.AttachedPeer.IsConnected && this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
-            {
-                this.logger.LogInformation($"Broadcasting to {this.AttachedPeer.PeerEndPoint.Address}");
-                await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
-            }
-            else
-            {
-                this.logger.LogInformation($"Broadcast skipped for {this.AttachedPeer.PeerEndPoint.Address}:{this.AttachedPeer.IsConnected}, federation IP not in list or not connected.");
-            }
+            //if (this.AttachedPeer.IsConnected && this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
+            //{
+            this.logger.LogInformation($"Broadcasting to {this.AttachedPeer.PeerEndPoint.Address}");
+            await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
+            //}
+            //else
+            //{
+            //    this.logger.LogInformation($"Broadcast skipped for {this.AttachedPeer.PeerEndPoint.Address}:{this.AttachedPeer.IsConnected}, federation IP not in list or not connected.");
+            //}
         }
 
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
