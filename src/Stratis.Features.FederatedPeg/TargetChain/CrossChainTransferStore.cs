@@ -623,22 +623,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                         this.logger.LogInformation($"Partials {partialTransactions.Count()}");
 
-                        foreach (Transaction partial in partialTransactions)
+                        Transaction partial = partialTransactions[0];
+                        this.logger.LogInformation($"Partial inputs:{partial.Inputs.Count} = trasnfer Partial inputs:{transfer.PartialTransaction.Inputs.Count}");
+                        this.logger.LogInformation($"Partial outputs:{partial.Outputs.Count} =  transfer Partial outputs:{transfer.PartialTransaction.Outputs.Count}");
+
+                        for (int i = 0; i < partial.Inputs.Count; i++)
                         {
-                            this.logger.LogInformation($"Partial inputs:{partial.Inputs.Count} = Partial inputs:{partial.Inputs.Count}");
-                            this.logger.LogInformation($"Partial outputs:{partial.Outputs.Count} = Partial outputs:{partial.Outputs.Count}");
+                            TxIn input = partial.Inputs[i];
+                            TxIn transferInput = transfer.PartialTransaction.Inputs[i];
+                            this.logger.LogInformation($"input N:{input.PrevOut.N} : input Hash:{input.PrevOut.Hash}");
+                            this.logger.LogInformation($"trans N:{transferInput.PrevOut.N} : transferInput Hash:{transferInput.PrevOut.Hash}");
+                        }
 
-                            for (int i = 0; i < partial.Inputs.Count; i++)
-                            {
-                                TxIn input = partial.Inputs[i];
-                                this.logger.LogInformation($"input N:{input.PrevOut.N} : input Hash:{input.PrevOut.Hash}");
-                            }
-
-                            for (int i = 0; i < partial.Outputs.Count; i++)
-                            {
-                                TxOut output = partial.Outputs[i];
-                                this.logger.LogInformation($"output1 Value:{output.Value} ScriptPubKey:{output.ScriptPubKey}");
-                            }
+                        for (int i = 0; i < partial.Outputs.Count; i++)
+                        {
+                            TxOut output = partial.Outputs[i];
+                            TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
+                            this.logger.LogInformation($"output1 Value:{output.Value} ScriptPubKey:{output.ScriptPubKey}");
+                            this.logger.LogInformation($"transfr Value:{transferOutput.Value} ScriptPubKey:{transferOutput.ScriptPubKey}");
                         }
 
                         this.logger.LogInformation("Merging signatures for deposit : {0}", depositId);
