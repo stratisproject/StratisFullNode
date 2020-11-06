@@ -621,6 +621,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         var builder = new TransactionBuilder(this.network);
                         Transaction oldTransaction = transfer.PartialTransaction;
 
+                        this.logger.LogInformation($"Partials {partialTransactions.Count()}");
+
                         foreach (Transaction partial in partialTransactions)
                         {
                             this.logger.LogInformation($"Partial inputs:{partial.Inputs.Count} = Partial inputs:{partial.Inputs.Count}");
