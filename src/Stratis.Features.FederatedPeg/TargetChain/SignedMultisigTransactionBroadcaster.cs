@@ -70,18 +70,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
             {
-                this.logger.LogDebug("Federation wallet isn't active or in IBD. Not attempting to broadcast signed transactions.");
+                this.logger.LogInformation("Federation wallet isn't active or in IBD. Not attempting to broadcast signed transactions.");
                 return;
             }
 
             TxMempoolInfo txInfo = await this.mempoolManager.InfoAsync(@event.Transfer.PartialTransaction.GetHash()).ConfigureAwait(false);
             if (txInfo != null)
             {
-                this.logger.LogDebug("Deposit ID '{0}' already in the mempool.", @event.Transfer.DepositTransactionId);
+                this.logger.LogInformation("Deposit ID '{0}' already in the mempool.", @event.Transfer.DepositTransactionId);
                 return;
             }
 
-            this.logger.LogDebug("Broadcasting deposit-id={0} a signed multisig transaction {1} to the network.", @event.Transfer.DepositTransactionId, @event.Transfer.PartialTransaction.GetHash());
+            this.logger.LogInformation("Broadcasting deposit-id={0} a signed multisig transaction {1} to the network.", @event.Transfer.DepositTransactionId, @event.Transfer.PartialTransaction.GetHash());
 
             await this.broadcasterManager.BroadcastTransactionAsync(@event.Transfer.PartialTransaction).ConfigureAwait(false);
 
