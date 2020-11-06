@@ -107,6 +107,8 @@ namespace Stratis.Features.FederatedPeg
                 return;
             }
 
+            this.logger.LogInformation($"RequestPartialTransactionPayload received from {peer.PeerEndPoint.Address}.");
+
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
 
             // This could be null if the store was unable to sync with the federation 
@@ -152,6 +154,10 @@ namespace Stratis.Features.FederatedPeg
 
                 // Respond back to the peer that requested a signature.
                 await this.BroadcastAsync(payload.AddPartial(signedTransaction));
+            }
+            else
+            {
+                this.logger.LogInformation($"Old and signed hash matches.");
             }
         }
 
