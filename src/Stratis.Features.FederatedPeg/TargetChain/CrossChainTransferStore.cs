@@ -608,13 +608,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                         if (transfer == null)
                         {
-                            this.logger.LogTrace("(-)[MERGE_NOT_FOUND]:null");
+                            this.logger.LogInformation("(-)[MERGE_NOT_FOUND]:null");
                             return null;
                         }
 
                         if (transfer.Status != CrossChainTransferStatus.Partial)
                         {
-                            this.logger.LogTrace($"(-)[MERGE_BAD_STATUS]:{nameof(transfer.Status)}={transfer.Status}");
+                            this.logger.LogInformation($"(-)[MERGE_BAD_STATUS]:{nameof(transfer.Status)}={transfer.Status}");
                             return transfer.PartialTransaction;
                         }
 
@@ -628,7 +628,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // We will finish dealing with the request here if an invalid signature is sent.
                             // The incoming partial transaction will not have the same inputs / outputs as what our node has generated
                             // so would have failed CrossChainTransfer.TemplatesMatch() and leave through here.
-                            this.logger.LogTrace("(-)[MERGE_UNCHANGED_TX_HASHES_MATCH]");
+                            this.logger.LogInformation("(-)[MERGE_UNCHANGED_TX_HASHES_MATCH]");
                             return transfer.PartialTransaction;
                         }
 
