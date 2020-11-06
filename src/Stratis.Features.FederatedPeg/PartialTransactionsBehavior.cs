@@ -96,7 +96,7 @@ namespace Stratis.Features.FederatedPeg
 
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
         {
-            this.logger.LogInformation($"{message.GetType().Name} received from {peer.PeerEndPoint.Address}.");
+            this.logger.LogInformation($"{message.Message.Payload.GetType().Name} received from {peer.PeerEndPoint.Address}.");
 
             if (!(message.Message.Payload is RequestPartialTransactionPayload payload))
                 return;
