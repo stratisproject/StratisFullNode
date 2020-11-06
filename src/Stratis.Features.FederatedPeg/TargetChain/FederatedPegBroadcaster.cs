@@ -41,6 +41,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 catch (OperationCanceledException)
                 {
                 }
+                catch (Exception ex)
+                {
+                    this.logger.LogInformation($"Error sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}:{ex.ToString()}");
+                }
             });
         }
     }
