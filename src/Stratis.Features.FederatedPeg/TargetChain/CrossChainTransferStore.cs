@@ -621,7 +621,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         var builder = new TransactionBuilder(this.network);
                         Transaction oldTransaction = transfer.PartialTransaction;
 
-                        transfer.CombineSignatures(builder, partialTransactions);
+                        transfer.CombineSignatures(builder, partialTransactions, this.logger);
 
                         if (transfer.PartialTransaction.GetHash() == oldTransaction.GetHash())
                         {
