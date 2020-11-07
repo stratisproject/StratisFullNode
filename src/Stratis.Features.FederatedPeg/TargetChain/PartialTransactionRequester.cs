@@ -15,7 +15,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// <summary>
     /// Requests partial transactions from the peers and calls <see cref="ICrossChainTransferStore.MergeTransactionSignaturesAsync".
     /// </summary>
-    public interface IPartialTransactionRequester {
+    public interface IPartialTransactionRequester
+    {
         /// <summary>
         /// Starts the broadcasting of partial transaction requests.
         /// </summary>
@@ -28,11 +29,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     }
 
     /// <inheritdoc />
-    public class PartialTransactionRequester : IPartialTransactionRequester {
+    public class PartialTransactionRequester : IPartialTransactionRequester
+    {
         /// <summary>
         /// How many transactions we want to pass around to sign at a time.
         /// </summary>
-        private const int NumberToSignAtATime = 3;
+        private const int NumberToSignAtATime = 30;
 
         /// <summary>
         /// How often to trigger the query for and broadcasting of partial transactions.
@@ -59,7 +61,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IInitialBlockDownloadState ibdState,
             IFederationWalletManager federationWalletManager,
-            IInputConsolidator inputConsolidator) {
+            IInputConsolidator inputConsolidator)
+        {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(crossChainTransferStore, nameof(crossChainTransferStore));
             Guard.NotNull(asyncProvider, nameof(asyncProvider));
@@ -75,14 +78,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.inputConsolidator = inputConsolidator;
         }
 
-        public async Task BroadcastPartialTransactionsAsync() {
-            if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive()) {
-                this.logger.LogDebug("Federation wallet isn't active or in IBD. Not attempting to request transaction signatures.");
+        public async Task BroadcastPartialTransactionsAsync()
+        {
+            if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
+            {
+                this.logger.LogInformation("Federation wallet isn't active or in IBD. Not attempting to request transaction signatures.");
                 return;
             }
 
             // Broadcast the partial transaction with the earliest inputs.
-            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] {CrossChainTransferStatus.Partial}, true).Take(NumberToSignAtATime);
+            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true).Take(NumberToSignAtATime);
 
             foreach (ICrossChainTransfer transfer in transfers)
             {
@@ -109,8 +114,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public void Start() {
-            this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(PartialTransactionRequester), async token => {
+        public void Start()
+        {
+            this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(PartialTransactionRequester), async token =>
+            {
                 await this.BroadcastPartialTransactionsAsync().ConfigureAwait(false);
             },
             this.nodeLifetime.ApplicationStopping,
@@ -118,8 +125,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public void Stop() {
-            if (this.asyncLoop != null) {
+        public void Stop()
+        {
+            if (this.asyncLoop != null)
+            {
                 this.asyncLoop.Dispose();
                 this.asyncLoop = null;
             }
