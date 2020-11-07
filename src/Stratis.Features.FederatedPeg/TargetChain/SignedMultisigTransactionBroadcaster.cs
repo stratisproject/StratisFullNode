@@ -32,10 +32,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
     public class SignedMultisigTransactionBroadcaster : ISignedMultisigTransactionBroadcaster, IDisposable
     {
-        /// <summary>
-        /// How often to trigger the query for and broadcasting of new transactions.
-        /// </summary>
-        private static readonly TimeSpan TimeBetweenQueries = TimeSpans.TenSeconds;
         private readonly ILogger logger;
         private readonly MempoolManager mempoolManager;
         private readonly IBroadcasterManager broadcasterManager;
@@ -66,7 +62,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
-        private async Task OnCrossChainTransactionFullySigned(CrossChainTransferTransactionFullySigned @event)
+        private async Task OnCrossChainTransactionFullySignedAsync(CrossChainTransferTransactionFullySigned @event)
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
             {
@@ -77,11 +73,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             TxMempoolInfo txInfo = await this.mempoolManager.InfoAsync(@event.Transfer.PartialTransaction.GetHash()).ConfigureAwait(false);
             if (txInfo != null)
             {
-                this.logger.LogInformation("Deposit ID '{0}' already in the mempool.", @event.Transfer.DepositTransactionId);
+                this.logger.LogDebug("Deposit ID '{0}' already in the mempool.", @event.Transfer.DepositTransactionId);
                 return;
             }
 
-            this.logger.LogInformation("Broadcasting deposit-id={0} a signed multisig transaction {1} to the network.", @event.Transfer.DepositTransactionId, @event.Transfer.PartialTransaction.GetHash());
+            this.logger.LogDebug("Broadcasting deposit-id={0} a signed multisig transaction {1} to the network.", @event.Transfer.DepositTransactionId, @event.Transfer.PartialTransaction.GetHash());
 
             await this.broadcasterManager.BroadcastTransactionAsync(@event.Transfer.PartialTransaction).ConfigureAwait(false);
 
@@ -98,7 +94,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public void Start()
         {
-            this.onCrossChainTransactionFullySignedSubscription = this.signals.Subscribe<CrossChainTransferTransactionFullySigned>(async (tx) => await this.OnCrossChainTransactionFullySigned(tx).ConfigureAwait(false));
+            this.onCrossChainTransactionFullySignedSubscription = this.signals.Subscribe<CrossChainTransferTransactionFullySigned>(async (tx) => await this.OnCrossChainTransactionFullySignedAsync(tx).ConfigureAwait(false));
         }
 
         public void Dispose()
