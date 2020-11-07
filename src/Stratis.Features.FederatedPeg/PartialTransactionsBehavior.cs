@@ -76,11 +76,8 @@ namespace Stratis.Features.FederatedPeg
         /// <param name="payload">The payload to broadcast.</param>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
-            if (this.AttachedPeer.IsConnected)
-            {
-                this.logger.LogDebug($"Broadcasting to {this.AttachedPeer.PeerEndPoint.Address}");
-                await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
-            }
+            this.logger.LogDebug($"Broadcasting to {this.AttachedPeer.PeerEndPoint.Address}");
+            await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
         }
 
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
