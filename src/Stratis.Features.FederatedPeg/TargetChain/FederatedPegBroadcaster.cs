@@ -31,11 +31,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             IEnumerable<INetworkPeer> connectedPeers = this.connectionManager.ConnectedPeers.Where(peer => (peer?.IsConnected ?? false) && this.federatedPegSettings.FederationNodeIpAddresses.Contains(peer.PeerEndPoint.Address));
 
-            Parallel.ForEach<INetworkPeer>(connectedPeers, async (INetworkPeer peer) =>
+            Parallel.ForEach(connectedPeers, async (INetworkPeer peer) =>
             {
                 try
                 {
-                    this.logger.LogInformation($"Sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}");
                     await peer.SendMessageAsync(payload).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -43,7 +42,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
                 catch (Exception ex)
                 {
-                    this.logger.LogInformation($"Error sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}:{ex.ToString()}");
+                    this.logger.LogError($"Error sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}:{ex.ToString()}");
                 }
             });
         }
