@@ -146,7 +146,7 @@ namespace Stratis.Features.FederatedPeg
             }
             else
             {
-                this.logger.LogInformation($"Old and signed hash matches.");
+                this.logger.LogDebug($"The old and signed hash matches '{oldHash}'.");
             }
         }
 
