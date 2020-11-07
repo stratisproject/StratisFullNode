@@ -641,8 +641,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
 
                         var builder = new TransactionBuilder(this.network);
-                        transfer.CombineSignatures(builder, partialTransactions);
                         Transaction oldTransaction = transfer.PartialTransaction;
+
+                        transfer.CombineSignatures(builder, partialTransactions);
 
                         if (transfer.PartialTransaction.GetHash() == oldTransaction.GetHash())
                         {
