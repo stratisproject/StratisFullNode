@@ -92,7 +92,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             foreach (ICrossChainTransfer transfer in transfers)
             {
                 await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId).AddPartial(transfer.PartialTransaction));
-                this.logger.LogInformation("Partial template requested for deposit ID {0}", transfer.DepositTransactionId);
+                this.logger.LogDebug("Partial template requested for deposit ID {0}", transfer.DepositTransactionId);
             }
 
             // If we don't have any broadcastable transactions, check if we have any consolidating transactions to sign.
@@ -107,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (toSign != null)
                     {
                         await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(RequestPartialTransactionPayload.ConsolidationDepositId).AddPartial(toSign.PartialTransaction));
-                        this.logger.LogInformation("Partial consolidating transaction requested for {0}.", toSign.PartialTransaction.GetHash());
+                        this.logger.LogDebug("Partial consolidating transaction requested for {0}.", toSign.PartialTransaction.GetHash());
                     }
                 }
             }
