@@ -93,7 +93,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                             if (this.ConsolidationTransactions != null)
                                 return;
 
-                            this.logger.LogDebug("Building consolidation transactions for federation wallet inputs.");
+                            this.logger.LogInformation("Building consolidation transactions for federation wallet inputs.");
 
                             this.ConsolidationTransactions = this.CreateRequiredConsolidationTransactions(trigger.Amount);
 
@@ -103,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                                 return;
                             }
 
-                            this.logger.LogDebug("Successfully built {0} consolidating transactions.", this.ConsolidationTransactions.Count);
+                            this.logger.LogInformation("Successfully built {0} consolidating transactions.", this.ConsolidationTransactions.Count);
                         }
                     });
 

@@ -117,7 +117,7 @@ namespace Stratis.Features.FederatedPeg
 
             if (transfer[0].Status != CrossChainTransferStatus.Partial)
             {
-                this.logger.LogInformation("{0}: Deposit {1} is {2}.", nameof(this.OnMessageReceivedAsync), payload.DepositId, transfer[0].Status);
+                this.logger.LogDebug("{0}: Deposit {1} is {2}.", nameof(this.OnMessageReceivedAsync), payload.DepositId, transfer[0].Status);
                 return;
             }
 

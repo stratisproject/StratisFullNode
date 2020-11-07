@@ -443,7 +443,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             for (int i = 0; i < deposits.Count; i++)
                             {
-                                this.logger.LogInformation($"{i}={transfers[i]} | {transfers[i]?.Status} || {transfers[i]?.BlockHeight} | {transfers[i]?.DepositTransactionId}");
+                                this.logger.LogDebug($"{i}={transfers[i]} | {transfers[i]?.Status} || {transfers[i]?.BlockHeight} | {transfers[i]?.DepositTransactionId}");
 
                                 if (transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended)
                                     continue;
@@ -608,13 +608,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                         if (transfer == null)
                         {
-                            this.logger.LogInformation("(-)[MERGE_NOT_FOUND]:null");
+                            this.logger.LogDebug("(-)[MERGE_NOT_FOUND]:null");
                             return null;
                         }
 
                         if (transfer.Status != CrossChainTransferStatus.Partial)
                         {
-                            this.logger.LogInformation($"(-)[MERGE_BAD_STATUS]:{nameof(transfer.Status)}={transfer.Status}");
+                            this.logger.LogDebug($"(-)[MERGE_BAD_STATUS]:{nameof(transfer.Status)}={transfer.Status}");
                             return transfer.PartialTransaction;
                         }
 
@@ -921,7 +921,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // Check if the federation wallet's tip is on chain, if not exit.
                 if (this.chainIndexer.GetHeader(federationWalletTip.Hash) == null)
                 {
-                    this.logger.LogInformation("Synchronization failed as the federation wallet tip is not on chain; {0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
+                    this.logger.LogDebug("Synchronization failed as the federation wallet tip is not on chain; {0}='{1}', {2}='{3}'", nameof(this.chainIndexer.Tip), this.chainIndexer.Tip, nameof(federationWalletTip), federationWalletTip);
                     this.logger.LogTrace("(-)[FED_WALLET_TIP_NOT_ONCHAIN]:false");
                     return false;
                 }
@@ -1263,7 +1263,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     // Transaction is no longer seen and the FederationWalletManager is going to remove the transaction anyhow
                     // So don't prolong - just set to Suspended now.
-                    this.logger.LogInformation("Setting DepositId {0} to Suspended", transfer.DepositTransactionId);
+                    this.logger.LogDebug("Setting DepositId {0} to Suspended", transfer.DepositTransactionId);
                     tracker.SetTransferStatus(transfer, CrossChainTransferStatus.Suspended);
 
                     // Write the transfer status to the database.
