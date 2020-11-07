@@ -107,7 +107,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                         IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
 
-                        this.Logger.LogInformation($"Block is signed by '{0}' but expected '{1}' from: {2}.", pubKeyForSig.ToHex(), pubKey, string.Join(" ", modifiedFederation.Select(pk => pk.ToHex())));
+                        this.Logger.LogInformation($"Block is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
 
                         break;
                     };
