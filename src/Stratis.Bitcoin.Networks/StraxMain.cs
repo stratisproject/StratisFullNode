@@ -57,15 +57,14 @@ namespace Stratis.Bitcoin.Networks
 
             var consensusFactory = new PosConsensusFactory();
 
-            // Create the genesis block.
-            this.GenesisTime = 1598918400; // 1 September 2020
-            this.GenesisNonce = 1236386;
+             // Create the genesis block.
+            this.GenesisTime = 1604748859; // ~7 November 2020 - https://www.unixtimestamp.com/
+            this.GenesisNonce = 1309889; // Set to 1 until correct value found
             this.GenesisBits = 0x1e0fffff; // The difficulty target
-            this.GenesisVersion = 1;
+            this.GenesisVersion = 536870912; // 'Empty' BIP9 deployments as they are all activated from genesis already
             this.GenesisReward = Money.Zero;
 
-            // TODO: Update the genesis text to a dated newspaper article closer to launch
-            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "straxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "thinkagainthinkmccain");
 
             this.Genesis = genesisBlock;
 
@@ -122,7 +121,7 @@ namespace Stratis.Bitcoin.Networks
                 powLimit: new Target(new uint256("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")),
                 minimumChainWork: null,
                 isProofOfStake: true,
-                lastPowBlock: 12500,
+                lastPowBlock: 675,
                 proofOfStakeLimit: new BigInteger(uint256.Parse("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeLimitV2: new BigInteger(uint256.Parse("000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeReward: Money.Coins(18)
@@ -167,8 +166,8 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000921702bd55eb8c4318a8dbcfca29b9d340b1856c6af0b8962a3a0e12fff"));
-            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xb21368a732cb9ae9b34a45eea13ce1b7cdb3c4b02991d3f715022d67d2b51c8d"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x092d8e64fcfd84ba32fe95f1b9176f147d509e4c320339f43e6c95b3f906d2a5"));
+            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0x412ca9b16838ee4dd325101da3eed0d8fd6dfd5dde90f46b993d4e45e442d25b"));
 
             StraxNetwork.RegisterRules(this.Consensus);
             StraxNetwork.RegisterMempoolRules(this.Consensus);
