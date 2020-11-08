@@ -154,7 +154,7 @@ namespace Stratis.Sidechains.Networks
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
                 minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
                 maxReorgLength: 240, // Heuristic. Roughly 2 * mining members
-                defaultAssumeValid: null,
+                defaultAssumeValid: new uint256("0x57a3119de52cf43b66d6e805a644c20fdee63557038cd68c429d47b21d111084"), // 1800000
                 maxMoney: Money.Coins(20_000_000),
                 coinbaseMaturity: 1,
                 premineHeight: 2,
