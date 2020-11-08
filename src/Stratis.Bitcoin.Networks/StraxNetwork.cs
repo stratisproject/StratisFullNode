@@ -120,12 +120,12 @@ namespace Stratis.Bitcoin.Networks
             3. Iterate over the nonce until the proof-of-work is valid
             */
 
-            while (!genesis.CheckProofOfWork())
-            {
-               genesis.Header.Nonce++;
-                if (genesis.Header.Nonce == 0)
-                    genesis.Header.Time++;
-            }
+            //while (!genesis.CheckProofOfWork())
+            //{
+            //   genesis.Header.Nonce++;
+            //   if (genesis.Header.Nonce == 0)
+            //        genesis.Header.Time++;
+            //}
 
             /*
             4. This will mean the block header hash is under the target
