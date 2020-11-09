@@ -70,7 +70,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
                     if (mightBeInsufficient)
                     {
-                        this.Logger.LogDebug($"Set InsufficientHeaderInformation=true.");
                         // Mark header as insufficient to avoid banning the peer that presented it.
                         // When we advance consensus we will be able to validate it.
                         context.ValidationContext.InsufficientHeaderInformation = true;
