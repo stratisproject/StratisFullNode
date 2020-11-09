@@ -24,6 +24,8 @@ namespace SwapExtractionTool
         private const string distributedSwapTransactionsFile = "DistributedSwaps.csv";
         private const string walletName = "swapfunds";
         private const string walletPassword = "password";
+        private const decimal splitThreshold = 10_000m * 100_000_000m; // In stratoshi
+        private const decimal splitCount = 10;
 
         private List<DistributedSwapTransaction> distributedSwapTransactions;
         private List<SwapTransaction> swapTransactions;
@@ -160,6 +162,27 @@ namespace SwapExtractionTool
             }
         }
 
+        private List<RecipientModel> GetRecipients(string destinationAddress, decimal amount)
+        {
+            if (amount < splitThreshold)
+            {
+                return new List<RecipientModel> { new RecipientModel { DestinationAddress = destinationAddress, Amount = Money.Satoshis(amount).ToUnit(MoneyUnit.BTC).ToString() } };
+            }
+
+            var recipientList = new List<RecipientModel>();
+
+            for (int i = 0; i < splitCount; i++)
+            {
+                recipientList.Add(new RecipientModel()
+                {
+                    DestinationAddress = destinationAddress,
+                    Amount = Money.Satoshis(amount / splitCount).ToUnit(MoneyUnit.BTC).ToString()
+                });
+            }
+
+            return recipientList;
+        }
+
         private async Task BuildAndSendDistributionTransactionsAsync()
         {
             foreach (SwapTransaction swapTransaction in this.swapTransactions)
@@ -182,7 +205,7 @@ namespace SwapExtractionTool
                             AccountName = "account 0",
                             FeeType = "medium",
                             Password = walletPassword,
-                            Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = distributedSwapTransaction.StraxAddress, Amount = Money.Satoshis(distributedSwapTransaction.SenderAmount).ToUnit(MoneyUnit.BTC).ToString() } }
+                            Recipients = this.GetRecipients(distributedSwapTransaction.StraxAddress, distributedSwapTransaction.SenderAmount)
                         })
                         .ReceiveBytes();
 
