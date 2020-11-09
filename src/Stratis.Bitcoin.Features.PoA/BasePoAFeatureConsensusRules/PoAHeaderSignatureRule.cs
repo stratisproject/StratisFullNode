@@ -107,11 +107,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                         IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
 
-                        //// If the signer is in the modified federation then pass the rule.
-                        //if (modifiedFederation.Select(a => a.ToHex()).Contains(pubKeyForSig.ToHex()))
-                        //    return;
-
-                        this.Logger.LogDebug($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
+                        this.Logger.LogInformation($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
 
                         break;
                     };
