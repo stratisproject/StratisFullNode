@@ -68,10 +68,10 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
                     // that we have not yet processed all the votes that may determine the federation make-up.
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-                    this.Logger.LogInformation($"{nameof(currentHeader.Height)}:{currentHeader.Height} - {nameof(this.chainState.ConsensusTip.Height)}:{this.chainState.ConsensusTip.Height} - maxreorg:{this.maxReorg}.");
+                    this.Logger.LogDebug($"{nameof(currentHeader.Height)}:{currentHeader.Height} - {nameof(this.chainState.ConsensusTip.Height)}:{this.chainState.ConsensusTip.Height} - maxreorg:{this.maxReorg}.");
                     if (mightBeInsufficient)
                     {
-                        this.Logger.LogInformation($"Set InsufficientHeaderInformation=true.");
+                        this.Logger.LogDebug($"Set InsufficientHeaderInformation=true.");
                         // Mark header as insufficient to avoid banning the peer that presented it.
                         // When we advance consensus we will be able to validate it.
                         context.ValidationContext.InsufficientHeaderInformation = true;
@@ -96,16 +96,20 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                         PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, header.GetHash(), true);
                         if (pubKeyForSig == null)
                         {
-                            this.Logger.LogInformation($"Could not match candidate keys to any known key.");
+                            this.Logger.LogDebug($"Could not match candidate keys to any known key.");
                             break;
                         }
 
-                        this.Logger.LogInformation($"Attempting to match candidate key '{ pubKeyForSig.ToHex() }' to known keys.");
+                        this.Logger.LogDebug($"Attempting to match candidate key '{ pubKeyForSig.ToHex() }' to known keys.");
 
                         if (!knownKeys.Any(pk => pk == pubKeyForSig))
                             continue;
 
                         IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
+
+                        //// If the signer is in the modified federation then pass the rule.
+                        //if (modifiedFederation.Select(a => a.ToHex()).Contains(pubKeyForSig.ToHex()))
+                        //    return;
 
                         this.Logger.LogInformation($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Block?.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
 
@@ -114,7 +118,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 }
                 catch (Exception) { }
 
-                this.Logger.LogInformation("(-)[INVALID_SIGNATURE]");
+                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
         }
