@@ -15,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
     /// Estimates which public key should be used for timestamp of a header being
     /// validated and uses this public key to verify header's signature.
     /// </summary>
-    public class PoAHeaderSignatureRule : PartialValidationConsensusRule
+    public class PoAHeaderSignatureRule : FullValidationConsensusRule
     {
         private PoABlockHeaderValidator validator;
 
