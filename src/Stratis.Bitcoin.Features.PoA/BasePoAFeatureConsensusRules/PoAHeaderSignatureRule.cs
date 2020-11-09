@@ -68,7 +68,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
                     // that we have not yet processed all the votes that may determine the federation make-up.
                     bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-                    this.Logger.LogDebug($"{nameof(currentHeader.Height)}:{currentHeader.Height} - {nameof(this.chainState.ConsensusTip.Height)}:{this.chainState.ConsensusTip.Height} - maxreorg:{this.maxReorg}.");
                     if (mightBeInsufficient)
                     {
                         this.Logger.LogDebug($"Set InsufficientHeaderInformation=true.");
@@ -107,7 +106,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                         IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
 
-                        this.Logger.LogInformation($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
+                        this.Logger.LogDebug($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
 
                         break;
                     };
