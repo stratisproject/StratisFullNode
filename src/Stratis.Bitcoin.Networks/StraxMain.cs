@@ -145,6 +145,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.Checkpoints = new Dictionary<int, CheckpointInfo>
             {
+                { 0, new CheckpointInfo(new uint256("0xbaf2cff34756724b211c6adbe77eb22b3c7896a2773b89a97dd5fc2ddf28d6c2"), new uint256("0x0310b3b49c9bae62e187342d8776136d8335f77442439c86f4dfe3441088ed51")) } //PreMine
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];
