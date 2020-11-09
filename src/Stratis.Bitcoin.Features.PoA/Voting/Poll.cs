@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public int PollStartBlockDataHeight { get; private set; }
 
         public uint256 PollExecutedBlockDataHash { get; private set; }
-        public int PollExecutedBlockDataHeight { get; private set; }
+        public int? PollExecutedBlockDataHeight { get; private set; }
 
         public List<string> PubKeysHexVotedInFavor { get; private set; }
 
