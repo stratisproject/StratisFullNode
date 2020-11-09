@@ -154,8 +154,7 @@ namespace Stratis.SmartContracts.Networks
             consensus.ConsensusRules
                 .Register<HeaderTimeChecksPoARule>()
                 .Register<StratisHeaderVersionRule>()
-                .Register<PoAHeaderDifficultyRule>()
-                .Register<PoAHeaderSignatureRule>();
+                .Register<PoAHeaderDifficultyRule>();
             // ------------------------------------------------------
 
             // IIntegrityValidationConsensusRule
@@ -174,6 +173,7 @@ namespace Stratis.SmartContracts.Networks
                 .Register<BlockSizeRule>()
 
                 // Rules that are inside the method CheckBlock
+                .Register<PoAHeaderSignatureRule>()
                 .Register<EnsureCoinbaseRule>()
                 .Register<CheckPowTransactionRule>()
                 .Register<CheckSigOpsRule>()
