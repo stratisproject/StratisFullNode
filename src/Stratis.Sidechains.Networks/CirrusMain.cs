@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
