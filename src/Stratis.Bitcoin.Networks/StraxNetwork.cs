@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Networks
             //{
             //   genesis.Header.Nonce++;
             //   if (genesis.Header.Nonce == 0)
-            //        genesis.Header.Time++;
+            //       genesis.Header.Time++;
             //}
 
             /*
