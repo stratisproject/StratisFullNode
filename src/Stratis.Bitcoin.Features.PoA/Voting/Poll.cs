@@ -112,8 +112,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.PollVotedInFavorBlockDataHeight = poll.PollVotedInFavorBlockData.Height;
             this.PollStartBlockDataHash = poll.PollStartBlockData.Hash;
             this.PollStartBlockDataHeight = poll.PollStartBlockData.Height;
-            this.PollExecutedBlockDataHash = poll.PollExecutedBlockData.Hash;
-            this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData.Height;
+            this.PollExecutedBlockDataHash = poll.PollExecutedBlockData?.Hash;
+            this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData?.Height;
             this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor;
             this.VotingDataString = executor.ConvertToString(poll.VotingData);
         }
