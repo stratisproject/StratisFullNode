@@ -38,11 +38,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>List of fed member's public keys that voted in favor.</summary>
         public List<string> PubKeysHexVotedInFavor;
 
-        private List<PubKey> GetPubKeysVotedInFavor()
-        {
-            return this.PubKeysHexVotedInFavor?.Select(x => new PubKey(x)).ToList();
-        }
-
         /// <inheritdoc />
         public void ReadWrite(BitcoinStream stream)
         {
