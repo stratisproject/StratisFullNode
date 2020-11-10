@@ -122,9 +122,9 @@ namespace Stratis.Bitcoin.Networks
 
             //while (!genesis.CheckProofOfWork())
             //{
-            //    genesis.Header.Nonce++;
-            //    if (genesis.Header.Nonce == 0)
-            //        genesis.Header.Time++;
+            //   genesis.Header.Nonce++;
+            //   if (genesis.Header.Nonce == 0)
+            //       genesis.Header.Time++;
             //}
 
             /*
@@ -132,7 +132,8 @@ namespace Stratis.Bitcoin.Networks
             5. Retrieve the Nonce and Time values from the resulting block header and insert them into the network definition
             */
 
-            return genesis;
+            return genesis; 
+
         }
     }
 }
