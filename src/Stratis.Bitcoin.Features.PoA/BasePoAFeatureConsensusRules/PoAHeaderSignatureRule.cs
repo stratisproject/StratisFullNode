@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
@@ -14,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
     /// Estimates which public key should be used for timestamp of a header being
     /// validated and uses this public key to verify header's signature.
     /// </summary>
-    public class PoAHeaderSignatureRule : HeaderValidationConsensusRule
+    public class PoAHeaderSignatureRule : FullValidationConsensusRule
     {
         private PoABlockHeaderValidator validator;
 
@@ -53,7 +54,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.votingEnabled = ((PoAConsensusOptions)this.network.Consensus.Options).VotingEnabled;
         }
 
-        public override void Run(RuleContext context)
+        public override async Task RunAsync(RuleContext context)
         {
             var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
 
