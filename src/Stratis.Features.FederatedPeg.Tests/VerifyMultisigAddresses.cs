@@ -17,24 +17,24 @@ namespace Stratis.Features.FederatedPeg.Tests
             // in the FederationSetup tool in the legacy Stratis (SBFN) code-base!!!
             var networks = new Network[] { new StraxMain(), new StraxTest(), new StraxRegTest() };
             string[] expectedFederationIds = new[] {
-                "0272ef88df1ac2bc9b14b05ced742c2a9c2f76e48ccb92258136750d0ae2af3859",
+                "029376b01f49af1d09798c2e70198bf56c30e2dccd2f1e90442b1a7c7adc92d9b6",
                 "0221db203e65aab442bd726e6da6d12b174c722281eb9c8a0c33b58451e4285f31",
                 "0347f6ba6232037a68ce2b8ac988c07c071eee1e7edd0e6bb9b3dbda22772ad96a"
             };
             string[] expectedMultisigScripts = new[]
             {
-                "0272ef88df1ac2bc9b14b05ced742c2a9c2f76e48ccb92258136750d0ae2af3859 OP_FEDERATION OP_CHECKMULTISIG",
+                "029376b01f49af1d09798c2e70198bf56c30e2dccd2f1e90442b1a7c7adc92d9b6 OP_FEDERATION OP_CHECKMULTISIG",
                 "0221db203e65aab442bd726e6da6d12b174c722281eb9c8a0c33b58451e4285f31 OP_FEDERATION OP_CHECKMULTISIG",
                 "0347f6ba6232037a68ce2b8ac988c07c071eee1e7edd0e6bb9b3dbda22772ad96a OP_FEDERATION OP_CHECKMULTISIG"
             };
             string[] expectedPaymentScripts = new[]
             {
-                "OP_HASH160 36f8bb703df2de2b4ddc0448dd28aac5d24a0e6d OP_EQUAL",
+                "OP_HASH160 5497bbc5b53dec5d78a2843f28eee6c76adccc9c OP_EQUAL",
                 "OP_HASH160 692978125e0f2e6e246ecc32b59f17fab6bc0f1d OP_EQUAL",
                 "OP_HASH160 9244ef1a1a829e2e94a652e071cb22d600ed4c40 OP_EQUAL"
             };
             string[] expectedAddresses = new[] {
-                "yRL7Jn1Ytgc6g2k5Sidh6K4vf7cKTj6n45",
+                "yU2jNwiac7XF8rQvSk2bgibmwsNLkkhsHV",
                 "tGWegFbA6e6QKZP7Pe3g16kFVXMghbSfY8",
                 "tLG1HR71iEDKbKkvB8sH3Gy6HLF8o4Pnim"
             };
