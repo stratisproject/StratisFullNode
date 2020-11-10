@@ -38,11 +38,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>List of fed member's public keys that voted in favor.</summary>
         public List<string> PubKeysHexVotedInFavor;
 
-        private List<PubKey> GetPubKeysVotedInFavor()
-        {
-            return this.PubKeysHexVotedInFavor?.Select(x => new PubKey(x)).ToList();
-        }
-
         /// <inheritdoc />
         public void ReadWrite(BitcoinStream stream)
         {
@@ -95,11 +90,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public int Id { get; private set; }
 
-        public HashHeightPair PollVotedInFavorBlockData { get; private set; }
+        public uint256 PollVotedInFavorBlockDataHash { get; private set; }
+        public int? PollVotedInFavorBlockDataHeight { get; private set; }
 
-        public HashHeightPair PollStartBlockData { get; private set; }
+        public uint256 PollStartBlockDataHash { get; private set; }
+        public int? PollStartBlockDataHeight { get; private set; }
 
-        public HashHeightPair PollExecutedBlockData { get; private set; }
+        public uint256 PollExecutedBlockDataHash { get; private set; }
+        public int? PollExecutedBlockDataHeight { get; private set; }
 
         public List<string> PubKeysHexVotedInFavor { get; private set; }
 
@@ -110,9 +108,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.IsPending = poll.IsPending;
             this.IsExecuted = poll.IsExecuted;
             this.Id = poll.Id;
-            this.PollVotedInFavorBlockData = poll.PollVotedInFavorBlockData;
-            this.PollStartBlockData = poll.PollStartBlockData;
-            this.PollExecutedBlockData = poll.PollExecutedBlockData;
+            this.PollVotedInFavorBlockDataHash = poll.PollVotedInFavorBlockData?.Hash;
+            this.PollVotedInFavorBlockDataHeight = poll.PollVotedInFavorBlockData?.Height;
+            this.PollStartBlockDataHash = poll.PollStartBlockData?.Hash;
+            this.PollStartBlockDataHeight = poll.PollStartBlockData?.Height;
+            this.PollExecutedBlockDataHash = poll.PollExecutedBlockData?.Hash;
+            this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData?.Height;
             this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor;
             this.VotingDataString = executor.ConvertToString(poll.VotingData);
         }

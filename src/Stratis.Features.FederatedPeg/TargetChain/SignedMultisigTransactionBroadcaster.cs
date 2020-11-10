@@ -32,10 +32,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
     public class SignedMultisigTransactionBroadcaster : ISignedMultisigTransactionBroadcaster, IDisposable
     {
-        /// <summary>
-        /// How often to trigger the query for and broadcasting of new transactions.
-        /// </summary>
-        private static readonly TimeSpan TimeBetweenQueries = TimeSpans.TenSeconds;
         private readonly ILogger logger;
         private readonly MempoolManager mempoolManager;
         private readonly IBroadcasterManager broadcasterManager;
@@ -66,11 +62,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
-        private async Task OnCrossChainTransactionFullySigned(CrossChainTransferTransactionFullySigned @event)
+        private async Task OnCrossChainTransactionFullySignedAsync(CrossChainTransferTransactionFullySigned @event)
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
             {
-                this.logger.LogDebug("Federation wallet isn't active or in IBD. Not attempting to broadcast signed transactions.");
+                this.logger.LogInformation("Federation wallet isn't active or in IBD. Not attempting to broadcast signed transactions.");
                 return;
             }
 
@@ -98,7 +94,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public void Start()
         {
-            this.onCrossChainTransactionFullySignedSubscription = this.signals.Subscribe<CrossChainTransferTransactionFullySigned>(async (tx) => await this.OnCrossChainTransactionFullySigned(tx).ConfigureAwait(false));
+            this.onCrossChainTransactionFullySignedSubscription = this.signals.Subscribe<CrossChainTransferTransactionFullySigned>(async (tx) => await this.OnCrossChainTransactionFullySignedAsync(tx).ConfigureAwait(false));
         }
 
         public void Dispose()

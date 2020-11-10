@@ -1,3 +1,7 @@
+| CirrusMain Nightly | 
+| :---- | 
+| [![Build status](https://dev.azure.com/stratisproject/StratisFullNode/_apis/build/status/CirrusMain%20IBD)](https://dev.azure.com/stratisproject/StratisFullNode/_build/latest?definitionId=67)
+
 Stratis (STRAX) Full Node 
 ===============
 

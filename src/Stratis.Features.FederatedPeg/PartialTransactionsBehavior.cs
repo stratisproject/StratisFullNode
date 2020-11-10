@@ -60,14 +60,14 @@ namespace Stratis.Features.FederatedPeg
 
         protected override void AttachCore()
         {
-            if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
-                this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
+            this.logger.LogDebug($"Attaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
+            this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
         }
 
         protected override void DetachCore()
         {
-            if (this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
-                this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
+            this.logger.LogDebug($"Detaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
+            this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
         /// <summary>
@@ -76,8 +76,8 @@ namespace Stratis.Features.FederatedPeg
         /// <param name="payload">The payload to broadcast.</param>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
-            if (this.AttachedPeer.IsConnected && this.federatedPegSettings.FederationNodeIpAddresses.Contains(this.AttachedPeer.PeerEndPoint.Address))
-                await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
+            this.logger.LogDebug($"Broadcasting to {this.AttachedPeer.PeerEndPoint.Address}");
+            await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
         }
 
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
@@ -89,9 +89,11 @@ namespace Stratis.Features.FederatedPeg
             if (payload.DepositId == RequestPartialTransactionPayload.ConsolidationDepositId)
             {
                 this.logger.LogDebug("Received request to sign consolidation transaction.");
-                await this.HandleConsolidationTransactionRequest(peer, payload);
+                await this.HandleConsolidationTransactionRequestAsync(peer, payload);
                 return;
             }
+
+            this.logger.LogDebug($"{nameof(RequestPartialTransactionPayload)} received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}'.");
 
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
 
@@ -139,9 +141,13 @@ namespace Stratis.Features.FederatedPeg
                 // Respond back to the peer that requested a signature.
                 await this.BroadcastAsync(payload.AddPartial(signedTransaction));
             }
+            else
+            {
+                this.logger.LogDebug($"The old and signed hash matches '{oldHash}'.");
+            }
         }
 
-        private async Task HandleConsolidationTransactionRequest(INetworkPeer peer, RequestPartialTransactionPayload payload)
+        private async Task HandleConsolidationTransactionRequestAsync(INetworkPeer peer, RequestPartialTransactionPayload payload)
         {
             ConsolidationSignatureResult result = this.inputConsolidator.CombineSignatures(payload.PartialTransaction);
 
