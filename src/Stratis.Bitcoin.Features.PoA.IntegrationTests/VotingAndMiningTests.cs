@@ -18,7 +18,6 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.JsonErrors;
-using Stratis.Features.Collateral;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.PoA.IntegrationTests

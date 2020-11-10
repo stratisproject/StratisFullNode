@@ -15,9 +15,12 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
         public Key FederationKey3 { get; private set; }
 
-        public TestPoANetwork()
+        public TestPoANetwork(string networkName = "")
         {
             this.Name = "PoATest";
+
+            if (!string.IsNullOrEmpty(networkName))
+                this.Name = networkName;
 
             this.FederationKey1 = new Mnemonic("lava frown leave wedding virtual ghost sibling able mammal liar wide wisdom").DeriveExtKey().PrivateKey;
             this.FederationKey2 = new Mnemonic("idle power swim wash diesel blouse photo among eager reward govern menu").DeriveExtKey().PrivateKey;

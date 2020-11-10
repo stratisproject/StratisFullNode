@@ -39,10 +39,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>Protects access to <see cref="scheduledVotingData"/>, <see cref="polls"/>, <see cref="pollsRepository"/>.</summary>
         private readonly object locker;
 
-        /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
+        /// <summary>All access should be protected by <see cref="locker"/>.</remarks>
         private readonly PollsRepository pollsRepository;
 
-        private IdleFederationMembersKicker idleFederationMembersKicker;
+        private IIdleFederationMembersKicker idleFederationMembersKicker;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.isInitialized = false;
         }
 
-        public void Initialize(IdleFederationMembersKicker idleFederationMembersKicker = null)
+        public void Initialize(IIdleFederationMembersKicker idleFederationMembersKicker = null)
         {
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
@@ -274,7 +274,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (multisigMinersApplicabilityHeight != null && chainedHeader.Height < multisigMinersApplicabilityHeight)
                 {
                     // If we are accessing blocks prior to STRAX activation then the IsMultisigMember values for the members may be different. 
-                    foreach (CollateralFederationMember member in modifiedFederation)
+                    foreach (CollateralFederationMember member in modifiedFederation.Where(m => m is CollateralFederationMember))
                     {
                         bool wasMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
                             .Any(m => m.PubKey == member.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
@@ -396,7 +396,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             foreach (string pubKey in fedMembersHex)
                             {
-                                if (this.idleFederationMembersKicker.ShouldBeKicked(new PubKey(pubKey), chainedHeader.Header.Time, out _))
+                                if (this.idleFederationMembersKicker.ShouldMemberBeKicked(new PubKey(pubKey), chainedHeader.Header.Time, out _))
                                 {
                                     fedMembersHex.TryRemove(pubKey);
                                 }
