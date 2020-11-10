@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Networks
 
             var consensusFactory = new PosConsensusFactory();
 
-             // Create the genesis block.
+            // Create the genesis block.
             this.GenesisTime = 1604913812; // ~9 November 2020 - https://www.unixtimestamp.com/
             this.GenesisNonce = 747342; // Set to 1 until correct value found
             this.GenesisBits = 0x1e0fffff; // The difficulty target
