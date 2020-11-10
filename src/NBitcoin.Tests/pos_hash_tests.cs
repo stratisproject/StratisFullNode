@@ -133,7 +133,7 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void hash256()
         {
-            Assert.Equal(uint256.Parse("0x00000921702bd55eb8c4318a8dbcfca29b9d340b1856c6af0b8962a3a0e12fff"), this.stratisMain.GetGenesis().GetHash());
+            Assert.Equal(uint256.Parse("0xebe158d09325c470276619ebc5f7f87c98c0ed4b211c46a17a6457655811d082"), this.stratisMain.GetGenesis().GetHash());
         }
 
         [Fact]

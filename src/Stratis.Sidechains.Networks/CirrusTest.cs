@@ -26,7 +26,7 @@ namespace Stratis.Sidechains.Networks
         private const string NetworkRootFolderName = "cirrus";
 
         /// <summary> The default name used for the federated peg configuration file. </summary>
-        private const string NetworkDefaultConfigFilename = "fedpeg.conf";
+        private const string NetworkDefaultConfigFilename = "cirrus.conf";
 
         public CirrusTest()
         {

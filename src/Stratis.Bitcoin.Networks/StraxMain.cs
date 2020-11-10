@@ -39,33 +39,32 @@ namespace Stratis.Bitcoin.Networks
             this.Federations = new Federations();
             this.Federations.RegisterFederation(new Federation(new[]
             {
-                new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"),
-                new PubKey("021043aacac5c8805e3bc62eb40e8d3c04070c56b21032d4bb14200ed6e4facf93"),
-                new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
-                new PubKey("037b5f0a88a477d9fba812826a3bf43104ca078fc51b62c0eaad15d0f9a724a4b2"),
-                new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
-                new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
-                new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
-                new PubKey("0200c70e46cd94012caaae3fcc124e5f280f63a29cd2b3e15c15bac9d371da1e0d"),
-                new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
-                new PubKey("03d8b5580b7ec709c006ef497327db27ea323bd358ca45412171c644214483b74f"),
-                new PubKey("02ace4fbe6a622cdfc922a447c3253e8635f3fecb69241f73629e6f0596a567907"),
-                new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
-                new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
-                new PubKey("0336312e7dce4f9ff8449a5d7d140be26eea7849f8ba13bb07b57b154a74aa7600"),
-                new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92")}));
+                new PubKey("03797a2047f84ba7dcdd2816d4feba45ae70a59b3aa97f46f7877df61aa9f06a21"),
+                new PubKey("0209cfca2490dec022f097114090c919e85047de0790c1c97451e0f50c2199a957"),
+                new PubKey("032e4088451c5a7952fb6a862cdad27ea18b2e12bccb718f13c9fdcc1caf0535b4"),
+                new PubKey("035bf78614171397b080c5b375dbb7a5ed2a4e6fb43a69083267c880f66de5a4f9"),
+                new PubKey("02387a219b1de54d4dc73a710a2315d957fc37ab04052a6e225c89205b90a881cd"),
+                new PubKey("028078c0613033e5b4d4745300ede15d87ed339e379daadc6481d87abcb78732fa"),
+                new PubKey("02b3e16d2e4bbad6dba1e699934a52d58d9b60b6e7eed303e400e95f2dbc2ef3fd"),
+                new PubKey("02ba8b842997ce50c8e29c24a5452de5482f1584ae79778950b7bae24d4cc68dad"),
+                new PubKey("02cbd907b0bf4d757dee7ea4c28e63e46af19dc8df0c924ee5570d9457be2f4c73"),
+                new PubKey("02d371f3a0cffffcf5636e6d4b79d9f018a1a18fbf64c39542b382c622b19af9de"),
+                new PubKey("02f891910d28fc26f272da8d7f548fdc18c286704907673e839dc07e8df416c15e"),
+                new PubKey("0337e816a3433c71c4bbc095a54a0715a6da7a70526d2afb8dba3d8d78d33053bf"),
+                new PubKey("035569e42835e25c854daa7de77c20f1009119a5667494664a46b5154db7ee768a"),
+                new PubKey("03cda7ea577e8fbe5d45b851910ec4a795e5cc12d498cf80d39ba1d9a455942188"),
+                new PubKey("02680321118bce869933b07ea42cc04d2a2804134b06db582427d6b9688b3536a4")}));
 
             var consensusFactory = new PosConsensusFactory();
 
-            // Create the genesis block.
-            this.GenesisTime = 1598918400; // 1 September 2020
-            this.GenesisNonce = 1236386;
+             // Create the genesis block.
+            this.GenesisTime = 1604913812; // ~9 November 2020 - https://www.unixtimestamp.com/
+            this.GenesisNonce = 747342; // Set to 1 until correct value found
             this.GenesisBits = 0x1e0fffff; // The difficulty target
-            this.GenesisVersion = 1;
+            this.GenesisVersion = 536870912; // 'Empty' BIP9 deployments as they are all activated from genesis already
             this.GenesisReward = Money.Zero;
 
-            // TODO: Update the genesis text to a dated newspaper article closer to launch
-            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "straxgenesisblock");
+            Block genesisBlock = StraxNetwork.CreateGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, "stratisplatform.com/2020/09/25/introducing-strax/");
 
             this.Genesis = genesisBlock;
 
@@ -112,7 +111,7 @@ namespace Stratis.Bitcoin.Networks
                 maxMoney: long.MaxValue,
                 coinbaseMaturity: 50,
                 premineHeight: 2,
-                premineReward: Money.Coins(125000000),
+                premineReward: Money.Coins(124987850),
                 proofOfWorkReward: Money.Coins(18),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60),
                 targetSpacing: TimeSpan.FromSeconds(45),
@@ -122,7 +121,7 @@ namespace Stratis.Bitcoin.Networks
                 powLimit: new Target(new uint256("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")),
                 minimumChainWork: null,
                 isProofOfStake: true,
-                lastPowBlock: 12500,
+                lastPowBlock: 675,
                 proofOfStakeLimit: new BigInteger(uint256.Parse("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeLimitV2: new BigInteger(uint256.Parse("000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeReward: Money.Coins(18)
@@ -146,6 +145,10 @@ namespace Stratis.Bitcoin.Networks
 
             this.Checkpoints = new Dictionary<int, CheckpointInfo>
             {
+                { 0, new CheckpointInfo(new uint256("0xebe158d09325c470276619ebc5f7f87c98c0ed4b211c46a17a6457655811d082"), new uint256("0x0000000000000000000000000000000000000000000000000000000000000000")) },
+                { 70, new CheckpointInfo(new uint256("0x7ec7a9cd1ee45ff140bc4c0c1becc6809916b99fac3fae42e6e2c8e70d987259"), new uint256("0x6efbb2d43e885cbc90dc7dfe2b781fc6a4d8a64bd77201de593d25307a7401ce")) },
+                { 500, new CheckpointInfo(new uint256("0xf88ead17d09223d914e5bdca27f27ff861c4c1e5bfb4ab3bc4a4627d4ddd442a"), new uint256("0xf6ea71dcc38a4dbf6c66dd1d3e54568269d6f7cd411c15304de6fce5394a9702")) },
+                { 800, new CheckpointInfo(new uint256("0x3bb02167ae32be4915c1a78150d5fc7ed9924be00c57c6e9693d7603d94970dc"), new uint256("0x995ff9e10f2ef8cddae35a9c40237bdd48fd7bc9982955d9aac50ee32d69d097")) }
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];
@@ -155,7 +158,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.DNSSeeds = new List<DNSSeedData>
             {
-                new DNSSeedData("mainnet1.stratisnetwork.com", "mainnet1.stratisnetwork.com")
+                new DNSSeedData("straxmainnet1.stratisnetwork.com", "straxmainnet1.stratisnetwork.com")
             };
 
             this.SeedNodes = new List<NetworkAddress>
@@ -167,8 +170,8 @@ namespace Stratis.Bitcoin.Networks
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Update these when the final block is mined
-            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000921702bd55eb8c4318a8dbcfca29b9d340b1856c6af0b8962a3a0e12fff"));
-            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xb21368a732cb9ae9b34a45eea13ce1b7cdb3c4b02991d3f715022d67d2b51c8d"));
+            Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0xebe158d09325c470276619ebc5f7f87c98c0ed4b211c46a17a6457655811d082"));
+            Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0xdd91e99b7ca5eb97d9c41b867762d1f2db412ba4331efb61d138fce5d39b9084"));
 
             StraxNetwork.RegisterRules(this.Consensus);
             StraxNetwork.RegisterMempoolRules(this.Consensus);

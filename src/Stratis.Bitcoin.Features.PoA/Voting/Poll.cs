@@ -91,13 +91,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public int Id { get; private set; }
 
         public uint256 PollVotedInFavorBlockDataHash { get; private set; }
-        public int PollVotedInFavorBlockDataHeight { get; private set; }
+        public int? PollVotedInFavorBlockDataHeight { get; private set; }
 
         public uint256 PollStartBlockDataHash { get; private set; }
-        public int PollStartBlockDataHeight { get; private set; }
+        public int? PollStartBlockDataHeight { get; private set; }
 
         public uint256 PollExecutedBlockDataHash { get; private set; }
-        public int PollExecutedBlockDataHeight { get; private set; }
+        public int? PollExecutedBlockDataHeight { get; private set; }
 
         public List<string> PubKeysHexVotedInFavor { get; private set; }
 
@@ -108,12 +108,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.IsPending = poll.IsPending;
             this.IsExecuted = poll.IsExecuted;
             this.Id = poll.Id;
-            this.PollVotedInFavorBlockDataHash = poll.PollVotedInFavorBlockData.Hash;
-            this.PollVotedInFavorBlockDataHeight = poll.PollVotedInFavorBlockData.Height;
-            this.PollStartBlockDataHash = poll.PollStartBlockData.Hash;
-            this.PollStartBlockDataHeight = poll.PollStartBlockData.Height;
-            this.PollExecutedBlockDataHash = poll.PollExecutedBlockData.Hash;
-            this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData.Height;
+            this.PollVotedInFavorBlockDataHash = poll.PollVotedInFavorBlockData?.Hash;
+            this.PollVotedInFavorBlockDataHeight = poll.PollVotedInFavorBlockData?.Height;
+            this.PollStartBlockDataHash = poll.PollStartBlockData?.Hash;
+            this.PollStartBlockDataHeight = poll.PollStartBlockData?.Height;
+            this.PollExecutedBlockDataHash = poll.PollExecutedBlockData?.Hash;
+            this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData?.Height;
             this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor;
             this.VotingDataString = executor.ConvertToString(poll.VotingData);
         }
