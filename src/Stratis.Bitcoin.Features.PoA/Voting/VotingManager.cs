@@ -57,6 +57,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private bool isInitialized;
 
+        public HashHeightPair Tip { get; private set; }
+
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, ISlotsManager slotsManager, IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, IFinalizedBlockInfoRepository finalizedBlockInfo, Network network)
         {
@@ -332,6 +334,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 byte[] rawVotingData = this.votingDataEncoder.ExtractRawVotingData(chBlock.Block.Transactions[0]);
 
+                this.Tip = new HashHeightPair(chBlock.ChainedHeader);
+
                 if (rawVotingData == null)
                 {
                     this.logger.LogTrace("(-)[NO_VOTING_DATA]");
@@ -443,6 +447,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             byte[] rawVotingData = this.votingDataEncoder.ExtractRawVotingData(chBlock.Block.Transactions[0]);
+
+            this.Tip = new HashHeightPair(chBlock.ChainedHeader.Previous);
 
             if (rawVotingData == null)
             {

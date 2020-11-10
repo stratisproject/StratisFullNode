@@ -61,13 +61,13 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             if (!this.validator.VerifySignature(pubKey, header))
             {
-                if (this.votingEnabled)
+                if (this.votingEnabled && this.votingManager.Tip != null)
                 {
                     ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
 
                     // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
                     // that we have not yet processed all the votes that may determine the federation make-up.
-                    bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
+                    bool mightBeInsufficient = (currentHeader.Height - this.votingManager.Tip.Height) > this.maxReorg;
                     if (mightBeInsufficient)
                     {
                         // Mark header as insufficient to avoid banning the peer that presented it.
