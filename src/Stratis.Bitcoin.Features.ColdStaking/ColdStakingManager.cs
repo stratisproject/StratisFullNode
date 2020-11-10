@@ -317,7 +317,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Guard.NotEmpty(walletName, nameof(walletName));
             Guard.NotEmpty(walletAccount, nameof(walletAccount));
             Guard.NotNull(amount, nameof(amount));
-            Guard.NotNull(feeAmount, nameof(feeAmount));
 
             Wallet.Wallet wallet = this.GetWallet(walletName);
 
@@ -457,7 +456,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Guard.NotEmpty(receivingAddress, nameof(receivingAddress));
             Guard.NotEmpty(walletName, nameof(walletName));
             Guard.NotNull(amount, nameof(amount));
-            Guard.NotNull(feeAmount, nameof(feeAmount));
 
             Wallet.Wallet wallet = this.GetWallet(walletName);
 
