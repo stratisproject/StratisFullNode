@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Networks
 
             var consensusFactory = new PosConsensusFactory();
 
-             // Create the genesis block.
+            // Create the genesis block.
             this.GenesisTime = 1604913812; // ~9 November 2020 - https://www.unixtimestamp.com/
             this.GenesisNonce = 747342; // Set to 1 until correct value found
             this.GenesisBits = 0x1e0fffff; // The difficulty target
@@ -146,9 +146,13 @@ namespace Stratis.Bitcoin.Networks
             this.Checkpoints = new Dictionary<int, CheckpointInfo>
             {
                 { 0, new CheckpointInfo(new uint256("0xebe158d09325c470276619ebc5f7f87c98c0ed4b211c46a17a6457655811d082"), new uint256("0x0000000000000000000000000000000000000000000000000000000000000000")) },
+                { 2, new CheckpointInfo(new uint256("0xbaf2cff34756724b211c6adbe77eb22b3c7896a2773b89a97dd5fc2ddf28d6c2"), new uint256("0xe3ee3d02e12d8819a01f66ac67a7a41547cd5d19a5bc7392bf415308c6960aab")) }, // Premine
+                { 50, new CheckpointInfo(new uint256("0x1ad414cd58cb74fc8c41fcfb0f207aebd3d5fed82f59609746779c39168adedc"), new uint256("0x0aa31c4bac4bdea08a65a08b579f210d8df28a15005a65c3a8edfc6f6428038e")) },
                 { 70, new CheckpointInfo(new uint256("0x7ec7a9cd1ee45ff140bc4c0c1becc6809916b99fac3fae42e6e2c8e70d987259"), new uint256("0x6efbb2d43e885cbc90dc7dfe2b781fc6a4d8a64bd77201de593d25307a7401ce")) },
+                { 100, new CheckpointInfo(new uint256("0x00bc48e8eae5b053e0d48b42997d637e8b36816c311339eb7e36c6eaca6f4674"), new uint256("0x0ad1e1ea9c0b8c90ff67b286cee07f25c9f1552b3749461e66c3ed2f4cd18d54")) },
                 { 500, new CheckpointInfo(new uint256("0xf88ead17d09223d914e5bdca27f27ff861c4c1e5bfb4ab3bc4a4627d4ddd442a"), new uint256("0xf6ea71dcc38a4dbf6c66dd1d3e54568269d6f7cd411c15304de6fce5394a9702")) },
-                { 800, new CheckpointInfo(new uint256("0x3bb02167ae32be4915c1a78150d5fc7ed9924be00c57c6e9693d7603d94970dc"), new uint256("0x995ff9e10f2ef8cddae35a9c40237bdd48fd7bc9982955d9aac50ee32d69d097")) }
+                { 800, new CheckpointInfo(new uint256("0x3bb02167ae32be4915c1a78150d5fc7ed9924be00c57c6e9693d7603d94970dc"), new uint256("0x995ff9e10f2ef8cddae35a9c40237bdd48fd7bc9982955d9aac50ee32d69d097")) },
+                { 1500, new CheckpointInfo(new uint256("0x0d28f45849a2e535a7ef72690fc49fc9a5c101494c5d5753fdeb1ac121ffb120"), new uint256("0x4a8a47deb226784606625bc4fd545bfaf5aa314c4a20076185cb86e524a36173")) }
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];

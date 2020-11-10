@@ -32,11 +32,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
 
             this.chainState.ConsensusTip = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0);
 
-            Assert.Throws<ConsensusErrorException>(() => this.signatureRule.Run(ruleContext));
+            Assert.Throws<ConsensusErrorException>(() => this.signatureRule.RunAsync(ruleContext).GetAwaiter().GetResult());
 
             this.poaHeaderValidator.Sign(key, this.currentHeader.Header as PoABlockHeader);
 
-            this.signatureRule.Run(ruleContext);
+            this.signatureRule.RunAsync(ruleContext).GetAwaiter().GetResult();
         }
     }
 }
