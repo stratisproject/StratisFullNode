@@ -102,7 +102,13 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
 
             var minter = this.PremineNodeWithCoins.FullNode.NodeService<IPosMinting>();
-            minter.Stake(new WalletSecret() { WalletName = PremineWallet, WalletPassword = PremineWalletPassword });
+            minter.Stake(new List<WalletSecret>()
+            {
+                new WalletSecret()
+                {
+                    WalletName = this.PremineWallet, WalletPassword = this.PremineWalletPassword
+                }
+            });
         }
 
         public void PremineNodeWalletHasEarnedCoinsThroughStaking()

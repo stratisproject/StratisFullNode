@@ -31,8 +31,8 @@ namespace Stratis.Bitcoin.Features.Miner.Interfaces
         /// Staking is attempted only if the node is fully synchronized and connected to the network.
         /// </para>
         /// </summary>
-        /// <param name="walletSecret">Credentials to the wallet with which will be used for staking.</param>
-        Task GenerateBlocksAsync(WalletSecret walletSecret, CancellationToken cancellationToken);
+        /// <param name="walletSecrets">Credentials to the wallets which will be used for staking.</param>
+        Task GenerateBlocksAsync(List<WalletSecret> walletSecrets, CancellationToken cancellationToken);
 
         /// <summary>
         /// Calculates staking difficulty for a specific block.
@@ -78,8 +78,8 @@ namespace Stratis.Bitcoin.Features.Miner.Interfaces
         /// <summary>
         /// Starts the main POS staking loop.
         /// </summary>
-        /// <param name="walletSecret">Credentials to the wallet with which will be used for staking.</param>
-        void Stake(WalletSecret walletSecret);
+        /// <param name="walletSecrets">Credentials to the wallets which will be used for staking.</param>
+        void Stake(List<WalletSecret> walletSecrets);
 
         /// <summary>
         /// Stop the main POS staking loop.

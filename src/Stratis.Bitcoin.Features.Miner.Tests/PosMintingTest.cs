@@ -90,7 +90,13 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 .Returns(asyncLoop)
                 .Verifiable();
 
-            this.posMinting.Stake(new WalletSecret() { WalletName = "wallet1", WalletPassword = "myPassword" });
+            this.posMinting.Stake(new List<WalletSecret>() 
+            {
+                new WalletSecret()
+                {
+                    WalletName = "wallet1", WalletPassword = "myPassword"
+                }
+            });
 
             this.nodeLifetime.Verify();
             this.asyncProvider.Verify();
@@ -123,7 +129,13 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                     throw new InvalidOperationException("End the loop");
                 });
 
-            this.posMinting.Stake(new WalletSecret() { WalletName = "wallet1", WalletPassword = "myPassword" });
+            this.posMinting.Stake(new List<WalletSecret>()
+            {
+                new WalletSecret()
+                {
+                    WalletName = "wallet1", WalletPassword = "myPassword"
+                }
+            });
             asyncLoop.Run();
 
             GetStakingInfoModel model = this.posMinting.GetGetStakingInfoModel();
@@ -157,7 +169,13 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                     throw new InvalidOperationException("End the loop");
                 });
 
-            this.posMinting.Stake(new WalletSecret() { WalletName = "wallet1", WalletPassword = "myPassword" });
+            this.posMinting.Stake(new List<WalletSecret>()
+            {
+                new WalletSecret()
+                {
+                    WalletName = "wallet1", WalletPassword = "myPassword"
+                }
+            });
             asyncLoop.Run();
 
             GetStakingInfoModel model = this.posMinting.GetGetStakingInfoModel();
@@ -197,7 +215,13 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                     throw new InvalidOperationException("End the loop");
                 });
 
-            this.posMinting.Stake(new WalletSecret() { WalletName = "wallet1", WalletPassword = "myPassword" });
+            this.posMinting.Stake(new List<WalletSecret>()
+            {
+                new WalletSecret()
+                {
+                    WalletName = "wallet1", WalletPassword = "myPassword"
+                }
+            });
             stakingLoopFunction(stakingLoopToken);
             stakingLoopFunction(stakingLoopToken);
 

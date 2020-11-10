@@ -48,7 +48,13 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
 
                 // Start staking on the node.
                 var minter = minerA.FullNode.NodeService<IPosMinting>();
-                minter.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
+                minter.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
 
                 // If new transactions are appearing in the wallet, staking has been successful. Due to coin maturity settings the
                 // spendable balance of the wallet actually drops after staking, so the wallet balance should not be used to

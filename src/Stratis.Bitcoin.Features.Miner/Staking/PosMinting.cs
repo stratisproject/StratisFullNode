@@ -270,9 +270,9 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         }
 
         /// <inheritdoc/>
-        public void Stake(WalletSecret walletSecret)
+        public void Stake(List<WalletSecret> walletSecrets)
         {
-            Guard.NotNull(walletSecret, nameof(walletSecret));
+            Guard.NotNull(walletSecrets, nameof(walletSecrets));
 
             if (Interlocked.CompareExchange(ref this.currentState, (int)CurrentState.StakingRequested, (int)CurrentState.Idle) != (int)CurrentState.Idle)
             {
@@ -287,7 +287,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             {
                 try
                 {
-                    await this.GenerateBlocksAsync(walletSecret, token)
+                    await this.GenerateBlocksAsync(walletSecrets, token)
                         .ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -353,9 +353,9 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         }
 
         /// <inheritdoc/>
-        public async Task GenerateBlocksAsync(WalletSecret walletSecret, CancellationToken cancellationToken)
+        public async Task GenerateBlocksAsync(List<WalletSecret> walletSecrets, CancellationToken cancellationToken)
         {
-            Guard.NotNull(walletSecret, nameof(walletSecret));
+            Guard.NotNull(walletSecrets, nameof(walletSecrets));
 
             BlockTemplate blockTemplate = null;
 
@@ -408,7 +408,13 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                     return;
                 }
 
-                List<UtxoStakeDescription> utxoStakeDescriptions = this.GetUtxoStakeDescriptions(walletSecret, cancellationToken);
+                // Get UTXOs from all wallets that have been enabled for staking.
+                // Each UTXO has its corresponding wallet secret stored with it, so we do not have to retain additional mappings to the origin wallet.
+                var utxoStakeDescriptions = new List<UtxoStakeDescription>();
+                foreach (WalletSecret walletSecret in walletSecrets)
+                {
+                    utxoStakeDescriptions.AddRange(this.GetUtxoStakeDescriptions(walletSecret, cancellationToken));
+                }
 
                 blockTemplate = blockTemplate ?? this.blockProvider.BuildPosBlock(chainTip, new Script());
                 var posBlock = (PosBlock)blockTemplate.Block;
@@ -846,6 +852,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                             // Default behavior.
                             if ((scriptType == "P2PK") || (scriptType == "P2PKH"))
                             {
+                                // TODO: Perhaps exclusively use P2PKH going forwards
                                 scriptPubKeyOut = PayToPubkeyTemplate.Instance.GenerateScriptPubKey(context.CoinstakeContext.Key.PubKey);
                             }
                             else

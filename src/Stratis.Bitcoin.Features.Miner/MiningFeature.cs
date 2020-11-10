@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -109,10 +110,13 @@ namespace Stratis.Bitcoin.Features.Miner
             {
                 this.logger.LogInformation("Staking enabled on wallet '{0}'.", walletName);
 
-                this.posMinting.Stake(new WalletSecret
+                this.posMinting.Stake(new List<WalletSecret>()
                 {
-                    WalletPassword = walletPassword,
-                    WalletName = walletName
+                    new WalletSecret()
+                    {
+                        WalletPassword = walletPassword,
+                        WalletName = walletName
+                    }
                 });
             }
             else
