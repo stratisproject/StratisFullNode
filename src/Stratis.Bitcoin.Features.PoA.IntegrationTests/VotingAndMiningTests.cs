@@ -392,7 +392,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         [Fact]
         public async Task CanMineVotingRequestTransactionAsync()
         {
-            var network = new TestPoACollateralNetwork();
+            var network = new TestPoACollateralNetwork(true, Guid.NewGuid().ToString());
 
             using (PoANodeBuilder builder = PoANodeBuilder.CreatePoANodeBuilder(this))
             {

@@ -39,6 +39,9 @@ namespace Stratis.CirrusD
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
                 };
 
+                bool enableFedKicking = nodeSettings.ConfigReader.GetOrDefault("enablefedkicking", true);
+                ((PoAConsensusOptions)nodeSettings.Network.Consensus.Options).AutoKickIdleMembers = enableFedKicking;
+
                 IFullNode node = GetSideChainFullNode(nodeSettings);
 
                 if (node != null)

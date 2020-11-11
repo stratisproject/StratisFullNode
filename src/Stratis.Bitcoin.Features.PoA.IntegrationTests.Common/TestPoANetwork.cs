@@ -18,6 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
         public TestPoANetwork(string networkName = "")
         {
             this.Name = "PoATest";
+            if (!string.IsNullOrEmpty(name))
+                this.Name = name;
 
             if (!string.IsNullOrEmpty(networkName))
                 this.Name = networkName;
@@ -58,19 +60,22 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
     public class TestPoACollateralNetwork : TestPoANetwork
     {
-        public TestPoACollateralNetwork() : base()
+        public TestPoACollateralNetwork(bool enableIdleKicking = false, string name = "") : base()
         {
             // Upgrade genesis members to CollateralFederationMember.
             var options = (PoAConsensusOptions)this.Consensus.Options;
-            var members = options.GenesisFederationMembers
-                .Select(m => new CollateralFederationMember(m.PubKey, true, new Money(0), "")).ToList();
+            var members = options.GenesisFederationMembers.Select(m => new CollateralFederationMember(m.PubKey, true, new Money(0), "")).ToList();
             options.GenesisFederationMembers.Clear();
             foreach (IFederationMember member in members)
                 options.GenesisFederationMembers.Add(member);
-            this.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
+
+            this.ConsensusOptions.AutoKickIdleMembers = enableIdleKicking;
             this.Consensus.ConsensusRules.PartialValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+            this.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 
             this.Name = "PoaCollateralMain";
+            if (!string.IsNullOrEmpty(name))
+                this.Name = name;
         }
 
         protected override PoAConsensusFactory GetConsensusFactory()
