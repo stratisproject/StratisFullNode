@@ -95,9 +95,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 this.fedPubKeysByLastActiveTime = new Dictionary<PubKey, uint>();
 
-                // Initialize with current timestamp. If we were to initialise with 0, then everyone would be wrong instantly!
+                // if this is a clean sync initialize each member's last active time the genesis timestamp.
+                // Each member's last active time will be updated on each block connected event during syncing
+                // or on block mined.
                 foreach (IFederationMember federationMember in this.federationManager.GetFederationMembers())
-                    this.fedPubKeysByLastActiveTime.Add(federationMember.PubKey, (uint)this.timeProvider.GetAdjustedTimeAsUnixTimestamp());
+                    this.fedPubKeysByLastActiveTime.Add(federationMember.PubKey, this.network.GenesisTime);
 
                 this.SaveMembersByLastActiveTime();
             }
