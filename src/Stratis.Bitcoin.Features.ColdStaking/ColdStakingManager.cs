@@ -417,7 +417,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         {
             (TransactionBuildContext context, HdAccount coldAccount, Script destination) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, feeAmount);
 
-            // Build the transaction according to the settings recorded in the context.
+            // Build the withdrawal transaction according to the settings recorded in the context.
             Transaction transaction = walletTransactionHandler.BuildTransaction(context);
 
             // Map OutPoint to UnspentOutputReference.
