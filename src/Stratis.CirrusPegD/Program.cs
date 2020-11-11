@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
@@ -111,6 +112,9 @@ namespace Stratis.CirrusPegD
             {
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
+
+            bool enableFedKicking = nodeSettings.ConfigReader.GetOrDefault("enablefedkicking", true);
+            ((PoAConsensusOptions)nodeSettings.Network.Consensus.Options).AutoKickIdleMembers = enableFedKicking;
 
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)

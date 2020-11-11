@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Stratis.Bitcoin.Features.PoA.IntegrationTests.Common;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.IntegrationTests.Common;
@@ -10,14 +11,14 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
     public class EnableVoteKickingTests
     {
         [Fact]
-        public async Task EnableAutoKick()
+        public async Task EnableAutoKickAsync()
         {
             using (PoANodeBuilder builder = PoANodeBuilder.CreatePoANodeBuilder(this))
             {
                 const int idleTimeSeconds = 5 * 60;
 
                 // Have a network that mimics Cirrus where voting is on and kicking is off.
-                var votingNetwork = new TestPoANetwork();
+                var votingNetwork = new TestPoANetwork(Guid.NewGuid().ToString());
                 var oldOptions = (PoAConsensusOptions)votingNetwork.Consensus.Options;
                 votingNetwork.Consensus.Options = new PoAConsensusOptions(maxBlockBaseSize: oldOptions.MaxBlockBaseSize,
                     maxStandardVersion: oldOptions.MaxStandardVersion,
