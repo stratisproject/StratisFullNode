@@ -324,7 +324,8 @@ namespace NBitcoin.Tests
         {
             Network network = this.straxMain;
 
-            Assert.Empty(network.Checkpoints);
+            Assert.Equal(8, network.Checkpoints.Count);
+            Assert.Single(network.DNSSeeds);
             Assert.Empty(network.SeedNodes);
 
             Assert.Equal("StraxMain", network.Name);
@@ -373,14 +374,14 @@ namespace NBitcoin.Tests
             Assert.False(network.Consensus.PowAllowMinDifficultyBlocks);
             Assert.False(network.Consensus.PowNoRetargeting);
             Assert.Equal(2016, network.Consensus.MinerConfirmationWindow);
-            Assert.Equal(12500, network.Consensus.LastPOWBlock);
+            Assert.Equal(675, network.Consensus.LastPOWBlock);
             Assert.True(network.Consensus.IsProofOfStake);
             Assert.Equal(105105, network.Consensus.CoinType);
             Assert.Equal(new BigInteger(uint256.Parse("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)), network.Consensus.ProofOfStakeLimit);
             Assert.Equal(new BigInteger(uint256.Parse("000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)), network.Consensus.ProofOfStakeLimitV2);
             Assert.Null(network.Consensus.DefaultAssumeValid);
             Assert.Equal(50, network.Consensus.CoinbaseMaturity);
-            Assert.Equal(Money.Coins(125000000), network.Consensus.PremineReward);
+            Assert.Equal(Money.Coins(124987850), network.Consensus.PremineReward);
             Assert.Equal(2, network.Consensus.PremineHeight);
             Assert.Equal(Money.Coins(18), network.Consensus.ProofOfWorkReward);
             Assert.Equal(Money.Coins(18), network.Consensus.ProofOfStakeReward);
@@ -388,8 +389,8 @@ namespace NBitcoin.Tests
             Assert.Equal(long.MaxValue, network.Consensus.MaxMoney);
 
             Block genesis = network.GetGenesis();
-            Assert.Equal(uint256.Parse("0x00000921702bd55eb8c4318a8dbcfca29b9d340b1856c6af0b8962a3a0e12fff"), genesis.GetHash());
-            Assert.Equal(uint256.Parse("0xb21368a732cb9ae9b34a45eea13ce1b7cdb3c4b02991d3f715022d67d2b51c8d"), genesis.Header.HashMerkleRoot);
+            Assert.Equal(uint256.Parse("0xebe158d09325c470276619ebc5f7f87c98c0ed4b211c46a17a6457655811d082"), genesis.GetHash());
+            Assert.Equal(uint256.Parse("0xdd91e99b7ca5eb97d9c41b867762d1f2db412ba4331efb61d138fce5d39b9084"), genesis.Header.HashMerkleRoot);
         }
 
         [Fact]
