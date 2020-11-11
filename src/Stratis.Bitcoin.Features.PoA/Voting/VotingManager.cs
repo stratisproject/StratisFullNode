@@ -448,7 +448,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             byte[] rawVotingData = this.votingDataEncoder.ExtractRawVotingData(chBlock.Block.Transactions[0]);
 
-            this.Tip = new HashHeightPair(chBlock.ChainedHeader.Previous);
+            this.Tip = (chBlock.ChainedHeader.Previous == null) ? null : new HashHeightPair(chBlock.ChainedHeader.Previous);
 
             if (rawVotingData == null)
             {
