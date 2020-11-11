@@ -5,10 +5,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Collateral.ConsensusRules;
 using Stratis.Bitcoin.Features.Collateral.MempoolRules;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Features.SmartContracts;
-using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 
@@ -32,7 +29,10 @@ namespace Stratis.Features.Collateral
         {
             var options = (PoAConsensusOptions)this.network.Consensus.Options;
             if (options.VotingEnabled)
-                await this.joinFederationRequestMonitor.InitializeAsync();
+            {
+                if (options.AutoKickIdleMembers)
+                    await this.joinFederationRequestMonitor.InitializeAsync();
+            }
         }
 
         public override void Dispose()
