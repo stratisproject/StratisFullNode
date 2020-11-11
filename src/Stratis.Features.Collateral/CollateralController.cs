@@ -34,7 +34,7 @@ namespace Stratis.Features.Collateral
 
         public CollateralController(Network network,
             ILoggerFactory loggerFactory,
-            IFederationManager federationManager) 
+            IFederationManager federationManager)
         {
             this.network = network;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -64,6 +64,9 @@ namespace Stratis.Features.Collateral
                 this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
             }
+
+            if (!(this.network.Consensus.Options as PoAConsensusOptions).AutoKickIdleMembers)
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", "This feature is currently disabled.");
 
             try
             {
