@@ -18,9 +18,6 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
         public TestPoANetwork(string networkName = "")
         {
             this.Name = "PoATest";
-            if (!string.IsNullOrEmpty(name))
-                this.Name = name;
-
             if (!string.IsNullOrEmpty(networkName))
                 this.Name = networkName;
 
