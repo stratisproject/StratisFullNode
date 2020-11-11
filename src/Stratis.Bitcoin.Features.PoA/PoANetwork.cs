@@ -221,7 +221,6 @@ namespace Stratis.Bitcoin.Features.PoA
                 .Register<BlockSizeRule>()
 
                 // Rules that are inside the method CheckBlock
-                .Register<PoAHeaderSignatureRule>()
                 .Register<EnsureCoinbaseRule>()
                 .Register<CheckPowTransactionRule>()
                 .Register<CheckSigOpsRule>()
