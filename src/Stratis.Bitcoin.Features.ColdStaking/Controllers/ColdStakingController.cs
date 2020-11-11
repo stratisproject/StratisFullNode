@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetColdStakingInfo([FromQuery]GetColdStakingInfoRequest request)
+        public IActionResult GetColdStakingInfo([FromQuery] GetColdStakingInfoRequest request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult CreateColdStakingAccount([FromBody]CreateColdStakingAccountRequest request)
+        public IActionResult CreateColdStakingAccount([FromBody] CreateColdStakingAccountRequest request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -144,7 +144,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetColdStakingAddress([FromQuery]GetColdStakingAddressRequest request)
+        public IActionResult GetColdStakingAddress([FromQuery] GetColdStakingAddressRequest request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -194,7 +194,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult SetupColdStaking([FromBody]SetupColdStakingRequest request)
+        public IActionResult SetupColdStaking([FromBody] SetupColdStakingRequest request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -237,6 +237,47 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
             }
         }
 
+        [Route("estimate-cold-staking-setup-tx-fee")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult EstimateColdStakingSetupFee([FromBody] SetupColdStakingRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+
+                Money estimatedFee = this.ColdStakingManager.EstimateSetupTransactionFee(
+                    this.walletTransactionHandler,
+                    request.ColdWalletAddress,
+                    request.HotWalletAddress,
+                    request.WalletName,
+                    request.WalletAccount,
+                    request.WalletPassword,
+                    amount,
+                    request.SegwitChangeAddress);
+
+                this.logger.LogTrace("(-):'{0}'", estimatedFee);
+                return this.Json(estimatedFee);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         /// <summary>
         /// Spends funds from the cold staking wallet account back to a normal wallet addresses. It is expected that this
         /// spend will be detected by both the hot wallet and cold wallet and reduce the amount available for cold staking.
@@ -252,7 +293,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ColdStakingWithdrawal([FromBody]ColdStakingWithdrawalRequest request)
+        public IActionResult ColdStakingWithdrawal([FromBody] ColdStakingWithdrawalRequest request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -279,6 +320,41 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                 this.logger.LogTrace("(-):'{0}'", model);
 
                 return this.Json(model);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("estimate-cold-staking-withdrawal-tx-fee")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult EstimateColdStakingWithdrawalFee([FromBody] ColdStakingWithdrawalRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+
+                Money estimatedFee = this.ColdStakingManager.EstimateWithdrawalTransactionFee(this.walletTransactionHandler,
+                    request.ReceivingAddress, request.WalletName, amount);
+
+                this.logger.LogTrace("(-):'{0}'", estimatedFee);
+
+                return this.Json(estimatedFee);
             }
             catch (Exception e)
             {
