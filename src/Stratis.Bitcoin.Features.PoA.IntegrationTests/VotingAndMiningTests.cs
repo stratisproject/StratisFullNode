@@ -18,7 +18,6 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.JsonErrors;
-using Stratis.Features.Collateral;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
@@ -393,7 +392,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         [Fact]
         public async Task CanMineVotingRequestTransactionAsync()
         {
-            var network = new TestPoACollateralNetwork();
+            var network = new TestPoACollateralNetwork(true, Guid.NewGuid().ToString());
 
             using (PoANodeBuilder builder = PoANodeBuilder.CreatePoANodeBuilder(this))
             {
