@@ -106,7 +106,7 @@ namespace Stratis.Sidechains.Networks
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
-                maxStandardTxWeight: 100_000,
+                maxStandardTxWeight: 150_000,
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 genesisFederationMembers: genesisFederationMembers,
@@ -201,8 +201,7 @@ namespace Stratis.Sidechains.Networks
             consensus.ConsensusRules
                 .Register<HeaderTimeChecksPoARule>()
                 .Register<StratisHeaderVersionRule>()
-                .Register<PoAHeaderDifficultyRule>()
-                .Register<PoAHeaderSignatureRule>();
+                .Register<PoAHeaderDifficultyRule>();
             // ------------------------------------------------------
 
             // IIntegrityValidationConsensusRule
@@ -235,6 +234,7 @@ namespace Stratis.Sidechains.Networks
                 .Register<SetActivationDeploymentsFullValidationRule>()
 
                 // Rules that require the store to be loaded (coinview)
+                .Register<PoAHeaderSignatureRule>()
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>() // implements BIP30
 

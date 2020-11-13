@@ -8,6 +8,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Models;
+using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -50,6 +51,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <summary>Current network for the active controller instance.</summary>
         private readonly Network network;
 
+        private readonly IStakeChain stakeChain;
+
         public BlockStoreController(
             Network network,
             ILoggerFactory loggerFactory,
@@ -57,7 +60,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             IChainState chainState,
             ChainIndexer chainIndexer,
             IAddressIndexer addressIndexer,
-            IUtxoIndexer utxoIndexer)
+            IUtxoIndexer utxoIndexer,
+            IStakeChain stakeChain = null)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
@@ -71,6 +75,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             this.chainState = chainState;
             this.chainIndexer = chainIndexer;
             this.utxoIndexer = utxoIndexer;
+            this.stakeChain = stakeChain;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
@@ -142,10 +147,19 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                 if (this.network.Consensus.IsProofOfStake)
                 {
                     var posBlock = block as PosBlock;
-
+                    
                     blockModel.PosBlockSignature = posBlock.BlockSignature.ToHex(this.network);
                     blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockTarget()).ToUInt256().ToString();
                     blockModel.PosChainTrust = chainedHeader.ChainWork.ToString(); // this should be similar to ChainWork
+
+                    if (this.stakeChain != null)
+                    {
+                        BlockStake blockStake = this.stakeChain.Get(blockId);
+
+                        blockModel.PosModifierv2 = blockStake?.StakeModifierV2.ToString();
+                        blockModel.PosFlags = blockStake?.Flags == BlockFlag.BLOCK_PROOF_OF_STAKE ? "proof-of-stake" : "proof-of-work";
+                        blockModel.PosHashProof = blockStake?.HashProof.ToString();
+                    }
                 }
 
                 return this.Json(blockModel);

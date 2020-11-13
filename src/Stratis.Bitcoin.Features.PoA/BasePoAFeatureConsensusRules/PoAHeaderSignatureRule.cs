@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
@@ -14,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
     /// Estimates which public key should be used for timestamp of a header being
     /// validated and uses this public key to verify header's signature.
     /// </summary>
-    public class PoAHeaderSignatureRule : HeaderValidationConsensusRule
+    public class PoAHeaderSignatureRule : FullValidationConsensusRule
     {
         private PoABlockHeaderValidator validator;
 
@@ -50,10 +51,10 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.consensusFactory = (PoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
             this.maxReorg = this.network.Consensus.MaxReorgLength;
-            this.votingEnabled = ((PoAConsensusOptions) this.network.Consensus.Options).VotingEnabled;
+            this.votingEnabled = ((PoAConsensusOptions)this.network.Consensus.Options).VotingEnabled;
         }
 
-        public override void Run(RuleContext context)
+        public override async Task RunAsync(RuleContext context)
         {
             var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
 
@@ -76,7 +77,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     }
                 }
 
-                try 
+                try
                 {
                     // Gather all past and present mining public keys.
                     IEnumerable<PubKey> genesisFederation = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Select(m => m.PubKey);
@@ -105,14 +106,14 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                         IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
 
-                        this.Logger.LogDebug($"Block is signed by '{0}' but expected '{1}' from: {2}.", pubKeyForSig.ToHex(), pubKey, string.Join(" ", modifiedFederation.Select(pk => pk.ToHex())));
+                        this.Logger.LogDebug($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
 
                         break;
                     };
-                } 
+                }
                 catch (Exception) { }
 
-                this.Logger.LogTrace("(-)[INVALID_SIGNATURE]");
+                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
         }

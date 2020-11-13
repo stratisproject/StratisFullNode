@@ -154,8 +154,7 @@ namespace Stratis.SmartContracts.Networks
             consensus.ConsensusRules
                 .Register<HeaderTimeChecksPoARule>()
                 .Register<StratisHeaderVersionRule>()
-                .Register<PoAHeaderDifficultyRule>()
-                .Register<PoAHeaderSignatureRule>();
+                .Register<PoAHeaderDifficultyRule>();
             // ------------------------------------------------------
 
             // IIntegrityValidationConsensusRule
@@ -188,6 +187,7 @@ namespace Stratis.SmartContracts.Networks
                 .Register<SetActivationDeploymentsFullValidationRule>()
 
                 // Rules that require the store to be loaded (coinview)
+                .Register<PoAHeaderSignatureRule>()
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>() // implements BIP30
 

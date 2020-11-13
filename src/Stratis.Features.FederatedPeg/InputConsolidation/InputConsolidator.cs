@@ -134,7 +134,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
 
                 this.logger.LogDebug("Attempting to merge signatures for '{0}' and '{1}'.", inMemoryTransaction.PartialTransaction.GetHash(), incomingPartialTransaction.GetHash());
 
-                Transaction newTransaction = SigningUtils.CheckTemplateAndCombineSignatures(builder, inMemoryTransaction.PartialTransaction, new []{incomingPartialTransaction});
+                Transaction newTransaction = SigningUtils.CheckTemplateAndCombineSignatures(builder, inMemoryTransaction.PartialTransaction, new[] { incomingPartialTransaction });
 
                 if (oldTransaction.GetHash() == newTransaction.GetHash())
                 {
@@ -243,7 +243,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                     SelectedInputs = selectedInputs.Select(u => u.ToOutPoint()).ToList(),
                     AllowOtherInputs = false,
                     IsConsolidatingTransaction = true,
-                    Time = this.network.Consensus.IsProofOfStake 
+                    Time = this.network.Consensus.IsProofOfStake
                         ? (uint?)selectedInputs.Max(x => x.Transaction.CreationTime).ToUnixTimeSeconds()
                         : null
                 };
