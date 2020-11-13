@@ -14,6 +14,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public interface IIdleFederationMembersKicker : IDisposable
     {
+        Dictionary<PubKey, uint> GetFederationMembersByLastActiveTime();
         bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
         void Execute(ChainedHeader consensusTip);
         void Initialize();
@@ -95,7 +96,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 this.fedPubKeysByLastActiveTime = new Dictionary<PubKey, uint>();
 
-                // if this is a clean sync initialize each member's last active time the genesis timestamp.
+                // If this is a clean sync initialize each member's last active time with the genesis timestamp.
                 // Each member's last active time will be updated on each block connected event during syncing
                 // or on block mined.
                 foreach (IFederationMember federationMember in this.federationManager.GetFederationMembers())
@@ -103,6 +104,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 this.SaveMembersByLastActiveTime();
             }
+        }
+
+        /// <inheritdoc />
+        public Dictionary<PubKey, uint> GetFederationMembersByLastActiveTime()
+        {
+            return this.fedPubKeysByLastActiveTime;
         }
 
         /// <summary>
