@@ -39,10 +39,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <summary>Protects access to <see cref="scheduledVotingData"/>, <see cref="polls"/>, <see cref="pollsRepository"/>.</summary>
         private readonly object locker;
 
-        /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
+        /// <summary>All access should be protected by <see cref="locker"/>.</remarks>
         private readonly PollsRepository pollsRepository;
 
-        private IdleFederationMembersKicker idleFederationMembersKicker;
+        private IIdleFederationMembersKicker idleFederationMembersKicker;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.isInitialized = false;
         }
 
-        public void Initialize(IdleFederationMembersKicker idleFederationMembersKicker = null)
+        public void Initialize(IIdleFederationMembersKicker idleFederationMembersKicker = null)
         {
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
@@ -238,58 +238,61 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader)
         {
-            // Starting with the current federation...
-            List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
-
-            // For the given height, revert the federation to the expected poll execution state.
-            if (this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory)
+            lock (this.locker)
             {
-                foreach (Poll poll in this.GetFinishedPolls().Where(x =>
-                    ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                // Starting with the current federation...
+                List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
+
+                // For the given height, revert the federation to the expected poll execution state.
+                if (this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory)
                 {
-                    bool shouldBeExecuted = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) < chainedHeader.Height;
-                    IFederationMember federationMember = poaConsensusFactory.DeserializeFederationMember(poll.VotingData.Data);
-
-                    if (poll.IsExecuted && !shouldBeExecuted)
+                    foreach (Poll poll in this.GetFinishedPolls().Where(x =>
+                        ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
                     {
-                        // Reverse addition/removal.
-                        if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                            modifiedFederation.Remove(federationMember);
-                        else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                            modifiedFederation.Add(federationMember);
-                    }
+                        bool shouldBeExecuted = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) < chainedHeader.Height;
+                        IFederationMember federationMember = poaConsensusFactory.DeserializeFederationMember(poll.VotingData.Data);
 
-                    if (!poll.IsExecuted && shouldBeExecuted)
-                    {
-                        // Reverse addition/removal.
-                        if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                            modifiedFederation.Add(federationMember);
-                        else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                            modifiedFederation.Remove(federationMember);
-                    }
-                }
-
-                // Set the IsMultisigMember flags to match the expected values.
-                int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight();
-                if (multisigMinersApplicabilityHeight != null && chainedHeader.Height < multisigMinersApplicabilityHeight)
-                {
-                    // If we are accessing blocks prior to STRAX activation then the IsMultisigMember values for the members may be different. 
-                    foreach (CollateralFederationMember member in modifiedFederation)
-                    {
-                        bool wasMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
-                            .Any(m => m.PubKey == member.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
-
-                        if (member.IsMultisigMember != wasMultisigMember)
+                        if (poll.IsExecuted && !shouldBeExecuted)
                         {
-                            // Clone the member if we will be changing the flag.
-                            modifiedFederation[modifiedFederation.IndexOf(member)] = new CollateralFederationMember(member.PubKey,
-                                wasMultisigMember, member.CollateralAmount, member.CollateralMainchainAddress);
+                            // Reverse addition/removal.
+                            if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                                modifiedFederation.Remove(federationMember);
+                            else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                                modifiedFederation.Add(federationMember);
+                        }
+
+                        if (!poll.IsExecuted && shouldBeExecuted)
+                        {
+                            // Reverse addition/removal.
+                            if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                                modifiedFederation.Add(federationMember);
+                            else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                                modifiedFederation.Remove(federationMember);
+                        }
+                    }
+
+                    // Set the IsMultisigMember flags to match the expected values.
+                    int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight();
+                    if (multisigMinersApplicabilityHeight != null && chainedHeader.Height < multisigMinersApplicabilityHeight)
+                    {
+                        // If we are accessing blocks prior to STRAX activation then the IsMultisigMember values for the members may be different. 
+                        foreach (CollateralFederationMember member in modifiedFederation.Where(m => m is CollateralFederationMember))
+                        {
+                            bool wasMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
+                                .Any(m => m.PubKey == member.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
+
+                            if (member.IsMultisigMember != wasMultisigMember)
+                            {
+                                // Clone the member if we will be changing the flag.
+                                modifiedFederation[modifiedFederation.IndexOf(member)] = new CollateralFederationMember(member.PubKey,
+                                    wasMultisigMember, member.CollateralAmount, member.CollateralMainchainAddress);
+                            }
                         }
                     }
                 }
-            }
 
-            return modifiedFederation;
+                return modifiedFederation;
+            }
         }
 
         private IFederationMember GetMemberVotedOn(VotingData votingData)
@@ -396,7 +399,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             foreach (string pubKey in fedMembersHex)
                             {
-                                if (this.idleFederationMembersKicker.ShouldBeKicked(new PubKey(pubKey), chainedHeader.Header.Time, out _))
+                                if (this.idleFederationMembersKicker.ShouldMemberBeKicked(new PubKey(pubKey), chainedHeader.Header.Time, out _))
                                 {
                                     fedMembersHex.TryRemove(pubKey);
                                 }
