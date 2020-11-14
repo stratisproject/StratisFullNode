@@ -160,11 +160,11 @@ $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
 if ( $NodeType -eq "50K" ) 
 {
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
+    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -enablefedkicking=false" -PassThru
 }
     Else
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -enablefedkicking=false" -PassThru
     }
 
 #Wait for API
@@ -354,8 +354,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUN4vIZBKJO8jN3jgRZgFRBbSN
-# psugggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUbwRoyNJtRKpBtUbfzpyRua4+
+# ATCgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -425,11 +425,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFPQv4HR+QpBr
-# u62eVyExVL22rDNuMA0GCSqGSIb3DQEBAQUABIIBAAtdFjD2B/wGg+cBEpF+D0pD
-# 9Rbl96Xdk4Qad6IqWid/hFRt9yTKLhScMZoTIwr871SEBjqeFyW/eog+R8FnLVbJ
-# Dpaw6HKjWn5SZ5wv8wzLOBz9LI8qAodbjhNKtpsprxhM2ihHoz+2gId70IRYX6oG
-# 8DMdCKdjFdpBN3DMZ9waP9x1OHB2sc7hQnA4Vapr1ahw2EGu4IK+T4X/gZxxOyNZ
-# /iOep40N7O4gWYmOe2Ry3/3VYSsh7sXvvMmS1b2gjAMOlXwOIBdS1n6EIPTaoyXn
-# chaMWPTlo8ATaTmbOqdEBD7A1IYaxDCEAjb3QMqfFTA7W6ziLFaeKZrSCHgvVmk=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFO+fioPyoW1M
+# ApRqYxNLYSsL1a4bMA0GCSqGSIb3DQEBAQUABIIBAJW21i4o3a9OzWSo+ZLgWvBl
+# 7BxpkbPVR4AGxhMwq13/zcdi6vBCZ7W7qoLvAeON9fyARr5/RoHL4aCtBxFszaGn
+# WidelGNLDTMoBpbJ0pUFbvmmzPQ7VlBRE4qjjB68ceDC9lmZPVFGUeU3A/JBiqg2
+# cWyylAZx4cSzXca8DnZiG7x/jlTpBICeOIXvMjLXDC6CqbvtuSxDBoiOekLB5Rx1
+# +/2/PXTsZtqVStuzrSb9Qa/OLNA0t0SCk7+vHgAzFfJdz8RYXcSv4T060iAwJGyk
+# kTfMexOmdqq+q/TLo15h5KGa1d1Xk34FMhqfA+Tq7karEZ5yyRCdRrDb6Rd7gaU=
 # SIG # End signature block
