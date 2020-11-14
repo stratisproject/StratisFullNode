@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
-        private readonly IdleFederationMembersKicker idleFederationMembersKicker;
+        private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
         private readonly IChainState chainState;
 
@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Features.PoA
         public PoAFeature(IFederationManager federationManager, PayloadProvider payloadProvider, IConnectionManager connectionManager, ChainIndexer chainIndexer,
             IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory,
             IPoAMiner miner, VotingManager votingManager, Network network, IWhitelistedHashesRepository whitelistedHashesRepository,
-            IdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue)
+            IIdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue)
         {
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.PoA
                         services.AddSingleton<VotingManager>();
                         services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
                         services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
-                        services.AddSingleton<IdleFederationMembersKicker>();
+                        services.AddSingleton<IIdleFederationMembersKicker, IdleFederationMembersKicker>();
                     });
             });
 

@@ -35,9 +35,9 @@ namespace Stratis.Features.Collateral
         public CollateralPoAMiner(IConsensusManager consensusManager, IDateTimeProvider dateTimeProvider, Network network, INodeLifetime nodeLifetime, ILoggerFactory loggerFactory,
             IInitialBlockDownloadState ibdState, BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager,
             PoABlockHeaderValidator poaHeaderValidator, IFederationManager federationManager, IIntegrityValidator integrityValidator, IWalletManager walletManager,
-            INodeStats nodeStats, VotingManager votingManager, PoAMinerSettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings)
+            INodeStats nodeStats, VotingManager votingManager, PoAMinerSettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings, IIdleFederationMembersKicker idleFederationMembersKicker)
             : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager, connectionManager,
-            poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider)
+            poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker)
         {
             this.counterChainNetwork = counterChainSettings.CounterChainNetwork;
             this.collateralChecker = collateralChecker;

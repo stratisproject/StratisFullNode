@@ -5,6 +5,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -18,30 +19,39 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         protected readonly IFederationManager fedManager;
 
-        protected readonly VotingManager votingManager;
+        private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
+
+        protected readonly ILogger logger;
 
         protected readonly Network network;
 
         private readonly IPollResultExecutor pollExecutor;
 
+        protected readonly VotingManager votingManager;
+
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
-        protected readonly ILogger logger;
-
-        public DefaultVotingController(IFederationManager fedManager, ILoggerFactory loggerFactory, VotingManager votingManager,
-            IWhitelistedHashesRepository whitelistedHashesRepository, Network network, IPollResultExecutor pollExecutor)
+        public DefaultVotingController(
+            IFederationManager fedManager,
+            ILoggerFactory loggerFactory,
+            VotingManager votingManager,
+            IWhitelistedHashesRepository whitelistedHashesRepository,
+            Network network,
+            IPollResultExecutor pollExecutor,
+            IIdleFederationMembersKicker idleFederationMembersKicker)
         {
             this.fedManager = fedManager;
-            this.votingManager = votingManager;
-            this.whitelistedHashesRepository = whitelistedHashesRepository;
+            this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.network = network;
             this.pollExecutor = pollExecutor;
+            this.votingManager = votingManager;
+            this.whitelistedHashesRepository = whitelistedHashesRepository;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <summary>
-        /// Retrieves a list of active federation members.
+        /// Retrieves a list of active federation members and their last active times.
         /// </summary>
         /// <returns>Active federation members</returns>
         /// <response code="200">Returns the active members</response>
@@ -56,7 +66,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 List<IFederationMember> federationMembers = this.fedManager.GetFederationMembers();
 
-                return this.Json(federationMembers);
+                var federationMemberModels = new List<FederationMemberModel>();
+
+                // Get their last active times.
+                Dictionary<PubKey, uint> activeTimes = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime();
+                foreach (IFederationMember federationMember in federationMembers)
+                {
+                    federationMemberModels.Add(new FederationMemberModel()
+                    {
+                        PubKey = federationMember.PubKey,
+                        LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value),
+                        PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value)
+                    });
+                }
+
+                return Json(federationMemberModels);
             }
             catch (Exception e)
             {
