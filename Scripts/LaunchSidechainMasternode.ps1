@@ -416,13 +416,13 @@ if ( -not ( $WalletNames -contains "MiningWallet" ) )
             Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
 
             $ReadyToContinue? = Read-Host -Prompt "Have you written down your words?"
-            While ( $ReadyToContinue -ne "Yes" -and $DeleteDataDir -ne "No" )
+            While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
             {
                 ""
                 $ReadyToContinue? = Read-Host -Prompt "Have you written down your words?"
                 ""
             }
-            Switch ( $DeleteDataDir )
+            Switch ( $ReadyToContinue )
             {
                 Yes 
                 {
