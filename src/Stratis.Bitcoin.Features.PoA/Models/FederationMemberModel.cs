@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         [JsonProperty("lastActiveTime")]
         public DateTime LastActiveTime { get; set; }
 
-        [JsonProperty("lastActiveTimeSpan")]
-        public TimeSpan LastActiveTimeSpan { get; set; }
+        [JsonProperty("periodOfInactivity")]
+        public TimeSpan PeriodOfInActivity { get; set; }
     }
 }
