@@ -1,3 +1,177 @@
+#Create Functions
+function Get-TimeStamp 
+{
+    return "[{0:dd/MM/yy} {0:HH:mm:ss}]" -f (Get-Date)
+}
+
+function Get-IndexerStatus
+{
+    $Headers = @{}
+    $Headers.Add("Accept","application/json")
+    $AsyncLoopStats = Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/Dashboard/AsyncLoopsStats | Select-Object -ExpandProperty content 
+    if ( $AsyncLoopStats.Contains("Fault Reason: Missing outpoint data") )
+    {
+        Write-Host "ERROR: Indexing Database is corrupt" -ForegroundColor Red
+        Write-Host "Would you like to delete the database?"
+        $DeleteDB = Read-Host -Prompt "Enter 'Yes' to remove the Indexing Database or 'No' to exit the script"
+        While ( $DeleteDB -ne "Yes" -and $DeleteDB -ne "No" )
+        {
+            $DeleteDB = Read-Host -Prompt "Enter 'Yes' to remove the indexing database or 'No' to exit the script"
+        }
+        Switch ( $DeleteDB )
+        {
+            Yes 
+            {
+                Shutdown-MainchainNode
+                Remove-Item -Path $mainChainDataDir\addressindex.litedb -Force
+                if ( -not ( Get-Item -Path $mainChainDataDir\addressindex.litedb ) )
+                {
+                    Write-Host "SUCCESS: Indexing Database has been removed. Please re-run the script" -ForegroundColor Green
+                    Start-Sleep 10
+                    Exit
+                }
+                    Else
+                    {
+                        Write-Host "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+                    }
+            }
+                
+            No 
+            { 
+                Shutdown-MainchainNode
+                Write-Host "WARNING: Masternode cannot run until Indexing Database is recovered. This will require a re-index. Please remove the addressindex.litedb file and re-run the script" -ForegroundColor DarkYellow
+                Start-Sleep 10
+                Exit
+            }
+        }
+    }
+}
+
+function Shutdown-MainchainNode
+{
+    Write-Host "Shutting down Mainchain Node..." -ForegroundColor Yellow
+    $Headers = @{}
+    $Headers.Add("Accept","application/json")
+    Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $Headers -Body "true" -ErrorAction SilentlyContinue | Out-Null
+
+    While ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort -ErrorAction SilentlyContinue )
+    {
+        Write-Host "Waiting for node to stop..." -ForegroundColor Yellow
+        Start-Sleep 5
+    }
+
+    Write-Host "SUCCESS: Mainchain Node shutdown" -ForegroundColor Green
+    Write-Host ""
+}
+
+function Shutdown-SidechainNode
+{
+    Write-Host "Shutting down Sidechain Node..." -ForegroundColor Yellow
+    $Headers = @{}
+    $Headers.Add("Accept","application/json")
+    Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $Headers -Body "true" -ErrorAction SilentlyContinue | Out-Null
+
+    While ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort -ErrorAction SilentlyContinue )
+    {
+        Write-Host "Waiting for node to stop..." -ForegroundColor Yellow
+        Start-Sleep 5
+    }
+
+     Write-Host "SUCCESS: Sidechain Node shutdown" -ForegroundColor Green
+     Write-Host ""
+}
+
+function Get-MaxHeight 
+{
+    $Height = @{}
+    $Peers = Invoke-WebRequest -Uri http://localhost:$API/api/ConnectionManager/getpeerinfo | ConvertFrom-Json
+    foreach ( $Peer in $Peers )
+    {
+        if ( $Peer.subver -eq "StratisNode:0.13.0 (70000)" )
+        {
+        }
+            Else
+            {
+                $Height.Add($Peer.id,$Peer.startingheight)
+            }
+    }    
+    
+    $MaxHeight = $Height.Values | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
+    $MaxHeight
+}       
+
+function Get-LocalHeight 
+{
+    $StatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status
+    $Stats = ConvertFrom-Json $StatsRequest
+    $LocalHeight = $Stats.blockStoreHeight
+    $LocalHeight
+}
+
+function Get-LocalIndexerHeight 
+{
+    $IndexStatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/BlockStore/addressindexertip
+    $IndexStats = ConvertFrom-Json $IndexStatsRequest
+    $LocalIndexHeight = $IndexStats.tipHeight
+    $LocalIndexHeight
+}
+
+function Get-BlockStoreStatus
+{
+    $FeatureStatus = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status | ConvertFrom-Json | Select-Object -ExpandProperty featuresData
+    $BlockStoreStatus = $FeatureStatus | Where-Object { $_.namespace -eq "Stratis.Bitcoin.Features.BlockStore.BlockStoreFeature" }
+    $BlockStoreStatus.state
+}
+
+function Shutdown-Dashboard
+{
+    Write-Host "Shutting down Stratis Masternode Dashboard..." -ForegroundColor Yellow
+    Start-Job -ScriptBlock { Invoke-WebRequest -Uri http://localhost:37000/shutdown } | Out-Null
+        While ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue )
+        {
+            Write-Host "Waiting for Stratis Masternode Dashboard to shut down" -ForegroundColor Yellow
+            Start-Sleep 5
+        }
+}
+
+function Get-Median($numberSeries)
+{
+    $sortedNumbers = @($numberSeries | Sort-Object)
+    if ( $numberSeries.Count % 2 ) 
+	{
+	    # Odd, pick the middle
+        $sortedNumbers[(($sortedNumbers.Count - 1) / 2)]
+    } 
+		Else 
+		{
+			# Even, average the middle two
+			($sortedNumbers[($sortedNumbers.Count / 2)] + $sortedNumbers[($sortedNumbers.Count / 2) - 1]) / 2
+		}
+}
+
+function Check-TimeDifference
+{
+    Write-Host "Checking UTC Time Difference" -ForegroundColor Cyan
+    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
+    $timeDifSamples[0] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
+    $timeDifSamples[1] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
+    $timeDifSamples[2] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
+
+    $timeDif = Get-Median -numberSeries $timeDifSamples
+
+    if ( $timeDif -gt 2 )
+    {
+        Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
+        Start-Sleep 30
+        Exit
+    }
+        Else
+        {
+            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
+            Write-Host ""
+        }
+}
+
 #Create DataDir(s)
 if ( -not ( Get-Item -Path $mainChainDataDir -ErrorAction SilentlyContinue ) )
 {
