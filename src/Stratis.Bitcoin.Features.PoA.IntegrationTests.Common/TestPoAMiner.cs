@@ -41,8 +41,9 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             INodeStats nodeStats,
             VotingManager votingManager,
             PoAMinerSettings poAMinerSettings,
-            IAsyncProvider asyncProvider) : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
-                connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider)
+            IAsyncProvider asyncProvider,
+            IIdleFederationMembersKicker idleFederationMembersKicker) : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
+                connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker)
         {
             this.timeProvider = dateTimeProvider as EditableTimeProvider;
 

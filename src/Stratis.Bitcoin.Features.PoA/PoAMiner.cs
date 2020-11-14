@@ -67,6 +67,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IIntegrityValidator integrityValidator;
 
+        private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
+
         private readonly IWalletManager walletManager;
 
         private readonly VotingManager votingManager;
@@ -98,7 +100,8 @@ namespace Stratis.Bitcoin.Features.PoA
             INodeStats nodeStats,
             VotingManager votingManager,
             PoAMinerSettings poAMinerSettings,
-            IAsyncProvider asyncProvider)
+            IAsyncProvider asyncProvider,
+            IIdleFederationMembersKicker idleFederationMembersKicker)
         {
             this.consensusManager = consensusManager;
             this.dateTimeProvider = dateTimeProvider;
@@ -114,6 +117,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingManager = votingManager;
             this.settings = poAMinerSettings;
             this.asyncProvider = asyncProvider;
+            this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.cancellation = CancellationTokenSource.CreateLinkedTokenSource(new[] { nodeLifetime.ApplicationStopping });
@@ -326,7 +330,16 @@ namespace Stratis.Bitcoin.Features.PoA
         protected virtual void FillBlockTemplate(BlockTemplate blockTemplate, out bool dropTemplate)
         {
             if (this.network.ConsensusOptions.VotingEnabled)
+            {
+                if (this.network.ConsensusOptions.AutoKickIdleMembers)
+                {
+                    // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+                    this.idleFederationMembersKicker.Execute(this.consensusManager.Tip);
+                }
+
+                // Add scheduled voting data to the block.
                 this.AddVotingData(blockTemplate);
+            }
 
             dropTemplate = false;
         }
