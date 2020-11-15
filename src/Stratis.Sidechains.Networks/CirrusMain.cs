@@ -37,7 +37,7 @@ namespace Stratis.Sidechains.Networks
             this.Magic = 0x522357AC;
             this.DefaultPort = 16179;
             this.DefaultMaxOutboundConnections = 16;
-            this.DefaultMaxInboundConnections = 109;
+            this.DefaultMaxInboundConnections = 256;
             this.DefaultRPCPort = 16175;
             this.DefaultAPIPort = 37223;
             this.DefaultSignalRPort = 38823;
