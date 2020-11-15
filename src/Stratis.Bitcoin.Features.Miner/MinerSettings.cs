@@ -47,7 +47,7 @@ namespace Stratis.Bitcoin.Features.Miner
         public bool Mine { get; private set; }
 
         /// <summary>
-        /// An address to use when mining, if not specified and address from the wallet will be used.
+        /// An address to use when mining, if not specified an address from the wallet will be used.
         /// </summary>
         public string MineAddress { get; set; }
 
