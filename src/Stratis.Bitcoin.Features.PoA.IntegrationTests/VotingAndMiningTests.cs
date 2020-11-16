@@ -426,9 +426,9 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));
 
                 var encoder = new JoinFederationRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
-                Transaction trx = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
+                JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
 
-                await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
+                await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(result.Transaction.ToHex()));
 
                 TestBase.WaitLoop(() => nodeA.CreateRPCClient().GetRawMempool().Length == 1 && nodeB.CreateRPCClient().GetRawMempool().Length == 1);
 
