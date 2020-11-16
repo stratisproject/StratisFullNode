@@ -115,9 +115,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                         if (ctx.VerifyScript(input.ScriptSig, txout.ScriptPubKey, checker))
                         {
                             this.logger.LogTrace("(-)[FAIL_NON_MANDATORY_SCRIPT_VERIFY]");
+                            this.logger.LogDebug("Failed non-mandatory script verify: Transaction = {0}, scriptVerify = {1}, ctx.scriptVerify = {2}",
+                                tx.ToHex(), scriptVerify, ctx.ScriptVerify);
+
                             // TODO: Check what this actually means in Core's logic. If it is on testnet/regtest and RequireStandard is false, is the transaction still rejected?
-                            context.State.Fail(MempoolErrors.NonMandatoryScriptVerifyFlagFailed, 
-                                $"{ctx.Error.ToString()} : Transaction = { tx.ToHex() } : scriptVerify = { scriptVerify } : ctx.scriptVerify = { ctx.ScriptVerify }").Throw();
+                            context.State.Fail(MempoolErrors.NonMandatoryScriptVerifyFlagFailed, ctx.Error.ToString()).Throw();
                         }
                     }
 
