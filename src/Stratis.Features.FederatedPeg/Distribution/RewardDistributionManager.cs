@@ -92,7 +92,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             var blocksMinedEach = new Dictionary<Script, long>();
 
             var totalBlocks = CalculateBlocksMinedPerMiner(blocksMinedEach, sidechainStartHeight, currentHeader.Height);
-            List<Recipient> recipients = ConstructRecipients(blocksMinedEach, totalBlocks, totalReward);
+            List<Recipient> recipients = ConstructRecipients(heightOfRecordedDistributionDeposit, blocksMinedEach, totalBlocks, totalReward);
             return recipients;
         }
 
@@ -142,7 +142,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             return totalBlocks;
         }
 
-        private List<Recipient> ConstructRecipients(Dictionary<Script, long> blocksMinedEach, long totalBlocks, Money totalReward)
+        private List<Recipient> ConstructRecipients(int heightOfRecordedDistributionDeposit, Dictionary<Script, long> blocksMinedEach, long totalBlocks, Money totalReward)
         {
             var recipients = new List<Recipient>();
 
@@ -170,7 +170,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
             this.logger.LogDebug(recipientLog.ToString());
 
-            this.logger.LogInformation($"A total reward of {totalReward} will be distributed between {recipients.Count} recipients");
+            this.logger.LogInformation($"Reward distribution at main chain height {heightOfRecordedDistributionDeposit} will distribute {totalReward} STRAX between {recipients.Count} mining keys.");
 
             return recipients;
         }
