@@ -274,16 +274,27 @@ namespace Stratis.Bitcoin.Features.PoA
                 return null;
             }
 
-            // Only get this once.
-            if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
+            // If an address is specified for mining then preferentially use that.
+            // The private key for this address is not used for block signing, so it can be any valid address.
+            // Since it is known which miner mines in each block already it does not change the privacy level that every block mines to the same address.
+            if (!string.IsNullOrWhiteSpace(this.settings.MineAddress))
             {
-                this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
-
-                // The node could not have a wallet.
-                if (this.walletScriptPubKey == null)
+                this.walletScriptPubKey = BitcoinAddress.Create(this.settings.MineAddress, this.network).ScriptPubKey;
+            }
+            else
+            {
+                // Get an unused address from the wallet.
+                // This happens once per node startup in order to prevent reward outputs getting strewn across multiple addresses.
+                if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
                 {
-                    this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
-                    this.walletScriptPubKey = new Script();
+                    this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
+
+                    // The node could not have a wallet.
+                    if (this.walletScriptPubKey == null)
+                    {
+                        this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
+                        this.walletScriptPubKey = new Script();
+                    }
                 }
             }
 

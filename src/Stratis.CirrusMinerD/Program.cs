@@ -35,7 +35,7 @@ namespace Stratis.CirrusMinerD
 
         private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
         {
-            { NetworkType.Mainnet, Networks.Strax.Mainnet},
+            { NetworkType.Mainnet, Networks.Strax.Mainnet },
             { NetworkType.Testnet, Networks.Strax.Testnet },
             { NetworkType.Regtest, Networks.Strax.Regtest }
         };
