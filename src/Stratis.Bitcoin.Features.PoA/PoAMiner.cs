@@ -407,10 +407,12 @@ namespace Stratis.Bitcoin.Features.PoA
             ChainedHeader currentHeader = tip;
             uint currentTime = currentHeader.Header.Time;
 
-            int maxDepth = 46;
             int pubKeyTakeCharacters = 4;
             int depthReached = 0;
             int hitCount = 0;
+
+            List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+            int maxDepth = modifiedFederation.Count;
 
             log.AppendLine($"Mining information for the last {maxDepth} blocks.");
             log.AppendLine("MISS means that miner didn't produce a block at the timestamp he was supposed to.");
@@ -418,7 +420,7 @@ namespace Stratis.Bitcoin.Features.PoA
             for (int i = tip.Height; (i > 0) && (i > tip.Height - maxDepth); i--)
             {
                 // Add stats for current header.
-                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForBlock(currentHeader, this.votingManager).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
                 log.Append("[" + pubKeyRepresentation + "]-");
                 depthReached++;
