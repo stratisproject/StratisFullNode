@@ -780,6 +780,21 @@ namespace NBitcoin
             return this;
         }
 
+        /// <summary>
+        /// Clears send builders so we can setup recipient sends again.
+        /// </summary>
+        public void ClearSendBuilders()
+        {
+            for (int i = this.CurrentGroup.Builders.Count - 1; i >= 0; i--)
+            {
+                // All other builders have different return type.
+                if (this.CurrentGroup.Builders[i].Method.ReturnType == typeof(Money))
+                {
+                    this.CurrentGroup.Builders.RemoveAt(i);
+                }
+            }
+        }
+
         private SendBuilder _LastSendBuilder;
         private SendBuilder _SubstractFeeBuilder;
 
