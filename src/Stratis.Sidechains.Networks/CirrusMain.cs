@@ -160,7 +160,7 @@ namespace Stratis.Sidechains.Networks
                 new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
                 new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
                 new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"),
-        };
+            };
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
@@ -176,9 +176,9 @@ namespace Stratis.Sidechains.Networks
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                FederationMemberActivationTime = 1606147200 // Monday, November 23, 2020 4:00:00 PM
             };
-
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

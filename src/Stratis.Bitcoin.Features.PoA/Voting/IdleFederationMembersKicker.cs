@@ -163,6 +163,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (consensusTip.Height == 0)
                 return;
 
+            // Federation member kicking is not yet enabled.
+            var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime;
+            if (federationMemberActivationTime != null &&
+                federationMemberActivationTime > 0 &&
+                consensusTip.Header.Time < federationMemberActivationTime)
+                return;
+
             try
             {
                 PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(consensusTip, this.votingManager).PubKey;
