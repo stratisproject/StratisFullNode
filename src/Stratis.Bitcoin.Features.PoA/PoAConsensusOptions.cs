@@ -27,6 +27,11 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Time that federation member has to be idle to be kicked by others in case <see cref="AutoKickIdleMembers"/> is enabled.</summary>
         public uint FederationMemberMaxIdleTimeSeconds { get; protected set; }
 
+        /// <summary>
+        /// This currently only applies to  Cirrus Main Net.
+        /// </summary>
+        public uint? FederationMemberActivationTime { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
