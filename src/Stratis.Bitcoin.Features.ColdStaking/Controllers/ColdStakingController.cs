@@ -265,6 +265,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     request.WalletAccount,
                     request.WalletPassword,
                     amount,
+                    request.SubtractFeeFromAmount,
                     request.SegwitChangeAddress);
 
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);
@@ -310,7 +311,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                 Money feeAmount = Money.Parse(request.Fees);
 
                 Transaction transaction = this.ColdStakingManager.GetColdStakingWithdrawalTransaction(this.walletTransactionHandler,
-                    request.ReceivingAddress, request.WalletName, request.WalletPassword, amount, feeAmount);
+                    request.ReceivingAddress, request.WalletName, request.WalletPassword, amount, feeAmount, request.SubtractFeeFromAmount);
 
                 var model = new ColdStakingWithdrawalResponse
                 {
@@ -350,7 +351,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                 Money amount = Money.Parse(request.Amount);
 
                 Money estimatedFee = this.ColdStakingManager.EstimateWithdrawalTransactionFee(this.walletTransactionHandler,
-                    request.ReceivingAddress, request.WalletName, amount);
+                    request.ReceivingAddress, request.WalletName, amount, request.SubtractFeeFromAmount);
 
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);
 

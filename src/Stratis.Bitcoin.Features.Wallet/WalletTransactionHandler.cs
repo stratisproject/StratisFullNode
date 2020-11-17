@@ -433,14 +433,6 @@ namespace Stratis.Bitcoin.Features.Wallet
                     context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
                 }
             }
-
-            /*
-            if (context.Recipients.Any(a => a.SubtractFeeFromAmount))
-                throw new NotImplementedException("Subtracting the fee from the recipient is not supported yet.");
-
-            foreach (Recipient recipient in context.Recipients)
-                context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
-            */
         }
 
         /// <summary>
