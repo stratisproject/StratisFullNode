@@ -484,8 +484,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                         if (transaction != null)
                                         {
+                                            bool isdistribution = false;
+                                            if (!this.settings.IsMainChain)
+                                                isdistribution = recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
+
                                             // Reserve the UTXOs before building the next transaction.
-                                            var isdistribution = recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
                                             walletUpdated |= this.federationWalletManager.ProcessTransaction(transaction, isDistribution: isdistribution);
 
                                             if (!this.ValidateTransaction(transaction))
