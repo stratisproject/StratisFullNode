@@ -1077,16 +1077,16 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     TransactionBuilder builder = new TransactionBuilder(this.Wallet.Network).AddCoins(coins);
 
-                    if (!builder.Verify(transaction, this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count), out TransactionPolicyError[] errors))
-                    {
-                        // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
-                        foreach (TransactionPolicyError transactionPolicyError in errors)
-                        {
-                            this.logger.LogInformation("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
-                        }
+                    if (builder.Verify(transaction, this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count), out TransactionPolicyError[] errors))
+                        return true;
 
-                        return false;
+                    // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
+                    foreach (TransactionPolicyError transactionPolicyError in errors)
+                    {
+                        this.logger.LogDebug("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
                     }
+
+                    return false;
                 }
 
                 return true;

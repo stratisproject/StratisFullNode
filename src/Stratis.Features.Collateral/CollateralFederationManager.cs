@@ -90,7 +90,7 @@ namespace Stratis.Features.Collateral
 
             foreach (CollateralFederationMemberModel fedMemberModel in fedMemberModels)
             {
-                PubKey pubKey = new PubKey(fedMemberModel.PubKeyHex);
+                var pubKey = new PubKey(fedMemberModel.PubKeyHex);
                 federation.Add(new CollateralFederationMember(pubKey, false, new Money(fedMemberModel.CollateralAmountSatoshis),
                     fedMemberModel.CollateralMainchainAddress));
             }
@@ -129,11 +129,11 @@ namespace Stratis.Features.Collateral
             var keyTool = new KeyTool(this.settings.DataFolder);
             Key minerKey = keyTool.LoadPrivateKey();
             if (minerKey == null)
-                throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName}) has not been configured.");
+                throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName}) has not been configured or is not present.");
 
             var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey(this.network, minerKey.PubKey);
 
-            Money collateralAmount = new Money(expectedCollateralAmount, MoneyUnit.BTC);
+            var collateralAmount = new Money(expectedCollateralAmount, MoneyUnit.BTC);
 
             var joinRequest = new JoinFederationRequest(minerKey.PubKey, collateralAmount, addressKey);
 
@@ -141,7 +141,7 @@ namespace Stratis.Features.Collateral
             var collateralFederationMember = new CollateralFederationMember(minerKey.PubKey, false, joinRequest.CollateralAmount, request.CollateralAddress);
 
             byte[] federationMemberBytes = (this.network.Consensus.ConsensusFactory as CollateralPoAConsensusFactory).SerializeFederationMember(collateralFederationMember);
-            var votingManager = this.fullNode.NodeService<VotingManager>();
+            VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
             Poll poll = votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
                   x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
@@ -159,16 +159,18 @@ namespace Stratis.Features.Collateral
             var walletClient = new WalletClient(this.loggerFactory, this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
             string signature = await walletClient.SignMessageAsync(signMessageRequest, cancellationToken);
             if (signature == null)
-                throw new Exception("Operation was cancelled during call to counter-chain to sign the collateral address.");
+                throw new Exception("The call to sign the join federation request failed. It could have timed-out or the counter chain node is offline.");
 
             joinRequest.AddSignature(signature);
 
-            var walletTransactionHandler = this.fullNode.NodeService<IWalletTransactionHandler>();
+            IWalletTransactionHandler walletTransactionHandler = this.fullNode.NodeService<IWalletTransactionHandler>();
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
-            Transaction trx = JoinFederationRequestBuilder.BuildTransaction(walletTransactionHandler, this.network, joinRequest, encoder, request.WalletName, request.WalletAccount, request.WalletPassword);
+            JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(walletTransactionHandler, this.network, joinRequest, encoder, request.WalletName, request.WalletAccount, request.WalletPassword);
+            if (result.Transaction == null)
+                throw new Exception(result.Errors);
 
-            var walletService = this.fullNode.NodeService<IWalletService>();
-            await walletService.SendTransaction(new SendTransactionRequest(trx.ToHex()), cancellationToken);
+            IWalletService walletService = this.fullNode.NodeService<IWalletService>();
+            await walletService.SendTransaction(new SendTransactionRequest(result.Transaction.ToHex()), cancellationToken);
 
             return minerKey.PubKey;
         }

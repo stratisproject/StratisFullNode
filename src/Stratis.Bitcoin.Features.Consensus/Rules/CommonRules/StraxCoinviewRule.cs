@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     }
                 }
 
-                this.Logger.LogInformation($"Reward distribution transaction validated in consensus, spending to '{prevOut.ScriptPubKey}'.");
+                this.Logger.LogDebug($"Reward distribution transaction validated in consensus, spending to '{prevOut.ScriptPubKey}'.");
             }
 
             // Otherwise allow the spend (do nothing).
