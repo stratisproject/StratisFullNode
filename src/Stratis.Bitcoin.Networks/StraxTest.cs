@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Networks
             this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("TtrX"));
             this.DefaultPort = 27105;
             this.DefaultMaxOutboundConnections = 16;
-            this.DefaultMaxInboundConnections = 100;
+            this.DefaultMaxInboundConnections = 109;
             this.DefaultRPCPort = 27104;
             this.DefaultAPIPort = 27103;
             this.DefaultSignalRPort = 27102;
