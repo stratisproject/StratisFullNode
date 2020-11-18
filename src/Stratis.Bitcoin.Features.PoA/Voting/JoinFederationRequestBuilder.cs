@@ -41,9 +41,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public static JoinFederationRequest Deconstruct(Transaction trx, JoinFederationRequestEncoder encoder)
         {
-            if (trx.Inputs.Count != VotingRequestExpectedInputCount)
-                return null;
-
             if (trx.Outputs.Count != VotingRequestExpectedOutputCount)
                 return null;
 
