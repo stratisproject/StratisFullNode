@@ -5,7 +5,7 @@
     <AssemblyTitle>Stratis.Bitcoin</AssemblyTitle>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>Stratis.Bitcoin</AssemblyName>
-    <PackageId>Stratis.Bitcoin</PackageId>
+    <PackageId>Stratis.Core</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>

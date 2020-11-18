@@ -6,8 +6,8 @@
     <Version>1.0.2.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
-    <PackageId>Stratis.FodyNlogAdapter</PackageId>
-    <Product>Stratis.FodyNlogAdapter</Product>
+    <PackageId>Stratis.Utils.FodyNlogAdapter</PackageId>
+    <Product>Stratis.Utils.FodyNlogAdapter</Product>
   </PropertyGroup>
 
   <ItemGroup>

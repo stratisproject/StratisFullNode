@@ -5,7 +5,7 @@
     <AssemblyTitle>Stratis.Bitcoin.Features.Notifications</AssemblyTitle>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Features.Notifications</AssemblyName>
-    <PackageId>Stratis.Bitcoin.Features.Notifications</PackageId>
+    <PackageId>Stratis.Features.Notifications</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>

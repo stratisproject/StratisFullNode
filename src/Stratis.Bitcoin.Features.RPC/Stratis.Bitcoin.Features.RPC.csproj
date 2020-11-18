@@ -5,7 +5,7 @@
 		<AssemblyTitle>Stratis.Bitcoin.Features.RPC</AssemblyTitle>
 		<TargetFramework>netcoreapp3.1</TargetFramework>
 		<AssemblyName>Stratis.Bitcoin.Features.RPC</AssemblyName>
-		<PackageId>Stratis.Bitcoin.Features.RPC</PackageId>
+		<PackageId>Stratis.Features.RPC</PackageId>
 		<GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
 		<GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
 		<GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
