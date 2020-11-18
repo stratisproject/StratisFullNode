@@ -5,7 +5,7 @@
     <PreserveCompilationContext>true</PreserveCompilationContext>
     <AssemblyName>Stratis.Bitcoin.Features.Api</AssemblyName>
     <OutputType>Library</OutputType>
-    <PackageId>Stratis.Bitcoin.Api</PackageId>
+    <PackageId>Stratis.Features.Api</PackageId>
     <Version>1.0.2.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <ApplicationIcon />
@@ -14,6 +14,7 @@
     <!-- Force packing of a web project https://github.com/aspnet/websdk/issues/228 -->
     <IsPackable>true</IsPackable>
     <Authors>Stratis Group Ltd.</Authors>
+    <Product>Stratis.Features.Api</Product>
   </PropertyGroup> 
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

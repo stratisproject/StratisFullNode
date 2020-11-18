@@ -5,6 +5,7 @@
     <CodeAnalysisRuleSet>..\None.ruleset</CodeAnalysisRuleSet>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>1.0.2.0</Version>
+    <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
   
   <ItemGroup>
