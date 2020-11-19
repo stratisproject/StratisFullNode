@@ -498,7 +498,7 @@ Switch ( $RegisterMasternode )
         $Body.Add("walletName",$CirrusWallet)
         $Body.Add("walletPassword",$WalletPassword)
         $Body.Add("walletAccount","account 0")
-        Invoke-WebRequest -Uri http://localhost:38223/api/Collateral/joinfederation -Body $Body -ContentType "application/json-patch+json" -Method Post
+        Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $Body -ContentType "application/json-patch+json" -Method Post
         Write-Host (Get-TimeStamp) "SUCCESS: Your registration was succesful!! Please follow the STRAX Sidechain Masternode Setup Guide!" -ForegroundColor Green
         Start-Sleep 30
     }
@@ -512,8 +512,8 @@ Switch ( $RegisterMasternode )
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUnJ0yCk4hGEemzFYYgaFYrQ1w
-# UzigggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUQJBTtiBJJcsT1kVPyI5lewEG
+# AbmgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -583,11 +583,11 @@ Switch ( $RegisterMasternode )
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDpD56Tlvjpz
-# ekJKHuF+HeyCd+UpMA0GCSqGSIb3DQEBAQUABIIBADlDNQEDbKH6B0w0KZkmB7Am
-# UXx9Ny/Tshrz62DYGW9paNf2A7DrLlGuayU8Pehz3qd6UxOCwjfNYhBnKT/xvkoa
-# /fwEdMNXNIxiAbDam2RKSP1U6KfPsChw2/F4Z8j9c09E9qEu2slUcOXnSz1/IW+2
-# wSai9VKn5v/yhpWp+WSpVLjAcYFNvmmo3g/mmfVbpuYpfgFCrBqcXksmBYwvoV8S
-# 0KR5CUbEn8rG0nn8reO7MWjRyc+g/+qGQAwcyexgoMHJWRnFMutwFEOkj1g4MLAc
-# Sk31dISIR5/N2u7qbnf0g6WFb7GFuCHRRrnmOk9jlwEbiriGny8sskyvhUpIGk4=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFG4Nn9AGvgT2
+# o9dDtZ32UPcArDDCMA0GCSqGSIb3DQEBAQUABIIBALA0K4hCNSa3z0cId++R7GRl
+# ciin1Pbmf27e2MJcDM11xWtNNBcyQlZ7Ed8/kbfIyw3C1kDnjJ6SQhNuIqxYfp02
+# zRorQWcu+2RF/OZwQ9yupJRI/pv8o8K07SxesFSU5Btdart67yk7YrXwpnNSecG6
+# 5H6H3O6oxGd0t1eK15lPNyaWdSnjMXE7/fiHZJUkjnnHu4nYhP9E0eBg9Rrbd+DB
+# ne6jgAlOZNobMTDDHxJgj2RexSnYw6LXcvAPQ9JpWEpsS9L80v+8cNJ2DAB2I12A
+# 1UV1QYCOZ4xFMn6opQhuikH+EEU67UPqs2c1HktUFaM/Xm85UaYPADwuSVOq5J8=
 # SIG # End signature block
