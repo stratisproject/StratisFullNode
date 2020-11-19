@@ -415,11 +415,11 @@ if ( -not ( $WalletNames -contains "MiningWallet" ) )
             ""
             Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
 
-            $ReadyToContinue? = Read-Host -Prompt "Have you written down your words? Enter "Yes" to continue or "No" to exit the script"
+            $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
             While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
             {
                 ""
-                $ReadyToContinue? = Read-Host -Prompt "Have you written down your words? Enter "Yes" to continue or "No" to exit the script"
+                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
                 ""
             }
             Switch ( $ReadyToContinue )
@@ -530,8 +530,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUuErJ5XQmebUd1eXKaK0ql92d
-# HDigggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUIp7RoAxMYQz77+6Bqmq86CnW
+# NSCgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -601,11 +601,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFJNzEfRc3uYS
-# gpnqoB8mWP1vLqblMA0GCSqGSIb3DQEBAQUABIIBAEbDDbdcuiGdKtNWhJsCnTY7
-# xQ/IsG9WPkoYqEljy/TjOhCTuS94/s9o7sXtoBeT2/q9+7U7bQZpgI3wyqQ3NnUs
-# saFRxrc72mmE6m3pkPAEdVjkGaD6szv36hr76iULcVVfGlN2cqXQj5dZLd/NEqUw
-# PGnn2wZuNYyafN9iXKGbzoam5pJh30qJp5qaqvBVYWqfHj150iCYsdUiTI0k1/KZ
-# syH14UcmmeFEG2zJ9rx9kgeoJnutl3M7n96MQc1sszll/KdDHDQXV12QzzkCaXMf
-# gS0elyP0lm2Nu4R6G8zhrDCdowEm/UWi3IKv+JrgAjSvXMnDaQByn84t8EFqoGc=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFGPI4ZV0Esh8
+# lASYr2TLQ/7CtXnHMA0GCSqGSIb3DQEBAQUABIIBACWtB584gwii1FpXvKsyyfNs
+# j65P1rbSDAXufCoJBGgyXFdC6+j/Z4sWrXqnLdMpuOK1JokhGt9nbWBG53KGjzX3
+# j8Hr3vJbwUdzAhS3H90EA52Wms8KtsgURAeJlmBE7taNwYnXJCylWjskRkfTqiGN
+# 5ob+dvrE+01m/jBcCMjpeeWEFtzqcSm610l21ZRL30V86ndW1DR3CmH7IR2IFMxc
+# duJ91aUm2oOvKC+4pzUi23jDcmyRfk3j5m0zmD66y81U03lG4vprNopHv/xpokZ/
+# wn6K4ifgkNWrd6gXpMxORkShd79RZA09gZ+9vuLCAE4C05MulyaSAdnL8yb1MVk=
 # SIG # End signature block
