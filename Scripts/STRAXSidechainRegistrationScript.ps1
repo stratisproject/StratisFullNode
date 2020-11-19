@@ -450,7 +450,6 @@ if ( $LoadedWallets -contains $Wallet )
     
 
 #Check Wallet Balance
-""
 $CirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$Wallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
 if ( $CirrusWalletBalance -ge 500.01 )
 {
@@ -463,8 +462,21 @@ if ( $CirrusWalletBalance -ge 500.01 )
         Exit
     }
 
-    
+#Gather Federation Detail
+""
+if ( -not ( Test-Path $sideChainDataDir\federationKey.dat ) ) 
+{
+    $miningDAT = Read-Host "Please Enter the full path to the federationKey.dat"
+    While ( -not ( Test-Path $miningDAT ) )
+    {
+        Write-Host Write-Host (Get-TimeStamp) "ERROR: $miningDAT is not a valid path.. Be sure to include the filename too '\federationKey.dat'"
+    }
+    Copy-Item $miningDAT -Destination $sideChainDataDir -Force -ErrorAction Stop
+}
+
+
 #Perform Registration
+""
 $CollateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount"
 ""
 $RegisterMasternode = Read-Host -Prompt 'Would you like to register as a Masternode? Please be aware that this will incur a 500 CRS Fee. Enter "Yes" to continue or "No" to exit the script'
