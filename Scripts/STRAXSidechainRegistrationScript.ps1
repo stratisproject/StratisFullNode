@@ -450,6 +450,7 @@ if ( $LoadedWallets -contains $Wallet )
     
 
 #Check Wallet Balance
+""
 $CirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$Wallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
 if ( $CirrusWalletBalance -ge 500.01 )
 {
@@ -465,11 +466,12 @@ if ( $CirrusWalletBalance -ge 500.01 )
     
 #Perform Registration
 $CollateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount"
+""
 $RegisterMasternode = Read-Host -Prompt 'Would you like to register as a Masternode? Please be aware that this will incur a 500 CRS Fee. Enter "Yes" to continue or "No" to exit the script'
 While ( $RegisterMasternode -ne "Yes" -and $RegisterMasternode -ne "No" )
 {
     ""
-    $RegisterMasternode = 'Enter "Yes" to continue or "No" to exit the script'
+    $RegisterMasternode = Read-Host 'Enter "Yes" to continue or "No" to exit the script'
     ""
 }
 Switch ( $RegisterMasternode )
