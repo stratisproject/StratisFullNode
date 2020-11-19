@@ -451,7 +451,7 @@ if ( $LoadedWallets -contains $Wallet )
 
 #Check Wallet Balance
 $CirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$Wallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
-if ( $CirrusWalletBalance -ge 501 )
+if ( $CirrusWalletBalance -ge 500.01 )
 {
     Write-Host (Get-TimeStamp) "SUCCESS: $Wallet contains a balance of over 501 CRS!" -ForegroundColor Green
 }
