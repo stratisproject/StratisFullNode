@@ -27,11 +27,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private VotingManager votingManager;
 
-        private IFederationManager federationManager;
-
         private IChainState chainState;
-
-        private PoAConsensusFactory consensusFactory;
 
         private Network network;
 
@@ -45,10 +41,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.validator = engine.PoaHeaderValidator;
             this.votingManager = engine.VotingManager;
-            this.federationManager = engine.FederationManager;
             this.chainState = engine.ChainState;
             this.network = this.Parent.Network;
-            this.consensusFactory = (PoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
             this.maxReorg = this.network.Consensus.MaxReorgLength;
             this.votingEnabled = ((PoAConsensusOptions)this.network.Consensus.Options).VotingEnabled;
