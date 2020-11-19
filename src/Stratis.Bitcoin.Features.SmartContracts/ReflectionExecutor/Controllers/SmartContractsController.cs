@@ -33,6 +33,7 @@ using Stratis.SmartContracts.Core.State;
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
     [ApiVersion("1")]
+    [Route("api/[controller]")]
     public class SmartContractsController : Controller
     {
         /// <summary>
@@ -305,7 +306,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
         // a web3-like library. For now the following method serves as a very basic example of how we can query the block
         // bloom filters to retrieve events.
-        
+
         /// <summary>
         /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
         /// is capable of storing C# structs, and structs are used to store information about different events occurring 
