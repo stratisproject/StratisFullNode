@@ -415,17 +415,18 @@ if ( -not ( $WalletNames -contains "MiningWallet" ) )
             ""
             Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
 
-            $ReadyToContinue? = Read-Host -Prompt "Have you written down your words?"
+            $ReadyToContinue? = Read-Host -Prompt "Have you written down your words? Enter "Yes" to continue or "No" to exit the script"
             While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
             {
                 ""
-                $ReadyToContinue? = Read-Host -Prompt "Have you written down your words?"
+                $ReadyToContinue? = Read-Host -Prompt "Have you written down your words? Enter "Yes" to continue or "No" to exit the script"
                 ""
             }
             Switch ( $ReadyToContinue )
             {
                 Yes 
                 {
+                    Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
                 }
                 
                 No 
