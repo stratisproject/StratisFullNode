@@ -295,10 +295,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <exception cref="WalletException">Thrown if any of the rules listed in the remarks section of this method are broken.</exception>
         internal Transaction GetColdStakingSetupTransaction(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, Money feeAmount, bool useSegwitChangeAddress = false)
+            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool useSegwitChangeAddress = false)
         {
             TransactionBuildContext context = this.GetSetupTransactionBuildContext(walletTransactionHandler, coldWalletAddress, hotWalletAddress, walletName, walletAccount,
-                walletPassword, amount, feeAmount, useSegwitChangeAddress);
+                walletPassword, amount, feeAmount, subtractFeeFromAmount, useSegwitChangeAddress);
 
             // Build the transaction.
             Transaction transaction = walletTransactionHandler.BuildTransaction(context);
@@ -309,7 +309,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
         private TransactionBuildContext GetSetupTransactionBuildContext(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, Money feeAmount, bool useSegwitChangeAddress = false)
+            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool useSegwitChangeAddress)
         {
             Guard.NotNull(walletTransactionHandler, nameof(walletTransactionHandler));
             Guard.NotEmpty(coldWalletAddress, nameof(coldWalletAddress));
@@ -376,7 +376,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 Shuffle = false,
                 UseSegwitChangeAddress = useSegwitChangeAddress,
                 WalletPassword = walletPassword,
-                Recipients = new List<Recipient>() { new Recipient { Amount = amount, ScriptPubKey = destination } }
+                Recipients = new List<Recipient>() { new Recipient { Amount = amount, ScriptPubKey = destination, SubtractFeeFromAmount = subtractFeeFromAmount} }
             };
 
             // Register the cold staking builder extension with the transaction builder.
@@ -387,10 +387,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
         internal Money EstimateSetupTransactionFee(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, bool useSegwitChangeAddress = false)
+            string walletPassword, Money amount, bool subtractFeeFromAmount, bool useSegwitChangeAddress)
         {
             TransactionBuildContext context = this.GetSetupTransactionBuildContext(walletTransactionHandler, coldWalletAddress, hotWalletAddress, walletName, walletAccount,
-                walletPassword, amount, null, useSegwitChangeAddress);
+                walletPassword, amount, null, subtractFeeFromAmount, useSegwitChangeAddress);
 
             Money estimatedFee = walletTransactionHandler.EstimateFee(context);
 
@@ -413,9 +413,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <exception cref="WalletException">Thrown if the receiving address is in a cold staking account in this wallet.</exception>
         /// <exception cref="ArgumentNullException">Thrown if the receiving address is invalid.</exception>
         internal Transaction GetColdStakingWithdrawalTransaction(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
-            string walletName, string walletPassword, Money amount, Money feeAmount)
+            string walletName, string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
-            (TransactionBuildContext context, HdAccount coldAccount, Script destination) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, feeAmount);
+            (TransactionBuildContext context, HdAccount coldAccount, Script destination) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, feeAmount, subtractFeeFromAmount);
 
             // Build the withdrawal transaction according to the settings recorded in the context.
             Transaction transaction = walletTransactionHandler.BuildTransaction(context);
@@ -451,7 +451,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             return transaction;
         }
 
-        private (TransactionBuildContext, HdAccount, Script) GetWithdrawalTransactionBuildContext(string receivingAddress, string walletName, Money amount, Money feeAmount)
+        private (TransactionBuildContext, HdAccount, Script) GetWithdrawalTransactionBuildContext(string receivingAddress, string walletName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
             Guard.NotEmpty(receivingAddress, nameof(receivingAddress));
             Guard.NotEmpty(walletName, nameof(walletName));
@@ -505,7 +505,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 MinConfirmations = 0,
                 Shuffle = false,
                 Sign = false,
-                Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destination } }.ToList()
+                Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destination, SubtractFeeFromAmount = subtractFeeFromAmount } }.ToList()
             };
 
             // Register the cold staking builder extension with the transaction builder.
@@ -518,9 +518,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         }
 
         internal Money EstimateWithdrawalTransactionFee(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
-            string walletName, Money amount)
+            string walletName, Money amount, bool subtractFeeFromAmount)
         {
-            (TransactionBuildContext context, _, _) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, null);
+            (TransactionBuildContext context, _, _) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, null, subtractFeeFromAmount);
 
             Money estimatedFee = walletTransactionHandler.EstimateFee(context);
 
