@@ -1,9 +1,4 @@
-﻿Write-Host STRAX Masternode Registration Script - Version 1 -ForegroundColor Cyan
-""
-""
-Start-Sleep 5
-
-#Create Functions
+﻿#Create Functions
 function Get-IndexerStatus
 {
     $Headers = @{}
