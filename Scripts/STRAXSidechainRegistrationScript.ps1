@@ -28,6 +28,7 @@ function Get-IndexerStatus
                     Else
                     {
                         Write-Host "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+                        Exit
                     }
             }
                 
