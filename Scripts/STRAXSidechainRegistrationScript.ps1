@@ -147,7 +147,7 @@ Set-Location $cloneDir\src\Stratis.CirrusMinerD
 #Start Mainchain Node
 $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Mainchain Masternode" -ForegroundColor Cyan
-$StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -testnet -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
+$StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
 
 #Wait for API
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
@@ -203,7 +203,7 @@ if ( Get-Variable c -ErrorAction SilentlyContinue ) { Clear-Variable c }
 #Start Sidechain Node
 $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
-$StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -testnet -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
+$StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
 
 #Wait for API
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
@@ -514,8 +514,8 @@ Switch ( $RegisterMasternode )
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6EuQl6sFyHsRUs/SlX1AcGND
-# EXOgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUCuC9YBFQ7dWIuH/DMBo+mf/p
+# wBOgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -585,11 +585,11 @@ Switch ( $RegisterMasternode )
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFM4nsXSOOJfw
-# ta9/2wUw3+r0nDP+MA0GCSqGSIb3DQEBAQUABIIBAFyyVn/Lg9Xj72RYYWvJSHei
-# QrRUgHhdLUgwj/t53Il0Jui9/9FLuNwo9CF88DzM5n3GmLA3VBBGgmH1RVz5eAHC
-# 4dPjTrb7Ql8pncr6zmFfm2Q2OUT1OdhFuHb+9sZ9uVVOkASVUzp4HR7PYQyO4+mS
-# vujE/Dz6FbH47GgjmOz5ABVr8RWLrIdGcquT7M0yKk4Sm9HQpxwHLkbTC4AZh385
-# E7yqX0NtOfHAnmKclSbcC8x3RF9XsdEtK3clV3/NvXRoLuV3Wf30u37wrGbsdcni
-# RSbgjtLb+BBzGQbl6y9nxt7YfNBw7H9ewGn1YzbJVg/q9MSSR0KadJY89GT5SXE=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFBbkNiITiD33
+# 5gmvM0gI0PLw6ktXMA0GCSqGSIb3DQEBAQUABIIBAKrHpH/frZOgofERALKGaDJi
+# yzgXaQCcO44qQFZj/zvfKNxiIQ/AD9DipT+SCTsLxL2NXUe5wN7jXKz7pMaDsSei
+# PhrJtoigkIBPQkXxVU2vkk5ILzG1cLUIQRWyla+JWw9/aK/esqI0kM2sHe9RbuWl
+# 9rW89vc2XTWbTYJM3EKlazyK+qxri9yZWdrdQOI7TwQGuisQD0cKcwolJJu9fOp6
+# ZUkRPRF98PcYlnGbig7X6A8cIfsFazL/DtaZHF7MzTr44na4tt6G7KWQH1Sl4FwZ
+# /oJf7n/XPVFchB+yK6DooUYJ/AvMyCL5Bnmyvll9EZrILyGTmAiHXiemuE8DruM=
 # SIG # End signature block
