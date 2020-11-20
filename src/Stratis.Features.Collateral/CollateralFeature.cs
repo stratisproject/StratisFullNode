@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Features.Collateral.CounterChain;
@@ -41,6 +42,16 @@ namespace Stratis.Features.Collateral
         // Both Cirrus Peg and Cirrus Miner calls this.
         public static IFullNodeBuilder CheckForPoAMembersCollateral(this IFullNodeBuilder fullNodeBuilder, bool isMiner)
         {
+            if (!isMiner)
+            {
+                // Remove the PoAHeaderSignatureRule if this is not a miner as CirrusD has no concept of the federation and
+                // any modifications of it.
+                // This rule is only required to ensure that the mining nodes don't mine on top of bad blocks. A consensus error will prevent that from happening."
+                // TODO: The code should be refactored at some point so that we dont do this hack.
+                var indexOf = fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.IndexOf(typeof(PoAHeaderSignatureRule));
+                fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.RemoveAt(indexOf);
+            }
+
             // These rules always execute between all Cirrus nodes.
             fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Insert(0, typeof(CheckCollateralCommitmentHeightRule));
 
