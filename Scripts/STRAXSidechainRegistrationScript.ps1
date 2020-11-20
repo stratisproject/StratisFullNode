@@ -470,7 +470,7 @@ if ( -not ( Test-Path $sideChainDataDir\federationKey.dat ) )
     $miningDAT = Read-Host "Please Enter the full path to the federationKey.dat"
     While ( -not ( Test-Path $miningDAT ) )
     {
-        Write-Host Write-Host (Get-TimeStamp) "ERROR: $miningDAT is not a valid path.. Be sure to include the filename too '\federationKey.dat'" -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: $miningDAT is not a valid path.. Be sure to include the filename too '\federationKey.dat'" -ForegroundColor Red
         $miningDAT = Read-Host "Please Enter the full path to the federationKey.dat"
     }
     Copy-Item $miningDAT -Destination $sideChainDataDir -Force -ErrorAction Stop
