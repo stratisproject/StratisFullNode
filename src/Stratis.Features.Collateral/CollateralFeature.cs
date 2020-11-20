@@ -46,6 +46,7 @@ namespace Stratis.Features.Collateral
             {
                 // Remove the PoAHeaderSignatureRule if this is not a miner as CirrusD has no concept of the federation and
                 // any modifications of it.
+                // This rule is only required to ensure that the mining nodes don't mine on top of bad blocks. A consensus error will prevent that from happening."
                 // TODO: The code should be refactored at some point so that we dont do this hack.
                 var indexOf = fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.IndexOf(typeof(PoAHeaderSignatureRule));
                 fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.RemoveAt(indexOf);
