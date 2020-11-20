@@ -286,11 +286,11 @@ if ( $LoadedWallets -contains $Wallet )
                 Clear-Host
                 $WalletPassphrase = Read-Host "Please enter your Wallet Passphrase"
                 Clear-Host
-                $WalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
+                $CollateralWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
                 Clear-Host
                 if ( -not ( $Wallet ) ) { $ErrorVar = 1 }
                 if ( -not ( $WalletMnemonic ) ) { $ErrorVar = 1 }
-                if ( -not ( $WalletPassword ) ) { $ErrorVar = 1 }
+                if ( -not ( $CollateralWalletPassword ) ) { $ErrorVar = 1 }
                 if ( $ErrorVar ) 
                 {
                     Write-Host (Get-TimeStamp) "ERROR: There was some missing wallet detail - Please re-run this script" -ForegroundColor Red
@@ -344,6 +344,7 @@ if ( $LoadedWallets -contains $Wallet )
         }
     }
     
+Clear-Variable Wallet,WalletPassword,WalletMnemonic
 
 #Check Wallet Balance
 $CollateralWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$Wallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
@@ -513,8 +514,8 @@ Switch ( $RegisterMasternode )
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUQJBTtiBJJcsT1kVPyI5lewEG
-# AbmgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6EuQl6sFyHsRUs/SlX1AcGND
+# EXOgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -584,11 +585,11 @@ Switch ( $RegisterMasternode )
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFG4Nn9AGvgT2
-# o9dDtZ32UPcArDDCMA0GCSqGSIb3DQEBAQUABIIBALA0K4hCNSa3z0cId++R7GRl
-# ciin1Pbmf27e2MJcDM11xWtNNBcyQlZ7Ed8/kbfIyw3C1kDnjJ6SQhNuIqxYfp02
-# zRorQWcu+2RF/OZwQ9yupJRI/pv8o8K07SxesFSU5Btdart67yk7YrXwpnNSecG6
-# 5H6H3O6oxGd0t1eK15lPNyaWdSnjMXE7/fiHZJUkjnnHu4nYhP9E0eBg9Rrbd+DB
-# ne6jgAlOZNobMTDDHxJgj2RexSnYw6LXcvAPQ9JpWEpsS9L80v+8cNJ2DAB2I12A
-# 1UV1QYCOZ4xFMn6opQhuikH+EEU67UPqs2c1HktUFaM/Xm85UaYPADwuSVOq5J8=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFM4nsXSOOJfw
+# ta9/2wUw3+r0nDP+MA0GCSqGSIb3DQEBAQUABIIBAFyyVn/Lg9Xj72RYYWvJSHei
+# QrRUgHhdLUgwj/t53Il0Jui9/9FLuNwo9CF88DzM5n3GmLA3VBBGgmH1RVz5eAHC
+# 4dPjTrb7Ql8pncr6zmFfm2Q2OUT1OdhFuHb+9sZ9uVVOkASVUzp4HR7PYQyO4+mS
+# vujE/Dz6FbH47GgjmOz5ABVr8RWLrIdGcquT7M0yKk4Sm9HQpxwHLkbTC4AZh385
+# E7yqX0NtOfHAnmKclSbcC8x3RF9XsdEtK3clV3/NvXRoLuV3Wf30u37wrGbsdcni
+# RSbgjtLb+BBzGQbl6y9nxt7YfNBw7H9ewGn1YzbJVg/q9MSSR0KadJY89GT5SXE=
 # SIG # End signature block
