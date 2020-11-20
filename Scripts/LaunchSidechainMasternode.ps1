@@ -151,15 +151,41 @@ function Get-Median($numberSeries)
 
 function Check-TimeDifference
 {
-    Write-Host "Checking UTC Time Difference" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (WorldTimeAPI)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $timeDifSamples[0] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
     $timeDifSamples[1] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
     $timeDifSamples[2] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
-    if ( $timeDif -gt 2 )
+    if ( $timeDif -gt 2 -or $timeDif -lt 2 )
+    {
+        Clear-Variable timeDif,timeDifSamples
+        Check-TimeDifference2
+    }
+        Else
+        {
+            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
+            Write-Host ""
+        }
+}
+
+function Check-TimeDifference2
+{
+    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
+    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDif = Get-Median -numberSeries $timeDifSamples
+
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 )
     {
         Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
         Start-Sleep 30
@@ -530,8 +556,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUIp7RoAxMYQz77+6Bqmq86CnW
-# NSCgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU3QOC/gMECD7V9YFWeZsN3Ke4
+# /SqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -601,11 +627,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFGPI4ZV0Esh8
-# lASYr2TLQ/7CtXnHMA0GCSqGSIb3DQEBAQUABIIBACWtB584gwii1FpXvKsyyfNs
-# j65P1rbSDAXufCoJBGgyXFdC6+j/Z4sWrXqnLdMpuOK1JokhGt9nbWBG53KGjzX3
-# j8Hr3vJbwUdzAhS3H90EA52Wms8KtsgURAeJlmBE7taNwYnXJCylWjskRkfTqiGN
-# 5ob+dvrE+01m/jBcCMjpeeWEFtzqcSm610l21ZRL30V86ndW1DR3CmH7IR2IFMxc
-# duJ91aUm2oOvKC+4pzUi23jDcmyRfk3j5m0zmD66y81U03lG4vprNopHv/xpokZ/
-# wn6K4ifgkNWrd6gXpMxORkShd79RZA09gZ+9vuLCAE4C05MulyaSAdnL8yb1MVk=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFAkzH767UIxC
+# PTvSZ2b/4eHdw8O/MA0GCSqGSIb3DQEBAQUABIIBACw42G0Flw5Jj1KVe3SEnh6T
+# fMKZiOur/K6g7EBwR6e82NvZW3DjAUsmFbPDVybFI1veP25ZxwI6DEugGrOeL9zF
+# L7Ugs/7qOvE3kffixpeU1Xb3rPB2RrlNchWWrAExV0s2QcLLU+9tT6iSQLWSFoKX
+# 7fOMtTSd0ZtHx9HJmTxGr6iOivshIjhCrklpUnsef8yWBKHHC/CiTwnuLsHpOsbs
+# SvELDDgF+4OBwq3n7e02g/Qz6JVI1oSG4X+f3drGgBFPk1H5jayzWrLWXI6pk03K
+# ZnQrl66gDS5pyLjNJpVJ12g+Fid2cd2UGepY7DkK/1oHJWj005OjzyLdbWMd8sU=
 # SIG # End signature block
