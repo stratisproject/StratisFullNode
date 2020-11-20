@@ -53,6 +53,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        // TODO: Move the verify flag into the context itself
         public Transaction BuildTransaction(TransactionBuildContext context)
         {
             this.InitializeTransactionBuilder(context);
@@ -78,10 +79,16 @@ namespace Stratis.Bitcoin.Features.Wallet
                     // TODO: Improve this as we already have secrets when running a retry iteration.
                     this.AddSecrets(context, spentCoins);
                     context.TransactionBuilder.SignTransactionInPlace(transaction);
-                }
 
-                if (context.TransactionBuilder.Verify(transaction, out errors))
+                    if (context.TransactionBuilder.Verify(transaction, out errors))
+                        return transaction;
+                }
+                else
+                {
+                    // If we aren't being asked to sign then it is not really meaningful to perform the Verify step.
+                    // TODO: Do we still need to check for FeeTooLowPolicyError in this case?
                     return transaction;
+                }
 
                 // Retry only if error is of type 'FeeTooLowPolicyError'.
                 if (!errors.Any(e => e is FeeTooLowPolicyError)) break;

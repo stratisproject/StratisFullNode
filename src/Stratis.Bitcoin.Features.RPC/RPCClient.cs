@@ -108,9 +108,9 @@ namespace Stratis.Bitcoin.Features.RPC
         rawtransactions    decoderawtransaction         Yes
         rawtransactions    decodescript
         rawtransactions    getrawtransaction            Yes
-        rawtransactions    sendrawtransaction
-        rawtransactions    signrawtransaction
-        rawtransactions    fundrawtransaction
+        rawtransactions    sendrawtransaction           Yes
+        rawtransactions    signrawtransaction           Yes
+        rawtransactions    fundrawtransaction           Yes
 
         ------------------ Utility functions
         util               createmultisig

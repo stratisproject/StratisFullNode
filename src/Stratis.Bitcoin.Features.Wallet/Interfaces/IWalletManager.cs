@@ -267,13 +267,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// Gets a list of accounts.
         /// </summary>
         /// <param name="walletName">The name of the wallet to look into.</param>
-        /// <returns></returns>
+        /// <returns>The list of accounts in the specified wallet.</returns>
         IEnumerable<HdAccount> GetAccounts(string walletName);
+
+        /// <summary>
+        /// Gets a list of all the accounts in all wallets.
+        /// </summary>
+        /// <returns>The list of all accounts.</returns>
+        IEnumerable<HdAccount> GetAllAccounts();
 
         /// <summary>
         /// Gets the last block height.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The last block height.</returns>
         int LastBlockHeight();
 
         /// <summary>
@@ -321,6 +327,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="walletName">The name of the wallet to get.</param>
         /// <returns>A wallet or null if it doesn't exist</returns>
         Wallet GetWallet(string walletName);
+
+        /// <summary>
+        /// Gets all the wallets known to the manager.
+        /// </summary>
+        /// <returns>The list of wallets.</returns>
+        IEnumerable<Wallet> GetWallets();
 
         /// <summary>
         /// Gets whether there are any wallet files loaded or not.

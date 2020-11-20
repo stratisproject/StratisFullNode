@@ -988,6 +988,17 @@ namespace Stratis.Bitcoin.Features.Wallet
             return res;
         }
 
+        public IEnumerable<HdAccount> GetAllAccounts()
+        {
+            HdAccount[] res = null;
+            lock (this.lockObject)
+            {
+                res = this.Wallets.SelectMany(w => w.GetAccounts()).ToArray();
+            }
+
+            return res;
+        }
+
         /// <inheritdoc />
         public int LastBlockHeight()
         {
@@ -1222,6 +1233,11 @@ namespace Stratis.Bitcoin.Features.Wallet
             var wallet = this.WalletRepository.GetWallet(walletName);
             wallet.WalletManager = this;
             return wallet;
+        }
+
+        public IEnumerable<Wallet> GetWallets()
+        {
+            return this.Wallets.ToArray();
         }
 
         /// <inheritdoc />
