@@ -100,6 +100,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     }
                 }
 
+                // TODO: This is the wrong destination message. Should be output.scriptpubkey?
                 this.Logger.LogDebug($"Reward distribution transaction validated in consensus, spending to '{prevOut.ScriptPubKey}'.");
             }
 
