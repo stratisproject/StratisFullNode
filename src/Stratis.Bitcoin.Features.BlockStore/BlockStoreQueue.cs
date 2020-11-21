@@ -365,7 +365,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (block == null)
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHash);
-                if (chainedHeader.Height <= this.blockRepository.TipHashAndHeight.Height)
+                if (chainedHeader != null && chainedHeader.Height <= this.blockRepository.TipHashAndHeight.Height)
                 {
                     // The block we were looking for occurs at a height that would be present in the block repository.
                     // If the block repository tip is on the consensus chain then the block should have been present.
