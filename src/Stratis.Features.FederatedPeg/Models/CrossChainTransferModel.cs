@@ -20,8 +20,5 @@ namespace Stratis.Features.FederatedPeg.Models
 
         [JsonProperty("tx")]
         public TransactionVerboseModel Transaction { get; set; }
-
-        [JsonProperty("txHex")]
-        public string TransactionHex { get; set; }
     }
 }
