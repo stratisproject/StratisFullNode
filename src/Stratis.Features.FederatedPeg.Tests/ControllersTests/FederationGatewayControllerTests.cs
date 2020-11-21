@@ -22,6 +22,7 @@ using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
+using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
@@ -30,6 +31,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
     public class FederationGatewayControllerTests
     {
         private readonly Network network;
+
+        private readonly ICrossChainTransferStore crossChainTransferStore;
 
         private readonly ILoggerFactory loggerFactory;
 
@@ -49,10 +52,13 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private readonly ISignals signals;
 
+        private readonly ISignedMultisigTransactionBroadcaster signedMultisigTransactionBroadcaster;
+
         public FederationGatewayControllerTests()
         {
             this.network = CirrusNetwork.NetworksSelector.Regtest();
 
+            this.crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
@@ -63,15 +69,19 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.keyValueRepository = Substitute.For<IKeyValueRepository>();
             this.signals = new Signals(this.loggerFactory, null);
             this.federationManager = new CollateralFederationManager(NodeSettings.Default(this.network), this.network, this.loggerFactory, this.keyValueRepository, this.signals, null, null, null);
+            this.signedMultisigTransactionBroadcaster = Substitute.For<ISignedMultisigTransactionBroadcaster>();
         }
 
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
             var controller = new FederationGatewayController(
+                this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
+                this.network,
                 this.federatedPegSettings,
                 this.federationWalletManager,
+                this.signedMultisigTransactionBroadcaster,
                 this.federationManager);
 
             return controller;
@@ -194,10 +204,13 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
+                this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
+                this.network,
                 settings,
                 this.federationWalletManager,
+                this.signedMultisigTransactionBroadcaster,
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -250,10 +263,13 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
+                this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
+                this.network,
                 settings,
                 this.federationWalletManager,
+                this.signedMultisigTransactionBroadcaster,
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
 using Newtonsoft.Json;
-using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Bitcoin.Controllers.Models;
 
 namespace Stratis.Features.FederatedPeg.Models
 {
@@ -15,10 +15,13 @@ namespace Stratis.Features.FederatedPeg.Models
         [JsonProperty("depositHeight")]
         public int? DepositHeight { get; internal set; }
 
-        [JsonProperty("status")]
-        public CrossChainTransferStatus TransferStatus { get; set; }
+        [JsonProperty("transferStatus")]
+        public string TransferStatus { get; set; }
 
         [JsonProperty("tx")]
-        public string Transaction { get; set; }
+        public TransactionVerboseModel Transaction { get; set; }
+
+        [JsonProperty("txHex")]
+        public string TransactionHex { get; set; }
     }
 }
