@@ -126,7 +126,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             var transferItem = new SignedMultisigTransactionBroadcastResultItem()
             {
-                DepositId = crossChainTransfer.DepositTransactionId.ToString(),
+                DepositId = crossChainTransfer.DepositTransactionId?.ToString(),
                 TransactionId = crossChainTransfer.PartialTransaction.GetHash().ToString(),
             };
 
