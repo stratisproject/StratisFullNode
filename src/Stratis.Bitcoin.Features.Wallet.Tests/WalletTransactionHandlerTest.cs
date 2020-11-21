@@ -568,8 +568,76 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             contextWithoutOpReturn.TransactionFee.Satoshi.Should().BeLessThan(contextWithOpReturn.TransactionFee.Satoshi);
         }
 
+        [Fact]
+        public void When_BuildTransactionIsCalled_Then_FeeIsDeductedFromAmountsInTransaction()
+        {
+            DataFolder dataFolder = CreateDataFolder(this);
+
+            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader())
+            {
+                TestMode = true
+            };
+
+            var walletFeePolicy = new Mock<IWalletFeePolicy>();
+            walletFeePolicy.Setup(w => w.GetFeeRate(FeeType.Low.ToConfirmations())).Returns(new FeeRate(20000));
+
+            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new ChainIndexer(this.Network), new WalletSettings(NodeSettings.Default(this.Network)),
+                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, this.scriptAddressReader, walletRepository);
+
+            walletManager.Start();
+
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.LoggerFactory.Object, walletManager, walletFeePolicy.Object, this.Network, this.standardTransactionPolicy, reserveUtxoService);
+
+            (Wallet wallet, ExtKey extKey) = WalletTestsHelpers.GenerateBlankWalletWithExtKey("myWallet1", "password", walletRepository);
+
+            walletManager.Wallets.Add(wallet);
+
+            int accountIndex = 0;
+            ExtKey addressExtKey = extKey.Derive(new KeyPath($"m/44'/{this.Network.Consensus.CoinType}'/{accountIndex}'"));
+            ExtPubKey extPubKey = addressExtKey.Neuter();
+
+            HdAccount account = wallet.AddNewAccount(extPubKey, accountName: "account1");
+
+            var address = account.ExternalAddresses.First();
+            var destination = account.InternalAddresses.First();
+            var destination2 = account.InternalAddresses.Skip(1).First();
+            var destination3 = account.InternalAddresses.Skip(2).First();
+
+            // Wallet with 4 coinbase outputs of 50 = 200.
+            var chain = new ChainIndexer(wallet.Network);
+            WalletTestsHelpers.AddBlocksWithCoinbaseToChain(wallet.Network, chain, address, 4);
+
+            var walletReference = new WalletAccountReference
+            {
+                AccountName = "account1",
+                WalletName = "myWallet1"
+            };
+
+            // Create a transaction with 3 outputs 50 + 50 + 50 = 150 but with fees charged to recipients.
+            var context = new TransactionBuildContext(this.Network)
+            {
+                AccountReference = walletReference,
+                MinConfirmations = 0,
+                FeeType = FeeType.Low,
+                WalletPassword = "password",
+                Recipients = new[]
+                {
+                    new Recipient { Amount = new Money(50, MoneyUnit.BTC), ScriptPubKey = destination.ScriptPubKey, SubtractFeeFromAmount = true },
+                    new Recipient { Amount = new Money(50, MoneyUnit.BTC), ScriptPubKey = destination2.ScriptPubKey, SubtractFeeFromAmount = true },
+                    new Recipient { Amount = new Money(50, MoneyUnit.BTC), ScriptPubKey = destination3.ScriptPubKey, SubtractFeeFromAmount = false }
+                }.ToList()
+            };
+
+            Transaction transaction = walletTransactionHandler.BuildTransaction(context);
+            Assert.Equal(3, transaction.Inputs.Count); // 3 inputs
+            Assert.Equal(3, transaction.Outputs.Count); // 3 outputs with change
+            Assert.True(transaction.Outputs.Count(i => i.Value.Satoshi < 5_000_000_000) == 2); // 2 outputs should have fees taken from the amount
+        }
+
         public static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password,
-            Script destinationScript, Money amount, FeeType feeType, int minConfirmations, string opReturnData = null)
+            Script destinationScript, Money amount, FeeType feeType, int minConfirmations, string opReturnData = null, List<Recipient> recipients = null)
         {
             return new TransactionBuildContext(network)
             {
@@ -579,7 +647,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 OpReturnData = opReturnData,
                 WalletPassword = password,
                 Sign = !string.IsNullOrEmpty(password),
-                Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destinationScript } }.ToList()
+                Recipients = recipients ?? new[] { new Recipient { Amount = amount, ScriptPubKey = destinationScript } }.ToList()
             };
         }
 

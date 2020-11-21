@@ -151,15 +151,41 @@ function Get-Median($numberSeries)
 
 function Check-TimeDifference
 {
-    Write-Host "Checking UTC Time Difference" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (WorldTimeAPI)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $timeDifSamples[0] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
     $timeDifSamples[1] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
     $timeDifSamples[2] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
-    if ( $timeDif -gt 2 )
+    if ( $timeDif -gt 2 -or $timeDif -lt 2 )
+    {
+        Clear-Variable timeDif,timeDifSamples
+        Check-TimeDifference2
+    }
+        Else
+        {
+            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
+            Write-Host ""
+        }
+}
+
+function Check-TimeDifference2
+{
+    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
+    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDif = Get-Median -numberSeries $timeDifSamples
+
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 )
     {
         Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
         Start-Sleep 30
@@ -415,17 +441,18 @@ if ( -not ( $WalletNames -contains "MiningWallet" ) )
             ""
             Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
 
-            $ReadyToContinue? = Read-Host -Prompt "Have you written down your words?"
+            $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
             While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
             {
                 ""
-                $ReadyToContinue? = Read-Host -Prompt "Have you written down your words?"
+                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
                 ""
             }
             Switch ( $ReadyToContinue )
             {
                 Yes 
                 {
+                    Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
                 }
                 
                 No 
@@ -529,8 +556,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUuErJ5XQmebUd1eXKaK0ql92d
-# HDigggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU3QOC/gMECD7V9YFWeZsN3Ke4
+# /SqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -600,11 +627,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFJNzEfRc3uYS
-# gpnqoB8mWP1vLqblMA0GCSqGSIb3DQEBAQUABIIBAEbDDbdcuiGdKtNWhJsCnTY7
-# xQ/IsG9WPkoYqEljy/TjOhCTuS94/s9o7sXtoBeT2/q9+7U7bQZpgI3wyqQ3NnUs
-# saFRxrc72mmE6m3pkPAEdVjkGaD6szv36hr76iULcVVfGlN2cqXQj5dZLd/NEqUw
-# PGnn2wZuNYyafN9iXKGbzoam5pJh30qJp5qaqvBVYWqfHj150iCYsdUiTI0k1/KZ
-# syH14UcmmeFEG2zJ9rx9kgeoJnutl3M7n96MQc1sszll/KdDHDQXV12QzzkCaXMf
-# gS0elyP0lm2Nu4R6G8zhrDCdowEm/UWi3IKv+JrgAjSvXMnDaQByn84t8EFqoGc=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFAkzH767UIxC
+# PTvSZ2b/4eHdw8O/MA0GCSqGSIb3DQEBAQUABIIBACw42G0Flw5Jj1KVe3SEnh6T
+# fMKZiOur/K6g7EBwR6e82NvZW3DjAUsmFbPDVybFI1veP25ZxwI6DEugGrOeL9zF
+# L7Ugs/7qOvE3kffixpeU1Xb3rPB2RrlNchWWrAExV0s2QcLLU+9tT6iSQLWSFoKX
+# 7fOMtTSd0ZtHx9HJmTxGr6iOivshIjhCrklpUnsef8yWBKHHC/CiTwnuLsHpOsbs
+# SvELDDgF+4OBwq3n7e02g/Qz6JVI1oSG4X+f3drGgBFPk1H5jayzWrLWXI6pk03K
+# ZnQrl66gDS5pyLjNJpVJ12g+Fid2cd2UGepY7DkK/1oHJWj005OjzyLdbWMd8sU=
 # SIG # End signature block

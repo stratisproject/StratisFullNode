@@ -172,6 +172,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [JsonProperty(PropertyName = "fees")]
         public string Fees { get; set; }
 
+        [JsonProperty(PropertyName = "subtractFeeFromAmount")]
+        public bool SubtractFeeFromAmount { get; set; }
+
         /// <summary>Creates a string containing the properties of this object.</summary>
         /// <returns>A string containing the properties of the object.</returns>
         public override string ToString()
@@ -240,6 +243,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [MoneyFormat(ErrorMessage = "The fees are not in the correct format.")]
         [JsonProperty(PropertyName = "fees")]
         public string Fees { get; set; }
+
+        [JsonProperty(PropertyName = "subtractFeeFromAmount")]
+        public bool SubtractFeeFromAmount { get; set; }
 
         /// <summary>
         /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
