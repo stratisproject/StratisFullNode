@@ -5,6 +5,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -29,10 +30,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
     [Route("api/[controller]")]
     public class FederationGatewayController : Controller
     {
-        /// <summary>Instance logger.</summary>
-        private readonly ILogger logger;
-
-        private readonly IMaturedBlocksProvider maturedBlocksProvider;
+        private readonly ICrossChainTransferStore crossChainTransferStore;
 
         private readonly IFederatedPegSettings federatedPegSettings;
 
@@ -40,22 +38,28 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
         private readonly IFederationManager federationManager;
 
-        private readonly ICrossChainTransferStore crossChainTransferStore;
+        private readonly ILogger logger;
+
+        private readonly IMaturedBlocksProvider maturedBlocksProvider;
+
+        private readonly Network network;
 
         public FederationGatewayController(
+            ICrossChainTransferStore crossChainTransferStore,
             ILoggerFactory loggerFactory,
             IMaturedBlocksProvider maturedBlocksProvider,
+            Network network,
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
-            IFederationManager federationManager = null,
-            ICrossChainTransferStore crossChainTransferStore = null)
+            IFederationManager federationManager = null)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.maturedBlocksProvider = maturedBlocksProvider;
+            this.crossChainTransferStore = crossChainTransferStore;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.federationManager = federationManager;
-            this.crossChainTransferStore = crossChainTransferStore;
+            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.maturedBlocksProvider = maturedBlocksProvider;
+            this.network = network;
         }
 
         /// <summary>
@@ -104,12 +108,17 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 CrossChainTransferStatus.SeenInBlock })
                 .ToArray();
 
-            var transactions = transfers
-                .Where(t => new[] { CrossChainTransferStatus.FullySigned, CrossChainTransferStatus.Partial, CrossChainTransferStatus.SeenInBlock }.Contains(t.Status))
+            CrossChainTransferModel[] transactions = transfers
                 .Where(t => t.PartialTransaction != null)
                 .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
-                .Select(t => $"DepositId = {t.DepositTransactionId}, TransactionId = { t.PartialTransaction.GetHash() }, Transaction = { t.PartialTransaction.ToHex() }")
-                .ToArray();
+                .Select(t => new CrossChainTransferModel()
+                {
+                    DepositAmount = t.DepositAmount,
+                    DepositId = t.DepositTransactionId,
+                    DepositHeight = t.DepositHeight,
+                    Transaction = t.PartialTransaction.ToString(this.network, RawFormat.BlockExplorer),
+                    TransferStatus = t.Status,
+                }).ToArray();
 
             return this.Json(transactions);
         }
