@@ -16,9 +16,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
-        public const string GetFasterMaturedBlockDeposits = "deposits/faster";
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetInfo = "info";
+        public const string RetrieveTransferByStatus = "ccts/transactions/fullysigned";
     }
 
     /// <summary>
@@ -28,29 +28,52 @@ namespace Stratis.Features.FederatedPeg.Controllers
     [Route("api/[controller]")]
     public class FederationGatewayController : Controller
     {
-        /// <summary>Instance logger.</summary>
+        private readonly ICrossChainTransferStore crossChainTransferStore;
+        private readonly IFederationManager federationManager;
+        private readonly IFederatedPegSettings federatedPegSettings;
+        private readonly IFederationWalletManager federationWalletManager;
         private readonly ILogger logger;
-
         private readonly IMaturedBlocksProvider maturedBlocksProvider;
 
-        private readonly IFederatedPegSettings federatedPegSettings;
-
-        private readonly IFederationWalletManager federationWalletManager;
-
-        private readonly IFederationManager federationManager;
-
         public FederationGatewayController(
+            ICrossChainTransferStore crossChainTransferStore,
             ILoggerFactory loggerFactory,
             IMaturedBlocksProvider maturedBlocksProvider,
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
             IFederationManager federationManager = null)
         {
+            this.crossChainTransferStore = crossChainTransferStore;
+            this.maturedBlocksProvider = maturedBlocksProvider;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.maturedBlocksProvider = maturedBlocksProvider;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.federationManager = federationManager;
+        }
+
+        /// <summary>
+        /// Retrieves <see cref="CrossChainTransferStatus.FullySigned"/> transactions from the <see cref="ICrossChainTransferStore"/>.
+        /// </summary>
+        /// <returns><see cref="IActionResult"/>OK on success.</returns>
+        /// <response code="200">Returns transfers by status deposits</response>
+        [Route(FederationGatewayRouteEndPoint.RetrieveTransferByStatus)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult CrossChainTransfers_RetrieveTransctionsByStatus([FromQuery] int transferStatus)
+        {
+            try
+            {
+                ICrossChainTransfer[] result = this.crossChainTransferStore.GetTransfersByStatus(new[] { (CrossChainTransferStatus)transferStatus });
+                return this.Json(result);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogDebug($"Exception {e.Message}.");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error occurred.", e.Message);
+            }
         }
 
         /// <summary>
