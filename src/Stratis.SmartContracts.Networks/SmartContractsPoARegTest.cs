@@ -173,6 +173,7 @@ namespace Stratis.SmartContracts.Networks
                 .Register<BlockSizeRule>()
 
                 // Rules that are inside the method CheckBlock
+                .Register<PoAHeaderSignatureRule>()
                 .Register<EnsureCoinbaseRule>()
                 .Register<CheckPowTransactionRule>()
                 .Register<CheckSigOpsRule>()
