@@ -19,6 +19,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string GetFasterMaturedBlockDeposits = "deposits/faster";
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetInfo = "info";
+        public const string GetTransfer = "gettransfers";
     }
 
     /// <summary>
@@ -39,18 +40,22 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
         private readonly IFederationManager federationManager;
 
+        private readonly ICrossChainTransferStore crossChainTransferStore;
+
         public FederationGatewayController(
             ILoggerFactory loggerFactory,
             IMaturedBlocksProvider maturedBlocksProvider,
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
-            IFederationManager federationManager = null)
+            IFederationManager federationManager = null,
+            ICrossChainTransferStore crossChainTransferStore = null)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.maturedBlocksProvider = maturedBlocksProvider;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.federationManager = federationManager;
+            this.crossChainTransferStore = crossChainTransferStore;
         }
 
         /// <summary>
@@ -84,6 +89,29 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Could not re-sync matured block deposits: {e.Message}", e.ToString());
             }
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetTransfer)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult GetTransfer([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
+        {
+            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] {
+                CrossChainTransferStatus.FullySigned,
+                CrossChainTransferStatus.Partial,
+                CrossChainTransferStatus.SeenInBlock })
+                .ToArray();
+
+            var transactions = transfers
+                .Where(t => new[] { CrossChainTransferStatus.FullySigned, CrossChainTransferStatus.Partial, CrossChainTransferStatus.SeenInBlock }.Contains(t.Status))
+                .Where(t => t.PartialTransaction != null)
+                .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
+                .Select(t => $"DepositId = {t.DepositTransactionId}, TransactionId = { t.PartialTransaction.GetHash() }, Transaction = { t.PartialTransaction.ToHex() }")
+                .ToArray();
+
+            return this.Json(transactions);
         }
 
         /// <summary>
