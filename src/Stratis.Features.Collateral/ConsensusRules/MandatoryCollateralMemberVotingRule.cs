@@ -43,14 +43,14 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            // Determine the pending "AddFederationMember" polls that this node is participating in.
+            // "AddFederationMember" polls, that were started at or before this height, that are still pending, which this node has voted in favor of.
             List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls()
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
                     && p.PollStartBlockData != null
                     && p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height
                     && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
 
-            // If there is nothing to check then exit.
+            // Exit if there aren't any.
             if (!pendingPolls.Any())
                 return Task.CompletedTask;
 
@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             PubKey blockMiner = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
             pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex())).ToList();
 
-            // If there is nothing remaining to check then exit.
+            // Exit if there is nothing remaining.
             if (!pendingPolls.Any())
                 return Task.CompletedTask;
 
@@ -68,6 +68,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             if (votingDataBytes == null)
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
+            // If any remaining polls are not found in the voting data list then throw a consenus error.
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
             if (pendingPolls.Any(p => !votingDataList.Any(data => pendingPolls.Any(p => p.VotingData == data))))
                 PoAConsensusErrors.BlockMissingVotes.Throw();
