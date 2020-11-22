@@ -53,8 +53,8 @@ namespace Stratis.Features.Collateral
             if (!fullNodeBuilder.Network.Consensus.MempoolRules.Contains(typeof(VotingRequestValidationRule)))
                 fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 
-            if (!fullNodeBuilder.Network.Consensus.ConsensusRules.PartialValidationRules.Contains(typeof(MandatoryCollateralMemberVotingRule)))
-                fullNodeBuilder.Network.Consensus.ConsensusRules.PartialValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+            if (!fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Contains(typeof(MandatoryCollateralMemberVotingRule)))
+                fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
 
             fullNodeBuilder.ConfigureFeature(features =>
             {

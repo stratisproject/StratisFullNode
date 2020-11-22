@@ -6,14 +6,13 @@ using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
-using Stratis.Bitcoin.PoA.Features.Voting;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 {
     /// <summary>Used with the dynamic-mebership feature to validate <see cref="VotingData"/> 
     /// collection to ensure new members are being voted-in.</summary>
-    public class MandatoryCollateralMemberVotingRule : PartialValidationConsensusRule
+    public class MandatoryCollateralMemberVotingRule : FullValidationConsensusRule
     {
         private VotingDataEncoder votingDataEncoder;
         private PoAConsensusRuleEngine ruleEngine;
@@ -44,67 +43,33 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         /// <summary>Checks that whomever mined this block is participating in any pending polls to vote-in new federation members.</summary>
         public override Task RunAsync(RuleContext context)
         {
-            // Determine the members that this node is currently in favor of adding.
-            List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls();
-            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
-            IEnumerable<PubKey> newMembers = pendingPolls
+            // Determine the pending "AddFederationMember" polls that this node is participating in.
+            List<Poll> pendingPolls = this.ruleEngine.VotingManager.GetPendingPolls()
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
-                    && (p.PollStartBlockData == null || p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height)
-                    && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
-                .Select(p => ((CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)).PubKey);
+                    && p.PollStartBlockData != null
+                    && p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height
+                    && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
 
-            if (!newMembers.Any())
+            // If there is nothing to check then exit.
+            if (!pendingPolls.Any())
                 return Task.CompletedTask;
 
-            // Determine who mined the block.
+            // Ignore any polls that the miner has already voted on.
             PubKey blockMiner = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
+            pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex())).ToList();
 
-            // Check that the miner is in favor of adding the same member(s).
-            Dictionary<string, bool> checkList = newMembers.ToDictionary(x => x.ToHex(), x => false);
-
-            foreach (CollateralFederationMember member in pendingPolls
-                .Where(p => p.VotingData.Key == VoteKey.AddFederationMember && p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex()))
-                .Select(p => (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(p.VotingData.Data)))
-            {
-                checkList[member.PubKey.ToHex()] = true;
-            }
-
-            if (!checkList.Any(c => !c.Value))
+            // If there is nothing remaining to check then exit.
+            if (!pendingPolls.Any())
                 return Task.CompletedTask;
 
-            // Otherwise check that the miner is including those votes now.
+            // Verify that the miner is including all the missing votes now.
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
-
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
-            if (votingDataBytes != null)
-            {
-                List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
-                foreach (VotingData votingData in votingDataList)
-                {
-                    var member = (CollateralFederationMember)this.consensusFactory.DeserializeFederationMember(votingData.Data);
+            if (votingDataBytes == null)
+                PoAConsensusErrors.BlockMissingVotes.Throw();
 
-                    var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey((PoANetwork)this.network, member.PubKey);
-
-                    // Check collateral amount.
-                    if (member.CollateralAmount.ToDecimal(MoneyUnit.BTC) != expectedCollateralAmount)
-                    {
-                        this.logger.LogTrace("(-)[INVALID_COLLATERAL_REQUIREMENT]");
-                        PoAConsensusErrors.InvalidCollateralRequirement.Throw();
-                    }
-
-                    // Can't be a multisig member.
-                    if (member.IsMultisigMember)
-                    {
-                        this.logger.LogTrace("(-)[INVALID_MULTISIG_VOTING]");
-                        PoAConsensusErrors.VotingRequestInvalidMultisig.Throw();
-                    }
-
-                    checkList[member.PubKey.ToHex()] = true;
-                }
-            }
-
-            // If any outstanding votes have not been included throw a consensus error.
-            if (checkList.Any(c => !c.Value))
+            List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
+            if (pendingPolls.Any(p => !votingDataList.Any(data => pendingPolls.Any(p => p.VotingData == data))))
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
             return Task.CompletedTask;

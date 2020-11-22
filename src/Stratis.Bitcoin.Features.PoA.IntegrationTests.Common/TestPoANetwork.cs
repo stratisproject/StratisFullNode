@@ -67,7 +67,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 options.GenesisFederationMembers.Add(member);
 
             this.ConsensusOptions.AutoKickIdleMembers = enableIdleKicking;
-            this.Consensus.ConsensusRules.PartialValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+            this.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
             this.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 
             this.Name = "PoaCollateralMain";
