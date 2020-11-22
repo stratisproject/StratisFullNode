@@ -70,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
 
             // If any remaining polls are not found in the voting data list then throw a consenus error.
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
-            if (pendingPolls.Any(p => !votingDataList.Any(data => pendingPolls.Any(p => p.VotingData == data))))
+            if (pendingPolls.Any(p => !votingDataList.Any(data => data == p.VotingData)))
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
             return Task.CompletedTask;
