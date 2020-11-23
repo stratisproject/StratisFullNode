@@ -77,11 +77,46 @@ namespace Stratis.Features.Collateral
 
         protected override void LoadFederation()
         {
-            VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
+            List<CollateralFederationMemberModel> fedMemberModels = this.keyValueRepo.LoadValueJson<List<CollateralFederationMemberModel>>(federationMembersDbKey);
 
-            this.federationMembers = votingManager.GetFederationFromExecutedPolls();
+            if (fedMemberModels == null)
+            {
+                this.logger.LogTrace("(-)[NOT_FOUND]:null");
+                this.federationMembers = null;
+                return;
+            }
+
+            var federation = new List<IFederationMember>(fedMemberModels.Count);
+
+            foreach (CollateralFederationMemberModel fedMemberModel in fedMemberModels)
+            {
+                var pubKey = new PubKey(fedMemberModel.PubKeyHex);
+                federation.Add(new CollateralFederationMember(pubKey, false, new Money(fedMemberModel.CollateralAmountSatoshis),
+                    fedMemberModel.CollateralMainchainAddress));
+            }
+
+            this.federationMembers = federation;
 
             this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
+        }
+
+        protected override void SaveFederation(List<IFederationMember> federation)
+        {
+            IEnumerable<CollateralFederationMember> collateralFederation = federation.Cast<CollateralFederationMember>();
+
+            var modelsCollection = new List<CollateralFederationMemberModel>(federation.Count);
+
+            foreach (CollateralFederationMember federationMember in collateralFederation)
+            {
+                modelsCollection.Add(new CollateralFederationMemberModel()
+                {
+                    PubKeyHex = federationMember.PubKey.ToHex(),
+                    CollateralMainchainAddress = federationMember.CollateralMainchainAddress,
+                    CollateralAmountSatoshis = federationMember.CollateralAmount.Satoshi
+                });
+            }
+
+            this.keyValueRepo.SaveValueJson(federationMembersDbKey, modelsCollection);
         }
 
         public async Task<PubKey> JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -70,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var federationMemberModels = new List<FederationMemberModel>();
 
                 // Get their last active times.
-                ConcurrentDictionary<PubKey, uint> activeTimes = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime();
+                Dictionary<PubKey, uint> activeTimes = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime();
                 foreach (IFederationMember federationMember in federationMembers)
                 {
                     federationMemberModels.Add(new FederationMemberModel()
