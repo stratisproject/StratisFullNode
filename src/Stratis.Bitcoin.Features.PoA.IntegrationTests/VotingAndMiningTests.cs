@@ -128,6 +128,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2, this.node3);
         }
 
+        // TODO : Rewrite.
         //[Fact]
         // Checks that multisig fed members can't be kicked.
         //public async Task CantKickMultiSigFedMemberAsync()
