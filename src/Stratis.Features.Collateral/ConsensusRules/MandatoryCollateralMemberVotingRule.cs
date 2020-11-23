@@ -57,10 +57,8 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
 
-            // If there are no voting data then just return, we could be dealing with pending polls
-            // that were never executed (picked up) by other nodes.
             if (votingDataBytes == null)
-                return Task.CompletedTask;
+                PoAConsensusErrors.BlockMissingVotes.Throw();
 
             // If any remaining polls are not found in the voting data list then throw a consenus error.
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
