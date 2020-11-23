@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -57,11 +60,26 @@ namespace Stratis.Features.FederatedPeg.Tests
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
             ISignals signals = new Signals(loggerFactory, new DefaultSubscriptionErrorHandler(loggerFactory));
-            IFederationManager fedManager = new CollateralFederationManager(nodeSettings, network, loggerFactory, new Mock<IKeyValueRepository>().Object, signals, settings, null, null);
+            var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
+            var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
+            finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
 
-            fedManager.Initialize();
+            var chainIndexerMock = new Mock<ChainIndexer>();
+            var header = new BlockHeader();
+            chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
+            var fullNode = new Mock<IFullNode>();
+            IFederationManager federationManager = new CollateralFederationManager(nodeSettings, network, loggerFactory, new Mock<IKeyValueRepository>().Object, signals, settings, fullNode.Object, null);
+            var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
+            var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager,
+                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
+            votingManager.Initialize();
 
-            this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, settings, fedManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
+            fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
+
+            federationManager.Initialize();
+
+            this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, settings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
         }
 
         [Fact]
