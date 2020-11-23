@@ -236,6 +236,27 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.GetFederationMembers().Any(fm => fm.PubKey == pubKey);
         }
 
+        public List<IFederationMember> GetFederationFromExecutedPolls()
+        {
+            lock (this.locker)
+            {
+                var federation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
+
+                foreach (Poll poll in this.GetFinishedPolls().Where(x =>
+                    ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                {
+                    IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
+
+                    if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                        federation.Add(federationMember);
+                    else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                        federation.Remove(federationMember);
+                }
+
+                return federation;
+            }
+        }
+
         public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader)
         {
             lock (this.locker)
