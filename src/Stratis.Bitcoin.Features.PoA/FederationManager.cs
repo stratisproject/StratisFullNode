@@ -66,9 +66,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly ISignals signals;
 
-        /// <summary>Key for accessing list of public keys that represent federation members from <see cref="IKeyValueRepository"/>.</summary>
-        protected const string federationMembersDbKey = "fedmemberskeys";
-
         /// <summary>Collection of all active federation members as determined by the genesis members and all executed polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         protected List<IFederationMember> federationMembers;
@@ -99,10 +96,7 @@ namespace Stratis.Bitcoin.Features.PoA
             if (this.federationMembers == null)
             {
                 this.logger.LogDebug("Federation members are not stored in the db. Loading genesis federation members.");
-
                 this.federationMembers = genesisFederation;
-
-                this.SaveFederation(this.federationMembers);
             }
 
             // Display federation.
@@ -154,8 +148,6 @@ namespace Stratis.Bitcoin.Features.PoA
                             .Any(m => m.PubKey == federationMember.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
                     }
                 }
-
-                this.SaveFederation(this.federationMembers);
             }
         }
 
@@ -192,7 +184,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.signals.Publish(new FedMemberAdded(federationMember));
         }
 
-        /// <remarks>Should be protected by <see cref="locker"/>.</remarks>
+        /// <summary>Should be protected by <see cref="locker"/>.</summary>
         protected virtual void AddFederationMemberLocked(IFederationMember federationMember)
         {
             if (this.federationMembers.Contains(federationMember))
@@ -203,7 +195,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.federationMembers.Add(federationMember);
 
-            this.SaveFederation(this.federationMembers);
             this.SetIsFederationMember();
 
             this.logger.LogInformation("Federation member '{0}' was added!", federationMember);
@@ -215,7 +206,6 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 this.federationMembers.Remove(federationMember);
 
-                this.SaveFederation(this.federationMembers);
                 this.SetIsFederationMember();
 
                 this.logger.LogInformation("Federation member '{0}' was removed!", federationMember);
@@ -223,8 +213,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.signals.Publish(new FedMemberKicked(federationMember));
         }
-
-        protected abstract void SaveFederation(List<IFederationMember> federation);
 
         /// <summary>Loads saved collection of federation members from the database.</summary>
         protected abstract void LoadFederation();
@@ -254,12 +242,7 @@ namespace Stratis.Bitcoin.Features.PoA
         protected override void LoadFederation()
         {
             VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
-
             this.federationMembers = votingManager.GetFederationFromExecutedPolls();
-        }
-
-        protected override void SaveFederation(List<IFederationMember> federation)
-        {
         }
     }
 }

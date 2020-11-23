@@ -84,10 +84,6 @@ namespace Stratis.Features.Collateral
             this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
         }
 
-        protected override void SaveFederation(List<IFederationMember> federation)
-        {
-        }
-
         public async Task<PubKey> JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)
         {
             // Get the address pub key hash.
