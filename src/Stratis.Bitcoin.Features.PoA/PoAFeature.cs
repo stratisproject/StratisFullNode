@@ -106,6 +106,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.votingManager.Initialize();
                 }
             }
+
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
 
