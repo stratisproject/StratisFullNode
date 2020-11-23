@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -29,13 +30,11 @@ namespace Stratis.Features.FederatedPeg.Tests
 {
     public class CollateralCheckerTests
     {
-        private readonly ICollateralChecker collateralChecker;
-
-        private readonly List<CollateralFederationMember> collateralFederationMembers;
-
+        private ICollateralChecker collateralChecker;
+        private List<CollateralFederationMember> collateralFederationMembers;
         private readonly int collateralCheckHeight = 2000;
 
-        public CollateralCheckerTests()
+        private void InitializeCollateralChecker([CallerMemberName] string callingMethod = "")
         {
             var loggerFactory = new LoggerFactory();
             IHttpClientFactory clientFactory = new Bitcoin.Controllers.HttpClientFactory();
@@ -53,9 +52,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             federationMembers.Clear();
             federationMembers.AddRange(this.collateralFederationMembers);
 
-            FederatedPegSettings fedPegSettings = FedPegTestsHelper.CreateSettings(network, KnownNetworks.StraxRegTest, out NodeSettings nodeSettings);
+            var dataFolder = TestBase.CreateTestDir(callingMethod);
+            FederatedPegSettings fedPegSettings = FedPegTestsHelper.CreateSettings(network, KnownNetworks.StraxRegTest, dataFolder, out NodeSettings nodeSettings);
 
-            CounterChainSettings settings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest()));
+            var settings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest()));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
@@ -80,11 +80,14 @@ namespace Stratis.Features.FederatedPeg.Tests
             federationManager.Initialize();
 
             this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, settings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
+
         }
 
         [Fact]
         public async Task InitializationTakesForeverIfCounterNodeIsOfflineAsync()
         {
+            InitializeCollateralChecker();
+
             Task initTask = this.collateralChecker.InitializeAsync();
 
             await Task.Delay(10_000);
@@ -96,6 +99,8 @@ namespace Stratis.Features.FederatedPeg.Tests
         [Fact]
         public async Task CanInitializeAndCheckCollateralAsync()
         {
+            InitializeCollateralChecker();
+
             var blockStoreClientMock = new Mock<IBlockStoreClient>();
 
             var collateralData = new VerboseAddressBalancesResult(this.collateralCheckHeight + 1000)
