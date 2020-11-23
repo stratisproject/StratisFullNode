@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
@@ -16,26 +15,18 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
     {
         private VotingDataEncoder votingDataEncoder;
         private PoAConsensusRuleEngine ruleEngine;
-        private Network network;
         private IFederationManager federationManager;
         private VotingManager votingManager;
         private ISlotsManager slotsManager;
-        private CollateralPoAConsensusFactory consensusFactory;
-        private ILoggerFactory loggerFactory;
-        private ILogger logger;
 
         [NoTrace]
         public override void Initialize()
         {
             this.votingDataEncoder = new VotingDataEncoder(this.Parent.LoggerFactory);
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
-            this.loggerFactory = this.Parent.LoggerFactory;
-            this.logger = this.loggerFactory.CreateLogger(this.GetType().FullName);
-            this.network = this.Parent.Network;
             this.federationManager = this.ruleEngine.FederationManager;
             this.votingManager = this.ruleEngine.VotingManager;
             this.slotsManager = this.ruleEngine.SlotsManager;
-            this.consensusFactory = (CollateralPoAConsensusFactory)this.network.Consensus.ConsensusFactory;
 
             base.Initialize();
         }
@@ -65,6 +56,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             // Verify that the miner is including all the missing votes now.
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
+
             if (votingDataBytes == null)
                 PoAConsensusErrors.BlockMissingVotes.Throw();
 
