@@ -124,7 +124,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
                         // UTILS ----------------------------------------------------------------------------
                         services.AddSingleton<ISenderRetriever, SenderRetriever>();
-                        services.AddSingleton<IVersionProvider, SmartContractVersionProvider>();
 
                         services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
                         services.AddSingleton<IMethodParameterStringSerializer, MethodParameterStringSerializer>();
