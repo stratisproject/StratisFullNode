@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -14,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public interface IIdleFederationMembersKicker : IDisposable
     {
-        Dictionary<PubKey, uint> GetFederationMembersByLastActiveTime();
+        ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime();
         bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
         void Execute(ChainedHeader consensusTip);
         void Initialize();
@@ -42,8 +43,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ILogger logger;
 
-        private readonly IDateTimeProvider timeProvider;
-
         private readonly uint federationMemberMaxIdleTimeSeconds;
 
         private readonly PoAConsensusFactory consensusFactory;
@@ -51,12 +50,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private SubscriptionToken blockConnectedToken, fedMemberAddedToken, fedMemberKickedToken;
 
         /// <summary>Active time is updated when member is added or produced a new block.</remarks>
-        private Dictionary<PubKey, uint> fedPubKeysByLastActiveTime;
+        private ConcurrentDictionary<PubKey, uint> fedPubKeysByLastActiveTime;
 
         private const string fedMembersByLastActiveTimeKey = "fedMembersByLastActiveTime";
 
         public IdleFederationMembersKicker(ISignals signals, Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager,
-            IFederationManager federationManager, ISlotsManager slotsManager, VotingManager votingManager, ILoggerFactory loggerFactory, IDateTimeProvider timeProvider)
+            IFederationManager federationManager, ISlotsManager slotsManager, VotingManager votingManager, ILoggerFactory loggerFactory)
         {
             this.signals = signals;
             this.network = network;
@@ -65,7 +64,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.federationManager = federationManager;
             this.slotsManager = slotsManager;
             this.votingManager = votingManager;
-            this.timeProvider = timeProvider;
 
             this.consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -83,31 +81,31 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (loaded != null)
             {
-                this.fedPubKeysByLastActiveTime = new Dictionary<PubKey, uint>();
+                this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
 
                 foreach (KeyValuePair<string, uint> loadedMember in loaded)
                 {
-                    this.fedPubKeysByLastActiveTime.Add(new PubKey(loadedMember.Key), loadedMember.Value);
+                    this.fedPubKeysByLastActiveTime[new PubKey(loadedMember.Key)] = loadedMember.Value;
                 }
             }
             else
             {
                 this.logger.LogDebug("No saved data found. Initializing federation data with current timestamp.");
 
-                this.fedPubKeysByLastActiveTime = new Dictionary<PubKey, uint>();
+                this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
 
                 // If this is a clean sync initialize each member's last active time with the genesis timestamp.
                 // Each member's last active time will be updated on each block connected event during syncing
                 // or on block mined.
-                foreach (IFederationMember federationMember in this.federationManager.GetFederationMembers())
-                    this.fedPubKeysByLastActiveTime.Add(federationMember.PubKey, this.network.GenesisTime);
+                foreach (IFederationMember federationMember in ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers)
+                    this.fedPubKeysByLastActiveTime[federationMember.PubKey] = this.network.GenesisTime;
 
                 this.SaveMembersByLastActiveTime();
             }
         }
 
         /// <inheritdoc />
-        public Dictionary<PubKey, uint> GetFederationMembersByLastActiveTime()
+        public ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime()
         {
             return this.fedPubKeysByLastActiveTime;
         }
@@ -123,7 +121,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private void OnFedMemberKicked(FedMemberKicked fedMemberKickedData)
         {
-            this.fedPubKeysByLastActiveTime.Remove(fedMemberKickedData.KickedMember.PubKey);
+            this.fedPubKeysByLastActiveTime.Remove(fedMemberKickedData.KickedMember.PubKey, out _);
 
             this.SaveMembersByLastActiveTime();
         }
@@ -132,7 +130,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             if (!this.fedPubKeysByLastActiveTime.ContainsKey(fedMemberAddedData.AddedMember.PubKey))
             {
-                this.fedPubKeysByLastActiveTime.Add(fedMemberAddedData.AddedMember.PubKey, this.consensusManager.Tip.Header.Time);
+                this.fedPubKeysByLastActiveTime[fedMemberAddedData.AddedMember.PubKey] = this.consensusManager.Tip.Header.Time;
 
                 this.SaveMembersByLastActiveTime();
             }
