@@ -607,7 +607,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <response code="200">Returns call response</response>
         /// <response code="400">Invalid request</response>
         /// <response code="500">Unable to deserialize method parameters</response>
-        [Route("api/[controller]/ocal-call")]
+        [Route("api/[controller]/local-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
