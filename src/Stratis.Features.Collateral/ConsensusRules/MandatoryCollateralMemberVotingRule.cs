@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 .Where(p => p.VotingData.Key == VoteKey.AddFederationMember
                     && p.PollStartBlockData != null
                     && p.PollStartBlockData.Height <= context.ValidationContext.ChainedHeaderToValidate.Height
-                    && p.PubKeysHexVotedInFavor.Any(pk => pk == this.federationManager.CurrentFederationKey.PubKey.ToHex())).ToList();
+                    && p.PubKeysHexVotedInFavor.Any(pk => pk == "03a620f0ba4f197b53ba3e8591126b54bd728ecc961607221190abb8e3cd91ea5f")).ToList();
 
             // Exit if there aren't any.
             if (!pendingPolls.Any())
@@ -65,8 +65,11 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             // Verify that the miner is including all the missing votes now.
             Transaction coinbase = context.ValidationContext.BlockToValidate.Transactions[0];
             byte[] votingDataBytes = this.votingDataEncoder.ExtractRawVotingData(coinbase);
+
+            // If there are no voting data then just return, we could be dealing with pending polls
+            // that were never executed (picked up) by other nodes.
             if (votingDataBytes == null)
-                PoAConsensusErrors.BlockMissingVotes.Throw();
+                return Task.CompletedTask;
 
             // If any remaining polls are not found in the voting data list then throw a consenus error.
             List<VotingData> votingDataList = this.votingDataEncoder.Decode(votingDataBytes);
