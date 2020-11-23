@@ -89,13 +89,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         public static IFederationManager CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
         {
             string dir = TestBase.CreateTestDir(caller);
-            var keyValueRepo = new KeyValueRepository(dir, new DBreezeSerializer(network.Consensus.ConsensusFactory));
+            var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
+            var keyValueRepo = new KeyValueRepository(dir, dbreezeSerializer);
 
             var settings = new NodeSettings(network, args: new string[] { $"-datadir={dir}" });
             var fullNode = new Mock<IFullNode>();
             var federationManager = new FederationManager(settings, network, loggerFactory, keyValueRepo, signals, fullNode.Object);
             var votingManager = new VotingManager(federationManager, loggerFactory, new Mock<ISlotsManager>().Object,
-                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, settings.DataFolder, null, signals, 
+                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, settings.DataFolder, dbreezeSerializer, signals, 
                 new Mock<IFinalizedBlockInfoRepository>().Object, network);
             votingManager.Initialize();
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
