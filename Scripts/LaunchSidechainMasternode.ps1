@@ -422,7 +422,7 @@ if ( -not ( $WalletNames -contains $CirrusMiningWallet ) )
 {
     Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
     $Body = @{} 
-    $Body.Add("name","MiningWallet")
+    $Body.Add("name", $CirrusMiningWallet)
 
     if ( $NodeType -eq "50K" )
     {    
