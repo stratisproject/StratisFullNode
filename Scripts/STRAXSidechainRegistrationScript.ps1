@@ -263,7 +263,7 @@ Write-Host (Get-TimeStamp) "SUCCESS: STRAX Blockchain and Cirrus Blockchain are 
 $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) INFO: "Assessing Masternode Requirements" -ForegroundColor Cyan
 ""
-$CollateralWallet = Read-Host "Please Enter the Name of the STRAX Wallet that contains the required Collateral off 100 000 STRAX"
+$CollateralWallet = Read-Host "Please Enter the Name of the STRAX Wallet that contains the required collateral of a 100 000 STRAX:"
 
 ""
 $LoadedWallets = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
