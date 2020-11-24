@@ -504,6 +504,18 @@ Switch ( $RegisterMasternode )
 {
     Yes
     {
+        if ( -not ( $CollateralWalletPassword ) ) 
+        {  
+            $CollateralWalletPassword = Read-Host "Please confirm your STRAX (Collateral) wallet password."
+            Clear-Host
+        }
+
+        if ( -not ( $CirrusWalletPassword ) ) 
+        {
+            $CirrusWalletPassword = Read-Host "Please confirm your Cirrus wallet password."
+            Clear-Host
+        }
+
         $Body = @{}
         $Body.Add("collateralAddress",$CollateralAddress)
         $Body.Add("collateralWalletName",$CollateralWallet)
@@ -525,8 +537,8 @@ Switch ( $RegisterMasternode )
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUCuC9YBFQ7dWIuH/DMBo+mf/p
-# wBOgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUJz7+xzEP3s6UvyUAY2SzNilC
+# sv+gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -596,11 +608,11 @@ Switch ( $RegisterMasternode )
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFBbkNiITiD33
-# 5gmvM0gI0PLw6ktXMA0GCSqGSIb3DQEBAQUABIIBAKrHpH/frZOgofERALKGaDJi
-# yzgXaQCcO44qQFZj/zvfKNxiIQ/AD9DipT+SCTsLxL2NXUe5wN7jXKz7pMaDsSei
-# PhrJtoigkIBPQkXxVU2vkk5ILzG1cLUIQRWyla+JWw9/aK/esqI0kM2sHe9RbuWl
-# 9rW89vc2XTWbTYJM3EKlazyK+qxri9yZWdrdQOI7TwQGuisQD0cKcwolJJu9fOp6
-# ZUkRPRF98PcYlnGbig7X6A8cIfsFazL/DtaZHF7MzTr44na4tt6G7KWQH1Sl4FwZ
-# /oJf7n/XPVFchB+yK6DooUYJ/AvMyCL5Bnmyvll9EZrILyGTmAiHXiemuE8DruM=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFFVXdfhr54SU
+# NsUqkFvwKbPEM/eEMA0GCSqGSIb3DQEBAQUABIIBADxoiXtgktrhSItBz7JAbit4
+# nKzraFyl+rJ0EBl1aJXrw6Kjna3GKqffgzc/4AmXhPrcby3XcxFrJL61CZymh5Qz
+# RLVGFIoTyhVUJESvfSp+/yRWjXprYblaT+/OfsKy/IbthSJ2HkmUM7XrO2cWLWbj
+# wEHIph8DLliQV7TEEzOh6/oEApocLp1jZD31B9o0Hmzxftylzrs26ja1jBvCzJKi
+# S1qgMMWk0JNM+M2rPa7/lOoHSPPmpB0j+Yp0jyQMbODSHL+M8SXTY9QxgoqLq5aa
+# huY3xwKvyKfm20PMbeKSVeZgVY/WTvP928xhy4GBOGPpIBuIyY+nM4xpt66+Fbw=
 # SIG # End signature block
