@@ -193,7 +193,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-
         /// <summary>
         /// Tells us whether we have already voted to boot a federation member.
         /// </summary>

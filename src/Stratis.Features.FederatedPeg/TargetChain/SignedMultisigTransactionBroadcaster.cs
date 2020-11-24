@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
@@ -20,6 +22,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     public interface ISignedMultisigTransactionBroadcaster
     {
         /// <summary>
+        /// Enables the node operator to try and manually push fully signed transactions.
+        /// </summary>
+        Task<SignedMultisigTransactionBroadcastResult> BroadcastFullySignedTransfersAsync();
+
+        /// <summary>
         /// Starts the broadcasting of fully signed transactions every N seconds.
         /// </summary>
         void Start();
@@ -36,7 +43,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly MempoolManager mempoolManager;
         private readonly IBroadcasterManager broadcasterManager;
         private readonly ISignals signals;
-        private readonly ICrossChainTransferStore store;
+        private readonly ICrossChainTransferStore crossChainTransferStore;
 
         private readonly IInitialBlockDownloadState ibdState;
         private readonly IFederationWalletManager federationWalletManager;
@@ -57,49 +64,42 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.ibdState = Guard.NotNull(ibdState, nameof(ibdState));
             this.federationWalletManager = Guard.NotNull(federationWalletManager, nameof(federationWalletManager));
             this.signals = Guard.NotNull(signals, nameof(signals));
-            this.store = crossChainTransferStore;
+            this.crossChainTransferStore = crossChainTransferStore;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
-        private async Task OnCrossChainTransactionFullySignedAsync(CrossChainTransferTransactionFullySigned @event)
+        /// <inheritdoc />
+        public async Task<SignedMultisigTransactionBroadcastResult> BroadcastFullySignedTransfersAsync()
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
             {
-                this.logger.LogInformation("Federation wallet isn't active or in IBD. Not attempting to broadcast signed transactions.");
-                return;
+                this.logger.LogInformation("Federation wallet isn't active or the node is in IBD.");
+                return new SignedMultisigTransactionBroadcastResult() { Message = "The federation wallet isn't active or the node is in IBD." };
             }
 
-            TxMempoolInfo txInfo = await this.mempoolManager.InfoAsync(@event.Transfer.PartialTransaction.GetHash()).ConfigureAwait(false);
-            if (txInfo != null)
+            ICrossChainTransfer[] fullySignedTransfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned });
+
+            if (fullySignedTransfers.Length == 0)
             {
-                this.logger.LogDebug("Deposit ID '{0}' already in the mempool.", @event.Transfer.DepositTransactionId);
-                return;
+                this.logger.LogInformation("There are no fully signed transactions to broadcast.");
+                return new SignedMultisigTransactionBroadcastResult() { Message = "There are no fully signed transactions to broadcast." };
             }
 
-            this.logger.LogDebug("Broadcasting deposit-id={0} a signed multisig transaction {1} to the network.", @event.Transfer.DepositTransactionId, @event.Transfer.PartialTransaction.GetHash());
+            var result = new SignedMultisigTransactionBroadcastResult();
 
-            await this.broadcasterManager.BroadcastTransactionAsync(@event.Transfer.PartialTransaction).ConfigureAwait(false);
-
-            // Check if transaction was actually added to a mempool.
-            TransactionBroadcastEntry transactionBroadCastEntry = this.broadcasterManager.GetTransaction(@event.Transfer.PartialTransaction.GetHash());
-
-            if (transactionBroadCastEntry?.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
+            foreach (ICrossChainTransfer fullySignedTransfer in fullySignedTransfers)
             {
-                this.logger.LogWarning("Deposit ID '{0}' rejected due to '{1}'.", @event.Transfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
-                this.store.RejectTransfer(@event.Transfer);
+                result.Items.Add(await BroadcastFullySignedTransfersAsync(fullySignedTransfer));
             }
+
+            return result;
         }
 
         /// <inheritdoc />
         public void Start()
         {
             this.onCrossChainTransactionFullySignedSubscription = this.signals.Subscribe<CrossChainTransferTransactionFullySigned>(async (tx) => await this.OnCrossChainTransactionFullySignedAsync(tx).ConfigureAwait(false));
-        }
-
-        public void Dispose()
-        {
-            this.Stop();
         }
 
         /// <inheritdoc />
@@ -110,5 +110,80 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 this.signals.Unsubscribe(this.onCrossChainTransactionFullySignedSubscription);
             }
         }
+
+        private async Task OnCrossChainTransactionFullySignedAsync(CrossChainTransferTransactionFullySigned @event)
+        {
+            if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
+            {
+                this.logger.LogInformation("Federation wallet isn't active or the node is IBD.");
+                return;
+            }
+
+            await BroadcastFullySignedTransfersAsync(@event.Transfer);
+        }
+
+        private async Task<SignedMultisigTransactionBroadcastResultItem> BroadcastFullySignedTransfersAsync(ICrossChainTransfer crossChainTransfer)
+        {
+            var transferItem = new SignedMultisigTransactionBroadcastResultItem()
+            {
+                DepositId = crossChainTransfer.DepositTransactionId?.ToString(),
+                TransactionId = crossChainTransfer.PartialTransaction.GetHash().ToString(),
+            };
+
+            TxMempoolInfo txMempoolInfo = await this.mempoolManager.InfoAsync(crossChainTransfer.PartialTransaction.GetHash()).ConfigureAwait(false);
+            if (txMempoolInfo != null)
+            {
+                this.logger.LogInformation("Deposit '{0}' already in the mempool.", crossChainTransfer.DepositTransactionId);
+                transferItem.ItemMessage = $"Deposit '{crossChainTransfer.DepositTransactionId}' already in the mempool.";
+                return transferItem;
+            }
+
+            this.logger.LogInformation("Broadcasting deposit '{0}', a signed multisig transaction '{1'} to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
+
+            await this.broadcasterManager.BroadcastTransactionAsync(crossChainTransfer.PartialTransaction).ConfigureAwait(false);
+
+            // Check if transaction was added to a mempool.
+            TransactionBroadcastEntry transactionBroadCastEntry = this.broadcasterManager.GetTransaction(crossChainTransfer.PartialTransaction.GetHash());
+            if (transactionBroadCastEntry?.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
+            {
+                this.logger.LogWarning("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
+                this.crossChainTransferStore.RejectTransfer(crossChainTransfer);
+                transferItem.ItemMessage = $"Deposit '{crossChainTransfer.DepositTransactionId}' rejected: '{transactionBroadCastEntry.ErrorMessage}'.";
+                return transferItem;
+            }
+
+            return transferItem;
+        }
+
+        public void Dispose()
+        {
+            this.Stop();
+        }
+    }
+
+    public sealed class SignedMultisigTransactionBroadcastResult
+    {
+        public SignedMultisigTransactionBroadcastResult()
+        {
+            this.Items = new List<SignedMultisigTransactionBroadcastResultItem>();
+        }
+
+        [JsonProperty("message")]
+        public string Message { get; set; }
+
+        [JsonProperty("items")]
+        public List<SignedMultisigTransactionBroadcastResultItem> Items { get; set; }
+    }
+
+    public sealed class SignedMultisigTransactionBroadcastResultItem
+    {
+        [JsonProperty("depositId")]
+        public string DepositId { get; set; }
+
+        [JsonProperty("message")]
+        public string ItemMessage { get; set; }
+
+        [JsonProperty("transactionId")]
+        public string TransactionId { get; set; }
     }
 }
