@@ -780,6 +780,25 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.Sweep(req, token)));
         }
 
+        [Route("build-offline-sign-request")]
+        [HttpPost]
+        public async Task<IActionResult> BuildOfflineSignRequest([FromBody] BuildOfflineSignRequest req,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(req, cancellationToken,
+                async (req, token) => this.Json(await this.walletService.BuildOfflineSignRequest(req, token)));
+        }
+
+        // TODO: Make this support PSBT directly?
+        [Route("offline-sign-request")]
+        [HttpPost]
+        public async Task<IActionResult> OfflineSignRequest([FromBody] OfflineSignRequest req,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(req, cancellationToken,
+                async (req, token) => this.Json(await this.walletService.OfflineSignRequest(req, token)));
+        }
+
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
             TransactionData transaction)
         {
