@@ -413,8 +413,12 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
 }
 
 #Mining Wallet Creation
+
+$CirrusMiningWallet = Read-Host "Please enter your Cirrus Mining Wallet name"
+Clear-Host
+
 $WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
-if ( -not ( $WalletNames -contains "MiningWallet" ) ) 
+if ( -not ( $WalletNames -contains $CirrusMiningWallet ) ) 
 {
     Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
     $Body = @{} 
