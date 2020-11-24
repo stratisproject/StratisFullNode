@@ -414,61 +414,64 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
 
 #Mining Wallet Creation
 
-$CirrusMiningWallet = Read-Host "Please enter your Cirrus Mining Wallet name"
-Clear-Host
-
 $WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
-if ( -not ( $WalletNames -contains $CirrusMiningWallet ) ) 
+if ( $WalletNames -eq $null )
 {
-    Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
-    $Body = @{} 
-    $Body.Add("name", $CirrusMiningWallet)
+    $CirrusMiningWallet = Read-Host "Please enter your Cirrus Mining Wallet name"
+    Clear-Host
 
-    if ( $NodeType -eq "50K" )
-    {    
-        $Body.Add("password",$multiSigPassword)
-        $Body.Add("passphrase",$multiSigPassword)
-        $Body.Add("mnemonic",$multiSigMnemonic)
-        $Body = $Body | ConvertTo-Json
-        Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json" | Out-Null
-    }
-        Else
-        {
-            $Body.Add("password",$miningPassword)
-            $Body.Add("passphrase",$miningPassword)
+    $WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
+    if ( -not ( $WalletNames -contains $CirrusMiningWallet ) ) 
+    {
+        Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
+        $Body = @{} 
+        $Body.Add("name", $CirrusMiningWallet)
+
+        if ( $NodeType -eq "50K" )
+        {    
+            $Body.Add("password",$multiSigPassword)
+            $Body.Add("passphrase",$multiSigPassword)
+            $Body.Add("mnemonic",$multiSigMnemonic)
             $Body = $Body | ConvertTo-Json
-            $CreateWallet = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json"
-            $Mnemonic = ($CreateWallet.Content).Trim('"')
-            Write-Host (Get-TimeStamp) INFO: A Mining Wallet has now been created, please take a note of the below recovery words -ForegroundColor Yellow
-            ""
-            $Mnemonic
-            ""
-            Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
-
-            $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
-            While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
-            {
-                ""
-                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
-                ""
-            }
-            Switch ( $ReadyToContinue )
-            {
-                Yes 
-                {
-                    Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
-                }
-                
-                No 
-                { 
-                    Write-Host (Get-TimeStamp) "WARNING: You have said No.. In the event of data loss your wallet will be unrecoverable unless you have taken a backup of the wallet database" -ForegroundColor Red
-                    Start-Sleep 60
-                    Exit
-                }
-            }
+            Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json" | Out-Null
         }
-}
+            Else
+            {
+                $Body.Add("password",$miningPassword)
+                $Body.Add("passphrase",$miningPassword)
+                $Body = $Body | ConvertTo-Json
+                $CreateWallet = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json"
+                $Mnemonic = ($CreateWallet.Content).Trim('"')
+                Write-Host (Get-TimeStamp) INFO: A Mining Wallet has now been created, please take a note of the below recovery words -ForegroundColor Yellow
+                ""
+                $Mnemonic
+                ""
+                Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
 
+                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
+                While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
+                {
+                    ""
+                    $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
+                    ""
+                }
+                Switch ( $ReadyToContinue )
+                {
+                    Yes 
+                    {
+                        Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
+                    }
+                
+                    No 
+                    { 
+                        Write-Host (Get-TimeStamp) "WARNING: You have said No.. In the event of data loss your wallet will be unrecoverable unless you have taken a backup of the wallet database" -ForegroundColor Red
+                        Start-Sleep 60
+                        Exit
+                    }
+                }
+            }
+    }
+}
 if ( $NodeType -eq "50K" )
 {
     #Enable Federation
@@ -560,8 +563,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU3QOC/gMECD7V9YFWeZsN3Ke4
-# /SqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUDvadxe5fDIoKM43QSBChK2nT
+# SsqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -631,11 +634,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFAkzH767UIxC
-# PTvSZ2b/4eHdw8O/MA0GCSqGSIb3DQEBAQUABIIBACw42G0Flw5Jj1KVe3SEnh6T
-# fMKZiOur/K6g7EBwR6e82NvZW3DjAUsmFbPDVybFI1veP25ZxwI6DEugGrOeL9zF
-# L7Ugs/7qOvE3kffixpeU1Xb3rPB2RrlNchWWrAExV0s2QcLLU+9tT6iSQLWSFoKX
-# 7fOMtTSd0ZtHx9HJmTxGr6iOivshIjhCrklpUnsef8yWBKHHC/CiTwnuLsHpOsbs
-# SvELDDgF+4OBwq3n7e02g/Qz6JVI1oSG4X+f3drGgBFPk1H5jayzWrLWXI6pk03K
-# ZnQrl66gDS5pyLjNJpVJ12g+Fid2cd2UGepY7DkK/1oHJWj005OjzyLdbWMd8sU=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFNUfpi0iT9VL
+# Kdh6QrZ+Y0QE/yJJMA0GCSqGSIb3DQEBAQUABIIBAIr6gVIImXKEuJo2xuTvkVZq
+# upUngXcgpt5KvT/BdkpLPHzZnd4sl1DN4Jyx50u6gogwVg9oml1pfgicdXnZp4y+
+# gJrfD8GKKrmtBFwZKmmh8e0efstnEOT1BCtkIqiGlMkjRescrvqRdwq9xx5C7GYF
+# 35eiPqpkg3+i85I9r6yWcuSqtb857Hn4HREZXALqh655mkjEvWquYeg2xAfP573C
+# i+DqZbcK1HxsLhPVeciIXYKdVtl7XJamKQvgj219qfEu23yfWY7SMUVN0wp87vkH
+# rszppM4+mexbvCB31aNaysRSpC3LUcKKCrVKhZSqye/VPMW+D/q9MAFpwOZ9Abw=
 # SIG # End signature block
