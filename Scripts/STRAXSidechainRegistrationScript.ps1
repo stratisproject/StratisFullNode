@@ -504,6 +504,11 @@ Switch ( $RegisterMasternode )
 {
     Yes
     {
+        $CollateralWalletPassword = Read-Host "Please confirm your STRAX (Collateral) wallet password."
+        Clear-Host
+        $CirrusWalletPassword = Read-Host "Please confirm your Cirrus wallet password."
+        Clear-Host
+
         $Body = @{}
         $Body.Add("collateralAddress",$CollateralAddress)
         $Body.Add("collateralWalletName",$CollateralWallet)
