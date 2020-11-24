@@ -212,6 +212,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<HdAddress> GetUnusedAddresses(WalletAccountReference accountReference, bool isChange = false);
 
         /// <summary>
+        /// Returns one or more newly created addresses every time.
+        /// This is in contrast to the getunusedaddress(es) endpoints that will return the same set of addresses if there has been no transactional activity.
+        /// <remarks>The created addresses are created without regard for the default gap limit. Care must therefore be taken when restoring the wallet if many sparsely used addresses have been created.</remarks>
+        /// </summary>
+        /// <param name="accountReference">A reference to the wallet and account that addresses should be created in.</param>
+        /// <param name="count">The number of addresses to be created.</param>
+        /// <param name="isChange">Whether the created addresses should be change addresses or not.</param>
+        /// <returns>A list of the created addresses.</returns>
+        IEnumerable<HdAddress> GetNewAddresses(WalletAccountReference accountReference, int count, bool isChange = false);
+
+        /// <summary>
         /// Gets the used receiving or change addresses.
         /// </summary>
         /// <param name="accountReference">The name of the wallet and account.</param>

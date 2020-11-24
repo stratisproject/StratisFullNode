@@ -601,7 +601,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     }
 
     /// <summary>
-    /// A class containing the necessary parameters for an unused addresses request.  
+    /// A class containing the necessary parameters for an unused addresses request.
     /// </summary>
     public class GetUnusedAddressesModel : RequestModel
     {
@@ -623,6 +623,39 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         /// <summary>
         /// The number of addresses to retrieve.
+        /// </summary>
+        [Required]
+        public string Count { get; set; }
+
+        /// <summary>
+        /// Whether to return the P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool Segwit { get; set; }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for new addresses request.
+    /// </summary>
+    public class GetNewAddressesModel : RequestModel
+    {
+        public GetNewAddressesModel()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
+        /// <summary>
+        /// The name of the wallet from which to get the addresses.
+        /// </summary>
+        [Required]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The name of the account for which to get the addresses.
+        /// </summary>
+        public string AccountName { get; set; }
+
+        /// <summary>
+        /// The number of new addresses to create and return.
         /// </summary>
         [Required]
         public string Count { get; set; }

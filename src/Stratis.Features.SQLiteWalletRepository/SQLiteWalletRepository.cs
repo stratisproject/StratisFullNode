@@ -695,6 +695,55 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
+        public IEnumerable<HdAddress> GetNewAddresses(WalletAccountReference accountReference, int count, bool isChange = false)
+        {
+            WalletContainer walletContainer = GetWalletContainer(accountReference.WalletName);
+
+            walletContainer.WriteLockWait();
+
+            DBConnection conn = walletContainer.Conn;
+
+            try
+            {
+                HDAccount account = conn.GetAccountByName(accountReference.WalletName, accountReference.AccountName);
+
+                if (account == null)
+                    throw new WalletException($"Account '{accountReference.AccountName}' of wallet '{accountReference.WalletName}' does not exist.");
+
+                var addresses = new List<HDAddress>();
+
+                conn.BeginTransaction();
+                try
+                {
+                    var tracker = new TopUpTracker(conn, account.WalletId, account.AccountIndex, isChange ? 1 : 0);
+                    tracker.ReadAccount();
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        AddressIdentifier addressIdentifier = tracker.CreateAddress();
+                        HDAddress address = this.CreateAddress(account, (int)addressIdentifier.AddressType, (int)addressIdentifier.AddressIndex);
+                        conn.Insert(address);
+                        addresses.Add(address);
+                    }
+
+                    walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex, isChange ? 1 : 0);
+
+                    conn.Commit();
+                }
+                catch (Exception)
+                {
+                    conn.Rollback();
+                    throw;
+                }
+
+                return addresses.Select(a => this.ToHdAddress(a, this.Network));
+            }
+            finally
+            {
+                walletContainer.WriteLockRelease();
+            }
+        }
+
         /// <inheritdoc />
         public IEnumerable<(HdAddress address, Money confirmed, Money total)> GetUsedAddresses(WalletAccountReference accountReference, bool isChange = false)
         {

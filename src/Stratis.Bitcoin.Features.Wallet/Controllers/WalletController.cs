@@ -577,6 +577,37 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
+        /// Gets a specified number of new addresses (in the Base58 format) for a wallet account. These addresses
+        /// will be newly created and will not have had any transactional activity.
+        /// <remarks>This differs from the unusedaddress(es) endpoints; the addresses will be added to the wallet without respecting the gap limit.
+        /// Therefore, each time the request is made a new set of addresses will be returned.</remarks>
+        /// </summary>
+        /// <param name="request">An object containing the necessary parameters to retrieve
+        /// new addresses for a wallet account.</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>A JSON object containing the required amount of new addresses (in Base58 format).</returns>
+        /// <response code="200">Returns address list</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null or cannot be parsed</response>
+        [Route("newaddresses")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> GetNewAddresses([FromQuery] GetNewAddressesModel request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.ExecuteAsAsync(request, cancellationToken, (req, token) =>
+            {
+                var result = this.walletManager.GetNewAddresses(
+                        new WalletAccountReference(request.WalletName, req.AccountName), int.Parse(req.Count))
+                    .Select(x => request.Segwit ? x.Bech32Address : x.Address).ToArray();
+
+                return this.Json(result);
+            });
+        }
+
+        /// <summary>
         /// Gets all addresses for a wallet account.
         /// </summary>
         /// <param name="request">An object containing the necessary parameters to retrieve
