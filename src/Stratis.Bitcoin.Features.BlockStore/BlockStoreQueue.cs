@@ -198,13 +198,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 this.blockRepository.ReIndex();
             }
 
-            ChainedHeader initializationTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
+            ChainedHeader initializationTip = RecoverStoreTip();
             this.SetStoreTip(initializationTip);
-
-            if (this.storeTip == null)
-                this.RecoverStoreTip();
-
-            this.logger.LogDebug("Initialized block store tip at '{0}'.", this.storeTip);
+            this.logger.LogDebug("Initialized block store tip at '{0}'.", initializationTip);
 
             if (this.storeSettings.TxIndex != this.blockRepository.TxIndex)
             {
@@ -411,8 +407,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>
         /// Sets block store tip to the last block that exists both in the repository and in the <see cref="ChainIndexer"/>.
         /// </summary>
-        private void RecoverStoreTip()
+        private ChainedHeader RecoverStoreTip()
         {
+            ChainedHeader blockStoreTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
+            if (blockStoreTip != null)
+                return blockStoreTip;
+
             var blockStoreResetList = new List<uint256>();
 
             uint256 resetBlockHash = this.blockRepository.TipHashAndHeight.Hash;
@@ -444,13 +444,11 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (blockStoreResetList.Count != 0)
                 this.blockRepository.Delete(new HashHeightPair(newTip), blockStoreResetList);
 
-            this.SetStoreTip(newTip);
-
-            // TODO: this will be replaced with tips manager
-            // TODO this thing should remove stuff from chain database. Otherwise we are leaving redundant data.
             this.chainIndexer.Initialize(newTip); // we have to set chain store to be same as the store tip.
 
             this.logger.LogWarning("Block store tip recovered to block '{0}'.", newTip);
+
+            return newTip;
         }
 
         [NoTrace]
