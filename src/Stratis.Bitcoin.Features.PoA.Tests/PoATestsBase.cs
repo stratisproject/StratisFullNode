@@ -39,6 +39,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         protected readonly DBreezeSerializer dBreezeSerializer;
         protected readonly ChainState chainState;
         protected readonly IAsyncProvider asyncProvider;
+        protected readonly Mock<IFullNode> fullNode;
 
         public PoATestsBase(TestPoANetwork network = null)
         {
@@ -88,10 +89,24 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         public static IFederationManager CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
         {
             string dir = TestBase.CreateTestDir(caller);
-            var keyValueRepo = new KeyValueRepository(dir, new DBreezeSerializer(network.Consensus.ConsensusFactory));
+            var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
+            var keyValueRepo = new KeyValueRepository(dir, dbreezeSerializer);
 
             var settings = new NodeSettings(network, args: new string[] { $"-datadir={dir}" });
-            var federationManager = new FederationManager(settings, network, loggerFactory, keyValueRepo, signals);
+            var fullNode = new Mock<IFullNode>();
+            var federationManager = new FederationManager(settings, network, loggerFactory, keyValueRepo, signals, fullNode.Object);
+            var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(settings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
+            finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
+
+            var chainIndexerMock = new Mock<ChainIndexer>();
+            var header = new BlockHeader();
+            chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
+            var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
+            var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager,
+                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, settings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
+            votingManager.Initialize();
+            fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
             federationManager.Initialize();
 
             return federationManager;
