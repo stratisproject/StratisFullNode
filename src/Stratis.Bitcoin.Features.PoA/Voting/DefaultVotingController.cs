@@ -333,7 +333,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.votingManager.ScheduleVote(new VotingData()
                     {
                         Key = VoteKey.AddFederationMember,
-                        Data = poaConsensusFactory.SerializeFederationMember(collateralFederationMember)
+                        Data = poll.VotingData.Data
                     });
 
                     result.Add(new ScheduleAddFederationMemberPollResult() { PubKey = memberVotedOnPubKey });
