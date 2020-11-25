@@ -69,7 +69,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public void Start()
         {
-            this.broadcastFullySignedTransfersTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.broadcastFullySignedTransfersTask)}", async token =>
+            this.broadcastFullySignedTransfersTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(SignedMultisigTransactionBroadcaster)}.{nameof(this.broadcastFullySignedTransfersTask)}", async token =>
             {
                 await this.BroadcastFullySignedTransfersAsync().ConfigureAwait(false);
             },
@@ -126,7 +126,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             // Check if transaction was added to a mempool.
             TransactionBroadcastEntry transactionBroadCastEntry = this.broadcasterManager.GetTransaction(crossChainTransfer.PartialTransaction.GetHash());
-            if (transactionBroadCastEntry?.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
+            if (transactionBroadCastEntry == null)
+                return transferItem;
+
+            if (transactionBroadCastEntry.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
             {
                 this.logger.LogWarning("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
                 this.crossChainTransferStore.RejectTransfer(crossChainTransfer);
