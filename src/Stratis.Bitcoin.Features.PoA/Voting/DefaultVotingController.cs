@@ -159,14 +159,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetExecutedPolls([FromQuery] string pubKey)
+        public IActionResult GetExecutedPolls()
         {
             try
             {
                 List<Poll> polls = this.votingManager.GetExecutedPolls();
-
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
-
                 return this.Json(models);
             }
             catch (Exception e)
