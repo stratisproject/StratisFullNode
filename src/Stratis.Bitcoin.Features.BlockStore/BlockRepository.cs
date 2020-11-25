@@ -313,7 +313,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     }
                 }
 
-                this.leveldb.Write(batch);
+                this.leveldb.Write(batch, new WriteOptions() { Sync = true });
             }
 
             if (this.TxIndex)
@@ -331,7 +331,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 foreach ((Transaction transaction, Block block) in transactions)
                     batch.Put(DBH.Key(TransactionTableName, transaction.GetHash().ToBytes()), block.GetHash().ToBytes());
 
-                this.leveldb.Write(batch);
+                this.leveldb.Write(batch, new WriteOptions() { Sync = true });
             }
         }
 
@@ -391,7 +391,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                             }
                         }
 
-                        this.leveldb.Write(batch);
+                        this.leveldb.Write(batch, new WriteOptions() { Sync = true });
                     }
 
                     this.logger.LogInformation("Reindex completed successfully.");
