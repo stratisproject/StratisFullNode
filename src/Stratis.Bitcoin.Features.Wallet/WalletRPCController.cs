@@ -153,10 +153,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 // TODO: Bitcoin Core performs an heuristic check to determine whether or not the provided transaction should be deserialised with witness data -> core_read.cpp DecodeHexTx()
                 Transaction rawTx = this.Network.CreateTransaction(rawHex);
-
-                // TODO: Compute this from the feeRate in the options
-                Money feeAmount = Money.Coins(0.01m);
-
+                
                 WalletAccountReference account = this.GetWalletAccountReference();
 
                 HdAddress changeAddress = null;
@@ -164,6 +161,11 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // TODO: Support ChangeType properly; allow both 'legacy' and 'bech32'. p2sh-segwit could be added when wallet support progresses to store p2sh redeem scripts
                 if (options != null && !string.IsNullOrWhiteSpace(options.ChangeType) && options.ChangeType != "legacy")
                     throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "The change_type option is not yet supported");
+
+                if (options?.LockUnspents ?? false)
+                {
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "The lockUnspents option is not yet supported");
+                }
 
                 if (options?.ChangeAddress != null)
                 {
@@ -184,10 +186,10 @@ namespace Stratis.Bitcoin.Features.Wallet
                 {
                     AccountReference = account,
                     ChangeAddress = changeAddress,
-                    TransactionFee = feeAmount,
                     OverrideFeeRate = options?.FeeRate,
+                    TransactionFee = (options?.FeeRate == null) ? new Money(this.Network.MinRelayTxFee) : null,
                     MinConfirmations = 0,
-                    Shuffle = false, // Set so that the change will be placed at the end of the outputs
+                    Shuffle = false,
                     //UseSegwitChangeAddress = false,
 
                     Sign = false
@@ -255,7 +257,14 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                     if (foundChange != -1)
                     {
-                        rawTx.Outputs.Insert(options?.ChangePosition ?? (RandomUtils.GetInt32() % rawTx.Outputs.Count), newTransaction.Outputs[foundChange]);
+                        // The position the change will be copied from in the transaction.
+                        int tempPos = foundChange;
+
+                        // Just overwrite this to avoid introducing yet another change position variable to the outer scope.
+                        // We need to update the foundChange value to return it in the RPC response as the final change position.
+                        foundChange = options?.ChangePosition ?? (RandomUtils.GetInt32() % rawTx.Outputs.Count);
+
+                        rawTx.Outputs.Insert(foundChange, newTransaction.Outputs[tempPos]);
                     }
                     else
                     {
@@ -264,7 +273,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     }
                 }
 
-                // TODO: Copy the updated output amounts (this also includes spreading the fee over the selected outputs, if applicable)
+                // TODO: Copy any updated output amounts, which might have changed due to the subtractfee flags etc (this also includes spreading the fee over the selected outputs, if applicable)
 
                 // Copy all the inputs from the built transaction into the original.
                 // As they are unsigned this has no effect on transaction validity.
@@ -281,7 +290,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 return new FundRawTransactionResponse()
                 {
                     ChangePos = foundChange,
-                    Fee = feeAmount,
+                    Fee = context.TransactionFee,
                     Transaction = rawTx
                 };
             }

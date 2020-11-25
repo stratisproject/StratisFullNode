@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 Money fee = CheckFunding(node, funded.Transaction);
 
-                Assert.Equal(Money.Coins(0.01m), fee);
+                Assert.Equal(new Money(this.network.MinRelayTxFee), fee);
                 Assert.True(funded.ChangePos > -1);
             }
         }
@@ -95,14 +95,14 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 var options = new FundRawTransactionOptions()
                 {
-                    ChangeAddress = BitcoinAddress.Create(changeAddress.Address, this.network)
+                    ChangeAddress = BitcoinAddress.Create(changeAddress.Address, this.network).ToString()
                 };
 
                 FundRawTransactionResponse funded = node.CreateRPCClient().FundRawTransaction(tx, options);
 
                 Money fee = CheckFunding(node, funded.Transaction);
 
-                Assert.Equal(Money.Coins(0.01m), fee);
+                Assert.Equal(new Money(this.network.MinRelayTxFee), fee);
                 Assert.True(funded.ChangePos > -1);
             }
         }
@@ -131,7 +131,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 var options = new FundRawTransactionOptions()
                 {
-                    ChangeAddress = BitcoinAddress.Create(changeAddress.Address, this.network),
+                    ChangeAddress = BitcoinAddress.Create(changeAddress.Address, this.network).ToString(),
                     ChangePosition = 2
                 };
 
@@ -141,7 +141,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 Money totalInputs = this.GetTotalInputValue(node, funded.Transaction);
 
-                Assert.Equal(Money.Coins(0.01m), fee);
+                Assert.Equal(new Money(this.network.MinRelayTxFee), fee);
                 // TODO: There seems to be a bug that is causing the options to not be properly propagated into the controller, maybe the middleware?
                 Assert.Equal(2, funded.ChangePos);
                 Assert.Equal(changeAddress.ScriptPubKey, funded.Transaction.Outputs[funded.ChangePos].ScriptPubKey);

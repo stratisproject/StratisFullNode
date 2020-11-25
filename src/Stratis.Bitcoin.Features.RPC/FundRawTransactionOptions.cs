@@ -9,7 +9,7 @@ namespace Stratis.Bitcoin.Features.RPC
         /// The address to receive the change.
         /// </summary>
         [JsonProperty(PropertyName = "changeAddress")]
-        public BitcoinAddress ChangeAddress
+        public string ChangeAddress
         {
             get; set;
         }
