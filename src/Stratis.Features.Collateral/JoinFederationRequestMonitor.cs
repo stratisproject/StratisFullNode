@@ -8,6 +8,7 @@ using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Bitcoin.Signals;
 using Stratis.Features.Collateral.CounterChain;
@@ -16,16 +17,18 @@ namespace Stratis.Features.Collateral
 {
     public class JoinFederationRequestMonitor
     {
+        private SubscriptionToken blockConnectedToken;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly ILoggerFactory loggerFactory;
         private readonly ILogger logger;
         private readonly ISignals signals;
-        private SubscriptionToken blockConnectedToken;
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, ILoggerFactory loggerFactory)
+        public JoinFederationRequestMonitor(IInitialBlockDownloadState initialBlockDownloadState, VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, ILoggerFactory loggerFactory)
         {
+            this.initialBlockDownloadState = initialBlockDownloadState;
             this.signals = signals;
             this.loggerFactory = loggerFactory;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -43,6 +46,10 @@ namespace Stratis.Features.Collateral
 
         private void OnBlockConnected(BlockConnected blockConnectedData)
         {
+            // Can't process join federation requests during IBD.
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return;
+
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
 
@@ -78,7 +85,7 @@ namespace Stratis.Features.Collateral
 
                     // Fill in the request.removalEventId (if any).
                     Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
-                    
+
                     var collateralFederationMember = new CollateralFederationMember(request.PubKey, false, request.CollateralAmount, collateralScript.GetDestinationAddress(this.counterChainNetwork).ToString());
 
                     byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(collateralFederationMember);

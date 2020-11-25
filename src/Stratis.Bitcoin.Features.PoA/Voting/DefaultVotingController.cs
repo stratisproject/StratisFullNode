@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
@@ -17,9 +18,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     [Route("api/[controller]")]
     public class DefaultVotingController : Controller
     {
-        protected readonly IFederationManager fedManager;
+        protected readonly IFederationManager federationManager;
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
+
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
         protected readonly ILogger logger;
 
@@ -32,16 +35,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
         public DefaultVotingController(
-            IFederationManager fedManager,
+            IFederationManager federationManager,
             ILoggerFactory loggerFactory,
             VotingManager votingManager,
             IWhitelistedHashesRepository whitelistedHashesRepository,
             Network network,
             IPollResultExecutor pollExecutor,
-            IIdleFederationMembersKicker idleFederationMembersKicker)
+            IIdleFederationMembersKicker idleFederationMembersKicker,
+            IInitialBlockDownloadState initialBlockDownloadState)
         {
-            this.fedManager = fedManager;
+            this.federationManager = federationManager;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
+            this.initialBlockDownloadState = initialBlockDownloadState;
             this.network = network;
             this.pollExecutor = pollExecutor;
             this.votingManager = votingManager;
@@ -64,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                List<IFederationMember> federationMembers = this.fedManager.GetFederationMembers();
+                List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
 
                 var federationMemberModels = new List<FederationMemberModel>();
 
@@ -95,7 +100,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Active polls</returns>
         /// <response code="200">Returns the active polls</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("pendingpolls")]
+        [Route("polls/pending")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -122,7 +127,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("finishedpolls")]
+        [Route("polls/finished")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -131,6 +136,33 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             try
             {
                 List<Poll> polls = this.votingManager.GetFinishedPolls();
+
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                return this.Json(models);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of executed polls.
+        /// </summary>
+        /// <returns>Finished polls</returns>
+        /// <response code="200">Returns the finished polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/executed")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExecutedPolls([FromQuery] string pubKey)
+        {
+            try
+            {
+                List<Poll> polls = this.votingManager.GetExecutedPolls();
 
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
 
@@ -209,7 +241,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            if (!this.fedManager.IsFederationMember)
+            if (!this.federationManager.IsFederationMember)
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Only federation members can vote", string.Empty);
 
             try
@@ -255,6 +287,64 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Manually schedule any pending add federation member polls.
+        /// </summary>
+        /// <returns>Scheduled voting data</returns>
+        /// <response code="200">Returns the voting data</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("schedule-pending-addmember-polls")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult ScheduleAddFederationMemberPolls()
+        {
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Votes can ony be scheduled once the node is out of IBD.", string.Empty);
+
+            if (!this.federationManager.IsFederationMember)
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Only federation members can schedule votes.", string.Empty);
+
+            try
+            {
+                List<Poll> pendingAddFederationMemberPolls = this.votingManager.GetPendingPolls(VoteKey.AddFederationMember);
+
+                //Filter all polls where this federation number has not voted on.
+                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
+
+                if (!pendingAddFederationMemberPolls.Any())
+                    return this.Ok("There are no pending add federation member polls to schedule for this federation member.");
+
+                IFederationMember collateralFederationMember = this.federationManager.GetCurrentFederationMember();
+
+                var poaConsensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
+
+                var result = new List<ScheduleAddFederationMemberPollResult>();
+                foreach (Poll poll in pendingAddFederationMemberPolls)
+                {
+                    // If this member is already a federation member, skip.
+                    PubKey memberVotedOnPubKey = poaConsensusFactory.DeserializeFederationMember(poll.VotingData.Data).PubKey;
+                    if (this.federationManager.GetFederationMembers().Select(f => f.PubKey).Contains(memberVotedOnPubKey))
+                        continue;
+
+                    this.votingManager.ScheduleVote(new VotingData()
+                    {
+                        Key = VoteKey.AddFederationMember,
+                        Data = poaConsensusFactory.SerializeFederationMember(collateralFederationMember)
+                    });
+
+                    result.Add(new ScheduleAddFederationMemberPollResult() { PubKey = memberVotedOnPubKey });
+                }
+
+                return this.Ok(result);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a command.", e.ToString());
             }
         }
     }

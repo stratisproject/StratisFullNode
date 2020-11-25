@@ -172,13 +172,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Provides a collection of polls that are currently active.</summary>
-        public List<Poll> GetPendingPolls()
+        /// <param name="voteKey">Filter byt vote key type.</param>
+        /// <returns>Returns a list of pending polls.</returns>
+        public List<Poll> GetPendingPolls(VoteKey? voteKey = null)
         {
             this.EnsureInitialized();
 
             lock (this.locker)
             {
-                return new List<Poll>(this.polls.Where(x => x.IsPending));
+                IEnumerable<Poll> pendingPolls = this.polls.Where(x => x.IsPending);
+                if (voteKey != null)
+                    pendingPolls = pendingPolls.Where(p => p.VotingData.Key == voteKey);
+
+                return new List<Poll>(pendingPolls);
             }
         }
 
@@ -190,6 +196,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 return new List<Poll>(this.polls.Where(x => !x.IsPending));
+            }
+        }
+
+        /// <summary>Provides a collection of polls that are already finished and their results applied.</summary>
+        public List<Poll> GetExecutedPolls()
+        {
+            this.EnsureInitialized();
+
+            lock (this.locker)
+            {
+                return new List<Poll>(this.polls.Where(x => x.IsExecuted));
             }
         }
 
