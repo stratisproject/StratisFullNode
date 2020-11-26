@@ -4,14 +4,18 @@ using System.Threading;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using NBitcoin.Protocol;
 using NSubstitute;
 using NSubstitute.Core;
+using Stratis.Bitcoin;
+using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -44,7 +48,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private readonly IFederatedPegSettings federatedPegSettings;
 
-        private readonly CollateralFederationManager federationManager;
+        private CollateralFederationManager federationManager;
 
         private readonly IFederationWalletManager federationWalletManager;
 
@@ -68,7 +72,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.keyValueRepository = Substitute.For<IKeyValueRepository>();
             this.signals = new Signals(this.loggerFactory, null);
-            this.federationManager = new CollateralFederationManager(NodeSettings.Default(this.network), this.network, this.loggerFactory, this.keyValueRepository, this.signals, null, null, null);
+
             this.signedMultisigTransactionBroadcaster = Substitute.For<ISignedMultisigTransactionBroadcaster>();
         }
 
@@ -199,7 +203,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
 
-            this.federationManager.Initialize();
+            CreateFederationManager(nodeSettings);
 
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
@@ -227,6 +231,37 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             model.MinimumDepositConfirmationsSmallDeposits.Should().Be(25);
             model.MinimumDepositConfirmationsNormalDeposits.Should().Be(80);
             model.MultisigPublicKey.Should().Be(multisigPubKey);
+        }
+
+        private void CreateFederationManager(NodeSettings nodeSettings)
+        {
+            var fullNode = new Mock<IFullNode>();
+
+            this.federationManager = new CollateralFederationManager(NodeSettings.Default(this.network), this.network, this.loggerFactory, this.keyValueRepository, this.signals, null, fullNode.Object, null);
+
+            VotingManager votingManager = InitializeVotingManager(nodeSettings);
+
+            fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
+
+            this.federationManager.Initialize();
+        }
+
+        private VotingManager InitializeVotingManager(NodeSettings nodeSettings)
+        {
+            var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
+            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new Mock<INodeLifetime>().Object);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
+            finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
+
+            var chainIndexerMock = new Mock<ChainIndexer>();
+            var header = new BlockHeader();
+            chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
+
+            var slotsManager = new SlotsManager(this.network, this.federationManager, chainIndexerMock.Object, this.loggerFactory);
+            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
+            votingManager.Initialize();
+
+            return votingManager;
         }
 
         public class TestNetwork : CirrusRegTest
