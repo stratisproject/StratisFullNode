@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.DataEncoders;
+using NBitcoin.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Consensus;
@@ -15,6 +17,7 @@ using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
@@ -25,28 +28,22 @@ namespace Stratis.Bitcoin.Features.Wallet
     [ApiVersion("1")]
     public class WalletRPCController : FeatureController
     {
-        /// <summary>Provides access to the block store database.</summary>
         private readonly IBlockStore blockStore;
 
-        /// <summary>Wallet broadcast manager.</summary>
         private readonly IBroadcasterManager broadcasterManager;
 
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
-        /// <summary>A reader for extracting an address from a <see cref="Script"/>.</summary>
         private readonly IScriptAddressReader scriptAddressReader;
 
-        /// <summary>Node related configuration.</summary>
         private readonly StoreSettings storeSettings;
 
-        /// <summary>Wallet manager.</summary>
         private readonly IWalletManager walletManager;
 
-        /// <summary>Wallet transaction handler.</summary>
         private readonly IWalletTransactionHandler walletTransactionHandler;
 
-        /// <summary>Wallet related configuration.</summary>
+        private readonly IReserveUtxoService reserveUtxoService;
+
         private readonly WalletSettings walletSettings;
 
         /// <summary>
@@ -66,7 +63,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             StoreSettings storeSettings,
             IWalletManager walletManager,
             WalletSettings walletSettings,
-            IWalletTransactionHandler walletTransactionHandler) : base(fullNode: fullNode, consensusManager: consensusManager, chainIndexer: chainIndexer, network: network)
+            IWalletTransactionHandler walletTransactionHandler,
+            IReserveUtxoService reserveUtxoService = null) : base(fullNode: fullNode, consensusManager: consensusManager, chainIndexer: chainIndexer, network: network)
         {
             this.blockStore = blockStore;
             this.broadcasterManager = broadcasterManager;
@@ -76,6 +74,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.walletManager = walletManager;
             this.walletSettings = walletSettings;
             this.walletTransactionHandler = walletTransactionHandler;
+            this.reserveUtxoService = reserveUtxoService;
         }
 
         [ActionName("setwallet")]
@@ -134,6 +133,242 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 uint256 hash = transaction.GetHash();
                 return hash;
+            }
+            catch (SecurityException)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_UNLOCK_NEEDED, "Wallet unlock needed");
+            }
+            catch (WalletException exception)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, exception.Message);
+            }
+        }
+
+        [ActionName("fundrawtransaction")]
+        [ActionDescription("Add inputs to a transaction until it has enough in value to meet its out value. Note that signing is performed separately.")]
+        public async Task<FundRawTransactionResponse> FundRawTransactionAsync(string rawHex, FundRawTransactionOptions options = null, bool? isWitness = null)
+        {
+            try
+            {
+                // TODO: Bitcoin Core performs an heuristic check to determine whether or not the provided transaction should be deserialised with witness data -> core_read.cpp DecodeHexTx()
+                Transaction rawTx = this.Network.CreateTransaction();
+                
+                // This is an uncommon case where we cannot simply rely on the consensus factory to do the right thing.
+                // We need to override the protocol version so that the RPC client workaround functions correctly.
+                // If this was not done the transaction deserialisation would attempt to use witness deserialisation and the transaction data would get mangled.
+                rawTx.FromBytes(Encoders.Hex.DecodeData(rawHex), this.Network.Consensus.ConsensusFactory, ProtocolVersion.WITNESS_VERSION - 1);
+
+                WalletAccountReference account = this.GetWalletAccountReference();
+
+                HdAddress changeAddress = null;
+
+                // TODO: Support ChangeType properly; allow both 'legacy' and 'bech32'. p2sh-segwit could be added when wallet support progresses to store p2sh redeem scripts
+                if (options != null && !string.IsNullOrWhiteSpace(options.ChangeType) && options.ChangeType != "legacy")
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "The change_type option is not yet supported");
+
+                if (options?.ChangeAddress != null)
+                {
+                    changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options?.ChangeAddress);
+                }
+                else
+                {
+                    changeAddress = this.walletManager.GetUnusedChangeAddress(account);
+                }
+
+                if (options?.ChangePosition != null && options.ChangePosition > rawTx.Outputs.Count)
+                {
+                    throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, "Invalid change position specified!");
+                }
+
+                var context = new TransactionBuildContext(this.Network)
+                {
+                    AccountReference = account,
+                    ChangeAddress = changeAddress,
+                    OverrideFeeRate = options?.FeeRate,
+                    TransactionFee = (options?.FeeRate == null) ? new Money(this.Network.MinRelayTxFee) : null,
+                    MinConfirmations = 0,
+                    Shuffle = false,
+                    UseSegwitChangeAddress = changeAddress != null && (options?.ChangeAddress == changeAddress.Bech32Address),
+
+                    Sign = false
+                };
+
+                context.Recipients.AddRange(rawTx.Outputs
+                    .Select(s => new Recipient
+                    {
+                        ScriptPubKey = s.ScriptPubKey,
+                        Amount = s.Value,
+                        SubtractFeeFromAmount = false // TODO: Do we properly support only subtracting the fee from particular recipients?
+                    }));
+
+                context.AllowOtherInputs = true;
+
+                foreach (TxIn transactionInput in rawTx.Inputs)
+                    context.SelectedInputs.Add(transactionInput.PrevOut);
+
+                Transaction newTransaction = this.walletTransactionHandler.BuildTransaction(context);
+
+                // If the change position can't be found for some reason, then -1 is the intended default.
+                int foundChange = -1;
+                if (context.ChangeAddress != null)
+                {
+                    // Try to find the position of the change and copy it over to the original transaction.
+                    // The only logical reason why the change would not be found (apart from errors) is that the chosen input UTXOs were precisely the right size.
+
+                    // Conceivably there could be another output that shares the change address too.
+                    // TODO: Could add change position field to the transaction build context to make this check unnecessary
+                    if (newTransaction.Outputs.Select(o => o.ScriptPubKey == context.ChangeAddress.ScriptPubKey).Count() > 1)
+                    {
+                        // This should only happen if the change address was deliberately included in the recipients. So find the output that has a different amount.
+                        int index = 0;
+                        foreach (TxOut newTransactionOutput in newTransaction.Outputs)
+                        {
+                            if (newTransactionOutput.ScriptPubKey == context.ChangeAddress.ScriptPubKey)
+                            {
+                                // Set this regardless. It will be overwritten if a subsequent output is the 'correct' change output.
+                                // If all potential change outputs have identical values it won't be updated, but in that case any of them are acceptable as the 'real' change output.
+                                if (foundChange == -1)
+                                    foundChange = index;
+
+                                // TODO: When SubtractFeeFromAmount is set this amount check will no longer be valid as they won't be equal
+                                // If the amount was not in the recipients list then it must be the change output.
+                                if (!context.Recipients.Any(recipient => recipient.ScriptPubKey == newTransactionOutput.ScriptPubKey && recipient.Amount == newTransactionOutput.Value))
+                                    foundChange = index;
+                            }
+
+                            index++;
+                        }
+                    }
+                    else
+                    {
+                        int index = 0;
+                        foreach (TxOut newTransactionOutput in newTransaction.Outputs)
+                        {
+                            if (newTransactionOutput.ScriptPubKey == context.ChangeAddress.ScriptPubKey)
+                            {
+                                foundChange = index;
+                            }
+
+                            index++;
+                        }
+                    }
+
+                    if (foundChange != -1)
+                    {
+                        // The position the change will be copied from in the transaction.
+                        int tempPos = foundChange;
+
+                        // Just overwrite this to avoid introducing yet another change position variable to the outer scope.
+                        // We need to update the foundChange value to return it in the RPC response as the final change position.
+                        foundChange = options?.ChangePosition ?? (RandomUtils.GetInt32() % rawTx.Outputs.Count);
+
+                        rawTx.Outputs.Insert(foundChange, newTransaction.Outputs[tempPos]);
+                    }
+                    else
+                    {
+                        // This should never happen so it is better to error out than potentially return incorrect results.
+                        throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, "Unable to locate change output in built transaction!");
+                    }
+                }
+
+                // TODO: Copy any updated output amounts, which might have changed due to the subtractfee flags etc (this also includes spreading the fee over the selected outputs, if applicable)
+
+                // Copy all the inputs from the built transaction into the original.
+                // As they are unsigned this has no effect on transaction validity.
+                foreach (TxIn newTransactionInput in newTransaction.Inputs)
+                {
+                    if (!context.SelectedInputs.Contains(newTransactionInput.PrevOut))
+                    {
+                        rawTx.Inputs.Add(newTransactionInput);
+
+                        if (options?.LockUnspents ?? false)
+                        {
+                            if (this.reserveUtxoService == null)
+                                continue;
+
+                            // Prevent the provided UTXO from being spent by another transaction until this one is signed and broadcast.
+                            this.reserveUtxoService.ReserveUtxos(new []{ newTransactionInput.PrevOut });
+                        }
+                    }
+                }
+
+                return new FundRawTransactionResponse()
+                {
+                    ChangePos = foundChange,
+                    Fee = context.TransactionFee,
+                    Transaction = rawTx
+                };
+            }
+            catch (SecurityException)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_UNLOCK_NEEDED, "Wallet unlock needed");
+            }
+            catch (WalletException exception)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, exception.Message);
+            }
+        }
+
+        /// <summary>
+        /// Sign inputs for raw transaction.
+        /// Needed private keys need to be within the wallet's current gap limit.
+        /// </summary>
+        /// <param name="rawHex">The raw (unsigned) transaction in hex format.</param>
+        /// <returns>The hex format of the transaction once it has been signed.</returns>
+        [ActionName("signrawtransaction")]
+        [ActionDescription("Sign inputs for raw transaction. Requires all affected wallets to be unlocked using walletpassphrase.")]
+        public async Task<SignRawTransactionResponse> SignRawTransactionAsync(string rawHex)
+        {
+            try
+            {
+                Transaction rawTx = this.Network.CreateTransaction(rawHex);
+
+                // We essentially need to locate the needed private keys from within the wallet and sign with them.
+                // This is done by listing the UTXOs for each address and seeing if one of them matches each input in the unsigned transaction.
+                var builder = new TransactionBuilder(this.Network);
+                var coins = new List<Coin>();
+                var signingKeys = new List<ISecret>();
+
+                // TODO: Add a cache to speed up the case where multiple inputs are controlled by the same private key?
+                foreach (var input in rawTx.Inputs.ToArray())
+                {
+                    bool found = false;
+
+                    // We need to know which wallet it was that we found the correct UTXO inside, as an account maintains no reference to its parent wallet.
+                    foreach (Wallet wallet in this.walletManager.GetWallets())
+                    {
+                        if (found)
+                            break;
+
+                        foreach (var unspent in wallet.GetAllUnspentTransactions(this.ChainIndexer.Height).Where(a => (a.Transaction.Id == input.PrevOut.Hash && a.Transaction.Index == input.PrevOut.N)))
+                        {
+                            coins.Add(new Coin(unspent.Transaction.Id, (uint)unspent.Transaction.Index, unspent.Transaction.Amount, unspent.Transaction.ScriptPubKey));
+
+                            ExtKey seedExtKey = this.walletManager.GetExtKey(new WalletAccountReference() { AccountName = unspent.Account.Name, WalletName = wallet.Name });
+                            ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(unspent.Address.HdPath));
+                            BitcoinExtKey addressPrivateKey = addressExtKey.GetWif(wallet.Network);
+                            signingKeys.Add(addressPrivateKey);
+
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        throw new RPCServerException(RPCErrorCode.RPC_WALLET_ERROR, "Unable to locate private key for transaction input!");
+                    }
+                }
+
+                builder.AddCoins(coins);
+                builder.AddKeys(signingKeys.ToArray());
+                builder.SignTransactionInPlace(rawTx);
+
+                return new SignRawTransactionResponse()
+                {
+                    Transaction = rawTx,
+                    Complete = true
+                };
             }
             catch (SecurityException)
             {

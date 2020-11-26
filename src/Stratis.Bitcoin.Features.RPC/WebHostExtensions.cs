@@ -17,6 +17,7 @@ namespace Stratis.Bitcoin.Features.RPC
                 {
                     o.ModelBinderProviders.Insert(0, new DestinationModelBinder());
                     o.ModelBinderProviders.Insert(0, new MoneyModelBinder());
+                    o.ModelBinderProviders.Insert(0, new FundRawTransactionOptionsBinder());
                 });
 
                 // Include all feature assemblies for action discovery otherwise RPC actions will not execute

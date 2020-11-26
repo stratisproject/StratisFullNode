@@ -53,5 +53,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
         Task<List<string>> Sweep(SweepRequest request,
             CancellationToken cancellationToken);
+
+        Task<BuildOfflineSignResponse> BuildOfflineSignRequest(BuildOfflineSignRequest request,
+            CancellationToken cancellationToken);
+
+        Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request,
+            CancellationToken cancellationToken);
     }
 }

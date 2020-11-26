@@ -419,7 +419,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var commands = JsonDataSerializer.Instance.Deserialize<List<RpcCommandModel>>(this.responseText);
 
-            commands.Count.Should().Be(34);
+            commands.Count.Should().Be(36);
             commands.Should().Contain(x => x.Command == "stop");
             commands.Should().Contain(x => x.Command == "getrawtransaction <txid> [<verbose>] [<blockhash>]");
             commands.Should().Contain(x => x.Command == "gettxout <txid> <vout> [<includemempool>]");
@@ -443,6 +443,8 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             commands.Should().Contain(x => x.Command == "getnewaddress <account> <addresstype>");
             commands.Should().Contain(x => x.Command == "getbalance <accountname> [<minconfirmations>]");
             commands.Should().Contain(x => x.Command == "gettransaction <txid>");
+            commands.Should().Contain(x => x.Command == "fundrawtransaction <rawhex> [<options>] [<iswitness>]");
+            commands.Should().Contain(x => x.Command == "signrawtransaction <rawhex>");
             commands.Should().Contain(x => x.Command == "sendrawtransaction <hex>");
             commands.Should().Contain(x => x.Command == "decoderawtransaction <hex>");
             commands.Should().Contain(x => x.Command == "getblock <blockhash> [<verbosity>]");

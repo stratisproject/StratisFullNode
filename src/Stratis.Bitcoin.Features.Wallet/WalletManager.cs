@@ -825,6 +825,15 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public IEnumerable<HdAddress> GetNewAddresses(WalletAccountReference accountReference, int count, bool isChange = false)
+        {
+            Guard.NotNull(accountReference, nameof(accountReference));
+            Guard.Assert(count > 0);
+
+            return this.WalletRepository.GetNewAddresses(accountReference, count, isChange);
+        }
+
+        /// <inheritdoc />
         public IEnumerable<(HdAddress address, Money confirmed, Money total)> GetUsedAddresses(WalletAccountReference accountReference, bool isChange = false)
         {
             Guard.NotNull(accountReference, nameof(accountReference));
@@ -985,6 +994,17 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 res = wallet.GetAccounts().ToArray();
             }
+            return res;
+        }
+
+        public IEnumerable<HdAccount> GetAllAccounts()
+        {
+            HdAccount[] res = null;
+            lock (this.lockObject)
+            {
+                res = this.Wallets.SelectMany(w => w.GetAccounts()).ToArray();
+            }
+
             return res;
         }
 
@@ -1222,6 +1242,11 @@ namespace Stratis.Bitcoin.Features.Wallet
             var wallet = this.WalletRepository.GetWallet(walletName);
             wallet.WalletManager = this;
             return wallet;
+        }
+
+        public IEnumerable<Wallet> GetWallets()
+        {
+            return this.Wallets.ToArray();
         }
 
         /// <inheritdoc />

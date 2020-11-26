@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.RPC
 {
-    public class FundRawTransactionResponse
+    public class SignRawTransactionResponse
     {
         [JsonProperty(PropertyName = "hex")]
         public Transaction Transaction
@@ -11,16 +11,12 @@ namespace Stratis.Bitcoin.Features.RPC
             get; set;
         }
 
-        [JsonProperty(PropertyName = "fee")]
-        public Money Fee
+        [JsonProperty(PropertyName = "complete")]
+        public bool Complete
         {
             get; set;
         }
 
-        [JsonProperty(PropertyName = "changepos")]
-        public int ChangePos
-        {
-            get; set;
-        }
+        // TODO: Add errors array
     }
 }

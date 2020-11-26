@@ -1196,6 +1196,192 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
+        public async Task<BuildOfflineSignResponse> BuildOfflineSignRequest(BuildOfflineSignRequest request, CancellationToken cancellationToken)
+        {
+            return await Task.Run(() =>
+            {
+                // TODO: It might make more sense to pull out the common code between this and an online transaction build into a common method
+                if (request.Recipients == null)
+                {
+                    request.Recipients = new List<RecipientModel>();
+                }
+
+                if (request.Recipients.Count == 0 && (request.OpReturnAmount == null || request.OpReturnAmount == Money.Zero))
+                    throw new FeatureException(HttpStatusCode.BadRequest, "No recipients.", "Either one or both of recipients and opReturnAmount must be specified.");
+
+                var recipients = new List<Recipient>();
+
+                foreach (RecipientModel recipientModel in request.Recipients)
+                {
+                    if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
+                        throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
+
+                    Script destination;
+
+                    if (!string.IsNullOrWhiteSpace(recipientModel.DestinationAddress))
+                    {
+                        destination = BitcoinAddress.Create(recipientModel.DestinationAddress, this.network).ScriptPubKey;
+                    }
+                    else
+                    {
+                        destination = Script.FromHex(recipientModel.DestinationScript);
+                    }
+
+                    recipients.Add(new Recipient
+                    {
+                        ScriptPubKey = destination,
+                        Amount = recipientModel.Amount
+                    });
+                }
+
+                // If specified, get the change address, which must already exist in the wallet.
+                HdAddress changeAddress = null;
+                if (!string.IsNullOrWhiteSpace(request.ChangeAddress))
+                {
+                    Wallet wallet = this.walletManager.GetWallet(request.WalletName);
+                    HdAccount account = wallet.GetAccount(request.AccountName);
+                    if (account == null)
+                    {
+                        throw new FeatureException(HttpStatusCode.BadRequest, "Account not found.",
+                            $"No account with the name '{request.AccountName}' could be found in wallet {wallet.Name}.");
+                    }
+
+                    changeAddress = account.GetCombinedAddresses()
+                        .FirstOrDefault(x => x.Address == request.ChangeAddress);
+
+                    if (changeAddress == null)
+                    {
+                        throw new FeatureException(HttpStatusCode.BadRequest, "Change address not found.",
+                            $"No change address '{request.ChangeAddress}' could be found in wallet {wallet.Name}.");
+                    }
+                }
+
+                var context = new TransactionBuildContext(this.network)
+                {
+                    AccountReference = new WalletAccountReference(request.WalletName, request.AccountName),
+                    TransactionFee = string.IsNullOrEmpty(request.FeeAmount) ? null : Money.Parse(request.FeeAmount),
+                    MinConfirmations = request.AllowUnconfirmed ? 0 : 1,
+                    Shuffle = request.ShuffleOutputs ??
+                              true, // We shuffle transaction outputs by default as it's better for anonymity.
+                    OpReturnData = request.OpReturnData,
+                    OpReturnAmount = string.IsNullOrEmpty(request.OpReturnAmount)
+                        ? null
+                        : Money.Parse(request.OpReturnAmount),
+                    SelectedInputs = request.Outpoints
+                        ?.Select(u => new OutPoint(uint256.Parse(u.TransactionId), u.Index)).ToList(),
+                    AllowOtherInputs = false,
+                    Recipients = recipients,
+                    ChangeAddress = changeAddress,
+
+                    Sign = false
+                };
+
+                if (!string.IsNullOrEmpty(request.FeeType))
+                {
+                    context.FeeType = FeeParser.Parse(request.FeeType);
+                }
+
+                Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
+
+                // Need to be able to look up the keypath for the UTXOs that were used.
+                IEnumerable<UnspentOutputReference> spendableTransactions =
+                    this.walletManager.GetSpendableTransactionsInAccount(
+                        new WalletAccountReference(request.WalletName, request.AccountName), 0).ToList();
+
+                var utxos = new List<UtxoDescriptor>();
+                var addresses = new List<AddressDescriptor>();
+                foreach (ICoin coin in context.TransactionBuilder.FindSpentCoins(transactionResult))
+                {
+                    utxos.Add(new UtxoDescriptor()
+                    {
+                        Amount = coin.TxOut.Value.ToUnit(MoneyUnit.BTC).ToString(),
+                        TransactionId = coin.Outpoint.Hash.ToString(),
+                        Index = coin.Outpoint.N.ToString(),
+                        ScriptPubKey = coin.TxOut.ScriptPubKey.ToHex()
+                    });
+
+                    UnspentOutputReference outputReference = spendableTransactions.FirstOrDefault(u => u.Transaction.Id == coin.Outpoint.Hash && u.Transaction.Index == coin.Outpoint.N);
+
+                    // TODO: This should never really be null. But the address list is regarded as optional hinting data so it's not a critical failure
+                    if (outputReference != null)
+                    {
+                        bool segwit = outputReference.Transaction.ScriptPubKey.IsScriptType(ScriptType.P2WPKH);
+                        addresses.Add(new AddressDescriptor() { Address = segwit ? outputReference.Address.Bech32Address : outputReference.Address.Address, AddressType = segwit ? "p2wpkh" : "p2pkh", KeyPath = outputReference.Address.HdPath });
+                    }
+                }
+
+                // Return transaction hex, UTXO list, address list
+                return new BuildOfflineSignResponse()
+                {
+                    WalletName = request.WalletName,
+                    WalletAccount = request.AccountName,
+                    Fee = context.TransactionFee.ToUnit(MoneyUnit.BTC).ToString(),
+                    UnsignedTransaction = transactionResult.ToHex(),
+                    Utxos = utxos,
+                    Addresses = addresses
+                };
+            }, cancellationToken);
+        }
+
+        public async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
+        {
+            return await Task.Run(() =>
+            {
+                Transaction unsignedTransaction = this.network.CreateTransaction(request.UnsignedTransaction);
+
+                uint256 originalTxId = unsignedTransaction.GetHash();
+
+                var builder = new TransactionBuilder(this.network);
+                var coins = new List<Coin>();
+                var signingKeys = new List<ISecret>();
+                
+                ExtKey seedExtKey = this.walletManager.GetExtKey(new WalletAccountReference() { AccountName = request.WalletAccount, WalletName = request.WalletName }, request.WalletPassword);
+
+                // Have to determine which private key to use for each UTXO being spent.
+                foreach (UtxoDescriptor utxo in request.Utxos)
+                {
+                    Script scriptPubKey = Script.FromHex(utxo.ScriptPubKey);
+
+                    coins.Add(new Coin(uint256.Parse(utxo.TransactionId), uint.Parse(utxo.Index), Money.Parse(utxo.Amount), scriptPubKey));
+
+                    // Now try get the associated private key. We therefore need to determine the address that contains the UTXO.
+                    string address = scriptPubKey.GetDestinationAddress(this.network).ToString();
+                    var accounts = this.walletManager.GetAccounts(request.WalletName);
+                    HdAddress hdAddress = accounts.SelectMany(hdAccount => hdAccount.GetCombinedAddresses()).FirstOrDefault(a => a.Address == address || a.Bech32Address == address);
+
+                    // It is possible that the address is outside the gap limit. So if it is not found we optimistically presume the address descriptors will fill in the missing information later.
+                    if (hdAddress != null)
+                    {
+                        ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(hdAddress.HdPath));
+                        BitcoinExtKey addressPrivateKey = addressExtKey.GetWif(this.network);
+                        signingKeys.Add(addressPrivateKey);
+                    }
+                }
+
+                // Address descriptors are 'easier' to look the private key up against if provided, but may not always be available.
+                foreach (AddressDescriptor address in request.Addresses)
+                {
+                    ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(address.KeyPath));
+                    BitcoinExtKey addressPrivateKey = addressExtKey.GetWif(this.network);
+                    signingKeys.Add(addressPrivateKey);
+                }
+
+                builder.AddCoins(coins);
+                builder.AddKeys(signingKeys.ToArray());
+                builder.SignTransactionInPlace(unsignedTransaction);
+
+                if (!builder.Verify(unsignedTransaction))
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Failed to validate signed transaction.",
+                        $"Failed to validate signed transaction '{unsignedTransaction.GetHash()}' from offline request '{originalTxId}'.");
+                }
+
+                var builtTransactionModel = new WalletBuildTransactionModel() { TransactionId = unsignedTransaction.GetHash(), Hex = unsignedTransaction.ToHex(), Fee = request.Fee };
+
+                return builtTransactionModel;
+            }, cancellationToken);
+        }
+
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
             TransactionData transaction)
         {

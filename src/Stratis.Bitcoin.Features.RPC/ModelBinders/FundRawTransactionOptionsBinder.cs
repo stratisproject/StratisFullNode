@@ -1,14 +1,14 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using NBitcoin;
+using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.RPC.ModelBinders
 {
-    public class MoneyModelBinder : IModelBinder, IModelBinderProvider
+    public class FundRawTransactionOptionsBinder : IModelBinder, IModelBinderProvider
     {
         public Task BindModelAsync(ModelBindingContext bindingContext)
         {
-            if (bindingContext.ModelType != typeof(Money))
+            if (bindingContext.ModelType != typeof(FundRawTransactionOptions))
             {
                 return Task.CompletedTask;
             }
@@ -21,15 +21,16 @@ namespace Stratis.Bitcoin.Features.RPC.ModelBinders
                 return Task.CompletedTask;
             }
 
-            // TODO: Check if this is actually correct. The other binders set the result in the binding context?
-            return Task.FromResult(Money.Parse(key));
+            var options = JsonConvert.DeserializeObject<FundRawTransactionOptions>(key);
+
+            bindingContext.Result = ModelBindingResult.Success(options);
+            return Task.CompletedTask;
         }
 
         public IModelBinder GetBinder(ModelBinderProviderContext context)
         {
-            if (context.Metadata.ModelType == typeof(Money))
+            if (context.Metadata.ModelType == typeof(FundRawTransactionOptions))
                 return this;
-
             return null;
         }
     }
