@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 
@@ -32,9 +33,13 @@ namespace Stratis.Features.Collateral
 
         private readonly Network counterChainNetwork;
 
+        private readonly ChainIndexer chainIndexer;
+
+        private readonly JoinFederationRequestMonitor joinFederationRequestMonitor;
+
         public CollateralPoAMiner(IConsensusManager consensusManager, IDateTimeProvider dateTimeProvider, Network network, INodeLifetime nodeLifetime, ILoggerFactory loggerFactory,
-            IInitialBlockDownloadState ibdState, BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager,
-            PoABlockHeaderValidator poaHeaderValidator, IFederationManager federationManager, IIntegrityValidator integrityValidator, IWalletManager walletManager,
+            IInitialBlockDownloadState ibdState, BlockDefinition blockDefinition, ISlotsManager slotsManager, IConnectionManager connectionManager, JoinFederationRequestMonitor joinFederationRequestMonitor,
+            PoABlockHeaderValidator poaHeaderValidator, IFederationManager federationManager, IIntegrityValidator integrityValidator, IWalletManager walletManager, ChainIndexer chainIndexer,
             INodeStats nodeStats, VotingManager votingManager, PoAMinerSettings poAMinerSettings, ICollateralChecker collateralChecker, IAsyncProvider asyncProvider, ICounterChainSettings counterChainSettings, IIdleFederationMembersKicker idleFederationMembersKicker)
             : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager, connectionManager,
             poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker)
@@ -42,11 +47,15 @@ namespace Stratis.Features.Collateral
             this.counterChainNetwork = counterChainSettings.CounterChainNetwork;
             this.collateralChecker = collateralChecker;
             this.encoder = new CollateralHeightCommitmentEncoder(this.logger);
+            this.chainIndexer = chainIndexer;
+            this.joinFederationRequestMonitor = joinFederationRequestMonitor;
         }
 
         /// <inheritdoc />
         protected override void FillBlockTemplate(BlockTemplate blockTemplate, out bool dropTemplate)
         {
+            OnBeforeFillBlockTemplate();
+
             base.FillBlockTemplate(blockTemplate, out dropTemplate);
 
             int counterChainHeight = this.collateralChecker.GetCounterChainConsensusHeight();
@@ -88,6 +97,58 @@ namespace Stratis.Features.Collateral
 
             var heightCommitmentScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedHeight), Op.GetPushOp(this.counterChainNetwork.MagicBytes));
             blockTemplate.Block.Transactions[0].AddOutput(Money.Zero, heightCommitmentScript);
+        }
+
+
+        /// <summary>
+        /// It is possible that this node was not a federation member at the time a pending poll was started.
+        /// As such the node would not have voted up to now. We have to check if a vote should be added now.
+        /// </summary>
+        /// <remarks>
+        /// There is another scenario catered for by this method. It's the situation where a node crashed or is
+        /// stopped when it contains scheduled "add member" votes that have not yet been added to a block.
+        /// </remarks>
+        private void OnBeforeFillBlockTemplate()
+        {
+            if (!this.federationManager.IsFederationMember || !this.network.ConsensusOptions.VotingEnabled)
+                return;
+
+            try
+            {
+                List<Poll> pendingAddFederationMemberPolls = this.votingManager.GetPendingPolls().Where(p => p.VotingData.Key == VoteKey.AddFederationMember).ToList();
+
+                // Filter all polls where this federation number has not voted on.
+                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
+
+                if (!pendingAddFederationMemberPolls.Any())
+                    return;
+
+                IFederationMember collateralFederationMember = this.federationManager.GetCurrentFederationMember();
+
+                var poaConsensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
+
+                foreach (Poll poll in pendingAddFederationMemberPolls)
+                {
+                    ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
+                    ChainedHeader votingRequestHeader = pollStartHeader.Previous;
+
+                    // Already checked?
+                    if (this.joinFederationRequestMonitor.AlreadyChecked(votingRequestHeader.HashBlock))
+                        continue;
+
+                    var blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
+
+                    this.joinFederationRequestMonitor.OnBlockConnected(new Bitcoin.EventBus.CoreEvents.BlockConnected(
+                        new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
+                }
+
+                return;
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return;
+            }
         }
     }
 

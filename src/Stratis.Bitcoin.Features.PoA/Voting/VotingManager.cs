@@ -108,7 +108,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                this.scheduledVotingData.Add(votingData);
+                if (!this.scheduledVotingData.Any(v => v == votingData))
+                    this.scheduledVotingData.Add(votingData);
 
                 this.CleanFinishedPollsLocked();
             }
@@ -190,6 +191,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 return new List<Poll>(this.polls.Where(x => !x.IsPending));
+            }
+        }
+
+        /// <summary>Provides a collection of polls that are already finished and their results applied.</summary>
+        public List<Poll> GetExecutedPolls()
+        {
+            this.EnsureInitialized();
+
+            lock (this.locker)
+            {
+                return new List<Poll>(this.polls.Where(x => x.IsExecuted));
             }
         }
 
@@ -372,6 +384,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     foreach (VotingData data in votingDataList)
                     {
+                        if (fedMemberKeyHex == this.federationManager.CurrentFederationKey.PubKey.ToHex())
+                        {
+                            // Any votes found in the block is no longer scheduled.
+                            // This avoids clinging to votes scheduled during IBD.
+                            if (this.scheduledVotingData.Any(v => v == data))
+                                this.scheduledVotingData.Remove(data);
+                        }
+
                         if (this.IsVotingOnMultisigMember(data))
                             continue;
 

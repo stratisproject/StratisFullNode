@@ -89,10 +89,15 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         public static IFederationManager CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
         {
             string dir = TestBase.CreateTestDir(caller);
+
             var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
             var keyValueRepo = new KeyValueRepository(dir, dbreezeSerializer);
 
             var settings = new NodeSettings(network, args: new string[] { $"-datadir={dir}" });
+
+            Key federationKey = new Mnemonic("lava frown leave wedding virtual ghost sibling able mammal liar wide wisdom").DeriveExtKey().PrivateKey;
+            new KeyTool(settings.DataFolder).SavePrivateKey(federationKey);
+
             var fullNode = new Mock<IFullNode>();
             var federationManager = new FederationManager(settings, network, loggerFactory, keyValueRepo, signals, fullNode.Object);
             var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
