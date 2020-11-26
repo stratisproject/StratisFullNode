@@ -194,6 +194,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        /// <summary>Provides a collection of polls that are already finished and their results applied.</summary>
+        public List<Poll> GetExecutedPolls()
+        {
+            this.EnsureInitialized();
+
+            lock (this.locker)
+            {
+                return new List<Poll>(this.polls.Where(x => x.IsExecuted));
+            }
+        }
+
         /// <summary>
         /// Tells us whether we have already voted to boot a federation member.
         /// </summary>

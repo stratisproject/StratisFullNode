@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Active polls</returns>
         /// <response code="200">Returns the active polls</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("pendingpolls")]
+        [Route("polls/pending")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -123,7 +123,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Finished polls</returns>
         /// <response code="200">Returns the finished polls</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("finishedpolls")]
+        [Route("polls/finished")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -135,6 +135,31 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
 
+                return this.Json(models);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of executed polls.
+        /// </summary>
+        /// <returns>Finished polls</returns>
+        /// <response code="200">Returns the finished polls</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/executed")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetExecutedPolls()
+        {
+            try
+            {
+                List<Poll> polls = this.votingManager.GetExecutedPolls();
+                IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
                 return this.Json(models);
             }
             catch (Exception e)
