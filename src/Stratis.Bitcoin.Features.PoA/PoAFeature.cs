@@ -89,9 +89,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.ReplaceBlockStoreBehavior(connectionParameters);
 
-            this.federationManager.Initialize();
-            this.whitelistedHashesRepository.Initialize();
-
             var options = (PoAConsensusOptions)this.network.Consensus.Options;
 
             if (options.VotingEnabled)
@@ -109,6 +106,9 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.votingManager.Initialize();
                 }
             }
+
+            this.federationManager.Initialize();
+            this.whitelistedHashesRepository.Initialize();
 
             this.miner.InitializeMining();
 
