@@ -375,7 +375,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         // Any votes found in the block is no longer scheduled.
                         // This avoids clinging to votes scheduled during IBD.
-                        if (!this.scheduledVotingData.Any(v => v == data))
+                        if (this.scheduledVotingData.Any(v => v == data))
                             this.scheduledVotingData.Remove(data);
 
                         if (this.IsVotingOnMultisigMember(data))
