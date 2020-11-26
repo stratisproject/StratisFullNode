@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    this.leveldb.Write(batch);
+                    this.leveldb.Write(batch, new WriteOptions() { Sync = true });
                 }
             }
 

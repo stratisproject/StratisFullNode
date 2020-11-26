@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 lock (this.locker)
                 {
-                    this.leveldb.Write(batch);
+                    this.leveldb.Write(batch, new WriteOptions { Sync = true });
                 }
             }
         }
