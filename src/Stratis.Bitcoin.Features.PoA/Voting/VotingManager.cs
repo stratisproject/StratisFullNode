@@ -385,7 +385,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     foreach (VotingData data in votingDataList)
                     {
-                        if (fedMemberKeyHex == this.federationManager.CurrentFederationKey.PubKey.ToHex())
+                        if (this.federationManager.CurrentFederationKey?.PubKey.ToHex() == fedMemberKeyHex)
                         {
                             // Any votes found in the block is no longer scheduled.
                             // This avoids clinging to votes scheduled during IBD.
