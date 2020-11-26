@@ -18,7 +18,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     [Route("api/[controller]")]
     public class DefaultVotingController : Controller
     {
-        protected readonly IFederationManager fedManager;
+        private readonly ChainIndexer chainIndexer;
+
+        protected readonly IFederationManager federationManager;
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
@@ -33,7 +35,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
         public DefaultVotingController(
-            IFederationManager fedManager,
+            ChainIndexer chainIndexer,
+            IFederationManager federationManager,
             ILoggerFactory loggerFactory,
             VotingManager votingManager,
             IWhitelistedHashesRepository whitelistedHashesRepository,
@@ -41,7 +44,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             IPollResultExecutor pollExecutor,
             IIdleFederationMembersKicker idleFederationMembersKicker)
         {
-            this.fedManager = fedManager;
+            this.chainIndexer = chainIndexer;
+            this.federationManager = federationManager;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.network = network;
             this.pollExecutor = pollExecutor;
@@ -142,7 +146,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                List<IFederationMember> federationMembers = this.fedManager.GetFederationMembers();
+                List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
 
                 var federationMemberModels = new List<FederationMemberModel>();
 
@@ -312,7 +316,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            if (!this.fedManager.IsFederationMember)
+            if (!this.federationManager.IsFederationMember)
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Only federation members can vote", string.Empty);
 
             try
