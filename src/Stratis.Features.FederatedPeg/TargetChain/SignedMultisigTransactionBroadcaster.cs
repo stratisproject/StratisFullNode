@@ -129,6 +129,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (transactionBroadCastEntry == null)
                 return transferItem;
 
+            // If there was no mempool error, then it safe to assume the transaction was broadcasted ok or already known.
+            if (transactionBroadCastEntry.MempoolError == null)
+                return transferItem;
+
             if (transactionBroadCastEntry.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
             {
                 this.logger.LogWarning("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
