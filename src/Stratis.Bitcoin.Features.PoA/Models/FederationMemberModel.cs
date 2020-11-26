@@ -41,6 +41,6 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         public VoteKey PollType { get; internal set; }
 
         [JsonProperty("rewardEstimate")]
-        public Money RewardEstimatePerBlock { get; internal set; }
+        public double RewardEstimatePerBlock { get; internal set; }
     }
 }
