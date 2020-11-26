@@ -61,7 +61,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Active federation members</returns>
         /// <response code="200">Returns the active members</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("fedmembers")]
+        [Route("currentmemberinfo")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
