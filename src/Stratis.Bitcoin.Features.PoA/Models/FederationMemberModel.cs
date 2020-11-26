@@ -38,9 +38,9 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         public long MemberWillStartEarningRewardsEstimateHeight { get; set; }
 
         [JsonProperty("pollType")]
-        public VoteKey PollType { get; internal set; }
+        public VoteKey PollType { get; set; }
 
         [JsonProperty("rewardEstimate")]
-        public double RewardEstimatePerBlock { get; internal set; }
+        public double RewardEstimatePerBlock { get; set; }
     }
 }

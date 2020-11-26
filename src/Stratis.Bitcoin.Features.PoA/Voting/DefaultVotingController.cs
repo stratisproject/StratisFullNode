@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
                 }
 
-                federationMemberModel.RewardEstimatePerBlock = 9 / this.federationManager.GetFederationMembers().Count;
+                federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
 
                 return Json(federationMemberModel);
             }
