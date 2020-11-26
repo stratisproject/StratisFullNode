@@ -15,31 +15,31 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         [JsonProperty("periodOfInactivity")]
         public TimeSpan PeriodOfInActivity { get; set; }
 
-        [JsonProperty("pollStart")]
+        [JsonProperty("pollStartBlockHeight")]
         public int PollStartBlockHeight { get; set; }
 
-        [JsonProperty("pollVoteCount")]
+        [JsonProperty("pollNumberOfVotesAcquired")]
         public int PollNumberOfVotesAcquired { get; set; }
 
-        [JsonProperty("pollFinished")]
+        [JsonProperty("pollFinishedBlockHeight")]
         public int PollFinishedBlockHeight { get; set; }
 
-        [JsonProperty("pollFinishInBlocks")]
+        [JsonProperty("pollWillFinishInBlocks")]
         public long PollWillFinishInBlocks { get; set; }
 
-        [JsonProperty("pollExecuted")]
+        [JsonProperty("pollExecutedBlockHeight")]
         public int PollExecutedBlockHeight { get; set; }
 
-        [JsonProperty("startMining")]
+        [JsonProperty("memberWillStartMiningAtBlockHeight")]
         public long MemberWillStartMiningAtBlockHeight { get; set; }
 
-        [JsonProperty("rewardsAtHeight")]
+        [JsonProperty("memberWillStartEarningRewardsEstimateHeight")]
         public long MemberWillStartEarningRewardsEstimateHeight { get; set; }
 
         [JsonProperty("pollType")]
         public string PollType { get; set; }
 
-        [JsonProperty("rewardEstimate")]
+        [JsonProperty("rewardEstimatePerBlock")]
         public double RewardEstimatePerBlock { get; set; }
     }
 }
