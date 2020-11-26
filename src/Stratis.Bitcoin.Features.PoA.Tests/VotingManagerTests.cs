@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.votingManager.ScheduleVote(new VotingData());
 
-            Assert.Equal(2, this.votingManager.GetAndCleanScheduledVotes().Count);
+            Assert.Equal(1, this.votingManager.GetAndCleanScheduledVotes().Count);
 
             Assert.Empty(this.votingManager.GetScheduledVotes());
         }
