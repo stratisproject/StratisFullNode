@@ -1,7 +1,6 @@
 ﻿using System;
 using NBitcoin;
 using Newtonsoft.Json;
-using Stratis.Bitcoin.Features.PoA.Voting;
 
 namespace Stratis.Bitcoin.Features.PoA.Models
 {
@@ -38,7 +37,7 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         public long MemberWillStartEarningRewardsEstimateHeight { get; set; }
 
         [JsonProperty("pollType")]
-        public VoteKey PollType { get; set; }
+        public string PollType { get; set; }
 
         [JsonProperty("rewardEstimate")]
         public double RewardEstimatePerBlock { get; set; }

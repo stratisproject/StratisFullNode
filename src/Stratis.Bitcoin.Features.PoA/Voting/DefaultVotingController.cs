@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 Poll poll = this.votingManager.GetPendingPolls().MemberPollsOnly().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
                 if (poll != null)
                 {
-                    federationMemberModel.PollType = poll.VotingData.Key;
+                    federationMemberModel.PollType = poll.VotingData.Key.ToString();
                     federationMemberModel.PollStartBlockHeight = poll.PollStartBlockData.Height;
                     federationMemberModel.PollNumberOfVotesAcquired = poll.PubKeysHexVotedInFavor.Count;
                 }
@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 poll = this.votingManager.GetFinishedPolls().MemberPollsOnly().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
                 if (poll != null)
                 {
-                    federationMemberModel.PollType = poll.VotingData.Key;
+                    federationMemberModel.PollType = poll.VotingData.Key.ToString();
                     federationMemberModel.PollStartBlockHeight = poll.PollStartBlockData.Height;
                     federationMemberModel.PollNumberOfVotesAcquired = poll.PubKeysHexVotedInFavor.Count;
                     federationMemberModel.PollFinishedBlockHeight = poll.PollVotedInFavorBlockData.Height;
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
 
-                    if (federationMemberModel.PollType == VoteKey.AddFederationMember)
+                    if (poll.VotingData.Key == VoteKey.AddFederationMember)
                     {
                         federationMemberModel.MemberWillStartMiningAtBlockHeight = poll.PollExecutedBlockData.Height + this.network.Consensus.MaxReorgLength;
                         federationMemberModel.MemberWillStartEarningRewardsEstimateHeight = federationMemberModel.MemberWillStartMiningAtBlockHeight + 480;
