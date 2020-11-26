@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
-using NBitcoin.DataEncoders;
+using NBitcoin.Protocol;
 using Newtonsoft.Json.Linq;
 
 namespace Stratis.Bitcoin.Features.RPC
@@ -222,15 +222,12 @@ namespace Stratis.Bitcoin.Features.RPC
         // NBitcoin internally puts a bit in the version number to differentiate between transactions without inputs and transactions with witness data.
         private string ToHex(Transaction tx)
         {
-            // TODO: Fix this - it seems that the WITNESS_VERSION branch below is giving incorrect results when there are no inputs (i.e. the fundrawtransaction use case)
-            return tx.ToHex();
-
             // If there are inputs in the transaction, then it is definitely not ambiguous
             if (tx.Inputs.Any())
                 return tx.ToHex();
 
-            // If there are inputs, do this hack so that NBitcoin does not change the version number when serialising the transaction
-            return Encoders.Hex.EncodeData(tx.ToBytes(version: NBitcoin.Protocol.ProtocolVersion.WITNESS_VERSION - 1));
+            // If there are no inputs, do this hack so that NBitcoin does not change the version number when serialising the transaction
+            return tx.ToHex(ProtocolVersion.WITNESS_VERSION - 1);
         }
 
         // getreceivedbyaddress

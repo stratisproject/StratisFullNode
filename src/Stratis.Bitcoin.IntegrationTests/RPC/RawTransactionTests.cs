@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 Money totalInputs = this.GetTotalInputValue(node, funded.Transaction);
 
                 Assert.Equal(new Money(this.network.MinRelayTxFee), fee);
-                // TODO: There seems to be a bug that is causing the options to not be properly propagated into the controller, maybe the middleware?
+                
                 Assert.Equal(2, funded.ChangePos);
                 Assert.Equal(changeAddress.ScriptPubKey, funded.Transaction.Outputs[funded.ChangePos].ScriptPubKey);
                 
@@ -173,7 +173,9 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 {
                     Assert.NotNull(input.ScriptSig);
 
-                    // TODO: Would fail for a pure segwit transaction
+                    // Basic sanity check that the transaction has actually been signed.
+                    // A segwit transaction would fail this check but we aren't checking that here.
+                    // In any case, the mempool count test shows definitively if the transaction passes validation.
                     Assert.NotEqual(input.ScriptSig, Script.Empty);
                 }
 

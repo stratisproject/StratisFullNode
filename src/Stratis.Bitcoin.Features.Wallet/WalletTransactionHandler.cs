@@ -53,7 +53,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        // TODO: Move the verify flag into the context itself
         public Transaction BuildTransaction(TransactionBuildContext context)
         {
             this.InitializeTransactionBuilder(context);
@@ -61,7 +60,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             const int maxRetries = 5;
             int retryCount = 0;
 
-            TransactionPolicyError[] errors = null;
+            TransactionPolicyError[] errors = {};
             while (retryCount <= maxRetries)
             {
                 if (context.Shuffle)

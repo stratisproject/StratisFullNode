@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.DataEncoders;
+using NBitcoin.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Consensus;
@@ -15,6 +17,7 @@ using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
@@ -25,28 +28,22 @@ namespace Stratis.Bitcoin.Features.Wallet
     [ApiVersion("1")]
     public class WalletRPCController : FeatureController
     {
-        /// <summary>Provides access to the block store database.</summary>
         private readonly IBlockStore blockStore;
 
-        /// <summary>Wallet broadcast manager.</summary>
         private readonly IBroadcasterManager broadcasterManager;
 
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
-        /// <summary>A reader for extracting an address from a <see cref="Script"/>.</summary>
         private readonly IScriptAddressReader scriptAddressReader;
 
-        /// <summary>Node related configuration.</summary>
         private readonly StoreSettings storeSettings;
 
-        /// <summary>Wallet manager.</summary>
         private readonly IWalletManager walletManager;
 
-        /// <summary>Wallet transaction handler.</summary>
         private readonly IWalletTransactionHandler walletTransactionHandler;
 
-        /// <summary>Wallet related configuration.</summary>
+        private readonly IReserveUtxoService reserveUtxoService;
+
         private readonly WalletSettings walletSettings;
 
         /// <summary>
@@ -66,7 +63,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             StoreSettings storeSettings,
             IWalletManager walletManager,
             WalletSettings walletSettings,
-            IWalletTransactionHandler walletTransactionHandler) : base(fullNode: fullNode, consensusManager: consensusManager, chainIndexer: chainIndexer, network: network)
+            IWalletTransactionHandler walletTransactionHandler,
+            IReserveUtxoService reserveUtxoService = null) : base(fullNode: fullNode, consensusManager: consensusManager, chainIndexer: chainIndexer, network: network)
         {
             this.blockStore = blockStore;
             this.broadcasterManager = broadcasterManager;
@@ -76,6 +74,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.walletManager = walletManager;
             this.walletSettings = walletSettings;
             this.walletTransactionHandler = walletTransactionHandler;
+            this.reserveUtxoService = reserveUtxoService;
         }
 
         [ActionName("setwallet")]
@@ -152,8 +151,13 @@ namespace Stratis.Bitcoin.Features.Wallet
             try
             {
                 // TODO: Bitcoin Core performs an heuristic check to determine whether or not the provided transaction should be deserialised with witness data -> core_read.cpp DecodeHexTx()
-                Transaction rawTx = this.Network.CreateTransaction(rawHex);
+                Transaction rawTx = this.Network.CreateTransaction();
                 
+                // This is an uncommon case where we cannot simply rely on the consensus factory to do the right thing.
+                // We need to override the protocol version so that the RPC client workaround functions correctly.
+                // If this was not done the transaction deserialisation would attempt to use witness deserialisation and the transaction data would get mangled.
+                rawTx.FromBytes(Encoders.Hex.DecodeData(rawHex), this.Network.Consensus.ConsensusFactory, ProtocolVersion.WITNESS_VERSION - 1);
+
                 WalletAccountReference account = this.GetWalletAccountReference();
 
                 HdAddress changeAddress = null;
@@ -162,15 +166,9 @@ namespace Stratis.Bitcoin.Features.Wallet
                 if (options != null && !string.IsNullOrWhiteSpace(options.ChangeType) && options.ChangeType != "legacy")
                     throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "The change_type option is not yet supported");
 
-                if (options?.LockUnspents ?? false)
-                {
-                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "The lockUnspents option is not yet supported");
-                }
-
                 if (options?.ChangeAddress != null)
                 {
-                    // TODO: Determine if this is the bech32 address for the HdAddress and set UseSegwitChangeAddress in the context accordingly
-                    changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options?.ChangeAddress.ToString());
+                    changeAddress = this.walletManager.GetAllAccounts().SelectMany(a => a.GetCombinedAddresses()).FirstOrDefault(a => a.Address == options?.ChangeAddress);
                 }
                 else
                 {
@@ -190,7 +188,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     TransactionFee = (options?.FeeRate == null) ? new Money(this.Network.MinRelayTxFee) : null,
                     MinConfirmations = 0,
                     Shuffle = false,
-                    //UseSegwitChangeAddress = false,
+                    UseSegwitChangeAddress = changeAddress != null && (options?.ChangeAddress == changeAddress.Bech32Address),
 
                     Sign = false
                 };
@@ -283,7 +281,14 @@ namespace Stratis.Bitcoin.Features.Wallet
                     {
                         rawTx.Inputs.Add(newTransactionInput);
 
-                        // TODO: Add a mechanism to lock inputs when LockUnspents is set - perhaps the reserve UTXO service?
+                        if (options?.LockUnspents ?? false)
+                        {
+                            if (this.reserveUtxoService == null)
+                                continue;
+
+                            // Prevent the provided UTXO from being spent by another transaction until this one is signed and broadcast.
+                            this.reserveUtxoService.ReserveUtxos(new []{ newTransactionInput.PrevOut });
+                        }
                     }
                 }
 
