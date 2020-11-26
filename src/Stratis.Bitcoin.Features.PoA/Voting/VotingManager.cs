@@ -180,6 +180,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 return new List<Poll>(this.polls.Where(x => x.IsPending));
+
             }
         }
 
@@ -327,7 +328,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private IFederationMember GetMemberVotedOn(VotingData votingData)
+        public IFederationMember GetMemberVotedOn(VotingData votingData)
         {
             if (votingData.Key != VoteKey.AddFederationMember && votingData.Key != VoteKey.KickFederationMember)
                 return null;

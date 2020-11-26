@@ -18,7 +18,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     [Route("api/[controller]")]
     public class DefaultVotingController : Controller
     {
-        protected readonly IFederationManager fedManager;
+        private readonly ChainIndexer chainIndexer;
+
+        protected readonly IFederationManager federationManager;
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
@@ -33,7 +35,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
         public DefaultVotingController(
-            IFederationManager fedManager,
+            ChainIndexer chainIndexer,
+            IFederationManager federationManager,
             ILoggerFactory loggerFactory,
             VotingManager votingManager,
             IWhitelistedHashesRepository whitelistedHashesRepository,
@@ -41,7 +44,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             IPollResultExecutor pollExecutor,
             IIdleFederationMembersKicker idleFederationMembersKicker)
         {
-            this.fedManager = fedManager;
+            this.chainIndexer = chainIndexer;
+            this.federationManager = federationManager;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.network = network;
             this.pollExecutor = pollExecutor;
@@ -50,6 +54,83 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
+
+        /// <summary>
+        /// Retrieves information for the current federation member's voting status and mining estimates.
+        /// </summary>
+        /// <returns>Active federation members</returns>
+        /// <response code="200">Returns the active members</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("currentmemberinfo")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult CurrentFederationMemberInfo()
+        {
+            try
+            {
+                IFederationMember federationMember = this.federationManager.GetCurrentFederationMember();
+
+                var federationMemberModel = new FederationMemberModel
+                {
+                    PubKey = federationMember.PubKey
+                };
+
+                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMember.PubKey);
+                if (lastActive.Key != null)
+                {
+                    federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+                    federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+                }
+
+                // Is this member part of a pending poll
+                Poll poll = this.votingManager.GetPendingPolls().MemberPollsOnly().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                if (poll != null)
+                {
+                    federationMemberModel.PollType = poll.VotingData.Key.ToString();
+                    federationMemberModel.PollStartBlockHeight = poll.PollStartBlockData.Height;
+                    federationMemberModel.PollNumberOfVotesAcquired = poll.PubKeysHexVotedInFavor.Count;
+                }
+
+                // Has the poll finished?
+                poll = this.votingManager.GetFinishedPolls().MemberPollsOnly().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                if (poll != null)
+                {
+                    federationMemberModel.PollType = poll.VotingData.Key.ToString();
+                    federationMemberModel.PollStartBlockHeight = poll.PollStartBlockData.Height;
+                    federationMemberModel.PollNumberOfVotesAcquired = poll.PubKeysHexVotedInFavor.Count;
+                    federationMemberModel.PollFinishedBlockHeight = poll.PollVotedInFavorBlockData.Height;
+
+                    if (this.chainIndexer.Height > poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength)
+                        federationMemberModel.PollWillFinishInBlocks = 0;
+                    else
+                        federationMemberModel.PollWillFinishInBlocks = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) - this.chainIndexer.Tip.Height;
+                }
+
+                // Has the poll executed?
+                poll = this.votingManager.GetExecutedPolls().MemberPollsOnly().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                if (poll != null)
+                {
+                    federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
+
+                    if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                    {
+                        federationMemberModel.MemberWillStartMiningAtBlockHeight = poll.PollExecutedBlockData.Height + this.network.Consensus.MaxReorgLength;
+                        federationMemberModel.MemberWillStartEarningRewardsEstimateHeight = federationMemberModel.MemberWillStartMiningAtBlockHeight + 480;
+                    }
+                }
+
+                federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
+
+                return Json(federationMemberModel);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
 
         /// <summary>
         /// Retrieves a list of active federation members and their last active times.
@@ -65,7 +146,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                List<IFederationMember> federationMembers = this.fedManager.GetFederationMembers();
+                List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
 
                 var federationMemberModels = new List<FederationMemberModel>();
 
@@ -235,7 +316,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            if (!this.fedManager.IsFederationMember)
+            if (!this.federationManager.IsFederationMember)
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Only federation members can vote", string.Empty);
 
             try
