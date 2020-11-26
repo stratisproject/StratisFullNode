@@ -108,7 +108,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                this.scheduledVotingData.Add(votingData);
+                if (!this.scheduledVotingData.Any(v => v == votingData))
+                    this.scheduledVotingData.Add(votingData);
 
                 this.CleanFinishedPollsLocked();
             }

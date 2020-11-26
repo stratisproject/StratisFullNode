@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA
     /// <inheritdoc cref="IPoAMiner"/>
     public class PoAMiner : IPoAMiner
     {
-        private readonly IConsensusManager consensusManager;
+        protected readonly IConsensusManager consensusManager;
 
         private readonly IDateTimeProvider dateTimeProvider;
 
@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IWalletManager walletManager;
 
-        private readonly VotingManager votingManager;
+        protected readonly VotingManager votingManager;
 
         private readonly VotingDataEncoder votingDataEncoder;
 
@@ -344,7 +344,7 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 if (this.network.ConsensusOptions.AutoKickIdleMembers)
                 {
-                    // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+                   // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
                     this.idleFederationMembersKicker.Execute(this.consensusManager.Tip);
                 }
 
