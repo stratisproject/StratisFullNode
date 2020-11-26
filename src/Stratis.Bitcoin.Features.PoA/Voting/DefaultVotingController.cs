@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Is this member part of a pending poll
-                Poll poll = this.votingManager.GetPendingPolls().FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                Poll poll = this.votingManager.GetPendingPolls().MemberPollsOnly().FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key;
@@ -93,7 +93,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll finished?
-                poll = this.votingManager.GetFinishedPolls().FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                poll = this.votingManager.GetFinishedPolls().MemberPollsOnly().FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key;
@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll executed?
-                poll = this.votingManager.GetExecutedPolls().FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                poll = this.votingManager.GetExecutedPolls().MemberPollsOnly().FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
