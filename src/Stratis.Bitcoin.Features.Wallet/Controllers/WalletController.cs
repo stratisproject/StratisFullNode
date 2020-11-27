@@ -56,10 +56,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> GenerateMnemonic([FromQuery] string language = "English", int wordCount = 12,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.ExecuteAsAsync(new {Language = language, WordCount = wordCount},
+            return await this.ExecuteAsAsync(new { Language = language, WordCount = wordCount },
                 cancellationToken, (req, token) =>
                     // Generate the Mnemonic
-                    this.Json(new Mnemonic(language, (WordCount) wordCount).ToString()));
+                    this.Json(new Mnemonic(language, (WordCount)wordCount).ToString()));
         }
 
         /// <summary>
@@ -447,8 +447,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [HttpGet]
         public async Task<IActionResult> ListWallets(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.ExecuteAsAsync((object) null, cancellationToken, (req, token) =>
-                this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames())), false);
+            return await this.ExecuteAsAsync((object)null, cancellationToken, (req, token) =>
+               this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames())), false);
         }
 
         /// <summary>
@@ -813,21 +813,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
 
         [Route("build-offline-sign-request")]
         [HttpPost]
-        public async Task<IActionResult> BuildOfflineSignRequest([FromBody] BuildOfflineSignRequest req,
+        public async Task<IActionResult> BuildOfflineSignRequest([FromBody] BuildOfflineSignRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.Execute(req, cancellationToken,
+            return await this.Execute(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.BuildOfflineSignRequest(req, token)));
         }
 
         // TODO: Make this support PSBT directly?
         [Route("offline-sign-request")]
         [HttpPost]
-        public async Task<IActionResult> OfflineSignRequest([FromBody] OfflineSignRequest req,
+        public async Task<IActionResult> OfflineSignRequest([FromBody] OfflineSignRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.Execute(req, cancellationToken,
-                async (req, token) => this.Json(await this.walletService.OfflineSignRequest(req, token)));
+            return await this.Execute(request, cancellationToken, async (req, token) => this.Json(await this.walletService.OfflineSignRequest(req, token)));
         }
 
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,

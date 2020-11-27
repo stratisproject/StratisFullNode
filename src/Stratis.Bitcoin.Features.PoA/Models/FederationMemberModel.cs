@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.PoA.Models
 {
-    public sealed class FederationMemberModel
+    public class FederationMemberModel
     {
         [JsonProperty("pubkey")]
         public PubKey PubKey { get; set; }
@@ -14,7 +14,10 @@ namespace Stratis.Bitcoin.Features.PoA.Models
 
         [JsonProperty("periodOfInactivity")]
         public TimeSpan PeriodOfInActivity { get; set; }
+    }
 
+    public sealed class FederationMemberDetailedModel : FederationMemberModel
+    {
         [JsonProperty("pollStartBlockHeight")]
         public int PollStartBlockHeight { get; set; }
 
