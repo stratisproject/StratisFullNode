@@ -71,7 +71,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 IFederationMember federationMember = this.federationManager.GetCurrentFederationMember();
 
-                var federationMemberModel = new FederationMemberModel
+                var federationMemberModel = new FederationMemberDetailedModel
                 {
                     PubKey = federationMember.PubKey
                 };
