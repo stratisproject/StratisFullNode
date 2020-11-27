@@ -89,7 +89,7 @@ namespace Stratis.Features.Collateral
                     .AddFeature<PoAFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<IFederationManager, FederationManager>();
+                        services.AddSingleton<IFederationManager, CollateralFederationManager>();
                         services.AddSingleton<PoABlockHeaderValidator>();
                         services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
                         services.AddSingleton<PoAMinerSettings>();
