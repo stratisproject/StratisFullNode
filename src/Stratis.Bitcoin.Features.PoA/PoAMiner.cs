@@ -400,43 +400,56 @@ namespace Stratis.Bitcoin.Features.PoA
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
+            if (this.ibdState.IsInitialBlockDownload())
+                return;
+
             log.AppendLine();
             log.AppendLine("======PoA Miner======");
 
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
-            uint currentTime = currentHeader.Header.Time;
 
             int pubKeyTakeCharacters = 4;
             int hitCount = 0;
 
             List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+
             int maxDepth = modifiedFederation.Count;
 
-            log.AppendLine($"Mining information for the last {maxDepth} blocks.");
-            log.AppendLine("MISS means that miner didn't produce a block at the timestamp he was supposed to.");
+            log.AppendLine($"Mining information for the last { maxDepth } blocks.");
+            log.AppendLine("'<' and '>' surrounds a miner didn't produce a block at the timestamp he was supposed to.");
 
-            uint miningSlot = currentTime / this.network.ConsensusOptions.TargetSpacingSeconds;
-            uint timeHeader = currentHeader.Header.Time;
-            uint headerSlot = timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds;
+            uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+            timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
 
             // Iterate mining slots.
-            for (int i = 0; i < maxDepth; i++, miningSlot--)
+            for (int i = 0; i < maxDepth; i++)
             {
+                int headerSlot = (int)(timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds) % modifiedFederation.Count;
+
+                PubKey pubKey = modifiedFederation[headerSlot].PubKey;
+
+                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "****" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+
                 // Mined in this slot?
-                if (miningSlot == headerSlot)
+                if (timeHeader == currentHeader.Header.Time)
                 {
-                    string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
-                    log.Append("[" + pubKeyRepresentation + "]-");
+                    log.Append($"[{ pubKeyRepresentation }] ");
+
                     currentHeader = currentHeader.Previous;
-                    timeHeader = currentHeader.Header.Time;
-                    headerSlot = timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds;
                     hitCount++;
+
+                    modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
                 }
                 else
                 {
-                    log.Append("MISS-");
+                    log.Append($"<{ pubKeyRepresentation }> ");
                 }
+
+                timeHeader -= this.network.ConsensusOptions.TargetSpacingSeconds;
+
+                if ((i % 20) == 19)
+                    log.AppendLine();
             }
 
             log.Append("...");
