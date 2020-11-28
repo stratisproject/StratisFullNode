@@ -429,7 +429,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 PubKey pubKey = modifiedFederation[headerSlot].PubKey;
 
-                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "****" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
                 // Mined in this slot?
                 if (timeHeader == currentHeader.Header.Time)
