@@ -409,7 +409,7 @@ namespace Stratis.Bitcoin.Features.PoA
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
 
-            int pubKeyTakeCharacters = 4;
+            int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
             List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
@@ -421,6 +421,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
             uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
             timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
+            if (timeHeader < currentHeader.Header.Time)
+                timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
 
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
@@ -429,7 +431,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 PubKey pubKey = modifiedFederation[headerSlot].PubKey;
 
-                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
                 // Mined in this slot?
                 if (timeHeader == currentHeader.Header.Time)
