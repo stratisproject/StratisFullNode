@@ -408,7 +408,6 @@ namespace Stratis.Bitcoin.Features.PoA
             uint currentTime = currentHeader.Header.Time;
 
             int pubKeyTakeCharacters = 4;
-            int depthReached = 0;
             int hitCount = 0;
 
             List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
@@ -417,30 +416,27 @@ namespace Stratis.Bitcoin.Features.PoA
             log.AppendLine($"Mining information for the last {maxDepth} blocks.");
             log.AppendLine("MISS means that miner didn't produce a block at the timestamp he was supposed to.");
 
-            for (int i = tip.Height; (i > 0) && (i > tip.Height - maxDepth); i--)
+            uint miningSlot = currentTime / this.network.ConsensusOptions.TargetSpacingSeconds;
+            uint timeHeader = currentHeader.Header.Time;
+            uint headerSlot = timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds;
+
+            // Iterate mining slots.
+            for (int i = 0; i < maxDepth; i++, miningSlot--)
             {
-                // Add stats for current header.
-                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
-
-                log.Append("[" + pubKeyRepresentation + "]-");
-                depthReached++;
-                hitCount++;
-
-                currentHeader = currentHeader.Previous;
-                currentTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
-
-                if (currentHeader.Height == 0)
-                    break;
-
-                while ((currentHeader.Header.Time != currentTime) && (depthReached <= maxDepth))
+                // Mined in this slot?
+                if (miningSlot == headerSlot)
+                {
+                    string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                    log.Append("[" + pubKeyRepresentation + "]-");
+                    currentHeader = currentHeader.Previous;
+                    timeHeader = currentHeader.Header.Time;
+                    headerSlot = timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds;
+                    hitCount++;
+                }
+                else
                 {
                     log.Append("MISS-");
-                    currentTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
-                    depthReached++;
                 }
-
-                if (depthReached >= maxDepth)
-                    break;
             }
 
             log.Append("...");
