@@ -250,7 +250,7 @@ namespace Stratis.Bitcoin.Consensus
             {
                 current.Previous.Next.Add(current);
                 this.chainedHeadersByHash.Add(current.HashBlock, current);
-                this.ChainedBlocksDataBytes += current.Header.HeaderSize;
+                this.ChainedBlocksDataBytes += BlockHeader.Size;
 
                 // TODO when pruned node is implemented it should be header only for pruned blocks
                 current.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
@@ -261,7 +261,7 @@ namespace Stratis.Bitcoin.Consensus
 
             // Add the genesis block.
             this.chainedHeadersByHash.Add(current.HashBlock, current);
-            this.ChainedBlocksDataBytes += current.Header.HeaderSize;
+            this.ChainedBlocksDataBytes += BlockHeader.Size;
 
             if (current.HashBlock != this.network.GenesisHash)
             {
@@ -605,7 +605,7 @@ namespace Stratis.Bitcoin.Consensus
         {
             header.Previous.Next.Remove(header);
             this.chainedHeadersByHash.Remove(header.HashBlock);
-            this.ChainedBlocksDataBytes -= header.Header.HeaderSize;
+            this.ChainedBlocksDataBytes -= BlockHeader.Size;
 
             if (header.Block != null)
             {
@@ -1103,7 +1103,7 @@ namespace Stratis.Bitcoin.Consensus
 
             previousChainedHeader.Next.Add(newChainedHeader);
             this.chainedHeadersByHash.Add(newChainedHeader.HashBlock, newChainedHeader);
-            this.ChainedBlocksDataBytes += newChainedHeader.Header.HeaderSize;
+            this.ChainedBlocksDataBytes += BlockHeader.Size;
 
             return newChainedHeader;
         }
