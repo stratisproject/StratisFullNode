@@ -1382,6 +1382,101 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
+        public async Task<string> Consolidate(ConsolidationRequest request, CancellationToken cancellationToken)
+        {
+            return await Task.Run(() =>
+            {
+                var utxos = new List<UnspentOutputReference>();
+                var accountReference = new WalletAccountReference(request.WalletName, request.AccountName);
+
+                if (!string.IsNullOrWhiteSpace(request.SingleAddress))
+                {
+                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                }
+                else
+                {
+                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                }
+
+                if (utxos.Count == 0)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Failed to locate any unspent outputs to consolidate.",
+                        "Failed to locate any unspent outputs to consolidate.");
+                }
+
+                if (utxos.Count == 1)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Already consolidated.",
+                        "Already consolidated.");
+                }
+
+
+                if (!string.IsNullOrWhiteSpace(request.UtxoValueThreshold))
+                {
+                    var threshold = Money.Parse(request.UtxoValueThreshold);
+
+                    utxos = utxos.Where(u => u.Transaction.Amount >= threshold).ToList();
+                }
+
+                Script destination;
+                if (!string.IsNullOrWhiteSpace(request.DestinationAddress))
+                {
+                    destination = BitcoinAddress.Create(request.DestinationAddress, this.network).ScriptPubKey;
+                }
+                else
+                {
+                    destination = this.walletManager.GetUnusedAddress(accountReference).ScriptPubKey;
+                }
+
+                Money totalToSend = Money.Zero;
+                var outpoints = new List<OutPoint>();
+
+                TransactionBuildContext context = null;
+
+                foreach (var utxo in utxos)
+                {
+                    totalToSend += utxo.Transaction.Amount;
+                    outpoints.Add(utxo.ToOutPoint());
+                    
+                    context = new TransactionBuildContext(this.network)
+                    {
+                        AccountReference = accountReference,
+                        AllowOtherInputs = false,
+                        FeeType = FeeType.Medium,
+                        // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
+                        Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
+                        SelectedInputs = outpoints,
+
+                        Sign = false
+                    };
+
+                    // Note that this is the virtual size taking the witness scale factor of the current network into account, and not the raw byte count.
+                    int size = this.walletTransactionHandler.EstimateSize(context);
+
+                    // Leave a bit of an error margin for size estimates that are not completely correct.
+                    if (size > (0.95m * this.network.Consensus.Options.MaxStandardTxWeight))
+                        break;
+                }
+                
+                // Build the final version of the consolidation transaction.
+                context = new TransactionBuildContext(this.network)
+                {
+                    AccountReference = accountReference,
+                    AllowOtherInputs = false,
+                    FeeType = FeeType.Medium,
+                    Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
+                    SelectedInputs = outpoints,
+                    WalletPassword = request.WalletPassword,
+
+                    Sign = true
+                };
+
+                Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
+
+                return transaction.ToHex();
+            }, cancellationToken);
+        }
+
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
             TransactionData transaction)
         {

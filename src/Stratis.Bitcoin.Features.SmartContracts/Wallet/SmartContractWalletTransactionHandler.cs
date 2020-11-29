@@ -57,8 +57,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             if (context.Recipients.Any(recipient => recipient.Amount == Money.Zero && !recipient.ScriptPubKey.IsSmartContractExec()))
                 throw new WalletException("No amount specified.");
 
+            // TODO: Port the necessary logic from the regular wallet transaction handler
             if (context.Recipients.Any(a => a.SubtractFeeFromAmount))
-                throw new NotImplementedException("Substracting the fee from the recipient is not supported yet.");
+                throw new NotImplementedException("Subtracting the fee from the recipient is not supported yet.");
 
             foreach (Recipient recipient in context.Recipients)
                 context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);

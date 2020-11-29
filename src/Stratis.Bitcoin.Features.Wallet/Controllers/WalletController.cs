@@ -829,6 +829,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
             return await this.Execute(request, cancellationToken, async (req, token) => this.Json(await this.walletService.OfflineSignRequest(req, token)));
         }
 
+        [HttpPost]
+        [Route("consolidate")]
+        public async Task<IActionResult> Consolidate([FromBody] ConsolidationRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) => this.Json(await this.walletService.Consolidate(req, token)));
+        }
+
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
             TransactionData transaction)
         {
