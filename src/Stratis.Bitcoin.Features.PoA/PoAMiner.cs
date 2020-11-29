@@ -417,7 +417,7 @@ namespace Stratis.Bitcoin.Features.PoA
             int maxDepth = modifiedFederation.Count;
 
             log.AppendLine($"Mining information for the last { maxDepth } blocks.");
-            log.AppendLine("'<' and '>' surrounds a miner didn't produce a block at the timestamp he was supposed to.");
+            log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
 
             uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
             timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
