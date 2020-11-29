@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         /// <summary>
         /// Adds mining to the smart contract node when on a proof-of-authority network.
         /// </summary>
-        public static IFullNodeBuilder UseSmartContractPoAMining(this IFullNodeBuilder fullNodeBuilder, bool isMiner)
+        public static IFullNodeBuilder UseSmartContractPoAMining(this IFullNodeBuilder fullNodeBuilder, bool isMiner = false)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
