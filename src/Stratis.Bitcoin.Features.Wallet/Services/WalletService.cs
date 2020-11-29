@@ -1415,7 +1415,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 {
                     var threshold = Money.Parse(request.UtxoValueThreshold);
 
-                    utxos = utxos.Where(u => u.Transaction.Amount >= threshold).ToList();
+                    utxos = utxos.Where(u => u.Transaction.Amount <= threshold).ToList();
                 }
 
                 Script destination;
