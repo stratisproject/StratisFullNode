@@ -989,4 +989,43 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         public bool Broadcast { get; set; }
     }
+
+    public sealed class ConsolidationRequest : RequestModel
+    {
+        public ConsolidationRequest()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The account from which UTXOs should be consolidated.
+        /// If this is not set the default account of the selected wallet will be used.
+        /// </summary>
+        public string AccountName { get; set; }
+
+        [Required(ErrorMessage = "A password is required.")]
+        public string WalletPassword { get; set; }
+
+        /// <summary>
+        /// If this is set, only UTXOs within this wallet address will be consolidated.
+        /// If it is not set, all the UTXOs within the selected account will be consolidated.
+        /// </summary>
+        public string SingleAddress { get; set; }
+
+        /// <summary>
+        /// Which address the UTXOs should be sent to. It does not have to be within the wallet.
+        /// If it is not provided the UTXOs will be consolidated to an unused address within the specified wallet.
+        /// </summary>
+        public string DestinationAddress { get; set; }
+
+        /// <summary>
+        /// If provided, UTXOs that are larger in value will not be consolidated.
+        /// Dust UTXOs will not be consolidated regardless of their value, so there is an implicit lower bound as well.
+        /// </summary>
+        [MoneyFormat(isRequired: false, ErrorMessage = "The amount is not in the correct format.")]
+        public string UtxoValueThreshold { get; set; }
+    }
 }
