@@ -242,6 +242,17 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             this.logger.LogInformation("Wallet Manager starting...");
 
+            this.WalletRepository.Bech32AddressFunc = scriptPubKey =>
+            {
+                if (string.IsNullOrEmpty(scriptPubKey))
+                    return string.Empty;
+
+                var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(Script.FromHex(scriptPubKey));
+                Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                return witScriptPubKey.GetDestinationAddress(this.network).ToString();
+            };
+
             this.WalletRepository.Initialize(false);
 
             // Ensure that any legacy JSON wallets are loaded to active storage.
@@ -994,7 +1005,66 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 res = wallet.GetAccounts().ToArray();
             }
+
             return res;
+        }
+
+        public HdAccount GetAccount(string walletName, string accountName)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            Wallet wallet = this.GetWallet(walletName);
+
+            HdAccount res = null;
+            lock (this.lockObject)
+            {
+                res = wallet.GetAccounts().FirstOrDefault(a => a.Name == accountName);
+            }
+
+            return res;
+        }
+
+        public HdAccount GetAccount(WalletAccountReference accountReference)
+        {
+            return GetAccount(accountReference.WalletName, accountReference.AccountName);
+        }
+
+        public HdAccount GetOrCreateWatchOnlyAccount(string walletName)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            Wallet wallet = this.GetWallet(walletName);
+
+            HdAccount[] res = null;
+            lock (this.lockObject)
+            {
+                res = wallet.GetAccounts(Wallet.WatchOnlyAccount).ToArray();
+            }
+
+            HdAccount watchOnlyAccount = res.FirstOrDefault(a => a.Index == Wallet.WatchOnlyAccountIndex);
+
+            if (watchOnlyAccount == null)
+            {
+                watchOnlyAccount = this.WalletRepository.CreateAccount(walletName, Wallet.WatchOnlyAccountIndex, Wallet.WatchOnlyAccountName, null);
+            }
+
+            return watchOnlyAccount;
+        }
+
+        // TODO: Perhaps this shouldn't be in the WalletManager itself, although it doesn't fit well with HdAccount either
+        public void AddWatchOnlyAddress(string walletName, string accountName, Script p2pkScriptPubKey, Script p2pkhScriptPubKey)
+        {
+            string address = p2pkhScriptPubKey.GetDestinationAddress(this.network).ToString();
+
+            // TODO: Is it sufficient to only define these fields here, or do we need all the other available fields?
+            var hdAddress = new HdAddress() 
+            {
+                ScriptPubKey = p2pkhScriptPubKey,
+                Pubkey = p2pkScriptPubKey,
+                Address = address
+            };
+
+            this.WalletRepository.AddWatchOnlyAddresses(walletName, accountName, 0, new List<HdAddress>() { hdAddress });
         }
 
         public IEnumerable<HdAccount> GetAllAccounts()

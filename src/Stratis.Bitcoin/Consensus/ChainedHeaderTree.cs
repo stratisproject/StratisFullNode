@@ -44,9 +44,6 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Total amount of unconsumed blocks.</summary>
         long UnconsumedBlocksCount { get; }
 
-        /// <summary>Total size of ChainedHeaders data in bytes.</summary>
-        long ChainedBlocksDataBytes { get; }
-
         /// <summary>
         /// Initialize the tree with consensus tip.
         /// </summary>
@@ -181,9 +178,6 @@ namespace Stratis.Bitcoin.Consensus
         /// <inheritdoc />
         public long UnconsumedBlocksCount { get; private set; }
 
-        /// <inheritdoc />
-        public long ChainedBlocksDataBytes { get; private set; }
-
         /// <summary>A special peer identifier that represents our local node.</summary>
         internal const int LocalPeerId = -1;
 
@@ -250,7 +244,6 @@ namespace Stratis.Bitcoin.Consensus
             {
                 current.Previous.Next.Add(current);
                 this.chainedHeadersByHash.Add(current.HashBlock, current);
-                this.ChainedBlocksDataBytes += current.Header.HeaderSize;
 
                 // TODO when pruned node is implemented it should be header only for pruned blocks
                 current.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
@@ -261,7 +254,6 @@ namespace Stratis.Bitcoin.Consensus
 
             // Add the genesis block.
             this.chainedHeadersByHash.Add(current.HashBlock, current);
-            this.ChainedBlocksDataBytes += current.Header.HeaderSize;
 
             if (current.HashBlock != this.network.GenesisHash)
             {
@@ -605,7 +597,6 @@ namespace Stratis.Bitcoin.Consensus
         {
             header.Previous.Next.Remove(header);
             this.chainedHeadersByHash.Remove(header.HashBlock);
-            this.ChainedBlocksDataBytes -= header.Header.HeaderSize;
 
             if (header.Block != null)
             {
@@ -1103,7 +1094,6 @@ namespace Stratis.Bitcoin.Consensus
 
             previousChainedHeader.Next.Add(newChainedHeader);
             this.chainedHeadersByHash.Add(newChainedHeader.HashBlock, newChainedHeader);
-            this.ChainedBlocksDataBytes += newChainedHeader.Header.HeaderSize;
 
             return newChainedHeader;
         }

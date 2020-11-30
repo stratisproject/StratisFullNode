@@ -13,6 +13,7 @@
         dumpprivkey,
         importprivkey,
         importaddress,
+        importpubkey,
         dumpwallet,
         importwallet,
 

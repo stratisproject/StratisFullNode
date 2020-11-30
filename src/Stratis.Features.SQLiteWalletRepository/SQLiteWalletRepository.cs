@@ -66,6 +66,8 @@ namespace Stratis.Features.SQLiteWalletRepository
         // Metrics.
         internal Metrics Metrics;
 
+        public Func<string, string> Bech32AddressFunc { get; set; } = null;
+
         public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader)
         {
             this.TestMode = false;
@@ -1574,11 +1576,23 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+                    string pubKeyHex = null;
 
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+                    if (hdAccount.ExtendedPubKey != null)
+                    {
+                        ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                        var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                        PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+
+                        pubKeyHex = pubKey.ScriptPubKey.ToHex();
+                    }
+                    else
+                    {
+                        // If it is a watch only account we have limited information available.
+                        pubKeyHex = addressIdentifier.PubKeyScript;
+                    }
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
@@ -1587,7 +1601,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         AddressType = (int)addressIdentifier.AddressType,
                         AddressIndex = (int)addressIdentifier.AddressIndex,
                         ScriptPubKey = addressIdentifier.ScriptPubKey,
-                        PubKey = pubKey.ScriptPubKey.ToHex(),
+                        PubKey = pubKeyHex,
                         Address = tranData.Address
                     }, this.Network);
 

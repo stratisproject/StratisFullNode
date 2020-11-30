@@ -262,6 +262,11 @@ namespace Stratis.Bitcoin.Features.RPC
             return Money.Coins(response.Result.Value<decimal>());
         }
 
+        public void ImportPubKey(string pubkey, bool rescan = true)
+        {
+            SendCommand(RPCOperations.importpubkey, pubkey, "", rescan);
+        }
+
         // importprivkey
 
         public void ImportPrivKey(BitcoinSecret secret)

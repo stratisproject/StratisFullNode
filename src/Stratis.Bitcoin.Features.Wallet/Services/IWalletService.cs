@@ -59,5 +59,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
         Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request,
             CancellationToken cancellationToken);
+
+        Task<string> Consolidate(ConsolidationRequest request,
+            CancellationToken cancellationToken);
     }
 }

@@ -25,8 +25,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
             StoreSettings storeSettings,
             IWalletManager walletManager,
             WalletSettings walletSettings,
-            IWalletTransactionHandler walletTransactionHandler) :
-            base(blockStore, broadcasterManager, chainIndexer, consensusManager, fullNode, loggerFactory, network, scriptAddressReader, storeSettings, walletManager, walletSettings, walletTransactionHandler)
+            IWalletTransactionHandler walletTransactionHandler,
+            IWalletSyncManager walletSyncManager) :
+            base(blockStore, broadcasterManager, chainIndexer, consensusManager, fullNode, loggerFactory, network, scriptAddressReader, storeSettings, walletManager, walletSettings, walletTransactionHandler, walletSyncManager)
         {
         }
     }

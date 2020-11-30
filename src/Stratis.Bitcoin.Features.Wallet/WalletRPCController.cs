@@ -42,6 +42,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private readonly IWalletTransactionHandler walletTransactionHandler;
 
+        private readonly IWalletSyncManager walletSyncManager;
+
         private readonly IReserveUtxoService reserveUtxoService;
 
         private readonly WalletSettings walletSettings;
@@ -64,6 +66,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             IWalletManager walletManager,
             WalletSettings walletSettings,
             IWalletTransactionHandler walletTransactionHandler,
+            IWalletSyncManager walletSyncManager,
             IReserveUtxoService reserveUtxoService = null) : base(fullNode: fullNode, consensusManager: consensusManager, chainIndexer: chainIndexer, network: network)
         {
             this.blockStore = blockStore;
@@ -74,6 +77,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.walletManager = walletManager;
             this.walletSettings = walletSettings;
             this.walletTransactionHandler = walletTransactionHandler;
+            this.walletSyncManager = walletSyncManager;
             this.reserveUtxoService = reserveUtxoService;
         }
 
@@ -453,11 +457,12 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <returns>Transaction information.</returns>
         [ActionName("gettransaction")]
         [ActionDescription("Get detailed information about an in-wallet transaction.")]
-        public GetTransactionModel GetTransaction(string txid)
+        public GetTransactionModel GetTransaction(string txid, bool include_watchonly = false)
         {
             if (!uint256.TryParse(txid, out uint256 trxid))
                 throw new ArgumentException(nameof(txid));
 
+            // First check the regular wallet accounts.
             WalletAccountReference accountReference = this.GetWalletAccountReference();
 
             Wallet hdWallet = this.walletManager.WalletRepository.GetWallet(accountReference.WalletName);
@@ -477,6 +482,24 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             TransactionData firstReceivedTransaction = receivedTransactions.FirstOrDefault();
             TransactionData firstSendTransaction = sentTransactions.FirstOrDefault();
+
+            if (firstReceivedTransaction == null && firstSendTransaction == null && include_watchonly)
+            {
+                accountReference = this.GetWatchOnlyWalletAccountReference();
+
+                hdAccount = this.walletManager.GetOrCreateWatchOnlyAccount(accountReference.WalletName);
+
+                addressLookup = this.walletManager.WalletRepository.GetWalletAddressLookup(accountReference.WalletName);
+
+                // Get the transaction from the wallet by looking into received and send transactions.
+                receivedTransactions = this.walletManager.WalletRepository.GetTransactionOutputs(hdAccount, null, trxid, true)
+                    .Where(td => !IsChangeAddress(td.ScriptPubKey)).ToList();
+                sentTransactions = this.walletManager.WalletRepository.GetTransactionInputs(hdAccount, null, trxid, true).ToList();
+
+                firstReceivedTransaction = receivedTransactions.FirstOrDefault();
+                firstSendTransaction = sentTransactions.FirstOrDefault();
+            }
+
             if (firstReceivedTransaction == null && firstSendTransaction == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id.");
 
@@ -617,6 +640,27 @@ namespace Stratis.Bitcoin.Features.Wallet
             model.Fee = model.Details.FirstOrDefault(d => d.Category == GetTransactionDetailsCategoryModel.Send)?.Fee;
 
             return model;
+        }
+
+        [ActionName("importpubkey")]
+        public bool ImportPubkey(string pubkey, string label = "", bool rescan = true)
+        {
+            WalletAccountReference walletAccountReference = this.GetWatchOnlyWalletAccountReference();
+
+            // As we are not sure whether the P2PK or P2PKH was desired, we have to add both to the watch only account simultaneously.
+            // We would not be able to infer the P2PK from the P2PKH later anyhow.
+            Script p2pkScriptPubKey = new PubKey(pubkey).ScriptPubKey;
+            Script p2pkhScriptPubKey = new PubKey(pubkey).Hash.ScriptPubKey;
+
+            this.walletManager.AddWatchOnlyAddress(walletAccountReference.WalletName, walletAccountReference.AccountName, p2pkScriptPubKey, p2pkhScriptPubKey);
+
+            // As we cannot be sure when an imported pubkey was transacted against, we have to rescan from genesis if requested.
+            if (rescan)
+            {
+                this.walletSyncManager.SyncFromHeight(0, walletAccountReference.WalletName);
+            }
+
+            return true;
         }
 
         [ActionName("listaddressgroupings")]
@@ -874,7 +918,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <summary>
-        /// Gets the first account from the "default" wallet if it specified,
+        /// Gets the first account from the "default" wallet if it is specified,
         /// otherwise returns the first available account in the existing wallets.
         /// </summary>
         /// <returns>Reference to the default wallet account, or the first available if no default wallet is specified.</returns>
@@ -905,6 +949,42 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             if (account == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "Account not found");
+
+            return new WalletAccountReference(walletName, account.Name);
+        }
+
+        /// <summary>
+        /// Gets the first watch only account from the "default" wallet if it is specified,
+        /// otherwise returns the first available watch only account in the existing wallets.
+        /// </summary>
+        /// <returns>Reference to the default wallet watch only account, or the first available if no default wallet is specified.</returns>
+        private WalletAccountReference GetWatchOnlyWalletAccountReference()
+        {
+            string walletName = null;
+
+            if (string.IsNullOrWhiteSpace(WalletRPCController.CurrentWalletName))
+            {
+                if (this.walletSettings.IsDefaultWalletEnabled())
+                    walletName = this.walletManager.GetWalletsNames().FirstOrDefault(w => w == this.walletSettings.DefaultWalletName);
+                else
+                {
+                    // TODO: Support multi wallet like core by mapping passed RPC credentials to a wallet/account
+                    walletName = this.walletManager.GetWalletsNames().FirstOrDefault();
+                }
+            }
+            else
+            {
+                // Read the wallet name from the class instance.
+                walletName = WalletRPCController.CurrentWalletName;
+            }
+
+            if (walletName == null)
+                throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "No wallet found");
+
+            HdAccount account = this.walletManager.GetOrCreateWatchOnlyAccount(walletName);
+
+            if (account == null)
+                throw new RPCServerException(RPCErrorCode.RPC_INVALID_REQUEST, "Unable to retrieve watch only account");
 
             return new WalletAccountReference(walletName, account.Name);
         }

@@ -356,5 +356,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="accountName">The Account Name to Query</param>
         /// <returns>The Transaction Count</returns>
         int GetTransactionCount(string walletName, string accountName = null);
+
+        Func<string, string> Bech32AddressFunc { get; set; }
     }
 }
