@@ -8,7 +8,9 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
@@ -58,6 +60,48 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 RPCResponse walletTx = rpc.SendCommand(RPCOperations.gettransaction, block.Transactions[0].GetHash().ToString());
                 walletTx.ThrowIfError();
+            }
+        }
+
+        [Fact]
+        public void TestRpcImportPubkeyIsSuccessful()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateStratisPowNode(new BitcoinRegTest()).AlwaysFlushBlocks().WithWallet().Start();
+                CoreNode node2 = builder.CreateStratisPowNode(new BitcoinRegTest()).WithReadyBlockchainData(ReadyBlockchain.BitcoinRegTest10Miner).Start();
+
+                TestHelper.ConnectAndSync(node, node2);
+
+                UnspentOutputReference tx = node2.FullNode.WalletManager().GetUnspentTransactionsInWallet("mywallet", 0, Features.Wallet.Wallet.NormalAccounts).First();
+
+                RPCClient rpc = node.CreateRPCClient();
+
+                PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(tx.Address.Pubkey);
+
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true));
+
+                rpc.ImportPubKey(pubKey.ToHex());
+
+                TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight == node2.FullNode.WalletManager().WalletTipHeight);
+
+                TestBase.WaitLoop(() =>
+                {
+                    try
+                    {
+                        // Check if gettransaction can now find the transaction in the watch only account.
+                        RPCResponse walletTx = rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true);
+
+                        return walletTx != null;
+                    }
+                    catch (RPCException e)
+                    {
+                        return false;
+                    }
+                });
+
+                // Check that when include_watchonly is not set, the watched transaction cannot be located in the normal wallet accounts.
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), false));
             }
         }
 
