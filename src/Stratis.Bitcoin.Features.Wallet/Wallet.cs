@@ -21,8 +21,19 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>Account numbers greater or equal to this number are reserved for special purpose account indexes.</summary>
         public const int SpecialPurposeAccountIndexesStart = 100_000_000;
 
+        /// <summary>
+        /// The wallet account used for storing watched addresses that the wallet does not possess a private key for.
+        /// This is intended to supersede the WatchOnlyWallet feature going forwards.
+        /// <remarks>Note that indices 0 and 1 are used for cold staking.</remarks>
+        /// </summary>
+        public const int WatchOnlyAccountIndex = SpecialPurposeAccountIndexesStart + 2;
+
+        public const string WatchOnlyAccountName = "watchOnly";
+
         /// <summary>Filter for identifying normal wallet accounts.</summary>
         public static Func<HdAccount, bool> NormalAccounts = a => a.Index < SpecialPurposeAccountIndexesStart;
+
+        public static Func<HdAccount, bool> WatchOnlyAccount = a => a.Index == WatchOnlyAccountIndex;
 
         /// <summary>Filter for all wallet accounts.</summary>
         public static Func<HdAccount, bool> AllAccounts = a => true;

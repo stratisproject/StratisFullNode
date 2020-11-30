@@ -152,7 +152,8 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             {
                                 // This tests the converse. 
                                 // Don't allow special-purpose accounts (e.g. coldstaking) to be used like normal accounts.
-                                if (address.AccountIndex >= Wallet.SpecialPurposeAccountIndexesStart)
+                                // However, for the purposes of recording transactions to watch-only accounts we need to make an allowance.
+                                if (address.AccountIndex >= Wallet.SpecialPurposeAccountIndexesStart && address.AccountIndex != Wallet.WatchOnlyAccountIndex)
                                     continue;
                             }
 

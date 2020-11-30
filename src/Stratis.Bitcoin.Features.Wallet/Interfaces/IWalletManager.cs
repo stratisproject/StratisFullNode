@@ -287,6 +287,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <returns>The list of all accounts.</returns>
         IEnumerable<HdAccount> GetAllAccounts();
 
+        HdAccount GetAccount(string walletName, string accountName);
+
+        HdAccount GetAccount(WalletAccountReference accountReference);
+
+        HdAccount GetOrCreateWatchOnlyAccount(string walletName);
+
+        void AddWatchOnlyAddress(string walletName, string accountName, Script p2pkScriptPubKey, Script p2pkhScriptPubKey);
+
         /// <summary>
         /// Gets the last block height.
         /// </summary>
