@@ -383,7 +383,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             else
             {
                 if (typeof(T) == typeof(HDAddress))
-                    HDAddress.MigrateTable(this);
+                    HDAddress.MigrateTable(this, this.Repository.Bech32AddressFunc);
                 else if (typeof(T) == typeof(HDPayment))
                     HDPayment.MigrateTable(this);
             }
