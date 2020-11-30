@@ -242,6 +242,17 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             this.logger.LogInformation("Wallet Manager starting...");
 
+            this.WalletRepository.Bech32AddressFunc = scriptPubKey =>
+            {
+                if (scriptPubKey == null)
+                    return "";
+
+                var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(Script.FromHex(scriptPubKey));
+                Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                return witScriptPubKey.GetDestinationAddress(this.network).ToString();
+            };
+
             this.WalletRepository.Initialize(false);
 
             // Ensure that any legacy JSON wallets are loaded to active storage.

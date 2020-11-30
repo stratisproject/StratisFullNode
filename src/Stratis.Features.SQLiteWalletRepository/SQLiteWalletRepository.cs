@@ -66,6 +66,8 @@ namespace Stratis.Features.SQLiteWalletRepository
         // Metrics.
         internal Metrics Metrics;
 
+        public Func<string, string> Bech32AddressFunc { get; set; } = null;
+
         public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader)
         {
             this.TestMode = false;

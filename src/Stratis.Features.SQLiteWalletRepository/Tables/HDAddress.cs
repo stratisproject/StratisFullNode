@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using SQLite;
 
@@ -46,7 +47,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             yield return "CREATE UNIQUE INDEX UX_HDAddress_PubKey ON HDAddress(WalletId, PubKey)";
         }
 
-        internal static IEnumerable<string> MigrateScript()
+        internal static IEnumerable<string> MigrateScript(bool hasBech32Address)
         {
             yield return $@"
                 PRAGMA foreign_keys=off;
@@ -56,7 +57,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
             // TODO: Copy the data.
             yield return $@"
-                INSERT INTO new_HDAddress SELECT WalletId, AccountIndex, AddressType, AddressIndex, ScriptPubKey, PubKey, Address, Bech32Address FROM HDAddress;
+                INSERT INTO new_HDAddress SELECT WalletId, AccountIndex, AddressType, AddressIndex, ScriptPubKey, PubKey, Address, { (hasBech32Address ? "Bech32Address" : "''") } FROM HDAddress;
             ";
 
             yield return $@"
@@ -81,11 +82,23 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 conn.Execute(command);
         }
 
-        internal static void MigrateTable(SQLiteConnection conn)
+        internal static void MigrateTable(SQLiteConnection conn, Func<string, string> bech32AddressFunc)
         {
-            if (conn.ExecuteScalar<int>("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('HDAddress') WHERE name='Bech32ScriptPubKey'") != 0)
-                foreach (string command in MigrateScript())
+            bool hasBech32Address = conn.ExecuteScalar<int>("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('HDAddress') WHERE name='Bech32Address'") != 0;
+            bool hasBech32ScriptPubKey = conn.ExecuteScalar<int>("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('HDAddress') WHERE name='Bech32ScriptPubKey'") != 0;
+
+            if (hasBech32ScriptPubKey || !hasBech32Address)
+                foreach (string command in MigrateScript(hasBech32Address))
                     conn.Execute(command);
+
+            if (bech32AddressFunc != null)
+            {
+                foreach (HDAddress address in conn.Query<HDAddress>($@"SELECT * FROM HDAddress WHERE Bech32Address = ''"))
+                {
+                    address.Bech32Address = bech32AddressFunc(address.ScriptPubKey);
+                    conn.Update(address);
+                }
+            }
         }
 
         internal static IEnumerable<HDAddress> GetAccountAddresses(SQLiteConnection conn, int walletId, int accountIndex, int addressType, int count)
