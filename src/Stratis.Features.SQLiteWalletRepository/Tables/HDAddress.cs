@@ -93,10 +93,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
 
             if (bech32AddressFunc != null)
             {
-                foreach (HDAddress address in conn.Query<HDAddress>($@"SELECT * FROM HDAddress WHERE Bech32Address = ''"))
+                List<HDAddress> addresses = conn.Query<HDAddress>($@"SELECT * FROM HDAddress WHERE Bech32Address = ''");
+                if (addresses.Any())
                 {
-                    address.Bech32Address = bech32AddressFunc(address.ScriptPubKey);
-                    conn.Update(address);
+                    foreach (HDAddress address in addresses)
+                    {
+                        address.Bech32Address = bech32AddressFunc(address.PubKey);
+                        conn.InsertOrReplace(address);
+                    }
                 }
             }
         }
