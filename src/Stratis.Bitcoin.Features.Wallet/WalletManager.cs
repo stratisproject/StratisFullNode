@@ -244,8 +244,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             this.WalletRepository.Bech32AddressFunc = scriptPubKey =>
             {
-                if (scriptPubKey == null)
-                    return "";
+                if (string.IsNullOrEmpty(scriptPubKey))
+                    return string.Empty;
 
                 var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(Script.FromHex(scriptPubKey));
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
