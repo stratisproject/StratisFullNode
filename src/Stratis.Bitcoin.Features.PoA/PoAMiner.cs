@@ -403,44 +403,59 @@ namespace Stratis.Bitcoin.Features.PoA
             log.AppendLine();
             log.AppendLine("======PoA Miner======");
 
+            if (this.ibdState.IsInitialBlockDownload())
+            {
+                log.AppendLine($"Mining information is not available during IBD.");
+                log.AppendLine();
+                return;
+            }
+
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
-            uint currentTime = currentHeader.Header.Time;
 
-            int pubKeyTakeCharacters = 4;
-            int depthReached = 0;
+            int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
             List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+
             int maxDepth = modifiedFederation.Count;
 
-            log.AppendLine($"Mining information for the last {maxDepth} blocks.");
-            log.AppendLine("MISS means that miner didn't produce a block at the timestamp he was supposed to.");
+            log.AppendLine($"Mining information for the last { maxDepth } blocks.");
+            log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
 
-            for (int i = tip.Height; (i > 0) && (i > tip.Height - maxDepth); i--)
+            uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+            timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
+            if (timeHeader < currentHeader.Header.Time)
+                timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
+
+            // Iterate mining slots.
+            for (int i = 0; i < maxDepth; i++)
             {
-                // Add stats for current header.
-                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForTimestamp(currentHeader.Header.Time, modifiedFederation).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                int headerSlot = (int)(timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds) % modifiedFederation.Count;
 
-                log.Append("[" + pubKeyRepresentation + "]-");
-                depthReached++;
-                hitCount++;
+                PubKey pubKey = modifiedFederation[headerSlot].PubKey;
 
-                currentHeader = currentHeader.Previous;
-                currentTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
+                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
-                if (currentHeader.Height == 0)
-                    break;
-
-                while ((currentHeader.Header.Time != currentTime) && (depthReached <= maxDepth))
+                // Mined in this slot?
+                if (timeHeader == currentHeader.Header.Time)
                 {
-                    log.Append("MISS-");
-                    currentTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
-                    depthReached++;
+                    log.Append($"[{ pubKeyRepresentation }] ");
+
+                    currentHeader = currentHeader.Previous;
+                    hitCount++;
+
+                    modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+                }
+                else
+                {
+                    log.Append($"<{ pubKeyRepresentation }> ");
                 }
 
-                if (depthReached >= maxDepth)
-                    break;
+                timeHeader -= this.network.ConsensusOptions.TargetSpacingSeconds;
+
+                if ((i % 20) == 19)
+                    log.AppendLine();
             }
 
             log.Append("...");
