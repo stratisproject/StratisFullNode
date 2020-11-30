@@ -400,11 +400,15 @@ namespace Stratis.Bitcoin.Features.PoA
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
-            if (this.ibdState.IsInitialBlockDownload())
-                return;
-
             log.AppendLine();
             log.AppendLine("======PoA Miner======");
+
+            if (this.ibdState.IsInitialBlockDownload())
+            {
+                log.AppendLine($"Mining information is not available during IBD.");
+                log.AppendLine();
+                return;
+            }
 
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
