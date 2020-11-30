@@ -76,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var consensusManager = new Mock<IConsensusManager>();
             fullnode.Setup(x => x.NodeService<IConsensusManager>(false)).Returns(consensusManager.Object);
 
-            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, fullnode.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork(), null)
+            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork(), null)
             {
                 Logger = logger
             };
