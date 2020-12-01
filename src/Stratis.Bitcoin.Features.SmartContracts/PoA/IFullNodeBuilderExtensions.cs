@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         /// <summary>
         /// Adds mining to the smart contract node when on a proof-of-authority network.
         /// </summary>
-        public static IFullNodeBuilder UseSmartContractPoAMining(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseSmartContractPoAMining(this IFullNodeBuilder fullNodeBuilder, bool isMiner = false)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -73,12 +73,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     {
                         services.AddSingleton<IFederationManager, FederationManager>();
                         services.AddSingleton<PoABlockHeaderValidator>();
-                        services.AddSingleton<IPoAMiner, PoAMiner>();
-                        services.AddSingleton<PoAMinerSettings>();
-                        services.AddSingleton<MinerSettings>();
                         services.AddSingleton<ISlotsManager, SlotsManager>();
-                        services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
                         services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
+
+                        if (isMiner)
+                        {
+                            services.AddSingleton<IPoAMiner, PoAMiner>();
+                            services.AddSingleton<PoAMinerSettings>();
+                            services.AddSingleton<MinerSettings>();
+                            services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
+                        }
                     });
             });
 

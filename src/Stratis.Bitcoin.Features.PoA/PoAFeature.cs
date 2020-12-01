@@ -59,8 +59,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public PoAFeature(IFederationManager federationManager, PayloadProvider payloadProvider, IConnectionManager connectionManager, ChainIndexer chainIndexer,
             IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory,
-            IPoAMiner miner, VotingManager votingManager, Network network, IWhitelistedHashesRepository whitelistedHashesRepository,
-            IIdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue)
+            VotingManager votingManager, Network network, IWhitelistedHashesRepository whitelistedHashesRepository,
+            IIdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue, IPoAMiner miner = null)
         {
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
 
-            this.miner.InitializeMining();
+            this.miner?.InitializeMining();
 
             return Task.CompletedTask;
         }
@@ -146,7 +146,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public override void Dispose()
         {
-            this.miner.Dispose();
+            this.miner?.Dispose();
 
             this.votingManager.Dispose();
 
