@@ -407,6 +407,24 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public string GetPubKey(string walletName, string externalAddress)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+            Guard.NotEmpty(externalAddress, nameof(externalAddress));
+
+            Script scriptPubKey = BitcoinAddress.Create(externalAddress, this.network).ScriptPubKey;
+
+            if (!this.WalletRepository.GetWalletAddressLookup(walletName).Contains(scriptPubKey, out AddressIdentifier addressIdentifier))
+                throw new SecurityException("The address does not exist in the wallet.");
+
+            var script = Script.FromHex(addressIdentifier.PubKeyScript);
+
+            PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(script);
+
+            return pubKey.ToHex();
+        }
+
+        /// <inheritdoc />
         public string SignMessage(string password, string walletName, string externalAddress, string message)
         {
             Guard.NotEmpty(password, nameof(password));

@@ -964,6 +964,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string Message { get; set; }
     }
 
+
+    /// <summary>
+    /// Object to get a public key.
+    /// </summary>
+    public class PubKeyRequest : RequestModel
+    {
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        [Required(ErrorMessage = "An address is required.")]
+        public string ExternalAddress { get; set; }
+    }
+
     /// <summary>
     /// Object to verify a signed message.
     /// </summary>

@@ -111,6 +111,31 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
+        /// Gets the public key for an address.
+        /// </summary>
+        /// <param name="request">The object containing the parameters used to get the public key.</param>
+        /// <param name="cancellationToken">The cancellation token</param>
+        /// <returns>A Jstring containing the public key.</returns>
+        /// <response code="200">Returns public key</response>
+        /// <response code="400">Invalid request or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
+        [Route("pubkey")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> GetPubKey([FromBody] PubKeyRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.ExecuteAsAsync(request, cancellationToken, (req, token) =>
+            {
+                string pubKey = this.walletManager.GetPubKey(req.WalletName, req.ExternalAddress);
+
+                return this.Json(pubKey);
+            });
+        }
+
+        /// <summary>
         /// Verifies the signature of a message.
         /// </summary>
         /// <param name="request">The object containing the parameters verify a signature.</param>
