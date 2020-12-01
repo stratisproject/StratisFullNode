@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
@@ -196,7 +197,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                 return true; // Coinbases don't use vin normally.
             }
 
-            for (int i=0; i<tx.Inputs.Count; i++)
+            for (int i = 0; i < tx.Inputs.Count; i++)
             {
                 TxIn txin = tx.Inputs[i];
                 TxOut prev = mapInputs.GetOutputFor(txin);
@@ -233,7 +234,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                     var redeemScript = new Script(ctx.Stack.Top(-1));
 
                     // TODO: Move this into a network-specific rule so that it only applies to Strax (the Cirrus validator already allows non-standard transactions)
-                    if (!redeemScript.ToOps().Contains(OpcodeType.OP_FEDERATION))
+                    if (!redeemScript.ToOps().Select(o => o.Code).Contains(OpcodeType.OP_FEDERATION))
                     {
                         if (redeemScript.GetSigOpCount(true) > MaxP2SHSigOps)
                         {
