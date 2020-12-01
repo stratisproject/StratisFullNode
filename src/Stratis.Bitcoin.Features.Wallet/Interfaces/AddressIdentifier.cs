@@ -15,7 +15,7 @@
         public string ScriptPubKey { get; set; }
 
         /// <summary>Always a P2PK script.</summary>
-        public string PubKeyScript;
+        public string PubKeyScript { get; set; }
 
         public override bool Equals(object obj)
         {
