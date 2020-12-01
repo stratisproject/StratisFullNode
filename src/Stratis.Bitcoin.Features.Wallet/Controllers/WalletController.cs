@@ -124,7 +124,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> GetPubKey([FromQuery] PubKeyRequest request,
+        public async Task<IActionResult> GetPubKey([FromBody] PubKeyRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             return await this.ExecuteAsAsync(request, cancellationToken, (req, token) =>
