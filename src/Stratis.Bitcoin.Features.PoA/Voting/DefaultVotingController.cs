@@ -181,13 +181,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetPendingPolls()
+        public IActionResult GetPendingPolls([FromQuery] VoteKey voteType, [FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
             {
-                List<Poll> polls = this.votingManager.GetPendingPolls();
-
+                IEnumerable<Poll> polls = this.votingManager.GetPendingPolls().Where(v => v.VotingData.Key == voteType);
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
+                    models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
 
                 return this.Json(models);
             }
@@ -208,13 +210,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetFinishedPolls()
+        public IActionResult GetFinishedPolls([FromQuery] VoteKey voteType, [FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
             {
-                List<Poll> polls = this.votingManager.GetFinishedPolls();
-
+                IEnumerable<Poll> polls = this.votingManager.GetFinishedPolls().Where(v => v.VotingData.Key == voteType);
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
+                    models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
 
                 return this.Json(models);
             }
@@ -235,12 +239,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetExecutedPolls()
+        public IActionResult GetExecutedPolls([FromQuery] VoteKey voteType, [FromQuery] string pubKeyOfMemberBeingVotedOn = "")
         {
             try
             {
-                List<Poll> polls = this.votingManager.GetExecutedPolls();
+                IEnumerable<Poll> polls = this.votingManager.GetExecutedPolls().Where(v => v.VotingData.Key == voteType);
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
+
+                if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))
+                    models = models.Where(m => m.VotingDataString.Contains(pubKeyOfMemberBeingVotedOn));
+
                 return this.Json(models);
             }
             catch (Exception e)
