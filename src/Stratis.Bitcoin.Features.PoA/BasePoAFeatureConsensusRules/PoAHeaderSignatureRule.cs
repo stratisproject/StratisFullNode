@@ -21,10 +21,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private ISlotsManager slotsManager;
 
-        private uint maxReorg;
-
-        private bool votingEnabled;
-
         private VotingManager votingManager;
 
         private IChainState chainState;
@@ -43,9 +39,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.votingManager = engine.VotingManager;
             this.chainState = engine.ChainState;
             this.network = this.Parent.Network;
-
-            this.maxReorg = this.network.Consensus.MaxReorgLength;
-            this.votingEnabled = ((PoAConsensusOptions)this.network.Consensus.Options).VotingEnabled;
         }
 
         public override async Task RunAsync(RuleContext context)
@@ -56,20 +49,23 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             if (!this.validator.VerifySignature(pubKey, header))
             {
-                if (this.votingEnabled)
-                {
-                    ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
+                context.ValidationContext.InsufficientHeaderInformation = true;
 
-                    // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
-                    // that we have not yet processed all the votes that may determine the federation make-up.
-                    bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-                    if (mightBeInsufficient)
-                    {
-                        // Mark header as insufficient to avoid banning the peer that presented it.
-                        // When we advance consensus we will be able to validate it.
-                        context.ValidationContext.InsufficientHeaderInformation = true;
-                    }
-                }
+                //TODO: This could be replaced/re-introduced once we get to the bottom of the time slot issues.
+                //if (((PoAConsensusOptions)this.network.Consensus.Options).VotingEnabled)
+                //{
+                //    ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
+
+                //    // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
+                //    // that we have not yet processed all the votes that may determine the federation make-up.
+                //    bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.network.Consensus.MaxReorgLength;
+                //    if (mightBeInsufficient)
+                //    {
+                //        // Mark header as insufficient to avoid banning the peer that presented it.
+                //        // When we advance consensus we will be able to validate it.
+                //        context.ValidationContext.InsufficientHeaderInformation = true;
+                //    }
+                //}
 
                 try
                 {
@@ -100,15 +96,15 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                         IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
 
-                        this.Logger.LogDebug($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
+                        this.Logger.LogWarning($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
 
                         break;
                     };
                 }
                 catch (Exception) { }
 
-                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
-                PoAConsensusErrors.InvalidHeaderSignature.Throw();
+                //this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
+                //PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
         }
     }

@@ -170,6 +170,11 @@ namespace Stratis.Bitcoin.Features.PoA
                     }
 
                     uint miningTimestamp = await this.WaitUntilMiningSlotAsync().ConfigureAwait(false);
+                    if (this.slotsManager.GetFederationMemberForTimestamp(miningTimestamp).PubKey != this.federationManager.CurrentFederationKey.PubKey)
+                    {
+                        this.logger.LogError("The timestamp produced for mining failed cross-checking.");
+                        continue;
+                    }
 
                     ChainedHeader chainedHeader = await this.MineBlockAtTimestampAsync(miningTimestamp).ConfigureAwait(false);
 
@@ -344,7 +349,7 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 if (this.network.ConsensusOptions.AutoKickIdleMembers)
                 {
-                   // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+                    // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
                     this.idleFederationMembersKicker.Execute(this.consensusManager.Tip);
                 }
 
