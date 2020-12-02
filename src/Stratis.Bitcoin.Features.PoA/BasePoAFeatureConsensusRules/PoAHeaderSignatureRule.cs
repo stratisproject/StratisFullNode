@@ -103,8 +103,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 }
                 catch (Exception) { }
 
-                //this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
-                //PoAConsensusErrors.InvalidHeaderSignature.Throw();
+                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
+                PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
         }
     }
