@@ -255,7 +255,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var federation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
 
                 IEnumerable<Poll> executedPolls = this.GetFinishedPolls().Where(x => x.IsExecuted && ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember)));
-                foreach (Poll poll in executedPolls)
+                foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
                 {
                     IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
 
