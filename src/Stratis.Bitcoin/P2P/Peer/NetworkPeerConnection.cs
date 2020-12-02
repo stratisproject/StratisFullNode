@@ -137,6 +137,8 @@ namespace Stratis.Bitcoin.P2P.Peer
                 {
                     (Message message, int rawMessageSize) = await this.ReadAndParseMessageAsync(this.peer.Version, this.CancellationSource.Token).ConfigureAwait(false);
 
+                    this.payloadProvider.RecordMessageReceivedMetric(message, rawMessageSize);
+
                     this.asyncProvider.Signals.Publish(new PeerMessageReceived(this.peer.PeerEndPoint, message, rawMessageSize));
                     this.logger.LogDebug("Received message: '{0}'", message);
 
@@ -261,6 +263,8 @@ namespace Stratis.Bitcoin.P2P.Peer
                     await this.SendAsync(bytes, cancellation).ConfigureAwait(false);
                     this.asyncProvider.Signals.Publish(new PeerMessageSent(this.peer.PeerEndPoint, message, bytes.Length));
                     this.peer.Counter.AddWritten(bytes.Length);
+
+                    this.payloadProvider.RecordMessageSentMetric(message, bytes.Length);
                 }
             }
             catch (OperationCanceledException)
