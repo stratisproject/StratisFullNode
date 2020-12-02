@@ -384,7 +384,8 @@ namespace Stratis.Bitcoin.Connection
                         builder.AppendLine();
                 }
 
-                builder.AppendLine();
+                if ((i % 2) != 0)
+                    builder.AppendLine();
             }
         }
 
