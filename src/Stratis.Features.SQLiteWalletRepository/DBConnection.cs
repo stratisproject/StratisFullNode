@@ -296,14 +296,6 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
-        internal void AddAdresses(HDAccount account, int addressType, List<HdAddress> hdAddresses)
-        {
-            foreach (HDAddress address in CreateWatchOnlyAddresses(account, addressType, hdAddresses.Select(a => PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(a.Pubkey)).ToArray()))
-            { 
-                this.Insert(address);
-            }
-        }
-
         internal List<HDAddress> CreateAddresses(HDAccount account, int addressType, int addressesQuantity)
         {
             var addresses = new List<HDAddress>();
