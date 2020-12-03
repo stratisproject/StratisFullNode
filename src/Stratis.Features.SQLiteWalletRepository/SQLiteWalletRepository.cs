@@ -520,7 +520,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             if (account.ExtPubKey != null)
             {
-                if (pubKey != null)
+                if (pubKey != null && !this.TestMode)
                     throw new NotSupportedException($"The '{nameof(pubKey)} argument is only supported with a watchonly accounts.");
 
                 // Retrieve the pubkey associated with the private key of this address index.
@@ -594,7 +594,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Addresses can only be added to watch-only accounts.");
 
-                conn.CreateWatchOnlyAddresses(account, addressType, addresses.Select(a => PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(a.Pubkey)).ToArray());
+                conn.CreateWatchOnlyAddresses(account, addressType, addresses.Select(a => PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(a.Pubkey)).ToArray(), this.TestMode ? addresses.ToArray() : null);
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex);
