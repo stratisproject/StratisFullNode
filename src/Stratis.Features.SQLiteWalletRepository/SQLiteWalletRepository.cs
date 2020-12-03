@@ -516,23 +516,27 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
-        internal HDAddress CreateAddress(HDAccount account, int addressType, int addressIndex)
+        internal HDAddress CreateAddress(HDAccount account, int addressType, int addressIndex, PubKey pubKey = null)
         {
-            // Retrieve the pubkey associated with the private key of this address index.
-            var keyPath = new KeyPath($"{addressType}/{addressIndex}");
-
-            Script pubKeyScript = null;
-            Script scriptPubKey = null;
-            Script bech32ScriptPubKey = null;
-
             if (account.ExtPubKey != null)
             {
+                if (pubKey != null)
+                    throw new NotSupportedException($"The '{nameof(pubKey)} argument is only supported with a watchonly accounts.");
+
+                // Retrieve the pubkey associated with the private key of this address index.
+                var keyPath = new KeyPath($"{addressType}/{addressIndex}");
                 ExtPubKey extPubKey = account.GetExtPubKey(this.Network).Derive(keyPath);
-                PubKey pubKey = extPubKey.PubKey;
-                pubKeyScript = pubKey.ScriptPubKey;
-                scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
-                bech32ScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+                pubKey = extPubKey.PubKey;
             }
+            else
+            {
+                if (pubKey == null)
+                    throw new NotSupportedException($"The '{nameof(pubKey)} argument is required for watchonly accounts.");
+            }
+
+            Script pubKeyScript = pubKey.ScriptPubKey;
+            Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+            Script bech32ScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
             // Add the new address details to the list of addresses.
             return new HDAddress()

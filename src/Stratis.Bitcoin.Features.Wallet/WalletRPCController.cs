@@ -647,12 +647,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             WalletAccountReference walletAccountReference = this.GetWatchOnlyWalletAccountReference();
 
-            // As we are not sure whether the P2PK or P2PKH was desired, we have to add both to the watch only account simultaneously.
-            // We would not be able to infer the P2PK from the P2PKH later anyhow.
-            Script p2pkScriptPubKey = new PubKey(pubkey).ScriptPubKey;
-            Script p2pkhScriptPubKey = new PubKey(pubkey).Hash.ScriptPubKey;
-
-            this.walletManager.AddWatchOnlyAddress(walletAccountReference.WalletName, walletAccountReference.AccountName, p2pkScriptPubKey, p2pkhScriptPubKey);
+            this.walletManager.AddWatchOnlyAddress(walletAccountReference.WalletName, walletAccountReference.AccountName, 
+                pubkey.Split(new char[] {' ', ','}).Select(pk => new PubKey(pk.Trim())).ToArray());
 
             // As we cannot be sure when an imported pubkey was transacted against, we have to rescan from genesis if requested.
             if (rescan)

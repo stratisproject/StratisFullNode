@@ -298,17 +298,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         internal void AddAdresses(HDAccount account, int addressType, List<HdAddress> hdAddresses)
         {
-            foreach (HdAddress hdAddress in hdAddresses)
-            {
-                HDAddress address = this.Repository.CreateAddress(account, addressType, hdAddress.Index);
-                // TODO: These get set within CreateAddress - it shouldn't be necessary to do so again
-                address.Address = hdAddress.Address;
-                address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
-                address.PubKey = hdAddress.Pubkey?.ToHex();
-
+            foreach (HDAddress address in CreateWatchOnlyAddresses(account, addressType, hdAddresses.Select(a => PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(a.Pubkey)).ToArray()))
+            { 
                 this.Insert(address);
-
-                this.AddTransactions(account, hdAddress, hdAddress.Transactions);
             }
         }
 
@@ -321,6 +313,24 @@ namespace Stratis.Features.SQLiteWalletRepository
             for (int addressIndex = addressCount; addressIndex < (addressCount + addressesQuantity); addressIndex++)
             {
                 HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex);
+                this.Insert(address);
+                addresses.Add(address);
+            }
+
+            return addresses;
+        }
+
+        internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, PubKey[] pubKeys)
+        {
+            var addresses = new List<HDAddress>();
+            int addressQuantity = pubKeys.Length;
+            int i = 0;
+
+            int addressCount = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
+
+            for (int addressIndex = addressCount; addressIndex < (addressCount + addressQuantity); addressIndex++)
+            {
+                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKeys[i++]);
                 this.Insert(address);
                 addresses.Add(address);
             }

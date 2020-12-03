@@ -1070,19 +1070,9 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         // TODO: Perhaps this shouldn't be in the WalletManager itself, although it doesn't fit well with HdAccount either
-        public void AddWatchOnlyAddress(string walletName, string accountName, Script p2pkScriptPubKey, Script p2pkhScriptPubKey)
+        public void AddWatchOnlyAddress(string walletName, string accountName, PubKey[] pubKeys)
         {
-            string address = p2pkhScriptPubKey.GetDestinationAddress(this.network).ToString();
-
-            // TODO: Is it sufficient to only define these fields here, or do we need all the other available fields?
-            var hdAddress = new HdAddress() 
-            {
-                ScriptPubKey = p2pkhScriptPubKey,
-                Pubkey = p2pkScriptPubKey,
-                Address = address
-            };
-
-            this.WalletRepository.AddWatchOnlyAddresses(walletName, accountName, 0, new List<HdAddress>() { hdAddress });
+            this.WalletRepository.AddWatchOnlyAddresses(walletName, accountName, 0, pubKeys.Select(pubKey => new HdAddress() { Pubkey = pubKey.ScriptPubKey }).ToList());
         }
 
         public IEnumerable<HdAccount> GetAllAccounts()
