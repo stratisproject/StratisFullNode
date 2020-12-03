@@ -69,18 +69,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
+                var federationMemberModel = new FederationMemberDetailedModel();
+
                 IFederationMember federationMember = this.federationManager.GetCurrentFederationMember();
-
-                var federationMemberModel = new FederationMemberDetailedModel
+                if (federationMember != null)
                 {
-                    PubKey = federationMember.PubKey
-                };
+                    federationMemberModel.PubKey = federationMember.PubKey;
 
-                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMember.PubKey);
-                if (lastActive.Key != null)
-                {
-                    federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
-                    federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+                    KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMember.PubKey);
+                    if (lastActive.Key != null)
+                    {
+                        federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+                        federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+                    }
                 }
 
                 // Is this member part of a pending poll
