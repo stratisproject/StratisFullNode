@@ -5,9 +5,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public static class PollExtensions
     {
-        public static List<Poll> MemberPollsOnly(this List<Poll> polls)
+        public static List<Poll> MemberPolls(this List<Poll> polls)
         {
             return polls.Where(p => p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember).ToList();
+        }
+
+        public static List<Poll> WhitelistPolls(this List<Poll> polls)
+        {
+            return polls.Where(p => p.VotingData.Key == VoteKey.RemoveHash || p.VotingData.Key == VoteKey.WhitelistHash).ToList();
         }
     }
 }

@@ -69,23 +69,23 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                var federationMemberModel = new FederationMemberDetailedModel();
+                if (this.federationManager.CurrentFederationKey == null)
+                    throw new Exception("Your node is not registered as a federation member.");
 
-                IFederationMember federationMember = this.federationManager.GetCurrentFederationMember();
-                if (federationMember != null)
+                var federationMemberModel = new FederationMemberDetailedModel
                 {
-                    federationMemberModel.PubKey = federationMember.PubKey;
+                    PubKey = this.federationManager.CurrentFederationKey.PubKey
+                };
 
-                    KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMember.PubKey);
-                    if (lastActive.Key != null)
-                    {
-                        federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
-                        federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
-                    }
+                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMemberModel.PubKey);
+                if (lastActive.Key != null)
+                {
+                    federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+                    federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
                 }
 
                 // Is this member part of a pending poll
-                Poll poll = this.votingManager.GetPendingPolls().MemberPollsOnly().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                Poll poll = this.votingManager.GetPendingPolls().MemberPolls().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll finished?
-                poll = this.votingManager.GetFinishedPolls().MemberPollsOnly().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                poll = this.votingManager.GetFinishedPolls().MemberPolls().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
@@ -109,7 +109,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll executed?
-                poll = this.votingManager.GetExecutedPolls().MemberPollsOnly().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                poll = this.votingManager.GetExecutedPolls().MemberPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
