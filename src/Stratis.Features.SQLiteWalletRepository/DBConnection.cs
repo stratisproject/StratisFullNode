@@ -296,22 +296,6 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
-        internal List<HDAddress> CreateAddresses(HDAccount account, int addressType, int addressesQuantity)
-        {
-            var addresses = new List<HDAddress>();
-
-            int addressCount = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
-
-            for (int addressIndex = addressCount; addressIndex < (addressCount + addressesQuantity); addressIndex++)
-            {
-                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex);
-                this.Insert(address);
-                addresses.Add(address);
-            }
-
-            return addresses;
-        }
-
         internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, PubKey[] pubKeys)
         {
             var addresses = new List<HDAddress>();
@@ -323,6 +307,22 @@ namespace Stratis.Features.SQLiteWalletRepository
             for (int addressIndex = addressCount; addressIndex < (addressCount + addressQuantity); addressIndex++)
             {
                 HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKeys[i++]);
+                this.Insert(address);
+                addresses.Add(address);
+            }
+
+            return addresses;
+        }
+
+        internal List<HDAddress> CreateAddresses(HDAccount account, int addressType, int addressesQuantity)
+        {
+            var addresses = new List<HDAddress>();
+
+            int addressCount = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
+
+            for (int addressIndex = addressCount; addressIndex < (addressCount + addressesQuantity); addressIndex++)
+            {
+                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex);
                 this.Insert(address);
                 addresses.Add(address);
             }
