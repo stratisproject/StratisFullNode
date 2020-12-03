@@ -307,7 +307,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             for (int addressIndex = addressCount; addressIndex < (addressCount + addressQuantity); addressIndex++, i++)
             {
                 HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKeys[i]);
-                if (addresses != null)
+                if (hdAddresses != null)
                 {
                     HdAddress hdAddress = hdAddresses[i];
                     address.Address = hdAddress?.Address;
