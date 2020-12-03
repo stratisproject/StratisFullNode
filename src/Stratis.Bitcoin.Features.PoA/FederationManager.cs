@@ -197,7 +197,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.SetIsFederationMember();
 
-            this.logger.LogInformation("Federation member '{0}' was added!", federationMember);
+            this.logger.LogInformation("Federation member '{0}' was added.", federationMember);
         }
 
         public void RemoveFederationMember(IFederationMember federationMember)
@@ -208,7 +208,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 this.SetIsFederationMember();
 
-                this.logger.LogInformation("Federation member '{0}' was removed!", federationMember);
+                this.logger.LogInformation("Federation member '{0}' was removed.", federationMember);
             }
 
             this.signals.Publish(new FedMemberKicked(federationMember));
