@@ -648,7 +648,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             WalletAccountReference walletAccountReference = this.GetWatchOnlyWalletAccountReference();
 
             this.walletManager.AddWatchOnlyAddress(walletAccountReference.WalletName, walletAccountReference.AccountName, 
-                pubkey.Split(new char[] {' ', ','}).Select(pk => new PubKey(pk.Trim())).ToArray());
+                pubkey.Split(new char[] {' ', ','}, StringSplitOptions.RemoveEmptyEntries).Select(pk => new PubKey(pk.Trim())).ToArray());
 
             // As we cannot be sure when an imported pubkey was transacted against, we have to rescan from genesis if requested.
             if (rescan)
