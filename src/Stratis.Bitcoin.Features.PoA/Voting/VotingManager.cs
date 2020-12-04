@@ -254,7 +254,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 var federation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
 
-                IEnumerable<Poll> executedPolls = this.GetFinishedPolls().Where(x => x.IsExecuted && ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember)));
+                IEnumerable<Poll> executedPolls = this.GetExecutedPolls().MemberPolls();
                 foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
                 {
                     IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
@@ -275,7 +275,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 // Starting with the genesis federation...
                 var modifiedFederation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
-                IEnumerable<Poll> executedPolls = this.GetFinishedPolls().Where(x => x.IsExecuted && ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember)));
+                IEnumerable<Poll> executedPolls = this.GetExecutedPolls().MemberPolls();
 
                 // Modify the federation with the polls that would have been executed up to the given height.
                 if (this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory)
@@ -533,12 +533,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private void AddComponentStats(StringBuilder log)
         {
             log.AppendLine();
-            log.AppendLine("======Voting Manager======");
+            log.AppendLine("====== Voting & Poll Data ======");
 
             lock (this.locker)
             {
-                log.AppendLine($"{this.polls.Count(x => x.IsPending)} polls are pending, {this.polls.Count(x => !x.IsPending)} polls are finished, {this.polls.Count(x => x.IsExecuted)} polls are executed.");
-                log.AppendLine($"{this.scheduledVotingData.Count} votes are scheduled to be added to the next block this node mines.");
+                log.AppendLine("Pending Member Polls".PadRight(30) + ": " + GetPendingPolls().MemberPolls().Count);
+                log.AppendLine("Finished Member Polls".PadRight(30) + ": " + GetFinishedPolls().MemberPolls().Count);
+                log.AppendLine("Executed Member Polls".PadRight(30) + ": " + GetExecutedPolls().MemberPolls().Count);
+                log.AppendLine("Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
+                log.AppendLine("Finished Whitelist Polls".PadRight(30) + ": " + GetFinishedPolls().WhitelistPolls().Count);
+                log.AppendLine("Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
+                log.AppendLine("Scheduled Votes".PadRight(30) + ": " + this.scheduledVotingData.Count);
+                log.AppendLine($"Scheduled votes will be added to the next block this node mines.");
             }
         }
 
