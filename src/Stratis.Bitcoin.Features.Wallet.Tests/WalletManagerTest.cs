@@ -854,7 +854,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             // Allow manual addition of addresses.
             walletRepository.TestMode = true;
 
-            Script myUsedScriptPubKey = new Key().PubKey.Hash.ScriptPubKey;
+            PubKey pubKey1 = new Key().PubKey;
+            Script myUsedScriptPubKey = pubKey1.Hash.ScriptPubKey;
 
             account.ExternalAddresses.Add(new HdAddress(new List<TransactionData> {
                 new TransactionData() {
@@ -867,6 +868,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 Index = 0,
                 Address = "myUsedAddress",
                 ScriptPubKey = myUsedScriptPubKey,
+                Pubkey = pubKey1.ScriptPubKey
             });
 
             HdAddress result = walletManager.GetUnusedAddress(new WalletAccountReference("myWallet", "myAccount"));

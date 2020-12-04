@@ -44,7 +44,7 @@ namespace Stratis.SmartContracts.Tests.Common
                                 options.UseReflectionExecutor();
                             })
                             .UseSmartContractPoAConsensus()
-                            .UseSmartContractPoAMining()
+                            .UseSmartContractPoAMining(true)
                             .UseSmartContractWallet()
                             .AddSQLiteWalletRepository()
                             .ReplaceTimeProvider(this.timeProvider)

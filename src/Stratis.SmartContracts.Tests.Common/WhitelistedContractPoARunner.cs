@@ -42,7 +42,7 @@ namespace Stratis.SmartContracts.Tests.Common
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining()
+                .UseSmartContractPoAMining(true)
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .ReplaceTimeProvider(this.dateTimeProvider)

@@ -42,16 +42,6 @@ namespace Stratis.Features.Collateral
         // Both Cirrus Peg and Cirrus Miner calls this.
         public static IFullNodeBuilder CheckForPoAMembersCollateral(this IFullNodeBuilder fullNodeBuilder, bool isMiner)
         {
-            if (!isMiner)
-            {
-                // Remove the PoAHeaderSignatureRule if this is not a miner as CirrusD has no concept of the federation and
-                // any modifications of it.
-                // This rule is only required to ensure that the mining nodes don't mine on top of bad blocks. A consensus error will prevent that from happening."
-                // TODO: The code should be refactored at some point so that we dont do this hack.
-                var indexOf = fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.IndexOf(typeof(PoAHeaderSignatureRule));
-                fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.RemoveAt(indexOf);
-            }
-
             // These rules always execute between all Cirrus nodes.
             fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Insert(0, typeof(CheckCollateralCommitmentHeightRule));
 
@@ -89,7 +79,7 @@ namespace Stratis.Features.Collateral
                     .AddFeature<PoAFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<IFederationManager, FederationManager>();
+                        services.AddSingleton<IFederationManager, CollateralFederationManager>();
                         services.AddSingleton<PoABlockHeaderValidator>();
                         services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
                         services.AddSingleton<PoAMinerSettings>();

@@ -100,6 +100,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         string SignMessage(string password, string walletName, string externalAddress, string message);
 
         /// <summary>
+        /// Gets the public for an address.
+        /// </summary>
+        /// <param name="walletName">The name of the wallet.</param>
+        /// <param name="externalAddress">Address to use to sign.</param>
+        /// <returns>The public key hex.</returns>
+        string GetPubKey(string walletName, string externalAddress);
+
+        /// <summary>
         /// Verifies the signed message.
         /// </summary>
         /// <param name="externalAddress">Address used to sign.</param>
@@ -293,7 +301,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 
         HdAccount GetOrCreateWatchOnlyAccount(string walletName);
 
-        void AddWatchOnlyAddress(string walletName, string accountName, Script p2pkScriptPubKey, Script p2pkhScriptPubKey);
+        void AddWatchOnlyAddress(string walletName, string accountName, PubKey[] pubKeys);
 
         /// <summary>
         /// Gets the last block height.

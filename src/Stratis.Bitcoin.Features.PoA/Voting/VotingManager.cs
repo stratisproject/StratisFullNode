@@ -255,7 +255,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var federation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
 
                 IEnumerable<Poll> executedPolls = this.GetFinishedPolls().Where(x => x.IsExecuted && ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember)));
-                foreach (Poll poll in executedPolls)
+                foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
                 {
                     IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
 
@@ -273,35 +273,26 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.locker)
             {
-                // Starting with the current federation...
-                List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers();
+                // Starting with the genesis federation...
+                var modifiedFederation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
+                IEnumerable<Poll> executedPolls = this.GetFinishedPolls().Where(x => x.IsExecuted && ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember)));
 
-                // For the given height, revert the federation to the expected poll execution state.
+                // Modify the federation with the polls that would have been executed up to the given height.
                 if (this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory)
                 {
-                    foreach (Poll poll in this.GetFinishedPolls().Where(x =>
-                        ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                    foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
                     {
-                        bool shouldBeExecuted = (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) < chainedHeader.Height;
-                        IFederationMember federationMember = poaConsensusFactory.DeserializeFederationMember(poll.VotingData.Data);
+                        // When block "PollVotedInFavorBlockData"+MaxReorgLength connects, block "PollVotedInFavorBlockData" is executed. See VotingManager.OnBlockConnected.
+                        if ((poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) > chainedHeader.Height)
+                            break;
 
-                        if (poll.IsExecuted && !shouldBeExecuted)
-                        {
-                            // Reverse addition/removal.
-                            if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                                modifiedFederation.Remove(federationMember);
-                            else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                                modifiedFederation.Add(federationMember);
-                        }
+                        IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
 
-                        if (!poll.IsExecuted && shouldBeExecuted)
-                        {
-                            // Reverse addition/removal.
-                            if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                                modifiedFederation.Add(federationMember);
-                            else if (poll.VotingData.Key == VoteKey.KickFederationMember)
-                                modifiedFederation.Remove(federationMember);
-                        }
+                        // Addition/removal.
+                        if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                            modifiedFederation.Add(federationMember);
+                        else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                            modifiedFederation.Remove(federationMember);
                     }
 
                     // Set the IsMultisigMember flags to match the expected values.
