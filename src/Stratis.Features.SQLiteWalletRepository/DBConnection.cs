@@ -299,32 +299,37 @@ namespace Stratis.Features.SQLiteWalletRepository
         internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, List<HdAddress> hdAddresses, bool force = false)
         {
             var addresses = new List<HDAddress>();
-            int addressQuantity = hdAddresses.Count;
-            int i = 0;
+            int addressIndex = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
 
-            int addressCount = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
-
-            for (int addressIndex = addressCount; addressIndex < (addressCount + addressQuantity); addressIndex++, i++)
+            foreach (HdAddress hdAddress in hdAddresses)
             {
-                var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(hdAddresses[i].Pubkey);
-                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKey);
-
-                if (force || this.Repository.TestMode)
+                try
                 {
-                    // Allow greater control over field values for legacy tests.
-                    HdAddress hdAddress = hdAddresses[i];
-                    address.Address = hdAddress?.Address;
-                    address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
-                    address.PubKey = hdAddress.Pubkey?.ToHex();
-                    this.Insert(address);
-                    this.AddTransactions(account, hdAddress, hdAddress.Transactions);
-                }
-                else
-                {
-                    this.Insert(address);
-                }
+                    var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(hdAddress.Pubkey);
+                    HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKey);
 
-                addresses.Add(address);
+                    if (force || this.Repository.TestMode)
+                    {
+                        // Allow greater control over field values for legacy tests.
+                        address.Address = hdAddress?.Address;
+                        address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
+                        address.PubKey = hdAddress.Pubkey?.ToHex();
+                        this.Insert(address);
+                        this.AddTransactions(account, hdAddress, hdAddress.Transactions);
+                    }
+                    else
+                    {
+                        this.Insert(address);
+                    }
+
+                    addresses.Add(address);
+
+                    addressIndex++;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
 
             return addresses;
