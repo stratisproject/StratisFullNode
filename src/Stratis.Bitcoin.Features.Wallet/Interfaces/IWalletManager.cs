@@ -301,7 +301,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
 
         HdAccount GetOrCreateWatchOnlyAccount(string walletName);
 
-        void AddWatchOnlyAddress(string walletName, string accountName, Script p2pkScriptPubKey, Script p2pkhScriptPubKey);
+        void AddWatchOnlyAddress(string walletName, string accountName, PubKey[] pubKeys);
 
         /// <summary>
         /// Gets the last block height.
