@@ -296,19 +296,22 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
-        internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, PubKey[] pubKeys, HdAddress[] hdAddresses = null)
+        internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, List<HdAddress> hdAddresses, bool force = false)
         {
             var addresses = new List<HDAddress>();
-            int addressQuantity = pubKeys.Length;
+            int addressQuantity = hdAddresses.Count;
             int i = 0;
 
             int addressCount = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
 
             for (int addressIndex = addressCount; addressIndex < (addressCount + addressQuantity); addressIndex++, i++)
             {
-                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKeys[i]);
-                if (hdAddresses != null)
+                var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(hdAddresses[i].Pubkey);
+                HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKey);
+
+                if (force || this.Repository.TestMode)
                 {
+                    // Allow greater control over field values for legacy tests.
                     HdAddress hdAddress = hdAddresses[i];
                     address.Address = hdAddress?.Address;
                     address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();

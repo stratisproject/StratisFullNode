@@ -594,7 +594,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Addresses can only be added to watch-only accounts.");
 
-                conn.CreateWatchOnlyAddresses(account, addressType, addresses.Select(a => PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(a.Pubkey)).ToArray(), this.TestMode ? addresses.ToArray() : null);
+                conn.CreateWatchOnlyAddresses(account, addressType, addresses, force);
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex);
