@@ -32,6 +32,12 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public uint? FederationMemberActivationTime { get; set; }
 
+        /// <summary>The height at which the first version of reward distribution will end.</summary>
+        public long? RewardDistributionV1EndBlockHeight { get; set; }
+
+        /// <summary>The height at which the second version of reward distribution will start.</summary>
+        public long? RewardDistributionV2StartBlockHeight { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
