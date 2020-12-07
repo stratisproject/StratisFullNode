@@ -59,7 +59,10 @@ namespace Stratis.Bitcoin.Networks
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 witnessScaleFactor: 4
-            );
+            )
+            {
+                RewardClaimerBatchActivationHeight = 30
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
@@ -116,7 +119,7 @@ namespace Stratis.Bitcoin.Networks
                 maxReorgLength: 500,
                 defaultAssumeValid: null, // turn off assumevalid for regtest.
                 maxMoney: long.MaxValue,
-                coinbaseMaturity: 10,
+                coinbaseMaturity: 1,
                 premineHeight: 2,
                 premineReward: Money.Coins(130000000),
                 proofOfWorkReward: Money.Coins(18),
