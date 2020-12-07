@@ -211,25 +211,27 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Check if the current block is after reward batching activation height.
             if (blockConnected.ConnectedBlock.ChainedHeader.Height >= this.posConsensusOptions.RewardClaimerBatchActivationHeight)
             {
-                this.lastDistributionHeight = blockConnected.ConnectedBlock.ChainedHeader.Height;
-
-                this.logger.LogInformation($"Reward batching enabled, distribution at block {this.lastDistributionHeight + 10}.");
+                //var countDown = blockConnected.ConnectedBlock.ChainedHeader.Height % 10;
+                this.logger.LogInformation($"Reward batching enabled, distribution at block {this.lastDistributionHeight + DistributionBlockInterval}.");
 
                 // Check if the reward claimer should be triggered.
-                if (this.lastDistributionHeight > this.posConsensusOptions.RewardClaimerBatchActivationHeight && this.lastDistributionHeight % DistributionBlockInterval == 0)
+                if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.posConsensusOptions.RewardClaimerBatchActivationHeight &&
+                    blockConnected.ConnectedBlock.ChainedHeader.Height % DistributionBlockInterval == 0)
+                {
                     transaction = BuildRewardTransaction(true);
+                }
             }
             else
             {
-                this.lastDistributionHeight = blockConnected.ConnectedBlock.ChainedHeader.Height;
                 transaction = BuildRewardTransaction(false);
             }
 
-            // Always save the last distribution height.
-            SaveLastDistributionHeight();
-
             if (transaction == null)
                 return;
+
+            this.lastDistributionHeight = blockConnected.ConnectedBlock.ChainedHeader.Height;
+
+            SaveLastDistributionHeight();
 
             // It does not really matter whether the reward has been claimed already, as the transaction will simply be rejected by the other nodes on the network if it has.
             // So just broadcast it anyway.
@@ -244,8 +246,10 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Load from database
             this.lastDistributionHeight = this.keyValueRepository.LoadValueJson<int>(LastDistributionHeightKey);
 
+
+            // If this has never been loaded, set this to the activation height.
             if (this.lastDistributionHeight == 0)
-                this.lastDistributionHeight = this.chainIndexer.Tip.Height;
+                this.lastDistributionHeight = this.posConsensusOptions.RewardClaimerBatchActivationHeight;
 
             this.logger.LogInformation($"Last reward distribution height set to {this.lastDistributionHeight}.");
         }
