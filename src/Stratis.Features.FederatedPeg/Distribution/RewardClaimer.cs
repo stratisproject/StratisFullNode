@@ -85,7 +85,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (batchRewards)
             {
                 var coins = new List<ScriptCoin>();
-                for (int height = this.lastDistributionHeight; height < this.lastDistributionHeight + DistributionBlockInterval; height++)
+
+                var startFromHeight = this.lastDistributionHeight + 1;
+                for (int height = startFromHeight; height < startFromHeight + DistributionBlockInterval; height++)
                 {
                     // Get the block that is minStakeConfirmations behind the current tip.
                     Block maturedBlock = GetMaturedBlock(height - minStakeConfirmations);

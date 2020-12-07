@@ -34,7 +34,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 maxStandardTxSigopsCost: 20_000 / 5,
                 witnessScaleFactor: 4)
             {
-                this.RewardClaimerBatchActivationHeight = 20;
+                this.RewardClaimerBatchActivationHeight = 30;
             }
 
             public override int GetStakeMinConfirmations(int height, Network network)
@@ -64,34 +64,56 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             IPosMinting minter = nodeA.FullNode.NodeService<IPosMinting>();
             minter.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
 
-            // Stake to block height 30
-            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 30));
+            // Stake to block height 40
+            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40));
             TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
 
             // Stop staking
             minter.StopStake();
 
-            // Mine 1 more block to include the reward transaction in the mempool.
+            // Mine 1 more block to include the batched reward transaction in the mempool.
             TestHelper.MineBlocks(nodeA, 1);
             TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
 
-            // Check that block 30 does not contain a reward transaction.
-            ChainedHeader chainedHeader30 = nodeB.FullNode.ChainIndexer.GetHeader(30);
-            Block block30 = nodeB.FullNode.BlockStore().GetBlock(chainedHeader30.HashBlock);
-            Assert.Equal(2, block30.Transactions.Count);
+            // The first staked block would have been 21 and as min confs is 1, the first eligible blocks
+            // for rewards would have been 22 and the first tx woul dhave ony been included in block 23.
+            // Check that blocks 23 to 30 each contains only 1 reward transaction.
+            for (int height = 23; height <= 30; height++)
+            {
+                // Check that only block 31 contains a batched reward transaction to the multisig.
+                ChainedHeader chainedHeader = nodeB.FullNode.ChainIndexer.GetHeader(height);
+                Block block = nodeB.FullNode.BlockStore().GetBlock(chainedHeader.HashBlock);
+                Assert.Equal(3, block.Transactions.Count);
 
-            // Check that only block 31 contains a batched reward transaction to the multisig.
-            ChainedHeader chainedHeader31 = nodeB.FullNode.ChainIndexer.GetHeader(31);
-            Block block31 = nodeB.FullNode.BlockStore().GetBlock(chainedHeader31.HashBlock);
-            Assert.Equal(3, block31.Transactions.Count);
-            Assert.Equal(2, block31.Transactions[2].Outputs.Count);
+                Transaction rewardTransaction = block.Transactions[2];
+                Assert.Equal(2, rewardTransaction.Outputs.Count);
 
-            // The first staked block would have been at height 21 and as min confs is 1,the first block to count towards
-            // rewards would be at height 22, so that will 8 x 9 (72) STRAX.
-            Assert.Equal(Money.Coins(72), block31.Transactions[2].Outputs[1].Value);
-            TxOut cirrusDummy = block31.Transactions[2].Outputs[0];
+                Assert.Equal(Money.Coins(9), rewardTransaction.Outputs[1].Value);
+                TxOut cirrusDummyAddressSingle = rewardTransaction.Outputs[0];
+                Assert.Equal(StraxCoinstakeRule.CirrusTransactionTag(network.CirrusRewardDummyAddress), cirrusDummyAddressSingle.ScriptPubKey);
+                TxOut multiSigAddressSingle = rewardTransaction.Outputs[1];
+                Assert.Equal(network.Federations.GetOnlyFederation().MultisigScript.PaymentScript, multiSigAddressSingle.ScriptPubKey);
+            }
+
+            // Check that blocks 31 to 40 does not contain reward transactions.
+            for (int height = 31; height <= 40; height++)
+            {
+                ChainedHeader chainedHeader = nodeB.FullNode.ChainIndexer.GetHeader(height);
+                Block block = nodeB.FullNode.BlockStore().GetBlock(chainedHeader.HashBlock);
+                Assert.Equal(2, block.Transactions.Count);
+            }
+
+            // Check that only block 41 contains a batched reward transaction to the multisig.
+            ChainedHeader chainedHeader41 = nodeB.FullNode.ChainIndexer.GetHeader(41);
+            Block block41 = nodeB.FullNode.BlockStore().GetBlock(chainedHeader41.HashBlock);
+            Assert.Equal(3, block41.Transactions.Count);
+            Assert.Equal(2, block41.Transactions[2].Outputs.Count);
+
+            // The first block to count towards batched rewards would be at height 30, so that will 10 x 9 (90) STRAX.
+            Assert.Equal(Money.Coins(90), block41.Transactions[2].Outputs[1].Value);
+            TxOut cirrusDummy = block41.Transactions[2].Outputs[0];
             Assert.Equal(StraxCoinstakeRule.CirrusTransactionTag(network.CirrusRewardDummyAddress), cirrusDummy.ScriptPubKey);
-            TxOut multiSigAddress = block31.Transactions[2].Outputs[1];
+            TxOut multiSigAddress = block41.Transactions[2].Outputs[1];
             Assert.Equal(network.Federations.GetOnlyFederation().MultisigScript.PaymentScript, multiSigAddress.ScriptPubKey);
         }
     }
