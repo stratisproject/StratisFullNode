@@ -26,12 +26,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
     public class WalletService : IWalletService
     {
         private const int MaxHistoryItemsPerAccount = 1000;
-        private readonly IWalletManager walletManager;
+        protected readonly IWalletManager walletManager;
         private readonly IWalletTransactionHandler walletTransactionHandler;
         private readonly IWalletSyncManager walletSyncManager;
         private readonly IConnectionManager connectionManager;
         private readonly IConsensusManager consensusManager;
-        private readonly Network network;
+        protected readonly Network network;
         private readonly ChainIndexer chainIndexer;
         private readonly IBroadcasterManager broadcasterManager;
         private readonly IDateTimeProvider dateTimeProvider;
@@ -1323,7 +1323,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
+        public virtual async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
             {
@@ -1370,7 +1370,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 builder.AddKeys(signingKeys.ToArray());
                 builder.SignTransactionInPlace(unsignedTransaction);
 
-                if (!builder.Verify(unsignedTransaction))
+                // TODO: Do something with the errors
+                if (!builder.Verify(unsignedTransaction, out TransactionPolicyError[] errors))
                 {
                     throw new FeatureException(HttpStatusCode.BadRequest, "Failed to validate signed transaction.",
                         $"Failed to validate signed transaction '{unsignedTransaction.GetHash()}' from offline request '{originalTxId}'.");
