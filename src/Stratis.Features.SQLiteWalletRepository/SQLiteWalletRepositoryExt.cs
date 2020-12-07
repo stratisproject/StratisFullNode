@@ -63,21 +63,8 @@ namespace Stratis.Features.SQLiteWalletRepository
             // We need to examine the entire scriptPubKey of the transaction output in question in order to determine if it is a coldstaking output.
             var scriptPubKey = new Script(Encoders.Hex.DecodeData(transactionData.RedeemScript));
 
-            // Making the actual cold staking script template available here for checking will be quite messy, so just bring in the relevant check.
-            byte[] bytes = scriptPubKey.ToBytes(true);
-            bool isColdStaking = ((bytes.Length == 51)
-                                  && (bytes[0] == (byte)0x76) // OP_DUP
-                                  && (bytes[1] == (byte)0xa9) // OP_HASH160
-                                  && (bytes[2] == (byte)0x7b) // OP_ROT
-                                  && (bytes[3] == (byte)0x63) // OP_IF
-                                  && (bytes[4] == (byte)0xb9) // OP_CHECKCOLDSTAKEVERIFY
-                                  && (bytes[5] == 0x14)
-                                  && (bytes[26] == (byte)0x67) // OP_ELSE
-                                  && (bytes[27] == 0x14)
-                                  && (bytes[48] == (byte)0x68) // OP_ENDIF
-                                  && (bytes[49] == (byte)0x88) // OP_EQUALVERIFY
-                                  && (bytes[50] == (byte)0xac)); // OP_CHECKSIG
-            
+            bool isColdStaking = scriptPubKey.IsScriptType(ScriptType.ColdStaking);
+
             // TODO: Need to make a central determination of whether a UTXO is Segwit or not (i.e. it pays to a P2WPKH scriptPubKey)
 
             var res = new TransactionData()

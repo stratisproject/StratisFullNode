@@ -1,11 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using NBitcoin;
 using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.Wallet.Models
 {
-    // TODO: The only difference between this and the offline sign request sent to the offline node is the wallet password. Can they be tidily combined?
     public class BuildOfflineSignResponse
     {
         /// <summary>
