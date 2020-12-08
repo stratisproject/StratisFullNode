@@ -35,6 +35,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 witnessScaleFactor: 4)
             {
                 this.RewardClaimerBatchActivationHeight = 30;
+                this.RewardClaimerBlockInterval = 10;
             }
 
             public override int GetStakeMinConfirmations(int height, Network network)
