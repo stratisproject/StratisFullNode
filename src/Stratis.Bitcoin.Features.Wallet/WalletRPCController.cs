@@ -40,6 +40,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private readonly IWalletManager walletManager;
 
+        private readonly IWalletService walletService;
+
         private readonly IWalletTransactionHandler walletTransactionHandler;
 
         private readonly IWalletSyncManager walletSyncManager;
@@ -64,6 +66,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             IScriptAddressReader scriptAddressReader,
             StoreSettings storeSettings,
             IWalletManager walletManager,
+            IWalletService walletService,
             WalletSettings walletSettings,
             IWalletTransactionHandler walletTransactionHandler,
             IWalletSyncManager walletSyncManager,
@@ -75,6 +78,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.scriptAddressReader = scriptAddressReader;
             this.storeSettings = storeSettings;
             this.walletManager = walletManager;
+            this.walletService = walletService;
             this.walletSettings = walletSettings;
             this.walletTransactionHandler = walletTransactionHandler;
             this.walletSyncManager = walletSyncManager;
@@ -457,10 +461,13 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <returns>Transaction information.</returns>
         [ActionName("gettransaction")]
         [ActionDescription("Get detailed information about an in-wallet transaction.")]
-        public GetTransactionModel GetTransaction(string txid, bool include_watchonly = false)
+        public async Task<object> GetTransaction(string txid, bool include_watchonly = false)
         {
             if (!uint256.TryParse(txid, out uint256 trxid))
                 throw new ArgumentException(nameof(txid));
+
+            if (include_watchonly)
+                return await GetWatchOnlyTransactionAsync(trxid);
 
             // First check the regular wallet accounts.
             WalletAccountReference accountReference = this.GetWalletAccountReference();
@@ -482,9 +489,6 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             TransactionData firstReceivedTransaction = receivedTransactions.FirstOrDefault();
             TransactionData firstSendTransaction = sentTransactions.FirstOrDefault();
-
-            if (firstReceivedTransaction == null && firstSendTransaction == null && include_watchonly)
-                return GetWatchOnlyTransaction(trxid);
 
             if (firstReceivedTransaction == null && firstSendTransaction == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id.");
@@ -628,61 +632,23 @@ namespace Stratis.Bitcoin.Features.Wallet
             return model;
         }
 
-        private GetTransactionModel GetWatchOnlyTransaction(uint256 trxid)
+
+        /// <summary>
+        /// We get the details via the wallet service's history method.
+        /// </summary>
+        private async Task<WalletHistoryModel> GetWatchOnlyTransactionAsync(uint256 trxid)
         {
             var accountReference = this.GetWatchOnlyWalletAccountReference();
 
-            var hdAccount = this.walletManager.GetOrCreateWatchOnlyAccount(accountReference.WalletName);
-
-            var history = this.walletManager.GetHistory(hdAccount);
-            if (history == null)
-                throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Watch only account not found on the wallet.");
-
-            var transactionData = history.History.FirstOrDefault(t => t.Transaction.Id == trxid);
-            if (transactionData == null)
-                throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id.");
-
-            var transactionModel = new GetTransactionModel
+            var request = new WalletHistoryRequest()
             {
-                Confirmations = transactionData.Transaction.BlockHeight != null ? this.ConsensusManager.Tip.Height - transactionData.Transaction.BlockHeight.Value + 1 : 0,
-                BlockHash = transactionData.Transaction.BlockHash,
-                BlockIndex = transactionData.Transaction.BlockIndex,
-                Isgenerated = (transactionData.Transaction.IsCoinBase ?? false) || (transactionData.Transaction.IsCoinStake ?? false),
-                TransactionId = trxid,
-                TransactionTime = transactionData.Transaction.CreationTime.ToUnixTimeSeconds(),
-                TimeReceived = transactionData.Transaction.CreationTime.ToUnixTimeSeconds(),
-                Details = new List<GetTransactionDetailsModel>(),
-                Hex = transactionData.Transaction.Hex
+                WalletName = accountReference.WalletName,
+                AccountName = Wallet.WatchOnlyAccountName,
+                SearchQuery = trxid.ToString(),
             };
 
-            if (transactionData.Transaction.SpendingDetails != null)
-            {
-                transactionModel.TransactionSpentId = transactionData.Transaction.SpendingDetails.TransactionId;
-
-                // Send transactions details.
-                Money feeSent = Money.Zero;
-                Money outputsAmount = new Money(transactionData.Transaction.SpendingDetails.Payments.Sum(p => p.Amount));
-
-                feeSent = transactionData.Transaction.Amount - outputsAmount;
-
-                var details = transactionData.Transaction.SpendingDetails.Payments
-                    .GroupBy(detail => detail.DestinationAddress)
-                    .Select(p => new GetTransactionDetailsModel()
-                    {
-                        Address = p.Key,
-                        Category = GetTransactionDetailsCategoryModel.Send,
-                        OutputIndex = p.First().OutputIndex,
-                        Amount = 0 - p.Sum(detail => detail.Amount.ToDecimal(MoneyUnit.BTC)),
-                        Fee = -feeSent.ToDecimal(MoneyUnit.BTC),
-                    });
-
-                transactionModel.Details.AddRange(details);
-            }
-
-            transactionModel.Amount = transactionModel.Details.Sum(d => d.Amount);
-            transactionModel.Fee = transactionModel.Details.FirstOrDefault(d => d.Category == GetTransactionDetailsCategoryModel.Send)?.Fee;
-
-            return transactionModel;
+            var history = await this.walletService.GetHistory(request, default);
+            return history;
         }
 
         [ActionName("importpubkey")]
