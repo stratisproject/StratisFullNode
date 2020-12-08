@@ -628,7 +628,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             return model;
         }
 
-        private GetTransactionModel GetWatchOnlyTransaction(uint256 trxid, bool includeSpending = false)
+        private GetTransactionModel GetWatchOnlyTransaction(uint256 trxid)
         {
             var accountReference = this.GetWatchOnlyWalletAccountReference();
 
@@ -663,9 +663,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             transactionModel.TransactionSpentId = transactionData.Transaction.SpendingDetails?.TransactionId;
 
-            if (includeSpending && transactionData.Transaction.SpendingDetails != null)
+            if (transactionData.Transaction.SpendingDetails != null)
             {
-
                 Money outputsAmount = new Money(transactionData.Transaction.SpendingDetails.Payments.Sum(p => p.Amount));
 
                 var feeSent = transactionData.Transaction.Amount - outputsAmount;
