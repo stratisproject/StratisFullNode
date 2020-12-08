@@ -643,7 +643,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             var request = new WalletHistoryRequest()
             {
                 WalletName = accountReference.WalletName,
-                AccountName = "watchOnly",
+                AccountName = Wallet.WatchOnlyAccountName,
                 SearchQuery = trxid.ToString(),
             };
 
