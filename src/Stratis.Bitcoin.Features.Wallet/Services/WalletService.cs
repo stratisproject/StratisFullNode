@@ -356,31 +356,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         // Create a record for a 'receive' transaction.
                         if (!address.IsChangeAddress())
                         {
-                            // First check if we already have a similar transaction output, in which case we just sum up the amounts
-                            TransactionItemModel existingReceivedItem =
-                                this.FindSimilarReceivedTransactionOutput(transactionItems, transaction);
-
-                            if (existingReceivedItem == null)
+                            var receivedItem = new TransactionItemModel
                             {
-                                // Add incoming fund transaction details.
-                                var receivedItem = new TransactionItemModel
-                                {
-                                    Type = TransactionItemType.Received,
-                                    ToAddress = address.Address,
-                                    Amount = transaction.Amount,
-                                    Id = transaction.Id,
-                                    Timestamp = transaction.CreationTime,
-                                    ConfirmedInBlock = transaction.BlockHeight,
-                                    BlockIndex = transaction.BlockIndex
-                                };
+                                Type = TransactionItemType.Received,
+                                ToAddress = address.Address,
+                                Amount = transaction.Amount,
+                                Id = transaction.Id,
+                                Timestamp = transaction.CreationTime,
+                                ConfirmedInBlock = transaction.BlockHeight,
+                                BlockIndex = transaction.BlockIndex
+                            };
 
-                                transactionItems.Add(receivedItem);
-                                uniqueProcessedTxIds.Add(receivedItem.Id);
-                            }
-                            else
-                            {
-                                existingReceivedItem.Amount += transaction.Amount;
-                            }
+                            transactionItems.Add(receivedItem);
+                            uniqueProcessedTxIds.Add(receivedItem.Id);
                         }
                     }
 
@@ -1334,7 +1322,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 var builder = new TransactionBuilder(this.network);
                 var coins = new List<Coin>();
                 var signingKeys = new List<ISecret>();
-                
+
                 ExtKey seedExtKey = this.walletManager.GetExtKey(new WalletAccountReference() { AccountName = request.WalletAccount, WalletName = request.WalletName }, request.WalletPassword);
 
                 // Have to determine which private key to use for each UTXO being spent.
@@ -1438,7 +1426,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 {
                     totalToSend += utxo.Transaction.Amount;
                     outpoints.Add(utxo.ToOutPoint());
-                    
+
                     context = new TransactionBuildContext(this.network)
                     {
                         AccountReference = accountReference,
@@ -1458,7 +1446,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     if (size > (0.95m * this.network.Consensus.Options.MaxStandardTxWeight))
                         break;
                 }
-                
+
                 // Build the final version of the consolidation transaction.
                 context = new TransactionBuildContext(this.network)
                 {
