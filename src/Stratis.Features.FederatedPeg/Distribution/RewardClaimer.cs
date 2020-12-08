@@ -207,8 +207,6 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (this.initialBlockDownloadState.IsInitialBlockDownload())
                 return;
 
-            Transaction transaction = null;
-
             // Check if the current block is after reward batching activation height.
             if (blockConnected.ConnectedBlock.ChainedHeader.Height >= this.posConsensusOptions.RewardClaimerBatchActivationHeight)
             {
@@ -218,19 +216,24 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.posConsensusOptions.RewardClaimerBatchActivationHeight &&
                     blockConnected.ConnectedBlock.ChainedHeader.Height % this.posConsensusOptions.RewardClaimerBlockInterval == 0)
                 {
-                    transaction = BuildRewardTransaction(true);
+                    BuildAndCompleteRewardClaim(true, this.lastDistributionHeight += this.posConsensusOptions.RewardClaimerBlockInterval);
                 }
             }
             else
             {
-                transaction = BuildRewardTransaction(false);
                 this.logger.LogInformation($"Per block reward claiming in effect until block {this.posConsensusOptions.RewardClaimerBatchActivationHeight} (rewards are not batched).");
+                BuildAndCompleteRewardClaim(false, blockConnected.ConnectedBlock.ChainedHeader.Height);
             }
+        }
+
+        private void BuildAndCompleteRewardClaim(bool batchRewards, int lastDistributionHeight)
+        {
+            Transaction transaction = BuildRewardTransaction(batchRewards);
 
             if (transaction == null)
                 return;
 
-            this.lastDistributionHeight = blockConnected.ConnectedBlock.ChainedHeader.Height;
+            this.lastDistributionHeight = lastDistributionHeight;
 
             SaveLastDistributionHeight();
 
