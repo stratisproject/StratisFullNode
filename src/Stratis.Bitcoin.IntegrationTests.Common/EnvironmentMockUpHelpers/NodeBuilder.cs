@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <returns>A <see cref="NodeBuilder"/> instance with logs disabled.</returns>
         private static NodeBuilder CreateNodeBuilder(string testFolderPath)
         {
-            return new NodeBuilder(testFolderPath).WithLogsDisabled();
+            return new NodeBuilder(testFolderPath);
         }
 
         private static string GetBitcoinCorePath(string version)
