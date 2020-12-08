@@ -462,6 +462,9 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (!uint256.TryParse(txid, out uint256 trxid))
                 throw new ArgumentException(nameof(txid));
 
+            if (include_watchonly)
+                return GetWatchOnlyTransaction(trxid);
+
             // First check the regular wallet accounts.
             WalletAccountReference accountReference = this.GetWalletAccountReference();
 
@@ -482,9 +485,6 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             TransactionData firstReceivedTransaction = receivedTransactions.FirstOrDefault();
             TransactionData firstSendTransaction = sentTransactions.FirstOrDefault();
-
-            if (firstReceivedTransaction == null && firstSendTransaction == null && include_watchonly)
-                return GetWatchOnlyTransaction(trxid);
 
             if (firstReceivedTransaction == null && firstSendTransaction == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id.");
@@ -628,7 +628,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             return model;
         }
 
-        private GetTransactionModel GetWatchOnlyTransaction(uint256 trxid)
+        private GetTransactionModel GetWatchOnlyTransaction(uint256 trxid, bool includeSpending = false)
         {
             var accountReference = this.GetWatchOnlyWalletAccountReference();
 
@@ -644,28 +644,33 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             var transactionModel = new GetTransactionModel
             {
+                Amount = transactionData.Transaction.Amount.ToDecimal(MoneyUnit.BTC),
                 Confirmations = transactionData.Transaction.BlockHeight != null ? this.ConsensusManager.Tip.Height - transactionData.Transaction.BlockHeight.Value + 1 : 0,
                 BlockHash = transactionData.Transaction.BlockHash,
-                BlockIndex = transactionData.Transaction.BlockIndex,
                 Isgenerated = (transactionData.Transaction.IsCoinBase ?? false) || (transactionData.Transaction.IsCoinStake ?? false),
                 TransactionId = trxid,
                 TransactionTime = transactionData.Transaction.CreationTime.ToUnixTimeSeconds(),
                 TimeReceived = transactionData.Transaction.CreationTime.ToUnixTimeSeconds(),
                 Details = new List<GetTransactionDetailsModel>(),
-                Hex = transactionData.Transaction.Hex
             };
 
-            if (transactionData.Transaction.SpendingDetails != null)
+            var details = new GetTransactionDetailsModel()
             {
-                transactionModel.TransactionSpentId = transactionData.Transaction.SpendingDetails.TransactionId;
+                Address = transactionData.Address.Address,
+                Category = GetTransactionDetailsCategoryModel.Receive,
+                Amount = transactionData.Transaction.Amount.ToDecimal(MoneyUnit.BTC),
+            };
 
-                // Send transactions details.
-                Money feeSent = Money.Zero;
+            transactionModel.TransactionSpentId = transactionData.Transaction.SpendingDetails?.TransactionId;
+
+            if (includeSpending && transactionData.Transaction.SpendingDetails != null)
+            {
+
                 Money outputsAmount = new Money(transactionData.Transaction.SpendingDetails.Payments.Sum(p => p.Amount));
 
-                feeSent = transactionData.Transaction.Amount - outputsAmount;
+                var feeSent = transactionData.Transaction.Amount - outputsAmount;
 
-                var details = transactionData.Transaction.SpendingDetails.Payments
+                var paymentDetails = transactionData.Transaction.SpendingDetails.Payments
                     .GroupBy(detail => detail.DestinationAddress)
                     .Select(p => new GetTransactionDetailsModel()
                     {
@@ -673,14 +678,13 @@ namespace Stratis.Bitcoin.Features.Wallet
                         Category = GetTransactionDetailsCategoryModel.Send,
                         OutputIndex = p.First().OutputIndex,
                         Amount = 0 - p.Sum(detail => detail.Amount.ToDecimal(MoneyUnit.BTC)),
-                        Fee = -feeSent.ToDecimal(MoneyUnit.BTC),
+                        Fee = -feeSent.ToDecimal(MoneyUnit.BTC)
                     });
 
-                transactionModel.Details.AddRange(details);
+                transactionModel.Details.AddRange(paymentDetails);
             }
 
-            transactionModel.Amount = transactionModel.Details.Sum(d => d.Amount);
-            transactionModel.Fee = transactionModel.Details.FirstOrDefault(d => d.Category == GetTransactionDetailsCategoryModel.Send)?.Fee;
+            transactionModel.Details.Add(details);
 
             return transactionModel;
         }
