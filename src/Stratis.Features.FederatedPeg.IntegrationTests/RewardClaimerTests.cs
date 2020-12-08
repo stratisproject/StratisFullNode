@@ -65,7 +65,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             minter.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
 
             // Stake to block height 40
-            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40));
+            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40, 120), waitTimeSeconds: 120);
             TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
 
             // Stop staking
