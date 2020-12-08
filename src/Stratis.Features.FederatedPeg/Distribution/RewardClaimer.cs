@@ -176,7 +176,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 return null;
             }
 
-            this.logger.LogInformation($"Reward distribution transaction built; payment script to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
+            this.logger.LogInformation($"Reward distribution transaction built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
             return builtTransaction;
         }
 
@@ -213,8 +213,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Check if the current block is after reward batching activation height.
             if (blockConnected.ConnectedBlock.ChainedHeader.Height >= this.posConsensusOptions.RewardClaimerBatchActivationHeight)
             {
-                //var countDown = blockConnected.ConnectedBlock.ChainedHeader.Height % 10;
-                this.logger.LogInformation($"Reward batching enabled, distribution at block {this.lastDistributionHeight + DistributionBlockInterval}.");
+                this.logger.LogInformation($"Batching rewards, the next distribution will be at block {this.lastDistributionHeight + 1 + DistributionBlockInterval}.");
 
                 // Check if the reward claimer should be triggered.
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.posConsensusOptions.RewardClaimerBatchActivationHeight &&
@@ -226,6 +225,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             else
             {
                 transaction = BuildRewardTransaction(false);
+                this.logger.LogInformation($"Per block reward claiming in effect until block {this.posConsensusOptions.RewardClaimerBatchActivationHeight} (rewards are not batched).");
             }
 
             if (transaction == null)

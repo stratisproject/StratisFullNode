@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Networks
                 witnessScaleFactor: 4
                 )
             {
-                RewardClaimerBatchActivationHeight = 200000
+                RewardClaimerBatchActivationHeight = 150400
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
