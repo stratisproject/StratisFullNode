@@ -27,7 +27,6 @@ namespace Stratis.Features.FederatedPeg.Distribution
     /// </summary>
     public sealed class RewardClaimer : IDisposable
     {
-        private const long DistributionBlockInterval = 10;
         private const string LastDistributionHeightKey = "rewardClaimerLastDistributionHeight";
 
         private readonly IBroadcasterManager broadcasterManager;
@@ -87,7 +86,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 var coins = new List<ScriptCoin>();
 
                 var startFromHeight = this.lastDistributionHeight + 1;
-                for (int height = startFromHeight; height < startFromHeight + DistributionBlockInterval; height++)
+                for (int height = startFromHeight; height < startFromHeight + this.posConsensusOptions.RewardClaimerBlockInterval; height++)
                 {
                     // Get the block that is minStakeConfirmations behind the current tip.
                     Block maturedBlock = GetMaturedBlock(height - minStakeConfirmations);
@@ -213,11 +212,11 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Check if the current block is after reward batching activation height.
             if (blockConnected.ConnectedBlock.ChainedHeader.Height >= this.posConsensusOptions.RewardClaimerBatchActivationHeight)
             {
-                this.logger.LogInformation($"Batching rewards, the next distribution will be at block {this.lastDistributionHeight + 1 + DistributionBlockInterval}.");
+                this.logger.LogInformation($"Batching rewards, the next distribution will be at block {this.lastDistributionHeight + 1 + this.posConsensusOptions.RewardClaimerBlockInterval}.");
 
                 // Check if the reward claimer should be triggered.
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.posConsensusOptions.RewardClaimerBatchActivationHeight &&
-                    blockConnected.ConnectedBlock.ChainedHeader.Height % DistributionBlockInterval == 0)
+                    blockConnected.ConnectedBlock.ChainedHeader.Height % this.posConsensusOptions.RewardClaimerBlockInterval == 0)
                 {
                     transaction = BuildRewardTransaction(true);
                 }
