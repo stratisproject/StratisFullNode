@@ -216,7 +216,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.posConsensusOptions.RewardClaimerBatchActivationHeight &&
                     blockConnected.ConnectedBlock.ChainedHeader.Height % this.posConsensusOptions.RewardClaimerBlockInterval == 0)
                 {
-                    BuildAndCompleteRewardClaim(true, this.lastDistributionHeight += this.posConsensusOptions.RewardClaimerBlockInterval);
+                    BuildAndCompleteRewardClaim(true, this.lastDistributionHeight + this.posConsensusOptions.RewardClaimerBlockInterval);
                 }
             }
             else
