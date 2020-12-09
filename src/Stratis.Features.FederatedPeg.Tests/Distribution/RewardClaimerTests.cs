@@ -40,6 +40,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         {
             this.network = new StraxRegTest();
             ((PosConsensusOptions)this.network.Consensus.Options).RewardClaimerBatchActivationHeight = 40;
+            ((PosConsensusOptions)this.network.Consensus.Options).RewardClaimerBlockInterval = 10;
 
             this.addressHelper = new MultisigAddressHelper(this.network, new CirrusRegTest());
             this.broadCasterManager = Substitute.For<IBroadcasterManager>();
