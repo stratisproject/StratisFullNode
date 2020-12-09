@@ -8,20 +8,20 @@ namespace Stratis.Bitcoin.Utilities
     {
         public static byte[] Key(byte table, byte[] key)
         {
-            Span<byte> dbkey = new byte[key.Length + 1];
+            var dbkey = new byte[key.Length + 1];
             dbkey[0] = table;
-            key.AsSpan().CopyTo(dbkey.Slice(1));
+            key.AsSpan().CopyTo(dbkey[1..]);
 
-            return dbkey.ToArray();
+            return dbkey;
         }
 
         public static byte[] Key(byte table, ReadOnlySpan<byte> key)
         {
-            Span<byte> dbkey = new byte[key.Length + 1];
+            var dbkey = new byte[key.Length + 1];
             dbkey[0] = table;
-            key.CopyTo(dbkey.Slice(1));
+            key.CopyTo(dbkey[1..]);
 
-            return dbkey.ToArray();
+            return dbkey;
         }
 
         public static Dictionary<byte[], byte[]> SelectDictionary(this DB db, byte table)
