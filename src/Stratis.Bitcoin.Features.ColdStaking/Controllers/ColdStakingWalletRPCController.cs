@@ -5,6 +5,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
@@ -24,10 +25,11 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
             IScriptAddressReader scriptAddressReader,
             StoreSettings storeSettings,
             IWalletManager walletManager,
+            IWalletService walletService,
             WalletSettings walletSettings,
             IWalletTransactionHandler walletTransactionHandler,
             IWalletSyncManager walletSyncManager) :
-            base(blockStore, broadcasterManager, chainIndexer, consensusManager, fullNode, loggerFactory, network, scriptAddressReader, storeSettings, walletManager, walletSettings, walletTransactionHandler, walletSyncManager)
+            base(blockStore, broadcasterManager, chainIndexer, consensusManager, fullNode, loggerFactory, network, scriptAddressReader, storeSettings, walletManager, walletService, walletSettings, walletTransactionHandler, walletSyncManager)
         {
         }
     }

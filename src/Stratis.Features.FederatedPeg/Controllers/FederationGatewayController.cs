@@ -131,7 +131,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         }
 
         [Route(FederationGatewayRouteEndPoint.BroadcastFullySignedTransfers)]
-        [HttpPost]
+        [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]

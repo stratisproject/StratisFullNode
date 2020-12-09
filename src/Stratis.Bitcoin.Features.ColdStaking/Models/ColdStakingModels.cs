@@ -66,6 +66,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [JsonProperty(PropertyName = "isColdWalletAccount")]
         public bool IsColdWalletAccount { get; set; }
 
+        /// <summary>If the cold staking account is being added to an extpubkey wallet, the extpubkey of the cold staking account is required.</summary>
+        [JsonProperty(PropertyName = "extPubKey")]
+        public string ExtPubKey { get; set; }
+
         /// <summary>Creates a string containing the properties of this object.</summary>
         /// <returns>A string containing the properties of the object.</returns>
         public override string ToString()
@@ -201,11 +205,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         }
     }
 
-    /// <summary>
-    /// The data structure used by a client requesting that a cold staking setup be performed.
-    /// Refer to <see cref="Controllers.ColdStakingController.SetupColdStaking"/>.
-    /// </summary>
-    public class SetupColdStakingRequest
+    public class BaseSetupColdStakingRequest
     {
         /// <summary>The Base58 cold wallet address.</summary>
         [Required]
@@ -221,11 +221,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [Required]
         [JsonProperty(PropertyName = "walletName")]
         public string WalletName { get; set; }
-
-        /// <summary>The password of the wallet from which we select coins for cold staking.</summary>
-        [Required]
-        [JsonProperty(PropertyName = "walletPassword")]
-        public string WalletPassword { get; set; }
 
         /// <summary>The wallet account from which we select coins for cold staking.</summary>
         [Required]
@@ -251,6 +246,18 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
         /// </summary>
         public bool SegwitChangeAddress { get; set; }
+    }
+
+    /// <summary>
+    /// The data structure used by a client requesting that a cold staking setup be performed.
+    /// Refer to <see cref="Controllers.ColdStakingController.SetupColdStaking"/>.
+    /// </summary>
+    public class SetupColdStakingRequest : BaseSetupColdStakingRequest
+    {
+        /// <summary>The password of the wallet from which we select coins for cold staking.</summary>
+        [Required]
+        [JsonProperty(PropertyName = "walletPassword")]
+        public string WalletPassword { get; set; }
 
         /// <summary>Creates a string containing the properties of this object.</summary>
         /// <returns>A string containing the properties of the object.</returns>
@@ -258,6 +265,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         {
             return $"{nameof(this.ColdWalletAddress)}={this.ColdWalletAddress},{nameof(this.HotWalletAddress)}={this.HotWalletAddress},{nameof(this.WalletName)}={this.WalletName},{nameof(this.WalletAccount)}={this.WalletAccount},{nameof(this.Amount)}={this.Amount},{nameof(this.Fees)}={this.Fees}";
         }
+    }
+
+    public class SetupOfflineColdStakingRequest : BaseSetupColdStakingRequest
+    {
     }
 
     /// <summary>
