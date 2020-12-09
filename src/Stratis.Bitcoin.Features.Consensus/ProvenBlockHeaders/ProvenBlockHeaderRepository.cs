@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    row = this.leveldb.Get(DBH.Key(provenBlockHeaderTable, BitConverter.GetBytes(blockHeight)));
+                    row = this.leveldb.Get(provenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
                 }
 
                 if (row != null)
@@ -165,7 +165,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             lock (this.locker)
             {
-                this.leveldb.Put(DBH.Key(blockHashHeightTable, blockHashHeightKey), this.dBreezeSerializer.Serialize(newTip));
+                this.leveldb.Put(blockHashHeightTable, blockHashHeightKey, this.dBreezeSerializer.Serialize(newTip));
             }
         }
 
@@ -178,7 +178,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             using (var batch = new WriteBatch())
             {
                 foreach (KeyValuePair<int, ProvenBlockHeader> header in headers)
-                    batch.Put(DBH.Key(provenBlockHeaderTable, BitConverter.GetBytes(header.Key)), this.dBreezeSerializer.Serialize(header.Value));
+                    batch.Put(provenBlockHeaderTable, BitConverter.GetBytes(header.Key), this.dBreezeSerializer.Serialize(header.Value));
 
                 lock (this.locker)
                 {
@@ -201,7 +201,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             byte[] row = null;
             lock (this.locker)
             {
-                row = this.leveldb.Get(DBH.Key(blockHashHeightTable, blockHashHeightKey));
+                row = this.leveldb.Get(blockHashHeightTable, blockHashHeightKey);
             }
 
             if (row != null)
