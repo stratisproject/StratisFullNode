@@ -57,7 +57,10 @@ namespace Stratis.Bitcoin.Networks
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 witnessScaleFactor: 4
-            );
+                )
+            {
+                RewardClaimerBatchActivationHeight = 150400
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

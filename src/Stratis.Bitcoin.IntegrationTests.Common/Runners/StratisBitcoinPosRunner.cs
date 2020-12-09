@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.P2P;
+using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
@@ -44,6 +45,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
 
             if (this.OverrideDateTimeProvider)
                 builder.OverrideDateTimeProviderFor<MiningFeature>();
+
+            if (this.AddRewardClaimer)
+                builder.AddService<BaseFeature, RewardClaimer>();
 
             if (!this.EnablePeerDiscovery)
             {

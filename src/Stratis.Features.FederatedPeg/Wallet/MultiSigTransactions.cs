@@ -55,7 +55,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
             if (this.withdrawalsByDepositDict.TryGetValue(matchingDepositId, out List<TransactionData> txList))
             {
-                txList.Remove(transactionData);
+                int pos = txList.FindIndex(i => i.Id == transactionData.Id && i.Index == transactionData.Index);
+                if (pos >= 0)
+                    txList.RemoveAt(pos);
 
                 if (txList.Count == 0)
                     this.withdrawalsByDepositDict.Remove(matchingDepositId);
