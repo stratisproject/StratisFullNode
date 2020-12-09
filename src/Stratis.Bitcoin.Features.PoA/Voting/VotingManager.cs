@@ -429,6 +429,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         {
                             ChainedHeader chainedHeader = chBlock.ChainedHeader.GetAncestor(poll.PollStartBlockData.Height);
 
+                            if (chainedHeader?.Header == null)
+                            {
+                                this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
+
+                                Guard.NotNull(chainedHeader, nameof(chainedHeader));
+                                Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
+                            }
+
                             foreach (string pubKey in fedMembersHex)
                             {
                                 if (this.idleFederationMembersKicker.ShouldMemberBeKicked(new PubKey(pubKey), chainedHeader.Header.Time, out _))
