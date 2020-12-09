@@ -1432,6 +1432,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         AccountReference = accountReference,
                         AllowOtherInputs = false,
                         FeeType = FeeType.Medium,
+                        MinConfirmations = 0,
                         // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
                         Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
                         SelectedInputs = outpoints,
