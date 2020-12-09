@@ -144,12 +144,6 @@ namespace NBitcoin
         /// </summary>
         public const int MaxMerkleProofSerializedSize = 512;
 
-        /// <summary>The height at which reward batching will be activated.</summary>
-        public int RewardClaimerBatchActivationHeight { get; set; }
-
-        /// <summary>Rewards will be claimed every N blocks, as defined here.</summary>
-        public int RewardClaimerBlockInterval { get; set; }
-
         /// <summary>
         /// Initializes the default values.
         /// </summary>
