@@ -8,7 +8,7 @@ namespace Stratis.Bitcoin.Utilities
     {
         public static byte[] Key(byte table, byte[] key)
         {
-            Span<byte> dbkey = stackalloc byte[key.Length + 1];
+            Span<byte> dbkey = new byte[key.Length + 1];
             dbkey[0] = table;
             key.AsSpan().CopyTo(dbkey.Slice(1));
 
@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Utilities
 
         public static byte[] Key(byte table, ReadOnlySpan<byte> key)
         {
-            Span<byte> dbkey = stackalloc byte[key.Length + 1];
+            Span<byte> dbkey = new byte[key.Length + 1];
             dbkey[0] = table;
             key.CopyTo(dbkey.Slice(1));
 
