@@ -431,7 +431,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (chainedHeader?.Header == null)
                             {
-                                this.logger.LogDebug("Could not retrieve header for block at height: {0}.", poll.PollStartBlockData?.Height);
+                                this.logger.LogDebug("Couldn't retrieve header for block at height: {0}.", poll.PollStartBlockData?.Height);
 
                                 Guard.NotNull(chainedHeader, nameof(chainedHeader));
                                 Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
