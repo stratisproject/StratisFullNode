@@ -469,10 +469,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (include_watchonly)
             {
                 WalletHistoryModel history = await GetWatchOnlyTransactionAsync(trxid);
-                if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) == 0)
-                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id.");
-
-                return history;
+                if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) != 0)
+                    return history;
             }
 
             // First check the regular wallet accounts.
