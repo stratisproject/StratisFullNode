@@ -1,15 +1,12 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
-using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA.Behaviors;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Interfaces;
@@ -148,30 +145,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingManager.Dispose();
 
             this.idleFederationMembersKicker.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// A class providing extension methods for <see cref="IFullNodeBuilder"/>.
-    /// </summary>
-    public static class FullNodeBuilderConsensusExtension
-    {
-        /// <summary>Adds Proof-of-Authority mining to the side chain node.</summary>
-        public static IFullNodeBuilder AddPoAMiningCapability(this IFullNodeBuilder fullNodeBuilder)
-        {
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                IFeatureRegistration feature = fullNodeBuilder.Features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(PoAFeature));
-                feature.FeatureServices(services =>
-                {
-                    services.AddSingleton<IPoAMiner, PoAMiner>();
-                    services.AddSingleton<MinerSettings>();
-                    services.AddSingleton<PoAMinerSettings>();
-                    services.AddSingleton<BlockDefinition, PoABlockDefinition>();
-                });
-            });
-
-            return fullNodeBuilder;
         }
     }
 }

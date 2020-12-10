@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,6 +11,8 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Features.Miner;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
@@ -133,6 +136,24 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SmartContractOptions(services, fullNodeBuilder.Network));
                     });
+            });
+
+            return fullNodeBuilder;
+        }
+
+        /// <summary>Adds Proof-of-Authority mining to the side chain node.</summary>
+        public static IFullNodeBuilder AddPoAMiningCapability(this IFullNodeBuilder fullNodeBuilder)
+        {
+            fullNodeBuilder.ConfigureFeature(features =>
+            {
+                IFeatureRegistration feature = fullNodeBuilder.Features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(PoAFeature));
+                feature.FeatureServices(services =>
+                {
+                    services.AddSingleton<IPoAMiner, PoAMiner>();
+                    services.AddSingleton<MinerSettings>();
+                    services.AddSingleton<PoAMinerSettings>();
+                    services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
+                });
             });
 
             return fullNodeBuilder;
