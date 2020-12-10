@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Features.Collateral.MempoolRules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Voting;
 
 namespace Stratis.Features.Collateral
 {
@@ -64,6 +65,7 @@ namespace Stratis.Features.Collateral
                     .DependOn<CollateralFeature>()
                     .FeatureServices(services =>
                     {
+                        services.AddSingleton<IJoinFederationRequestService, JoinFederationRequestService>();
                         services.AddSingleton<JoinFederationRequestMonitor>();
                     });
             });

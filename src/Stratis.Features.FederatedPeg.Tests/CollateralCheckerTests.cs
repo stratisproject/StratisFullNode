@@ -55,7 +55,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var dataFolder = TestBase.CreateTestDir(callingMethod);
             FederatedPegSettings fedPegSettings = FedPegTestsHelper.CreateSettings(network, KnownNetworks.StraxRegTest, dataFolder, out NodeSettings nodeSettings);
 
-            var settings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest()));
+            var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest()));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
@@ -69,17 +69,16 @@ namespace Stratis.Features.FederatedPeg.Tests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             var fullNode = new Mock<IFullNode>();
-            IFederationManager federationManager = new CollateralFederationManager(nodeSettings, network, loggerFactory, new Mock<IKeyValueRepository>().Object, signals, settings, fullNode.Object, null);
+            IFederationManager federationManager = new FederationManager(fullNode.Object, nodeSettings, network, loggerFactory, signals);
             var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
-            var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager,
-                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
+            var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
             votingManager.Initialize();
 
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
 
             federationManager.Initialize();
 
-            this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, settings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
+            this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
 
         }
 

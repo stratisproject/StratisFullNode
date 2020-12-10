@@ -9,6 +9,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.PoA.Collateral;
 
 namespace Stratis.Features.Collateral
 {
