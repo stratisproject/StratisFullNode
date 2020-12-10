@@ -62,7 +62,6 @@ namespace Stratis.Features.Collateral
                 features.AddFeature<DynamicMembershipFeature>()
                     .DependOn<CounterChainFeature>()
                     .DependOn<PoAFeature>()
-                    .DependOn<CollateralFeature>()
                     .FeatureServices(services =>
                     {
                         services.AddSingleton<IJoinFederationRequestService, JoinFederationRequestService>();

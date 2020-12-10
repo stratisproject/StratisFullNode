@@ -138,21 +138,30 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.logger.LogWarning("Key provided is not registered on the network.");
             }
 
-            IEnumerable<CollateralFederationMember> collateralMembers = this.federationMembers.Cast<CollateralFederationMember>().Where(x => x.CollateralAmount != null && x.CollateralAmount > 0);
+            // TODO This will be removed once we remove the distinction between FederationMember and CollateralFederationMember
+            CheckCollateralMembers();
 
-            if (collateralMembers.Any(x => x.CollateralMainchainAddress == null))
+            this.logger.LogInformation("Federation key pair was successfully loaded. Your public key is: '{0}'.", this.CurrentFederationKey.PubKey);
+        }
+
+        private void CheckCollateralMembers()
+        {
+            if (!this.federationMembers.Any(f => f is CollateralFederationMember))
+                return;
+
+            IEnumerable<CollateralFederationMember> collateralFederationMembers = this.federationMembers.Cast<CollateralFederationMember>().Where(x => x.CollateralAmount != null && x.CollateralAmount > 0);
+
+            if (collateralFederationMembers.Any(x => x.CollateralMainchainAddress == null))
             {
                 throw new Exception("Federation can't contain members with non-zero collateral requirement but null collateral address.");
             }
 
-            int distinctCount = collateralMembers.Select(x => x.CollateralMainchainAddress).Distinct().Count();
+            int distinctCount = collateralFederationMembers.Select(x => x.CollateralMainchainAddress).Distinct().Count();
 
-            if (distinctCount != collateralMembers.Count())
+            if (distinctCount != collateralFederationMembers.Count())
             {
                 throw new Exception("Federation can't contain members with duplicated collateral addresses.");
             }
-
-            this.logger.LogInformation("Federation key pair was successfully loaded. Your public key is: '{0}'.", this.CurrentFederationKey.PubKey);
         }
 
         public CollateralFederationMember CollateralAddressOwner(VotingManager votingManager, VoteKey voteKey, string address)
@@ -258,18 +267,19 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Should be protected by <see cref="locker"/>.</summary>
         private void AddFederationMemberLocked(IFederationMember federationMember)
         {
-            var collateralMember = federationMember as CollateralFederationMember;
-
-            if (this.federationMembers.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralMember.CollateralMainchainAddress))
+            if (federationMember is CollateralFederationMember collateralFederationMember)
             {
-                this.logger.LogTrace("(-)[DUPLICATED_COLLATERAL_ADDR]");
-                return;
-            }
+                if (this.federationMembers.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
+                {
+                    this.logger.LogTrace("(-)[DUPLICATED_COLLATERAL_ADDR]");
+                    return;
+                }
 
-            if (this.federationMembers.Contains(federationMember))
-            {
-                this.logger.LogTrace("(-)[ALREADY_EXISTS]");
-                return;
+                if (this.federationMembers.Contains(federationMember))
+                {
+                    this.logger.LogTrace("(-)[ALREADY_EXISTS]");
+                    return;
+                }
             }
 
             this.federationMembers.Add(federationMember);

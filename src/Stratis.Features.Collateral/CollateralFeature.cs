@@ -69,7 +69,6 @@ namespace Stratis.Features.Collateral
                         .DependOn<PoAFeature>()
                         .FeatureServices(services =>
                         {
-                            services.AddSingleton<IFederationManager, FederationManager>();
                             services.AddSingleton<ICollateralChecker, CollateralChecker>();
                         });
                 });
