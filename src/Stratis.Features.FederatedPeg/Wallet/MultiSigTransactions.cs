@@ -43,7 +43,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 this.withdrawalsByDepositDict.Add(transactionData.SpendingDetails.WithdrawalDetails.MatchingDepositId, txList);
             }
 
-            txList.Add(transactionData);
+            if (!txList.Any(i => i.Id == transactionData.Id && i.Index == transactionData.Index))
+                txList.Add(transactionData);
         }
 
         private void RemoveWithdrawal(TransactionData transactionData)
@@ -57,10 +58,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
             {
                 int pos = txList.FindIndex(i => i.Id == transactionData.Id && i.Index == transactionData.Index);
                 if (pos >= 0)
+                {
                     txList.RemoveAt(pos);
 
-                if (txList.Count == 0)
-                    this.withdrawalsByDepositDict.Remove(matchingDepositId);
+                    if (txList.Count == 0)
+                        this.withdrawalsByDepositDict.Remove(matchingDepositId);
+                }
             }
         }
 
