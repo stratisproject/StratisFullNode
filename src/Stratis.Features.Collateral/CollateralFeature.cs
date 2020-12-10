@@ -48,7 +48,7 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// Adds mining to the side chain node when on a proof-of-authority network with collateral enabled.
         /// </summary>
-        public static IFullNodeBuilder AddCollateralPoAMining(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder AddPoACollateralMiningCapability(this IFullNodeBuilder fullNodeBuilder)
         {
             // Inject the CheckCollateralFullValidationRule as the first Full Validation Rule.
             // This is still a bit hacky and we need to properly review the dependencies again between the different side chain nodes.
@@ -56,21 +56,18 @@ namespace Stratis.Features.Collateral
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
-                fullNodeBuilder.ConfigureFeature(features =>
+                features
+                .AddFeature<CollateralFeature>()
+                .DependOn<CounterChainFeature>()
+                .DependOn<PoAFeature>()
+                .FeatureServices(services =>
                 {
-                    features
-                    .AddFeature<CollateralFeature>()
-                    .DependOn<CounterChainFeature>()
-                    .DependOn<PoAFeature>()
-                    .FeatureServices(services =>
-                    {
-                        services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
-                        services.AddSingleton<PoAMinerSettings>();
-                        services.AddSingleton<MinerSettings>();
-                        services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
+                    services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
+                    services.AddSingleton<PoAMinerSettings>();
+                    services.AddSingleton<MinerSettings>();
+                    services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
 
-                        services.AddSingleton<ICollateralChecker, CollateralChecker>();
-                    });
+                    services.AddSingleton<ICollateralChecker, CollateralChecker>();
                 });
             });
 

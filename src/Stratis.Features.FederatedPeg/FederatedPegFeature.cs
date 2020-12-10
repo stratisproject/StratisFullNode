@@ -379,8 +379,7 @@ namespace Stratis.Features.FederatedPeg
         [NoTrace]
         public static IFullNodeBuilder AddFederatedPeg(this IFullNodeBuilder fullNodeBuilder, bool isMainChain = false)
         {
-            LoggingConfiguration.RegisterFeatureNamespace<FederatedPegFeature>(
-                FederatedPegFeature.FederationGatewayFeatureNamespace);
+            LoggingConfiguration.RegisterFeatureNamespace<FederatedPegFeature>(FederatedPegFeature.FederationGatewayFeatureNamespace);
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -414,7 +413,11 @@ namespace Stratis.Features.FederatedPeg
 
                         // The reward distribution manager only runs on the side chain.
                         if (!isMainChain)
+                        {
                             services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
+                            services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
+                            services.AddSingleton<BlockDefinition, FederatedPegBlockDefinition>();
+                        }
 
                         // The reward claimer only runs on the main chain.
                         if (isMainChain)
@@ -423,79 +426,10 @@ namespace Stratis.Features.FederatedPeg
                         // Set up events.
                         services.AddSingleton<TransactionObserver>();
                         services.AddSingleton<BlockObserver>();
-
-                        services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
-                        services.AddSingleton<BlockDefinition, FederatedPegBlockDefinition>();
                     });
             });
 
             return fullNodeBuilder;
         }
-
-        //public static IFullNodeBuilder UseFederatedPegPoAMining(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
-        //{
-        //    fullNodeBuilder.ConfigureFeature(features =>
-        //    {
-        //        features
-        //        .AddFeature<PoAFeature>()
-        //        .DependOn<FederatedPegFeature>()
-        //        .FeatureServices(services =>
-        //        {
-        //            services.AddSingleton<IFederationManager, FederationManager>();
-        //            services.AddSingleton<PoABlockHeaderValidator>();
-        //            services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
-        //            //services.AddSingleton<ISlotsManager, SlotsManager>();
-        //            //services.AddSingleton<BlockDefinition, FederatedPegBlockDefinition>();
-        //            //services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
-        //            //services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
-
-        //            //services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
-        //        });
-        //    });
-
-        //    // TODO: Consensus and Mining should be separated. Sidechain nodes don't need any of the Federation code but do need Consensus.
-        //    // In the dependency tree as it is currently however, consensus is dependent on PoAFeature (needs SlotManager) which is in turn dependent on
-        //    // FederatedPegFeature. https://github.com/stratisproject/FederatedSidechains/issues/273
-
-        //    LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
-        //    fullNodeBuilder.ConfigureFeature(features =>
-        //    {
-        //        features
-        //        .AddFeature<ConsensusFeature>()
-        //        .FeatureServices(services =>
-        //        {
-        //            AddCoindbImplementation(services, coindbType);
-        //            services.AddSingleton<ICoinView, CachedCoinView>();
-        //            services.AddSingleton<IChainState, ChainState>();
-        //            services.AddSingleton<ConsensusQuery>()
-        //                .AddSingleton<INetworkDifficulty, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>())
-        //                .AddSingleton<IGetUnspentTransaction, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>());
-
-        //            services.AddSingleton<VotingManager>();
-        //            services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
-        //            services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
-        //            services.AddSingleton<IIdleFederationMembersKicker, IdleFederationMembersKicker>();
-        //            services.AddSingleton<PoAMinerSettings>();
-        //            services.AddSingleton<MinerSettings>();
-
-        //            // Consensus Rules
-        //            services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
-        //        });
-        //    });
-
-        //    return fullNodeBuilder;
-        //}
-
-        //private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
-        //{
-        //    if (coindbType == DbType.Dbreeze)
-        //        services.AddSingleton<ICoindb, DBreezeCoindb>();
-
-        //    if (coindbType == DbType.Leveldb)
-        //        services.AddSingleton<ICoindb, LeveldbCoindb>();
-
-        //    if (coindbType == DbType.Faster)
-        //        services.AddSingleton<ICoindb, FasterCoindb>();
-        //}
     }
 }

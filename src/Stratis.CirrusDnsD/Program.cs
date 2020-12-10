@@ -77,7 +77,7 @@ namespace Stratis.CirrusDnsD
                     options.UsePoAWhitelistedContracts();
                 })
                 .AddPoAFeature()
-                .ConfigurePoAConsensus()
+                .UsePoAConsensus()
                 .CheckCollateralCommitment()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
@@ -93,7 +93,8 @@ namespace Stratis.CirrusDnsD
         {
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
-                .ConfigurePoAConsensus()
+                .AddPoAFeature()
+                .UsePoAConsensus()
                 .UseApi()
                 .AddRPC()
                 .UseDns()

@@ -14,31 +14,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
     public static partial class IFullNodeBuilderExtensions
     {
         /// <summary>
-        /// Configures the node with the smart contract proof of authority consensus model.
-        /// </summary>
-        public static IFullNodeBuilder ConfigurePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
-        {
-            LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
-
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                features
-                    .AddFeature<ConsensusFeature>()
-                    .DependOn<SmartContractFeature>()
-                    .FeatureServices(services =>
-                    {
-                        AddCoindbImplementation(services, coindbType);
-
-                        services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
-                        services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
-                        services.AddSingleton<ICoinView, CachedCoinView>();
-                    });
-            });
-
-            return fullNodeBuilder;
-        }
-
-        /// <summary>
         /// Adds mining to the smart contract node when on a proof-of-authority network.
         /// </summary>
         public static IFullNodeBuilder AddPoAFeature(this IFullNodeBuilder fullNodeBuilder)
@@ -62,6 +37,31 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                         // Block Validation
                         services.AddSingleton<PoABlockHeaderValidator>();
                         services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
+                    });
+            });
+
+            return fullNodeBuilder;
+        }
+
+        /// <summary>
+        /// Configures the node with the smart contract proof of authority consensus model.
+        /// </summary>
+        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
+        {
+            LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
+
+            fullNodeBuilder.ConfigureFeature(features =>
+            {
+                features
+                    .AddFeature<ConsensusFeature>()
+                    .DependOn<PoAFeature>()
+                    .FeatureServices(services =>
+                    {
+                        AddCoindbImplementation(services, coindbType);
+
+                        services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
+                        services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
+                        services.AddSingleton<ICoinView, CachedCoinView>();
                     });
             });
 

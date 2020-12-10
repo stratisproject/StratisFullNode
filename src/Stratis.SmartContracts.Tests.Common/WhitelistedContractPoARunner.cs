@@ -43,7 +43,7 @@ namespace Stratis.SmartContracts.Tests.Common
                     options.UsePoAWhitelistedContracts();
                 })
                 .AddPoAFeature()
-                .ConfigurePoAConsensus()
+                .UsePoAConsensus()
                 .AddPoAMiningCapability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()

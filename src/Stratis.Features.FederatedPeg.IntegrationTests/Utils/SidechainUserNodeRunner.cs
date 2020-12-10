@@ -43,7 +43,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     options.UsePoAWhitelistedContracts();
                 })
                 .AddPoAFeature()
-                .ConfigurePoAConsensus()
+                .UsePoAConsensus()
                 .AddPoAMiningCapability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()

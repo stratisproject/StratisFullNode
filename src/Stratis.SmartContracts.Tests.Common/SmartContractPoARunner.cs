@@ -44,7 +44,7 @@ namespace Stratis.SmartContracts.Tests.Common
                             {
                                 options.UseReflectionExecutor();
                             })
-                            .ConfigurePoAConsensus()
+                            .UsePoAConsensus()
                             .AddPoAFeature()
                             .AddPoAMiningCapability()
                             .UseSmartContractWallet()

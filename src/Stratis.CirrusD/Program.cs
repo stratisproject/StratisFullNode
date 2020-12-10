@@ -66,7 +66,7 @@ namespace Stratis.CirrusD
                     options.UsePoAWhitelistedContracts();
                 })
                 .AddPoAFeature()
-                .ConfigurePoAConsensus()
+                .UsePoAConsensus()
                 .CheckCollateralCommitment()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
