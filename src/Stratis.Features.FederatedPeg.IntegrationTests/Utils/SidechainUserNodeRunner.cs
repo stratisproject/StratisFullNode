@@ -5,6 +5,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.IntegrationTests.Common;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
@@ -41,8 +42,9 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining(true)
+                .AddPoAFeature()
+                .ConfigurePoAConsensus()
+                .AddPoAMiningCapability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .UseMempool()

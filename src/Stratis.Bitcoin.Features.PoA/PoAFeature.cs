@@ -6,12 +6,9 @@ using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.Consensus;
-using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA.Behaviors;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -159,62 +156,22 @@ namespace Stratis.Bitcoin.Features.PoA
     /// </summary>
     public static class FullNodeBuilderConsensusExtension
     {
-        /// <summary>This is mandatory for all PoA networks.</summary>
-        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
+        /// <summary>Adds Proof-of-Authority mining to the side chain node.</summary>
+        public static IFullNodeBuilder AddPoAMiningCapability(this IFullNodeBuilder fullNodeBuilder)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
-                features
-                    .AddFeature<PoAFeature>()
-                    .DependOn<ConsensusFeature>()
-                    .FeatureServices(services =>
-                    {
-                        services.AddSingleton<IFederationManager, FederationManager>();
-                        services.AddSingleton<PoABlockHeaderValidator>();
-                        services.AddSingleton<IPoAMiner, PoAMiner>();
-                        services.AddSingleton<MinerSettings>();
-                        services.AddSingleton<PoAMinerSettings>();
-                        services.AddSingleton<ISlotsManager, SlotsManager>();
-                        services.AddSingleton<BlockDefinition, PoABlockDefinition>();
-                    });
-            });
-
-            LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                features
-                    .AddFeature<ConsensusFeature>()
-                    .FeatureServices(services =>
-                    {
-                        AddCoindbImplementation(services, coindbType);
-                        services.AddSingleton<ICoinView, CachedCoinView>();
-                        services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
-                        services.AddSingleton<IChainState, ChainState>();
-                        services.AddSingleton<ConsensusQuery>()
-                            .AddSingleton<INetworkDifficulty, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>())
-                            .AddSingleton<IGetUnspentTransaction, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>());
-
-                        // Voting.
-                        services.AddSingleton<VotingManager>();
-                        services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
-                        services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
-                        services.AddSingleton<IIdleFederationMembersKicker, IdleFederationMembersKicker>();
-                    });
+                IFeatureRegistration feature = fullNodeBuilder.Features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(PoAFeature));
+                feature.FeatureServices(services =>
+                {
+                    services.AddSingleton<IPoAMiner, PoAMiner>();
+                    services.AddSingleton<MinerSettings>();
+                    services.AddSingleton<PoAMinerSettings>();
+                    services.AddSingleton<BlockDefinition, PoABlockDefinition>();
+                });
             });
 
             return fullNodeBuilder;
-        }
-
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
-        {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
-
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
-
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
         }
     }
 }

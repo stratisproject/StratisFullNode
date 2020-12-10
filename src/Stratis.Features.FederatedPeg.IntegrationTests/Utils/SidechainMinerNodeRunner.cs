@@ -44,9 +44,8 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(this.counterChainNetwork)
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractCollateralPoAMining()
-                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
+                .ConfigurePoAConsensus()
+                .AddCollateralPoAMining()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()

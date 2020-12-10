@@ -4,7 +4,6 @@ using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
@@ -17,7 +16,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         /// <summary>
         /// Configures the node with the smart contract proof of authority consensus model.
         /// </summary>
-        public static IFullNodeBuilder UseSmartContractPoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
+        public static IFullNodeBuilder ConfigurePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
             LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
 
@@ -29,19 +28,40 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     .FeatureServices(services =>
                     {
                         AddCoindbImplementation(services, coindbType);
-                        services.AddSingleton<ICoinView, CachedCoinView>();
-                        services.AddSingleton<VotingManager>();
-                        services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
-                        services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
 
                         services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
                         services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
+                        services.AddSingleton<ICoinView, CachedCoinView>();
+                    });
+            });
 
-                        // Voting.
+            return fullNodeBuilder;
+        }
+
+        /// <summary>
+        /// Adds mining to the smart contract node when on a proof-of-authority network.
+        /// </summary>
+        public static IFullNodeBuilder AddPoAFeature(this IFullNodeBuilder fullNodeBuilder)
+        {
+            fullNodeBuilder.ConfigureFeature(features =>
+            {
+                features
+                    .AddFeature<PoAFeature>()
+                    .FeatureServices(services =>
+                    {
+                        // Voting & Polls 
                         services.AddSingleton<VotingManager>();
-                        services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
                         services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
+                        services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
                         services.AddSingleton<IIdleFederationMembersKicker, IdleFederationMembersKicker>();
+
+                        // Federation Awareness
+                        services.AddSingleton<IFederationManager, FederationManager>();
+                        services.AddSingleton<ISlotsManager, SlotsManager>();
+
+                        // Block Validation
+                        services.AddSingleton<PoABlockHeaderValidator>();
+                        services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                     });
             });
 
@@ -58,35 +78,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 
             if (coindbType == DbType.Faster)
                 services.AddSingleton<ICoindb, FasterCoindb>();
-        }
-
-        /// <summary>
-        /// Adds mining to the smart contract node when on a proof-of-authority network.
-        /// </summary>
-        public static IFullNodeBuilder UseSmartContractPoAMining(this IFullNodeBuilder fullNodeBuilder, bool isMiner = false)
-        {
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                features
-                    .AddFeature<PoAFeature>()
-                    .FeatureServices(services =>
-                    {
-                        services.AddSingleton<IFederationManager, FederationManager>();
-                        services.AddSingleton<PoABlockHeaderValidator>();
-                        services.AddSingleton<ISlotsManager, SlotsManager>();
-                        services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
-
-                        if (isMiner)
-                        {
-                            services.AddSingleton<IPoAMiner, PoAMiner>();
-                            services.AddSingleton<PoAMinerSettings>();
-                            services.AddSingleton<MinerSettings>();
-                            services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
-                        }
-                    });
-            });
-
-            return fullNodeBuilder;
         }
     }
 }

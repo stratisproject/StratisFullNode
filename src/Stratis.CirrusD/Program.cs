@@ -65,9 +65,9 @@ namespace Stratis.CirrusD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining() // TODO: this needs to be refactored and removed as it does not make sense to call this for non-mining nodes.
-                .CheckForPoAMembersCollateral(false) // This is a non-mining node so we will only check the commitment height data and not do the full set of collateral checks.
+                .AddPoAFeature()
+                .ConfigurePoAConsensus()
+                .CheckCollateralCommitment()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .UseApi()
