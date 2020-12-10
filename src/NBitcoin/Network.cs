@@ -445,6 +445,12 @@ namespace NBitcoin
         /// <summary> This is used for reward distribution transactions. </summary>
         public string CirrusRewardDummyAddress { get; protected set; }
 
+        /// <summary>The height at which reward batching will be activated.</summary>
+        public int RewardClaimerBatchActivationHeight { get; set; }
+
+        /// <summary>Rewards will be claimed every N blocks, as defined here.</summary>
+        public int RewardClaimerBlockInterval { get; set; }
+
         /// <summary>
         /// Mines a new genesis block, to use with a new network.
         /// Typically, 3 such genesis blocks need to be created when bootstrapping a new coin: for Main, Test and Reg networks.

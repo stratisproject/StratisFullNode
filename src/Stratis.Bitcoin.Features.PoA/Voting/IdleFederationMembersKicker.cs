@@ -139,6 +139,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <inheritdoc />
         public bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds)
         {
+            Guard.NotNull(pubKey, nameof(pubKey));
+
+            if (this.fedPubKeysByLastActiveTime == null)
+                throw new Exception($"'{nameof(IdleFederationMembersKicker)}' has not been initialized.");
+
             if (!this.fedPubKeysByLastActiveTime.TryGetValue(pubKey, out uint lastActiveTime))
             {
                 inactiveForSeconds = 0;

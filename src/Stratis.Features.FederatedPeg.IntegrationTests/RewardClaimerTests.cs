@@ -18,6 +18,8 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             public StraxRegTestAdjusedCoinbaseMaturity()
             {
                 this.Name = Guid.NewGuid().ToString("N").Substring(0, 7);
+                this.RewardClaimerBatchActivationHeight = 30;
+                this.RewardClaimerBlockInterval = 10;
 
                 typeof(Consensus).GetProperty("CoinbaseMaturity").SetValue(this.Consensus, 1);
                 this.Consensus.Options = new ConsensusOptionsAdjustedMinStakeConfirmations();
@@ -34,7 +36,6 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 maxStandardTxSigopsCost: 20_000 / 5,
                 witnessScaleFactor: 4)
             {
-                this.RewardClaimerBatchActivationHeight = 30;
             }
 
             public override int GetStakeMinConfirmations(int height, Network network)

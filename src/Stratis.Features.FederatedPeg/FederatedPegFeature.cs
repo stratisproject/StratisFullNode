@@ -336,7 +336,7 @@ namespace Stratis.Features.FederatedPeg
                 benchLog.AppendLine();
             }
 
-            benchLog.AppendLine("====== NodeStore ======");
+            benchLog.AppendLine("====== Cross Chain Transfer Store ======");
             this.AddBenchmarkLine(benchLog, new (string, int)[] {
                 ("Height:", LoggingConfiguration.ColumnLength),
                 (this.crossChainTransferStore.TipHashAndHeight.Height.ToString(), LoggingConfiguration.ColumnLength),
