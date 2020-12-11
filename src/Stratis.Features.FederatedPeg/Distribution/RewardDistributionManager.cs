@@ -4,8 +4,8 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Features.Collateral;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {

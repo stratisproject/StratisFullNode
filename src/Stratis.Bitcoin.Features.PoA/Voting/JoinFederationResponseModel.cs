@@ -1,11 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Stratis.Bitcoin.Features.BlockStore.Models
+namespace Stratis.Features.PoA.Voting
 {
     /// <summary>
     /// A class containing the necessary parameters for a block search request.
     /// </summary>
-    public class JoinFederationResponseModel
+    public sealed class JoinFederationResponseModel
     {
         /// <summary>
         /// The collateral address.

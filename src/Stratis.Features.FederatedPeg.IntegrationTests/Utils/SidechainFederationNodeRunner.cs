@@ -22,7 +22,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 {
     public class SidechainFederationNodeRunner : NodeRunner
     {
-        private bool testingFederation;
+        private readonly bool testingFederation;
 
         private readonly IDateTimeProvider timeProvider;
 
@@ -44,7 +44,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
         {
             var settings = new NodeSettings(this.Network, args: new string[] { "-conf=poa.conf", "-datadir=" + this.DataFolder });
 
-            var builder = new FullNodeBuilder()
+            IFullNodeBuilder builder = new FullNodeBuilder()
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(this.counterChainNetwork)

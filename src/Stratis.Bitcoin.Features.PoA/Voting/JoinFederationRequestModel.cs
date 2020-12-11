@@ -1,12 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 
-namespace Stratis.Bitcoin.Features.BlockStore.Models
+namespace Stratis.Features.PoA.Voting
 {
     /// <summary>
     /// A class containing the necessary parameters for a join federation request.
     /// </summary>
-    public class JoinFederationRequestModel
+    public sealed class JoinFederationRequestModel
     {
         /// <summary>
         /// The collateral address.

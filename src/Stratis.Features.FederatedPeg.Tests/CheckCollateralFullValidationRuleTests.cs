@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Collateral;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
