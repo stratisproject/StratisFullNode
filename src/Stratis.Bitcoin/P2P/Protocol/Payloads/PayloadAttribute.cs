@@ -58,22 +58,31 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
         /// </summary>
         private readonly Dictionary<Type, string> typeToName;
 
-        private Dictionary<Type, PayloadTypeMetric> payloadTypeMetrics;
+        private readonly Dictionary<Type, PayloadTypeMetric> payloadTypeMetrics;
+
+        private readonly object locker = new object();
 
         public PayloadTypeMetric GetPayloadTypeMetric(Type type)
         {
-            if (!this.payloadTypeMetrics.TryGetValue(type, out PayloadTypeMetric metric))
+            lock (this.locker)
             {
-                metric = new PayloadTypeMetric();
-                this.payloadTypeMetrics[type] = metric;
-            }
+                if (!this.payloadTypeMetrics.TryGetValue(type, out PayloadTypeMetric metric))
+                {
+                    metric = new PayloadTypeMetric();
 
-            return metric;
+                        this.payloadTypeMetrics[type] = metric;
+                }
+
+                return metric;
+            }
         }
 
         public Dictionary<Type, PayloadTypeMetric> GetPayloadTypeMetrics()
         {
-            return this.payloadTypeMetrics;
+            lock (this.locker)
+            {
+                return this.payloadTypeMetrics;
+            }
         }
 
         public PayloadTypeMetric GetPayloadTypeMetric(Payload payload)
@@ -87,16 +96,22 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
         {
             PayloadTypeMetric metric = this.GetPayloadTypeMetric(message.Payload);
 
-            metric.SentCount++;
-            metric.BytesSentCount += bytesSent;
+            lock (this.locker)
+            {
+                metric.SentCount++;
+                metric.BytesSentCount += bytesSent;
+            }
         }
 
         public void RecordMessageReceivedMetric(Message message, int bytesReceived)
         {
             PayloadTypeMetric metric = this.GetPayloadTypeMetric(message.Payload);
 
-            metric.ReceivedCount++;
-            metric.BytesReceivedCount += bytesReceived;
+            lock (this.locker)
+            {
+                metric.ReceivedCount++;
+                metric.BytesReceivedCount += bytesReceived;
+            }
         }
 
         /// <summary>
