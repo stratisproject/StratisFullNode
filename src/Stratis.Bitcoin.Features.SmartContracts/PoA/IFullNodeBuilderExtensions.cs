@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
     public static partial class IFullNodeBuilderExtensions
     {
         /// <summary>
-        /// Adds mining to the smart contract node when on a proof-of-authority network.
+        /// Adds common PoA functionality to the side chain node.
         /// </summary>
         public static IFullNodeBuilder AddPoAFeature(this IFullNodeBuilder fullNodeBuilder)
         {
@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         }
 
         /// <summary>
-        /// Configures the node with the smart contract proof of authority consensus model.
+        /// Configures the side chain node with the PoA consensus rule engine.
         /// </summary>
         public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
         {
