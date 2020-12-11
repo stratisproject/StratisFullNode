@@ -37,9 +37,9 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
 
         public int SentCount { get; set; }
 
-        public int BytesSentCount { get; set; }
+        public long BytesSentCount { get; set; }
 
-        public int BytesReceivedCount { get; set; }
+        public long BytesReceivedCount { get; set; }
     }
 
     /// <summary>
