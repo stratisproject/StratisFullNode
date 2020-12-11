@@ -191,7 +191,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                return new List<Poll>(this.polls.Where(x => !x.IsPending));
+                return new List<Poll>(this.polls.Where(x => !x.IsPending && !x.IsExpired));
             }
         }
 
