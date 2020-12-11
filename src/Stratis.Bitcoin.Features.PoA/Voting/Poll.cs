@@ -17,10 +17,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <c>true</c> if poll still didn't get enough votes.
         /// <c>false</c> in case majority of fed members voted in favor and result of the poll was scheduled to be applied after max reorg blocks are mined.
         /// </summary>
-        public bool IsPending => this.PollVotedInFavorBlockData == null;
+        public bool IsPending => this.PollVotedInFavorBlockData == null && !this.IsExpired;
 
         /// <summary><c>true</c> if poll wasn't executed yet; <c>false</c> otherwise.</summary>
-        public bool IsExecuted => this.PollExecutedBlockData != null;
+        public bool IsExecuted => this.PollExecutedBlockData?.Height > 0;
+
+        /// <summary><c>true</c> if poll has expired; <c>false</c> otherwise.</summary>
+        public bool IsExpired => this.PollExecutedBlockData?.Height == 0;
 
         public int Id;
 

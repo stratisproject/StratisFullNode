@@ -18,6 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public class VotingManager : IDisposable
     {
+        private const int PollExpiryBlocks = 50000;
+
         private readonly IFederationManager federationManager;
 
         private readonly VotingDataEncoder votingDataEncoder;
@@ -160,7 +162,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // following scenario: federation adds a hash or fed member or does any other revertable action, then reverts
             // the action (removes the hash) and then reapplies it again. To allow for this scenario we have to exclude
             // executed polls here.
-            List<Poll> finishedPolls = this.polls.Where(x => !x.IsPending && !x.IsExecuted).ToList();
+            List<Poll> finishedPolls = this.polls.Where(x => !x.IsPending && !x.IsExecuted && !x.IsExpired).ToList();
 
             for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
             {
@@ -184,14 +186,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Provides a collection of polls that are already finished and their results applied.</summary>
+        /// <summary>Provides a collection of polls that were approved by majority vote.</summary>
         public List<Poll> GetFinishedPolls()
         {
             this.EnsureInitialized();
 
             lock (this.locker)
             {
-                return new List<Poll>(this.polls.Where(x => !x.IsPending));
+                return new List<Poll>(this.polls.Where(x => !x.IsPending && !x.IsExpired));
             }
         }
 
@@ -206,6 +208,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        /// <summary>Provides a collection of polls that are expired.</summary>
+        public List<Poll> GetExpiredPolls()
+        {
+            this.EnsureInitialized();
+
+            lock (this.locker)
+            {
+                return new List<Poll>(this.polls.Where(x => x.IsExpired));
+            }
+        }
+
         /// <summary>
         /// Tells us whether we have already voted to boot a federation member.
         /// </summary>
@@ -213,7 +226,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             List<Poll> finishedPolls = this.GetFinishedPolls();
 
-            if (finishedPolls.Any(x => !x.IsExecuted &&
+            if (finishedPolls.Any(x => !x.IsExecuted && !x.IsExpired &&
                   x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
                   x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {
@@ -347,7 +360,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 lock (this.locker)
                 {
-                    foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollVotedInFavorBlockData.Hash == newFinalizedHash).ToList())
+                    foreach (Poll poll in this.polls.Where(x => x.IsPending && x.PollStartBlockData.Height < (chBlock.ChainedHeader.Height - PollExpiryBlocks)).ToList())
+                    {
+                        this.logger.LogDebug("Expired poll '{0}'.", poll);
+
+                        poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader.HashBlock, 0);
+                        this.pollsRepository.UpdatePoll(poll);
+                    }
+
+                    foreach (Poll poll in this.polls.Where(x => !x.IsExpired && !x.IsPending && x.PollVotedInFavorBlockData.Hash == newFinalizedHash).ToList())
                     {
                         this.logger.LogDebug("Applying poll '{0}'.", poll);
                         this.pollResultExecutor.ApplyChange(poll.VotingData);
@@ -475,10 +496,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
+                foreach (Poll poll in this.polls.Where(x => x.IsExecuted && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
                 {
                     this.logger.LogDebug("Reverting poll execution '{0}'.", poll);
                     this.pollResultExecutor.RevertChange(poll.VotingData);
+
+                    poll.PollExecutedBlockData = null;
+                    this.pollsRepository.UpdatePoll(poll);
+                }
+
+                foreach (Poll poll in this.polls.Where(x => x.IsExpired && x.PollStartBlockData.Height >= (chBlock.ChainedHeader.Height - PollExpiryBlocks)).ToList())
+                {
+                    this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
 
                     poll.PollExecutedBlockData = null;
                     this.pollsRepository.UpdatePoll(poll);
@@ -545,11 +574,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
+                log.AppendLine("Expired Member Polls".PadRight(30) + ": " + GetExpiredPolls().MemberPolls().Count);
                 log.AppendLine("Pending Member Polls".PadRight(30) + ": " + GetPendingPolls().MemberPolls().Count);
-                log.AppendLine("Finished Member Polls".PadRight(30) + ": " + GetFinishedPolls().MemberPolls().Count);
+                log.AppendLine("Approved Member Polls".PadRight(30) + ": " + GetFinishedPolls().MemberPolls().Count);
                 log.AppendLine("Executed Member Polls".PadRight(30) + ": " + GetExecutedPolls().MemberPolls().Count);
+                log.AppendLine("Expired Whitelist Polls".PadRight(30) + ": " + GetExpiredPolls().WhitelistPolls().Count);
                 log.AppendLine("Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
-                log.AppendLine("Finished Whitelist Polls".PadRight(30) + ": " + GetFinishedPolls().WhitelistPolls().Count);
+                log.AppendLine("Approved Whitelist Polls".PadRight(30) + ": " + GetFinishedPolls().WhitelistPolls().Count);
                 log.AppendLine("Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
                 log.AppendLine("Scheduled Votes".PadRight(30) + ": " + this.scheduledVotingData.Count);
                 log.AppendLine($"Scheduled votes will be added to the next block this node mines.");
