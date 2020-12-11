@@ -160,7 +160,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // following scenario: federation adds a hash or fed member or does any other revertable action, then reverts
             // the action (removes the hash) and then reapplies it again. To allow for this scenario we have to exclude
             // executed polls here.
-            List<Poll> finishedPolls = this.polls.Where(x => !x.IsPending && !x.IsExecuted).ToList();
+            List<Poll> finishedPolls = this.polls.Where(x => !x.IsPending && !x.IsExecuted && !x.IsExpired).ToList();
 
             for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
             {
@@ -213,7 +213,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             List<Poll> finishedPolls = this.GetFinishedPolls();
 
-            if (finishedPolls.Any(x => !x.IsExecuted &&
+            if (finishedPolls.Any(x => !x.IsExecuted && !x.IsExpired &&
                   x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
                   x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {

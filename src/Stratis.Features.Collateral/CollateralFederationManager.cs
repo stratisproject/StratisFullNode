@@ -160,7 +160,7 @@ namespace Stratis.Features.Collateral
             List<Poll> finishedPolls = votingManager.GetFinishedPolls();
 
             member = finishedPolls
-                .Where(x => !x.IsExecuted && x.VotingData.Key == voteKey)
+                .Where(x => !x.IsExecuted && !x.IsExpired && x.VotingData.Key == voteKey)
                 .Select(x => this.GetMember(x.VotingData))
                 .FirstOrDefault(x => x.CollateralMainchainAddress == address);
 
