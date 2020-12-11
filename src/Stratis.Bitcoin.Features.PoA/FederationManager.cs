@@ -81,12 +81,14 @@ namespace Stratis.Bitcoin.Features.PoA
         private ChainedHeader lastBlockChecked;
 
         public FederationManager(
+            ICounterChainSettings counterChainSettings,
             IFullNode fullNode,
-            NodeSettings nodeSettings,
             Network network,
+            NodeSettings nodeSettings,
             ILoggerFactory loggerFactory,
             ISignals signals)
         {
+            this.counterChainSettings = counterChainSettings;
             this.fullNode = fullNode;
             this.network = Guard.NotNull(network as PoANetwork, nameof(network));
             this.nodeSettings = Guard.NotNull(nodeSettings, nameof(nodeSettings));

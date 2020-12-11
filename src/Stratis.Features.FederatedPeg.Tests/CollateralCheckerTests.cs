@@ -69,7 +69,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             var fullNode = new Mock<IFullNode>();
-            IFederationManager federationManager = new FederationManager(fullNode.Object, nodeSettings, network, loggerFactory, signals);
+
+            IFederationManager federationManager = new FederationManager(counterChainSettings, fullNode.Object, network, nodeSettings, loggerFactory, signals);
             var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
             var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
             votingManager.Initialize();
@@ -79,7 +80,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             federationManager.Initialize();
 
             this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
-
         }
 
         [Fact]

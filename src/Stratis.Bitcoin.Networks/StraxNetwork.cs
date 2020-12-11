@@ -132,8 +132,15 @@ namespace Stratis.Bitcoin.Networks
             5. Retrieve the Nonce and Time values from the resulting block header and insert them into the network definition
             */
 
-            return genesis; 
+            return genesis;
 
         }
+
+        public static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
+        {
+            { NetworkType.Mainnet, Networks.Strax.Mainnet },
+            { NetworkType.Testnet, Networks.Strax.Testnet },
+            { NetworkType.Regtest, Networks.Strax.Regtest }
+        };
     }
 }

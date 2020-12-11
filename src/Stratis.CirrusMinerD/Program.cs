@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
@@ -13,7 +11,6 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
@@ -32,13 +29,6 @@ namespace Stratis.CirrusMinerD
     {
         private const string MainchainArgument = "-mainchain";
         private const string SidechainArgument = "-sidechain";
-
-        private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
-        {
-            { NetworkType.Mainnet, Networks.Strax.Mainnet },
-            { NetworkType.Testnet, Networks.Strax.Testnet },
-            { NetworkType.Regtest, Networks.Strax.Regtest }
-        };
 
         public static void Main(string[] args)
         {
@@ -75,9 +65,6 @@ namespace Stratis.CirrusMinerD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
-            bool enableFedKicking = nodeSettings.ConfigReader.GetOrDefault("enablefedkicking", true);
-            ((PoAConsensusOptions)nodeSettings.Network.Consensus.Options).AutoKickIdleMembers = enableFedKicking;
-
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
@@ -86,7 +73,7 @@ namespace Stratis.CirrusMinerD
                 .AddPoACollateralMiningCapability()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
-                .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()

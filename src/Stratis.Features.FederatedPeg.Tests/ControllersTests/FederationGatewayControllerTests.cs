@@ -16,6 +16,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -201,14 +202,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             CreateFederationManager(nodeSettings);
 
-            var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
+            var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
                 this.crossChainTransferStore,
                 this.loggerFactory,
-                this.GetMaturedBlocksProvider(settings),
+                this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
-                settings,
+                federatedPegSettings,
                 this.federationWalletManager,
                 this.signedMultisigTransactionBroadcaster,
                 this.federationManager);
@@ -233,7 +234,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var fullNode = new Mock<IFullNode>();
 
-            this.federationManager = new FederationManager(fullNode.Object, NodeSettings.Default(this.network), this.network, this.loggerFactory, this.signals);
+            var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
+
+            this.federationManager = new FederationManager(counterChainSettings, fullNode.Object, this.network, NodeSettings.Default(this.network), this.loggerFactory, this.signals);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 

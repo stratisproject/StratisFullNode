@@ -14,8 +14,10 @@ using Stratis.Bitcoin.Features.SignalR.Events;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
@@ -63,6 +65,11 @@ namespace Stratis.CirrusD
                 .AddPoAFeature()
                 .UsePoAConsensus()
                 .CheckCollateralCommitment()
+
+                // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
+                // Perhaps we can introduce a block height check rather?
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .UseApi()

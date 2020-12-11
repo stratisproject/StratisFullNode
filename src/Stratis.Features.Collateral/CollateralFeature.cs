@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Features.Collateral.CounterChain;
 
@@ -66,6 +67,7 @@ namespace Stratis.Features.Collateral
                     services.AddSingleton<PoAMinerSettings>();
                     services.AddSingleton<MinerSettings>();
                     services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
+                    services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
 
                     services.AddSingleton<ICollateralChecker, CollateralChecker>();
                 });
