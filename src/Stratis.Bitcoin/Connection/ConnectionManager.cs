@@ -356,7 +356,7 @@ namespace Stratis.Bitcoin.Connection
 
             builder.AppendLine();
 
-            string ToMB(int bytes)
+            string ToMB(long bytes)
             {
                 return string.Format("{0:0.000}", (double)((bytes + 500) / 1000) / 1000);
             }
@@ -364,8 +364,8 @@ namespace Stratis.Bitcoin.Connection
             var metrics = this.payloadProvider.GetPayloadTypeMetrics();
             if (metrics.Count > 0)
             {
-                int bytesIn = metrics.Sum(m => m.Value.BytesReceivedCount);
-                int bytesOut = metrics.Sum(m => m.Value.BytesSentCount);
+                long bytesIn = metrics.Sum(m => m.Value.BytesReceivedCount);
+                long bytesOut = metrics.Sum(m => m.Value.BytesSentCount);
                 builder.AppendLine($"---Payload Bandwidth Breakdown (In/Out MB = {ToMB(bytesIn)}/{ToMB(bytesOut)})---");
                 int i = 0;
                 foreach (Type payloadType in metrics.Keys)

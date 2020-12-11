@@ -60,8 +60,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
             {
-                var headerOut = this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(engine.Get(DBH.Key(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHashHeightPair.Height))));
-                var hashHeightPairOut = this.DBreezeSerializer.Deserialize<HashHeightPair>(engine.Get(DBH.Key(BlockHashHeightTable, new byte[] { 1 })));
+                var headerOut = this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(engine.Get(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHashHeightPair.Height)));
+                var hashHeightPairOut = this.DBreezeSerializer.Deserialize<HashHeightPair>(engine.Get(BlockHashHeightTable, new byte[] { 1 }));
 
                 headerOut.Should().NotBeNull();
                 headerOut.GetHash().Should().Be(provenBlockHeaderIn.GetHash());
@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
             {
-                engine.Put(DBH.Key(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight)), this.dBreezeSerializer.Serialize(headerIn));
+                engine.Put(ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight), this.dBreezeSerializer.Serialize(headerIn));
             }
 
             // Query the repository for the item that was inserted in the above code.
@@ -134,8 +134,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, folder))
             {
-                engine.Put(DBH.Key(ProvenBlockHeaderTable, BitConverter.GetBytes(1)), this.dBreezeSerializer.Serialize(CreateNewProvenBlockHeaderMock()));
-                engine.Put(DBH.Key(BlockHashHeightTable, new byte[0]), this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(), 1)));
+                engine.Put(ProvenBlockHeaderTable, BitConverter.GetBytes(1), this.dBreezeSerializer.Serialize(CreateNewProvenBlockHeaderMock()));
+                engine.Put(BlockHashHeightTable, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(), 1)));
             }
 
             using (ProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))

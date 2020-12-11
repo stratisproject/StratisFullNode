@@ -321,14 +321,14 @@ namespace Stratis.Bitcoin.Base
             this.logger.LogInformation("Disposing time sync behavior.");
             this.timeSyncBehaviorState.Dispose();
 
+            this.logger.LogInformation("Disposing consensus manager.");
+            this.consensusManager.Dispose();
+
             this.logger.LogInformation("Disposing block puller.");
             this.blockPuller.Dispose();
 
             this.logger.LogInformation("Disposing partial validator.");
             this.partialValidator.Dispose();
-
-            this.logger.LogInformation("Disposing consensus manager.");
-            this.consensusManager.Dispose();
 
             this.logger.LogInformation("Disposing consensus rules.");
             this.consensusRules.Dispose();

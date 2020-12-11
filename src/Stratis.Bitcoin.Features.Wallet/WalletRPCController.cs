@@ -467,7 +467,11 @@ namespace Stratis.Bitcoin.Features.Wallet
                 throw new ArgumentException(nameof(txid));
 
             if (include_watchonly)
-                return await GetWatchOnlyTransactionAsync(trxid);
+            {
+                WalletHistoryModel history = await GetWatchOnlyTransactionAsync(trxid);
+                if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) != 0)
+                    return history;
+            }
 
             // First check the regular wallet accounts.
             WalletAccountReference accountReference = this.GetWalletAccountReference();
