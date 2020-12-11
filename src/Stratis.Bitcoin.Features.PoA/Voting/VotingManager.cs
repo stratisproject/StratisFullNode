@@ -213,7 +213,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             List<Poll> finishedPolls = this.GetFinishedPolls();
 
-            if (finishedPolls.Any(x => !x.IsExecuted && !x.IsExpired &&
+            if (finishedPolls.Any(x => !x.IsExecuted &&
                   x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
                   x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {
