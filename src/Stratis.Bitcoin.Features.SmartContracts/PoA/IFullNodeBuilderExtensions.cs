@@ -34,9 +34,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                         services.AddSingleton<IFederationManager, FederationManager>();
                         services.AddSingleton<ISlotsManager, SlotsManager>();
 
-                        // Block Validation
+                        // Rule Related
                         services.AddSingleton<PoABlockHeaderValidator>();
-                        services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                     });
             });
 

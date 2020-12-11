@@ -7,7 +7,6 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SignalR;
 using Stratis.Bitcoin.Features.SignalR.Broadcasters;
@@ -34,14 +33,10 @@ namespace Stratis.CirrusD
         {
             try
             {
-                var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector,
-                    protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
+                var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
                 };
-
-                bool enableFedKicking = nodeSettings.ConfigReader.GetOrDefault("enablefedkicking", true);
-                ((PoAConsensusOptions)nodeSettings.Network.Consensus.Options).AutoKickIdleMembers = enableFedKicking;
 
                 IFullNode node = GetSideChainFullNode(nodeSettings);
 

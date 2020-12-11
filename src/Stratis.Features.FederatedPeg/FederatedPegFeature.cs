@@ -16,6 +16,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
+using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -417,6 +418,7 @@ namespace Stratis.Features.FederatedPeg
                             services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
                             services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
                             services.AddSingleton<BlockDefinition, FederatedPegBlockDefinition>();
+                            services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                         }
 
                         // The reward claimer only runs on the main chain.
