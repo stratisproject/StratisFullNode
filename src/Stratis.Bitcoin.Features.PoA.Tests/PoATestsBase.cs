@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             this.loggerFactory = new LoggerFactory();
             this.signals = new Signals.Signals(this.loggerFactory, null);
-            this.network = network == null ? new TestPoANetwork() : network;
+            this.network = network ?? new TestPoANetwork();
             this.consensusOptions = this.network.ConsensusOptions;
             this.dBreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
 
@@ -76,7 +76,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.chainState = new ChainState();
 
-
             this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, new DateTimeProvider(), this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
                 this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, this.chainState, new InvalidBlockHashStore(timeProvider),
                 new NodeStats(timeProvider, this.loggerFactory), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider, new ConsensusRulesContainer());
@@ -91,17 +90,21 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             string dir = TestBase.CreateTestDir(caller);
 
             var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
-            var keyValueRepo = new KeyValueRepository(dir, dbreezeSerializer);
 
-            var settings = new NodeSettings(network, args: new string[] { $"-datadir={dir}" });
+            var nodeSettings = new NodeSettings(network, args: new string[] { $"-datadir={dir}" });
 
             Key federationKey = new Mnemonic("lava frown leave wedding virtual ghost sibling able mammal liar wide wisdom").DeriveExtKey().PrivateKey;
-            new KeyTool(settings.DataFolder).SavePrivateKey(federationKey);
+            new KeyTool(nodeSettings.DataFolder).SavePrivateKey(federationKey);
+
+            var consensusManager = new Mock<IConsensusManager>();
+            consensusManager.Setup(c => c.Tip).Returns(new ChainedHeader(network.GetGenesis().Header, network.GenesisHash, 0));
 
             var fullNode = new Mock<IFullNode>();
-            var federationManager = new FederationManager(settings, network, loggerFactory, keyValueRepo, signals, fullNode.Object);
+            fullNode.Setup(x => x.NodeService<IConsensusManager>(false)).Returns(consensusManager.Object);
+
+            var federationManager = new FederationManager(fullNode.Object, nodeSettings, network, loggerFactory, signals);
             var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(settings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
@@ -109,7 +112,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
             var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager,
-                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, settings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
+                new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
             votingManager.Initialize();
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
             federationManager.Initialize();

@@ -448,6 +448,7 @@ namespace Stratis.Features.FederatedPeg
                 .DependOn<FederatedPegFeature>()
                 .FeatureServices(services =>
                 {
+                    services.AddSingleton<IFederationManager, FederationManager>();
                     services.AddSingleton<PoABlockHeaderValidator>();
                     services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
                     services.AddSingleton<ISlotsManager, SlotsManager>();

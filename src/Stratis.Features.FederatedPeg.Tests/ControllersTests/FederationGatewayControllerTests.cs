@@ -20,7 +20,6 @@ using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -48,11 +47,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private readonly IFederatedPegSettings federatedPegSettings;
 
-        private CollateralFederationManager federationManager;
+        private IFederationManager federationManager;
 
         private readonly IFederationWalletManager federationWalletManager;
-
-        private readonly IKeyValueRepository keyValueRepository;
 
         private readonly ISignals signals;
 
@@ -70,7 +67,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
-            this.keyValueRepository = Substitute.For<IKeyValueRepository>();
             this.signals = new Signals(this.loggerFactory, null);
 
             this.signedMultisigTransactionBroadcaster = Substitute.For<ISignedMultisigTransactionBroadcaster>();
@@ -237,7 +233,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var fullNode = new Mock<IFullNode>();
 
-            this.federationManager = new CollateralFederationManager(NodeSettings.Default(this.network), this.network, this.loggerFactory, this.keyValueRepository, this.signals, null, fullNode.Object, null);
+            this.federationManager = new FederationManager(fullNode.Object, NodeSettings.Default(this.network), this.network, this.loggerFactory, this.signals);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 

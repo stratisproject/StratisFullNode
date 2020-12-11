@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Features.PoA.Collateral;
 
 namespace Stratis.Features.Collateral
 {
