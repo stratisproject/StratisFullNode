@@ -142,7 +142,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         }
 
         /// <summary>Adds Proof-of-Authority mining to the side chain node.</summary>
-        public static IFullNodeBuilder AddPoAMiningCapability(this IFullNodeBuilder fullNodeBuilder)
+        /// <typeparam name="T">The type of block definition to use.</typeparam>
+        public static IFullNodeBuilder AddPoAMiningCapability<T>(this IFullNodeBuilder fullNodeBuilder) where T : BlockDefinition
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -152,7 +153,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                     services.AddSingleton<IPoAMiner, PoAMiner>();
                     services.AddSingleton<MinerSettings>();
                     services.AddSingleton<PoAMinerSettings>();
-                    services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
+                    services.AddSingleton<BlockDefinition, T>();
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                 });
             });

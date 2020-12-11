@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 .SetCounterChainNetwork(this.counterChain)
                 .AddPoAFeature()
                 .UsePoAConsensus()
-                .AddPoAMiningCapability()
+                .AddPoAMiningCapability<PoABlockDefinition>()
                 .AddDynamicMemberhip()
                 .UseMempool()
                 .UseWallet()

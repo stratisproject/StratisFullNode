@@ -4,7 +4,6 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.IntegrationTests.Common;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
@@ -12,7 +11,9 @@ using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.SmartContracts.Tests.Common
@@ -44,7 +45,8 @@ namespace Stratis.SmartContracts.Tests.Common
                 })
                 .AddPoAFeature()
                 .UsePoAConsensus()
-                .AddPoAMiningCapability()
+                .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
+                .SetCounterChainNetwork(new StraxRegTest())
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .ReplaceTimeProvider(this.dateTimeProvider)

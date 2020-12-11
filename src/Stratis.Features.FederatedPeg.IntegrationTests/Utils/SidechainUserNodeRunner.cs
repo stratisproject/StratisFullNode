@@ -21,7 +21,6 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 {
     public class SidechainUserNodeRunner : NodeRunner
     {
-
         private readonly IDateTimeProvider timeProvider;
 
         public SidechainUserNodeRunner(string dataDir, string agent, Network network, IDateTimeProvider dateTimeProvider)
@@ -45,7 +44,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 })
                 .AddPoAFeature()
                 .UsePoAConsensus()
-                .AddPoAMiningCapability()
+                .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
                 .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
