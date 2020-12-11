@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     // Gather all past and present mining public keys.
                     IEnumerable<PubKey> genesisFederation = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Select(m => m.PubKey);
                     var knownKeys = new HashSet<PubKey>(genesisFederation);
-                    foreach (Poll poll in this.votingManager.GetFinishedPolls().Where(x => ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
+                    foreach (Poll poll in this.votingManager.GetApprovedPolls().Where(x => ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
                     {
                         IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
                         knownKeys.Add(federationMember.PubKey);

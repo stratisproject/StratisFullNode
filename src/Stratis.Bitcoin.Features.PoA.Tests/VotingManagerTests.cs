@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 this.TriggerOnBlockConnected(this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
             }
 
-            Assert.Single(this.votingManager.GetFinishedPolls());
+            Assert.Single(this.votingManager.GetApprovedPolls());
         }
 
         [Fact]
@@ -80,7 +80,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 this.TriggerOnBlockConnected(this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
             }
 
-            Assert.Single(this.votingManager.GetFinishedPolls());
+            Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
 
             // Now that poll is complete, add another vote for it.
@@ -88,14 +88,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.TriggerOnBlockConnected(blockToDisconnect);
 
             // Now we have 1 finished and 1 pending for the same data.
-            Assert.Single(this.votingManager.GetFinishedPolls());
+            Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Single(this.votingManager.GetPendingPolls());
 
             // This previously caused an error because of Single() being used.
             this.TriggerOnBlockDisconnected(blockToDisconnect);
 
             // VotingManager cleverly removed the pending poll but kept the finished poll.
-            Assert.Single(this.votingManager.GetFinishedPolls());
+            Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
         }
 
