@@ -18,6 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public class VotingManager : IDisposable
     {
+        // Warning: Setting this to a value under 32,000 will require dealing with legacy
+        // voting history where some polls took that long and were applied.
         private const int PollExpiryBlocks = 50000;
 
         private readonly IFederationManager federationManager;
