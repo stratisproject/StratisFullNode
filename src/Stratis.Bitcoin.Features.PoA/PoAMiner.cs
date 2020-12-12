@@ -283,13 +283,12 @@ namespace Stratis.Bitcoin.Features.PoA
             }
             else
             {
-                // Get an unused address from the wallet.
-                // This happens once per node startup in order to prevent reward outputs getting strewn across multiple addresses.
+                // Get the first address from the wallet. In a network with an account-based model the mined UTXOs should all be sent to a predictable address.
                 if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
                 {
                     this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
 
-                    // The node could not have a wallet.
+                    // The node could not have a wallet, or the first account/address could have been incorrectly created.
                     if (this.walletScriptPubKey == null)
                     {
                         this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
@@ -367,12 +366,10 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (account == null)
                 return null;
-
-            var walletAccountReference = new WalletAccountReference(walletName, account.Name);
-
-            HdAddress address = this.walletManager.GetUnusedAddress(walletAccountReference);
-
-            return address.Pubkey;
+            
+            HdAddress address = account.ExternalAddresses.FirstOrDefault();
+            
+            return address?.Pubkey;
         }
 
         /// <summary>Adds OP_RETURN output to a coinbase transaction which contains encoded voting data.</summary>
