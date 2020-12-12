@@ -12,14 +12,15 @@ using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 {
     public class SidechainUserNodeRunner : NodeRunner
     {
-
         private readonly IDateTimeProvider timeProvider;
 
         public SidechainUserNodeRunner(string dataDir, string agent, Network network, IDateTimeProvider dateTimeProvider)
@@ -31,18 +32,20 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 
         public override void BuildNode()
         {
-            var settings = new NodeSettings(this.Network, args: new string[] { "-conf=poa.conf", "-datadir=" + this.DataFolder });
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=poa.conf", "-datadir=" + this.DataFolder });
 
             this.FullNode = (FullNode)new FullNodeBuilder()
-                .UseNodeSettings(settings)
+                .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
                 .AddSmartContracts(options =>
                 {
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining(true)
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .UseMempool()

@@ -5,6 +5,8 @@ using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
@@ -36,7 +38,9 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(this.counterChain)
+                .AddPoAFeature()
                 .UsePoAConsensus()
+                .AddPoAMiningCapability<PoABlockDefinition>()
                 .AddDynamicMemberhip()
                 .UseMempool()
                 .UseWallet()

@@ -1,18 +1,12 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
-using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.Consensus;
-using Stratis.Bitcoin.Features.Consensus.CoinViews;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA.Behaviors;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Interfaces;
@@ -151,70 +145,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingManager.Dispose();
 
             this.idleFederationMembersKicker.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// A class providing extension methods for <see cref="IFullNodeBuilder"/>.
-    /// </summary>
-    public static class FullNodeBuilderConsensusExtension
-    {
-        /// <summary>This is mandatory for all PoA networks.</summary>
-        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
-        {
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                features
-                    .AddFeature<PoAFeature>()
-                    .DependOn<ConsensusFeature>()
-                    .FeatureServices(services =>
-                    {
-                        services.AddSingleton<IFederationManager, FederationManager>();
-                        services.AddSingleton<PoABlockHeaderValidator>();
-                        services.AddSingleton<IPoAMiner, PoAMiner>();
-                        services.AddSingleton<MinerSettings>();
-                        services.AddSingleton<PoAMinerSettings>();
-                        services.AddSingleton<ISlotsManager, SlotsManager>();
-                        services.AddSingleton<BlockDefinition, PoABlockDefinition>();
-                    });
-            });
-
-            LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                features
-                    .AddFeature<ConsensusFeature>()
-                    .FeatureServices(services =>
-                    {
-                        AddCoindbImplementation(services, coindbType);
-                        services.AddSingleton<ICoinView, CachedCoinView>();
-                        services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
-                        services.AddSingleton<IChainState, ChainState>();
-                        services.AddSingleton<ConsensusQuery>()
-                            .AddSingleton<INetworkDifficulty, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>())
-                            .AddSingleton<IGetUnspentTransaction, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>());
-
-                        // Voting.
-                        services.AddSingleton<VotingManager>();
-                        services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
-                        services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
-                        services.AddSingleton<IIdleFederationMembersKicker, IdleFederationMembersKicker>();
-                    });
-            });
-
-            return fullNodeBuilder;
-        }
-
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
-        {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
-
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
-
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
         }
     }
 }
