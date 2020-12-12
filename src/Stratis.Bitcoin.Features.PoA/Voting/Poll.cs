@@ -19,6 +19,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         public bool IsPending => this.PollVotedInFavorBlockData == null;
 
+        /// <summary><c>true</c> if poll has expired; <c>false</c> otherwise.</summary>
+        public bool IsExpired => this.PollVotedInFavorBlockData?.Height == 0;
+
         /// <summary><c>true</c> if poll wasn't executed yet; <c>false</c> otherwise.</summary>
         public bool IsExecuted => this.PollExecutedBlockData != null;
 
