@@ -599,10 +599,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (pendingPolls.Count != 0)
                 {
                     log.AppendLine();
-                    log.AppendLine("--- Pending Polls ---");
-                    foreach (Poll poll in pendingPolls)
+                    log.AppendLine("--- Pending Add/Kick Member Polls ---");
+                    foreach (Poll poll in pendingPolls.Where(p => !p.IsExecuted && (p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember)))
                     {
-                        log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, In Favor = {poll.PubKeysHexVotedInFavor.Count}, Blocks Left = {(PollExpiryBlocks - (tipHeight - poll.PollStartBlockData.Height))}");
+                        IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
+                        log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}, Blocks Left = {(PollExpiryBlocks - (tipHeight - poll.PollStartBlockData.Height))}");
+                        bool exists = this.federationManager.GetFederationMembers().Any(m => m.PubKey == federationMember.PubKey);
+                        if (poll.VotingData.Key == VoteKey.AddFederationMember && exists)
+                            log.Append(" (Already exists)");
+                        if (poll.VotingData.Key == VoteKey.KickFederationMember && !exists)
+                            log.Append(" (Does not exist)");
+                        log.AppendLine();
                     }
                 }
 
