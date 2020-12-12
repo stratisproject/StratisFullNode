@@ -364,7 +364,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         this.logger.LogDebug("Expiring poll '{0}'.", poll);
 
-                        poll.PollVotedInFavorBlockData = new HashHeightPair(null, 0);
+                        // 0'ing the hash ensures that the logic in the foreach below can never apply the poll.
+                        poll.PollVotedInFavorBlockData = new HashHeightPair(0, 0);
                         this.pollsRepository.UpdatePoll(poll);
                     }
 
