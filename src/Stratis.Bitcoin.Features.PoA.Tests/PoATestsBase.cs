@@ -13,9 +13,11 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Bitcoin.Features.PoA.Tests
 {
@@ -102,7 +104,9 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var fullNode = new Mock<IFullNode>();
             fullNode.Setup(x => x.NodeService<IConsensusManager>(false)).Returns(consensusManager.Object);
 
-            var federationManager = new FederationManager(fullNode.Object, nodeSettings, network, loggerFactory, signals);
+            var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
+
+            var federationManager = new FederationManager(counterChainSettings, fullNode.Object, network, nodeSettings, loggerFactory, signals);
             var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
             var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
