@@ -18,9 +18,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public class VotingManager : IDisposable
     {
-        // Warning: Setting this to a value under 32,000 will require dealing with legacy
+        // Warning: Setting this to a value under 32,000 blocks (+- 5 days) will require dealing with legacy
         // voting history where some polls took that long and were applied.
-        private const int PollExpiryBlocks = 50000;
+        private const int PollExpiryBlocks = 32000;
 
         private readonly IFederationManager federationManager;
 
@@ -592,6 +592,30 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 log.AppendLine(
                     "Scheduled Votes".PadRight(30) + ": " + this.scheduledVotingData.Count.ToString().PadRight(16) +
                     "Scheduled votes will be added to the next block this node mines.");
+
+                long tipHeight = this.finalizedBlockInfo.GetFinalizedBlockInfo().Height + this.network.Consensus.MaxReorgLength;
+
+                List<Poll> pendingPolls = GetPendingPolls().OrderByDescending(p => p.PollStartBlockData.Height).Take(5).ToList();
+                if (pendingPolls.Count != 0)
+                {
+                    log.AppendLine();
+                    log.AppendLine("--- Pending Polls ---");
+                    foreach (Poll poll in pendingPolls)
+                    {
+                        log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, In Favor = {poll.PubKeysHexVotedInFavor.Count}, Blocks Left = {(PollExpiryBlocks - (tipHeight - poll.PollStartBlockData.Height))}");
+                    }
+                }
+
+                List<Poll> approvedPolls = GetApprovedPolls().Where(p => !p.IsExecuted).OrderByDescending(p => p.PollVotedInFavorBlockData.Height).Take(5).ToList();
+                if (approvedPolls.Count != 0)
+                {
+                    log.AppendLine();
+                    log.AppendLine("--- Approved Polls ---");
+                    foreach (Poll poll in approvedPolls)
+                    {
+                        log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, Blocks Left = ({(poll.PollStartBlockData.Height - this.finalizedBlockInfo.GetFinalizedBlockInfo().Height)})");
+                    }
+                }
             }
         }
 
