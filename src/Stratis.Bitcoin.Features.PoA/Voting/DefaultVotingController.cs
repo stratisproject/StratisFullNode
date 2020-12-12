@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll finished?
-                poll = this.votingManager.GetFinishedPolls().MemberPolls().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
+                poll = this.votingManager.GetApprovedPolls().MemberPolls().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
@@ -209,7 +209,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                IEnumerable<Poll> polls = this.votingManager.GetFinishedPolls().Where(v => v.VotingData.Key == voteType);
+                IEnumerable<Poll> polls = this.votingManager.GetApprovedPolls().Where(v => v.VotingData.Key == voteType);
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
 
                 if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))

@@ -184,8 +184,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Provides a collection of polls that are already finished and their results applied.</summary>
-        public List<Poll> GetFinishedPolls()
+        /// <summary>Provides a collection of polls that are approved but not executed yet.</summary>
+        public List<Poll> GetApprovedPolls()
         {
             this.EnsureInitialized();
 
@@ -195,7 +195,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Provides a collection of polls that are already finished and their results applied.</summary>
+        /// <summary>Provides a collection of polls that are approved and their results applied.</summary>
         public List<Poll> GetExecutedPolls()
         {
             this.EnsureInitialized();
@@ -211,9 +211,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         public bool AlreadyVotingFor(VoteKey voteKey, byte[] federationMemberBytes)
         {
-            List<Poll> finishedPolls = this.GetFinishedPolls();
+            List<Poll> approvedPolls = this.GetApprovedPolls();
 
-            if (finishedPolls.Any(x => !x.IsExecuted &&
+            if (approvedPolls.Any(x => !x.IsExecuted &&
                   x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
                   x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {
@@ -347,7 +347,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 lock (this.locker)
                 {
-                    foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollVotedInFavorBlockData.Hash == newFinalizedHash).ToList())
+                    foreach (Poll poll in this.GetApprovedPolls().Where(x => x.PollVotedInFavorBlockData.Hash == newFinalizedHash).ToList())
                     {
                         this.logger.LogDebug("Applying poll '{0}'.", poll);
                         this.pollResultExecutor.ApplyChange(poll.VotingData);
@@ -546,10 +546,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 log.AppendLine("Pending Member Polls".PadRight(30) + ": " + GetPendingPolls().MemberPolls().Count);
-                log.AppendLine("Finished Member Polls".PadRight(30) + ": " + GetFinishedPolls().MemberPolls().Count);
+                log.AppendLine("Approved Member Polls".PadRight(30) + ": " + GetApprovedPolls().MemberPolls().Count);
                 log.AppendLine("Executed Member Polls".PadRight(30) + ": " + GetExecutedPolls().MemberPolls().Count);
                 log.AppendLine("Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
-                log.AppendLine("Finished Whitelist Polls".PadRight(30) + ": " + GetFinishedPolls().WhitelistPolls().Count);
+                log.AppendLine("Approved Whitelist Polls".PadRight(30) + ": " + GetApprovedPolls().WhitelistPolls().Count);
                 log.AppendLine("Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
                 log.AppendLine("Scheduled Votes".PadRight(30) + ": " + this.scheduledVotingData.Count);
                 log.AppendLine($"Scheduled votes will be added to the next block this node mines.");

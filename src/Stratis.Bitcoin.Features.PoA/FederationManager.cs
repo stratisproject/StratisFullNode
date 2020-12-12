@@ -170,9 +170,9 @@ namespace Stratis.Bitcoin.Features.PoA
             if (member != null)
                 return member;
 
-            List<Poll> finishedPolls = votingManager.GetFinishedPolls();
+            List<Poll> approvedPolls = votingManager.GetApprovedPolls();
 
-            member = finishedPolls
+            member = approvedPolls
                 .Where(x => !x.IsExecuted && x.VotingData.Key == voteKey)
                 .Select(x => this.GetMember(x.VotingData))
                 .FirstOrDefault(x => x.CollateralMainchainAddress == address);

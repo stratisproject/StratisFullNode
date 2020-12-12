@@ -213,14 +213,14 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetPendingPolls());
-            Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetFinishedPolls());
+            Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetApprovedPolls());
 
             await this.node3.MineBlocksAsync(4);
             TestHelper.Connect(this.node2, this.node3);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2, this.node3);
 
             Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetPendingPolls());
-            Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetFinishedPolls());
+            Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetApprovedPolls());
         }
 
         private async Task AllVoteAndMineAsync(PubKey key, bool add)
