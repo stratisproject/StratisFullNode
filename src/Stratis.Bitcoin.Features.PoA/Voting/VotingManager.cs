@@ -115,7 +115,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (!this.scheduledVotingData.Any(v => v == votingData))
                     this.scheduledVotingData.Add(votingData);
 
-                this.CleanFinishedPollsLocked();
+                this.SanitizeScheduledPollsLocked();
             }
 
             this.logger.LogDebug("Vote was scheduled with key: {0}.", votingData.Key);
@@ -128,7 +128,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                this.CleanFinishedPollsLocked();
+                this.SanitizeScheduledPollsLocked();
 
                 return new List<VotingData>(this.scheduledVotingData);
             }
@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                this.CleanFinishedPollsLocked();
+                this.SanitizeScheduledPollsLocked();
 
                 List<VotingData> votingData = this.scheduledVotingData;
 
@@ -155,25 +155,66 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Checks pending polls against finished polls and removes pending polls that will make no difference and basically are redundant.</summary>
+        /// <summary>Performs sanity checks against scheduled votes and removes any conflicts.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
-        private void CleanFinishedPollsLocked()
+        private void SanitizeScheduledPollsLocked()
         {
-            // We take polls that are not pending (collected enough votes in favor) but not executed yet (maxReorg blocks
-            // didn't pass since the vote that made the poll pass). We can't just take not pending polls because of the
-            // following scenario: federation adds a hash or fed member or does any other revertable action, then reverts
-            // the action (removes the hash) and then reapplies it again. To allow for this scenario we have to exclude
-            // executed polls here.
-            List<Poll> finishedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
-
-            for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
+            // Sanitize the scheduled votes.
+            // Remove scheduled votes that are in pending polls or non-executed approved polls
+            // Remove scheduled votes where the target has already been added/removed at this block height.
+            lock (this.locker)
             {
-                VotingData currentScheduledData = this.scheduledVotingData[i];
+                List<Poll> pendingPolls = this.GetPendingPolls().ToList();
+                List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
+                List<IFederationMember> federation = GetFederationFromExecutedPolls();
+                HashSet<uint256> hashes = GetWhitelistedHashesFromExecutedPolls();
 
-                // Remove scheduled voting data that can be found in finished polls that were not yet executed.
-                if (finishedPolls.Any(x => x.VotingData == currentScheduledData))
-                    this.scheduledVotingData.RemoveAt(i);
+                bool IsValid(VotingData currentScheduledData)
+                {
+                    // Remove scheduled voting data that can be found in pending polls.
+                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData))
+                        return false;
+
+                    // Remove scheduled voting data that can be found in finished polls that were not yet executed.
+                    if (approvedPolls.Any(x => x.VotingData == currentScheduledData))
+                        return false;
+
+                    // Remove scheduled votes where the target has already been added/removed.
+                    if (currentScheduledData.Key == VoteKey.AddFederationMember || currentScheduledData.Key == VoteKey.KickFederationMember)
+                    {
+                        IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(currentScheduledData.Data); 
+                        if (currentScheduledData.Key == (federation.Any(m => m.PubKey == federationMember.PubKey) ? VoteKey.AddFederationMember : VoteKey.KickFederationMember))
+                            return false;
+                    }
+
+                    if (currentScheduledData.Key == VoteKey.WhitelistHash || currentScheduledData.Key == VoteKey.RemoveHash)
+                    {
+                        if (currentScheduledData.Key == (hashes.Contains(new uint256(currentScheduledData.Data)) ? VoteKey.WhitelistHash : VoteKey.RemoveHash))
+                            return false;
+                    }
+
+                    return true;
+                }
+
+                this.scheduledVotingData = this.scheduledVotingData.Where(d => IsValid(d)).ToList();
             }
+        }
+
+        public HashSet<uint256> GetWhitelistedHashesFromExecutedPolls()
+        {
+            var hashes = new HashSet<uint256>();
+
+            foreach (Poll poll in this.GetExecutedPolls().Where(p => p.VotingData.Key == VoteKey.WhitelistHash || p.VotingData.Key == VoteKey.RemoveHash).OrderBy(p => p.PollExecutedBlockData.Height))
+            {
+                var hash = new uint256(poll.VotingData.Data);
+
+                if (poll.VotingData.Key == VoteKey.WhitelistHash)
+                    hashes.Add(hash);
+                else
+                    hashes.Remove(hash);
+            }
+
+            return hashes;
         }
 
         /// <summary>Provides a collection of polls that are currently active.</summary>
@@ -603,7 +644,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     foreach (Poll poll in pendingPolls.Where(p => !p.IsExecuted && (p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember)))
                     {
                         IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
-                        log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}, Blocks Left = {(PollExpiryBlocks - (tipHeight - poll.PollStartBlockData.Height))}");
+                        log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}, Expires In = {(PollExpiryBlocks - (tipHeight - poll.PollStartBlockData.Height))}");
                         bool exists = this.federationManager.GetFederationMembers().Any(m => m.PubKey == federationMember.PubKey);
                         if (poll.VotingData.Key == VoteKey.AddFederationMember && exists)
                             log.Append(" (Already exists)");
@@ -620,7 +661,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     log.AppendLine("--- Approved Polls ---");
                     foreach (Poll poll in approvedPolls)
                     {
-                        log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, Blocks Left = ({(poll.PollStartBlockData.Height - this.finalizedBlockInfo.GetFinalizedBlockInfo().Height)})");
+                        log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, Applied In = ({(poll.PollStartBlockData.Height - this.finalizedBlockInfo.GetFinalizedBlockInfo().Height)})");
                     }
                 }
             }
