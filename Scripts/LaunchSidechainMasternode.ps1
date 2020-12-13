@@ -178,10 +178,10 @@ function Check-TimeDifference2
     $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
     $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing | Select-Object -expand Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://www.timeanddate.com/worldclock/timezone/utc -UseBasicParsing | Select-Object -expand Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
