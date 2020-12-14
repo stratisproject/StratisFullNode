@@ -505,7 +505,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 }
 
                 // Merges the transaction signatures.
-                Transaction mergedTransaction = await cctsInstanceOne.MergeTransactionSignaturesAsync(deposit.Id, new[] { transaction2 });
+                Transaction mergedTransaction = cctsInstanceOne.MergeTransactionSignatures(deposit.Id, new[] { transaction2 });
 
                 // Test the outcome.
                 crossChainTransfer = cctsInstanceOne.GetAsync(new[] { deposit.Id }).GetAwaiter().GetResult().SingleOrDefault();
@@ -683,7 +683,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 transaction2.Outputs[1].ScriptPubKey = bogusAddress.ScriptPubKey;
 
                 // Merges the transaction signatures.
-                await crossChainTransferStore.MergeTransactionSignaturesAsync(deposit.Id, new[] { transaction2 });
+                crossChainTransferStore.MergeTransactionSignatures(deposit.Id, new[] { transaction2 });
 
                 // Test the outcome.
                 crossChainTransfers = await crossChainTransferStore.GetAsync(new[] { deposit.Id });
@@ -1235,6 +1235,32 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(partialTransactions[0], null, 1);
                 Assert.Equal((uint256)1, withdrawal.DepositId);
+            }
+        }
+
+        /// <summary>
+        /// Recording deposits when the target is our multisig is ignored, but a different multisig is allowed.
+        /// </summary>
+        [Fact]
+        public async Task GetStackTrace()
+        {
+            var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
+
+            this.Init(dataFolder);
+            this.AddFunding();
+            this.AppendBlocks(WithdrawalTransactionBuilder.MinConfirmations);
+
+            MultiSigAddress multiSigAddress = this.wallet.MultiSigAddress;
+
+            using (ICrossChainTransferStore crossChainTransferStore = this.CreateStore())
+            {
+                crossChainTransferStore.Initialize();
+                crossChainTransferStore.Start();
+
+                TestBase.WaitLoopMessage(() => (this.ChainIndexer.Tip.Height == crossChainTransferStore.TipHashAndHeight.Height, $"ChainIndexer.Height:{this.ChainIndexer.Tip.Height} Store.TipHashHeight:{crossChainTransferStore.TipHashAndHeight.Height}"));
+                Assert.Equal(this.ChainIndexer.Tip.HashBlock, crossChainTransferStore.TipHashAndHeight.HashBlock);
+
+                crossChainTransferStore.MergeTransactionSignatures(new uint256(), new[] { this.network.CreateTransaction() });
             }
         }
 
