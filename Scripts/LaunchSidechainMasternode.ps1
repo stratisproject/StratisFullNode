@@ -223,7 +223,6 @@ function Check-TimeDifference3
         Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
         Start-Sleep 30
         Exit
-        Clear-Variable timeDif,timeDifSamples
     }
         Else
         {
