@@ -102,11 +102,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 stream.ReadWrite(ref this.Data, 0, dataSize);
 
                 // Clean the data of non-standard newlines.
-                string data = Encoding.ASCII.GetString(this.Data);
-                if (data.Contains("\r\n"))
+                if (this.Key == VoteKey.AddFederationMember || this.Key == VoteKey.KickFederationMember)
                 {
-                    data = data.Replace("\r\n", "\n");
-                    this.Data = Encoding.ASCII.GetBytes(data);
+                    string data = Encoding.ASCII.GetString(this.Data);
+                    if (data.Contains("\r\n"))
+                    {
+                        data = data.Replace("\r\n", "\n");
+                        this.Data = Encoding.ASCII.GetBytes(data);
+                    }
                 }
             }
         }
