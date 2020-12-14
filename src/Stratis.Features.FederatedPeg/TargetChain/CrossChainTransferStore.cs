@@ -591,113 +591,110 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public Task<Transaction> MergeTransactionSignaturesAsync(uint256 depositId, Transaction[] partialTransactions)
+        public Transaction MergeTransactionSignatures(uint256 depositId, Transaction[] partialTransactions)
         {
             Guard.NotNull(depositId, nameof(depositId));
             Guard.NotNull(partialTransactions, nameof(partialTransactions));
 
-            return Task.Run(() =>
+            lock (this.lockObj)
             {
-                lock (this.lockObj)
+                return this.federationWalletManager.Synchronous(() =>
                 {
-                    return this.federationWalletManager.Synchronous(() =>
+                    if (!this.Synchronize())
+                        return null;
+
+                    ICrossChainTransfer transfer = this.ValidateCrossChainTransfers(this.Get(new[] { depositId })).FirstOrDefault();
+
+                    if (transfer == null)
                     {
-                        if (!this.Synchronize())
-                            return null;
+                        this.logger.LogDebug("(-)[MERGE_NOT_FOUND]:null");
+                        return null;
+                    }
 
-                        ICrossChainTransfer transfer = this.ValidateCrossChainTransfers(this.Get(new[] { depositId })).FirstOrDefault();
+                    if (transfer.Status != CrossChainTransferStatus.Partial)
+                    {
+                        this.logger.LogDebug($"(-)[MERGE_BAD_STATUS]:{nameof(transfer.Status)}={transfer.Status}");
+                        return transfer.PartialTransaction;
+                    }
 
-                        if (transfer == null)
+                    // Log this incase we run into issues where the transaction templates doesn't match.
+                    this.logger.LogDebug($"Partial Transaction inputs:{partialTransactions[0].Inputs.Count} = Transfer Partial Transaction inputs:{transfer.PartialTransaction.Inputs.Count}");
+                    this.logger.LogDebug($"Partial Transaction outputs:{partialTransactions[0].Outputs.Count} =  Transfer Partial Transaction outputs:{transfer.PartialTransaction.Outputs.Count}");
+
+                    for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
+                    {
+                        TxIn input = partialTransactions[0].Inputs[i];
+                        TxIn transferInput = transfer.PartialTransaction.Inputs[i];
+                        this.logger.LogDebug($"Partial Transaction Input N:{input.PrevOut.N} : Hash:{input.PrevOut.Hash}");
+                        this.logger.LogDebug($"Transfer Partial Transaction Input N:{transferInput.PrevOut.N} : Hash:{transferInput.PrevOut.Hash}");
+                    }
+
+                    for (int i = 0; i < partialTransactions[0].Outputs.Count; i++)
+                    {
+                        TxOut output = partialTransactions[0].Outputs[i];
+                        TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
+                        this.logger.LogDebug($"Partial Transaction Output Value:{output.Value} : ScriptPubKey:{output.ScriptPubKey}");
+                        this.logger.LogDebug($"Transfer Partial Transaction Output Value:{transferOutput.Value} : ScriptPubKey:{transferOutput.ScriptPubKey}");
+                    }
+
+                    this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
+
+                    var builder = new TransactionBuilder(this.network);
+                    Transaction oldTransaction = transfer.PartialTransaction;
+
+                    transfer.CombineSignatures(builder, partialTransactions);
+
+                    if (transfer.PartialTransaction.GetHash() == oldTransaction.GetHash())
+                    {
+                        // We will finish dealing with the request here if an invalid signature is sent.
+                        // The incoming partial transaction will not have the same inputs / outputs as what our node has generated
+                        // so would have failed CrossChainTransfer.TemplatesMatch() and leave through here.
+                        this.logger.LogDebug("(-)[MERGE_UNCHANGED_TX_HASHES_MATCH]");
+                        return transfer.PartialTransaction;
+                    }
+
+                    using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
+                    {
+                        try
                         {
-                            this.logger.LogDebug("(-)[MERGE_NOT_FOUND]:null");
-                            return null;
-                        }
+                            dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
 
-                        if (transfer.Status != CrossChainTransferStatus.Partial)
-                        {
-                            this.logger.LogDebug($"(-)[MERGE_BAD_STATUS]:{nameof(transfer.Status)}={transfer.Status}");
-                            return transfer.PartialTransaction;
-                        }
+                            this.federationWalletManager.ProcessTransaction(transfer.PartialTransaction);
+                            this.federationWalletManager.SaveWallet();
 
-                        // Log this incase we run into issues where the transaction templates doesn't match.
-                        this.logger.LogDebug($"Partial Transaction inputs:{partialTransactions[0].Inputs.Count} = Transfer Partial Transaction inputs:{transfer.PartialTransaction.Inputs.Count}");
-                        this.logger.LogDebug($"Partial Transaction outputs:{partialTransactions[0].Outputs.Count} =  Transfer Partial Transaction outputs:{transfer.PartialTransaction.Outputs.Count}");
-
-                        for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
-                        {
-                            TxIn input = partialTransactions[0].Inputs[i];
-                            TxIn transferInput = transfer.PartialTransaction.Inputs[i];
-                            this.logger.LogDebug($"Partial Transaction Input N:{input.PrevOut.N} : Hash:{input.PrevOut.Hash}");
-                            this.logger.LogDebug($"Transfer Partial Transaction Input N:{transferInput.PrevOut.N} : Hash:{transferInput.PrevOut.Hash}");
-                        }
-
-                        for (int i = 0; i < partialTransactions[0].Outputs.Count; i++)
-                        {
-                            TxOut output = partialTransactions[0].Outputs[i];
-                            TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
-                            this.logger.LogDebug($"Partial Transaction Output Value:{output.Value} : ScriptPubKey:{output.ScriptPubKey}");
-                            this.logger.LogDebug($"Transfer Partial Transaction Output Value:{transferOutput.Value} : ScriptPubKey:{transferOutput.ScriptPubKey}");
-                        }
-
-                        this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
-
-                        var builder = new TransactionBuilder(this.network);
-                        Transaction oldTransaction = transfer.PartialTransaction;
-
-                        transfer.CombineSignatures(builder, partialTransactions);
-
-                        if (transfer.PartialTransaction.GetHash() == oldTransaction.GetHash())
-                        {
-                            // We will finish dealing with the request here if an invalid signature is sent.
-                            // The incoming partial transaction will not have the same inputs / outputs as what our node has generated
-                            // so would have failed CrossChainTransfer.TemplatesMatch() and leave through here.
-                            this.logger.LogDebug("(-)[MERGE_UNCHANGED_TX_HASHES_MATCH]");
-                            return transfer.PartialTransaction;
-                        }
-
-                        using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
-                        {
-                            try
+                            if (this.ValidateTransaction(transfer.PartialTransaction, true))
                             {
-                                dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
-
-                                this.federationWalletManager.ProcessTransaction(transfer.PartialTransaction);
-                                this.federationWalletManager.SaveWallet();
-
-                                if (this.ValidateTransaction(transfer.PartialTransaction, true))
-                                {
-                                    this.logger.LogDebug("Deposit: {0} collected enough signatures and is FullySigned", transfer.DepositTransactionId);
-                                    transfer.SetStatus(CrossChainTransferStatus.FullySigned);
-                                    this.signals.Publish(new CrossChainTransferTransactionFullySigned(transfer));
-                                }
-                                else
-                                {
-                                    this.logger.LogDebug("Deposit: {0} did not collect enough signatures and is Partial", transfer.DepositTransactionId);
-                                }
-
-                                this.PutTransfer(dbreezeTransaction, transfer);
-                                dbreezeTransaction.Commit();
-
-                                // Do this last to maintain DB integrity. We are assuming that this won't throw.
-                                // This will remove the transaction from the Partial dictionary, and re-insert it, either as Partial again or FullySigned dependent on what happened above.
-                                this.TransferStatusUpdated(transfer, CrossChainTransferStatus.Partial);
+                                this.logger.LogDebug("Deposit: {0} collected enough signatures and is FullySigned", transfer.DepositTransactionId);
+                                transfer.SetStatus(CrossChainTransferStatus.FullySigned);
+                                this.signals.Publish(new CrossChainTransferTransactionFullySigned(transfer));
                             }
-                            catch (Exception err)
+                            else
                             {
-                                this.logger.LogError("Error: {0} ", err);
-
-                                // Restore expected store state in case the calling code retries / continues using the store.
-                                transfer.SetPartialTransaction(oldTransaction);
-                                this.federationWalletManager.ProcessTransaction(oldTransaction);
-                                this.federationWalletManager.SaveWallet();
-                                this.RollbackAndThrowTransactionError(dbreezeTransaction, err, "MERGE_ERROR");
+                                this.logger.LogDebug("Deposit: {0} did not collect enough signatures and is Partial", transfer.DepositTransactionId);
                             }
 
-                            return transfer.PartialTransaction;
+                            this.PutTransfer(dbreezeTransaction, transfer);
+                            dbreezeTransaction.Commit();
+
+                            // Do this last to maintain DB integrity. We are assuming that this won't throw.
+                            // This will remove the transaction from the Partial dictionary, and re-insert it, either as Partial again or FullySigned dependent on what happened above.
+                            this.TransferStatusUpdated(transfer, CrossChainTransferStatus.Partial);
                         }
-                    });
-                }
-            });
+                        catch (Exception err)
+                        {
+                            this.logger.LogError("Error: {0} ", err);
+
+                            // Restore expected store state in case the calling code retries / continues using the store.
+                            transfer.SetPartialTransaction(oldTransaction);
+                            this.federationWalletManager.ProcessTransaction(oldTransaction);
+                            this.federationWalletManager.SaveWallet();
+                            this.RollbackAndThrowTransactionError(dbreezeTransaction, err, "MERGE_ERROR");
+                        }
+
+                        return transfer.PartialTransaction;
+                    }
+                });
+            }
         }
 
         /// <summary>

@@ -62,7 +62,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// transaction that has been recorded in the wallet.
         /// </remarks>
         /// <returns>The updated transaction.</returns>
-        Task<Transaction> MergeTransactionSignaturesAsync(uint256 depositId, Transaction[] partialTransactions);
+        Transaction MergeTransactionSignatures(uint256 depositId, Transaction[] partialTransactions);
 
         /// <summary>
         /// Get the cross-chain transfer information from the database, identified by the deposit transaction ids.
