@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.PoA
             string json = Serializer.ToString(model);
 
             // Standardize the bytes produced as its often used in poll matching.
-            if (Environment.NewLine == "\r\n")
+            if (Environment.NewLine != "\n")
                 json = json.Replace(Environment.NewLine, "\n");
 
             byte[] jsonBytes = Encoding.ASCII.GetBytes(json);
