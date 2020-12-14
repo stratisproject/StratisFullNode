@@ -151,11 +151,17 @@ function Get-Median($numberSeries)
 
 function Check-TimeDifference
 {
-    Write-Host "Checking UTC Time Difference (WorldTimeAPI)" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
-    $timeDifSamples[0] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-    $timeDifSamples[1] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-    $timeDifSamples[2] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content)
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
     if ( $timeDif -gt 2 -or $timeDif -lt 2 )
@@ -172,24 +178,52 @@ function Check-TimeDifference
 
 function Check-TimeDifference2
 {
-    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (unixtimestamp.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing | Select-Object -expand Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://www.timeanddate.com/worldclock/timezone/utc -UseBasicParsing | Select-Object -expand Headers).Date).ToUniversalTime())).TotalSeconds
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
-    if ( $timeDif -gt 2 -or $timeDif -lt -2 )
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
+    {
+        Clear-Variable timeDif,timeDifSamples
+        Check-TimeDifference3
+    }
+        Else
+        {
+            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
+            Write-Host ""
+        }
+}
+
+function Check-TimeDifference3
+{
+    Write-Host "Checking UTC Time Difference (google.com)" -ForegroundColor Cyan
+    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDif = Get-Median -numberSeries $timeDifSamples
+
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
     {
         Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
         Start-Sleep 30
         Exit
+        Clear-Variable timeDif,timeDifSamples
     }
         Else
         {
