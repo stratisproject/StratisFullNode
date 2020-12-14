@@ -1239,32 +1239,6 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         /// <summary>
-        /// Recording deposits when the target is our multisig is ignored, but a different multisig is allowed.
-        /// </summary>
-        [Fact]
-        public async Task GetStackTrace()
-        {
-            var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
-
-            this.Init(dataFolder);
-            this.AddFunding();
-            this.AppendBlocks(WithdrawalTransactionBuilder.MinConfirmations);
-
-            MultiSigAddress multiSigAddress = this.wallet.MultiSigAddress;
-
-            using (ICrossChainTransferStore crossChainTransferStore = this.CreateStore())
-            {
-                crossChainTransferStore.Initialize();
-                crossChainTransferStore.Start();
-
-                TestBase.WaitLoopMessage(() => (this.ChainIndexer.Tip.Height == crossChainTransferStore.TipHashAndHeight.Height, $"ChainIndexer.Height:{this.ChainIndexer.Tip.Height} Store.TipHashHeight:{crossChainTransferStore.TipHashAndHeight.Height}"));
-                Assert.Equal(this.ChainIndexer.Tip.HashBlock, crossChainTransferStore.TipHashAndHeight.HashBlock);
-
-                crossChainTransferStore.MergeTransactionSignatures(new uint256(), new[] { this.network.CreateTransaction() });
-            }
-        }
-
-        /// <summary>
         /// <see cref="CrossChainTransferStore.IsMempoolErrorRecoverable(MempoolError)"/> returns appropriate responses for different types of errors.
         /// </summary>
         [Fact]
