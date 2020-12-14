@@ -13,7 +13,7 @@ using Stratis.Features.FederatedPeg.Payloads;
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
     /// <summary>
-    /// Requests partial transactions from the peers and calls <see cref="ICrossChainTransferStore.MergeTransactionSignaturesAsync".
+    /// Requests partial transactions from the peers and calls <see cref="ICrossChainTransferStore.MergeTransactionSignatures".
     /// </summary>
     public interface IPartialTransactionRequester
     {

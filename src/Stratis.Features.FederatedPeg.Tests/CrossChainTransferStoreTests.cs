@@ -505,7 +505,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 }
 
                 // Merges the transaction signatures.
-                Transaction mergedTransaction = await cctsInstanceOne.MergeTransactionSignaturesAsync(deposit.Id, new[] { transaction2 });
+                Transaction mergedTransaction = cctsInstanceOne.MergeTransactionSignatures(deposit.Id, new[] { transaction2 });
 
                 // Test the outcome.
                 crossChainTransfer = cctsInstanceOne.GetAsync(new[] { deposit.Id }).GetAwaiter().GetResult().SingleOrDefault();
@@ -683,7 +683,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 transaction2.Outputs[1].ScriptPubKey = bogusAddress.ScriptPubKey;
 
                 // Merges the transaction signatures.
-                await crossChainTransferStore.MergeTransactionSignaturesAsync(deposit.Id, new[] { transaction2 });
+                crossChainTransferStore.MergeTransactionSignatures(deposit.Id, new[] { transaction2 });
 
                 // Test the outcome.
                 crossChainTransfers = await crossChainTransferStore.GetAsync(new[] { deposit.Id });
