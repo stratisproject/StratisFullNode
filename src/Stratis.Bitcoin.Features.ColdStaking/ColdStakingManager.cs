@@ -370,7 +370,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             }
             else
             {
-                // In offline mode we relax all the restrictions to enable simpler setup.
+                // In offline mode we relax all the restrictions to enable simpler setup. The user should ensure they are using separate wallets, or the cold private key could be inadvertently loaded on the online node.
                 IDestination hot = BitcoinAddress.Create(hotWalletAddress, this.network);
                 IDestination cold = BitcoinAddress.Create(coldWalletAddress, this.network);
 
