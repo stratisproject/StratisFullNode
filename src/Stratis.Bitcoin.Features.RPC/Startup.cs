@@ -17,6 +17,7 @@ namespace Stratis.Bitcoin.Features.RPC
 {
     public class Startup
     {
+        // TODO: Uncomment MVC specific options
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
@@ -24,11 +25,11 @@ namespace Stratis.Bitcoin.Features.RPC
             services.AddSingleton<IObjectModelValidator, NoObjectModelValidator>();
             services.AddMvcCore(o =>
                 {
-                    o.EnableEndpointRouting = false;
+                    //o.EnableEndpointRouting = false;
                     o.ValueProviderFactories.Clear();
                     o.ValueProviderFactories.Add(new RPCParametersValueProvider());
                 })
-                .AddNewtonsoftJson()
+                //.AddNewtonsoftJson()
                 .AddFormatterMappings();
 
             services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<MvcOptions>, RPCJsonMvcOptionsSetup>());
@@ -61,15 +62,10 @@ namespace Stratis.Bitcoin.Features.RPC
             }
             authorizedAccess.AllowIp.AddRange(rpcSettings.AllowIp);
 
-            MvcNewtonsoftJsonOptions options = GetMVCOptions(serviceProvider);
-            Serializer.RegisterFrontConverters(options.SerializerSettings, fullNode.Network);
+            //MvcNewtonsoftJsonOptions options = GetMVCOptions(serviceProvider);
+            //Serializer.RegisterFrontConverters(options.SerializerSettings, fullNode.Network);
             app.UseMiddleware(typeof(RPCMiddleware), authorizedAccess);
             app.UseRPC();
-        }
-
-        private static MvcNewtonsoftJsonOptions GetMVCOptions(IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
         }
     }
 
