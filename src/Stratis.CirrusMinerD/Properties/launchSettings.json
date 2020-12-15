@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Stratis.CirrusMinerD": {
+      "commandName": "Project",
+      "commandLineArgs": "-sidechain"
+    },
+    "Stratis.CirrusMinerD Mainchain": {
+      "commandName": "Project",
+      "commandLineArgs": "-mainchain -apiport=38700"
+    }
+  }
+}
