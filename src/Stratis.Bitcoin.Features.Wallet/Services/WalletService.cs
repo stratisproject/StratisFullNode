@@ -588,6 +588,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
+        public async Task RemoveWallet(RemoveWalletModel request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Run(() =>
+            {
+                this.walletManager.DeleteWallet(request.WalletName);
+            }, cancellationToken);
+        }
+
         public async Task<AddressesModel> GetAllAddresses(GetAllAddressesModel request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
