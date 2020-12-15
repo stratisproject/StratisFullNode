@@ -34,7 +34,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// How many transactions we want to pass around to sign at a time.
         /// </summary>
-        private const int NumberToSignAtATime = 30;
+        private const int NumberToSignAtATime = 10_000;
 
         /// <summary>
         /// How often to trigger the query for and broadcasting of partial transactions.
