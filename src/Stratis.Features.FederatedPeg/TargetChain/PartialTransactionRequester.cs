@@ -82,7 +82,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Broadcast the partial transaction with the earliest inputs.
-            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true).Take(CrossChainTransferStore.MaximumPartialTransactions);
+            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
 
             foreach (ICrossChainTransfer transfer in transfers)
             {
