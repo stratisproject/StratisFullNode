@@ -175,7 +175,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                     if (chainedHeader == null)
                     {
-                        int attemptDelayMs = 10_000;
+                        int attemptDelayMs = 500;
                         await Task.Delay(attemptDelayMs, this.cancellation.Token).ConfigureAwait(false);
 
                         continue;
