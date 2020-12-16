@@ -25,6 +25,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 {
     public class CrossChainTransferStore : ICrossChainTransferStore
     {
+        /// <summary>
+        /// Maximum number of partial transactions.
+        /// </summary>
+        public const int MaximumPartialTransactions = 50;
+
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
 
@@ -477,6 +482,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     if (invalidRecipient)
                                     {
                                         status = CrossChainTransferStatus.Rejected;
+                                    }
+                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) 
+                                        + this.depositsIdsByStatus.Count(t => t.Key == CrossChainTransferStatus.Partial)) >= MaximumPartialTransactions)
+                                    {
+                                        haveSuspendedTransfers = true;
                                     }
                                     else
                                     {

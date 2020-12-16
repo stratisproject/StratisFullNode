@@ -32,11 +32,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     public class PartialTransactionRequester : IPartialTransactionRequester
     {
         /// <summary>
-        /// How many transactions we want to pass around to sign at a time.
-        /// </summary>
-        private const int NumberToSignAtATime = 10_000;
-
-        /// <summary>
         /// How often to trigger the query for and broadcasting of partial transactions.
         /// </summary>
         private static readonly TimeSpan TimeBetweenQueries = TimeSpans.TenSeconds;
@@ -87,7 +82,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Broadcast the partial transaction with the earliest inputs.
-            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true).Take(NumberToSignAtATime);
+            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
 
             foreach (ICrossChainTransfer transfer in transfers)
             {
