@@ -326,56 +326,71 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
             Wallet.Wallet wallet = this.GetWallet(walletName);
 
-            // Get/create the cold staking accounts.
-            HdAccount coldAccount;
-            HdAccount hotAccount;
+            KeyId hotPubKeyHash = null;
+            KeyId coldPubKeyHash = null;
 
-            if (offline)
+            if (!offline)
             {
-                coldAccount = this.GetColdStakingAccount(wallet, true);
-                hotAccount = this.GetColdStakingAccount(wallet, false);
+                // Get/create the cold staking accounts.
+                HdAccount coldAccount = this.GetOrCreateColdStakingAccount(walletName, true, walletPassword, extPubKey);
+                HdAccount hotAccount = this.GetOrCreateColdStakingAccount(walletName, false, walletPassword, extPubKey);
+
+                HdAddress coldAddress = coldAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == coldWalletAddress || s.Bech32Address == coldWalletAddress);
+                HdAddress hotAddress = hotAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == hotWalletAddress || s.Bech32Address == hotWalletAddress);
+
+                bool thisIsColdWallet = coldAddress != null;
+                bool thisIsHotWallet = hotAddress != null;
+
+                this.logger.LogDebug("Local wallet '{0}' does{1} contain cold wallet address '{2}' and does{3} contain hot wallet address '{4}'.",
+                    walletName, thisIsColdWallet ? "" : " NOT", coldWalletAddress, thisIsHotWallet ? "" : " NOT", hotWalletAddress);
+
+                if (thisIsColdWallet && thisIsHotWallet)
+                {
+                    this.logger.LogTrace("(-)[COLDSTAKE_BOTH_HOT_AND_COLD]");
+                    throw new WalletException("You can't use this wallet as both the hot wallet and cold wallet.");
+                }
+
+                if (!thisIsColdWallet && !thisIsHotWallet)
+                {
+                    this.logger.LogTrace("(-)[COLDSTAKE_ADDRESSES_NOT_IN_ACCOUNTS]");
+                    throw new WalletException("The hot and cold wallet addresses could not be found in the corresponding accounts.");
+                }
+
+                // Check if this is a segwit address.
+                if (coldAddress?.Bech32Address == coldWalletAddress || hotAddress?.Bech32Address == hotWalletAddress)
+                {
+                    hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
+                    coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
+                }
+                else
+                {
+                    hotPubKeyHash = new BitcoinPubKeyAddress(hotWalletAddress, wallet.Network).Hash;
+                    coldPubKeyHash = new BitcoinPubKeyAddress(coldWalletAddress, wallet.Network).Hash;
+                }
             }
             else
             {
-                coldAccount = this.GetOrCreateColdStakingAccount(walletName, true, walletPassword, extPubKey);
-                hotAccount = this.GetOrCreateColdStakingAccount(walletName, false, walletPassword, extPubKey);
+                // In offline mode we relax all the restrictions to enable simpler setup. The user should ensure they are using separate wallets, or the cold private key could be inadvertently loaded on the online node.
+                IDestination hot = BitcoinAddress.Create(hotWalletAddress, this.network);
+                IDestination cold = BitcoinAddress.Create(coldWalletAddress, this.network);
+
+                if (hot is BitcoinPubKeyAddress && cold is BitcoinPubKeyAddress)
+                {
+                    hotPubKeyHash = new BitcoinPubKeyAddress(hotWalletAddress, wallet.Network).Hash;
+                    coldPubKeyHash = new BitcoinPubKeyAddress(coldWalletAddress, wallet.Network).Hash;
+                }
+
+                if (hot is BitcoinWitPubKeyAddress && cold is BitcoinWitPubKeyAddress)
+                {
+                    hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
+                    coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
+                }
             }
 
-            HdAddress coldAddress = coldAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == coldWalletAddress || s.Bech32Address == coldWalletAddress);
-            HdAddress hotAddress = hotAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == hotWalletAddress || s.Bech32Address == hotWalletAddress);
-
-            bool thisIsColdWallet = coldAddress != null;
-            bool thisIsHotWallet = hotAddress != null;
-
-            this.logger.LogDebug("Local wallet '{0}' does{1} contain cold wallet address '{2}' and does{3} contain hot wallet address '{4}'.",
-                walletName, thisIsColdWallet ? "" : " NOT", coldWalletAddress, thisIsHotWallet ? "" : " NOT", hotWalletAddress);
-
-            // TODO: Relax the constraint that both cannot be from the same wallet
-            if (thisIsColdWallet && thisIsHotWallet)
+            if (hotPubKeyHash == null || coldPubKeyHash == null)
             {
-                this.logger.LogTrace("(-)[COLDSTAKE_BOTH_HOT_AND_COLD]");
-                throw new WalletException("You can't use this wallet as both the hot wallet and cold wallet.");
-            }
-
-            if (!thisIsColdWallet && !thisIsHotWallet)
-            {
-                this.logger.LogTrace("(-)[COLDSTAKE_ADDRESSES_NOT_IN_ACCOUNTS]");
-                throw new WalletException("The hot and cold wallet addresses could not be found in the corresponding accounts.");
-            }
-
-            KeyId hotPubKeyHash;
-            KeyId coldPubKeyHash;
-
-            // Check if this is a segwit address.
-            if (coldAddress?.Bech32Address == coldWalletAddress || hotAddress?.Bech32Address == hotWalletAddress)
-            {
-                hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
-                coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
-            }
-            else
-            {
-                hotPubKeyHash = new BitcoinPubKeyAddress(hotWalletAddress, wallet.Network).Hash;
-                coldPubKeyHash = new BitcoinPubKeyAddress(coldWalletAddress, wallet.Network).Hash;
+                this.logger.LogTrace("(-)[PUBKEYHASH_NOT_AVAILABLE]");
+                throw new WalletException($"Unable to compute the needed hashes from the given addresses.");
             }
 
             Script destination = ColdStakingScriptTemplate.Instance.GenerateScriptPubKey(hotPubKeyHash, coldPubKeyHash);

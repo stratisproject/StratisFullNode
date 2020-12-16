@@ -561,6 +561,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         }
     }
 
+    public class RemoveWalletModel : RequestModel
+    {
+        /// <summary>
+        /// The name of the wallet to remove.
+        /// </summary>
+        [Required(ErrorMessage = "The name of the wallet is required.")]
+        public string WalletName { get; set; }
+    }
+
     /// <summary>
     /// A class containing the necessary parameters for a list accounts request.  
     /// </summary>

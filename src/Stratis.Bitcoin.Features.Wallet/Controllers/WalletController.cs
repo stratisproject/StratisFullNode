@@ -473,7 +473,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> ListWallets(CancellationToken cancellationToken = default(CancellationToken))
         {
             return await this.ExecuteAsAsync((object)null, cancellationToken, (req, token) =>
-               this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames())), false);
+               this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames(), this.walletManager.GetWatchOnlyWalletsNames())), false);
         }
 
         /// <summary>
@@ -678,6 +678,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.Execute(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.RemoveTransactions(req, token)));
+        }
+
+        [Route("remove-wallet")]
+        [HttpDelete]
+        public async Task<IActionResult> RemoveWallet([FromQuery] RemoveWalletModel request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) =>
+                {
+                    await this.walletService.RemoveWallet(req, token);
+
+                    return this.Ok();
+                });
         }
 
         /// <summary>
