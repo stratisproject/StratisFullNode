@@ -473,7 +473,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> ListWallets(CancellationToken cancellationToken = default(CancellationToken))
         {
             return await this.ExecuteAsAsync((object)null, cancellationToken, (req, token) =>
-               this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames())), false);
+               this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames(), this.walletManager.GetWatchOnlyWalletsNames())), false);
         }
 
         /// <summary>

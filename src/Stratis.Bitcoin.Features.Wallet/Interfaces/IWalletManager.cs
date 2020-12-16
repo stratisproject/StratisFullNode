@@ -349,6 +349,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<string> GetWalletsNames();
 
         /// <summary>
+        /// Gets all the wallets' names that have been restored via an account extPubKey.
+        /// </summary>
+        /// <returns>A collection of the watch only wallets' names.</returns>
+        IEnumerable<string> GetWatchOnlyWalletsNames();
+
+        /// <summary>
         /// Gets a wallet given its name.
         /// </summary>
         /// <param name="walletName">The name of the wallet to get.</param>
