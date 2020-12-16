@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
             this.epochWindow = this.epoch * 2;
+
+            if (this.network.RewardClaimerBlockInterval > 0)
+            {
+                // If the amount of blocks that the sidechain will advance in the time that the reward intervals are, is more
+                // than the default epoch then use that amount so that there aren't any gaps.
+                var mainchainTargetSpacingSeconds = 45;
+                var sidechainAdvancement = (int)Math.Round(this.network.RewardClaimerBlockInterval * mainchainTargetSpacingSeconds / this.network.Consensus.TargetSpacing.TotalSeconds, MidpointRounding.AwayFromZero);
+                if (sidechainAdvancement > this.epoch)
+                    this.epoch = sidechainAdvancement;
+            }
         }
 
         /// <inheritdoc />
