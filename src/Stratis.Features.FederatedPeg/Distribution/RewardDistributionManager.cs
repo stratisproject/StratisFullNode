@@ -44,7 +44,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             if (this.network.RewardClaimerBlockInterval > 0)
             {
-                // If the amounnt of blocks that the sidechain will advance in the time that the reward intervals are, is more
+                // If the amount of blocks that the sidechain will advance in the time that the reward intervals are, is more
                 // than the default epoch then use that amount so that there aren't any gaps.
                 var mainchainTargetSpacing = 45;
                 var sidechainAdvancement = (int)Math.Round(this.network.RewardClaimerBlockInterval * mainchainTargetSpacing / this.network.Consensus.TargetSpacing.TotalSeconds, MidpointRounding.AwayFromZero);
