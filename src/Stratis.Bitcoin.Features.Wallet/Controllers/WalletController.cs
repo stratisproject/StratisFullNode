@@ -680,6 +680,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.RemoveTransactions(req, token)));
         }
 
+        [Route("remove-wallet")]
+        [HttpDelete]
+        public async Task<IActionResult> RemoveWallet([FromQuery] RemoveWalletModel request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) =>
+                {
+                    await this.walletService.RemoveWallet(req, token);
+
+                    return this.Ok();
+                });
+        }
+
         /// <summary>
         /// Gets the extended public key of a specified wallet account.
         /// </summary>
