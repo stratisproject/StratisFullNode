@@ -84,6 +84,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 var coins = new List<ScriptCoin>();
 
                 var startFromHeight = this.lastDistributionHeight + 1;
+                this.logger.LogInformation($"Calculating rewards from height:{startFromHeight}");
                 for (int height = startFromHeight; height < startFromHeight + this.network.RewardClaimerBlockInterval; height++)
                 {
                     // Get the block that is minStakeConfirmations behind the current tip.
@@ -259,6 +260,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private void SaveLastDistributionHeight()
         {
             this.keyValueRepository.SaveValueJson(LastDistributionHeightKey, this.lastDistributionHeight);
+            this.logger.LogInformation($"Last reward distribution saved as {this.lastDistributionHeight}.");
         }
 
         public void Dispose()
