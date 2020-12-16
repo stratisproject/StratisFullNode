@@ -184,7 +184,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
             values.Add("isjsonformat", new StringValues("true"));
             this.controller.ControllerContext = new ControllerContext();
             this.controller.ControllerContext.HttpContext = new DefaultHttpContext();
-            this.controller.ControllerContext.HttpContext.Request.Query = new QueryCollection(values);
+            //this.controller.ControllerContext.HttpContext.Request.Query = new QueryCollection(values);
 
             var body = JObject.FromObject(new {methodName = "getblockheader"});
             IActionResult controllerResult = this.controller.CallByName(body);

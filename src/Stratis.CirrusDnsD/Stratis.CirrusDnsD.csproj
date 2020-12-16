@@ -21,6 +21,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Stratis.Bitcoin.Extensions\Stratis.Bitcoin.Extensions.csproj" />
       <ProjectReference Include="..\Stratis.Bitcoin.Features.Api\Stratis.Bitcoin.Features.Api.csproj" />
       <ProjectReference Include="..\Stratis.Bitcoin.Features.Dns\Stratis.Bitcoin.Features.Dns.csproj" />
       <ProjectReference Include="..\Stratis.Bitcoin\Stratis.Bitcoin.csproj" />

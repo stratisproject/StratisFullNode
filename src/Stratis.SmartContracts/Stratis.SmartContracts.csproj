@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Authors>Stratis Group Ltd.</Authors>
+    <Company>Stratis Group Ltd.</Company>
+    <Product>Stratis Smart Contracts</Product>
+    <Version>1.2.1</Version>
+    <PackageId>Stratis.SmartContracts</PackageId>
+    <CodeAnalysisRuleSet>..\None.ruleset</CodeAnalysisRuleSet>
+    <AssemblyVersion>1.2.1.0</AssemblyVersion>
+  </PropertyGroup>
+
+</Project>

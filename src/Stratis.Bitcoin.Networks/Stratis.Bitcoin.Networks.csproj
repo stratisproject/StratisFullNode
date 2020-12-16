@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Stratis Full Node Networks</Description>
     <AssemblyTitle>Stratis.Bitcoin.Networks</AssemblyTitle>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Networks</AssemblyName>
     <PackageId>Stratis.Core.Networks</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>

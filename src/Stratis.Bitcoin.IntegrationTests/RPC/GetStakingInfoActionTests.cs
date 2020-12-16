@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Stratis.Bitcoin.Extensions;
 using Stratis.Bitcoin.Features.Miner.Controllers;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.Miner.Models;
