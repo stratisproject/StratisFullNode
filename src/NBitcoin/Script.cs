@@ -925,7 +925,7 @@ namespace NBitcoin
 
         public ScriptTemplate FindTemplate(Network network)
         {
-            return StandardScripts.GetTemplateFromScriptPubKey(this);
+            return network.StandardScriptsRegistry.GetTemplateFromScriptPubKey(this);
         }
 
         public bool IsScriptType(ScriptType type)
