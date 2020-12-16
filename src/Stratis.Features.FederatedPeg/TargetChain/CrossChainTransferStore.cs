@@ -28,7 +28,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Maximum number of partial transactions.
         /// </summary>
-        public const int MaximumPartialTransactions = 500;
+        public const int MaximumPartialTransactions = 50;
 
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
