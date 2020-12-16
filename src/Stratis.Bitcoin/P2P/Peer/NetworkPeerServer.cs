@@ -212,6 +212,7 @@ namespace Stratis.Bitcoin.P2P.Peer
         /// <returns>When criteria is met returns <c>true</c>, to allow connection.</returns>
         private (bool successful, string reason) AllowClientConnection(TcpClient tcpClient)
         {
+            // This is the IP address of the client connection.
             var clientRemoteEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
 
             var peers = this.peerAddressManager.FindPeersByIp(clientRemoteEndPoint);
@@ -234,14 +235,25 @@ namespace Stratis.Bitcoin.P2P.Peer
                 return (true, "Inbound Accepted: IBD Complete.");
             }
 
+            // This is the network interface the client connection is being made against, not the IP of the client itself.
             var clientLocalEndPoint = tcpClient.Client.LocalEndPoint as IPEndPoint;
 
+            // This checks whether the network interface being connected to by the client is configured to whitelist all inbound connections (i.e. -whitebind).
             bool endpointCanBeWhiteListed = this.connectionManagerSettings.Bind.Where(x => x.Whitelisted).Any(x => x.Endpoint.MapToIpv6().Contains(clientLocalEndPoint));
 
             if (endpointCanBeWhiteListed)
             {
                 this.logger.LogTrace("(-)[ENDPOINT_WHITELISTED_ALLOW_CONNECTION]:true");
                 return (true, "Inbound Accepted: Whitelisted endpoint connected during IBD.");
+            }
+
+            // This checks whether the client IP itself has been whitelisted (i.e. -whitelist).
+            bool clientEndpointCanBeWhiteListed = this.connectionManagerSettings.Whitelist.Any(x => x.MatchIpOnly(clientRemoteEndPoint));
+
+            if (clientEndpointCanBeWhiteListed)
+            {
+                this.logger.LogTrace("(-)[CLIENT_WHITELISTED_ALLOW_CONNECTION]:true");
+                return (true, "Inbound Accepted: Whitelisted client connected during IBD.");
             }
 
             this.logger.LogInformation("Node '{0}' is not whitelisted via endpoint '{1}' during initial block download.", clientRemoteEndPoint, clientLocalEndPoint);
