@@ -9,13 +9,15 @@ namespace Stratis.Bitcoin.Features.PoA
 {
     public interface IFederationHistory
     {
-        /// <summary>Gets the federation member for a specified block.</summary>
+        /// <summary>Gets the federation member for a specified block by first looking at a cache 
+        /// and then the signature in <see cref="PoABlockHeader.BlockSignature"/>.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
         /// <exception cref="ConsensusErrorException">In case timestamp is invalid.</exception>
         IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader);
 
-        /// <summary>Gets the federation member for a specified block.</summary>
+        /// <summary>Gets the federation member for a specified block by first looking at a cache 
+        /// and then the signature in <see cref="PoABlockHeader.BlockSignature"/>.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
         /// <param name="federation">The federation members at the block height.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
@@ -27,6 +29,11 @@ namespace Stratis.Bitcoin.Features.PoA
         List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
     }
 
+    /// <summary>
+    /// This component can be used to determine the member that mined a block for any block height.
+    /// It also provides the federation at any block height by leveraging the functionality
+    /// implemented by <see cref="VotingManager.GetModifiedFederation(ChainedHeader)"/>.
+    /// </summary>
     public class FederationHistory : IFederationHistory
     {
         private readonly IFederationManager federationManager;
