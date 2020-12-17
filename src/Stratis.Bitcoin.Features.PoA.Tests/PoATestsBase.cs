@@ -120,9 +120,16 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
 
             var federationHistory = new Mock<IFederationHistory>();
-            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((a) => {
+            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) => {
                 List<IFederationMember> members = ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
-                return members[a.Height % members.Count];
+                return members[chainedHeader.Height % members.Count];
+            });
+            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>(), It.IsAny<List<IFederationMember>>())).Returns<ChainedHeader, List<IFederationMember>>((chainedHeader, members) => {
+                members = members ?? ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
+                return members[chainedHeader.Height % members.Count];
+            });
+            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) => {
+                return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });
 
             votingManager.Initialize(federationHistory.Object);
