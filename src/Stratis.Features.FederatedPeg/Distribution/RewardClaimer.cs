@@ -83,12 +83,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             {
                 var coins = new List<ScriptCoin>();
 
-                var startFromHeight = this.lastDistributionHeight + 1;
-                this.logger.LogInformation($"Calculating rewards from height:{startFromHeight}");
+                var startFromHeight = (this.lastDistributionHeight + 1) - minStakeConfirmations;
+
+                this.logger.LogInformation($"[Reward Batching] Calculating rewards from height {startFromHeight}.");
                 for (int height = startFromHeight; height < startFromHeight + this.network.RewardClaimerBlockInterval; height++)
                 {
                     // Get the block that is minStakeConfirmations behind the current tip.
-                    Block maturedBlock = GetMaturedBlock(height - minStakeConfirmations);
+                    Block maturedBlock = GetMaturedBlock(height);
                     if (maturedBlock == null)
                         continue;
 
@@ -209,14 +210,23 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Check if the current block is after reward batching activation height.
             if (blockConnected.ConnectedBlock.ChainedHeader.Height >= this.network.RewardClaimerBatchActivationHeight)
             {
-                this.logger.LogInformation($"Batching rewards, the next distribution will be at block {this.lastDistributionHeight + 1 + this.network.RewardClaimerBlockInterval}.");
-
                 // Check if the reward claimer should be triggered.
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height > this.network.RewardClaimerBatchActivationHeight &&
                     blockConnected.ConnectedBlock.ChainedHeader.Height % this.network.RewardClaimerBlockInterval == 0)
                 {
+                    // If this node "skipped" a reward claimer run, then just bring the last claimer height up to
+                    // the last applicable round as the assumption is that some other node would have processed the reward claiming
+                    // properly.
+                    if (blockConnected.ConnectedBlock.ChainedHeader.Height - (this.lastDistributionHeight + 1) > this.network.RewardClaimerBlockInterval)
+                    {
+                        this.lastDistributionHeight = blockConnected.ConnectedBlock.ChainedHeader.Height - this.network.RewardClaimerBlockInterval - 1;
+                        this.logger.LogInformation($"[Reward Batching] The last reward window was skipped, resetting to {this.lastDistributionHeight}.");
+                    }
+
                     BuildAndCompleteRewardClaim(true, this.lastDistributionHeight + this.network.RewardClaimerBlockInterval);
                 }
+                else
+                    this.logger.LogInformation($"[Reward Batching] The next distribution will be at block {this.lastDistributionHeight + 1 + this.network.RewardClaimerBlockInterval}.");
             }
             else
             {
