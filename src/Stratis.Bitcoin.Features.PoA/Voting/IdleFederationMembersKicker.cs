@@ -37,9 +37,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly IFederationManager federationManager;
 
-        private readonly ISlotsManager slotsManager;
-
         private readonly VotingManager votingManager;
+
+        private readonly IFederationHistory federationHistory;
 
         private readonly ILogger logger;
 
@@ -55,15 +55,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private const string fedMembersByLastActiveTimeKey = "fedMembersByLastActiveTime";
 
         public IdleFederationMembersKicker(ISignals signals, Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager,
-            IFederationManager federationManager, ISlotsManager slotsManager, VotingManager votingManager, ILoggerFactory loggerFactory)
+            IFederationManager federationManager, VotingManager votingManager, IFederationHistory federationHistory, ILoggerFactory loggerFactory)
         {
             this.signals = signals;
             this.network = network;
             this.keyValueRepository = keyValueRepository;
             this.consensusManager = consensusManager;
             this.federationManager = federationManager;
-            this.slotsManager = slotsManager;
             this.votingManager = votingManager;
+            this.federationHistory = federationHistory;
 
             this.consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -175,7 +175,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             try
             {
-                PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(consensusTip, this.votingManager).PubKey;
+                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(consensusTip).PubKey;
                 this.fedPubKeysByLastActiveTime.AddOrReplace(pubKey, consensusTip.Header.Time);
                 this.SaveMembersByLastActiveTime();
 
@@ -217,7 +217,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private void UpdateFederationMembersLastActiveTime(BlockConnected blockConnected)
         {
             // The pubkey of the member that signed the block.
-            PubKey key = this.slotsManager.GetFederationMemberForBlock(blockConnected.ConnectedBlock.ChainedHeader, this.votingManager).PubKey;
+            PubKey key = this.federationHistory.GetFederationMemberForBlock(blockConnected.ConnectedBlock.ChainedHeader).PubKey;
 
             // Update the dictionary.
             this.fedPubKeysByLastActiveTime.AddOrReplace(key, blockConnected.ConnectedBlock.ChainedHeader.Header.Time);

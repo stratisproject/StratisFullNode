@@ -20,9 +20,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         private readonly IFederationManager federationManager;
 
-        private readonly VotingDataEncoder votingDataEncoder;
+        private IFederationHistory federationHistory;
 
-        private readonly ISlotsManager slotsManager;
+        private readonly VotingDataEncoder votingDataEncoder;
 
         private readonly IPollResultExecutor pollResultExecutor;
 
@@ -57,11 +57,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private bool isInitialized;
 
-        public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, ISlotsManager slotsManager, IPollResultExecutor pollResultExecutor,
+        public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, IFinalizedBlockInfoRepository finalizedBlockInfo, Network network)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
-            this.slotsManager = Guard.NotNull(slotsManager, nameof(slotsManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
             this.signals = Guard.NotNull(signals, nameof(signals));
             this.nodeStats = Guard.NotNull(nodeStats, nameof(nodeStats));
@@ -77,8 +76,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.isInitialized = false;
         }
 
-        public void Initialize(IIdleFederationMembersKicker idleFederationMembersKicker = null)
+        public void Initialize(IFederationHistory federationHistory, IIdleFederationMembersKicker idleFederationMembersKicker = null)
         {
+            this.federationHistory = federationHistory;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.pollsRepository.Initialize();
@@ -366,7 +366,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Pub key of a fed member that created voting data.
-                string fedMemberKeyHex = this.slotsManager.GetFederationMemberForTimestamp(chBlock.Block.Header.Time).PubKey.ToHex();
+                string fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
 
                 List<VotingData> votingDataList = this.votingDataEncoder.Decode(rawVotingData);
 
@@ -522,7 +522,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
 
                     // Pub key of a fed member that created voting data.
-                    string fedMemberKeyHex = this.slotsManager.GetFederationMemberForTimestamp(chBlock.Block.Header.Time).PubKey.ToHex();
+                    string fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
 
                     targetPoll.PubKeysHexVotedInFavor.Remove(fedMemberKeyHex);
 
