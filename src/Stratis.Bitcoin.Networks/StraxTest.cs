@@ -35,8 +35,8 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             this.CirrusRewardDummyAddress = "tGXZrZiU44fx3SQj8tAQ3Zexy2VuELZtoh";
-            this.RewardClaimerBatchActivationHeight = 165600;
-            this.RewardClaimerBlockInterval = 10;
+            this.RewardClaimerBatchActivationHeight = 166200;
+            this.RewardClaimerBlockInterval = 100;
 
             var consensusFactory = new PosConsensusFactory();
 
