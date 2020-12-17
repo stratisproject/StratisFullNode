@@ -33,6 +33,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             var engine = this.Parent as PoAConsensusRuleEngine;
 
+            // TODO: Consider adding these via a constructor on this rule.
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
@@ -72,9 +73,11 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
 
+            // Look at the last round of blocks to find the previous time that the miner mined.
             ChainedHeader prevHeader = context.ValidationContext.ChainedHeaderToValidate.Previous;
             while (prevHeader.Previous != null && (header.Time - prevHeader.Header.Time) < roundTime)
             {
+                // If the miner is found again within the same round then throw a consensus error.
                 PubKey nextPubKey = this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey;
                 if (nextPubKey == pubKey)
                 {
