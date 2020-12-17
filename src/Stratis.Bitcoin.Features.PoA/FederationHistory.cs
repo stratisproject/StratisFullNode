@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.PoA
             if (this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember))
                 return federationMember;
 
-            return GetFederationMemberForBlock(chainedHeader, this.GetFederationForBlock(chainedHeader));
+            return GetFederationMemberForBlockInternal(chainedHeader, this.GetFederationForBlock(chainedHeader));
         }
 
         /// <inheritdoc />
@@ -61,6 +61,11 @@ namespace Stratis.Bitcoin.Features.PoA
             if (this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember))
                 return federationMember;
 
+            return GetFederationMemberForBlockInternal(chainedHeader, federation);
+        }
+
+        private IFederationMember GetFederationMemberForBlockInternal(ChainedHeader chainedHeader, List<IFederationMember> federation)
+        {
             // Try to provide the public key that signed the block.
             try
             {
@@ -73,7 +78,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     if (pubKeyForSig == null)
                         break;
 
-                    federationMember = federation.FirstOrDefault(m => m.PubKey == pubKeyForSig);
+                    IFederationMember federationMember = federation.FirstOrDefault(m => m.PubKey == pubKeyForSig);
                     if (federationMember != null)
                     {
                         this.minersByBlockHash[chainedHeader.HashBlock] = federationMember;
