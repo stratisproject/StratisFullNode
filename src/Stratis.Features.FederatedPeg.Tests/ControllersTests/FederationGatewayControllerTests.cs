@@ -256,9 +256,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
-            var slotsManager = new SlotsManager(this.network, this.federationManager, chainIndexerMock.Object, this.loggerFactory);
-            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
-            votingManager.Initialize();
+            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
+            var federationHistory = new FederationHistory(this.federationManager, votingManager);
+            votingManager.Initialize(federationHistory);
 
             return votingManager;
         }

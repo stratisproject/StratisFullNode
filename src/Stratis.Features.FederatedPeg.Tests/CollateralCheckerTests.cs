@@ -71,9 +71,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             var fullNode = new Mock<IFullNode>();
 
             IFederationManager federationManager = new FederationManager(counterChainSettings, fullNode.Object, network, nodeSettings, loggerFactory, signals);
-            var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
-            var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
-            votingManager.Initialize();
+            var votingManager = new VotingManager(federationManager, loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
+            var federationHistory = new FederationHistory(federationManager, votingManager);
+            votingManager.Initialize(federationHistory);
 
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
 

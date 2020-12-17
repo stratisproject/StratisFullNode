@@ -40,24 +40,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         }
 
         [Fact]
-        public void ValidSlotAssigned()
-        {
-            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
-            uint roundStart = this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count * 5;
-
-            int currentFedIndex = -1;
-
-            for (int i = 0; i < 20; i++)
-            {
-                currentFedIndex++;
-                if (currentFedIndex > federationMembers.Count - 1)
-                    currentFedIndex = 0;
-
-                Assert.Equal(federationMembers[currentFedIndex].PubKey, this.slotsManager.GetFederationMemberForTimestamp(roundStart + this.consensusOptions.TargetSpacingSeconds * (uint)i).PubKey);
-            }
-        }
-
-        [Fact]
         public void GetMiningTimestamp()
         {
             var tool = new KeyTool(new DataFolder(string.Empty));
