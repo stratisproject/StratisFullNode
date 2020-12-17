@@ -234,6 +234,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     feeAmount,
                     request.SubtractFeeFromAmount,
                     false,
+                    request.SplitCount,
                     request.SegwitChangeAddress);
 
                 var model = new SetupColdStakingResponse
@@ -293,6 +294,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     feeAmount,
                     request.SubtractFeeFromAmount,
                     true,
+                    request.SplitCount,
                     request.SegwitChangeAddress);
 
                 // TODO: We use the same code in the regular wallet for offline signing request construction, perhaps it should be moved to a common method
@@ -373,7 +375,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     amount,
                     request.SubtractFeeFromAmount,
                     false,
-                    request.SegwitChangeAddress);
+                    request.SegwitChangeAddress,
+                    request.SplitCount);
 
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);
                 return this.Json(estimatedFee);
@@ -416,7 +419,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     amount,
                     request.SubtractFeeFromAmount,
                     true,
-                    request.SegwitChangeAddress);
+                    request.SegwitChangeAddress,
+                    request.SplitCount);
 
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);
                 return this.Json(estimatedFee);
