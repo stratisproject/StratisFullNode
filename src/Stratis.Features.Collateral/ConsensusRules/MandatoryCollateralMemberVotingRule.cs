@@ -16,8 +16,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         private VotingDataEncoder votingDataEncoder;
         private PoAConsensusRuleEngine ruleEngine;
         private IFederationManager federationManager;
-        private VotingManager votingManager;
-        private ISlotsManager slotsManager;
+        private IFederationHistory federationHistory;
 
         [NoTrace]
         public override void Initialize()
@@ -25,8 +24,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
             this.votingDataEncoder = new VotingDataEncoder(this.Parent.LoggerFactory);
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
             this.federationManager = this.ruleEngine.FederationManager;
-            this.votingManager = this.ruleEngine.VotingManager;
-            this.slotsManager = this.ruleEngine.SlotsManager;
+            this.federationHistory = this.ruleEngine.FederationHistory;
 
             base.Initialize();
         }
@@ -46,7 +44,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
                 return Task.CompletedTask;
 
             // Ignore any polls that the miner has already voted on.
-            PubKey blockMiner = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
+            PubKey blockMiner = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate).PubKey;
             pendingPolls = pendingPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(pk => pk == blockMiner.ToHex())).ToList();
 
             // Exit if there is nothing remaining.
