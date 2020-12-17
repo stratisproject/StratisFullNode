@@ -294,7 +294,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="feeAmount">The fee to pay for the cold staking setup transaction.</param>
         /// <param name="subtractFeeFromAmount">Whether the transaction fee should be subtracted from the amount being transferred into the cold staking account.</param>
         /// <param name="offline">Whether the transaction should be left unsigned so that it can be transferred to an offline wallet for signing.</param>
-        /// <param name="splitCount">If greater than 1, the amount of the setup transaction will be pre-split into 'splitCount' UTXOs of similar value.</param>
+        /// <param name="splitCount">The number of UTXOs of similar value the setup transaction will be split into. Defaults to 1.</param>
         /// <param name="useSegwitChangeAddress">Use a segwit style change address.</param>
         /// <returns>The <see cref="Transaction"/> for setting up cold staking.</returns>
         /// <exception cref="WalletException">Thrown if any of the rules listed in the remarks section of this method are broken.</exception>
