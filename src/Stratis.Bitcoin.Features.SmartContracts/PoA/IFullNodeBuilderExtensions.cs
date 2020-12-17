@@ -25,6 +25,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     .FeatureServices(services =>
                     {
                         // Voting & Polls 
+                        services.AddSingleton<IFederationHistory, FederationHistory>();
                         services.AddSingleton<VotingManager>();
                         services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
                         services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
