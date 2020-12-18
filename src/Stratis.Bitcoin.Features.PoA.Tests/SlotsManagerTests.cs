@@ -30,17 +30,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         }
         /* TODO: Update this
         [Fact]
-        public void IsValidTimestamp()
-        {
-            uint targetSpacing = this.consensusOptions.TargetSpacingSeconds;
-
-            Assert.True(this.slotsManager.IsValidTimestamp(targetSpacing));
-            Assert.True(this.slotsManager.IsValidTimestamp(targetSpacing * 100));
-            Assert.False(this.slotsManager.IsValidTimestamp(targetSpacing * 10 + 1));
-            Assert.False(this.slotsManager.IsValidTimestamp(targetSpacing + 2));
-        }
-        
-        [Fact]
         public void GetMiningTimestamp()
         {
             var tool = new KeyTool(new DataFolder(string.Empty));

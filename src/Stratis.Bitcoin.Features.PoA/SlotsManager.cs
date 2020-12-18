@@ -17,9 +17,6 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
         uint GetMiningTimestamp(uint currentTime);
 
-        /// <summary>Determines whether timestamp is valid according to the network rules.</summary>
-        bool IsValidTimestamp(uint headerUnixTimestamp);
-
         uint GetRoundLengthSeconds(int? federationMembersCount = null);
     }
 
@@ -97,13 +94,6 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             return nextTimestampForMining;
-        }
-
-
-        /// <inheritdoc />
-        public bool IsValidTimestamp(uint headerUnixTimestamp)
-        {
-            return true;
         }
 
         public uint GetRoundLengthSeconds(int? federationMembersCount = null)
