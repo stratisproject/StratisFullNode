@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
@@ -43,7 +44,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 this.withdrawalsByDepositDict.Add(transactionData.SpendingDetails.WithdrawalDetails.MatchingDepositId, txList);
             }
 
-            txList.Add(transactionData);
+            if (!txList.Any(i => i.Id == transactionData.Id && i.Index == transactionData.Index))
+                txList.Add(transactionData);
         }
 
         private void RemoveWithdrawal(TransactionData transactionData)
@@ -55,10 +57,14 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
             if (this.withdrawalsByDepositDict.TryGetValue(matchingDepositId, out List<TransactionData> txList))
             {
-                txList.Remove(transactionData);
+                int pos = txList.FindIndex(i => i.Id == transactionData.Id && i.Index == transactionData.Index);
+                if (pos >= 0)
+                {
+                    txList.RemoveAt(pos);
 
-                if (txList.Count == 0)
-                    this.withdrawalsByDepositDict.Remove(matchingDepositId);
+                    if (txList.Count == 0)
+                        this.withdrawalsByDepositDict.Remove(matchingDepositId);
+                }
             }
         }
 
@@ -99,16 +105,23 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             lock (this.lockObject)
             {
-                this.transactionDict.Add(transactionData.Key, transactionData);
+                try
+                {
+                    this.transactionDict.Add(transactionData.Key, transactionData);
 
-                if (transactionData.IsSpendable())
-                    this.spendableTransactionList.Add(transactionData, transactionData);
+                    if (transactionData.IsSpendable())
+                        this.spendableTransactionList.Add(transactionData, transactionData);
 
-                this.AddWithdrawal(transactionData);
+                    this.AddWithdrawal(transactionData);
 
-                this.AddSpentTransactionByHeight(transactionData);
+                    this.AddSpentTransactionByHeight(transactionData);
 
-                transactionData.Subscribe(this);
+                    transactionData.Subscribe(this);
+                }
+                catch (Exception err)
+                {
+                    throw new System.Exception("An error occurred during transaction data addition.", err);
+                }
             }
         }
 
@@ -122,18 +135,25 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             lock (this.lockObject)
             {
-                bool res = this.transactionDict.Remove(transactionData.Key);
+                try
+                {
+                    bool res = this.transactionDict.Remove(transactionData.Key);
 
-                if (this.spendableTransactionList.ContainsKey(transactionData))
-                    this.spendableTransactionList.Remove(transactionData);
+                    if (this.spendableTransactionList.ContainsKey(transactionData))
+                        this.spendableTransactionList.Remove(transactionData);
 
-                this.RemoveWithdrawal(transactionData);
+                    this.RemoveWithdrawal(transactionData);
 
-                this.RemoveSpentTransactionByHeight(transactionData);
+                    this.RemoveSpentTransactionByHeight(transactionData);
 
-                transactionData.Subscribe(null);
+                    transactionData.Subscribe(null);
 
-                return res;
+                    return res;
+                }
+                catch (Exception err)
+                {
+                    throw new System.Exception("An error occurred during transaction data removal.", err);
+                }
             }
         }
 

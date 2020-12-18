@@ -56,10 +56,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> GenerateMnemonic([FromQuery] string language = "English", int wordCount = 12,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.ExecuteAsAsync(new {Language = language, WordCount = wordCount},
+            return await this.ExecuteAsAsync(new { Language = language, WordCount = wordCount },
                 cancellationToken, (req, token) =>
                     // Generate the Mnemonic
-                    this.Json(new Mnemonic(language, (WordCount) wordCount).ToString()));
+                    this.Json(new Mnemonic(language, (WordCount)wordCount).ToString()));
         }
 
         /// <summary>
@@ -107,6 +107,31 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 string signature =
                     this.walletManager.SignMessage(req.Password, req.WalletName, req.ExternalAddress, req.Message);
                 return this.Json(signature);
+            });
+        }
+
+        /// <summary>
+        /// Gets the public key for an address.
+        /// </summary>
+        /// <param name="request">The object containing the parameters used to get the public key.</param>
+        /// <param name="cancellationToken">The cancellation token</param>
+        /// <returns>A Jstring containing the public key.</returns>
+        /// <response code="200">Returns public key</response>
+        /// <response code="400">Invalid request or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
+        [Route("pubkey")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> GetPubKey([FromBody] PubKeyRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.ExecuteAsAsync(request, cancellationToken, (req, token) =>
+            {
+                string pubKey = this.walletManager.GetPubKey(req.WalletName, req.ExternalAddress);
+
+                return this.Json(pubKey);
             });
         }
 
@@ -447,8 +472,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [HttpGet]
         public async Task<IActionResult> ListWallets(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.ExecuteAsAsync((object) null, cancellationToken, (req, token) =>
-                this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames())), false);
+            return await this.ExecuteAsAsync((object)null, cancellationToken, (req, token) =>
+               this.Json(new WalletInfoModel(this.walletManager.GetWalletsNames(), this.walletManager.GetWatchOnlyWalletsNames())), false);
         }
 
         /// <summary>
@@ -577,6 +602,37 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
+        /// Gets a specified number of new addresses (in the Base58 format) for a wallet account. These addresses
+        /// will be newly created and will not have had any transactional activity.
+        /// <remarks>This differs from the unusedaddress(es) endpoints; the addresses will be added to the wallet without respecting the gap limit.
+        /// Therefore, each time the request is made a new set of addresses will be returned.</remarks>
+        /// </summary>
+        /// <param name="request">An object containing the necessary parameters to retrieve
+        /// new addresses for a wallet account.</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>A JSON object containing the required amount of new addresses (in Base58 format).</returns>
+        /// <response code="200">Returns address list</response>
+        /// <response code="400">Invalid request, or unexpected exception occurred</response>
+        /// <response code="500">Request is null or cannot be parsed</response>
+        [Route("newaddresses")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> GetNewAddresses([FromQuery] GetNewAddressesModel request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.ExecuteAsAsync(request, cancellationToken, (req, token) =>
+            {
+                var result = this.walletManager.GetNewAddresses(
+                        new WalletAccountReference(request.WalletName, req.AccountName), int.Parse(req.Count))
+                    .Select(x => request.Segwit ? x.Bech32Address : x.Address).ToArray();
+
+                return this.Json(result);
+            });
+        }
+
+        /// <summary>
         /// Gets all addresses for a wallet account.
         /// </summary>
         /// <param name="request">An object containing the necessary parameters to retrieve
@@ -622,6 +678,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.Execute(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.RemoveTransactions(req, token)));
+        }
+
+        [Route("remove-wallet")]
+        [HttpDelete]
+        public async Task<IActionResult> RemoveWallet([FromQuery] RemoveWalletModel request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) =>
+                {
+                    await this.walletService.RemoveWallet(req, token);
+
+                    return this.Ok();
+                });
         }
 
         /// <summary>
@@ -778,6 +848,33 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.Execute(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.Sweep(req, token)));
+        }
+
+        [Route("build-offline-sign-request")]
+        [HttpPost]
+        public async Task<IActionResult> BuildOfflineSignRequest([FromBody] BuildOfflineSignRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) => this.Json(await this.walletService.BuildOfflineSignRequest(req, token)));
+        }
+
+        // TODO: Make this support PSBT directly?
+        [Route("offline-sign-request")]
+        [HttpPost]
+        public async Task<IActionResult> OfflineSignRequest([FromBody] OfflineSignRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken, async (req, token) => this.Json(await this.walletService.OfflineSignRequest(req, token)));
+        }
+
+        [HttpPost]
+        [Route("consolidate")]
+        public async Task<IActionResult> Consolidate([FromBody] ConsolidationRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) => this.Json(await this.walletService.Consolidate(req, token)));
         }
 
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,

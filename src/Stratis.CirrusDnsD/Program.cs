@@ -47,12 +47,12 @@ namespace Stratis.CirrusDnsD
                 if (dnsSettings.DnsFullNode)
                 {
                     // Build the Dns full node.
-                    node = GetFederatedPegFullNode(nodeSettings);
+                    node = GetSideChainFullNode(nodeSettings);
                 }
                 else
                 {
                     // Build the Dns node.
-                    node = GetFederatedPegDnsNode(nodeSettings);
+                    node = GetDnsNode(nodeSettings);
                 }
 
                 // Run node.
@@ -65,7 +65,7 @@ namespace Stratis.CirrusDnsD
             }
         }
 
-        private static IFullNode GetFederatedPegFullNode(NodeSettings nodeSettings)
+        private static IFullNode GetSideChainFullNode(NodeSettings nodeSettings)
         {
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
@@ -76,9 +76,9 @@ namespace Stratis.CirrusDnsD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining() // TODO: this needs to be refactored and removed as it does not make sense to call this for non-mining nodes.
-                .CheckForPoAMembersCollateral(false) // This is a non-mining node so we will only check the commitment height data and not do the full set of collateral checks.
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .CheckCollateralCommitment()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .UseApi()
@@ -89,11 +89,12 @@ namespace Stratis.CirrusDnsD
             return node;
         }
 
-        private static IFullNode GetFederatedPegDnsNode(NodeSettings nodeSettings)
+        private static IFullNode GetDnsNode(NodeSettings nodeSettings)
         {
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
-                .UseSmartContractPoAConsensus()
+                .AddPoAFeature()
+                .UsePoAConsensus()
                 .UseApi()
                 .AddRPC()
                 .UseDns()

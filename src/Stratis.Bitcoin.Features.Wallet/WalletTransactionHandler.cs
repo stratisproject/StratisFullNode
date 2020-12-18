@@ -5,7 +5,6 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
-using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
@@ -60,7 +59,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             const int maxRetries = 5;
             int retryCount = 0;
 
-            TransactionPolicyError[] errors = null;
+            TransactionPolicyError[] errors = {};
             while (retryCount <= maxRetries)
             {
                 if (context.Shuffle)
@@ -78,10 +77,16 @@ namespace Stratis.Bitcoin.Features.Wallet
                     // TODO: Improve this as we already have secrets when running a retry iteration.
                     this.AddSecrets(context, spentCoins);
                     context.TransactionBuilder.SignTransactionInPlace(transaction);
-                }
 
-                if (context.TransactionBuilder.Verify(transaction, out errors))
+                    if (context.TransactionBuilder.Verify(transaction, out errors))
+                        return transaction;
+                }
+                else
+                {
+                    // If we aren't being asked to sign then it is not really meaningful to perform the Verify step.
+                    // TODO: Do we still need to check for FeeTooLowPolicyError in this case?
                     return transaction;
+                }
 
                 // Retry only if error is of type 'FeeTooLowPolicyError'.
                 if (!errors.Any(e => e is FeeTooLowPolicyError)) break;
@@ -208,6 +213,15 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.InitializeTransactionBuilder(context);
 
             return context.TransactionFee;
+        }
+
+        public int EstimateSize(TransactionBuildContext context)
+        {
+            this.InitializeTransactionBuilder(context);
+            
+            Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
+
+            return context.TransactionBuilder.EstimateSize(transaction, true);
         }
 
         /// <summary>
@@ -397,16 +411,27 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (context.Recipients.Any(a => a.Amount == Money.Zero))
                 throw new WalletException("No amount specified.");
 
-            int totalRecipients = context.Recipients.Count(r => r.SubtractFeeFromAmount);
+            int totalSubtractingRecipients = context.Recipients.Count(r => r.SubtractFeeFromAmount);
 
-            // If we have any recipients that require a fee to be subtracted from the amount, then
-            // calculate fee and evenly distribute it among all recipients. Any remaining fee should be
+            // If none of them need the fee subtracted then it's simply a matter of adding the individual recipients to the builder.
+            if (totalSubtractingRecipients == 0)
+            {
+                foreach (Recipient recipient in context.Recipients)
+                {
+                    context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
+                }
+
+                return;
+            }
+
+            // If the transaction fee has been explicitly specified, and we have any recipients that require a fee to be subtracted
+            // from the amount to be sent, then evenly distribute the chosen fee among all recipients. Any remaining fee should be
             // subtracted from the first recipient.
-            if (totalRecipients > 0 && context.TransactionFee != null)
+            if (context.TransactionFee != null)
             {
                 Money fee = context.TransactionFee;
-                long recipientFee = fee.Satoshi / totalRecipients;
-                long remainingFee = fee.Satoshi % totalRecipients;
+                long recipientFee = fee.Satoshi / totalSubtractingRecipients;
+                long remainingFee = fee.Satoshi % totalSubtractingRecipients;
 
                 for (int i = 0; i < context.Recipients.Count; i++)
                 {
@@ -428,9 +453,19 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
             else
             {
+                // This is currently a limitation of the NBitcoin TransactionBuilder.
+                // The only alternative would possibly be to recompute the output sizes after the AddFee call.
+                if (totalSubtractingRecipients > 1)
+                    throw new WalletException($"Cannot subtract fee from more than 1 recipient if {nameof(context.TransactionFee)} is not set.");
+
+                // If the transaction fee has not been explicitly specified yet, then the builder needs to assign it later from the wallet fee policy.
+                // So we just need to indicate to the builder that the fees must be subtracted from the specified recipient.
                 foreach (Recipient recipient in context.Recipients)
                 {
                     context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
+
+                    if (recipient.SubtractFeeFromAmount)
+                        context.TransactionBuilder.SubtractFees();
                 }
             }
         }

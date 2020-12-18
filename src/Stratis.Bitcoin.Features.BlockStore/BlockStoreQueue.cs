@@ -198,13 +198,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 this.blockRepository.ReIndex();
             }
 
-            ChainedHeader initializationTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
+            ChainedHeader initializationTip = RecoverStoreTip();
             this.SetStoreTip(initializationTip);
-
-            if (this.storeTip == null)
-                this.RecoverStoreTip();
-
-            this.logger.LogDebug("Initialized block store tip at '{0}'.", this.storeTip);
+            this.logger.LogDebug("Initialized block store tip at '{0}'.", initializationTip);
 
             if (this.storeSettings.TxIndex != this.blockRepository.TxIndex)
             {
@@ -411,8 +407,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>
         /// Sets block store tip to the last block that exists both in the repository and in the <see cref="ChainIndexer"/>.
         /// </summary>
-        private void RecoverStoreTip()
+        private ChainedHeader RecoverStoreTip()
         {
+            ChainedHeader blockStoreTip = this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash);
+            if (blockStoreTip != null)
+                return blockStoreTip;
+
             var blockStoreResetList = new List<uint256>();
 
             uint256 resetBlockHash = this.blockRepository.TipHashAndHeight.Hash;
@@ -444,13 +444,11 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (blockStoreResetList.Count != 0)
                 this.blockRepository.Delete(new HashHeightPair(newTip), blockStoreResetList);
 
-            this.SetStoreTip(newTip);
-
-            // TODO: this will be replaced with tips manager
-            // TODO this thing should remove stuff from chain database. Otherwise we are leaving redundant data.
             this.chainIndexer.Initialize(newTip); // we have to set chain store to be same as the store tip.
 
             this.logger.LogWarning("Block store tip recovered to block '{0}'.", newTip);
+
+            return newTip;
         }
 
         [NoTrace]
@@ -507,8 +505,11 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 // Start new dequeue task if not started already.
                 dequeueTask = dequeueTask ?? this.blocksQueue.DequeueAsync();
 
+                // Start timer if it is not started already.
+                timerTask = timerTask ?? Task.Delay(BatchMaxSaveIntervalSeconds * 1000, this.cancellation.Token);
+
                 // Wait for one of the tasks: dequeue or timer (if available) to finish.
-                Task task = (timerTask == null) ? dequeueTask : await Task.WhenAny(dequeueTask, timerTask).ConfigureAwait(false);
+                Task task = await Task.WhenAny(dequeueTask, timerTask).ConfigureAwait(false);
 
                 bool saveBatch = false;
 
@@ -534,15 +535,15 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     // Set the dequeue task to null so it can be assigned on the next iteration.
                     dequeueTask = null;
 
-                    lock (this.blocksCacheLock)
-                    {
-                        this.batch.Add(item);
-                    }
+                    this.ProcessQueueItem(item);
 
-                    this.blocksQueueSizeBytes -= item.Block.BlockSize.Value;
-                    this.currentBatchSizeBytes += item.Block.BlockSize.Value;
+                    if (this.blockStoreQueueFlushCondition.ShouldFlush)
+                        this.FlushAllCollections();
 
-                    saveBatch = saveBatch || (this.currentBatchSizeBytes >= this.BatchThresholdSizeBytes) || this.blockStoreQueueFlushCondition.ShouldFlush;
+                    // Don't allow block store to fall MaxReorg length behind consensus tip
+                    // otherwise the chain will need to rewind further than it's capable of doing.
+                    if ((this.blocksQueue.Count + this.batch.Count) >= this.chainIndexer.Network.Consensus.MaxReorgLength / 2)
+                        this.FlushAllCollections();
                 }
                 else
                 {
@@ -552,44 +553,27 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                 if (saveBatch)
                 {
-                    if (this.batch.Count != 0)
-                    {
-                        try
-                        {
-                            this.SaveBatch();
-
-                            // If an error occurred during SaveBatchAsync then this code
-                            // which clears the batch will not execute.
-                            lock (this.blocksCacheLock)
-                            {
-                                foreach (ChainedHeaderBlock chainedHeaderBlock in this.batch)
-                                {
-                                    this.pendingBlocksCache.Remove(chainedHeaderBlock.ChainedHeader.HashBlock);
-                                }
-
-                                this.batch.Clear();
-                            }
-
-                            this.currentBatchSizeBytes = 0;
-                        }
-                        catch (Exception err)
-                        {
-                            this.logger.LogError("Could not save blocks to the block repository. Exiting due to '{0}'.", err.Message);
-                            this.saveAsyncLoopException = err;
-                            throw;
-                        }
-                    }
+                    this.SaveBatch();
 
                     timerTask = null;
-                }
-                else
-                {
-                    // Start timer if it is not started already.
-                    timerTask = timerTask ?? Task.Delay(BatchMaxSaveIntervalSeconds * 1000, this.cancellation.Token);
                 }
             }
 
             this.FlushAllCollections();
+        }
+
+        private void ProcessQueueItem(ChainedHeaderBlock item)
+        {
+            lock (this.blocksCacheLock)
+            {
+                this.batch.Add(item);
+            }
+
+            this.blocksQueueSizeBytes -= item.Block.BlockSize.Value;
+            this.currentBatchSizeBytes += item.Block.BlockSize.Value;
+
+            if (this.currentBatchSizeBytes >= this.BatchThresholdSizeBytes)
+                this.SaveBatch();
         }
 
         /// <summary>
@@ -598,14 +582,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// </summary>
         private void FlushAllCollections()
         {
-            ChainedHeaderBlock chainedHeaderBlock = null;
-            while (this.blocksQueue.TryDequeue(out chainedHeaderBlock))
-            {
-                this.batch.Add(chainedHeaderBlock);
-            }
+            while (this.blocksQueue.TryDequeue(out ChainedHeaderBlock item))
+                this.ProcessQueueItem(item);
 
-            if (this.batch.Count != 0)
-                this.SaveBatch();
+            this.SaveBatch();
         }
 
         /// <summary>
@@ -615,23 +595,48 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <exception cref="DBreeze.Exceptions.DBreezeException">Thrown if an error occurs during database operations.</exception>
         private void SaveBatch()
         {
-            List<ChainedHeaderBlock> clearedBatch = this.GetBatchWithoutReorgedBlocks();
+            if (this.batch.Count == 0)
+                return;
 
-            ChainedHeader expectedStoreTip = clearedBatch.First().ChainedHeader.Previous;
+            try
+            {
+                List<ChainedHeaderBlock> clearedBatch = this.GetBatchWithoutReorgedBlocks();
 
-            // Check if block repository contains reorged blocks. If it does - delete them.
-            if (expectedStoreTip.HashBlock != this.storeTip.HashBlock)
-                this.RemoveReorgedBlocksFromStore(expectedStoreTip);
+                ChainedHeader expectedStoreTip = clearedBatch.First().ChainedHeader.Previous;
 
-            // Save the batch.
-            ChainedHeader newTip = clearedBatch.Last().ChainedHeader;
+                // Check if block repository contains reorged blocks. If it does - delete them.
+                if (expectedStoreTip.HashBlock != this.storeTip.HashBlock)
+                    this.RemoveReorgedBlocksFromStore(expectedStoreTip);
 
-            this.logger.LogDebug("Saving batch of {0} blocks, total size: {1} bytes.", clearedBatch.Count, this.currentBatchSizeBytes);
+                // Save the batch.
+                ChainedHeader newTip = clearedBatch.Last().ChainedHeader;
 
-            this.blockRepository.PutBlocks(new HashHeightPair(newTip), clearedBatch.Select(b => b.Block).ToList());
+                this.logger.LogDebug("Saving batch of {0} blocks, total size: {1} bytes.", clearedBatch.Count, this.currentBatchSizeBytes);
 
-            this.SetStoreTip(newTip);
-            this.logger.LogDebug("Store tip set to '{0}'.", this.storeTip);
+                this.blockRepository.PutBlocks(new HashHeightPair(newTip), clearedBatch.Select(b => b.Block).ToList());
+
+                this.SetStoreTip(newTip);
+                this.logger.LogDebug("Store tip set to '{0}'.", this.storeTip);
+
+                // If an error occurred above then this code which clears the batch will not execute.
+                lock (this.blocksCacheLock)
+                {
+                    foreach (ChainedHeaderBlock chainedHeaderBlock in this.batch)
+                    {
+                        this.pendingBlocksCache.Remove(chainedHeaderBlock.ChainedHeader.HashBlock);
+                    }
+
+                    this.batch.Clear();
+                }
+
+                this.currentBatchSizeBytes = 0;
+            }
+            catch (Exception err)
+            {
+                this.logger.LogError("Could not save blocks to the block repository. Exiting due to '{0}'.", err.Message);
+                this.saveAsyncLoopException = err;
+                throw;
+            }
         }
 
         /// <summary>

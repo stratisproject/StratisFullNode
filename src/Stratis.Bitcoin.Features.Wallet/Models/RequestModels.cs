@@ -561,6 +561,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         }
     }
 
+    public class RemoveWalletModel : RequestModel
+    {
+        /// <summary>
+        /// The name of the wallet to remove.
+        /// </summary>
+        [Required(ErrorMessage = "The name of the wallet is required.")]
+        public string WalletName { get; set; }
+    }
+
     /// <summary>
     /// A class containing the necessary parameters for a list accounts request.  
     /// </summary>
@@ -601,7 +610,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     }
 
     /// <summary>
-    /// A class containing the necessary parameters for an unused addresses request.  
+    /// A class containing the necessary parameters for an unused addresses request.
     /// </summary>
     public class GetUnusedAddressesModel : RequestModel
     {
@@ -623,6 +632,39 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         /// <summary>
         /// The number of addresses to retrieve.
+        /// </summary>
+        [Required]
+        public string Count { get; set; }
+
+        /// <summary>
+        /// Whether to return the P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool Segwit { get; set; }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for new addresses request.
+    /// </summary>
+    public class GetNewAddressesModel : RequestModel
+    {
+        public GetNewAddressesModel()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
+        /// <summary>
+        /// The name of the wallet from which to get the addresses.
+        /// </summary>
+        [Required]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The name of the account for which to get the addresses.
+        /// </summary>
+        public string AccountName { get; set; }
+
+        /// <summary>
+        /// The number of new addresses to create and return.
         /// </summary>
         [Required]
         public string Count { get; set; }
@@ -931,6 +973,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string Message { get; set; }
     }
 
+
+    /// <summary>
+    /// Object to get a public key.
+    /// </summary>
+    public class PubKeyRequest : RequestModel
+    {
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        [Required(ErrorMessage = "An address is required.")]
+        public string ExternalAddress { get; set; }
+    }
+
     /// <summary>
     /// Object to verify a signed message.
     /// </summary>
@@ -955,5 +1010,44 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string DestinationAddress { get; set; }
 
         public bool Broadcast { get; set; }
+    }
+
+    public sealed class ConsolidationRequest : RequestModel
+    {
+        public ConsolidationRequest()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The account from which UTXOs should be consolidated.
+        /// If this is not set the default account of the selected wallet will be used.
+        /// </summary>
+        public string AccountName { get; set; }
+
+        [Required(ErrorMessage = "A password is required.")]
+        public string WalletPassword { get; set; }
+
+        /// <summary>
+        /// If this is set, only UTXOs within this wallet address will be consolidated.
+        /// If it is not set, all the UTXOs within the selected account will be consolidated.
+        /// </summary>
+        public string SingleAddress { get; set; }
+
+        /// <summary>
+        /// Which address the UTXOs should be sent to. It does not have to be within the wallet.
+        /// If it is not provided the UTXOs will be consolidated to an unused address within the specified wallet.
+        /// </summary>
+        public string DestinationAddress { get; set; }
+
+        /// <summary>
+        /// If provided, UTXOs that are larger in value will not be consolidated.
+        /// Dust UTXOs will not be consolidated regardless of their value, so there is an implicit lower bound as well.
+        /// </summary>
+        [MoneyFormat(isRequired: false, ErrorMessage = "The amount is not in the correct format.")]
+        public string UtxoValueThreshold { get; set; }
     }
 }

@@ -151,11 +151,17 @@ function Get-Median($numberSeries)
 
 function Check-TimeDifference
 {
-    Write-Host "Checking UTC Time Difference (WorldTimeAPI)" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
-    $timeDifSamples[0] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-    $timeDifSamples[1] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-    $timeDifSamples[2] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content)
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
     if ( $timeDif -gt 2 -or $timeDif -lt 2 )
@@ -172,20 +178,47 @@ function Check-TimeDifference
 
 function Check-TimeDifference2
 {
-    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (unixtimestamp.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
-    if ( $timeDif -gt 2 -or $timeDif -lt -2 )
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
+    {
+        Clear-Variable timeDif,timeDifSamples
+        Check-TimeDifference3
+    }
+        Else
+        {
+            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
+            Write-Host ""
+        }
+}
+
+function Check-TimeDifference3
+{
+    Write-Host "Checking UTC Time Difference (google.com)" -ForegroundColor Cyan
+    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDif = Get-Median -numberSeries $timeDifSamples
+
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
     {
         Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
         Start-Sleep 30
@@ -413,58 +446,65 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
 }
 
 #Mining Wallet Creation
+
 $WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
-if ( -not ( $WalletNames -contains "MiningWallet" ) ) 
+if ( $WalletNames -eq $null )
 {
-    Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
-    $Body = @{} 
-    $Body.Add("name","MiningWallet")
+    $CirrusMiningWallet = Read-Host "Please enter your Cirrus Mining Wallet name"
+    Clear-Host
 
-    if ( $NodeType -eq "50K" )
-    {    
-        $Body.Add("password",$multiSigPassword)
-        $Body.Add("passphrase",$multiSigPassword)
-        $Body.Add("mnemonic",$multiSigMnemonic)
-        $Body = $Body | ConvertTo-Json
-        Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json" | Out-Null
-    }
-        Else
-        {
-            $Body.Add("password",$miningPassword)
-            $Body.Add("passphrase",$miningPassword)
+    $WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
+    if ( -not ( $WalletNames -contains $CirrusMiningWallet ) ) 
+    {
+        Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
+        $Body = @{} 
+        $Body.Add("name", $CirrusMiningWallet)
+
+        if ( $NodeType -eq "50K" )
+        {    
+            $Body.Add("password",$multiSigPassword)
+            $Body.Add("passphrase",$multiSigPassword)
+            $Body.Add("mnemonic",$multiSigMnemonic)
             $Body = $Body | ConvertTo-Json
-            $CreateWallet = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json"
-            $Mnemonic = ($CreateWallet.Content).Trim('"')
-            Write-Host (Get-TimeStamp) INFO: A Mining Wallet has now been created, please take a note of the below recovery words -ForegroundColor Yellow
-            ""
-            $Mnemonic
-            ""
-            Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
-
-            $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
-            While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
-            {
-                ""
-                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
-                ""
-            }
-            Switch ( $ReadyToContinue )
-            {
-                Yes 
-                {
-                    Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
-                }
-                
-                No 
-                { 
-                    Write-Host (Get-TimeStamp) "WARNING: You have said No.. In the event of data loss your wallet will be unrecoverable unless you have taken a backup of the wallet database" -ForegroundColor Red
-                    Start-Sleep 60
-                    Exit
-                }
-            }
+            Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json" | Out-Null
         }
-}
+            Else
+            {
+                $Body.Add("password",$miningPassword)
+                $Body.Add("passphrase",$miningPassword)
+                $Body = $Body | ConvertTo-Json
+                $CreateWallet = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json"
+                $Mnemonic = ($CreateWallet.Content).Trim('"')
+                Write-Host (Get-TimeStamp) INFO: A Mining Wallet has now been created, please take a note of the below recovery words -ForegroundColor Yellow
+                ""
+                $Mnemonic
+                ""
+                Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
 
+                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
+                While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
+                {
+                    ""
+                    $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
+                    ""
+                }
+                Switch ( $ReadyToContinue )
+                {
+                    Yes 
+                    {
+                        Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
+                    }
+                
+                    No 
+                    { 
+                        Write-Host (Get-TimeStamp) "WARNING: You have said No.. In the event of data loss your wallet will be unrecoverable unless you have taken a backup of the wallet database" -ForegroundColor Red
+                        Start-Sleep 60
+                        Exit
+                    }
+                }
+            }
+    }
+}
 if ( $NodeType -eq "50K" )
 {
     #Enable Federation
@@ -556,8 +596,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU3QOC/gMECD7V9YFWeZsN3Ke4
-# /SqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUNjDKWkl5DNclOcReU/bbOt2t
+# 1j2gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -627,11 +667,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFAkzH767UIxC
-# PTvSZ2b/4eHdw8O/MA0GCSqGSIb3DQEBAQUABIIBACw42G0Flw5Jj1KVe3SEnh6T
-# fMKZiOur/K6g7EBwR6e82NvZW3DjAUsmFbPDVybFI1veP25ZxwI6DEugGrOeL9zF
-# L7Ugs/7qOvE3kffixpeU1Xb3rPB2RrlNchWWrAExV0s2QcLLU+9tT6iSQLWSFoKX
-# 7fOMtTSd0ZtHx9HJmTxGr6iOivshIjhCrklpUnsef8yWBKHHC/CiTwnuLsHpOsbs
-# SvELDDgF+4OBwq3n7e02g/Qz6JVI1oSG4X+f3drGgBFPk1H5jayzWrLWXI6pk03K
-# ZnQrl66gDS5pyLjNJpVJ12g+Fid2cd2UGepY7DkK/1oHJWj005OjzyLdbWMd8sU=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFLVSB4FSW+DI
+# nvxrRxJ5M8+ETM94MA0GCSqGSIb3DQEBAQUABIIBAGX++n4uElYFjo2HkbFBQllW
+# q6c7Hti09KnDyw75pWPM4CiQ8XE+4W44k3t4OKIe5GcBQW/3BniDoHzZQP6AF31i
+# kmoAazG5IraZuQhj9xiqudD/dzQNfg/gBf60M7RFydpGc/vhIecQR3ZQ8o3JgF5U
+# 5XfXbscPdWgFkaEgFGs+LfAoJopLLjmb1lJlrUUrVHl8wnMry3XrZvDsLB4whwHp
+# QBKMbeYrLbM19Ln8rsHzLuiKwY8H5aGksClJQ2Ip/u3OkYEIBGy1Vp8gkPsq8nIM
+# boWpdBBgeQUsOoWyOSpO2zdSfe9s08n2zEYcuiHarUM2WAc3O70hzwM8NJs8iSA=
 # SIG # End signature block

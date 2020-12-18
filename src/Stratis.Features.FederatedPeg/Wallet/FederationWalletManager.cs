@@ -827,6 +827,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     case TxOutType.TX_MULTISIG:
                     case TxOutType.TX_NULL_DATA:
                     case TxOutType.TX_SEGWIT:
+                    case TxOutType.TX_COLDSTAKE:
                         break;
                 }
 

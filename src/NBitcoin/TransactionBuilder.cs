@@ -1545,7 +1545,7 @@ namespace NBitcoin
         /// Estimate the physical size of the transaction
         /// </summary>
         /// <param name="tx">The transaction to be estimated</param>
-        /// <returns></returns>
+        /// <returns>The estimated size of the transaction in bytes.</returns>
         public int EstimateSize(Transaction tx)
         {
             return EstimateSize(tx, false);
@@ -1617,7 +1617,7 @@ namespace NBitcoin
             }
 
             if (scriptSigSize == -1)
-                scriptSigSize += coin.TxOut.ScriptPubKey.Length; //Using heurestic to approximate size of unknown scriptPubKey
+                scriptSigSize += coin.TxOut.ScriptPubKey.Length; //Using heuristic to approximate size of unknown scriptPubKey
 
             if (coin.GetHashVersion(this.Network) == HashVersion.Witness)
                 witSize += scriptSigSize + 1; //Account for the push

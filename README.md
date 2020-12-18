@@ -5,8 +5,6 @@
 Stratis (STRAX) Full Node 
 ===============
 
-**Please note that the StraxMain Chain is yet to be created, a new chain will be created at a later date, closer to the distribution of STRAX Tokens.**
-
 Bitcoin Implementation in C#
 ----------------------------
 

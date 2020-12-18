@@ -127,11 +127,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 var hotWalletManager = stratisHotStake.FullNode.WalletManager() as ColdStakingManager;
 
                 // Set up cold staking account on cold wallet.
-                coldWalletManager.GetOrCreateColdStakingAccount(WalletName, true, Password);
+                coldWalletManager.GetOrCreateColdStakingAccount(WalletName, true, Password, null);
                 HdAddress coldWalletAddress = coldWalletManager.GetFirstUnusedColdStakingAddress(WalletName, true);
 
                 // Set up cold staking account on hot wallet.
-                hotWalletManager.GetOrCreateColdStakingAccount(WalletName, false, Password);
+                hotWalletManager.GetOrCreateColdStakingAccount(WalletName, false, Password, null);
                 HdAddress hotWalletAddress = hotWalletManager.GetFirstUnusedColdStakingAddress(WalletName, false);
 
                 var walletAccountReference = new WalletAccountReference(WalletName, Account);
@@ -162,8 +162,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Setup cold staking from the hot wallet.
                 Money amountToSend2 = receiveTotal - network.Consensus.ProofOfWorkReward;
-                Transaction transaction2 = hotWalletManager.GetColdStakingSetupTransaction(stratisHotStake.FullNode.WalletTransactionHandler(),
-                    coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC), false, false);
+                (Transaction transaction2, _) = hotWalletManager.GetColdStakingSetupTransaction(stratisHotStake.FullNode.WalletTransactionHandler(),
+                    coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC), false, false, 1, false);
 
                 // Broadcast to the other node
                 await stratisHotStake.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction2.ToHex()));

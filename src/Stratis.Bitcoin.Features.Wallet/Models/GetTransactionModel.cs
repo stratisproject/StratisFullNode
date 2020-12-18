@@ -62,6 +62,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public uint256 TransactionId { get; set; }
 
         /// <summary>
+        /// The transaction that spent the referenced UTXO(s).
+        /// </summary>
+        [JsonProperty("txidSpent")]
+        [JsonConverter(typeof(UInt256JsonConverter))]
+        public uint256 TransactionSpentId { get; set; }
+
+        /// <summary>
         /// The transaction time in seconds since epoch (1 Jan 1970 GMT).
         /// </summary>
         [JsonProperty("time")]

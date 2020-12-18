@@ -242,6 +242,17 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             this.logger.LogInformation("Wallet Manager starting...");
 
+            this.WalletRepository.Bech32AddressFunc = scriptPubKey =>
+            {
+                if (string.IsNullOrEmpty(scriptPubKey))
+                    return string.Empty;
+
+                var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(Script.FromHex(scriptPubKey));
+                Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                return witScriptPubKey.GetDestinationAddress(this.network).ToString();
+            };
+
             this.WalletRepository.Initialize(false);
 
             // Ensure that any legacy JSON wallets are loaded to active storage.
@@ -393,6 +404,24 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey.GetWif(this.network);
             return privateKey.ToString();
+        }
+
+        /// <inheritdoc />
+        public string GetPubKey(string walletName, string externalAddress)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+            Guard.NotEmpty(externalAddress, nameof(externalAddress));
+
+            Script scriptPubKey = BitcoinAddress.Create(externalAddress, this.network).ScriptPubKey;
+
+            if (!this.WalletRepository.GetWalletAddressLookup(walletName).Contains(scriptPubKey, out AddressIdentifier addressIdentifier))
+                throw new SecurityException("The address does not exist in the wallet.");
+
+            var script = Script.FromHex(addressIdentifier.PubKeyScript);
+
+            PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(script);
+
+            return pubKey.ToHex();
         }
 
         /// <inheritdoc />
@@ -825,6 +854,15 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public IEnumerable<HdAddress> GetNewAddresses(WalletAccountReference accountReference, int count, bool isChange = false)
+        {
+            Guard.NotNull(accountReference, nameof(accountReference));
+            Guard.Assert(count > 0);
+
+            return this.WalletRepository.GetNewAddresses(accountReference, count, isChange);
+        }
+
+        /// <inheritdoc />
         public IEnumerable<(HdAddress address, Money confirmed, Money total)> GetUsedAddresses(WalletAccountReference accountReference, bool isChange = false)
         {
             Guard.NotNull(accountReference, nameof(accountReference));
@@ -985,6 +1023,66 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 res = wallet.GetAccounts().ToArray();
             }
+
+            return res;
+        }
+
+        public HdAccount GetAccount(string walletName, string accountName)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            Wallet wallet = this.GetWallet(walletName);
+
+            HdAccount res = null;
+            lock (this.lockObject)
+            {
+                res = wallet.GetAccounts().FirstOrDefault(a => a.Name == accountName);
+            }
+
+            return res;
+        }
+
+        public HdAccount GetAccount(WalletAccountReference accountReference)
+        {
+            return GetAccount(accountReference.WalletName, accountReference.AccountName);
+        }
+
+        public HdAccount GetOrCreateWatchOnlyAccount(string walletName)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            Wallet wallet = this.GetWallet(walletName);
+
+            HdAccount[] res = null;
+            lock (this.lockObject)
+            {
+                res = wallet.GetAccounts(Wallet.WatchOnlyAccount).ToArray();
+            }
+
+            HdAccount watchOnlyAccount = res.FirstOrDefault(a => a.Index == Wallet.WatchOnlyAccountIndex);
+
+            if (watchOnlyAccount == null)
+            {
+                watchOnlyAccount = this.WalletRepository.CreateAccount(walletName, Wallet.WatchOnlyAccountIndex, Wallet.WatchOnlyAccountName, null);
+            }
+
+            return watchOnlyAccount;
+        }
+
+        // TODO: Perhaps this shouldn't be in the WalletManager itself, although it doesn't fit well with HdAccount either
+        public void AddWatchOnlyAddress(string walletName, string accountName, PubKey[] pubKeys)
+        {
+            this.WalletRepository.AddWatchOnlyAddresses(walletName, accountName, 0, pubKeys.Select(pubKey => new HdAddress() { Pubkey = pubKey.ScriptPubKey }).ToList());
+        }
+
+        public IEnumerable<HdAccount> GetAllAccounts()
+        {
+            HdAccount[] res = null;
+            lock (this.lockObject)
+            {
+                res = this.Wallets.SelectMany(w => w.GetAccounts()).ToArray();
+            }
+
             return res;
         }
 
@@ -1217,11 +1315,32 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public IEnumerable<string> GetWatchOnlyWalletsNames()
+        {
+            var watchOnlyWallets = new List<string>();
+
+            foreach (string walletName in this.WalletRepository.GetWalletNames())
+            {
+                Wallet wallet = this.WalletRepository.GetWallet(walletName);
+
+                if (wallet.IsExtPubKeyWallet)
+                    watchOnlyWallets.Add(walletName);
+            }
+
+            return watchOnlyWallets;
+        }
+
+        /// <inheritdoc />
         public Wallet GetWallet(string walletName)
         {
             var wallet = this.WalletRepository.GetWallet(walletName);
             wallet.WalletManager = this;
             return wallet;
+        }
+
+        public IEnumerable<Wallet> GetWallets()
+        {
+            return this.Wallets.ToArray();
         }
 
         /// <inheritdoc />

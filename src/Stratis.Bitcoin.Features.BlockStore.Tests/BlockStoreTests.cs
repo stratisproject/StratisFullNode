@@ -195,7 +195,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             await WaitUntilQueueIsEmptyAsync().ConfigureAwait(false);
             Assert.Equal(longChainIndexer.GetHeader(count - 1), this.chainState.BlockStoreTip);
-            Assert.Equal(1, this.repositorySavesCount);
+            Assert.True(this.repositorySavesCount > 0);
         }
 
         [Fact]

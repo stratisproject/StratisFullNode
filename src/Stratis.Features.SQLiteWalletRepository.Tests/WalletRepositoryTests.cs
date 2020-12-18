@@ -185,6 +185,58 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
         static object lockObj = new object();
 
         [Fact]
+        public void CanRecordWatchOnlyAddresses()
+        {
+            lock (lockTest)
+            {
+                using (var dataFolder = new TempDataFolder(this.GetType().Name))
+                {
+                    var nodeSettings = new NodeSettings(this.network, args: new[] { $"-datadir={dataFolder.RootPath}" }, protocolVersion: ProtocolVersion.ALT_PROTOCOL_VERSION);
+
+                    var repo = new SQLiteWalletRepository(nodeSettings.LoggerFactory, dataFolder, this.network, DateTimeProvider.Default, new ColdStakingDestinationReader(new ScriptAddressReader()))
+                    {
+                        WriteMetricsToFile = true
+                    };
+
+                    repo.Initialize(this.dbPerWallet);
+
+                    string password = "test";
+                    var account = new WalletAccountReference("test2", Wallet.WatchOnlyAccountName);
+                    var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
+                    ExtKey extendedKey = HdOperations.GetExtendedKey(mnemonic, password);
+
+                    // Create a wallet file.
+                    string encryptedSeed = extendedKey.PrivateKey.GetEncryptedBitcoinSecret(password, this.network).ToWif();
+
+                    // Create "test2" as an empty wallet.
+                    byte[] chainCode = extendedKey.ChainCode;
+                    ITransactionContext dbTran = repo.BeginTransaction(account.WalletName);
+                    var hdWallet = repo.CreateWallet(account.WalletName, encryptedSeed, chainCode);
+
+                    // Get the extended pub key used to generate addresses for this account.
+                    Key privateKey = Key.Parse(encryptedSeed, password, this.network);
+                    var seedExtKey = new ExtKey(privateKey, chainCode);
+                    ExtKey addressExtKey = seedExtKey.Derive(new KeyPath($"m/44'/{this.network.Consensus.CoinType}'/0'"));
+                    ExtPubKey extPubKey = addressExtKey.Neuter();
+
+                    repo.CreateAccount(account.WalletName, 0, account.AccountName, null);
+                    dbTran.Commit();
+
+                    var pubKeyScripts = Enumerable.Range(0, 10).Select(n => PayToPubkeyTemplate.Instance.GenerateScriptPubKey(new Key().PubKey)).ToList();
+
+                    foreach (var pubKeyScript in pubKeyScripts)
+                    {
+                        repo.AddWatchOnlyAddresses("test2", Wallet.WatchOnlyAccountName, 0, new List<HdAddress> { new HdAddress() { Pubkey = pubKeyScript } });
+                    }
+
+                    var addresses = repo.GetAccountAddresses(account, 0, pubKeyScripts.Count + 1).ToArray();
+
+                    Assert.Equal(pubKeyScripts, addresses.Select(a => a.Pubkey));
+                }
+            }
+        }
+
+        [Fact]
         public void CanCreateWalletAndTransactionsAndAddressesAndCanRewind()
         {
             lock (lockTest)

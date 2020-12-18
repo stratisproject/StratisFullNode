@@ -20,6 +20,8 @@ namespace Stratis.Bitcoin.Features.RPC.ModelBinders
             {
                 return Task.CompletedTask;
             }
+
+            // TODO: Check if this is actually correct. The other binders set the result in the binding context?
             return Task.FromResult(Money.Parse(key));
         }
 
@@ -27,6 +29,7 @@ namespace Stratis.Bitcoin.Features.RPC.ModelBinders
         {
             if (context.Metadata.ModelType == typeof(Money))
                 return this;
+
             return null;
         }
     }

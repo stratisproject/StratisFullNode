@@ -131,9 +131,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
         /// <param name="node">This node.</param>
         /// <param name="height">At which height should it be synced to.</param>
         /// <returns>Returns <c>true</c> if the node is synced at a given height.</returns>
-        public static bool IsNodeSyncedAtHeight(CoreNode node, int height)
+        public static bool IsNodeSyncedAtHeight(CoreNode node, int height, int waitTimeSeconds = 60)
         {
-            TestBase.WaitLoopMessage(() => { return (node.FullNode.ConsensusManager().Tip.Height == height, $"Node height: {node.FullNode.ConsensusManager().Tip.Height}; Expected height: {height}"); });
+            TestBase.WaitLoopMessage(() => { return (node.FullNode.ConsensusManager().Tip.Height == height, $"Node height: {node.FullNode.ConsensusManager().Tip.Height}; Expected height: {height}"); }, waitTimeSeconds);
             return true;
         }
 

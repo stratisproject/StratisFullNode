@@ -19,6 +19,7 @@ using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -246,6 +247,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 {
                     services.RemoveSingleton<IWalletManager>();
                     services.AddSingleton<IWalletManager, ColdStakingManager>();
+
+                    services.RemoveSingleton<IWalletService>();
+                    services.AddSingleton<IWalletService, ColdStakingWalletService>();
 
                     services.AddSingleton<ScriptAddressReader>();
                     services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(ColdStakingDestinationReader), ServiceLifetime.Singleton));
