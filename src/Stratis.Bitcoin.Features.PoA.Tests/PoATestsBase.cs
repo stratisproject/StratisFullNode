@@ -128,7 +128,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 members = members ?? ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
                 return members[chainedHeader.Height % members.Count];
             });
-            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<bool>())).Returns<ChainedHeader>((chainedHeader) => {
+            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<bool>())).Returns<ChainedHeader, bool>((chainedHeader, nextBlock) => {
                 return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });
 
