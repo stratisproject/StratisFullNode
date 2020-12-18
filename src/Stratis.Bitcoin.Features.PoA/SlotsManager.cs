@@ -68,13 +68,11 @@ namespace Stratis.Bitcoin.Features.PoA
             int lastMinerIndex = federationMembers.FindIndex(m => m.PubKey == lastMiner.PubKey);
             uint lastRoundStart = tip.Header.Time - (uint)(lastMinerIndex * roundTime / federationMembers.Count);
 
-            // Determine the slot in which we're mining.
-            int thisMinerIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey);
-
             // To calculate the latest round start bring the last round forward in round time increments but stop short of the current time.
             uint prevRoundStart = lastRoundStart + ((currentTime - lastRoundStart) / roundTime) * roundTime;
 
             // Add our own slot position to determine our earliest mining timestamp.
+            int thisMinerIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey);
             uint nextTimestampForMining = prevRoundStart + (uint)(thisMinerIndex * roundTime / federationMembers.Count);
             // Start in the past in case we still have to mine that slot.
             if (nextTimestampForMining > currentTime)
