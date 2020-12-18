@@ -77,6 +77,8 @@ namespace Stratis.Bitcoin.Features.PoA
             try
             {
                 var header = chainedHeader.Header as PoABlockHeader;
+                if (header == null)
+                    return null;
 
                 var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
                 for (int recId = 0; recId < 4; recId++)
