@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 throw new NotAFederationMemberException();
 
             ChainedHeader tip = this.chainIndexer.Tip;
-            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip);
+            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, true);
 
             // Round length in seconds.
             uint roundTime = this.GetRoundLengthSeconds(federationMembers.Count);
