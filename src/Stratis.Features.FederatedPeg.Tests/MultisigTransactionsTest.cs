@@ -32,7 +32,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 }
             };
 
-            var txData1 = new TransactionData()
+            TransactionData txData1Fact() => new TransactionData()
             {
                 Amount = Money.Zero,
                 Id = 1,
@@ -40,13 +40,16 @@ namespace Stratis.Features.FederatedPeg.Tests
                 SpendingDetails = spendingDetails1
             };
 
-            var txData2 = new TransactionData()
+            TransactionData txData2Fact() => new TransactionData()
             {
                 Amount = Money.Zero,
                 Id = 2,
                 Index = 0,
                 SpendingDetails = spendingDetails2
             };
+
+            TransactionData txData1 = txData1Fact();
+            TransactionData txData2 = txData2Fact();
 
             multiSigTransactions.Add(txData1);
             multiSigTransactions.Add(txData2);
@@ -55,6 +58,12 @@ namespace Stratis.Features.FederatedPeg.Tests
             List<TransactionData> txDataMatch = multiSigTransactions.GetSpendingTransactionsByDepositId(2).Single().txList;
             Assert.Contains(txDataMatch, txDataMatch => txData1.Id == txDataMatch.Id && txData1.Index == txDataMatch.Index);
             Assert.Contains(txDataMatch, txDataMatch => txData2.Id == txDataMatch.Id && txData2.Index == txDataMatch.Index);
+
+            multiSigTransactions.Remove(txData1Fact());
+            multiSigTransactions.Remove(txData2Fact());
+
+            multiSigTransactions.Add(txData1);
+            multiSigTransactions.Add(txData2);
 
             // Replace the SpendingDetails with one containing WithdrawalDetails set to null.
             var spendingDetails3 = new SpendingDetails()
