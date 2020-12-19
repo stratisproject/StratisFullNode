@@ -81,8 +81,18 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PubKey nextPubKey = this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey;
                 if (nextPubKey == pubKey)
                 {
-                    this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
-                    ConsensusErrors.BlockTimestampTooEarly.Throw();
+                    // Mining slots shift when the federation changes. 
+                    // Only raise an error if the federation did not change.
+                    uint newRoundTime = this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count);
+                    if (newRoundTime == roundTime)
+                    {
+                        this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                        ConsensusErrors.BlockTimestampTooEarly.Throw();
+                    }
+                    roundTime = newRoundTime;
+                    header = prevHeader.Header as PoABlockHeader;
+                    if (header == null)
+                        break;
                 }
                 prevHeader = prevHeader.Previous;
             }
