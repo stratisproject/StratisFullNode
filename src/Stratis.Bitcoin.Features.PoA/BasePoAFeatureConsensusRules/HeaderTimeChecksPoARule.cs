@@ -48,13 +48,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 this.Logger.LogTrace("(-)[TIME_TOO_NEW]");
                 ConsensusErrors.TimeTooNew.Throw();
             }
-
-            // Timestamp should be divisible by target spacing.
-            if (!this.slotsManager.IsValidTimestamp(chainedHeader.Header.Time))
-            {
-                this.Logger.LogTrace("(-)[INVALID_TIMESTAMP]");
-                PoAConsensusErrors.InvalidHeaderTimestamp.Throw();
-            }
         }
     }
 }

@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
-        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
+        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, bool nextBlock = false);
     }
 
     /// <summary>
@@ -48,9 +48,9 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader)
+        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, bool nextBlock = false)
         {
-            return (this.votingManager == null) ? this.federationManager.GetFederationMembers() : this.votingManager.GetModifiedFederation(chainedHeader);
+            return (this.votingManager == null) ? this.federationManager.GetFederationMembers() : this.votingManager.GetModifiedFederation(chainedHeader, nextBlock);
         }
 
         /// <inheritdoc />
@@ -73,10 +73,15 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private IFederationMember GetFederationMemberForBlockInternal(ChainedHeader chainedHeader, List<IFederationMember> federation)
         {
-            // Try to provide the public key that signed the block.
+            if (chainedHeader.Height == 0)
+                return federation.Last();
+
+            // Try to provide the member that signed the block.
             try
             {
                 var header = chainedHeader.Header as PoABlockHeader;
+                if (header == null)
+                    return null;
 
                 var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
                 for (int recId = 0; recId < 4; recId++)
