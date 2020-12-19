@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
@@ -61,8 +62,8 @@ namespace Stratis.Bitcoin.Features.PoA
             uint roundTime = this.GetRoundLengthSeconds(federationMembers.Count);
 
             // Determine when the last round started by looking at who mined the tip.
-            IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip, federationMembers);
-            int lastMinerIndex = (tip.Height > 0) ? federationMembers.FindIndex(m => m.PubKey == lastMiner.PubKey) : (federationMembers.Count - 1);
+            IFederationMember lastMiner = (tip.Height > 0) ? this.federationHistory.GetFederationMemberForBlock(tip, federationMembers) : federationMembers.Last();
+            int lastMinerIndex = federationMembers.FindIndex(m => m.PubKey == lastMiner.PubKey);
             uint lastRoundStart = tip.Header.Time - (uint)(lastMinerIndex * roundTime / federationMembers.Count);
 
             // To calculate the latest round start bring the last round forward in round time increments but stop short of the current time.
