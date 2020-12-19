@@ -71,7 +71,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            /* TODO: Uncomment this in the next release.
             uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
 
             // Look at the last round of blocks to find the previous time that the miner mined.
@@ -87,7 +86,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 }
                 prevHeader = prevHeader.Previous;
             }
-            */
         }
     }
 }
