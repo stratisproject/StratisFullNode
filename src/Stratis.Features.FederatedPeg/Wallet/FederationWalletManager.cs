@@ -963,6 +963,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     if (withdrawals.Any(w => w.withdrawal.Id == spendingDetail.TransactionId))
                         continue;
 
+                    if (spendingDetail.WithdrawalDetails == null)
+                    {
+                        this.logger.LogError($"Spending detail with txId '{spendingDetail.TransactionId}' has null withdrawal details, deposit id '{depositId}'");
+                    }
+
                     var withdrawal = new Withdrawal(
                         spendingDetail.WithdrawalDetails.MatchingDepositId,
                         spendingDetail.TransactionId,
