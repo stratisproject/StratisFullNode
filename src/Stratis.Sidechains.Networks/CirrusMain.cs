@@ -277,7 +277,8 @@ namespace Stratis.Sidechains.Networks
             {
                 new NetworkAddress(IPAddress.Parse("213.125.242.234"), 16179),
                 new NetworkAddress(IPAddress.Parse("45.58.55.21"), 16179),
-                new NetworkAddress(IPAddress.Parse("86.106.181.141"), 16179)
+                new NetworkAddress(IPAddress.Parse("86.106.181.141"), 16179),
+                new NetworkAddress(IPAddress.Parse("51.195.136.221"), 16179)
             };
 
             this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
