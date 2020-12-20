@@ -18,6 +18,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public class VotingManager : IDisposable
     {
+        private readonly PoAConsensusOptions poaConsensusOptions;
+
         private readonly IFederationManager federationManager;
 
         private IFederationHistory federationHistory;
@@ -31,7 +33,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly INodeStats nodeStats;
 
         private readonly Network network;
-
         private readonly ILogger logger;
 
         private readonly IFinalizedBlockInfoRepository finalizedBlockInfo;
@@ -72,6 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.pollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer);
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
+            this.poaConsensusOptions = (PoAConsensusOptions)this.network.Consensus.Options;
 
             this.isInitialized = false;
         }
@@ -365,8 +367,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     return;
                 }
 
-                // Pub key of a fed member that created voting data.
-                string fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
+                string fedMemberKeyHex;
+
+                // Please the description under `VotingManagerV2ActivationHeight`.
+                // PubKey of the federation member that created the voting data.
+                if (blockConnected.ConnectedBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
+                    fedMemberKeyHex = this.federationHistory.GetFederationMemberForTimestamp(chBlock.Block.Header.Time, this.poaConsensusOptions).PubKey.ToHex();
+                else
+                    fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
 
                 List<VotingData> votingDataList = this.votingDataEncoder.Decode(rawVotingData);
 

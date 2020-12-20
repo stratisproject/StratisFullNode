@@ -27,6 +27,12 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
         List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
+
+        /// <summary>
+        /// See <see cref="PoAConsensusOptions.VotingManagerV2ActivationHeight"/>
+        /// </summary>
+        /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
+        IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, PoAConsensusOptions poAConsensusOptions);
     }
 
     /// <summary>
@@ -98,6 +104,28 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             return null;
+        }
+
+        /// <inheritdoc />
+        public IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, PoAConsensusOptions poAConsensusOptions)
+        {
+            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
+
+            uint roundTime = this.GetRoundLengthSeconds(poAConsensusOptions, federationMembers.Count);
+
+            // Time when current round started.
+            uint roundStartTimestamp = (headerUnixTimestamp / roundTime) * roundTime;
+
+            // Slot number in current round.
+            int currentSlotNumber = (int)((headerUnixTimestamp - roundStartTimestamp) / poAConsensusOptions.TargetSpacingSeconds);
+
+            return federationMembers[currentSlotNumber];
+        }
+
+        private uint GetRoundLengthSeconds(PoAConsensusOptions poAConsensusOptions, int? federationMembersCount)
+        {
+            uint roundLength = (uint)(federationMembersCount * poAConsensusOptions.TargetSpacingSeconds);
+            return roundLength;
         }
     }
 }
