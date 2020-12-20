@@ -264,7 +264,8 @@ namespace Stratis.Sidechains.Networks
                 { 1100000, new CheckpointInfo(new uint256("0x7abc2882bcb5e9723ba71ff4155ed3c4006ee655e9f52f8787bcae31b4c796a8")) },
                 { 1200000, new CheckpointInfo(new uint256("0x8411b830270cc9d6c2e28de1c2e8025c57a5673835f63e30708967adfee5a92c")) },
                 { 1300000, new CheckpointInfo(new uint256("0x512c19a8245316b4d3b13513c7901f41842846f539f668ca4ac349daaab6dc20")) },
-                { 1400000, new CheckpointInfo(new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95")) }
+                { 1400000, new CheckpointInfo(new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95")) },
+                { 1500000, new CheckpointInfo(new uint256("0x2a1602877a5231997654bae975223762ee636be2f371cb444b2d3fb564e6989e")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>
@@ -276,6 +277,8 @@ namespace Stratis.Sidechains.Networks
             {
                 new NetworkAddress(IPAddress.Parse("213.125.242.234"), 16179),
                 new NetworkAddress(IPAddress.Parse("45.58.55.21"), 16179),
+                new NetworkAddress(IPAddress.Parse("86.106.181.141"), 16179),
+                new NetworkAddress(IPAddress.Parse("51.195.136.221"), 16179)
             };
 
             this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
