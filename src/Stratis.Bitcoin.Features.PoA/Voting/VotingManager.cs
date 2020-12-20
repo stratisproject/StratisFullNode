@@ -254,7 +254,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.locker)
             {
-                var federation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
+                var federation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
 
                 IEnumerable<Poll> executedPolls = this.GetExecutedPolls().MemberPolls();
                 foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
@@ -276,7 +276,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 // Starting with the genesis federation...
-                var modifiedFederation = new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
+                var modifiedFederation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
                 IEnumerable<Poll> executedPolls = this.GetExecutedPolls().MemberPolls();
 
                 // Modify the federation with the polls that would have been executed up to the given height.
@@ -369,7 +369,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 string fedMemberKeyHex;
 
-                // Please the description under `VotingManagerV2ActivationHeight`.
+                // Please see the description under `VotingManagerV2ActivationHeight`.
                 // PubKey of the federation member that created the voting data.
                 if (blockConnected.ConnectedBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
                     fedMemberKeyHex = this.federationHistory.GetFederationMemberForTimestamp(chBlock.Block.Header.Time, this.poaConsensusOptions).PubKey.ToHex();
