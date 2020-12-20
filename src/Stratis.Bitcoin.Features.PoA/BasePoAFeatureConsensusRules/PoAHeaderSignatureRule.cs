@@ -71,20 +71,30 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
-
             // Look at the last round of blocks to find the previous time that the miner mined.
-            ChainedHeader prevHeader = context.ValidationContext.ChainedHeaderToValidate.Previous;
-            while (prevHeader.Previous != null && (header.Time - prevHeader.Header.Time) < roundTime)
+            uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
+            
+            for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
             {
+                if ((header.Time - prevHeader.Header.Time) >= roundTime)
+                    break;
+
                 // If the miner is found again within the same round then throw a consensus error.
-                PubKey nextPubKey = this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey;
-                if (nextPubKey == pubKey)
-                {
-                    this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
-                    ConsensusErrors.BlockTimestampTooEarly.Throw();
-                }
-                prevHeader = prevHeader.Previous;
+                if (this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey != pubKey)
+                    continue;
+
+                // Mining slots shift when the federation changes. 
+                // Only raise an error if the federation did not change.
+                uint newRoundTime = this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count);
+                if (newRoundTime != roundTime)
+                    break;
+
+                // Exempt this one block that somehow got included in the chain where the miner managed to mine too early.
+                if (prevHeader.HashBlock == uint256.Parse("7d67ea42010f03971edd6ba5e1b644d09c9fd0191ca8d312255c12d23f7cd147"))
+                    break;
+
+                this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
         }
     }
