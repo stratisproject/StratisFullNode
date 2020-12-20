@@ -94,6 +94,10 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
+            // Can't mine before the current tip.
+            if (nextTimestampForMining < tip.Header.Time)
+                nextTimestampForMining += roundTime;
+
             return nextTimestampForMining;
         }
 
