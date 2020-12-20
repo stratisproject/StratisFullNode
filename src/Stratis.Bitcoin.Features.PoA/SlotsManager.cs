@@ -77,7 +77,11 @@ namespace Stratis.Bitcoin.Features.PoA
                 nextTimestampForMining -= roundTime;
 
             // If the current time is closer to the next mining slot then mine there.
-            if (currentTime > nextTimestampForMining + roundTime / 2 || nextTimestampForMining < tip.Header.Time)
+            if (currentTime > nextTimestampForMining + roundTime / 2)
+                nextTimestampForMining += roundTime;
+
+            // Can't mine before the current tip.
+            while (nextTimestampForMining < tip.Header.Time)
                 nextTimestampForMining += roundTime;
 
             // Don't break the round time rule.
@@ -93,10 +97,6 @@ namespace Stratis.Bitcoin.Features.PoA
                     break;
                 }
             }
-
-            // Can't mine before the current tip.
-            if (nextTimestampForMining < tip.Header.Time)
-                nextTimestampForMining += roundTime;
 
             return nextTimestampForMining;
         }
