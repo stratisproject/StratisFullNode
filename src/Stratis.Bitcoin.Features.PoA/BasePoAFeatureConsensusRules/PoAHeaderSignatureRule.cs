@@ -86,20 +86,15 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 // Mining slots shift when the federation changes. 
                 // Only raise an error if the federation did not change.
                 uint newRoundTime = this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count);
-                if (newRoundTime == roundTime)
-                {
-                    // Exempt this one block that somehow got included in the chain where the miner managed to mine too early.
-                    if (prevHeader.HashBlock == uint256.Parse("7d67ea42010f03971edd6ba5e1b644d09c9fd0191ca8d312255c12d23f7cd147"))
-                        continue;
+                if (newRoundTime != roundTime)
+                    break;
 
-                    this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
-                    ConsensusErrors.BlockTimestampTooEarly.Throw();
-                }
+                // Exempt this one block that somehow got included in the chain where the miner managed to mine too early.
+                if (prevHeader.HashBlock == uint256.Parse("7d67ea42010f03971edd6ba5e1b644d09c9fd0191ca8d312255c12d23f7cd147"))
+                    break;
 
-                roundTime = newRoundTime;
-                header = prevHeader.Header as PoABlockHeader;
-                if (header == null)
-                    break;                                
+                this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
         }
     }
