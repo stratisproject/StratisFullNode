@@ -277,12 +277,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 // Starting with the genesis federation...
                 var modifiedFederation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
-                IEnumerable<Poll> executedPolls = this.GetExecutedPolls().MemberPolls();
+                IEnumerable<Poll> approvedPolls = this.GetApprovedPolls().MemberPolls();
 
                 // Modify the federation with the polls that would have been executed up to the given height.
                 if (this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory)
                 {
-                    foreach (Poll poll in executedPolls.OrderBy(a => a.PollExecutedBlockData.Height))
+                    foreach (Poll poll in approvedPolls.OrderBy(a => a.PollVotedInFavorBlockData.Height))
                     {
                         // When block "PollVotedInFavorBlockData"+MaxReorgLength connects, block "PollVotedInFavorBlockData" is executed. See VotingManager.OnBlockConnected.
                         if ((poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) > chainedHeader.Height)
