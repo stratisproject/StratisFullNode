@@ -493,7 +493,6 @@ if ( -not ( Test-Path $sideChainDataDir\federationKey.dat ) )
 
 
 #Perform Registration
-""
 $collateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount (the FULL BALANCE of a 100k must be held in ONE address)"
 ""
 #While ( $CollateralAddress.Trim() -notmatch '^X[a-zA-Z0-9]{26,33}$' )
@@ -537,7 +536,7 @@ Switch ( $registerMasternode )
             walletPassword = $cirrusWalletPassword
             walletAccount = "account 0"
         }
-        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerMasternode -ContentType "application/json-patch+json" -Method Post
+        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerBody -ContentType "application/json-patch+json" -Method Post
 
         if ( $register.content -match '^.{66,66}$' )
         {
