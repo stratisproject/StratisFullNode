@@ -169,7 +169,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             Transaction res = null;
             lock (this.locker)
             {
-                byte[] transactionRow = this.leveldb.Get(DBH.Key(TransactionTableName, trxid.ToBytes()));
+                byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxid.ToBytes());
 
                 if (transactionRow == null)
                 {
@@ -177,7 +177,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     return null;
                 }
 
-                byte[] blockRow = this.leveldb.Get(DBH.Key(BlockTableName, transactionRow));
+                byte[] blockRow = this.leveldb.Get(BlockTableName, transactionRow);
 
                 if (blockRow != null)
                 {
@@ -222,14 +222,14 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         continue;
                     }
 
-                    byte[] transactionRow = this.leveldb.Get(DBH.Key(TransactionTableName, trxids[i].ToBytes()));
+                    byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxids[i].ToBytes());
                     if (transactionRow == null)
                     {
                         this.logger.LogTrace("(-)[NO_TX_ROW]:null");
                         return null;
                     }
 
-                    byte[] blockRow = this.leveldb.Get(DBH.Key(BlockTableName, transactionRow));
+                    byte[] blockRow = this.leveldb.Get(BlockTableName, transactionRow);
 
                     if (blockRow != null)
                     {
@@ -266,7 +266,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             uint256 res = null;
             lock (this.locker)
             {
-                byte[] transactionRow = this.leveldb.Get(DBH.Key(TransactionTableName, trxid.ToBytes()));
+                byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxid.ToBytes());
                 if (transactionRow != null)
                     res = new uint256(transactionRow);
             }
@@ -300,10 +300,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     Block block = kv.Value;
 
                     // If the block is already in store don't write it again.
-                    byte[] blockRow = this.leveldb.Get(DBH.Key(BlockTableName, blockId.ToBytes()));
+                    byte[] blockRow = this.leveldb.Get(BlockTableName, blockId.ToBytes());
                     if (blockRow == null)
                     {
-                        batch.Put(DBH.Key(BlockTableName, blockId.ToBytes()), this.dBreezeSerializer.Serialize(block));
+                        batch.Put(BlockTableName, blockId.ToBytes(), this.dBreezeSerializer.Serialize(block));
 
                         if (this.TxIndex)
                         {
@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 // Index transactions.
                 foreach ((Transaction transaction, Block block) in transactions)
-                    batch.Put(DBH.Key(TransactionTableName, transaction.GetHash().ToBytes()), block.GetHash().ToBytes());
+                    batch.Put(TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
 
                 this.leveldb.Write(batch, new WriteOptions() { Sync = true });
             }
@@ -341,7 +341,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 foreach (ChainedHeader chainedHeader in headers)
                 {
-                    byte[] blockRow = this.leveldb.Get(DBH.Key(BlockTableName, chainedHeader.HashBlock.ToBytes()));
+                    byte[] blockRow = this.leveldb.Get(BlockTableName, chainedHeader.HashBlock.ToBytes());
                     Block block = blockRow != null ? this.dBreezeSerializer.Deserialize<Block>(blockRow) : null;
                     yield return block;
                 }
@@ -380,7 +380,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                                 var block = this.dBreezeSerializer.Deserialize<Block>(enumerator.Current.Value);
                                 foreach (Transaction transaction in block.Transactions)
                                 {
-                                    batch.Put(DBH.Key(TransactionTableName, transaction.GetHash().ToBytes()), block.GetHash().ToBytes());
+                                    batch.Put(TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
                                 }
 
                                 // inform the user about the ongoing operation
@@ -429,7 +429,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         private bool? LoadTxIndex()
         {
             bool? res = null;
-            byte[] row = this.leveldb.Get(DBH.Key(CommonTableName, TxIndexKey));
+            byte[] row = this.leveldb.Get(CommonTableName, TxIndexKey);
             if (row != null)
             {
                 this.TxIndex = BitConverter.ToBoolean(row, 0);
@@ -442,7 +442,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         private void SaveTxIndex(bool txIndex)
         {
             this.TxIndex = txIndex;
-            this.leveldb.Put(DBH.Key(CommonTableName, TxIndexKey), BitConverter.GetBytes(txIndex));
+            this.leveldb.Put(CommonTableName, TxIndexKey, BitConverter.GetBytes(txIndex));
         }
 
         /// <inheritdoc />
@@ -458,7 +458,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         {
             if (this.TipHashAndHeight == null)
             {
-                byte[] row = this.leveldb.Get(DBH.Key(CommonTableName, RepositoryTipKey));
+                byte[] row = this.leveldb.Get(CommonTableName, RepositoryTipKey);
                 if (row != null)
                     this.TipHashAndHeight = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);
             }
@@ -469,7 +469,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         private void SaveTipHashAndHeight(HashHeightPair newTip)
         {
             this.TipHashAndHeight = newTip;
-            this.leveldb.Put(DBH.Key(CommonTableName, RepositoryTipKey), this.dBreezeSerializer.Serialize(newTip));
+            this.leveldb.Put(CommonTableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(newTip));
         }
 
         /// <inheritdoc />
@@ -514,7 +514,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 // Lazy loading is on so we don't fetch the whole value, just the row.
                 byte[] key = hash.ToBytes();
-                byte[] blockRow = this.leveldb.Get(DBH.Key(BlockTableName, key));
+                byte[] blockRow = this.leveldb.Get(BlockTableName, key);
                 if (blockRow != null)
                     res = true;
             }
@@ -525,7 +525,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
         protected virtual void OnDeleteTransactions(List<(Transaction, Block)> transactions)
         {
             foreach ((Transaction transaction, Block block) in transactions)
-                this.leveldb.Delete(DBH.Key(TransactionTableName, transaction.GetHash().ToBytes()));
+                this.leveldb.Delete(TransactionTableName, transaction.GetHash().ToBytes());
         }
 
         protected virtual void OnDeleteBlocks(List<Block> blocks)
@@ -542,7 +542,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             }
 
             foreach (Block block in blocks)
-                this.leveldb.Delete(DBH.Key(BlockTableName, block.GetHash().ToBytes()));
+                this.leveldb.Delete(BlockTableName, block.GetHash().ToBytes());
         }
 
         public List<Block> GetBlocksFromHashes(List<uint256> hashes)
@@ -564,7 +564,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     continue;
                 }
 
-                byte[] blockRow = this.leveldb.Get(DBH.Key(BlockTableName, key.Item2));
+                byte[] blockRow = this.leveldb.Get(BlockTableName, key.Item2);
                 if (blockRow != null)
                 {
                     results[key.Item1] = this.dBreezeSerializer.Deserialize<Block>(blockRow);

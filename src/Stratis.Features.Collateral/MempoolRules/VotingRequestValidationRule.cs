@@ -5,7 +5,6 @@ using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.PoA.Features.Voting;
-using Stratis.Features.Collateral;
 
 namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
 {
@@ -54,13 +53,10 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
                 context.State.Fail(MempoolErrors.InvalidCollateralRequirement, $"{context.Transaction.GetHash()} has a voting request with an invalid colateral requirement.").Throw();
             }
 
-            if (!(this.federationManager is CollateralFederationManager federationManager))
-                return;
-
             // Prohibit re-use of collateral addresses.
             Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
             string collateralAddress = script.GetDestinationAddress(this.network).ToString();
-            CollateralFederationMember owner = federationManager.CollateralAddressOwner(this.votingManager, VoteKey.AddFederationMember, collateralAddress);
+            CollateralFederationMember owner = this.federationManager.CollateralAddressOwner(this.votingManager, VoteKey.AddFederationMember, collateralAddress);
             if (owner != null && owner.PubKey != request.PubKey)
             {
                 this.logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");

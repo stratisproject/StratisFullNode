@@ -40,6 +40,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private readonly IWalletManager walletManager;
 
+        private readonly IWalletService walletService;
+
         private readonly IWalletTransactionHandler walletTransactionHandler;
 
         private readonly IWalletSyncManager walletSyncManager;
@@ -64,6 +66,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             IScriptAddressReader scriptAddressReader,
             StoreSettings storeSettings,
             IWalletManager walletManager,
+            IWalletService walletService,
             WalletSettings walletSettings,
             IWalletTransactionHandler walletTransactionHandler,
             IWalletSyncManager walletSyncManager,
@@ -75,6 +78,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.scriptAddressReader = scriptAddressReader;
             this.storeSettings = storeSettings;
             this.walletManager = walletManager;
+            this.walletService = walletService;
             this.walletSettings = walletSettings;
             this.walletTransactionHandler = walletTransactionHandler;
             this.walletSyncManager = walletSyncManager;
@@ -156,7 +160,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 // TODO: Bitcoin Core performs an heuristic check to determine whether or not the provided transaction should be deserialised with witness data -> core_read.cpp DecodeHexTx()
                 Transaction rawTx = this.Network.CreateTransaction();
-                
+
                 // This is an uncommon case where we cannot simply rely on the consensus factory to do the right thing.
                 // We need to override the protocol version so that the RPC client workaround functions correctly.
                 // If this was not done the transaction deserialisation would attempt to use witness deserialisation and the transaction data would get mangled.
@@ -291,7 +295,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                                 continue;
 
                             // Prevent the provided UTXO from being spent by another transaction until this one is signed and broadcast.
-                            this.reserveUtxoService.ReserveUtxos(new []{ newTransactionInput.PrevOut });
+                            this.reserveUtxoService.ReserveUtxos(new[] { newTransactionInput.PrevOut });
                         }
                     }
                 }
@@ -447,7 +451,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             AccountBalance balances = this.walletManager.GetBalances(account.WalletName, account.AccountName, minConfirmations).FirstOrDefault();
             return balances?.SpendableAmount.ToUnit(MoneyUnit.BTC) ?? 0;
-       }
+        }
 
         /// <summary>
         /// RPC method to return transaction info from the wallet. Will only work fully if 'txindex' is set.
@@ -457,10 +461,17 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <returns>Transaction information.</returns>
         [ActionName("gettransaction")]
         [ActionDescription("Get detailed information about an in-wallet transaction.")]
-        public GetTransactionModel GetTransaction(string txid, bool include_watchonly = false)
+        public async Task<object> GetTransaction(string txid, bool include_watchonly = false)
         {
             if (!uint256.TryParse(txid, out uint256 trxid))
                 throw new ArgumentException(nameof(txid));
+
+            if (include_watchonly)
+            {
+                WalletHistoryModel history = await GetWatchOnlyTransactionAsync(trxid);
+                if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) != 0)
+                    return history;
+            }
 
             // First check the regular wallet accounts.
             WalletAccountReference accountReference = this.GetWalletAccountReference();
@@ -482,23 +493,6 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             TransactionData firstReceivedTransaction = receivedTransactions.FirstOrDefault();
             TransactionData firstSendTransaction = sentTransactions.FirstOrDefault();
-
-            if (firstReceivedTransaction == null && firstSendTransaction == null && include_watchonly)
-            {
-                accountReference = this.GetWatchOnlyWalletAccountReference();
-
-                hdAccount = this.walletManager.GetOrCreateWatchOnlyAccount(accountReference.WalletName);
-
-                addressLookup = this.walletManager.WalletRepository.GetWalletAddressLookup(accountReference.WalletName);
-
-                // Get the transaction from the wallet by looking into received and send transactions.
-                receivedTransactions = this.walletManager.WalletRepository.GetTransactionOutputs(hdAccount, null, trxid, true)
-                    .Where(td => !IsChangeAddress(td.ScriptPubKey)).ToList();
-                sentTransactions = this.walletManager.WalletRepository.GetTransactionInputs(hdAccount, null, trxid, true).ToList();
-
-                firstReceivedTransaction = receivedTransactions.FirstOrDefault();
-                firstSendTransaction = sentTransactions.FirstOrDefault();
-            }
 
             if (firstReceivedTransaction == null && firstSendTransaction == null)
                 throw new RPCServerException(RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY, "Invalid or non-wallet transaction id.");
@@ -642,13 +636,32 @@ namespace Stratis.Bitcoin.Features.Wallet
             return model;
         }
 
+
+        /// <summary>
+        /// We get the details via the wallet service's history method.
+        /// </summary>
+        private async Task<WalletHistoryModel> GetWatchOnlyTransactionAsync(uint256 trxid)
+        {
+            var accountReference = this.GetWatchOnlyWalletAccountReference();
+
+            var request = new WalletHistoryRequest()
+            {
+                WalletName = accountReference.WalletName,
+                AccountName = Wallet.WatchOnlyAccountName,
+                SearchQuery = trxid.ToString(),
+            };
+
+            var history = await this.walletService.GetHistory(request, default);
+            return history;
+        }
+
         [ActionName("importpubkey")]
         public bool ImportPubkey(string pubkey, string label = "", bool rescan = true)
         {
             WalletAccountReference walletAccountReference = this.GetWatchOnlyWalletAccountReference();
 
-            this.walletManager.AddWatchOnlyAddress(walletAccountReference.WalletName, walletAccountReference.AccountName, 
-                pubkey.Split(new char[] {' ', ','}, StringSplitOptions.RemoveEmptyEntries).Select(pk => new PubKey(pk.Trim())).ToArray());
+            this.walletManager.AddWatchOnlyAddress(walletAccountReference.WalletName, walletAccountReference.AccountName,
+                pubkey.Split(new char[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries).Select(pk => new PubKey(pk.Trim())).ToArray());
 
             // As we cannot be sure when an imported pubkey was transacted against, we have to rescan from genesis if requested.
             if (rescan)

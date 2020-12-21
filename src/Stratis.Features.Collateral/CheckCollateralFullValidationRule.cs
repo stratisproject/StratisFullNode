@@ -6,9 +6,9 @@ using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.PoA.Collateral;
 
 namespace Stratis.Features.Collateral
 {
@@ -20,8 +20,6 @@ namespace Stratis.Features.Collateral
 
         private readonly ICollateralChecker collateralChecker;
 
-        private readonly ISlotsManager slotsManager;
-
         private readonly IDateTimeProvider dateTime;
 
         private readonly Network network;
@@ -29,17 +27,16 @@ namespace Stratis.Features.Collateral
         /// <summary>For how many seconds the block should be banned in case collateral check failed.</summary>
         private readonly int collateralCheckBanDurationSeconds;
 
-        private readonly VotingManager votingManager;
+        private readonly IFederationHistory federationHistory;
 
         public CheckCollateralFullValidationRule(IInitialBlockDownloadState ibdState, ICollateralChecker collateralChecker,
-            ISlotsManager slotsManager, IDateTimeProvider dateTime, Network network, VotingManager votingManager)
+            IDateTimeProvider dateTime, Network network, IFederationHistory federationHistory)
         {
             this.network = network;
             this.ibdState = ibdState;
             this.collateralChecker = collateralChecker;
-            this.slotsManager = slotsManager;
             this.dateTime = dateTime;
-            this.votingManager = votingManager;
+            this.federationHistory = federationHistory;
 
             this.collateralCheckBanDurationSeconds = (int)(this.network.Consensus.Options as PoAConsensusOptions).TargetSpacingSeconds / 2;
         }
@@ -81,7 +78,7 @@ namespace Stratis.Features.Collateral
                 PoAConsensusErrors.InvalidCollateralAmountCommitmentTooNew.Throw();
             }
 
-            IFederationMember federationMember = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager);
+            IFederationMember federationMember = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate);
             if (!this.collateralChecker.CheckCollateral(federationMember, commitmentHeight.Value))
             {
                 // By setting rejectUntil we avoid banning a peer that provided a block.

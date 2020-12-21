@@ -551,7 +551,8 @@ namespace Stratis.Bitcoin.Tests.P2P
                 connectionSettings,
                 new VersionProvider(),
                 new Mock<INodeStats>().Object,
-                this.asyncProvider);
+                this.asyncProvider,
+                new Bitcoin.P2P.Protocol.Payloads.PayloadProvider());
 
             networkPeerParameters.TemplateBehaviors.Add(new ConnectionManagerBehavior(connectionManager, this.extendedLoggerFactory));
 

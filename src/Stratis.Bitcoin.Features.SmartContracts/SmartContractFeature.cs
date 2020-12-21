@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,9 +11,10 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Features.Miner;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
-using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -52,12 +54,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         public override Task InitializeAsync()
         {
             // TODO: This check should be more robust
-            if (this.network.Consensus.IsProofOfStake)
-                Guard.Assert(this.network.Consensus.ConsensusFactory is SmartContractPosConsensusFactory);
-            else
-                Guard.Assert(this.network.Consensus.ConsensusFactory is SmartContractPowConsensusFactory
-                             || this.network.Consensus.ConsensusFactory is SmartContractPoAConsensusFactory
-                             || this.network.Consensus.ConsensusFactory is SmartContractCollateralPoAConsensusFactory);
+            Guard.Assert(this.network.Consensus.ConsensusFactory is SmartContractPowConsensusFactory
+                         || this.network.Consensus.ConsensusFactory is SmartContractPoAConsensusFactory
+                         || this.network.Consensus.ConsensusFactory is SmartContractCollateralPoAConsensusFactory);
 
             this.stateRoot.SyncToRoot(((ISmartContractBlockHeader)this.consensusManager.Tip.Header).HashStateRoot.ToBytes());
 
@@ -137,6 +136,26 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SmartContractOptions(services, fullNodeBuilder.Network));
                     });
+            });
+
+            return fullNodeBuilder;
+        }
+
+        /// <summary>Adds Proof-of-Authority mining to the side chain node.</summary>
+        /// <typeparam name="T">The type of block definition to use.</typeparam>
+        public static IFullNodeBuilder AddPoAMiningCapability<T>(this IFullNodeBuilder fullNodeBuilder) where T : BlockDefinition
+        {
+            fullNodeBuilder.ConfigureFeature(features =>
+            {
+                IFeatureRegistration feature = fullNodeBuilder.Features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(PoAFeature));
+                feature.FeatureServices(services =>
+                {
+                    services.AddSingleton<IPoAMiner, PoAMiner>();
+                    services.AddSingleton<MinerSettings>();
+                    services.AddSingleton<PoAMinerSettings>();
+                    services.AddSingleton<BlockDefinition, T>();
+                    services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
+                });
             });
 
             return fullNodeBuilder;

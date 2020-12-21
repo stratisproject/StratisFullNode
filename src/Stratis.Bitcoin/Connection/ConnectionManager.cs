@@ -92,6 +92,8 @@ namespace Stratis.Bitcoin.Connection
         /// <summary>Traffic statistics from peers that have been disconnected.</summary>
         private readonly PerformanceCounter disconnectedPerfCounter;
 
+        private readonly PayloadProvider payloadProvider;
+
         public ConnectionManager(IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory,
             Network network,
@@ -106,7 +108,8 @@ namespace Stratis.Bitcoin.Connection
             ConnectionManagerSettings connectionSettings,
             IVersionProvider versionProvider,
             INodeStats nodeStats,
-            IAsyncProvider asyncProvider)
+            IAsyncProvider asyncProvider,
+            PayloadProvider payloadProvider)
         {
             this.connectedPeers = new NetworkPeerCollection();
             this.dateTimeProvider = dateTimeProvider;
@@ -117,6 +120,7 @@ namespace Stratis.Bitcoin.Connection
             this.NodeSettings = nodeSettings;
             this.nodeLifetime = nodeLifetime;
             this.asyncProvider = asyncProvider;
+            this.payloadProvider = payloadProvider;
             this.peerAddressManager = peerAddressManager;
             this.PeerConnectors = peerConnectors;
             this.peerDiscovery = peerDiscovery;
@@ -349,6 +353,40 @@ namespace Stratis.Bitcoin.Connection
 
             if (otherBuilder.Length > 0)
                 builder.Append(otherBuilder.ToString());
+
+            builder.AppendLine();
+
+            string ToMB(long bytes)
+            {
+                return string.Format("{0:0.000}", (double)((bytes + 500) / 1000) / 1000);
+            }
+
+            var metrics = this.payloadProvider.GetPayloadTypeMetrics();
+            if (metrics.Count > 0)
+            {
+                long bytesIn = metrics.Sum(m => m.Value.BytesReceivedCount);
+                long bytesOut = metrics.Sum(m => m.Value.BytesSentCount);
+                builder.AppendLine($"---Payload Bandwidth Breakdown (In/Out MB = {ToMB(bytesIn)}/{ToMB(bytesOut)})---");
+                int i = 0;
+                foreach (Type payloadType in metrics.Keys)
+                {
+                    PayloadTypeMetric metric = metrics[payloadType];
+
+                    string name = payloadType.Name.PadLeft(20);
+                    string receivedCnt = metric.ReceivedCount.ToString().PadLeft(6);
+                    string bytesReceivedCnt = ToMB(metric.BytesReceivedCount).PadLeft(9);
+                    string sentCnt = metric.SentCount.ToString().PadLeft(6);
+                    string bytesSentCnt = ToMB(metric.BytesSentCount).PadLeft(9);
+
+                    builder.Append($"{name} -- In: {receivedCnt} ({bytesReceivedCnt} MB), Out: {sentCnt} ({bytesSentCnt} MB)");
+
+                    if ((++i % 2) == 0)
+                        builder.AppendLine();
+                }
+
+                if ((i % 2) != 0)
+                    builder.AppendLine();
+            }
         }
 
         private string ToKBSec(ulong bytesPerSec)

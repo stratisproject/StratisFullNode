@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Consensus
 
             lock (this.locker)
             {
-                bytes = this.leveldb.Get(DBH.Key(HeaderTableName, bytes));
+                bytes = this.leveldb.Get(HeaderTableName, bytes);
             }
 
             if (bytes == null)
@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Consensus
 
             lock (this.locker)
             {
-                this.leveldb.Put(DBH.Key(HeaderTableName, blockHeader.GetHash().ToBytes()), blockHeader.ToBytes(consensusFactory));
+                this.leveldb.Put(HeaderTableName, blockHeader.GetHash().ToBytes(), blockHeader.ToBytes(consensusFactory));
             }
 
             return true;
@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Consensus
 
             lock (this.locker)
             {
-                bytes = this.leveldb.Get(DBH.Key(ChainTableName, BitConverter.GetBytes(height)));
+                bytes = this.leveldb.Get(ChainTableName, BitConverter.GetBytes(height));
             }
 
             if (bytes == null)
@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Consensus
             {
                 foreach (var item in items)
                 {
-                    batch.Put(DBH.Key(ChainTableName, BitConverter.GetBytes(item.Height)), item.Data.ToBytes(this.network.Consensus.ConsensusFactory));
+                    batch.Put(ChainTableName, BitConverter.GetBytes(item.Height), item.Data.ToBytes(this.network.Consensus.ConsensusFactory));
                 }
 
                 lock (this.locker)

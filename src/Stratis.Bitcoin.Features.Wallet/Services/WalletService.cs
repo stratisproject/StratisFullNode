@@ -26,12 +26,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
     public class WalletService : IWalletService
     {
         private const int MaxHistoryItemsPerAccount = 1000;
-        private readonly IWalletManager walletManager;
+        protected readonly IWalletManager walletManager;
         private readonly IWalletTransactionHandler walletTransactionHandler;
         private readonly IWalletSyncManager walletSyncManager;
         private readonly IConnectionManager connectionManager;
         private readonly IConsensusManager consensusManager;
-        private readonly Network network;
+        protected readonly Network network;
         private readonly ChainIndexer chainIndexer;
         private readonly IBroadcasterManager broadcasterManager;
         private readonly IDateTimeProvider dateTimeProvider;
@@ -356,31 +356,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         // Create a record for a 'receive' transaction.
                         if (!address.IsChangeAddress())
                         {
-                            // First check if we already have a similar transaction output, in which case we just sum up the amounts
-                            TransactionItemModel existingReceivedItem =
-                                this.FindSimilarReceivedTransactionOutput(transactionItems, transaction);
-
-                            if (existingReceivedItem == null)
+                            var receivedItem = new TransactionItemModel
                             {
-                                // Add incoming fund transaction details.
-                                var receivedItem = new TransactionItemModel
-                                {
-                                    Type = TransactionItemType.Received,
-                                    ToAddress = address.Address,
-                                    Amount = transaction.Amount,
-                                    Id = transaction.Id,
-                                    Timestamp = transaction.CreationTime,
-                                    ConfirmedInBlock = transaction.BlockHeight,
-                                    BlockIndex = transaction.BlockIndex
-                                };
+                                Type = TransactionItemType.Received,
+                                ToAddress = address.Address,
+                                Amount = transaction.Amount,
+                                Id = transaction.Id,
+                                Timestamp = transaction.CreationTime,
+                                ConfirmedInBlock = transaction.BlockHeight,
+                                BlockIndex = transaction.BlockIndex
+                            };
 
-                                transactionItems.Add(receivedItem);
-                                uniqueProcessedTxIds.Add(receivedItem.Id);
-                            }
-                            else
-                            {
-                                existingReceivedItem.Amount += transaction.Amount;
-                            }
+                            transactionItems.Add(receivedItem);
+                            uniqueProcessedTxIds.Add(receivedItem.Id);
                         }
                     }
 
@@ -597,6 +585,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     TransactionId = r.transactionId,
                     CreationTime = r.creationTime
                 });
+            }, cancellationToken);
+        }
+
+        public async Task RemoveWallet(RemoveWalletModel request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Run(() =>
+            {
+                this.walletManager.DeleteWallet(request.WalletName);
             }, cancellationToken);
         }
 
@@ -1323,7 +1320,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
+        public virtual async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
             {
@@ -1334,7 +1331,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 var builder = new TransactionBuilder(this.network);
                 var coins = new List<Coin>();
                 var signingKeys = new List<ISecret>();
-                
+
                 ExtKey seedExtKey = this.walletManager.GetExtKey(new WalletAccountReference() { AccountName = request.WalletAccount, WalletName = request.WalletName }, request.WalletPassword);
 
                 // Have to determine which private key to use for each UTXO being spent.
@@ -1370,7 +1367,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 builder.AddKeys(signingKeys.ToArray());
                 builder.SignTransactionInPlace(unsignedTransaction);
 
-                if (!builder.Verify(unsignedTransaction))
+                // TODO: Do something with the errors
+                if (!builder.Verify(unsignedTransaction, out TransactionPolicyError[] errors))
                 {
                     throw new FeatureException(HttpStatusCode.BadRequest, "Failed to validate signed transaction.",
                         $"Failed to validate signed transaction '{unsignedTransaction.GetHash()}' from offline request '{originalTxId}'.");
@@ -1437,12 +1435,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 {
                     totalToSend += utxo.Transaction.Amount;
                     outpoints.Add(utxo.ToOutPoint());
-                    
+
                     context = new TransactionBuildContext(this.network)
                     {
                         AccountReference = accountReference,
                         AllowOtherInputs = false,
                         FeeType = FeeType.Medium,
+                        MinConfirmations = 0,
                         // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
                         Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
                         SelectedInputs = outpoints,
@@ -1457,7 +1456,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     if (size > (0.95m * this.network.Consensus.Options.MaxStandardTxWeight))
                         break;
                 }
-                
+
                 // Build the final version of the consolidation transaction.
                 context = new TransactionBuildContext(this.network)
                 {

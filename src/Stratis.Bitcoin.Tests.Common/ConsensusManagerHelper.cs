@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Tests.Common
             var connectionSettings = new ConnectionManagerSettings(nodeSettings);
             var connectionManager = new ConnectionManager(dateTimeProvider, loggerFactory, network, networkPeerFactory, nodeSettings,
                 new NodeLifetime(), new NetworkPeerConnectionParameters(), peerAddressManager, new IPeerConnector[] { },
-                peerDiscovery, selfEndpointTracker, connectionSettings, new VersionProvider(), new Mock<INodeStats>().Object, asyncProvider);
+                peerDiscovery, selfEndpointTracker, connectionSettings, new VersionProvider(), new Mock<INodeStats>().Object, asyncProvider, new PayloadProvider());
 
             if (chainState == null)
                 chainState = new ChainState();

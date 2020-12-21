@@ -16,11 +16,11 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -48,11 +48,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private readonly IFederatedPegSettings federatedPegSettings;
 
-        private CollateralFederationManager federationManager;
+        private IFederationManager federationManager;
 
         private readonly IFederationWalletManager federationWalletManager;
-
-        private readonly IKeyValueRepository keyValueRepository;
 
         private readonly ISignals signals;
 
@@ -70,7 +68,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
-            this.keyValueRepository = Substitute.For<IKeyValueRepository>();
             this.signals = new Signals(this.loggerFactory, null);
 
             this.signedMultisigTransactionBroadcaster = Substitute.For<ISignedMultisigTransactionBroadcaster>();
@@ -205,14 +202,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             CreateFederationManager(nodeSettings);
 
-            var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
+            var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
                 this.crossChainTransferStore,
                 this.loggerFactory,
-                this.GetMaturedBlocksProvider(settings),
+                this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
-                settings,
+                federatedPegSettings,
                 this.federationWalletManager,
                 this.signedMultisigTransactionBroadcaster,
                 this.federationManager);
@@ -237,7 +234,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var fullNode = new Mock<IFullNode>();
 
-            this.federationManager = new CollateralFederationManager(NodeSettings.Default(this.network), this.network, this.loggerFactory, this.keyValueRepository, this.signals, null, fullNode.Object, null);
+            var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
+
+            this.federationManager = new FederationManager(counterChainSettings, fullNode.Object, this.network, NodeSettings.Default(this.network), this.loggerFactory, this.signals);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 
@@ -257,9 +256,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
-            var slotsManager = new SlotsManager(this.network, this.federationManager, chainIndexerMock.Object, this.loggerFactory);
-            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
-            votingManager.Initialize();
+            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
+            var federationHistory = new FederationHistory(this.federationManager, votingManager);
+            votingManager.Initialize(federationHistory);
 
             return votingManager;
         }
