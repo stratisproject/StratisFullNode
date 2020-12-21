@@ -512,6 +512,7 @@ While ( $registerMasternode -ne "Yes" -and $registerMasternode -ne "No" )
     $registerMasternode = Read-Host 'Enter "Yes" to continue or "No" to exit the script'
     ""
 }
+Clear-Host
 Switch ( $registerMasternode )
 {
     Yes
