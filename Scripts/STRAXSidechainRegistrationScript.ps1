@@ -1,25 +1,26 @@
 ﻿#Create Functions
 function Get-IndexerStatus
 {
-    $Headers = @{}
-    $Headers.Add("Accept","application/json")
-    $AsyncLoopStats = Invoke-WebRequest -Uri http://localhost:$API/api/Dashboard/AsyncLoopsStats | Select-Object -ExpandProperty content 
-    if ( $AsyncLoopStats.Contains("Fault Reason: Missing outpoint data") )
+    $indexerStatusHeader = @{
+        Accept = "application/json"
+    }
+    $asyncLoopStats = Invoke-WebRequest -Uri http://localhost:$API/api/Dashboard/AsyncLoopsStats -Headers $indexerStatusHeader | Select-Object -ExpandProperty content
+    if ( $asyncLoopStats.Contains("Fault Reason: Missing outpoint data") )
     {
         Write-Host "ERROR: Indexing Database is corrupt" -ForegroundColor Red
         Write-Host "Would you like to delete the database?"
-        $DeleteDB = Read-Host -Prompt "Enter 'Yes' to remove the Indexing Database or 'No' to exit the script"
-        While ( $DeleteDB -ne "Yes" -and $DeleteDB -ne "No" )
+        $deleteDB = Read-Host -Prompt "Enter 'Yes' to remove the Indexing Database or 'No' to exit the script"
+        While ( $deleteDB -ne "Yes" -and $deleteDB -ne "No" )
         {
-            $DeleteDB = Read-Host -Prompt "Enter 'Yes' to remove the indexing database or 'No' to exit the script"
+            $deleteDB = Read-Host -Prompt "Enter 'Yes' to remove the indexing database or 'No' to exit the script"
         }
-        Switch ( $DeleteDB )
+        Switch ( $deleteDB )
         {
             Yes 
             {
                 Shutdown-MainchainNode
-                Remove-Item -Path $API\addressindex.litedb -Force
-                if ( -not ( Get-Item -Path $API\addressindex.litedb ) )
+                Remove-Item -Path $mainChainDataDir\addressindex.litedb -Force
+                if ( -not ( Get-Item -Path $mainChainDataDir\addressindex.litedb ) )
                 {
                     Write-Host "SUCCESS: Indexing Database has been removed. Please re-run the script" -ForegroundColor Green
                     Start-Sleep 10
@@ -46,9 +47,10 @@ function Get-IndexerStatus
 function Shutdown-MainchainNode
 {
     Write-Host "Shutting down Mainchain Node..." -ForegroundColor Yellow
-    $Headers = @{}
-    $Headers.Add("Accept","application/json")
-    Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $Headers -Body "true" -ErrorAction SilentlyContinue | Out-Null
+    $shutdownHeader = @{
+        Accept = "application/json"
+    }
+    Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $shutdownHeader -Body "true" | Out-Null
 
     While ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort -ErrorAction SilentlyContinue )
     {
@@ -63,9 +65,10 @@ function Shutdown-MainchainNode
 function Shutdown-SidechainNode
 {
     Write-Host "Shutting down Sidechain Node..." -ForegroundColor Yellow
-    $Headers = @{}
-    $Headers.Add("Accept","application/json")
-    Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $Headers -Body "true" -ErrorAction SilentlyContinue | Out-Null
+    $shutdownHeader = @{
+        Accept = "application/json"
+    }
+    Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $shutdownHeader -Body "true" | Out-Null
 
     While ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort -ErrorAction SilentlyContinue )
     {
@@ -79,56 +82,50 @@ function Shutdown-SidechainNode
 
 function Get-MaxHeight 
 {
-    $Height = @{}
-    $Peers = Invoke-WebRequest -Uri http://localhost:$API/api/ConnectionManager/getpeerinfo | ConvertFrom-Json
-    foreach ( $Peer in $Peers )
+    $height = @{}
+    $peers = Invoke-WebRequest -Uri http://localhost:$API/api/ConnectionManager/getpeerinfo | ConvertFrom-Json
+    foreach ( $peer in $peers )
     {
-        if ( $Peer.subver -eq "StratisNode:0.13.0 (70000)" )
-        {
-        }
-            Else
-            {
-                $Height.Add($Peer.id,$Peer.startingheight)
-            }
+        $height.Add($peer.id,$peer.startingheight)
     }    
     
-    $MaxHeight = $Height.Values | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
-    $MaxHeight
+    $maxHeight = $height.Values | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
+    $maxHeight
 }       
 
 function Get-LocalHeight 
 {
-    $StatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status
-    $Stats = ConvertFrom-Json $StatsRequest
-    $LocalHeight = $Stats.blockStoreHeight
-    $LocalHeight
+    $statsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status -UseBasicParsing
+    $stats = ConvertFrom-Json $statsRequest
+    $localHeight = $stats.blockStoreHeight
+    $localHeight
 }
 
 function GetCollateral-WalletHeight
 {
-    $WalletHeight = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/general-info?Name=$CollateralWallet | ConvertFrom-Json | Select-Object -ExpandProperty lastBlockSyncedHeight
-    $WalletHeight
+    $collateralWalletHeight = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/general-info?Name=$collateralWallet -UseBasicParsing| ConvertFrom-Json | Select-Object -ExpandProperty lastBlockSyncedHeight
+    $collateralWalletHeight
 }
 
 function GetCirrus-WalletHeight
 {
-    $WalletHeight = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/general-info?Name=$CirrusWallet | ConvertFrom-Json | Select-Object -ExpandProperty lastBlockSyncedHeight
-    $WalletHeight
+    $cirrusWalletHeight = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/general-info?Name=$cirrusWallet -UseBasicParsing | ConvertFrom-Json | Select-Object -ExpandProperty lastBlockSyncedHeight
+    $cirrusWalletHeight
 }
 
 function Get-LocalIndexerHeight 
 {
-    $IndexStatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/BlockStore/addressindexertip
-    $IndexStats = ConvertFrom-Json $IndexStatsRequest
-    $LocalIndexHeight = $IndexStats.tipHeight
-    $LocalIndexHeight
+    $indexStatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/BlockStore/addressindexertip -UseBasicParsing
+    $indexStats = ConvertFrom-Json $indexStatsRequest
+    $localIndexHeight = $indexStats.tipHeight
+    $localIndexHeight
 }
 
 function Get-BlockStoreStatus
 {
-    $FeatureStatus = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status | ConvertFrom-Json | Select-Object -ExpandProperty featuresData
-    $BlockStoreStatus = $FeatureStatus | Where-Object { $_.namespace -eq "Stratis.Bitcoin.Features.BlockStore.BlockStoreFeature" }
-    $BlockStoreStatus.state
+    $featureStatus = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status -UseBasicParsing | ConvertFrom-Json | Select-Object -ExpandProperty featuresData
+    $blockStoreStatus = $featureStatus | Where-Object { $_.namespace -eq "Stratis.Bitcoin.Features.BlockStore.BlockStoreFeature" }
+    $blockStoreStatus.state
 }
 
 #Check for an existing running node
@@ -153,16 +150,16 @@ Set-Location $cloneDir\src\Stratis.CirrusMinerD
 #Start Mainchain Node
 $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Mainchain Masternode" -ForegroundColor Cyan
-$StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
+$startNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
 
 #Wait for API
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
 {
     Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
     Start-Sleep 3
-    if ( $StartNode.HasExited -eq $true )
+    if ( $startNode.HasExited -eq $true )
     {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong - The Mainchain Node Exited unexpectedly. Please contact support in Discord" -ForegroundColor Red
         Start-Sleep 30
         Exit
     }
@@ -173,9 +170,9 @@ While ( ( Get-BlockStoreStatus ) -ne "Initialized" )
 { 
     Write-Host (Get-TimeStamp) "Waiting for BlockStore to Initialize..." -ForegroundColor Yellow
     Start-Sleep 10
-    if ( $StartNode.HasExited -eq $true )
+    if ( $startNode.HasExited -eq $true )
     {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong - The Mainchain Node Exited unexpectedly. Please contact support in Discord" -ForegroundColor Red
         Start-Sleep 30
         Exit
     }
@@ -192,9 +189,9 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalIndexerHeight ) )
 {
     $a = Get-MaxHeight
     $b = Get-LocalIndexerHeight 
-    $c = $a - $b
+    [int]$percentage = $b / $a * 100
     ""
-    Write-Host (Get-TimeStamp) "The Indexed Height is $b" -ForegroundColor Yellow
+    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
     Write-Host (Get-TimeStamp) "$c Blocks Require Indexing..." -ForegroundColor Yellow
     Start-Sleep 10
@@ -202,23 +199,22 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalIndexerHeight ) )
 }
 
 #Clear Variables
-if ( Get-Variable a -ErrorAction SilentlyContinue ) { Clear-Variable a }
-if ( Get-Variable b -ErrorAction SilentlyContinue ) { Clear-Variable b }
-if ( Get-Variable c -ErrorAction SilentlyContinue ) { Clear-Variable c }
+$variablesToClear = "a","b","c","startNode","API"
+$variablesToClear | ForEach-Object { if ( Get-Variable $_ -ErrorAction SilentlyContinue ) { Clear-Variable $_ } }
 
 #Start Sidechain Node
 $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
-$StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
+$startNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
 
 #Wait for API
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
 {
     Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
     Start-Sleep 3
-    if ( $StartNode.HasExited -eq $true )
+    if ( $startNode.HasExited -eq $true )
     {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong - The Sidechain Node Exited unexpectedly. Please contact support in Discord" -ForegroundColor Red
         Start-Sleep 30
         Exit
     }
@@ -229,9 +225,9 @@ While ( ( Get-BlockStoreStatus ) -ne "Initialized" )
 { 
     Write-Host (Get-TimeStamp) "Waiting for BlockStore to Initialize..." -ForegroundColor Yellow
     Start-Sleep 10
-    if ( $StartNode.HasExited -eq $true )
+    if ( $startNode.HasExited -eq $true )
     {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: Something went wrong - The Sidechain Node Exited unexpectedly. Please contact support in Discord" -ForegroundColor Red
         Start-Sleep 30
         Exit
     }
@@ -249,8 +245,9 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
     $a = Get-MaxHeight
     $b = Get-LocalHeight 
     $c = $a - $b
+    [int]$percentage = $b / $a * 100
     ""
-    Write-Host (Get-TimeStamp) "The Local Synced Height is $b" -ForegroundColor Yellow
+    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
     Start-Sleep 10
@@ -259,16 +256,19 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
 ""
 Write-Host (Get-TimeStamp) "SUCCESS: STRAX Blockchain and Cirrus Blockchain are now fully synchronised!" -ForegroundColor Green
 ""
+$variablesToClear = "a","b","c","API"
+$variablesToClear | ForEach-Object { if ( Get-Variable $_ -ErrorAction SilentlyContinue ) { Clear-Variable $_ } }
+
 #Check Collateral Wallet Existence
 $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) INFO: "Assessing Masternode Requirements" -ForegroundColor Cyan
 ""
-$CollateralWallet = Read-Host "Please Enter the Name of the STRAX Wallet that contains the required collateral of a 100 000 STRAX:"
+$collateralWallet = Read-Host "Please Enter the Name of the STRAX Wallet that contains the required collateral of a 100 000 STRAX"
 
 ""
-$LoadedWallets = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
-
-if ( $LoadedWallets -contains $CollateralWallet )
+$loadedWallets = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
+    
+if ( $loadedWallets -contains $collateralWallet )
 {
     Write-Host (Get-TimeStamp) "SUCCESS: Collateral wallet found!" -ForegroundColor Green
 }
@@ -276,52 +276,51 @@ if ( $LoadedWallets -contains $CollateralWallet )
     {
         Write-Host (Get-TimeStamp) "ERROR: No Wallets could be found.. Please restore a wallet that holds the required collateral" -ForegroundColor Red
         ""
-        $RestoreWallet = Read-Host -Prompt 'Would you like to restore the wallet using this script? Enter "Yes" to continue or "No" to exit the script'
+        $restoreWallet = Read-Host -Prompt 'Would you like to restore the wallet using this script? Enter "Yes" to continue or "No" to exit the script'
         ""
-        While ( $RestoreWallet -ne "Yes" -and $RestoreWallet -ne "No" )
+        While ( $restoreWallet -ne "Yes" -and $restoreWallet -ne "No" )
         {
             ""
-            $RestoreWallet = Read-Host -Prompt "Enter 'Yes' to continue or 'No' to exit the script"
+            $restoreWallet = Read-Host -Prompt "Enter 'Yes' to continue or 'No' to exit the script"
             ""
         }
-        Switch ( $RestoreWallet )
+        Switch ( $restoreWallet )
         {
             Yes
             {
-                $CollateralWalletMnemonic = Read-Host "Please enter your 12-Words used to recover your wallet"
+                $collateralWalletMnemonic = Read-Host "Please enter your 12-Words used to recover your wallet"
                 Clear-Host
-                $CollateralWalletPassphrase = Read-Host "Please enter your Wallet Passphrase"
+                $collateralWalletPassphrase = Read-Host "Please enter your Wallet Passphrase"
                 Clear-Host
-                $CollateralWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
+                $collateralWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
                 Clear-Host
-                if ( -not ( $CollateralWallet ) ) { $ErrorVar = 1 }
-                if ( -not ( $CollateralWalletMnemonic ) ) { $ErrorVar = 1 }
-                if ( -not ( $CollateralWalletPassword ) ) { $ErrorVar = 1 }
-                if ( $ErrorVar ) 
-                {
+                $validateVariables = $collateralWallet, $collateralWalletMnemonic, $collateralWalletPassword
+                $validateVariables | ForEach-Object { 
+                if ( $_ -eq $null ) {
                     Write-Host (Get-TimeStamp) "ERROR: There was some missing wallet detail - Please re-run this script" -ForegroundColor Red
                     Start-Sleep 30
                     Exit
+                    }
                 }
-            
-                $Body = @{}
-                $Body.Add("mnemonic",$CollateralWalletMnemonic)
+                                         
+                $collateralRestoreBody = @{
+                    mnemonic = $collateralWalletMnemonic
+                    password = $collateralWalletPassword
+                    name = $collateralWallet
+                    creationDate = "2020-11-01T00:00:01.690Z"
+                }
 
-                if ( $CollateralWalletPassphrase )
+                if ( $collateralWalletPassphrase )
                 {
-                    $Body.Add("passphrase",$CollateralWalletPassphrase)
+                    $collateralRestoreBody.Add("passphrase",$collateralWalletPassphrase)
                 }
                     Else
                     {
-                        $Body.Add("passphrase","")
+                        $collateralRestoreBody.Add("passphrase","")
                     }
+                $collateralRestoreBody = ConvertTo-Json $collateralRestoreBody
 
-                $Body.Add("password",$CollateralWalletPassword)
-                $Body.Add("name",$CollateralWallet)
-                $Body.Add("creationDate","2020-11-01T00:00:01.690Z")
-
-                $Body = $Body | ConvertTo-Json
-                $RestoreWallet = Invoke-WebRequest -Uri http://localhost:$API/api/wallet/recover -UseBasicParsing -Method Post -Body $Body -ContentType "application/json"
+                $restoreWallet = Invoke-WebRequest -Uri http://localhost:$API/api/wallet/recover -UseBasicParsing -Method Post -Body $collateralRestoreBody -ContentType "application/json"
                 if ( (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames) -notcontains $CollateralWallet ) 
                 {                    
                     Write-Host (Get-TimeStamp) "ERROR: There was an error calling the Wallet Recover API - Please re-run this script" -ForegroundColor Red
@@ -329,17 +328,18 @@ if ( $LoadedWallets -contains $CollateralWallet )
                     Exit
                 }
 
-                Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/remove-transactions?WalletName=$CollateralWallet"&"all=true"&"ReSync=true -UseBasicParsing -Method Delete
+                Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/remove-transactions?WalletName=$collateralWallet"&"all=true"&"ReSync=true -UseBasicParsing -Method Delete
                 Clear-Host
                 
-                Write-Host (Get-TimeStamp) INFO: "Syncing $CollateralWallet - This may take some time and -1 may be dispalyed for some time. The process is wholly dependant on avaialble resource, please do no close this window..." -ForegroundColor Cyan
+                Write-Host (Get-TimeStamp) INFO: "Syncing $collateralWallet - This may take some time and -1 may be dispalyed for some time. The process is wholly dependant on avaialble resource, please do no close this window..." -ForegroundColor Cyan
                 While ( (GetCollateral-WalletHeight) -ne (Get-LocalHeight) )
                 {
                     $a = Get-LocalHeight
-                    $b = GetCollateral-WalletHeight 
+                    $b = GetCollateral-WalletHeight
                     $c = $a - $b
+                    [int]$percentage = $b / $a * 100
                     ""
-                    Write-Host (Get-TimeStamp) "The Wallet Synced Height is $b" -ForegroundColor Yellow
+                    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
                     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
                     Start-Sleep 10
@@ -348,7 +348,7 @@ if ( $LoadedWallets -contains $CollateralWallet )
 
             No
             {
-                Write-Host (Get-TimeStamp) "ERROR: There was some missing wallet detail - Please re-run this script" -ForegroundColor Red
+                Write-Host (Get-TimeStamp) "ERROR: You have chosen not to restore a wallet - Please re-run this script" -ForegroundColor Red
                 Start-Sleep 30
                 Exit
             }
@@ -356,8 +356,8 @@ if ( $LoadedWallets -contains $CollateralWallet )
     }
     
 #Check Wallet Balance
-$CollateralWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$CollateralWallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
-if ( $CollateralWalletBalance -ge 100000 )
+$collateralWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$collateralWallet -Method Get -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
+if ( $collateralWalletBalance -ge 100000 )
 {
     Write-Host (Get-TimeStamp) "SUCCESS: Collateral Wallet contains a balance of over 100,000 STRAX!" -ForegroundColor Green
 }
@@ -368,83 +368,86 @@ if ( $CollateralWalletBalance -ge 100000 )
         Exit
     }
     
+$variablesToClear = "a","b","c","API"
+$variablesToClear | ForEach-Object { if ( Get-Variable $_ -ErrorAction SilentlyContinue ) { Clear-Variable $_ } }
 
 #Check Cirrus Wallet Existence
 $API = $sideChainAPIPort
 ""
-$CirrusWallet = Read-Host "Please Enter the Name of the Cirrus Wallet that contains the required balance of 501 CRS to fund the registration fee."
+$cirrusWallet = Read-Host "Please Enter the Name of the Cirrus Wallet that contains the required balance of 501 CRS to fund the registration fee."
 ""
-$LoadedWallets = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
+$loadedWallets = Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
 
-if ( $LoadedWallets -contains $CirrusWallet )
+if ( $loadedWallets -contains $cirrusWallet )
 {
-    Write-Host (Get-TimeStamp) "SUCCESS: $CirrusWallet found!" -ForegroundColor Green
+    Write-Host (Get-TimeStamp) "SUCCESS: $cirrusWallet found!" -ForegroundColor Green
 }
     Else
     {
-        Write-Host (Get-TimeStamp) "ERROR: No wallet named $CirrusWallet could be found. Please restore a wallet that holds the required fee." -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: No wallet named $cirrusWallet could be found. Please restore a wallet that holds the required fee." -ForegroundColor Red
         ""
         $RestoreWallet = Read-Host -Prompt 'Would you like to restore the wallet using this script? Enter "Yes" to continue or "No" to exit the script'
         ""
-        While ( $RestoreWallet -ne "Yes" -and $RestoreWallet -ne "No" )
+        While ( $restoreWallet -ne "Yes" -and $restoreWallet -ne "No" )
         {
             ""
-            $RestoreWallet = Read-Host -Prompt "Enter 'Yes' to continue or 'No' to exit the script"
+            $restoreWallet = Read-Host -Prompt "Enter 'Yes' to continue or 'No' to exit the script"
             ""
         }
-        Switch ( $RestoreWallet )
+        Switch ( $restoreWallet )
         {
             Yes
             {
-                $CirrusWalletMnemonic = Read-Host "Please enter your 12-Words used to recover your wallet"
+                $cirrusWalletMnemonic = Read-Host "Please enter your 12-Words used to recover your wallet"
                 Clear-Host
-                $CirrusWalletPassphrase = Read-Host "Please enter your Wallet Passphrase"
+                $cirrusWalletPassphrase = Read-Host "Please enter your Wallet Passphrase"
                 Clear-Host
-                $CirrusWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
+                $cirrusWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
                 Clear-Host
-                if ( -not ( $CirrusWallet ) ) { $ErrorVar = 1 }
-                if ( -not ( $CirrusWalletMnemonic ) ) { $ErrorVar = 1 }
-                if ( -not ( $CirrusWalletPassword ) ) { $ErrorVar = 1 }
-                if ( $ErrorVar ) 
-                {
+                $validateVariables = $cirrusWallet, $cirrusWalletMnemonic, $cirrusWalletPassword
+                $validateVariables | ForEach-Object { 
+                if ( $_ -eq $null ) {
                     Write-Host (Get-TimeStamp) "ERROR: There was some missing wallet detail - Please re-run this script" -ForegroundColor Red
                     Start-Sleep 30
                     Exit
+                    }
                 }
             
-                $Body = @{}
-                $Body.Add("mnemonic",$CirrusWalletMnemonic)
+                $cirrusRestoreBody = @{
+                    mnemonic = $cirrusWalletMnemonic
+                    password = $cirrusWalletPassword
+                    name = $cirrusWallet
+                    creationDate = "2020-11-01T00:00:01.690Z"
+                }
 
                 if ( $CirrusWalletPassphrase )
                 {
-                    $Body.Add("passphrase",$CirrusWalletPassphrase)
+                    $cirrusRestoreBody.Add("passphrase",$CirrusWalletPassphrase)
                 }
                     Else
                     {
-                        $Body.Add("passphrase","")
+                        $cirrusRestoreBody.Add("passphrase","")
                     }
-                
-                $Body.Add("password",$CirrusWalletPassword)
-                $Body.Add("name",$CirrusWallet)
-                $Body.Add("creationDate","2020-11-01T00:00:01.690Z")
-                $Body = $Body | ConvertTo-Json
-                
-                $RestoreWallet = Invoke-WebRequest -Uri http://localhost:$API/api/wallet/recover -UseBasicParsing -Method Post -Body $Body -ContentType "application/json"
-                if ( (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames) -notcontains $CirrusWallet ) 
+                $cirrusRestoreBody = ConvertTo-Json $cirrusRestoreBody
+                                               
+                $restoreCirrusWallet = Invoke-WebRequest -Uri http://localhost:$API/api/wallet/recover -UseBasicParsing -Method Post -Body $cirrusRestoreBody -ContentType "application/json"
+                if ( (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames) -notcontains $cirrusWallet ) 
                 {                    
                     Write-Host (Get-TimeStamp) "ERROR: There was an error calling the Cirrus Wallet Recover API - Please re-run this script" -ForegroundColor Red
                     Start-Sleep 30
                     Exit
                 }
 
-                Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/remove-transactions?WalletName=$CirrusWallet"&"all=true"&"ReSync=true -UseBasicParsing -Method Delete
+                Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/remove-transactions?WalletName=$cirrusWallet"&"all=true"&"ReSync=true -UseBasicParsing -Method Delete
 
                 While ( (GetCirrus-WalletHeight) -ne (Get-LocalHeight) )
                 {
                     $a = Get-LocalHeight
                     $b = GetCirrus-WalletHeight 
                     $c = $a - $b
+                    [int]$percentage = $b / $a * 100
                     ""
+                    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
                     Write-Host (Get-TimeStamp) "The Wallet Synced Height is $b" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
@@ -463,14 +466,14 @@ if ( $LoadedWallets -contains $CirrusWallet )
     
 
 #Check Wallet Balance
-$CirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$CirrusWallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
-if ( $CirrusWalletBalance -ge 500.01 )
+$cirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$cirrusWallet -Method Get -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
+if ( $cirrusWalletBalance -ge 500.01 )
 {
-    Write-Host (Get-TimeStamp) "SUCCESS: $CirrusWallet contains a balance of over 501 CRS!" -ForegroundColor Green
+    Write-Host (Get-TimeStamp) "SUCCESS: $cirrusWallet contains enough CRS to cover the registration cost!" -ForegroundColor Green
 }
     Else
     {
-        Write-Host (Get-TimeStamp) "ERROR: $CirrusWallet does not contain a balance of over 501 CRS! Please run again and define a wallet that contains the required amount..." -ForegroundColor Red
+        Write-Host (Get-TimeStamp) "ERROR: $cirrusWallet does not contain a balance of over 501 CRS! Please run again and define a wallet that contains the required amount..." -ForegroundColor Red
         Start-Sleep 30
         Exit
     }
@@ -490,55 +493,84 @@ if ( -not ( Test-Path $sideChainDataDir\federationKey.dat ) )
 
 
 #Perform Registration
+$collateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount (the FULL BALANCE of a 100k must be held in ONE address)"
 ""
-$CollateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount (the FULL BALANCE of a 100k must be held in ONE address):"
-""
-$RegisterMasternode = Read-Host -Prompt 'Would you like to register as a Masternode? Please be aware that this will incur a 500 CRS Fee. Enter "Yes" to continue or "No" to exit the script'
-While ( $RegisterMasternode -ne "Yes" -and $RegisterMasternode -ne "No" )
+While ( $CollateralAddress.Trim() -notmatch '^X[a-zA-Z0-9]{26,33}$' )
+
 {
-    ""
-    $RegisterMasternode = Read-Host 'Enter "Yes" to continue or "No" to exit the script'
+    Write-Host (Get-TimeStamp) "ERROR: $CollateralAddress is not a valid address. Please ensure you're defining a STRAX Address." -ForegroundColor Red
+    $collateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount (the FULL BALANCE of a 100k must be held in ONE address)"
     ""
 }
-Switch ( $RegisterMasternode )
+
+$registerMasternode = Read-Host -Prompt 'Would you like to register as a Masternode? Please be aware that this will incur a 500 CRS Fee. Enter "Yes" to continue or "No" to exit the script'
+While ( $registerMasternode -ne "Yes" -and $registerMasternode -ne "No" )
+{
+    ""
+    $registerMasternode = Read-Host 'Enter "Yes" to continue or "No" to exit the script'
+    ""
+}
+Clear-Host
+Switch ( $registerMasternode )
 {
     Yes
     {
-        if ( -not ( $CollateralWalletPassword ) ) 
+        if ( -not ( $collateralWalletPassword ) ) 
         {  
-            $CollateralWalletPassword = Read-Host "Please confirm your STRAX (Collateral) wallet password."
+            $collateralWalletPassword = Read-Host "Please confirm your STRAX (Collateral) wallet password."
             Clear-Host
         }
 
-        if ( -not ( $CirrusWalletPassword ) ) 
+        if ( -not ( $cirrusWalletPassword ) ) 
         {
-            $CirrusWalletPassword = Read-Host "Please confirm your Cirrus wallet password."
+            $cirrusWalletPassword = Read-Host "Please confirm your Cirrus wallet password."
             Clear-Host
         }
 
-        $Body = @{}
-        $Body.Add("collateralAddress",$CollateralAddress)
-        $Body.Add("collateralWalletName",$CollateralWallet)
-        $Body.Add("collateralWalletPassword",$CollateralWalletPassword)
-        $Body.Add("walletName",$CirrusWallet)
-        $Body.Add("walletPassword",$CirrusWalletPassword)
-        $Body.Add("walletAccount","account 0")
-        Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $Body -ContentType "application/json-patch+json" -Method Post
-        Write-Host (Get-TimeStamp) "SUCCESS: Your registration was succesful!! Please follow the STRAX Sidechain Masternode Setup Guide!" -ForegroundColor Green
-        Start-Sleep 30
+        $registerBody = ConvertTo-Json @{
+            collateralAddress = $collateralAddress
+            collateralWalletName = $collateralWallet
+            collateralWalletPassword = $collateralWalletPassword
+            walletName = $cirrusWallet
+            walletPassword = $cirrusWalletPassword
+            walletAccount = "account 0"
+        }
+        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerBody -ContentType "application/json-patch+json" -UseBasicParsing -Method Post | Select
+
+        if ( ($register.content | ConvertFrom-Json | Select-Object -ExpandProperty minerPublicKey) -match '^.{66,66}$' )
+        {
+            Write-Host (Get-TimeStamp) "Your Masternode Public Key is: " ($register.content | ConvertFrom-Json | Select-Object -ExpandProperty minerPublicKey) -ForegroundColor Cyan
+            Write-Host (Get-TimeStamp) "SUCCESS: Your registration was succesful!! Please follow the STRAX Sidechain Masternode Setup Guide!" -ForegroundColor Green
+            Start-Sleep 30
+            pause
+        }
+            Else
+            {
+                Write-Host (Get-TimeStamp) "ERROR: Something went  wrong when attmepting to register..." -ForegroundColor Red
+                ""
+                Write-Host "Cirrus Wallet Name: $cirrusWallet" -ForegroundColor Yellow
+                Write-Host "STRAX Wallet Name: $collateralWallet" -ForegroundColor Yellow
+                Write-Host "Collateral Address: $collateralAddress" -ForegroundColor Yellow
+                ""
+                Write-Host (Get-TimeStamp) "INFO: Please try again ensuring that the detail is entered  correctly, such as Wallet Passowrds. If you continue to experience issues, please contact support via Discord" -ForegroundColor Cyan
+                Start-Sleep 60
+                Exit
+            }
     }
 
     No
     {
+        Write-Host (Get-TimeStamp) "ERROR: You have chosen not to continue with your Masternode registration - Please re-run the registration script to begin the registration process again" -ForegroundColor Red
+        Start-Sleep 30
     }
 }
 
-            
+          
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUJz7+xzEP3s6UvyUAY2SzNilC
-# sv+gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUaI73JqpdFrCnxEf+ERUtxeH8
+# lpegggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -608,11 +640,11 @@ Switch ( $RegisterMasternode )
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFFVXdfhr54SU
-# NsUqkFvwKbPEM/eEMA0GCSqGSIb3DQEBAQUABIIBADxoiXtgktrhSItBz7JAbit4
-# nKzraFyl+rJ0EBl1aJXrw6Kjna3GKqffgzc/4AmXhPrcby3XcxFrJL61CZymh5Qz
-# RLVGFIoTyhVUJESvfSp+/yRWjXprYblaT+/OfsKy/IbthSJ2HkmUM7XrO2cWLWbj
-# wEHIph8DLliQV7TEEzOh6/oEApocLp1jZD31B9o0Hmzxftylzrs26ja1jBvCzJKi
-# S1qgMMWk0JNM+M2rPa7/lOoHSPPmpB0j+Yp0jyQMbODSHL+M8SXTY9QxgoqLq5aa
-# huY3xwKvyKfm20PMbeKSVeZgVY/WTvP928xhy4GBOGPpIBuIyY+nM4xpt66+Fbw=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDNyjn39gPPC
+# J7Z4/e+mAZmCWil9MA0GCSqGSIb3DQEBAQUABIIBAGfEv2mGygtzNxl+6PM3nJDh
+# jWdJW6krHbdZhAPoHuOEEBNPSKuw8xB7rxdEl8gKHfW38sHFeL0i91J2wogI7Vpj
+# 6Es199NFsh/iU/Mp4el+yLv2t2Q2z/B3kbqg313kNkrmDWA7h6CumoTwvF+zei48
+# dql/ZEHCakLQFefuNiKmR6pog1fEmuCz2QuKN8lCOOy9gKJsXL/kAFUf07NgRtL0
+# rN10OlZ49l8n/GOxGQvP0nb0rtTEgd4Ca00x5LKTKWCCk9Ja/bUZX/dED5Iaoqks
+# SBs3+Y5sG0LyLU5R0qMFPO1lry47XJjYvu7XcIoAdJjfPUiodDgIdJ144UJgRnQ=
 # SIG # End signature block
