@@ -189,9 +189,9 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalIndexerHeight ) )
 {
     $a = Get-MaxHeight
     $b = Get-LocalIndexerHeight 
-    $c = $a - $b
+    [int]$percentage = $b / $a * 100
     ""
-    Write-Host (Get-TimeStamp) "The Indexed Height is $b" -ForegroundColor Yellow
+    Write-Host "$percentage% Synced" -ForegroundColor Cyan
     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
     Write-Host (Get-TimeStamp) "$c Blocks Require Indexing..." -ForegroundColor Yellow
     Start-Sleep 10
@@ -245,8 +245,9 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
     $a = Get-MaxHeight
     $b = Get-LocalHeight 
     $c = $a - $b
+    [int]$percentage = $b / $a * 100
     ""
-    Write-Host (Get-TimeStamp) "The Local Synced Height is $b" -ForegroundColor Yellow
+    Write-Host "$percentage% Synced" -ForegroundColor Cyan
     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
     Start-Sleep 10
@@ -333,9 +334,9 @@ if ( $loadedWallets -contains $collateralWallet )
                 {
                     $a = Get-LocalHeight
                     $b = GetCollateral-WalletHeight 
-                    $c = $a - $b
+                    [int]$percentage = $b / $a * 100
                     ""
-                    Write-Host (Get-TimeStamp) "The Wallet Synced Height is $b" -ForegroundColor Yellow
+                    Write-Host "$percentage% Synced" -ForegroundColor Cyan
                     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
                     Start-Sleep 10
