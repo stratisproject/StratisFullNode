@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Utilities.ValidationAttributes;
 
@@ -242,10 +243,18 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [JsonProperty(PropertyName = "subtractFeeFromAmount")]
         public bool SubtractFeeFromAmount { get; set; }
 
+        [JsonProperty(PropertyName = "splitCount")]
+        public int SplitCount { get; set; }
+
         /// <summary>
         /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
         /// </summary>
         public bool SegwitChangeAddress { get; set; }
+
+        public BaseSetupColdStakingRequest()
+        {
+            this.SplitCount = 1;
+        }
     }
 
     /// <summary>

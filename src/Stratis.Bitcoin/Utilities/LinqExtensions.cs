@@ -65,5 +65,15 @@ namespace Stratis.Bitcoin.Utilities
             else
                 return ordered.ElementAt(midpoint);
         }
+
+        public static HashSet<T> ToHashSet<T>(this IEnumerable<T> source, IEqualityComparer<T> comparer = null)
+        {
+            return new HashSet<T>(source, comparer);
+        }
+
+        public static IEnumerable<T> TakeLast<T>(this IEnumerable<T> source, int N)
+        {
+            return source.Skip(Math.Max(0, source.Count() - N));
+        }
     }
 }

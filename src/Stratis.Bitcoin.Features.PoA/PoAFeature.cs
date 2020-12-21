@@ -41,6 +41,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly VotingManager votingManager;
 
+        private readonly IFederationHistory federationHistory;
+
         private readonly Network network;
 
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
@@ -53,7 +55,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public PoAFeature(IFederationManager federationManager, PayloadProvider payloadProvider, IConnectionManager connectionManager, ChainIndexer chainIndexer,
             IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory,
-            VotingManager votingManager, Network network, IWhitelistedHashesRepository whitelistedHashesRepository,
+            VotingManager votingManager, IFederationHistory federationHistory, Network network, IWhitelistedHashesRepository whitelistedHashesRepository,
             IIdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue, IPoAMiner miner = null)
         {
             this.federationManager = federationManager;
@@ -65,6 +67,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.loggerFactory = loggerFactory;
             this.miner = miner;
             this.votingManager = votingManager;
+            this.federationHistory = federationHistory;
             this.whitelistedHashesRepository = whitelistedHashesRepository;
             this.network = network;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
@@ -93,11 +96,11 @@ namespace Stratis.Bitcoin.Features.PoA
                 if (options.AutoKickIdleMembers)
                 {
                     this.idleFederationMembersKicker.Initialize();
-                    this.votingManager.Initialize(this.idleFederationMembersKicker);
+                    this.votingManager.Initialize(this.federationHistory, this.idleFederationMembersKicker);
                 }
                 else
                 {
-                    this.votingManager.Initialize();
+                    this.votingManager.Initialize(this.federationHistory);
                 }
             }
 

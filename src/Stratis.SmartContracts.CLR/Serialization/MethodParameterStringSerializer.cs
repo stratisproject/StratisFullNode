@@ -188,7 +188,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
         private string EscapeAndJoin(string[] parameters)
         {
             IEnumerable<string> escaped = this.EscapePipesAndHashes(parameters);
-            return string.Join('|', escaped);
+            return string.Join("|", escaped);
         }
 
         /// <summary>
@@ -225,7 +225,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
                     reconstructed.Add(hashes[i]);
                 }
 
-                string result = string.Join('#', reconstructed).Replace("#", @"\#");
+                string result = string.Join("#", reconstructed).Replace("#", @"\#");
                 return hashes[0].Insert(hashes[0].Length, "#" + result);
             });
 

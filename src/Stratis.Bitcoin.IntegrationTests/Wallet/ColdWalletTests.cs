@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Setup cold staking from the hot wallet.
                 Money amountToSend2 = receiveTotal - network.Consensus.ProofOfWorkReward;
                 (Transaction transaction2, _) = hotWalletManager.GetColdStakingSetupTransaction(stratisHotStake.FullNode.WalletTransactionHandler(),
-                    coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC), false, false, false);
+                    coldWalletAddress.Address, hotWalletAddress.Address, WalletName, Account, Password, amountToSend2, new Money(0.02m, MoneyUnit.BTC), false, false, 1, false);
 
                 // Broadcast to the other node
                 await stratisHotStake.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction2.ToHex()));

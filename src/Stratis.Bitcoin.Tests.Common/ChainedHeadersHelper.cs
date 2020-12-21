@@ -36,9 +36,12 @@ namespace Stratis.Bitcoin.Tests.Common
 
             uint256 hashPrevBlock = tip.HashBlock;
 
+            uint time = 0;
+
             for (int i = 0; i < count; i++)
             {
                 BlockHeader header = network.Consensus.ConsensusFactory.CreateBlockHeader();
+                header.Time = time += (uint)network.Consensus.TargetSpacing.TotalSeconds;
                 header.Nonce = (uint)Interlocked.Increment(ref currentNonce);
                 header.HashPrevBlock = hashPrevBlock;
                 header.Bits = bits ?? Target.Difficulty1;

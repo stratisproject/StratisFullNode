@@ -230,7 +230,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                         Amount = "5", // Check that we can send the entire available balance in the setup
                         Fees = "0.01",
                         SubtractFeeFromAmount = true,
-                        SegwitChangeAddress = false
+                        SegwitChangeAddress = false,
+                        SplitCount = 10
                     })
                     .ReceiveJson<BuildOfflineSignResponse>();
 

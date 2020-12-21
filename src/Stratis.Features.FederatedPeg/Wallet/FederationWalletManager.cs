@@ -827,6 +827,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     case TxOutType.TX_MULTISIG:
                     case TxOutType.TX_NULL_DATA:
                     case TxOutType.TX_SEGWIT:
+                    case TxOutType.TX_COLDSTAKE:
                         break;
                 }
 
@@ -961,6 +962,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     // Multiple UTXOs may be spent by the one withdrawal, so if it's already added then no need to add it again.
                     if (withdrawals.Any(w => w.withdrawal.Id == spendingDetail.TransactionId))
                         continue;
+
+                    if (spendingDetail.WithdrawalDetails == null)
+                    {
+                        this.logger.LogError($"Spending detail with txId '{spendingDetail.TransactionId}' has null withdrawal details, deposit id '{depositId}'");
+                    }
 
                     var withdrawal = new Withdrawal(
                         spendingDetail.WithdrawalDetails.MatchingDepositId,

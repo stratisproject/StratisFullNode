@@ -6,7 +6,6 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Primitives;
-using Stratis.Bitcoin.Utilities;
 using Xunit;
 
 namespace Stratis.Bitcoin.Tests.Consensus
@@ -19,7 +18,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             {
                 if (height < 1) throw new ArgumentOutOfRangeException(nameof(height), "Height must be greater or equal to 1.");
 
-                Guard.NotNull(header, nameof(header));
+                Stratis.Bitcoin.Utilities.Guard.NotNull(header, nameof(header));
 
                 this.Height = height;
                 this.Header = header;
@@ -1231,7 +1230,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
                 cht.BlockDataDownloaded(currentChainTip, block);
                 cht.PartialValidationSucceeded(currentChainTip, out bool fullValidationRequired);
-                ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, currentChainTip.Height - maxReorg));
+                ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new Stratis.Bitcoin.Utilities.HashHeightPair(uint256.One, currentChainTip.Height - maxReorg));
                 List<int> peerIds = cht.ConsensusTipChanged(currentChainTip);
                 peerIds.Should().BeEmpty();
             }
@@ -1253,7 +1252,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
                 cht.BlockDataDownloaded(currentChainTip, block);
                 cht.PartialValidationSucceeded(currentChainTip, out bool fullValidationRequired);
-                ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, currentChainTip.Height - maxReorg));
+                ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new Stratis.Bitcoin.Utilities.HashHeightPair(uint256.One, currentChainTip.Height - maxReorg));
                 List<int> peerIds = cht.ConsensusTipChanged(currentChainTip);
                 if (currentChainTip.Height > maxReorg + initialChainSize)
                 {
@@ -1780,7 +1779,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             ctx.ChainState.Setup(x => x.MaxReorgLength).Returns(maxReorg);
 
             // Setup finalized block height to 10.
-            ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, 10));
+            ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new Stratis.Bitcoin.Utilities.HashHeightPair(uint256.One, 10));
 
             // Extend a chain by 50 headers.
             // Example: h1=h2=...=h50.
@@ -2140,7 +2139,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
                 cht.BlockDataDownloaded(currentChainTip, block);
                 cht.PartialValidationSucceeded(currentChainTip, out bool fullValidationRequired);
-                ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, currentChainTip.Height - maxReorg));
+                ctx.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new Stratis.Bitcoin.Utilities.HashHeightPair(uint256.One, currentChainTip.Height - maxReorg));
                 cht.ConsensusTipChanged(currentChainTip);
             }
 
@@ -2758,7 +2757,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             // Setup finalized block height to 40.
             const int finalizedBlockHeight = 40;
-            testContext.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new HashHeightPair(uint256.One, finalizedBlockHeight));
+            testContext.FinalizedBlockMock.Setup(m => m.GetFinalizedBlockInfo()).Returns(new Stratis.Bitcoin.Utilities.HashHeightPair(uint256.One, finalizedBlockHeight));
 
             // Peer 1 presents headers from 20a to 60b, with fork point 40a.
             const int heightOfFirstFork = 40;

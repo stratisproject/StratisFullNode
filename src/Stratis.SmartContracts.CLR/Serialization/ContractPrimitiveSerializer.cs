@@ -203,7 +203,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         private bool ToBool(byte[] val)
         {
-            return BitConverter.ToBoolean(val);
+            return BitConverter.ToBoolean(val, 0);
         }
 
         private Address ToAddress(byte[] val)

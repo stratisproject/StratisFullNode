@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>Stratis Group Ltd.</Authors>
     <Company>Stratis Group Ltd.</Company>
     <Product>Stratis Smart Contracts</Product>

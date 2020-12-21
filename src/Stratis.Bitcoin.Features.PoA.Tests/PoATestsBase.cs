@@ -34,6 +34,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         protected readonly ConsensusSettings consensusSettings;
         protected readonly ChainIndexer ChainIndexer;
         protected readonly IFederationManager federationManager;
+        protected readonly IFederationHistory federationHistory;
         protected readonly VotingManager votingManager;
         protected readonly Mock<IPollResultExecutor> resultExecutorMock;
         protected readonly Mock<ChainIndexer> chainIndexerMock;
@@ -55,7 +56,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             IDateTimeProvider timeProvider = new DateTimeProvider();
             this.consensusSettings = new ConsensusSettings(NodeSettings.Default(this.network));
 
-            this.federationManager = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
+            (this.federationManager, this.federationHistory) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
 
             this.chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
@@ -71,23 +72,24 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
-            this.votingManager = new VotingManager(this.federationManager, this.loggerFactory, this.slotsManager, this.resultExecutorMock.Object, new NodeStats(timeProvider, this.loggerFactory),
+            this.votingManager = new VotingManager(this.federationManager, this.loggerFactory, this.resultExecutorMock.Object, new NodeStats(timeProvider, this.loggerFactory),
                  dataFolder, this.dBreezeSerializer, this.signals, finalizedBlockRepo, this.network);
 
-            this.votingManager.Initialize();
+            this.votingManager.Initialize(this.federationHistory);
 
             this.chainState = new ChainState();
 
             this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, new DateTimeProvider(), this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
                 this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, this.chainState, new InvalidBlockHashStore(timeProvider),
-                new NodeStats(timeProvider, this.loggerFactory), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider, new ConsensusRulesContainer());
+                new NodeStats(timeProvider, this.loggerFactory), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider, 
+                new ConsensusRulesContainer(), this.federationHistory);
 
             List<ChainedHeader> headers = ChainedHeadersHelper.CreateConsecutiveHeaders(50, null, false, null, this.network);
 
             this.currentHeader = headers.Last();
         }
 
-        public static IFederationManager CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
+        public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
         {
             string dir = TestBase.CreateTestDir(caller);
 
@@ -114,17 +116,30 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            var slotsManager = new SlotsManager(network, federationManager, chainIndexerMock.Object, loggerFactory);
-            var votingManager = new VotingManager(federationManager, loggerFactory, slotsManager,
+            var votingManager = new VotingManager(federationManager, loggerFactory, 
                 new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
-            votingManager.Initialize();
+
+            var federationHistory = new Mock<IFederationHistory>();
+            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) => {
+                List<IFederationMember> members = ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
+                return members[chainedHeader.Height % members.Count];
+            });
+            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>(), It.IsAny<List<IFederationMember>>())).Returns<ChainedHeader, List<IFederationMember>>((chainedHeader, members) => {
+                members = members ?? ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
+                return members[chainedHeader.Height % members.Count];
+            });
+            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) => {
+                return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
+            });
+
+            votingManager.Initialize(federationHistory.Object);
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
             federationManager.Initialize();
 
-            return federationManager;
+            return (federationManager, federationHistory.Object);
         }
 
-        public static IFederationManager CreateFederationManager(object caller)
+        public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller)
         {
             return CreateFederationManager(caller, new TestPoANetwork(), new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null));
         }

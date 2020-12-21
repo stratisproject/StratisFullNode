@@ -221,7 +221,7 @@ namespace Stratis.SmartContracts.Core.Receipts
 
             return new Receipt(
                 new uint256(innerList[0].RLPData),
-                BitConverter.ToUInt64(innerList[1].RLPData),
+                BitConverter.ToUInt64(innerList[1].RLPData, 0),
                 logs,
                 new Bloom(innerList[2].RLPData)
             );
@@ -259,7 +259,7 @@ namespace Stratis.SmartContracts.Core.Receipts
 
             var receipt = new Receipt(
                 new uint256(innerList[0].RLPData),
-                BitConverter.ToUInt64(innerList[1].RLPData),
+                BitConverter.ToUInt64(innerList[1].RLPData, 0),
                 logs,
                 new Bloom(innerList[2].RLPData),
                 new uint256(innerList[4].RLPData),
@@ -267,13 +267,13 @@ namespace Stratis.SmartContracts.Core.Receipts
                 new uint160(innerList[6].RLPData),
                 innerList[7].RLPData != null ? new uint160(innerList[7].RLPData) : null,
                 innerList[8].RLPData != null ? new uint160(innerList[8].RLPData) : null,
-                BitConverter.ToBoolean(innerList[9].RLPData),
+                BitConverter.ToBoolean(innerList[9].RLPData, 0),
                 innerList[10].RLPData != null ? Encoding.UTF8.GetString(innerList[10].RLPData) : null,
                 innerList[11].RLPData != null ? Encoding.UTF8.GetString(innerList[11].RLPData) : null,
-                BitConverter.ToUInt64(innerList[12].RLPData),
-                BitConverter.ToUInt64(innerList[13].RLPData),
+                BitConverter.ToUInt64(innerList[12].RLPData, 0),
+                BitConverter.ToUInt64(innerList[13].RLPData, 0),
                 hasMethodName && innerList[14].RLPData != null ? Encoding.UTF8.GetString(innerList[14].RLPData) : null,
-                hasBlockNumber && innerList[15].RLPData != null ? BitConverter.ToUInt64(innerList[15].RLPData) : (ulong?) null);
+                hasBlockNumber && innerList[15].RLPData != null ? BitConverter.ToUInt64(innerList[15].RLPData, 0) : (ulong?) null);
 
             return receipt;
         }
