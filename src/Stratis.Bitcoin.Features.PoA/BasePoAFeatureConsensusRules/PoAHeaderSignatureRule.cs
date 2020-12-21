@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
@@ -71,11 +70,15 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
+
             // Look at the last round of blocks to find the previous time that the miner mined.
             uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
-            
+            int blockCounter = 0;
+
             for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
             {
+                blockCounter += 1;
+
                 if ((header.Time - prevHeader.Header.Time) >= roundTime)
                     break;
 
@@ -93,8 +96,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 if (prevHeader.HashBlock == uint256.Parse("7d67ea42010f03971edd6ba5e1b644d09c9fd0191ca8d312255c12d23f7cd147"))
                     break;
 
-                this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
-                ConsensusErrors.BlockTimestampTooEarly.Throw();
+                this.Logger.LogWarning($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
             }
         }
     }
