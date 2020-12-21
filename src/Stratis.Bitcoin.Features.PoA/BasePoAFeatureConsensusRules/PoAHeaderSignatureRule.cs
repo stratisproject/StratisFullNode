@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 if (prevHeader.HashBlock == uint256.Parse("7d67ea42010f03971edd6ba5e1b644d09c9fd0191ca8d312255c12d23f7cd147"))
                     break;
 
-                this.Logger.LogWarning($"Block {prevHeader.HashBlock} was mined by the same miner as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change");
+                this.Logger.LogWarning($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
             }
         }
     }
