@@ -178,7 +178,7 @@ namespace Stratis.Sidechains.Networks
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
-                VotingManagerV2ActivationHeight = 1_614_100 // Monday, December 28, 2020 (approx)
+                VotingManagerV2ActivationHeight = 0
             };
 
             var buriedDeployments = new BuriedDeploymentsArray

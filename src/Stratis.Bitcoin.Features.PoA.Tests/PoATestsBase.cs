@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, new DateTimeProvider(), this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
                 this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, this.chainState, new InvalidBlockHashStore(timeProvider),
-                new NodeStats(timeProvider, this.loggerFactory), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider, 
+                new NodeStats(timeProvider, this.loggerFactory), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider,
                 new ConsensusRulesContainer(), this.federationHistory);
 
             List<ChainedHeader> headers = ChainedHeadersHelper.CreateConsecutiveHeaders(50, null, false, null, this.network);
@@ -116,21 +116,43 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            var votingManager = new VotingManager(federationManager, loggerFactory, 
+            var votingManager = new VotingManager(federationManager, loggerFactory,
                 new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
 
             var federationHistory = new Mock<IFederationHistory>();
-            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) => {
+            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) =>
+            {
                 List<IFederationMember> members = ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
                 return members[chainedHeader.Height % members.Count];
             });
-            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>(), It.IsAny<List<IFederationMember>>())).Returns<ChainedHeader, List<IFederationMember>>((chainedHeader, members) => {
+
+            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>(), It.IsAny<List<IFederationMember>>())).Returns<ChainedHeader, List<IFederationMember>>((chainedHeader, members) =>
+            {
                 members = members ?? ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
                 return members[chainedHeader.Height % members.Count];
             });
-            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) => {
+
+            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) =>
+            {
                 return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });
+
+            federationHistory
+                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), It.IsAny<PoAConsensusOptions>()))
+                .Returns<uint, PoAConsensusOptions>((headerUnixTimestamp, poAConsensusOptions) =>
+                {
+                    List<IFederationMember> federationMembers = poAConsensusOptions.GenesisFederationMembers;
+
+                    uint roundTime = (uint)(federationMembers.Count * poAConsensusOptions.TargetSpacingSeconds);
+
+                    // Time when current round started.
+                    uint roundStartTimestamp = (headerUnixTimestamp / roundTime) * roundTime;
+
+                    // Slot number in current round.
+                    int currentSlotNumber = (int)((headerUnixTimestamp - roundStartTimestamp) / poAConsensusOptions.TargetSpacingSeconds);
+
+                    return federationMembers[currentSlotNumber];
+                });
 
             votingManager.Initialize(federationHistory.Object);
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);

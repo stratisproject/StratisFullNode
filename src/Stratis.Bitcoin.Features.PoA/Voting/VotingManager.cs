@@ -371,7 +371,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 // Please see the description under `VotingManagerV2ActivationHeight`.
                 // PubKey of the federation member that created the voting data.
-                if (blockConnected.ConnectedBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
+                if (this.poaConsensusOptions.VotingManagerV2ActivationHeight == 0 || blockConnected.ConnectedBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
                     fedMemberKeyHex = this.federationHistory.GetFederationMemberForTimestamp(chBlock.Block.Header.Time, this.poaConsensusOptions).PubKey.ToHex();
                 else
                     fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
