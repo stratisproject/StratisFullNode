@@ -335,7 +335,8 @@ if ( $loadedWallets -contains $collateralWallet )
                 While ( (GetCollateral-WalletHeight) -ne (Get-LocalHeight) )
                 {
                     $a = Get-LocalHeight
-                    $b = GetCollateral-WalletHeight 
+                    $b = GetCollateral-WalletHeight
+                    $c = $a - $b
                     [int]$percentage = $b / $a * 100
                     ""
                     Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
