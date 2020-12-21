@@ -29,6 +29,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
             var ruleContext = new RuleContext(validationContext, DateTimeOffset.Now);
 
             Key randomKey = new KeyTool(new DataFolder(string.Empty)).GeneratePrivateKey();
+
             this.poaHeaderValidator.Sign(randomKey, this.currentHeader.Header as PoABlockHeader);
 
             this.chainState.ConsensusTip = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().GetHash(), 0);

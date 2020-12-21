@@ -294,15 +294,16 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="feeAmount">The fee to pay for the cold staking setup transaction.</param>
         /// <param name="subtractFeeFromAmount">Whether the transaction fee should be subtracted from the amount being transferred into the cold staking account.</param>
         /// <param name="offline">Whether the transaction should be left unsigned so that it can be transferred to an offline wallet for signing.</param>
+        /// <param name="splitCount">The number of UTXOs of similar value the setup transaction will be split into. Defaults to 1.</param>
         /// <param name="useSegwitChangeAddress">Use a segwit style change address.</param>
         /// <returns>The <see cref="Transaction"/> for setting up cold staking.</returns>
         /// <exception cref="WalletException">Thrown if any of the rules listed in the remarks section of this method are broken.</exception>
         internal (Transaction, TransactionBuildContext) GetColdStakingSetupTransaction(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress = false)
+            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool offline, int splitCount, bool useSegwitChangeAddress = false)
         {
             TransactionBuildContext context = this.GetSetupTransactionBuildContext(walletTransactionHandler, coldWalletAddress, hotWalletAddress, walletName, walletAccount,
-                walletPassword, amount, feeAmount, subtractFeeFromAmount, offline, useSegwitChangeAddress);
+                walletPassword, amount, feeAmount, subtractFeeFromAmount, offline, useSegwitChangeAddress, splitCount);
 
             context.Sign = !offline;
 
@@ -315,7 +316,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
         private TransactionBuildContext GetSetupTransactionBuildContext(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress, ExtPubKey extPubKey = null)
+            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress, int splitCount, ExtPubKey extPubKey = null)
         {
             Guard.NotNull(walletTransactionHandler, nameof(walletTransactionHandler));
             Guard.NotEmpty(coldWalletAddress, nameof(coldWalletAddress));
@@ -402,6 +403,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 throw new WalletException($"Can't find wallet account '{walletAccount}'.");
             }
 
+            List<Recipient> recipients = GetRecipients(destination, amount, subtractFeeFromAmount, splitCount);
+
             var context = new TransactionBuildContext(wallet.Network)
             {
                 AccountReference = new WalletAccountReference(walletName, walletAccount),
@@ -410,7 +413,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 Shuffle = false,
                 UseSegwitChangeAddress = useSegwitChangeAddress,
                 WalletPassword = walletPassword,
-                Recipients = new List<Recipient>() { new Recipient { Amount = amount, ScriptPubKey = destination, SubtractFeeFromAmount = subtractFeeFromAmount} }
+                Recipients = recipients
             };
 
             // Register the cold staking builder extension with the transaction builder.
@@ -419,12 +422,36 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             return context;
         }
 
+        private List<Recipient> GetRecipients(Script destination, Money overallAmount, bool subtractFeeFromAmount, int splitCount)
+        {
+            var recipients = new List<Recipient>();
+
+            Money moneyPerRecipient = overallAmount / splitCount;
+
+            while (recipients.Count < splitCount)
+            {
+                recipients.Add(new Recipient
+                {
+                    Amount = moneyPerRecipient,
+                    ScriptPubKey = destination,
+                    SubtractFeeFromAmount = false
+                });
+            }
+
+            if (recipients.Count == 0)
+                throw new WalletException($"Couldn't construct recipients list.");
+
+            recipients.Last().SubtractFeeFromAmount = subtractFeeFromAmount;
+
+            return recipients;
+        }
+
         internal Money EstimateSetupTransactionFee(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress)
+            string walletPassword, Money amount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress, int splitCount)
         {
             TransactionBuildContext context = this.GetSetupTransactionBuildContext(walletTransactionHandler, coldWalletAddress, hotWalletAddress, walletName, walletAccount,
-                walletPassword, amount, null, subtractFeeFromAmount, offline, useSegwitChangeAddress);
+                walletPassword, amount, null, subtractFeeFromAmount, offline, useSegwitChangeAddress, splitCount);
 
             Money estimatedFee = walletTransactionHandler.EstimateFee(context);
 

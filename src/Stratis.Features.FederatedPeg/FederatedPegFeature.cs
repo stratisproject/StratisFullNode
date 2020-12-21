@@ -286,9 +286,9 @@ namespace Stratis.Features.FederatedPeg
                     if (target == this.network.CirrusRewardDummyAddress)
                         target = "Reward Distribution";
                     return $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {target} ({d.deposit.RetrievalType})";
-                }).Take(20)));
+                }).Take(10)));
 
-                if (maturingDeposits.Length > 20)
+                if (maturingDeposits.Length > 10)
                     benchLog.AppendLine("...");
 
                 benchLog.AppendLine();
@@ -347,7 +347,6 @@ namespace Stratis.Features.FederatedPeg
                     }).ToArray(),
                 4);
 
-            benchLog.AppendLine();
             return benchLog.ToString();
         }
 
