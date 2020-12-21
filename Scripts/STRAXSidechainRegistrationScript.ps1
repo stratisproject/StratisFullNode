@@ -191,7 +191,7 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalIndexerHeight ) )
     $b = Get-LocalIndexerHeight 
     [int]$percentage = $b / $a * 100
     ""
-    Write-Host "$percentage% Synced" -ForegroundColor Cyan
+    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
     Write-Host (Get-TimeStamp) "$c Blocks Require Indexing..." -ForegroundColor Yellow
     Start-Sleep 10
@@ -247,7 +247,7 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
     $c = $a - $b
     [int]$percentage = $b / $a * 100
     ""
-    Write-Host "$percentage% Synced" -ForegroundColor Cyan
+    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
     Start-Sleep 10
@@ -336,7 +336,7 @@ if ( $loadedWallets -contains $collateralWallet )
                     $b = GetCollateral-WalletHeight 
                     [int]$percentage = $b / $a * 100
                     ""
-                    Write-Host "$percentage% Synced" -ForegroundColor Cyan
+                    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
                     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
                     Start-Sleep 10
@@ -442,7 +442,7 @@ if ( $loadedWallets -contains $cirrusWallet )
                     $c = $a - $b
                     [int]$percentage = $b / $a * 100
                     ""
-                    Write-Host "$percentage% Synced" -ForegroundColor Cyan
+                    Write-Host (Get-TimeStamp) "$percentage% Synced" -ForegroundColor Cyan
                     Write-Host (Get-TimeStamp) "The Wallet Synced Height is $b" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
