@@ -150,7 +150,7 @@ Set-Location $cloneDir\src\Stratis.CirrusMinerD
 #Start Mainchain Node
 $API = $mainChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Mainchain Masternode" -ForegroundColor Cyan
-$startNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -testnet -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
+$startNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
 
 #Wait for API
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
@@ -205,7 +205,7 @@ $variablesToClear | ForEach-Object { if ( Get-Variable $_ -ErrorAction SilentlyC
 #Start Sidechain Node
 $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
-$startNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -testnet -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
+$startNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
 
 #Wait for API
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
@@ -495,8 +495,7 @@ if ( -not ( Test-Path $sideChainDataDir\federationKey.dat ) )
 #Perform Registration
 $collateralAddress = Read-Host -Prompt "Please enter your STRAX Address that contains the required collateral amount (the FULL BALANCE of a 100k must be held in ONE address)"
 ""
-#While ( $CollateralAddress.Trim() -notmatch '^X[a-zA-Z0-9]{26,33}$' )
-While ( $collateralAddress.Trim() -notmatch '^q[a-zA-Z0-9]{26,33}$' )
+While ( $CollateralAddress.Trim() -notmatch '^X[a-zA-Z0-9]{26,33}$' )
 
 {
     Write-Host (Get-TimeStamp) "ERROR: $CollateralAddress is not a valid address. Please ensure you're defining a STRAX Address." -ForegroundColor Red
