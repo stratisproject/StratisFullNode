@@ -13,7 +13,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>NBitcoin</RootNamespace>
-    <PackageId>NStratis</PackageId>
+    <PackageId>NStratis.NETStandard</PackageId>
     <Authors>NStratis</Authors>
     <Product>NStratis</Product>
   </PropertyGroup>

@@ -5,7 +5,7 @@
     <AssemblyTitle>Stratis.Bitcoin.Networks</AssemblyTitle>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Networks</AssemblyName>
-    <PackageId>Stratis.Core.Networks</PackageId>
+    <PackageId>Stratis.Core.Networks.NETStandard</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -16,7 +16,7 @@
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <AssemblyVersion>1.0.5.0</AssemblyVersion>
     <FileVersion>1.0.5.0</FileVersion>
-    <Version>1.0.5.0</Version>
+    <Version>1.0.5.0-alpha</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
