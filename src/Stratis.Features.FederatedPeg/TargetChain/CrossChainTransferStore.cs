@@ -25,6 +25,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 {
     public class CrossChainTransferStore : ICrossChainTransferStore
     {
+        /// <summary>
+        /// Maximum number of partial transactions.
+        /// </summary>
+        public const int MaximumPartialTransactions = 50;
+
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
 
@@ -478,6 +483,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     {
                                         status = CrossChainTransferStatus.Rejected;
                                     }
+                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) 
+                                        + this.depositsIdsByStatus.Count(t => t.Key == CrossChainTransferStatus.Partial)) >= MaximumPartialTransactions)
+                                    {
+                                        haveSuspendedTransfers = true;
+                                    }
                                     else
                                     {
                                         transaction = this.withdrawalTransactionBuilder.BuildWithdrawalTransaction(maturedDeposit.BlockInfo.BlockHeight, deposit.Id, maturedDeposit.BlockInfo.BlockTime, recipient);
@@ -617,24 +627,43 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         return transfer.PartialTransaction;
                     }
 
-                    // Log this incase we run into issues where the transaction templates doesn't match.
-                    this.logger.LogDebug($"Partial Transaction inputs:{partialTransactions[0].Inputs.Count} = Transfer Partial Transaction inputs:{transfer.PartialTransaction.Inputs.Count}");
-                    this.logger.LogDebug($"Partial Transaction outputs:{partialTransactions[0].Outputs.Count} =  Transfer Partial Transaction outputs:{transfer.PartialTransaction.Outputs.Count}");
-
-                    for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
+                    try
                     {
-                        TxIn input = partialTransactions[0].Inputs[i];
-                        TxIn transferInput = transfer.PartialTransaction.Inputs[i];
-                        this.logger.LogDebug($"Partial Transaction Input N:{input.PrevOut.N} : Hash:{input.PrevOut.Hash}");
-                        this.logger.LogDebug($"Transfer Partial Transaction Input N:{transferInput.PrevOut.N} : Hash:{transferInput.PrevOut.Hash}");
+                        // Log this incase we run into issues where the transaction templates doesn't match.
+                        this.logger.LogDebug($"Partial Transaction inputs:{partialTransactions[0].Inputs.Count}");
+                        this.logger.LogDebug($"Partial Transaction outputs:{partialTransactions[0].Outputs.Count}");
+
+                        for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
+                        {
+                            TxIn input = partialTransactions[0].Inputs[i];
+                            this.logger.LogDebug($"Partial Transaction Input N:{input.PrevOut.N} : Hash:{input.PrevOut.Hash}");
+                        }
+
+                        for (int i = 0; i < partialTransactions[0].Outputs.Count; i++)
+                        {
+                            TxOut output = partialTransactions[0].Outputs[i];
+                            this.logger.LogDebug($"Partial Transaction Output Value:{output.Value} : ScriptPubKey:{output.ScriptPubKey}");
+                        }
+
+                        // Log this incase we run into issues where the transaction templates doesn't match.
+                        this.logger.LogDebug($"Transfer Partial Transaction inputs:{transfer.PartialTransaction.Inputs.Count}");
+                        this.logger.LogDebug($"Transfer Partial Transaction outputs:{transfer.PartialTransaction.Outputs.Count}");
+
+                        for (int i = 0; i < transfer.PartialTransaction.Inputs.Count; i++)
+                        {
+                            TxIn transferInput = transfer.PartialTransaction.Inputs[i];
+                            this.logger.LogDebug($"Transfer Partial Transaction Input N:{transferInput.PrevOut.N} : Hash:{transferInput.PrevOut.Hash}");
+                        }
+
+                        for (int i = 0; i < transfer.PartialTransaction.Outputs.Count; i++)
+                        {
+                            TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
+                            this.logger.LogDebug($"Transfer Partial Transaction Output Value:{transferOutput.Value} : ScriptPubKey:{transferOutput.ScriptPubKey}");
+                        }
                     }
-
-                    for (int i = 0; i < partialTransactions[0].Outputs.Count; i++)
+                    catch (Exception err)
                     {
-                        TxOut output = partialTransactions[0].Outputs[i];
-                        TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
-                        this.logger.LogDebug($"Partial Transaction Output Value:{output.Value} : ScriptPubKey:{output.ScriptPubKey}");
-                        this.logger.LogDebug($"Transfer Partial Transaction Output Value:{transferOutput.Value} : ScriptPubKey:{transferOutput.ScriptPubKey}");
+                        this.logger.LogDebug("Failed to log transactions: {0}.", err.Message);
                     }
 
                     this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
@@ -936,8 +965,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     if (this.HasSuspended())
                     {
-                        ICrossChainTransfer[] transfers = this.Get(this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].ToArray());
-                        this.NextMatureDepositHeight = transfers.Min(t => t.DepositHeight) ?? this.NextMatureDepositHeight;
+                        try
+                        {
+                            ICrossChainTransfer[] transfers = this.Get(this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].ToArray());
+                            this.NextMatureDepositHeight = transfers.Min(t => t.DepositHeight) ?? this.NextMatureDepositHeight;
+                        }
+                        catch (Exception ex)
+                        {
+                            this.logger.LogError($"An error occurred whilst synchronizing the store: {ex}.");
+                            throw ex;
+                        }
                     }
 
                     this.RewindIfRequiredLocked();

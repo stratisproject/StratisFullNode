@@ -1315,6 +1315,22 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public IEnumerable<string> GetWatchOnlyWalletsNames()
+        {
+            var watchOnlyWallets = new List<string>();
+
+            foreach (string walletName in this.WalletRepository.GetWalletNames())
+            {
+                Wallet wallet = this.WalletRepository.GetWallet(walletName);
+
+                if (wallet.IsExtPubKeyWallet)
+                    watchOnlyWallets.Add(walletName);
+            }
+
+            return watchOnlyWallets;
+        }
+
+        /// <inheritdoc />
         public Wallet GetWallet(string walletName)
         {
             var wallet = this.WalletRepository.GetWallet(walletName);

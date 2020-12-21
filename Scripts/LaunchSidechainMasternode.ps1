@@ -151,11 +151,17 @@ function Get-Median($numberSeries)
 
 function Check-TimeDifference
 {
-    Write-Host "Checking UTC Time Difference (WorldTimeAPI)" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
-    $timeDifSamples[0] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-    $timeDifSamples[1] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
-    $timeDifSamples[2] = New-TimeSpan -Start (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") -End ( Invoke-WebRequest http://worldtimeapi.org/api/timezone/Etc/GMT | ConvertFrom-Json | Select-Object -ExpandProperty utc_datetime ) | Select-Object -ExpandProperty TotalSeconds
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content)
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
     if ( $timeDif -gt 2 -or $timeDif -lt 2 )
@@ -172,20 +178,47 @@ function Check-TimeDifference
 
 function Check-TimeDifference2
 {
-    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
+    Write-Host "Checking UTC Time Difference (unixtimestamp.com)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now | Select-Object -ExpandProperty content)
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
-    if ( $timeDif -gt 2 -or $timeDif -lt -2 )
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
+    {
+        Clear-Variable timeDif,timeDifSamples
+        Check-TimeDifference3
+    }
+        Else
+        {
+            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
+            Write-Host ""
+        }
+}
+
+function Check-TimeDifference3
+{
+    Write-Host "Checking UTC Time Difference (google.com)" -ForegroundColor Cyan
+    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
+    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
+    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
+    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
+    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDif = Get-Median -numberSeries $timeDifSamples
+
+    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
     {
         Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
         Start-Sleep 30
@@ -563,8 +596,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUDvadxe5fDIoKM43QSBChK2nT
-# SsqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUNjDKWkl5DNclOcReU/bbOt2t
+# 1j2gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -634,11 +667,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFNUfpi0iT9VL
-# Kdh6QrZ+Y0QE/yJJMA0GCSqGSIb3DQEBAQUABIIBAIr6gVIImXKEuJo2xuTvkVZq
-# upUngXcgpt5KvT/BdkpLPHzZnd4sl1DN4Jyx50u6gogwVg9oml1pfgicdXnZp4y+
-# gJrfD8GKKrmtBFwZKmmh8e0efstnEOT1BCtkIqiGlMkjRescrvqRdwq9xx5C7GYF
-# 35eiPqpkg3+i85I9r6yWcuSqtb857Hn4HREZXALqh655mkjEvWquYeg2xAfP573C
-# i+DqZbcK1HxsLhPVeciIXYKdVtl7XJamKQvgj219qfEu23yfWY7SMUVN0wp87vkH
-# rszppM4+mexbvCB31aNaysRSpC3LUcKKCrVKhZSqye/VPMW+D/q9MAFpwOZ9Abw=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFLVSB4FSW+DI
+# nvxrRxJ5M8+ETM94MA0GCSqGSIb3DQEBAQUABIIBAGX++n4uElYFjo2HkbFBQllW
+# q6c7Hti09KnDyw75pWPM4CiQ8XE+4W44k3t4OKIe5GcBQW/3BniDoHzZQP6AF31i
+# kmoAazG5IraZuQhj9xiqudD/dzQNfg/gBf60M7RFydpGc/vhIecQR3ZQ8o3JgF5U
+# 5XfXbscPdWgFkaEgFGs+LfAoJopLLjmb1lJlrUUrVHl8wnMry3XrZvDsLB4whwHp
+# QBKMbeYrLbM19Ln8rsHzLuiKwY8H5aGksClJQ2Ip/u3OkYEIBGy1Vp8gkPsq8nIM
+# boWpdBBgeQUsOoWyOSpO2zdSfe9s08n2zEYcuiHarUM2WAc3O70hzwM8NJs8iSA=
 # SIG # End signature block

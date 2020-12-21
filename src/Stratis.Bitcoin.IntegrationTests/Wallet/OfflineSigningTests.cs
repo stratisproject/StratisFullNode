@@ -6,7 +6,6 @@ using Flurl;
 using Flurl.Http;
 using NBitcoin;
 using Stratis.Bitcoin.Features.ColdStaking.Models;
-using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
@@ -179,7 +178,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .SetQueryParams(new { walletName = "coldwallet", accountName = "account 0" })
                     .GetJsonAsync<string>();
 
-                // Send some funds to the hot wallet's default (non-special) account to use for the staking setup.
+                // Send some funds to the cold wallet's default (non-special) account to use for the staking setup.
                 string fundTransaction = (await $"http://localhost:{miningNode.ApiPort}/api"
                     .AppendPathSegment("wallet/build-transaction")
                     .PostJsonAsync(new BuildTransactionRequest
@@ -203,7 +202,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestBase.WaitLoop(() => miningNode.CreateRPCClient().GetRawMempool().Length > 0);
                 TestHelper.MineBlocks(miningNode, 1);
 
-                // Set up cold staking account on offline node to get the needed cold address
+                // Set up cold staking account on offline node to get the needed cold address.
                 CreateColdStakingAccountResponse coldAccount = await $"http://localhost:{offlineNode.ApiPort}/api"
                     .AppendPathSegment("coldstaking/cold-staking-account")
                     .PostJsonAsync(new CreateColdStakingAccountRequest()
@@ -218,24 +217,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .AppendPathSegment("coldstaking/cold-staking-address")
                     .SetQueryParams(new { walletName = "mywallet", isColdWalletAddress = "true" })
                     .GetJsonAsync<GetColdStakingAddressResponse>()).Address;
-
-                // Get the extpubkey of the cold account from the offline node to restore on the online node.
-                string coldAccountExtPubKey = await $"http://localhost:{offlineNode.ApiPort}/api"
-                    .AppendPathSegment("wallet/extpubkey")
-                    .SetQueryParams(new { walletName = "mywallet", accountName = coldAccount.AccountName })
-                    .GetJsonAsync<string>();
-
-                // Set up the cold account on the online node. This has to be done via extPubKey.
-                await $"http://localhost:{onlineNode.ApiPort}/api"
-                    .AppendPathSegment("coldstaking/cold-staking-account")
-                    .PostJsonAsync(new CreateColdStakingAccountRequest()
-                    {
-                        WalletName = "coldwallet",
-                        WalletPassword = "password",
-                        IsColdWalletAccount = true,
-                        ExtPubKey = coldAccountExtPubKey
-                    })
-                    .ReceiveJson<CreateColdStakingAccountResponse>();
 
                 // Build the offline cold staking template from the online node. No password is needed.
                 BuildOfflineSignResponse offlineTemplate = await $"http://localhost:{onlineNode.ApiPort}/api"

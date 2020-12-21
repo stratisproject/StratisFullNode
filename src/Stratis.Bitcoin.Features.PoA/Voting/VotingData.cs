@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Text;
 using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
@@ -99,6 +100,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.Data = new byte[dataSize];
 
                 stream.ReadWrite(ref this.Data, 0, dataSize);
+
+                // Clean the data of non-standard newlines.
+                if (this.Key == VoteKey.AddFederationMember || this.Key == VoteKey.KickFederationMember)
+                {
+                    string data = Encoding.ASCII.GetString(this.Data);
+                    if (data.Contains("\r\n"))
+                    {
+                        data = data.Replace("\r\n", "\n");
+                        this.Data = Encoding.ASCII.GetBytes(data);
+                    }
+                }
             }
         }
     }
