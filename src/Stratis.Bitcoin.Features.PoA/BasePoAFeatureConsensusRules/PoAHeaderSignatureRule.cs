@@ -70,7 +70,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-
             // Look at the last round of blocks to find the previous time that the miner mined.
             uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
             int blockCounter = 0;
