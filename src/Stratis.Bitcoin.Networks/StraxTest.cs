@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Networks
         {
             this.Name = "StraxTest";
             this.NetworkType = NetworkType.Testnet;
-            this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("TtrX"));
+            this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("TtrX"), 0);
             this.DefaultPort = 27105;
             this.DefaultMaxOutboundConnections = 16;
             this.DefaultMaxInboundConnections = 109;

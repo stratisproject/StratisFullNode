@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.PoA.Features.Voting;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.PoA.Voting

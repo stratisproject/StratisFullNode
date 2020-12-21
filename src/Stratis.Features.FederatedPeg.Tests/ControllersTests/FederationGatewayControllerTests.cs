@@ -20,7 +20,6 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -129,7 +128,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             IActionResult result = controller.GetMaturedBlockDeposits(earlierBlock.Height);
 
             // Block height (3) > Mature height (2) - returns error message
-            var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
+            var maturedBlockDepositsResult = (result as JsonResult).Value as Bitcoin.Utilities.SerializableResult<List<MaturedBlockDepositsModel>>;
             maturedBlockDepositsResult.Should().NotBeNull();
             maturedBlockDepositsResult.Value.Count().Should().Be(0);
             Assert.NotNull(maturedBlockDepositsResult.Message);
@@ -173,7 +172,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             IActionResult result = controller.GetMaturedBlockDeposits(earlierBlock.Height);
 
             result.Should().BeOfType<JsonResult>();
-            var maturedBlockDepositsResult = (result as JsonResult).Value as SerializableResult<List<MaturedBlockDepositsModel>>;
+            var maturedBlockDepositsResult = (result as JsonResult).Value as Bitcoin.Utilities.SerializableResult<List<MaturedBlockDepositsModel>>;
             maturedBlockDepositsResult.Should().NotBeNull();
             maturedBlockDepositsResult.Message.Should().Be(string.Empty);
 
@@ -247,9 +246,9 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
         private VotingManager InitializeVotingManager(NodeSettings nodeSettings)
         {
-            var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new Mock<INodeLifetime>().Object);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
+            var dbreezeSerializer = new Bitcoin.Utilities.DBreezeSerializer(this.network.Consensus.ConsensusFactory);
+            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new Mock<Bitcoin.Utilities.INodeLifetime>().Object);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new Bitcoin.Utilities.KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
@@ -257,7 +256,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
             var slotsManager = new SlotsManager(this.network, this.federationManager, chainIndexerMock.Object, this.loggerFactory);
-            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
+            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, slotsManager, new Mock<IPollResultExecutor>().Object, new Mock<Bitcoin.Utilities.INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
             votingManager.Initialize();
 
             return votingManager;

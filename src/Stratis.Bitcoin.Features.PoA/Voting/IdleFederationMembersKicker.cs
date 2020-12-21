@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private void OnFedMemberKicked(FedMemberKicked fedMemberKickedData)
         {
-            this.fedPubKeysByLastActiveTime.Remove(fedMemberKickedData.KickedMember.PubKey, out _);
+            this.fedPubKeysByLastActiveTime.TryRemove(fedMemberKickedData.KickedMember.PubKey, out _);
 
             this.SaveMembersByLastActiveTime();
         }

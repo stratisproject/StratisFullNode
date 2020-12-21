@@ -68,7 +68,7 @@ namespace Stratis.Features.PoA.Collateral
             }
 
             if (commitmentData != null)
-                return (BitConverter.ToInt32(commitmentData), ((magic == null) ? (uint?)null : BitConverter.ToUInt32(magic)));
+                return (BitConverter.ToInt32(commitmentData, 0), ((magic == null) ? (uint?)null : BitConverter.ToUInt32(magic, 0)));
 
             return (null, null);
         }
