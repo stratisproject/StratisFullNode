@@ -439,7 +439,9 @@ if ( $loadedWallets -contains $cirrusWallet )
                     $a = Get-LocalHeight
                     $b = GetCirrus-WalletHeight 
                     $c = $a - $b
+                    [int]$percentage = $b / $a * 100
                     ""
+                    Write-Host "$percentage% Synced" -ForegroundColor Cyan
                     Write-Host (Get-TimeStamp) "The Wallet Synced Height is $b" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
                     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
