@@ -295,10 +295,12 @@ if ( $loadedWallets -contains $collateralWallet )
                 $collateralWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
                 Clear-Host
                 $validateVariables = $collateralWallet, $collateralWalletMnemonic, $collateralWalletPassword
-                $validateVariables | ForEach-Object if ( -not ( Get-Variable -Name $_ ) ) {
+                $validateVariables | ForEach-Object { 
+                if ( $_ -eq $null ) {
                     Write-Host (Get-TimeStamp) "ERROR: There was some missing wallet detail - Please re-run this script" -ForegroundColor Red
                     Start-Sleep 30
                     Exit
+                    }
                 }
                                          
                 $collateralRestoreBody = @{
@@ -402,10 +404,12 @@ if ( $loadedWallets -contains $cirrusWallet )
                 $cirrusWalletPassword = Read-Host "Please enter a password used to encrypt the wallet"
                 Clear-Host
                 $validateVariables = $cirrusWallet, $cirrusWalletMnemonic, $cirrusWalletPassword
-                $validateVariables | ForEach-Object if ( -not ( Get-Variable -Name $_ ) ) {
+                $validateVariables | ForEach-Object { 
+                if ( $_ -eq $null ) {
                     Write-Host (Get-TimeStamp) "ERROR: There was some missing wallet detail - Please re-run this script" -ForegroundColor Red
                     Start-Sleep 30
                     Exit
+                    }
                 }
             
                 $cirrusRestoreBody = @{
