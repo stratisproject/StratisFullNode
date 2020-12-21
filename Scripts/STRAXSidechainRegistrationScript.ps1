@@ -535,9 +535,9 @@ Switch ( $registerMasternode )
             walletPassword = $cirrusWalletPassword
             walletAccount = "account 0"
         }
-        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerBody -ContentType "application/json-patch+json" -UseBasicParsing -Method Post | Select
+        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerBody -ContentType "application/json-patch+json" -UseBasicParsing -Method Post
 
-        if ( ($register.content | ConvertFrom-Json | Select-Object -ExpandProperty minerPublicKey) -match '^.{66,66}$' )
+        if ( ($register.content | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty minerPublicKey) -match '^.{66,66}$' )
         {
             Write-Host (Get-TimeStamp) "Your Masternode Public Key is: " ($register.content | ConvertFrom-Json | Select-Object -ExpandProperty minerPublicKey) -ForegroundColor Cyan
             Write-Host (Get-TimeStamp) "SUCCESS: Your registration was succesful!! Please follow the STRAX Sidechain Masternode Setup Guide!" -ForegroundColor Green
