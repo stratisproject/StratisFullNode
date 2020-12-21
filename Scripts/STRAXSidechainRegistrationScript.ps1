@@ -466,7 +466,7 @@ if ( $loadedWallets -contains $cirrusWallet )
     
 
 #Check Wallet Balance
-$cirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$cirrusWallet -Method Get | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
+$cirrusWalletBalance = (Invoke-WebRequest -Uri http://localhost:$API/api/Wallet/balance?WalletName=$cirrusWallet -Method Get -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty balances | Select-Object -ExpandProperty spendableamount) / 100000000
 if ( $cirrusWalletBalance -ge 500.01 )
 {
     Write-Host (Get-TimeStamp) "SUCCESS: $cirrusWallet contains enough CRS to cover the registration cost!" -ForegroundColor Green
@@ -528,7 +528,7 @@ Switch ( $registerMasternode )
             Clear-Host
         }
 
-        $registerBody = @{
+        $registerBody = ConvertTo-Json @{
             collateralAddress = $collateralAddress
             collateralWalletName = $collateralWallet
             collateralWalletPassword = $collateralWalletPassword
@@ -536,11 +536,11 @@ Switch ( $registerMasternode )
             walletPassword = $cirrusWalletPassword
             walletAccount = "account 0"
         }
-        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerBody -ContentType "application/json-patch+json" -Method Post
+        $register = Invoke-WebRequest -Uri http://localhost:$API/api/Collateral/joinfederation -Body $registerBody -ContentType "application/json-patch+json" -UseBasicParsing -Method Post | Select
 
-        if ( $register.content -match '^.{66,66}$' )
+        if ( ($register.content | ConvertFrom-Json | Select-Object -ExpandProperty minerPublicKey) -match '^.{66,66}$' )
         {
-            Write-Host (Get-TimeStamp) "Your Masternode Public Key is: " $register.content
+            Write-Host (Get-TimeStamp) "Your Masternode Public Key is: " ($register.content | ConvertFrom-Json | Select-Object -ExpandProperty minerPublicKey) -ForegroundColor Cyan
             Write-Host (Get-TimeStamp) "SUCCESS: Your registration was succesful!! Please follow the STRAX Sidechain Masternode Setup Guide!" -ForegroundColor Green
             Start-Sleep 30
             pause
