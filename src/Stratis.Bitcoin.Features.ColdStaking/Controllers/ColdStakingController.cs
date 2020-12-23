@@ -540,7 +540,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
             {
                 Money amount = Money.Parse(request.Amount);
 
-                Money estimatedFee = this.ColdStakingManager.EstimateOfflineColdStakingWithdrawalFee(this.walletTransactionHandler,
+                Money estimatedFee = this.ColdStakingManager.EstimateOfflineWithdrawalFee(this.walletTransactionHandler,
                     request.ReceivingAddress, request.WalletName, request.AccountName, amount, request.SubtractFeeFromAmount);
 
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);

@@ -465,7 +465,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         public BuildOfflineSignResponse BuildOfflineColdStakingWithdrawalRequest(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
             string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
-            TransactionBuildContext context = this.GetOfflineColdStakingWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, feeAmount, subtractFeeFromAmount);
+            TransactionBuildContext context = this.GetOfflineWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, feeAmount, subtractFeeFromAmount);
 
             Transaction transactionResult = walletTransactionHandler.BuildTransaction(context);
 
@@ -499,15 +499,17 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             };
         }
 
-        public Money EstimateOfflineColdStakingWithdrawalFee(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
+        public Money EstimateOfflineWithdrawalFee(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
             string walletName, string accountName, Money amount, bool subtractFeeFromAmount)
         {
-            TransactionBuildContext context = this.GetOfflineColdStakingWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, null, subtractFeeFromAmount);
+            TransactionBuildContext context = this.GetOfflineWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, null, subtractFeeFromAmount);
+
+            context.TransactionBuilder.Extensions.Add(new ColdStakingBuilderExtension(false));
 
             return walletTransactionHandler.EstimateFee(context);
         }
 
-        private TransactionBuildContext GetOfflineColdStakingWithdrawalBuildContext(string receivingAddress, string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
+        private TransactionBuildContext GetOfflineWithdrawalBuildContext(string receivingAddress, string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
             // We presume that the amount given by the user is accurate and optimistically pass it to the build context.
             var recipient = new List<Recipient>() { new Recipient() { Amount = amount, ScriptPubKey = BitcoinAddress.Create(receivingAddress, this.network).ScriptPubKey, SubtractFeeFromAmount = subtractFeeFromAmount } };
