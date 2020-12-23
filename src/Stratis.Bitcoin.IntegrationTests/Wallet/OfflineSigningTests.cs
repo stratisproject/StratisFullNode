@@ -285,7 +285,20 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .SetQueryParams(new { walletName = "hotwallet", accountName = "account 0" })
                     .GetJsonAsync<string>();
 
-                // Now attempt a withdrawal.
+                // Now attempt a withdrawal. First get the estimated fee.
+                Money offlineWithdrawalFee = await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("coldstaking/estimate-offline-cold-staking-withdrawal-tx-fee")
+                    .PostJsonAsync(new OfflineColdStakingWithdrawalFeeEstimationRequest()
+                    {
+                        WalletName = "hotwallet",
+                        AccountName = hotAccount.AccountName,
+                        ReceivingAddress = onlineNodeUnusedAddress,
+                        Amount = "4", // Withdraw part of the available balance in the cold account.
+                        SubtractFeeFromAmount = true
+                    })
+                    .ReceiveJson<Money>();
+
+                // Now generate the actual unsigned template transaction.
                 BuildOfflineSignResponse offlineWithdrawalTemplate = await $"http://localhost:{onlineNode.ApiPort}/api"
                     .AppendPathSegment("coldstaking/offline-cold-staking-withdrawal")
                     .PostJsonAsync(new OfflineColdStakingWithdrawalRequest()
@@ -294,7 +307,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                         AccountName = hotAccount.AccountName,
                         ReceivingAddress = onlineNodeUnusedAddress,
                         Amount = "4", // Withdraw part of the available balance in the cold account.
-                        Fees = "0.01",
+                        Fees = offlineWithdrawalFee.ToString(),
                         SubtractFeeFromAmount = true
                     })
                     .ReceiveJson<BuildOfflineSignResponse>();

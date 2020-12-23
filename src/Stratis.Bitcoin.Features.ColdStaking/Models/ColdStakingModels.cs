@@ -166,11 +166,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [JsonProperty(PropertyName = "amount")]
         public string Amount { get; set; }
 
-        /// <summary>The fees for the cold staking cancellation transaction.</summary>
-        [MoneyFormat(ErrorMessage = "The fees are not in the correct format.")]
-        [JsonProperty(PropertyName = "fees")]
-        public string Fees { get; set; }
-
         [JsonProperty(PropertyName = "subtractFeeFromAmount")]
         public bool SubtractFeeFromAmount { get; set; }
 
@@ -178,7 +173,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         /// <returns>A string containing the properties of the object.</returns>
         public override string ToString()
         {
-            return $"{nameof(this.ReceivingAddress)}={this.ReceivingAddress},{nameof(this.WalletName)}={this.WalletName},{nameof(this.Amount)}={this.Amount},{nameof(this.Fees)}={this.Fees}";
+            return $"{nameof(this.ReceivingAddress)}={this.ReceivingAddress},{nameof(this.WalletName)}={this.WalletName},{nameof(this.Amount)}={this.Amount}";
         }
     }
 
@@ -188,15 +183,28 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
         [Required]
         [JsonProperty(PropertyName = "walletPassword")]
         public string WalletPassword { get; set; }
+
+        /// <summary>The fees for the cold staking cancellation transaction.</summary>
+        [MoneyFormat(ErrorMessage = "The fees are not in the correct format.")]
+        [JsonProperty(PropertyName = "fees")]
+        public string Fees { get; set; }
     }
 
-    public class OfflineColdStakingWithdrawalRequest : BaseColdStakingWithdrawalRequest
+    public class OfflineColdStakingWithdrawalFeeEstimationRequest : BaseColdStakingWithdrawalRequest
     {
         /// <summary>The hot account of the watch only wallet from which we select coins for cold staking cancellation.</summary>
         /// <remarks>Note that this is specifically the hot account, which is sufficient for determining UTXOs and also is presumed to be available if the node was staking with it.</remarks>
         [Required]
         [JsonProperty(PropertyName = "accountName")]
         public string AccountName { get; set; }
+    }
+
+    public class OfflineColdStakingWithdrawalRequest : OfflineColdStakingWithdrawalFeeEstimationRequest
+    {
+        /// <summary>The fees for the cold staking cancellation transaction.</summary>
+        [MoneyFormat(ErrorMessage = "The fees are not in the correct format.")]
+        [JsonProperty(PropertyName = "fees")]
+        public string Fees { get; set; }
     }
 
     /// <summary>

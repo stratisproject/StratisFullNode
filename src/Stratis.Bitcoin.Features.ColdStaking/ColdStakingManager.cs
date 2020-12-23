@@ -465,6 +465,50 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         public BuildOfflineSignResponse BuildOfflineColdStakingWithdrawalRequest(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
             string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
+            TransactionBuildContext context = this.GetOfflineColdStakingWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, feeAmount, subtractFeeFromAmount);
+
+            Transaction transactionResult = walletTransactionHandler.BuildTransaction(context);
+
+            var utxos = new List<UtxoDescriptor>();
+            var addresses = new List<AddressDescriptor>();
+            foreach (ICoin coin in context.TransactionBuilder.FindSpentCoins(transactionResult))
+            {
+                utxos.Add(new UtxoDescriptor()
+                {
+                    Amount = coin.TxOut.Value.ToUnit(MoneyUnit.BTC).ToString(),
+                    TransactionId = coin.Outpoint.Hash.ToString(),
+                    Index = coin.Outpoint.N.ToString(),
+                    ScriptPubKey = coin.TxOut.ScriptPubKey.ToHex()
+                });
+
+                // We do not include address descriptors as the cold staking scripts are not really regarded as having addresses in the conventional sense.
+                // There is also typically only a single script involved so the keypath hinting is of little use.
+            }
+
+            var hotAccountReference = new WalletAccountReference(walletName, accountName);
+
+            // Return transaction hex and UTXO list.
+            return new BuildOfflineSignResponse()
+            {
+                WalletName = hotAccountReference.WalletName,
+                WalletAccount = hotAccountReference.AccountName,
+                Fee = context.TransactionFee.ToUnit(MoneyUnit.BTC).ToString(),
+                UnsignedTransaction = transactionResult.ToHex(),
+                Utxos = utxos,
+                Addresses = addresses
+            };
+        }
+
+        public Money EstimateOfflineColdStakingWithdrawalFee(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
+            string walletName, string accountName, Money amount, bool subtractFeeFromAmount)
+        {
+            TransactionBuildContext context = this.GetOfflineColdStakingWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, null, subtractFeeFromAmount);
+
+            return walletTransactionHandler.EstimateFee(context);
+        }
+
+        private TransactionBuildContext GetOfflineColdStakingWithdrawalBuildContext(string receivingAddress, string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
+        {
             // We presume that the amount given by the user is accurate and optimistically pass it to the build context.
             var recipient = new List<Recipient>() { new Recipient() { Amount = amount, ScriptPubKey = BitcoinAddress.Create(receivingAddress, this.network).ScriptPubKey, SubtractFeeFromAmount = subtractFeeFromAmount } };
 
@@ -496,34 +540,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 context.FeeType = FeeType.High;
             }
 
-            Transaction transactionResult = walletTransactionHandler.BuildTransaction(context);
-
-            var utxos = new List<UtxoDescriptor>();
-            var addresses = new List<AddressDescriptor>();
-            foreach (ICoin coin in context.TransactionBuilder.FindSpentCoins(transactionResult))
-            {
-                utxos.Add(new UtxoDescriptor()
-                {
-                    Amount = coin.TxOut.Value.ToUnit(MoneyUnit.BTC).ToString(),
-                    TransactionId = coin.Outpoint.Hash.ToString(),
-                    Index = coin.Outpoint.N.ToString(),
-                    ScriptPubKey = coin.TxOut.ScriptPubKey.ToHex()
-                });
-
-                // We do not include address descriptors as the cold staking scripts are not really regarded as having addresses in the conventional sense.
-                // There is also typically only a single script involved so the keypath hinting is of little use.
-            }
-
-            // Return transaction hex and UTXO list.
-            return new BuildOfflineSignResponse()
-            {
-                WalletName = hotAccountReference.WalletName,
-                WalletAccount = hotAccountReference.AccountName,
-                Fee = context.TransactionFee.ToUnit(MoneyUnit.BTC).ToString(),
-                UnsignedTransaction = transactionResult.ToHex(),
-                Utxos = utxos,
-                Addresses = addresses
-            };
+            return context;
         }
 
         /// <summary>

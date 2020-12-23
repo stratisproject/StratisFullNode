@@ -19,7 +19,6 @@ namespace Stratis.Bitcoin.Features.Wallet
     /// This will uses the <see cref="IWalletFeePolicy" /> and the <see cref="TransactionBuilder" />.
     /// TODO: Move also the broadcast transaction to this class
     /// TODO: Implement lockUnspents
-    /// TODO: Implement subtractFeeFromOutputs
     /// </remarks>
     public class WalletTransactionHandler : IWalletTransactionHandler
     {

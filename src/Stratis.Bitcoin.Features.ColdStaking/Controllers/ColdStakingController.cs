@@ -520,6 +520,41 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
             }
         }
 
+        [Route("estimate-offline-cold-staking-withdrawal-tx-fee")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult EstimateOfflineColdStakingWithdrawalFee([FromBody] OfflineColdStakingWithdrawalFeeEstimationRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+
+                Money estimatedFee = this.ColdStakingManager.EstimateOfflineColdStakingWithdrawalFee(this.walletTransactionHandler,
+                    request.ReceivingAddress, request.WalletName, request.AccountName, amount, request.SubtractFeeFromAmount);
+
+                this.logger.LogTrace("(-):'{0}'", estimatedFee);
+
+                return this.Json(estimatedFee);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
         [Route("estimate-cold-staking-withdrawal-tx-fee")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
