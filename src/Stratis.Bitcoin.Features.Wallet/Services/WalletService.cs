@@ -1402,18 +1402,23 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         "Failed to locate any unspent outputs to consolidate.");
                 }
 
-                if (utxos.Count == 1)
-                {
-                    throw new FeatureException(HttpStatusCode.BadRequest, "Already consolidated.",
-                        "Already consolidated.");
-                }
-
-
                 if (!string.IsNullOrWhiteSpace(request.UtxoValueThreshold))
                 {
                     var threshold = Money.Parse(request.UtxoValueThreshold);
 
                     utxos = utxos.Where(u => u.Transaction.Amount <= threshold).ToList();
+                }
+
+                if (utxos.Count == 0)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "After filtering for size, failed to locate any unspent outputs to consolidate.",
+                        "After filtering for size, failed to locate any unspent outputs to consolidate.");
+                }
+
+                if (utxos.Count == 1)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Already consolidated.",
+                        "Already consolidated.");
                 }
 
                 Script destination;
@@ -1426,39 +1431,50 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     destination = this.walletManager.GetUnusedAddress(accountReference).ScriptPubKey;
                 }
 
-                Money totalToSend = Money.Zero;
-                var outpoints = new List<OutPoint>();
+                // Set the maximum upper bound at 1000, as we don't expect any transaction can ever have that many inputs and still
+                // be under the size limit.
+                int upperBound = Math.Min(utxos.Count, 1000);
+                int lowerBound = 0;
+                int iterations = 0;
 
-                TransactionBuildContext context = null;
-
-                foreach (var utxo in utxos)
+                // Assuming a worst case binary search of log2(1000) + 1.
+                // Mostly we just want to bound the attempts.
+                while (iterations < 11)
                 {
-                    totalToSend += utxo.Transaction.Amount;
-                    outpoints.Add(utxo.ToOutPoint());
-
-                    context = new TransactionBuildContext(this.network)
-                    {
-                        AccountReference = accountReference,
-                        AllowOtherInputs = false,
-                        FeeType = FeeType.Medium,
-                        MinConfirmations = 0,
-                        // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
-                        Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
-                        SelectedInputs = outpoints,
-
-                        Sign = false
-                    };
-
-                    // Note that this is the virtual size taking the witness scale factor of the current network into account, and not the raw byte count.
-                    int size = this.walletTransactionHandler.EstimateSize(context);
-
-                    // Leave a bit of an error margin for size estimates that are not completely correct.
-                    if (size > (0.95m * this.network.Consensus.Options.MaxStandardTxWeight))
+                    if (lowerBound == upperBound)
                         break;
+
+                    // We perform a form of binary search through the UTXO list in order to find a reasonable number of UTXOs to include for consolidation.
+                    int candidate = (lowerBound + upperBound) / 2;
+
+                    // When the values of the bounds start getting too close together, just short circuit further checks.
+                    if (candidate == lowerBound || candidate == upperBound)
+                        break;
+
+                    // First check if (lower + upper) / 2 is under the size limit and move the lower bound upwards if it is.
+                    int size = this.GetTransactionSizeForUtxoCount(utxos, candidate, accountReference, destination);
+
+                    // If the midpoint resulted in a transaction that was too big then move the upper bound downwards.
+                    if (this.SizeAcceptable(size))
+                        lowerBound = candidate;
+                    else
+                        upperBound = candidate;
+
+                    iterations++;
                 }
 
+                // This is exceedingly unlikely unless the smallest-value UTXO was gigantic.
+                if (lowerBound == 0)
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Unable to consolidate.",
+                        "Unable to consolidate.");
+
+                // lowerBound will have converged to approximately the highest possible acceptable UTXO count.
+                List<UnspentOutputReference> finalUtxos = utxos.Take(lowerBound).ToList();
+                List<OutPoint> outpoints = finalUtxos.Select(u => u.ToOutPoint()).ToList();
+                Money totalToSend = finalUtxos.Sum(a => a.Transaction.Amount);
+
                 // Build the final version of the consolidation transaction.
-                context = new TransactionBuildContext(this.network)
+                var context = new TransactionBuildContext(this.network)
                 {
                     AccountReference = accountReference,
                     AllowOtherInputs = false,
@@ -1474,6 +1490,41 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 return transaction.ToHex();
             }, cancellationToken);
+        }
+
+        private bool SizeAcceptable(int size)
+        {
+            // Leave a bit of an error margin for size estimates that are not completely correct.
+            return size <= (0.95m * this.network.Consensus.Options.MaxStandardTxWeight);
+        }
+
+        private int GetTransactionSizeForUtxoCount(List<UnspentOutputReference> utxos, int count, WalletAccountReference accountReference, Script destination)
+        {
+            Money totalToSend = Money.Zero;
+            var outpoints = new List<OutPoint>();
+
+            foreach (var utxo in utxos)
+            {
+                totalToSend += utxo.Transaction.Amount;
+                outpoints.Add(utxo.ToOutPoint());
+            }
+
+            var context = new TransactionBuildContext(this.network)
+            {
+                AccountReference = accountReference,
+                AllowOtherInputs = false,
+                FeeType = FeeType.Medium,
+                // Prevent mempool transactions from being considered for inclusion.
+                MinConfirmations = 1,
+                // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
+                Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
+                SelectedInputs = outpoints,
+
+                Sign = false
+            };
+
+            // Note that this is the virtual size taking the witness scale factor of the current network into account, and not the raw byte count.
+            return this.walletTransactionHandler.EstimateSize(context);
         }
 
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
