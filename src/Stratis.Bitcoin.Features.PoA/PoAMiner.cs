@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA
     /// <inheritdoc cref="IPoAMiner"/>
     public class PoAMiner : IPoAMiner
     {
-        private readonly IConsensusManager consensusManager;
+        protected readonly IConsensusManager consensusManager;
 
         private readonly IDateTimeProvider dateTimeProvider;
 
@@ -67,9 +67,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IIntegrityValidator integrityValidator;
 
+        private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
+
         private readonly IWalletManager walletManager;
 
-        private readonly VotingManager votingManager;
+        protected readonly VotingManager votingManager;
 
         private readonly VotingDataEncoder votingDataEncoder;
 
@@ -98,7 +100,8 @@ namespace Stratis.Bitcoin.Features.PoA
             INodeStats nodeStats,
             VotingManager votingManager,
             PoAMinerSettings poAMinerSettings,
-            IAsyncProvider asyncProvider)
+            IAsyncProvider asyncProvider,
+            IIdleFederationMembersKicker idleFederationMembersKicker)
         {
             this.consensusManager = consensusManager;
             this.dateTimeProvider = dateTimeProvider;
@@ -114,6 +117,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingManager = votingManager;
             this.settings = poAMinerSettings;
             this.asyncProvider = asyncProvider;
+            this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.cancellation = CancellationTokenSource.CreateLinkedTokenSource(new[] { nodeLifetime.ApplicationStopping });
@@ -171,6 +175,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
                     if (chainedHeader == null)
                     {
+                        int attemptDelayMs = 500;
+                        await Task.Delay(attemptDelayMs, this.cancellation.Token).ConfigureAwait(false);
+
                         continue;
                     }
 
@@ -270,16 +277,26 @@ namespace Stratis.Bitcoin.Features.PoA
                 return null;
             }
 
-            // Only get this once.
-            if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
+            // If an address is specified for mining then preferentially use that.
+            // The private key for this address is not used for block signing, so it can be any valid address.
+            // Since it is known which miner mines in each block already it does not change the privacy level that every block mines to the same address.
+            if (!string.IsNullOrWhiteSpace(this.settings.MineAddress))
             {
-                this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
-
-                // The node could not have a wallet.
-                if (this.walletScriptPubKey == null)
+                this.walletScriptPubKey = BitcoinAddress.Create(this.settings.MineAddress, this.network).ScriptPubKey;
+            }
+            else
+            {
+                // Get the first address from the wallet. In a network with an account-based model the mined UTXOs should all be sent to a predictable address.
+                if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
                 {
-                    this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
-                    this.walletScriptPubKey = new Script();
+                    this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
+
+                    // The node could not have a wallet, or the first account/address could have been incorrectly created.
+                    if (this.walletScriptPubKey == null)
+                    {
+                        this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
+                        this.walletScriptPubKey = new Script();
+                    }
                 }
             }
 
@@ -326,7 +343,16 @@ namespace Stratis.Bitcoin.Features.PoA
         protected virtual void FillBlockTemplate(BlockTemplate blockTemplate, out bool dropTemplate)
         {
             if (this.network.ConsensusOptions.VotingEnabled)
+            {
+                if (this.network.ConsensusOptions.AutoKickIdleMembers)
+                {
+                   // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+                    this.idleFederationMembersKicker.Execute(this.consensusManager.Tip);
+                }
+
+                // Add scheduled voting data to the block.
                 this.AddVotingData(blockTemplate);
+            }
 
             dropTemplate = false;
         }
@@ -343,12 +369,10 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (account == null)
                 return null;
-
-            var walletAccountReference = new WalletAccountReference(walletName, account.Name);
-
-            HdAddress address = this.walletManager.GetUnusedAddress(walletAccountReference);
-
-            return address.Pubkey;
+            
+            HdAddress address = account.ExternalAddresses.FirstOrDefault();
+            
+            return address?.Pubkey;
         }
 
         /// <summary>Adds OP_RETURN output to a coinbase transaction which contains encoded voting data.</summary>
@@ -379,42 +403,59 @@ namespace Stratis.Bitcoin.Features.PoA
             log.AppendLine();
             log.AppendLine("======PoA Miner======");
 
+            if (this.ibdState.IsInitialBlockDownload())
+            {
+                log.AppendLine($"Mining information is not available during IBD.");
+                log.AppendLine();
+                return;
+            }
+
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
-            uint currentTime = currentHeader.Header.Time;
 
-            int maxDepth = 46;
-            int pubKeyTakeCharacters = 4;
-            int depthReached = 0;
+            int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            log.AppendLine($"Mining information for the last {maxDepth} blocks.");
-            log.AppendLine("MISS means that miner didn't produce a block at the timestamp he was supposed to.");
+            List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
 
-            for (int i = tip.Height; (i > 0) && (i > tip.Height - maxDepth); i--)
+            int maxDepth = modifiedFederation.Count;
+
+            log.AppendLine($"Mining information for the last { maxDepth } blocks.");
+            log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
+
+            uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+            timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
+            if (timeHeader < currentHeader.Header.Time)
+                timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
+
+            // Iterate mining slots.
+            for (int i = 0; i < maxDepth; i++)
             {
-                // Add stats for current header.
-                string pubKeyRepresentation = this.slotsManager.GetFederationMemberForBlock(currentHeader, this.votingManager).PubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                int headerSlot = (int)(timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds) % modifiedFederation.Count;
 
-                log.Append("[" + pubKeyRepresentation + "]-");
-                depthReached++;
-                hitCount++;
+                PubKey pubKey = modifiedFederation[headerSlot].PubKey;
 
-                currentHeader = currentHeader.Previous;
-                currentTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
+                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
-                if (currentHeader.Height == 0)
-                    break;
-
-                while ((currentHeader.Header.Time != currentTime) && (depthReached <= maxDepth))
+                // Mined in this slot?
+                if (timeHeader == currentHeader.Header.Time)
                 {
-                    log.Append("MISS-");
-                    currentTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
-                    depthReached++;
+                    log.Append($"[{ pubKeyRepresentation }] ");
+
+                    currentHeader = currentHeader.Previous;
+                    hitCount++;
+
+                    modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+                }
+                else
+                {
+                    log.Append($"<{ pubKeyRepresentation }> ");
                 }
 
-                if (depthReached >= maxDepth)
-                    break;
+                timeHeader -= this.network.ConsensusOptions.TargetSpacingSeconds;
+
+                if ((i % 20) == 19)
+                    log.AppendLine();
             }
 
             log.Append("...");

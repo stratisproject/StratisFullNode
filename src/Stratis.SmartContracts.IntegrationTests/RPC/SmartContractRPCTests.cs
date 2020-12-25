@@ -1,21 +1,17 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
-using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
-using Stratis.SmartContracts.CLR.Local;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Networks;
 using Stratis.SmartContracts.Tests.Common;
 using Stratis.SmartContracts.Tests.Common.MockChain;
 using Xunit;
-using Stratis.SmartContracts.CLR;
 
 namespace Stratis.SmartContracts.IntegrationTests.RPC
 {
@@ -49,7 +45,7 @@ namespace Stratis.SmartContracts.IntegrationTests.RPC
                 // Create a valid transaction.
                 byte[] toSend = ContractCompiler.CompileFile("SmartContracts/StandardToken.cs").Compilation;
 
-                var createParams = new[] {this.methodParameterStringSerializer.Serialize(10000uL)};
+                var createParams = new[] { this.methodParameterStringSerializer.Serialize(10000uL) };
                 BuildCreateContractTransactionResponse createResponse = node1.SendCreateContractTransaction(toSend, 0, createParams);
                 node2.WaitMempoolCount(1);
 
@@ -58,7 +54,7 @@ namespace Stratis.SmartContracts.IntegrationTests.RPC
                 // Check for the receipt.
                 RPCClient rpc = node2.CoreNode.CreateRPCClient();
                 var result = await rpc.SendCommandAsync("getreceipt", createResponse.TransactionId.ToString());
-                 
+
                 Assert.True(result.Result.Value<bool>("success"));
 
                 // Send a token.

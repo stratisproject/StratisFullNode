@@ -175,7 +175,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     }
 
                     insertedEntities += unspentOutputs.Count;
-                    this.leveldb.Write(batch);
+                    this.leveldb.Write(batch, new WriteOptions() { Sync = true });
 
                     this.SetBlockHash(nextBlockHash);
                 }
@@ -217,7 +217,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 res = rewindData.PreviousBlockHash;
 
-                this.leveldb.Write(batch);
+                this.leveldb.Write(batch, new WriteOptions() { Sync = true });
 
                 this.SetBlockHash(rewindData.PreviousBlockHash);
             }
@@ -248,7 +248,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     }
                 }
 
-                this.leveldb.Write(batch);
+                this.leveldb.Write(batch, new WriteOptions() { Sync = true });
             }
         }
 

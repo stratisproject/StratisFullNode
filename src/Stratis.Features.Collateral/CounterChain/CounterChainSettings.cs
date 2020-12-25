@@ -1,6 +1,7 @@
 ﻿using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral.CounterChain
 {

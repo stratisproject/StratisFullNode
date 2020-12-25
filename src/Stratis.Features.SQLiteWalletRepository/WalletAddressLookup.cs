@@ -103,6 +103,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         ,       AddressType
                         ,       AddressIndex
                         ,       ScriptPubKey
+                        ,       PubKey PubKeyScript
                         FROM    HDAddress
                         WHERE   ScriptPubKey = {strHex} {
                     // Restrict to wallet if provided.

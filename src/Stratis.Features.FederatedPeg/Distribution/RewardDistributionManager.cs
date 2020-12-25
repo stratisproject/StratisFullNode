@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Features.Collateral;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral;
 
 namespace Stratis.Features.FederatedPeg.Distribution
 {
@@ -40,6 +41,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
             this.epochWindow = this.epoch * 2;
+
+            if (this.network.RewardClaimerBlockInterval > 0)
+            {
+                // If the amount of blocks that the sidechain will advance in the time that the reward intervals are, is more
+                // than the default epoch then use that amount so that there aren't any gaps.
+                var mainchainTargetSpacingSeconds = 45;
+                var sidechainAdvancement = (int)Math.Round(this.network.RewardClaimerBlockInterval * mainchainTargetSpacingSeconds / this.network.Consensus.TargetSpacing.TotalSeconds, MidpointRounding.AwayFromZero);
+                if (sidechainAdvancement > this.epoch)
+                    this.epoch = sidechainAdvancement;
+            }
         }
 
         /// <inheritdoc />
@@ -92,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             var blocksMinedEach = new Dictionary<Script, long>();
 
             var totalBlocks = CalculateBlocksMinedPerMiner(blocksMinedEach, sidechainStartHeight, currentHeader.Height);
-            List<Recipient> recipients = ConstructRecipients(blocksMinedEach, totalBlocks, totalReward);
+            List<Recipient> recipients = ConstructRecipients(heightOfRecordedDistributionDeposit, blocksMinedEach, totalBlocks, totalReward);
             return recipients;
         }
 
@@ -142,7 +153,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             return totalBlocks;
         }
 
-        private List<Recipient> ConstructRecipients(Dictionary<Script, long> blocksMinedEach, long totalBlocks, Money totalReward)
+        private List<Recipient> ConstructRecipients(int heightOfRecordedDistributionDeposit, Dictionary<Script, long> blocksMinedEach, long totalBlocks, Money totalReward)
         {
             var recipients = new List<Recipient>();
 
@@ -170,7 +181,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
             this.logger.LogDebug(recipientLog.ToString());
 
-            this.logger.LogInformation($"A total reward of {totalReward} will be distributed between {recipients.Count} recipients");
+            this.logger.LogInformation($"Reward distribution at main chain height {heightOfRecordedDistributionDeposit} will distribute {totalReward} STRAX between {recipients.Count} mining keys.");
 
             return recipients;
         }

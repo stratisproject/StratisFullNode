@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Stratis Group Ltd.")]
-[assembly: AssemblyProduct("Stratis.Bitcoin.Features.LightWallet")]
+[assembly: AssemblyProduct("Stratis.Features.LightWallet")]
 [assembly: AssemblyTrademark("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible

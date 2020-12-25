@@ -827,6 +827,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     case TxOutType.TX_MULTISIG:
                     case TxOutType.TX_NULL_DATA:
                     case TxOutType.TX_SEGWIT:
+                    case TxOutType.TX_COLDSTAKE:
                         break;
                 }
 
@@ -962,6 +963,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     if (withdrawals.Any(w => w.withdrawal.Id == spendingDetail.TransactionId))
                         continue;
 
+                    if (spendingDetail.WithdrawalDetails == null)
+                    {
+                        this.logger.LogError($"Spending detail with txId '{spendingDetail.TransactionId}' has null withdrawal details, deposit id '{depositId}'");
+                    }
+
                     var withdrawal = new Withdrawal(
                         spendingDetail.WithdrawalDetails.MatchingDepositId,
                         spendingDetail.TransactionId,
@@ -1077,16 +1083,16 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     TransactionBuilder builder = new TransactionBuilder(this.Wallet.Network).AddCoins(coins);
 
-                    if (!builder.Verify(transaction, this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count), out TransactionPolicyError[] errors))
-                    {
-                        // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
-                        foreach (TransactionPolicyError transactionPolicyError in errors)
-                        {
-                            this.logger.LogInformation("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
-                        }
+                    if (builder.Verify(transaction, this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count), out TransactionPolicyError[] errors))
+                        return true;
 
-                        return false;
+                    // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
+                    foreach (TransactionPolicyError transactionPolicyError in errors)
+                    {
+                        this.logger.LogDebug("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
                     }
+
+                    return false;
                 }
 
                 return true;

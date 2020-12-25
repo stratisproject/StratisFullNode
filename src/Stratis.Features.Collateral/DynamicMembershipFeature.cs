@@ -3,14 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
-using Stratis.Bitcoin.Features.Collateral.ConsensusRules;
 using Stratis.Bitcoin.Features.Collateral.MempoolRules;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Features.SmartContracts;
-using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Voting;
 
 namespace Stratis.Features.Collateral
 {
@@ -32,7 +29,10 @@ namespace Stratis.Features.Collateral
         {
             var options = (PoAConsensusOptions)this.network.Consensus.Options;
             if (options.VotingEnabled)
-                await this.joinFederationRequestMonitor.InitializeAsync();
+            {
+                if (options.AutoKickIdleMembers)
+                    await this.joinFederationRequestMonitor.InitializeAsync();
+            }
         }
 
         public override void Dispose()
@@ -53,8 +53,9 @@ namespace Stratis.Features.Collateral
             if (!fullNodeBuilder.Network.Consensus.MempoolRules.Contains(typeof(VotingRequestValidationRule)))
                 fullNodeBuilder.Network.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
 
-            if (!fullNodeBuilder.Network.Consensus.ConsensusRules.PartialValidationRules.Contains(typeof(MandatoryCollateralMemberVotingRule)))
-                fullNodeBuilder.Network.Consensus.ConsensusRules.PartialValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+            // Disabling this for now until we can ensure that the "stale/duplicate poll issue is resolved."
+            // if (!fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Contains(typeof(MandatoryCollateralMemberVotingRule)))
+            //    fullNodeBuilder.Network.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -63,7 +64,7 @@ namespace Stratis.Features.Collateral
                     .DependOn<PoAFeature>()
                     .FeatureServices(services =>
                     {
-                        services.AddSingleton<IFederationManager, CollateralFederationManager>();
+                        services.AddSingleton<IJoinFederationRequestService, JoinFederationRequestService>();
                         services.AddSingleton<JoinFederationRequestMonitor>();
                     });
             });

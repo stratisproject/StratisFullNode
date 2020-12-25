@@ -23,6 +23,7 @@ namespace Stratis.Features.Collateral
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
+        private readonly HashSet<uint256> pollsCheckedWithJoinFederationRequestMonitor;
 
         public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, ILoggerFactory loggerFactory)
         {
@@ -32,7 +33,10 @@ namespace Stratis.Features.Collateral
             this.votingManager = votingManager;
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
+            this.pollsCheckedWithJoinFederationRequestMonitor = new HashSet<uint256>();
         }
+
+        public bool AlreadyChecked(uint256 hash) => this.pollsCheckedWithJoinFederationRequestMonitor.Contains(hash);
 
         public Task InitializeAsync()
         {
@@ -41,8 +45,10 @@ namespace Stratis.Features.Collateral
             return Task.CompletedTask;
         }
 
-        private void OnBlockConnected(BlockConnected blockConnectedData)
+        public void OnBlockConnected(BlockConnected blockConnectedData)
         {
+            this.pollsCheckedWithJoinFederationRequestMonitor.Add(blockConnectedData.ConnectedBlock.ChainedHeader.HashBlock);
+
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
 
@@ -92,7 +98,7 @@ namespace Stratis.Features.Collateral
                     }
 
                     // Populate the RemovalEventId.
-                    Poll poll = this.votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
+                    Poll poll = this.votingManager.GetApprovedPolls().FirstOrDefault(x => x.IsExecuted &&
                           x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
                     request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());

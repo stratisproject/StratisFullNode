@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
@@ -31,13 +29,6 @@ namespace Stratis.CirrusMinerD
     {
         private const string MainchainArgument = "-mainchain";
         private const string SidechainArgument = "-sidechain";
-
-        private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
-        {
-            { NetworkType.Mainnet, Networks.Strax.Mainnet},
-            { NetworkType.Testnet, Networks.Strax.Testnet },
-            { NetworkType.Regtest, Networks.Strax.Regtest }
-        };
 
         public static void Main(string[] args)
         {
@@ -77,11 +68,12 @@ namespace Stratis.CirrusMinerD
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
-                .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractCollateralPoAMining()
-                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .AddPoACollateralMiningCapability()
+                .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()

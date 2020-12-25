@@ -296,20 +296,43 @@ namespace Stratis.Features.SQLiteWalletRepository
             }
         }
 
-        internal void AddAdresses(HDAccount account, int addressType, List<HdAddress> hdAddresses)
+        internal List<HDAddress> CreateWatchOnlyAddresses(HDAccount account, int addressType, List<HdAddress> hdAddresses, bool force = false)
         {
+            var addresses = new List<HDAddress>();
+            int addressIndex = HDAddress.GetAddressCount(this.SQLiteConnection, account.WalletId, account.AccountIndex, addressType);
+
             foreach (HdAddress hdAddress in hdAddresses)
             {
-                HDAddress address = this.Repository.CreateAddress(account, addressType, hdAddress.Index);
-                // TODO: These get set within CreateAddress - it shouldn't be necessary to do so again
-                address.Address = hdAddress.Address;
-                address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
-                address.PubKey = hdAddress.Pubkey?.ToHex();
+                try
+                {
+                    var pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(hdAddress.Pubkey);
+                    HDAddress address = this.Repository.CreateAddress(account, addressType, addressIndex, pubKey);
 
-                this.Insert(address);
+                    if (force || this.Repository.TestMode)
+                    {
+                        // Allow greater control over field values for legacy tests.
+                        address.Address = hdAddress?.Address;
+                        address.ScriptPubKey = hdAddress.ScriptPubKey?.ToHex();
+                        address.PubKey = hdAddress.Pubkey?.ToHex();
+                        this.Insert(address);
+                        this.AddTransactions(account, hdAddress, hdAddress.Transactions);
+                    }
+                    else
+                    {
+                        this.Insert(address);
+                    }
 
-                this.AddTransactions(account, hdAddress, hdAddress.Transactions);
+                    addresses.Add(address);
+
+                    addressIndex++;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
+
+            return addresses;
         }
 
         internal List<HDAddress> CreateAddresses(HDAccount account, int addressType, int addressesQuantity)
@@ -383,7 +406,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             else
             {
                 if (typeof(T) == typeof(HDAddress))
-                    HDAddress.MigrateTable(this);
+                    HDAddress.MigrateTable(this, this.Repository.Bech32AddressFunc);
                 else if (typeof(T) == typeof(HDPayment))
                     HDPayment.MigrateTable(this);
             }

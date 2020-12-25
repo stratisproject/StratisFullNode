@@ -13,7 +13,7 @@ using Stratis.Features.FederatedPeg.Payloads;
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
     /// <summary>
-    /// Requests partial transactions from the peers and calls <see cref="ICrossChainTransferStore.MergeTransactionSignaturesAsync".
+    /// Requests partial transactions from the peers and calls <see cref="ICrossChainTransferStore.MergeTransactionSignatures".
     /// </summary>
     public interface IPartialTransactionRequester
     {
@@ -31,11 +31,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// <inheritdoc />
     public class PartialTransactionRequester : IPartialTransactionRequester
     {
-        /// <summary>
-        /// How many transactions we want to pass around to sign at a time.
-        /// </summary>
-        private const int NumberToSignAtATime = 30;
-
         /// <summary>
         /// How often to trigger the query for and broadcasting of partial transactions.
         /// </summary>
@@ -87,7 +82,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Broadcast the partial transaction with the earliest inputs.
-            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true).Take(NumberToSignAtATime);
+            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
 
             foreach (ICrossChainTransfer transfer in transfers)
             {

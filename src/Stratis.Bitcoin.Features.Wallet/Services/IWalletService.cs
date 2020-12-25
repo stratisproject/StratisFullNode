@@ -30,6 +30,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         Task<IEnumerable<RemovedTransactionModel>> RemoveTransactions(RemoveTransactionsModel request,
             CancellationToken cancellationToken);
 
+        Task RemoveWallet(RemoveWalletModel request,
+            CancellationToken cancellationToken);
+
         Task<AddressesModel> GetAllAddresses(GetAllAddressesModel request, CancellationToken cancellationToken);
 
         Task<WalletBuildTransactionModel> BuildTransaction(BuildTransactionRequest request, CancellationToken cancellationToken);
@@ -52,6 +55,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             CancellationToken cancellationToken);
 
         Task<List<string>> Sweep(SweepRequest request,
+            CancellationToken cancellationToken);
+
+        Task<BuildOfflineSignResponse> BuildOfflineSignRequest(BuildOfflineSignRequest request,
+            CancellationToken cancellationToken);
+
+        Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request,
+            CancellationToken cancellationToken);
+
+        Task<string> Consolidate(ConsolidationRequest request,
             CancellationToken cancellationToken);
     }
 }

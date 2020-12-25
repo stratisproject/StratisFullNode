@@ -16,6 +16,8 @@
 
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
+    <Version>1.0.5.0</Version>
+    <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
 
   <ItemGroup>

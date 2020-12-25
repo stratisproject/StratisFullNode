@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
@@ -90,11 +91,20 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             for (int i = 0; i < 2000; i++)
             {
-                dataList.Add(new VotingData()
+                var tempData = new VotingData()
                 {
                     Key = VoteKey.AddFederationMember,
                     Data = RandomUtils.GetBytes(25)
-                });
+                };
+
+                string data = Encoding.ASCII.GetString(tempData.Data);
+                if (data.Contains("\r\n"))
+                {
+                    data = data.Replace("\r\n", "\n");
+                    tempData.Data = Encoding.ASCII.GetBytes(data);
+                }
+
+                dataList.Add(tempData);
             }
 
             byte[] encodedBytes = this.encoder.Encode(dataList);

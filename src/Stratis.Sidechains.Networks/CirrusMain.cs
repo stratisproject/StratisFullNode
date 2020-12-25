@@ -122,44 +122,6 @@ namespace Stratis.Sidechains.Networks
             this.Federations = new Federations();
             var straxFederationTransactionSigningKeys = new List<PubKey>()
             {
-            new PubKey("024ca136db3fd5f72e30ff91cbbdf9ab7a0a1da186b3fc7ad5f861a4742fa42cdd"),
-            new PubKey("032768540dabcbe8a78fc2916c17a07fecc51647d353e6af22a6daa3281e2d3a70"),
-            new PubKey("02ace4fbe6a622cdfc922a447c3253e8635f3fecb69241f73629e6f0596a567907"),
-            new PubKey("038670251efd386121d3110716addb73fa452fa2891cb88ac14417682366358673"),
-            new PubKey("02dfd2c5502c2d9fef90ec80c7912588900fb3626d46473b842a9e82ac28649991"),
-            new PubKey("03adce7b60c2a3b03f9567d44bcf4e1d98200a736914a4385a4ef8c248d50b71ba"),
-            new PubKey("02b80af8dc4b20865c79228c53af6365bec92960ffdf2b2f56d7bf0555a05f647a"),
-            new PubKey("03d621e270932fd41a29d9658384eb75bf00416b5b8351228f4653a06f4c942b68"),
-            new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
-            new PubKey("03edf8ad7419fd7223d5309ee3cfb27f2d4e6a5cd5da80aa3d225e818e7d21b9e6"),
-            new PubKey("025cb67811d0922ca77fa33f19c3e5c37961f9639a1f0a116011b9075f6796abcb"),
-            new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
-            new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
-            new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
-            new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
-            new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92"),
-            new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),
-            new PubKey("03d8b5580b7ec709c006ef497327db27ea323bd358ca45412171c644214483b74f"),
-            new PubKey("0204cc7a01d4423a83081b6711c1e93a38ec9ff115331da933ae59937d5c075ca3"),
-            new PubKey("029925bc527cec3592973e79b340768231ef6f220d422b1839a6c441ffa1912c1c"),
-            new PubKey("02d57eaa61845c5ce07963b211af83c3fe072a9de65c555f7bdbd7c38efe65e42a"),
-            new PubKey("02f40bd4f662ba20629a104115f0ac9ee5eab695716edfe01b240abf56e05797e2"),
-            new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
-            new PubKey("03a620f0ba4f197b53ba3e8591126b54bd728ecc961607221190abb8e3cd91ea5f"),
-            new PubKey("02e96ce15caea22e6a38a8c2b06a788f8ac28453ebb77a6578d5f394296cbc8ed4"),
-            new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
-            new PubKey("0247e8dba42a4055f73598a57eddffb2c4db33699f258f529f1762ea29b8cc21a7"),
-            new PubKey("02b7af1d3e27ec3758bb59926ca3809013d6cd869808f4fae6d0426ce3166c6af2"),
-            new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
-            new PubKey("037716f71e1798743f44f43df7bf80815cbe6f40e7f725917963ee5aa04c35c716"),
-            };
-
-            // Register the new set of federation members.
-            this.Federations.RegisterFederation(new Federation(straxFederationTransactionSigningKeys));
-
-            // Set the list of Strax Era mining keys.
-            this.StraxMiningMultisigMembers = new List<PubKey>()
-            {
                 new PubKey("03797a2047f84ba7dcdd2816d4feba45ae70a59b3aa97f46f7877df61aa9f06a21"),
                 new PubKey("0209cfca2490dec022f097114090c919e85047de0790c1c97451e0f50c2199a957"),
                 new PubKey("032e4088451c5a7952fb6a862cdad27ea18b2e12bccb718f13c9fdcc1caf0535b4"),
@@ -174,13 +136,36 @@ namespace Stratis.Sidechains.Networks
                 new PubKey("0337e816a3433c71c4bbc095a54a0715a6da7a70526d2afb8dba3d8d78d33053bf"),
                 new PubKey("035569e42835e25c854daa7de77c20f1009119a5667494664a46b5154db7ee768a"),
                 new PubKey("03cda7ea577e8fbe5d45b851910ec4a795e5cc12d498cf80d39ba1d9a455942188"),
-                new PubKey("02680321118bce869933b07ea42cc04d2a2804134b06db582427d6b9688b3536a4"),
-        };
+                new PubKey("02680321118bce869933b07ea42cc04d2a2804134b06db582427d6b9688b3536a4")
+            };
+
+            // Register the new set of federation members.
+            this.Federations.RegisterFederation(new Federation(straxFederationTransactionSigningKeys));
+
+            // Set the list of Strax Era mining keys.
+            this.StraxMiningMultisigMembers = new List<PubKey>()
+            {
+                new PubKey("02ace4fbe6a622cdfc922a447c3253e8635f3fecb69241f73629e6f0596a567907"),
+                new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
+                new PubKey("025cb67811d0922ca77fa33f19c3e5c37961f9639a1f0a116011b9075f6796abcb"),
+                new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
+                new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
+                new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
+                new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
+                new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92"),
+                new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),
+                new PubKey("03d8b5580b7ec709c006ef497327db27ea323bd358ca45412171c644214483b74f"),
+                new PubKey("02f40bd4f662ba20629a104115f0ac9ee5eab695716edfe01b240abf56e05797e2"),
+                new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
+                new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
+                new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
+                new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"),
+            };
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
-                maxStandardTxWeight: 100_000,
+                maxStandardTxWeight: 150_000,
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 genesisFederationMembers: genesisFederationMembers,
@@ -191,9 +176,10 @@ namespace Stratis.Sidechains.Networks
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
+                VotingManagerV2ActivationHeight = 0
             };
-
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
@@ -279,7 +265,8 @@ namespace Stratis.Sidechains.Networks
                 { 1100000, new CheckpointInfo(new uint256("0x7abc2882bcb5e9723ba71ff4155ed3c4006ee655e9f52f8787bcae31b4c796a8")) },
                 { 1200000, new CheckpointInfo(new uint256("0x8411b830270cc9d6c2e28de1c2e8025c57a5673835f63e30708967adfee5a92c")) },
                 { 1300000, new CheckpointInfo(new uint256("0x512c19a8245316b4d3b13513c7901f41842846f539f668ca4ac349daaab6dc20")) },
-                { 1400000, new CheckpointInfo(new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95")) }
+                { 1400000, new CheckpointInfo(new uint256("0xbfd4a96a6c5250f18bf7c586761256fa5f8753ffa10b24160f0648a452823a95")) },
+                { 1500000, new CheckpointInfo(new uint256("0x2a1602877a5231997654bae975223762ee636be2f371cb444b2d3fb564e6989e")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>
@@ -291,6 +278,8 @@ namespace Stratis.Sidechains.Networks
             {
                 new NetworkAddress(IPAddress.Parse("213.125.242.234"), 16179),
                 new NetworkAddress(IPAddress.Parse("45.58.55.21"), 16179),
+                new NetworkAddress(IPAddress.Parse("86.106.181.141"), 16179),
+                new NetworkAddress(IPAddress.Parse("51.195.136.221"), 16179)
             };
 
             this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();

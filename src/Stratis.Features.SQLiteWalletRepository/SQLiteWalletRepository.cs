@@ -66,6 +66,8 @@ namespace Stratis.Features.SQLiteWalletRepository
         // Metrics.
         internal Metrics Metrics;
 
+        public Func<string, string> Bech32AddressFunc { get; set; } = null;
+
         public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader)
         {
             this.TestMode = false;
@@ -281,9 +283,10 @@ namespace Stratis.Features.SQLiteWalletRepository
             walletContainer.WriteLockWait();
 
             DBConnection conn = walletContainer.Conn;
-            conn.BeginTransaction();
             try
             {
+                conn.BeginTransaction();
+
                 // Add the UTXOs being freed up. If rewinding to start there will be nothing to add.
                 if (lastBlockSynced != null)
                     walletContainer.TransactionsOfInterest.AddSpendableTransactions(wallet.WalletId, fromBlock: lastBlockSynced.Height);
@@ -296,8 +299,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 else
                     this.logger.LogDebug("Wallet '{0}' rewound to height '{1}'.", walletName, lastBlockSynced);
 
-                walletContainer.WriteLockRelease();
-
                 return (true, res.Select(i => (uint256.Parse(i.txId), DateTimeOffset.FromUnixTimeSeconds(i.creationTime))).ToList());
             }
             catch (Exception ex)
@@ -309,10 +310,13 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 this.logger.LogError(ex.ToString());
 
-                walletContainer.WriteLockRelease();
                 conn.Rollback();
 
                 throw;
+            }
+            finally
+            {
+                walletContainer.WriteLockRelease();
             }
         }
 
@@ -478,10 +482,11 @@ namespace Stratis.Features.SQLiteWalletRepository
             (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
             walletContainer.WriteLockWait();
-            conn.BeginTransaction();
 
             try
             {
+                conn.BeginTransaction();
+
                 IEnumerable<HDAccount> accounts = conn.GetAccounts(wallet.WalletId);
 
                 if (accounts.Any(a => a.ExtPubKey != null && ExtPubKey.Parse(a.ExtPubKey) == extPubKey))
@@ -502,35 +507,41 @@ namespace Stratis.Features.SQLiteWalletRepository
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(wallet.WalletId, accountIndex);
-                walletContainer.WriteLockRelease();
 
                 return this.ToHdAccount(account);
             }
             catch (Exception)
             {
-                walletContainer.WriteLockRelease();
                 conn.Rollback();
                 throw;
             }
+            finally
+            {
+                walletContainer.WriteLockRelease();
+            }
         }
 
-        internal HDAddress CreateAddress(HDAccount account, int addressType, int addressIndex)
+        internal HDAddress CreateAddress(HDAccount account, int addressType, int addressIndex, PubKey pubKey = null)
         {
-            // Retrieve the pubkey associated with the private key of this address index.
-            var keyPath = new KeyPath($"{addressType}/{addressIndex}");
-
-            Script pubKeyScript = null;
-            Script scriptPubKey = null;
-            Script bech32ScriptPubKey = null;
-
             if (account.ExtPubKey != null)
             {
+                if (pubKey != null && !this.TestMode)
+                    throw new NotSupportedException($"The '{nameof(pubKey)} argument is only supported with a watchonly accounts.");
+
+                // Retrieve the pubkey associated with the private key of this address index.
+                var keyPath = new KeyPath($"{addressType}/{addressIndex}");
                 ExtPubKey extPubKey = account.GetExtPubKey(this.Network).Derive(keyPath);
-                PubKey pubKey = extPubKey.PubKey;
-                pubKeyScript = pubKey.ScriptPubKey;
-                scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
-                bech32ScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+                pubKey = extPubKey.PubKey;
             }
+            else
+            {
+                if (pubKey == null)
+                    throw new NotSupportedException($"The '{nameof(pubKey)} argument is required for watchonly accounts.");
+            }
+
+            Script pubKeyScript = pubKey.ScriptPubKey;
+            Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+            Script bech32ScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
             // Add the new address details to the list of addresses.
             return new HDAddress()
@@ -550,12 +561,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         public void AddWatchOnlyTransactions(string walletName, string accountName, HdAddress address, ICollection<TransactionData> transactions, bool force = false)
         {
             WalletContainer walletContainer = this.GetWalletContainer(walletName);
-            (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
+            DBConnection conn = walletContainer.Conn;
 
             walletContainer.WriteLockWait();
-            conn.BeginTransaction();
             try
             {
+                conn.BeginTransaction();
+
                 HDAccount account = conn.GetAccountByName(walletName, accountName);
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Transactions can only be added to watch-only addresses.");
@@ -564,13 +576,16 @@ namespace Stratis.Features.SQLiteWalletRepository
                 conn.Commit();
 
                 walletContainer.TransactionsOfInterest.AddSpendableTransactions(account.WalletId, account.AccountIndex);
-                walletContainer.WriteLockRelease();
             }
             catch (Exception)
             {
-                walletContainer.WriteLockRelease();
                 conn.Rollback();
+
                 throw;
+            }
+            finally 
+            {
+                walletContainer.WriteLockRelease();
             }
         }
 
@@ -588,7 +603,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Addresses can only be added to watch-only accounts.");
 
-                conn.AddAdresses(account, addressType, addresses);
+                conn.CreateWatchOnlyAddresses(account, addressType, addresses, force);
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex);
@@ -648,9 +663,9 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             WalletContainer walletContainer = GetWalletContainer(accountReference.WalletName);
 
-            walletContainer.WriteLockWait();
-
             DBConnection conn = walletContainer.Conn;
+
+            walletContainer.WriteLockWait();
 
             try
             {
@@ -685,6 +700,55 @@ namespace Stratis.Features.SQLiteWalletRepository
                         conn.Rollback();
                         throw;
                     }
+                }
+
+                return addresses.Select(a => this.ToHdAddress(a, this.Network));
+            }
+            finally
+            {
+                walletContainer.WriteLockRelease();
+            }
+        }
+
+        public IEnumerable<HdAddress> GetNewAddresses(WalletAccountReference accountReference, int count, bool isChange = false)
+        {
+            WalletContainer walletContainer = GetWalletContainer(accountReference.WalletName);
+
+            DBConnection conn = walletContainer.Conn;
+
+            walletContainer.WriteLockWait();
+
+            try
+            {
+                HDAccount account = conn.GetAccountByName(accountReference.WalletName, accountReference.AccountName);
+
+                if (account == null)
+                    throw new WalletException($"Account '{accountReference.AccountName}' of wallet '{accountReference.WalletName}' does not exist.");
+
+                var addresses = new List<HDAddress>();
+
+                conn.BeginTransaction();
+                try
+                {
+                    var tracker = new TopUpTracker(conn, account.WalletId, account.AccountIndex, isChange ? 1 : 0);
+                    tracker.ReadAccount();
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        AddressIdentifier addressIdentifier = tracker.CreateAddress();
+                        HDAddress address = this.CreateAddress(account, (int)addressIdentifier.AddressType, (int)addressIdentifier.AddressIndex);
+                        conn.Insert(address);
+                        addresses.Add(address);
+                    }
+
+                    walletContainer.AddressesOfInterest.AddAll(account.WalletId, account.AccountIndex, isChange ? 1 : 0);
+
+                    conn.Commit();
+                }
+                catch (Exception)
+                {
+                    conn.Rollback();
+                    throw;
                 }
 
                 return addresses.Select(a => this.ToHdAddress(a, this.Network));
@@ -1525,11 +1589,23 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 if (!addressDict.TryGetValue(addressIdentifier, out HdAddress hdAddress))
                 {
-                    ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+                    string pubKeyHex = null;
 
-                    var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+                    if (hdAccount.ExtendedPubKey != null)
+                    {
+                        ExtPubKey extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
 
-                    PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+                        var keyPath = new KeyPath($"{tranData.AddressType}/{tranData.AddressIndex}");
+
+                        PubKey pubKey = extPubKey.Derive(keyPath).PubKey;
+
+                        pubKeyHex = pubKey.ScriptPubKey.ToHex();
+                    }
+                    else
+                    {
+                        // If it is a watch only account we have limited information available.
+                        pubKeyHex = addressIdentifier.PubKeyScript;
+                    }
 
                     hdAddress = this.ToHdAddress(new HDAddress()
                     {
@@ -1538,7 +1614,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         AddressType = (int)addressIdentifier.AddressType,
                         AddressIndex = (int)addressIdentifier.AddressIndex,
                         ScriptPubKey = addressIdentifier.ScriptPubKey,
-                        PubKey = pubKey.ScriptPubKey.ToHex(),
+                        PubKey = pubKeyHex,
                         Address = tranData.Address
                     }, this.Network);
 

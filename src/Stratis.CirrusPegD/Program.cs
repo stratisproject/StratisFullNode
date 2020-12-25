@@ -40,13 +40,6 @@ namespace Stratis.CirrusPegD
             { NetworkType.Regtest, CirrusNetwork.NetworksSelector.Regtest }
         };
 
-        private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
-        {
-            { NetworkType.Mainnet, Networks.Strax.Mainnet},
-            { NetworkType.Testnet, Networks.Strax.Testnet },
-            { NetworkType.Regtest, Networks.Strax.Regtest }
-        };
-
         private static void Main(string[] args)
         {
             RunFederationGatewayAsync(args).Wait();
@@ -115,10 +108,12 @@ namespace Stratis.CirrusPegD
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
-                .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
-                .UseFederatedPegPoAMining()
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+                .AddPoAFeature()
+                .UsePoAConsensus()
                 .AddFederatedPeg()
-                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
+                .AddPoACollateralMiningCapability()
+                .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()

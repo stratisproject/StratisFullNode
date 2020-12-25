@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Networks
             this.Magic = BitConverter.ToUInt32(Encoding.ASCII.GetBytes("RtrX"));
             this.DefaultPort = 37105;
             this.DefaultMaxOutboundConnections = 16;
-            this.DefaultMaxInboundConnections = 100;
+            this.DefaultMaxInboundConnections = 109;
             this.DefaultRPCPort = 37104;
             this.DefaultAPIPort = 37103;
             this.DefaultSignalRPort = 37102;
@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Networks
             var consensusOptions = new PosConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
-                maxStandardTxWeight: 100_000,
+                maxStandardTxWeight: 150_000,
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 witnessScaleFactor: 4

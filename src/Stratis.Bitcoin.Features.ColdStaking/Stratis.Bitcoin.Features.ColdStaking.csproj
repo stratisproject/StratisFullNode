@@ -3,11 +3,11 @@
 	<PropertyGroup>
 		<TargetFramework>netcoreapp3.1</TargetFramework>
 		<AssemblyName>Stratis.Bitcoin.Features.ColdStaking</AssemblyName>
-		<PackageId>Stratis.Bitcoin.Features.ColdStaking</PackageId>
+		<PackageId>Stratis.Features.ColdStaking</PackageId>
 		<GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
 		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
 		<GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-		<Version>3.0.8.0</Version>
+		<Version>1.0.5.0</Version>
 		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
 		<Authors>Stratis Group Ltd.</Authors>
 	</PropertyGroup>

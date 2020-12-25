@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using NBitcoin.Policy;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.PoA.Features.Voting;
@@ -14,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public const int VotingRequestExpectedInputCount = 1;
         public const int VotingRequestExpectedOutputCount = 2;
 
-        public static Transaction BuildTransaction(IWalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
+        public static JoinFederationRequestResult BuildTransaction(IWalletTransactionHandler walletTransactionHandler, Network network, JoinFederationRequest request, JoinFederationRequestEncoder encoder, string walletName, string walletAccount, string walletPassword)
         {
             byte[] encodedVotingRequest = encoder.Encode(request);
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedVotingRequest));
@@ -28,19 +29,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 Recipients = new[] { new Recipient { Amount = new Money(VotingRequestTransferAmount, MoneyUnit.BTC), ScriptPubKey = votingOutputScript } }.ToList()
             };
 
-            Transaction trx = walletTransactionHandler.BuildTransaction(context);
+            Transaction transaction = walletTransactionHandler.BuildTransaction(context);
 
-            Guard.Assert(IsVotingRequestTransaction(trx, encoder));
-            Guard.Assert(context.TransactionBuilder.Verify(trx, out _));
+            Guard.Assert(IsVotingRequestTransaction(transaction, encoder));
 
-            return trx;
+            if (context.TransactionBuilder.Verify(transaction, out TransactionPolicyError[] errors))
+                return new JoinFederationRequestResult() { Transaction = transaction };
+
+            return new JoinFederationRequestResult() { Errors = string.Join(" - ", errors.Select(s => s.ToString())) };
         }
 
         public static JoinFederationRequest Deconstruct(Transaction trx, JoinFederationRequestEncoder encoder)
         {
-            if (trx.Inputs.Count != VotingRequestExpectedInputCount)
-                return null;
-
             if (trx.Outputs.Count != VotingRequestExpectedOutputCount)
                 return null;
 
@@ -59,5 +59,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             return Deconstruct(trx, encoder) != null;
         }
+    }
+
+    public sealed class JoinFederationRequestResult
+    {
+        public Transaction Transaction { get; set; }
+        public string Errors { get; set; }
     }
 }

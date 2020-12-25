@@ -7,11 +7,11 @@ using NBitcoin;
 using NBitcoin.BuilderExtensions;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Bitcoin.Signals;
 
 [assembly: InternalsVisibleTo("Stratis.Bitcoin.Features.ColdStaking.Tests")]
 [assembly: InternalsVisibleTo("Stratis.Bitcoin.IntegrationTests")]
@@ -162,7 +162,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// </summary>
         /// <remarks>
         /// <para>In order to keep track of cold staking addresses and balances we are using <see cref="HdAccount"/>'s
-        /// with indexes starting from the value defined in <see cref="Wallet.Wallet.SpecialPurposeAccountIndexesStart"/>.
+        /// with indexes starting from the value defined in <see cref="Wallet.SpecialPurposeAccountIndexesStart"/>.
         /// </para><para>
         /// We are using two such accounts, one when the wallet is in the role of cold wallet, and another one when
         /// the wallet is in the role of hot wallet. For this reason we specify the required account when calling this
@@ -173,7 +173,6 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <returns>The cold staking account or <c>null</c> if the account does not exist.</returns>
         internal HdAccount GetColdStakingAccount(Wallet.Wallet wallet, bool isColdWalletAccount)
         {
-            var coinType = (CoinType)wallet.Network.Consensus.CoinType;
             HdAccount account = wallet.GetAccount(isColdWalletAccount ? ColdWalletAccountName : HotWalletAccountName);
             if (account == null)
             {
@@ -191,7 +190,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// </summary>
         /// <remarks>
         /// <para>In order to keep track of cold staking addresses and balances we are using <see cref="HdAccount"/>'s
-        /// with indexes starting from the value defined in <see cref="Wallet.Wallet.SpecialPurposeAccountIndexesStart"/>.
+        /// with indexes starting from the value defined in <see cref="Wallet.SpecialPurposeAccountIndexesStart"/>.
         /// </para><para>
         /// We are using two such accounts, one when the wallet is in the role of cold wallet, and another one when
         /// the wallet is in the role of hot wallet. For this reason we specify the required account when calling this
@@ -201,7 +200,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="isColdWalletAccount">Indicates whether we need the cold wallet account (versus the hot wallet account).</param>
         /// <param name="walletPassword">The wallet password which will be used to create the account.</param>
         /// <returns>The new or existing cold staking account.</returns>
-        internal HdAccount GetOrCreateColdStakingAccount(string walletName, bool isColdWalletAccount, string walletPassword)
+        internal HdAccount GetOrCreateColdStakingAccount(string walletName, bool isColdWalletAccount, string walletPassword, ExtPubKey extPubKey)
         {
             Wallet.Wallet wallet = this.GetWallet(walletName);
 
@@ -228,7 +227,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 accountName = HotWalletAccountName;
             }
 
-            account = wallet.AddNewAccount(walletPassword,  accountIndex, accountName, this.dateTimeProvider.GetTimeOffset());
+            if (extPubKey == null)
+                account = wallet.AddNewAccount(walletPassword, accountIndex, accountName, this.dateTimeProvider.GetTimeOffset());
+            else
+                account = wallet.AddNewAccount(extPubKey, accountIndex, accountName, this.dateTimeProvider.GetTimeOffset());
 
             this.logger.LogTrace("(-):'{0}'", account.Name);
             return account;
@@ -290,12 +292,31 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <param name="walletPassword">The wallet password.</param>
         /// <param name="amount">The amount to cold stake.</param>
         /// <param name="feeAmount">The fee to pay for the cold staking setup transaction.</param>
+        /// <param name="subtractFeeFromAmount">Whether the transaction fee should be subtracted from the amount being transferred into the cold staking account.</param>
+        /// <param name="offline">Whether the transaction should be left unsigned so that it can be transferred to an offline wallet for signing.</param>
+        /// <param name="splitCount">The number of UTXOs of similar value the setup transaction will be split into. Defaults to 1.</param>
         /// <param name="useSegwitChangeAddress">Use a segwit style change address.</param>
         /// <returns>The <see cref="Transaction"/> for setting up cold staking.</returns>
         /// <exception cref="WalletException">Thrown if any of the rules listed in the remarks section of this method are broken.</exception>
-        internal Transaction GetColdStakingSetupTransaction(IWalletTransactionHandler walletTransactionHandler,
+        internal (Transaction, TransactionBuildContext) GetColdStakingSetupTransaction(IWalletTransactionHandler walletTransactionHandler,
             string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
-            string walletPassword, Money amount, Money feeAmount, bool useSegwitChangeAddress = false)
+            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool offline, int splitCount, bool useSegwitChangeAddress = false)
+        {
+            TransactionBuildContext context = this.GetSetupTransactionBuildContext(walletTransactionHandler, coldWalletAddress, hotWalletAddress, walletName, walletAccount,
+                walletPassword, amount, feeAmount, subtractFeeFromAmount, offline, useSegwitChangeAddress, splitCount);
+
+            context.Sign = !offline;
+
+            // Build the transaction.
+            Transaction transaction = walletTransactionHandler.BuildTransaction(context);
+
+            this.logger.LogTrace("(-)");
+            return (transaction, context);
+        }
+
+        private TransactionBuildContext GetSetupTransactionBuildContext(IWalletTransactionHandler walletTransactionHandler,
+            string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
+            string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress, int splitCount, ExtPubKey extPubKey = null)
         {
             Guard.NotNull(walletTransactionHandler, nameof(walletTransactionHandler));
             Guard.NotEmpty(coldWalletAddress, nameof(coldWalletAddress));
@@ -303,50 +324,77 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Guard.NotEmpty(walletName, nameof(walletName));
             Guard.NotEmpty(walletAccount, nameof(walletAccount));
             Guard.NotNull(amount, nameof(amount));
-            Guard.NotNull(feeAmount, nameof(feeAmount));
 
             Wallet.Wallet wallet = this.GetWallet(walletName);
 
-            // Get/create the cold staking accounts.
-            HdAccount coldAccount = this.GetOrCreateColdStakingAccount(walletName, true, walletPassword);
-            HdAccount hotAccount = this.GetOrCreateColdStakingAccount(walletName, false, walletPassword);
+            KeyId hotPubKeyHash = null;
+            KeyId coldPubKeyHash = null;
 
-            HdAddress coldAddress = coldAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == coldWalletAddress || s.Bech32Address == coldWalletAddress);
-            HdAddress hotAddress = hotAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == hotWalletAddress || s.Bech32Address == hotWalletAddress);
-
-            bool thisIsColdWallet = coldAddress != null;
-            bool thisIsHotWallet = hotAddress != null;
-
-            this.logger.LogDebug("Local wallet '{0}' does{1} contain cold wallet address '{2}' and does{3} contain hot wallet address '{4}'.",
-                walletName, thisIsColdWallet ? "" : " NOT", coldWalletAddress, thisIsHotWallet ? "" : " NOT", hotWalletAddress);
-
-            if (thisIsColdWallet && thisIsHotWallet)
+            if (!offline)
             {
-                this.logger.LogTrace("(-)[COLDSTAKE_BOTH_HOT_AND_COLD]");
-                throw new WalletException("You can't use this wallet as both the hot wallet and cold wallet.");
-            }
+                // Get/create the cold staking accounts.
+                HdAccount coldAccount = this.GetOrCreateColdStakingAccount(walletName, true, walletPassword, extPubKey);
+                HdAccount hotAccount = this.GetOrCreateColdStakingAccount(walletName, false, walletPassword, extPubKey);
 
-            if (!thisIsColdWallet && !thisIsHotWallet)
-            {
-                this.logger.LogTrace("(-)[COLDSTAKE_ADDRESSES_NOT_IN_ACCOUNTS]");
-                throw new WalletException("The hot and cold wallet addresses could not be found in the corresponding accounts.");
-            }
+                HdAddress coldAddress = coldAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == coldWalletAddress || s.Bech32Address == coldWalletAddress);
+                HdAddress hotAddress = hotAccount?.ExternalAddresses.FirstOrDefault(s => s.Address == hotWalletAddress || s.Bech32Address == hotWalletAddress);
 
-            Script destination = null;
+                bool thisIsColdWallet = coldAddress != null;
+                bool thisIsHotWallet = hotAddress != null;
 
-            // Check if this is a segwit address
-            if (coldAddress?.Bech32Address == coldWalletAddress || hotAddress?.Bech32Address == hotWalletAddress)
-            {
-                KeyId hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
-                KeyId coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
-                destination = ColdStakingScriptTemplate.Instance.GenerateScriptPubKey(hotPubKeyHash, coldPubKeyHash);
+                this.logger.LogDebug("Local wallet '{0}' does{1} contain cold wallet address '{2}' and does{3} contain hot wallet address '{4}'.",
+                    walletName, thisIsColdWallet ? "" : " NOT", coldWalletAddress, thisIsHotWallet ? "" : " NOT", hotWalletAddress);
+
+                if (thisIsColdWallet && thisIsHotWallet)
+                {
+                    this.logger.LogTrace("(-)[COLDSTAKE_BOTH_HOT_AND_COLD]");
+                    throw new WalletException("You can't use this wallet as both the hot wallet and cold wallet.");
+                }
+
+                if (!thisIsColdWallet && !thisIsHotWallet)
+                {
+                    this.logger.LogTrace("(-)[COLDSTAKE_ADDRESSES_NOT_IN_ACCOUNTS]");
+                    throw new WalletException("The hot and cold wallet addresses could not be found in the corresponding accounts.");
+                }
+
+                // Check if this is a segwit address.
+                if (coldAddress?.Bech32Address == coldWalletAddress || hotAddress?.Bech32Address == hotWalletAddress)
+                {
+                    hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
+                    coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
+                }
+                else
+                {
+                    hotPubKeyHash = new BitcoinPubKeyAddress(hotWalletAddress, wallet.Network).Hash;
+                    coldPubKeyHash = new BitcoinPubKeyAddress(coldWalletAddress, wallet.Network).Hash;
+                }
             }
             else
             {
-                KeyId hotPubKeyHash = new BitcoinPubKeyAddress(hotWalletAddress, wallet.Network).Hash;
-                KeyId coldPubKeyHash = new BitcoinPubKeyAddress(coldWalletAddress, wallet.Network).Hash;
-                destination = ColdStakingScriptTemplate.Instance.GenerateScriptPubKey(hotPubKeyHash, coldPubKeyHash);
+                // In offline mode we relax all the restrictions to enable simpler setup. The user should ensure they are using separate wallets, or the cold private key could be inadvertently loaded on the online node.
+                IDestination hot = BitcoinAddress.Create(hotWalletAddress, this.network);
+                IDestination cold = BitcoinAddress.Create(coldWalletAddress, this.network);
+
+                if (hot is BitcoinPubKeyAddress && cold is BitcoinPubKeyAddress)
+                {
+                    hotPubKeyHash = new BitcoinPubKeyAddress(hotWalletAddress, wallet.Network).Hash;
+                    coldPubKeyHash = new BitcoinPubKeyAddress(coldWalletAddress, wallet.Network).Hash;
+                }
+
+                if (hot is BitcoinWitPubKeyAddress && cold is BitcoinWitPubKeyAddress)
+                {
+                    hotPubKeyHash = new BitcoinWitPubKeyAddress(hotWalletAddress, wallet.Network).Hash.AsKeyId();
+                    coldPubKeyHash = new BitcoinWitPubKeyAddress(coldWalletAddress, wallet.Network).Hash.AsKeyId();
+                }
             }
+
+            if (hotPubKeyHash == null || coldPubKeyHash == null)
+            {
+                this.logger.LogTrace("(-)[PUBKEYHASH_NOT_AVAILABLE]");
+                throw new WalletException($"Unable to compute the needed hashes from the given addresses.");
+            }
+
+            Script destination = ColdStakingScriptTemplate.Instance.GenerateScriptPubKey(hotPubKeyHash, coldPubKeyHash);
 
             // Only normal accounts should be allowed.
             if (!this.GetAccounts(walletName).Any(a => a.Name == walletAccount))
@@ -354,6 +402,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 this.logger.LogTrace("(-)[COLDSTAKE_ACCOUNT_NOT_FOUND]");
                 throw new WalletException($"Can't find wallet account '{walletAccount}'.");
             }
+
+            List<Recipient> recipients = GetRecipients(destination, amount, subtractFeeFromAmount, splitCount);
 
             var context = new TransactionBuildContext(wallet.Network)
             {
@@ -363,17 +413,49 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 Shuffle = false,
                 UseSegwitChangeAddress = useSegwitChangeAddress,
                 WalletPassword = walletPassword,
-                Recipients = new List<Recipient>() { new Recipient { Amount = amount, ScriptPubKey = destination } }
+                Recipients = recipients
             };
 
             // Register the cold staking builder extension with the transaction builder.
             context.TransactionBuilder.Extensions.Add(new ColdStakingBuilderExtension(false));
 
-            // Build the transaction.
-            Transaction transaction = walletTransactionHandler.BuildTransaction(context);
+            return context;
+        }
 
-            this.logger.LogTrace("(-)");
-            return transaction;
+        private List<Recipient> GetRecipients(Script destination, Money overallAmount, bool subtractFeeFromAmount, int splitCount)
+        {
+            var recipients = new List<Recipient>();
+
+            Money moneyPerRecipient = overallAmount / splitCount;
+
+            while (recipients.Count < splitCount)
+            {
+                recipients.Add(new Recipient
+                {
+                    Amount = moneyPerRecipient,
+                    ScriptPubKey = destination,
+                    SubtractFeeFromAmount = false
+                });
+            }
+
+            if (recipients.Count == 0)
+                throw new WalletException($"Couldn't construct recipients list.");
+
+            recipients.Last().SubtractFeeFromAmount = subtractFeeFromAmount;
+
+            return recipients;
+        }
+
+        internal Money EstimateSetupTransactionFee(IWalletTransactionHandler walletTransactionHandler,
+            string coldWalletAddress, string hotWalletAddress, string walletName, string walletAccount,
+            string walletPassword, Money amount, bool subtractFeeFromAmount, bool offline, bool useSegwitChangeAddress, int splitCount)
+        {
+            TransactionBuildContext context = this.GetSetupTransactionBuildContext(walletTransactionHandler, coldWalletAddress, hotWalletAddress, walletName, walletAccount,
+                walletPassword, amount, null, subtractFeeFromAmount, offline, useSegwitChangeAddress, splitCount);
+
+            Money estimatedFee = walletTransactionHandler.EstimateFee(context);
+
+            return estimatedFee;
         }
 
         /// <summary>
@@ -392,12 +474,49 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <exception cref="WalletException">Thrown if the receiving address is in a cold staking account in this wallet.</exception>
         /// <exception cref="ArgumentNullException">Thrown if the receiving address is invalid.</exception>
         internal Transaction GetColdStakingWithdrawalTransaction(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
-            string walletName, string walletPassword, Money amount, Money feeAmount)
+            string walletName, string walletPassword, Money amount, Money feeAmount, bool subtractFeeFromAmount)
+        {
+            (TransactionBuildContext context, HdAccount coldAccount, Script destination) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, feeAmount, subtractFeeFromAmount);
+
+            // Build the withdrawal transaction according to the settings recorded in the context.
+            Transaction transaction = walletTransactionHandler.BuildTransaction(context);
+
+            // Map OutPoint to UnspentOutputReference.
+            var accountReference = new WalletAccountReference(walletName, coldAccount.Name);
+            Dictionary<OutPoint, UnspentOutputReference> mapOutPointToUnspentOutput = this.GetSpendableTransactionsInAccount(accountReference)
+                .ToDictionary(unspent => unspent.ToOutPoint(), unspent => unspent);
+
+            // Set the cold staking scriptPubKey on the change output.
+            TxOut changeOutput = transaction.Outputs.SingleOrDefault(output => (output.ScriptPubKey != destination) && (output.Value != 0));
+            if (changeOutput != null)
+            {
+                // Find the largest input.
+                TxIn largestInput = transaction.Inputs.OrderByDescending(input => mapOutPointToUnspentOutput[input.PrevOut].Transaction.Amount).Take(1).Single();
+
+                // Set the scriptPubKey of the change output to the scriptPubKey of the largest input.
+                changeOutput.ScriptPubKey = mapOutPointToUnspentOutput[largestInput.PrevOut].Transaction.ScriptPubKey;
+            }
+
+            Wallet.Wallet wallet = this.GetWallet(walletName);
+
+            // Add keys for signing inputs. This takes time so only add keys for distinct addresses.
+            foreach (HdAddress address in transaction.Inputs.Select(i => mapOutPointToUnspentOutput[i.PrevOut].Address).Distinct())
+            {
+                context.TransactionBuilder.AddKeys(wallet.GetExtendedPrivateKeyForAddress(walletPassword, address));
+            }
+
+            // Sign the transaction.
+            context.TransactionBuilder.SignTransactionInPlace(transaction);
+
+            this.logger.LogTrace("(-):'{0}'", transaction.GetHash());
+            return transaction;
+        }
+
+        private (TransactionBuildContext, HdAccount, Script) GetWithdrawalTransactionBuildContext(string receivingAddress, string walletName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
         {
             Guard.NotEmpty(receivingAddress, nameof(receivingAddress));
             Guard.NotEmpty(walletName, nameof(walletName));
             Guard.NotNull(amount, nameof(amount));
-            Guard.NotNull(feeAmount, nameof(feeAmount));
 
             Wallet.Wallet wallet = this.GetWallet(walletName);
 
@@ -441,13 +560,13 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             {
                 AccountReference = accountReference,
                 // Specify a dummy change address to prevent a change (internal) address from being created.
-                // Will be changed after the transacton is built and before it is signed.
+                // Will be changed after the transaction is built and before it is signed.
                 ChangeAddress = coldAccount.ExternalAddresses.First(),
                 TransactionFee = feeAmount,
                 MinConfirmations = 0,
                 Shuffle = false,
                 Sign = false,
-                Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destination } }.ToList()
+                Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destination, SubtractFeeFromAmount = subtractFeeFromAmount } }.ToList()
             };
 
             // Register the cold staking builder extension with the transaction builder.
@@ -456,35 +575,17 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             // Avoid script errors due to missing scriptSig.
             context.TransactionBuilder.StandardTransactionPolicy.ScriptVerify = null;
 
-            // Build the transaction according to the settings recorded in the context.
-            Transaction transaction = walletTransactionHandler.BuildTransaction(context);
+            return (context, coldAccount, destination);
+        }
 
-            // Map OutPoint to UnspentOutputReference.
-            Dictionary<OutPoint, UnspentOutputReference> mapOutPointToUnspentOutput = this.GetSpendableTransactionsInAccount(accountReference)
-                .ToDictionary(unspent => unspent.ToOutPoint(), unspent => unspent);
+        internal Money EstimateWithdrawalTransactionFee(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
+            string walletName, Money amount, bool subtractFeeFromAmount)
+        {
+            (TransactionBuildContext context, _, _) = this.GetWithdrawalTransactionBuildContext(receivingAddress, walletName, amount, null, subtractFeeFromAmount);
 
-            // Set the cold staking scriptPubKey on the change output.
-            TxOut changeOutput = transaction.Outputs.SingleOrDefault(output => (output.ScriptPubKey != destination) && (output.Value != 0));
-            if (changeOutput != null)
-            {
-                // Find the largest input.
-                TxIn largestInput = transaction.Inputs.OrderByDescending(input => mapOutPointToUnspentOutput[input.PrevOut].Transaction.Amount).Take(1).Single();
+            Money estimatedFee = walletTransactionHandler.EstimateFee(context);
 
-                // Set the scriptPubKey of the change output to the scriptPubKey of the largest input.
-                changeOutput.ScriptPubKey = mapOutPointToUnspentOutput[largestInput.PrevOut].Transaction.ScriptPubKey;
-            }
-
-            // Add keys for signing inputs. This takes time so only add keys for distinct addresses.
-            foreach (HdAddress address in transaction.Inputs.Select(i => mapOutPointToUnspentOutput[i.PrevOut].Address).Distinct())
-            {
-                context.TransactionBuilder.AddKeys(wallet.GetExtendedPrivateKeyForAddress(walletPassword, address));
-            }
-
-            // Sign the transaction.
-            context.TransactionBuilder.SignTransactionInPlace(transaction);
-
-            this.logger.LogTrace("(-):'{0}'", transaction.GetHash());
-            return transaction;
+            return estimatedFee;
         }
 
         /// <summary>

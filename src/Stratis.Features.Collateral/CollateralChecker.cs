@@ -15,7 +15,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
 {
@@ -279,11 +279,17 @@ namespace Stratis.Features.Collateral
             {
                 if (fedMemberAdded.AddedMember is CollateralFederationMember collateralFederationMember)
                 {
-                    this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
-                    if (!string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
-                        this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
-                    else
+                    if (string.IsNullOrEmpty(collateralFederationMember.CollateralMainchainAddress))
+                    {
                         this.logger.LogDebug("(-)[NO_COLLATERAL_ADDRESS]:{0}='{1}'", nameof(fedMemberAdded.AddedMember.PubKey), fedMemberAdded.AddedMember.PubKey);
+                        return;
+                    }
+
+                    if (!this.balancesDataByAddress.ContainsKey(collateralFederationMember.CollateralMainchainAddress))
+                    {
+                        this.logger.LogDebug("Adding federation member '{0}' with collateral address '{1}'.", collateralFederationMember.PubKey, collateralFederationMember.CollateralMainchainAddress);
+                        this.balancesDataByAddress.Add(collateralFederationMember.CollateralMainchainAddress, null);
+                    }
                 }
                 else
                 {

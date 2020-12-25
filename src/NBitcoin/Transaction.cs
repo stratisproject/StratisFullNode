@@ -1644,9 +1644,15 @@ namespace NBitcoin
             return GetFormatter(format, network).ParseJson(tx);
         }
 
+        /// <remarks>Note that this does not accept a ProtocolVersion parameter so care needs to be taken that the default version is acceptable.</remarks>
         public string ToHex()
         {
             return Encoders.Hex.EncodeData(this.ToBytes());
+        }
+
+        public string ToHex(ProtocolVersion protocolVersion)
+        {
+            return Encoders.Hex.EncodeData(this.ToBytes(protocolVersion));
         }
 
         public override string ToString()
