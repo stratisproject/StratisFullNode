@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security;
 using Moq;
 using NBitcoin;
@@ -151,7 +152,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
             });
 
             Assert.Contains("Staking cannot start", exception.Message);
-            this.posMinting.Verify(pm => pm.Stake(It.IsAny<WalletSecret>()), Times.Never);
+            this.posMinting.Verify(pm => pm.Stake(It.IsAny<List<WalletSecret>>()), Times.Never);
         }
 
         [Fact]
@@ -166,7 +167,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
             bool result = this.stakingRpcController.StartStaking("myWallet", "password1");
 
             Assert.True(result);
-            this.posMinting.Verify(p => p.Stake(It.Is<WalletSecret>(s => s.WalletName == "myWallet" && s.WalletPassword == "password1")), Times.Exactly(1));
+            this.posMinting.Verify(p => p.Stake(It.Is<List<WalletSecret>>(s => s.First().WalletName == "myWallet" && s.First().WalletPassword == "password1")), Times.Exactly(1));
         }
 
         [Fact]

@@ -202,7 +202,13 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Miner A stakes a coin that increases the network height to 56.
                 var minter = minerA.FullNode.NodeService<IPosMinting>();
-                minter.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
+                minter.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
 
                 Assert.True(TestHelper.IsNodeSyncedAtHeight(minerA, 56));
 
@@ -557,13 +563,25 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Miner A stakes one coin.
                 var minterA = minerA.FullNode.NodeService<IPosMinting>();
-                minterA.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
+                minterA.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
                 TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations * 2 + 5));
                 minterA.StopStake();
 
                 TestHelper.MineBlocks(minerB, 2); // this will push minerB total work to be highest
                 var minterB = minerB.FullNode.NodeService<IPosMinting>();
-                minterB.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
+                minterB.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
                 TestBase.WaitLoop(() => minerB.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations * 2 + 7));
                 minterB.StopStake();
 
@@ -603,13 +621,25 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Miner A stakes one coin.
                 var minterA = minerA.FullNode.NodeService<IPosMinting>();
-                minterA.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
+                minterA.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
                 TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations + 3));
                 minterA.StopStake();
 
                 TestHelper.MineBlocks(minerB, 2); // this will push minerB total work to be highest
                 var minterB = minerB.FullNode.NodeService<IPosMinting>();
-                minterB.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
+                minterB.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
                 TestBase.WaitLoop(() => minerB.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations + 5));
                 minterB.StopStake();
 
@@ -649,14 +679,26 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // Miner A stakes one coin. (height 13)
                 var minterA = minerA.FullNode.NodeService<IPosMinting>();
                 var minterAHeigh = minerA.FullNode.ConsensusManager().Tip.Height;
-                minterA.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
+                minterA.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
                 Assert.True(TestHelper.IsNodeSyncedAtHeight(minerA, minterAHeigh + 1));
 
                 minterA.StopStake();
 
                 var minterB = minerB.FullNode.NodeService<IPosMinting>();
                 var minterBHeigh = minerB.FullNode.ConsensusManager().Tip.Height;
-                minterB.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
+                minterB.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
                 Assert.True(TestHelper.IsNodeSyncedAtHeight(minerB, minterBHeigh + 1));
 
                 minterB.StopStake();
