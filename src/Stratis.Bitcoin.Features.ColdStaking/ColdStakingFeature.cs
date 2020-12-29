@@ -115,6 +115,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             this.nodeSettings = nodeSettings;
             this.walletSettings = walletSettings;
 
+            // The wallet feature displays these.
             //nodeStats.RemoveStats(StatsType.Component, typeof(WalletFeature).Name);
             //nodeStats.RemoveStats(StatsType.Inline, typeof(WalletFeature).Name);
 
@@ -162,7 +163,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             if (walletNames.Any())
             {
                 benchLog.AppendLine();
-                benchLog.AppendLine("======Wallets123======");
+                benchLog.AppendLine("======Wallets======");
 
                 foreach (string walletName in walletNames)
                 {

@@ -279,6 +279,80 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     .GetJsonAsync<Dictionary<string, int>>();
 
                 Assert.True(txCountAfter.Values.First() > 0);
+
+                string onlineNodeUnusedAddress = await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("wallet/unusedaddress")
+                    .SetQueryParams(new { walletName = "hotwallet", accountName = "account 0" })
+                    .GetJsonAsync<string>();
+
+                // Now attempt a withdrawal. First get the estimated fee.
+                Money offlineWithdrawalFee = await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("coldstaking/estimate-offline-cold-staking-withdrawal-tx-fee")
+                    .PostJsonAsync(new OfflineColdStakingWithdrawalFeeEstimationRequest()
+                    {
+                        WalletName = "hotwallet",
+                        AccountName = hotAccount.AccountName,
+                        ReceivingAddress = onlineNodeUnusedAddress,
+                        Amount = "4", // Withdraw part of the available balance in the cold account.
+                        SubtractFeeFromAmount = true
+                    })
+                    .ReceiveJson<Money>();
+
+                // Now generate the actual unsigned template transaction.
+                BuildOfflineSignResponse offlineWithdrawalTemplate = await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("coldstaking/offline-cold-staking-withdrawal")
+                    .PostJsonAsync(new OfflineColdStakingWithdrawalRequest()
+                    {
+                        WalletName = "hotwallet",
+                        AccountName = hotAccount.AccountName,
+                        ReceivingAddress = onlineNodeUnusedAddress,
+                        Amount = "4", // Withdraw part of the available balance in the cold account.
+                        Fees = offlineWithdrawalFee.ToString(),
+                        SubtractFeeFromAmount = true
+                    })
+                    .ReceiveJson<BuildOfflineSignResponse>();
+
+                WalletBuildTransactionModel builtWithdrawalTransactionModel = await $"http://localhost:{offlineNode.ApiPort}/api"
+                    .AppendPathSegment("wallet/offline-sign-request")
+                    .PostJsonAsync(new OfflineSignRequest()
+                    {
+                        WalletName = "mywallet",
+                        WalletAccount = "coldStakingColdAddresses",
+                        WalletPassword = "password",
+                        UnsignedTransaction = offlineWithdrawalTemplate.UnsignedTransaction,
+                        Fee = offlineWithdrawalTemplate.Fee,
+                        Utxos = offlineWithdrawalTemplate.Utxos,
+                        Addresses = offlineWithdrawalTemplate.Addresses
+                    })
+                    .ReceiveJson<WalletBuildTransactionModel>();
+
+                Dictionary<string, int> txCountBefore2 = await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("wallet/transactionCount")
+                    .SetQueryParams(new { walletName = "hotwallet", accountName = "account 0" })
+                    .GetJsonAsync<Dictionary<string, int>>();
+
+                Assert.True(txCountBefore2.Values.First() == 0);
+
+                // Send the signed transaction from the online node (doesn't really matter, could equally be from the mining node).
+                await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("wallet/send-transaction")
+                    .PostJsonAsync(new SendTransactionRequest
+                    {
+                        Hex = builtWithdrawalTransactionModel.Hex
+                    })
+                    .ReceiveJson<WalletSendTransactionModel>();
+
+                // Check that the transaction is valid and therefore relayed, and able to be mined into a block.
+                TestBase.WaitLoop(() => miningNode.CreateRPCClient().GetRawMempool().Length == 1);
+                TestHelper.MineBlocks(miningNode, 1);
+                TestBase.WaitLoop(() => miningNode.CreateRPCClient().GetRawMempool().Length == 0);
+
+                Dictionary<string, int> txCountAfter2 = await $"http://localhost:{onlineNode.ApiPort}/api"
+                    .AppendPathSegment("wallet/transactionCount")
+                    .SetQueryParams(new { walletName = "hotwallet", accountName = "account 0" })
+                    .GetJsonAsync<Dictionary<string, int>>();
+
+                Assert.True(txCountAfter2.Values.First() > 0);
             }
         }
     }

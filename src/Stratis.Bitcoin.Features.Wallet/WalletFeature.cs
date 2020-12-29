@@ -104,6 +104,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         private void AddComponentStats(StringBuilder log)
         {
             List<string> walletNamesSQL = this.walletRepository.GetWalletNames();
+            List<string> watchOnlyWalletNames = this.walletManager.GetWatchOnlyWalletsNames().ToList();
 
             if (walletNamesSQL.Any())
             {
@@ -114,10 +115,12 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 foreach (string walletName in walletNamesSQL)
                 {
+                    string watchOnly = (watchOnlyWalletNames.Contains(walletName)) ? "(W) " : "";
+
                     foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
                     {
                         log.AppendLine(
-                            ($"{walletName}/{accountBalance.Account.Name}" + ",").PadRight(
+                            ($"{watchOnly}{walletName}/{accountBalance.Account.Name}" + ",").PadRight(
                                 LoggingConfiguration.ColumnLength + 10)
                             + (" Confirmed balance: " + accountBalance.AmountConfirmed.ToString()).PadRight(
                                 LoggingConfiguration.ColumnLength + 20)

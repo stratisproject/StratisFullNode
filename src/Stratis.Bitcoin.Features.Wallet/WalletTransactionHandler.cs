@@ -19,7 +19,6 @@ namespace Stratis.Bitcoin.Features.Wallet
     /// This will uses the <see cref="IWalletFeePolicy" /> and the <see cref="TransactionBuilder" />.
     /// TODO: Move also the broadcast transaction to this class
     /// TODO: Implement lockUnspents
-    /// TODO: Implement subtractFeeFromOutputs
     /// </remarks>
     public class WalletTransactionHandler : IWalletTransactionHandler
     {
@@ -294,11 +293,18 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <summary>
-        /// Find the next available change address.
+        /// Find the next available change address, or set it to the provided value if applicable.
         /// </summary>
         /// <param name="context">The context associated with the current transaction being built.</param>
         protected void FindChangeAddress(TransactionBuildContext context)
         {
+            if (context.ChangeScript != null)
+            {
+                context.TransactionBuilder.SetChange(context.ChangeScript);
+                
+                return;
+            }
+
             if (context.ChangeAddress == null)
             {
                 // If no change address is supplied, get a new address to send the change to.
@@ -579,10 +585,16 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// The change address, where any remaining funds will be sent to.
         /// </summary>
         /// <remarks>
-        /// A Bitcoin has to spend the entire UTXO, if total value is greater then the send target
-        /// the rest of the coins go in to a change address that is under the senders control.
+        /// A transaction has to spend the entire UTXO provided as an input, if total value of the inputs is greater then the send target,
+        /// the rest of the coins go in to a change output with an address that is typically under the sender's control.
         /// </remarks>
         public HdAddress ChangeAddress { get; set; }
+
+        // TODO: Investigate whether ChangeAddress actually needs to be an HdAddress at all
+        /// <summary>
+        /// If specified, this takes precedence over the ChangeAddress as it does not require the address to actually be present in the wallet account.
+        /// </summary>
+        public Script ChangeScript { get; set; }
 
         /// <summary>
         /// The total fee on the transaction.
