@@ -55,6 +55,7 @@ namespace Stratis.Sidechains.Networks
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+            this.InteroperabilityDummyAddress = "P9m5PjBxnfL2kP3UY19pgdSQxUPgWFhSE7";
 
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 

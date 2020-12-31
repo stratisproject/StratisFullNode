@@ -144,6 +144,7 @@ namespace Stratis.Features.FederatedPeg
             this.MinimumConfirmationsNormalDeposits = configReader.GetOrDefault(MinimumConfirmationsNormalDepositsParam, 80);
             this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
+            this.MinimumConfirmationsConversionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
@@ -161,6 +162,8 @@ namespace Stratis.Features.FederatedPeg
         public int MinimumConfirmationsLargeDeposits { get; }
 
         public int MinimumConfirmationsDistributionDeposits { get; }
+
+        public int MinimumConfirmationsConversionDeposits { get; }
 
         /// <inheritdoc />
         public Money SmallDepositThresholdAmount { get; }

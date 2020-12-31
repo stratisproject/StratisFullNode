@@ -80,6 +80,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             DepositRetrievalType depositRetrievalType;
             if (targetAddress == this.network.CirrusRewardDummyAddress)
                 depositRetrievalType = DepositRetrievalType.Distribution;
+            else if (targetAddress == this.network.InteroperabilityDummyAddress)
+                depositRetrievalType = DepositRetrievalType.Conversion;
             else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                 depositRetrievalType = DepositRetrievalType.Large;
             else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)

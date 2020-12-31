@@ -27,6 +27,8 @@ namespace Stratis.Bitcoin.Configuration
             this.AddressManagerFilePath = path;
             this.ChainPath = Path.Combine(path, "chain");
             this.KeyValueRepositoryPath = Path.Combine(path, "common");
+            this.InteropRepositoryPath = Path.Combine(path, "interop");
+            this.ConversionRepositoryPath = Path.Combine(path, "conversion");
             this.BlockPath = Path.Combine(path, "blocks");
             this.PollsPath = Path.Combine(path, "polls");
             this.IndexPath = Path.Combine(path, "index");
@@ -58,6 +60,10 @@ namespace Stratis.Bitcoin.Configuration
 
         /// <summary>Path to the folder with separated key-value items managed by <see cref="IKeyValueRepository"/>.</summary>
         public string KeyValueRepositoryPath { get; internal set; }
+
+        public string InteropRepositoryPath { get; internal set; }
+
+        public string ConversionRepositoryPath { get; internal set; }
 
         /// <summary>Path to the folder with block repository database files.</summary>
         /// <seealso cref="Features.BlockStore.BlockRepository.BlockRepository"/>

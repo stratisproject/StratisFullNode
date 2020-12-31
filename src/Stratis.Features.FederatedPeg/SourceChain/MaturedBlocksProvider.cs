@@ -68,7 +68,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             };
 
             if (this.federatedPegSettings.IsMainChain)
+            {
                 this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.Conversion] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+            }
         }
 
         /// <inheritdoc />
@@ -196,13 +199,14 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposits"/> confirmations (blocks).
     /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposits"/>) confirmations (blocks).
     /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposits"/>) confirmations (blocks).
-    /// Similarly, reward distribution deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
+    /// Similarly, reward distribution and conversion deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
     /// </summary>
     public enum DepositRetrievalType
     {
         Small,
         Normal,
         Large,
-        Distribution
+        Distribution,
+        Conversion
     }
 }
