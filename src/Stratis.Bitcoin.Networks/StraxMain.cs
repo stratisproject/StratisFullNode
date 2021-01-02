@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka"; // Cirrus main address
+            this.RewardClaimerBatchActivationHeight = 111_615; // Friday 8 January 2021 09:00 GMT (Estimated)
+            this.RewardClaimerBlockInterval = 100;
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
