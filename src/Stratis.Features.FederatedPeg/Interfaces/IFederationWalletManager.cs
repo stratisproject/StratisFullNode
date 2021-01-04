@@ -60,7 +60,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="blockHash">The hash of the block this transaction came from. Null if it was not a transaction included in a block.</param>
         /// <param name="block">The block in which this transaction was included.</param>
         /// <returns>A value indicating whether this transaction affects the wallet.</returns>
-        bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null, bool isDistribution = false);
+        bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null);
 
         /// <summary>
         /// Verifies that the transaction's input UTXO's have been reserved by the wallet.
