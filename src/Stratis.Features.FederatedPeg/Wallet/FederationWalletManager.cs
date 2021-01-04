@@ -530,16 +530,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     foundSendingTrx = true;
                 }
 
-                // Figure out what to do when this transaction is found to affect the wallet.
-                if (foundSendingTrx || foundReceivingTrx)
-                {
-                    // Save the wallet when the transaction was not included in a block.
-                    //if (blockHeight == null)
-                    //{
-                    //this.SaveWallet();
-                    //}
-                }
-
                 return foundSendingTrx || foundReceivingTrx;
             }
         }

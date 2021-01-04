@@ -53,6 +53,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
 
         /// <summary>
         /// Processes a transaction received from the network.
+        /// <para>The caller should be responsible for saving the wallet if it has been updated.</para>
         /// </summary>
         /// <param name="transaction">The transaction.</param>
         /// <param name="blockHeight">The height of the block this transaction came from. Null if it was not a transaction included in a block.</param>
