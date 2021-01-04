@@ -88,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
 
                         // This can be transient as it is just to stop distribution happening multiple times
-                        // on blocks that contain more than on deposit.
+                        // on blocks that contain more than one deposit.
                         this.previousDistributionHeight = blockHeight;
                     }
                 }
