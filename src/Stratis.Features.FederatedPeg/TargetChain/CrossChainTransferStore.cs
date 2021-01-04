@@ -418,7 +418,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (!this.Synchronize())
                             return;
 
-                        this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing {maturedBlockDeposits.SelectMany(d => d.Deposits).Count()} a total of deposits.");
+                        this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing a total of {maturedBlockDeposits.SelectMany(d => d.Deposits).Count()} deposits.");
 
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
