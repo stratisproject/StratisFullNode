@@ -86,6 +86,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (this.previousDistributionHeight != blockHeight)
                     {
                         multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
+
+                        // This can be transient as it is just to stop distribution happening multiple times
+                        // on blocks that contain more than on deposit.
                         this.previousDistributionHeight = blockHeight;
                     }
                 }
