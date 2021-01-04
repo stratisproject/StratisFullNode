@@ -83,23 +83,22 @@ namespace Stratis.Bitcoin.Utilities
         /// <inheritdoc />
         public string GetStats()
         {
-            var statsBuilder = new StringBuilder();
-
             lock (this.locker)
             {
-                string date = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
+                var inlineStatsItems = this.stats.Where(x => x.StatsType == StatsType.Inline).ToArray();
+                var inlineStatsBuilders = inlineStatsItems.Select(inlineStatItem => (inlineStatItem, new StringBuilder())).ToArray();
 
-                statsBuilder.AppendLine($"======Node stats====== {date}");
-
-                foreach (StatsItem inlineStatItem in this.stats.Where(x => x.StatsType == StatsType.Inline))
+                Parallel.ForEach(inlineStatsBuilders, item =>
                 {
+                    (StatsItem inlineStatItem, StringBuilder inlineStatsBuilder) = item;
+
                     try
                     {
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(ComponentStatsWaitSeconds)))
                         {
                             Task.Run(() =>
                             {
-                                inlineStatItem.AppendStatsAction(statsBuilder);
+                                item.inlineStatItem.AppendStatsAction(inlineStatsBuilder);
                             }).WithCancellationAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
                     }
@@ -111,17 +110,22 @@ namespace Stratis.Bitcoin.Utilities
                     {
                         this.logger.LogError("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
                     }
-                }
+                });
 
-                foreach (StatsItem componentStatItem in this.stats.Where(x => x.StatsType == StatsType.Component))
+                var componentStatsItems = this.stats.Where(x => x.StatsType == StatsType.Component).ToArray();
+                var componentStatsBuilders = componentStatsItems.Select(componentStatItem => (componentStatItem, new StringBuilder())).ToArray();
+
+                Parallel.ForEach(componentStatsBuilders, item =>
                 {
+                    (StatsItem componentStatItem, StringBuilder componentStatsBuilder) = item;
+
                     try
                     {
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(ComponentStatsWaitSeconds)))
                         {
                             Task.Run(() =>
                             {
-                                componentStatItem.AppendStatsAction(statsBuilder);
+                                componentStatItem.AppendStatsAction(componentStatsBuilder);
                             }).WithCancellationAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
                     }
@@ -133,10 +137,28 @@ namespace Stratis.Bitcoin.Utilities
                     {
                         this.logger.LogError("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
                     }
-                }
-            }
+                });
 
-            return statsBuilder.ToString();
+                var statsBuilder = new StringBuilder();
+
+                string date = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
+
+                statsBuilder.AppendLine($"======Node stats====== {date}");
+
+                foreach (var item in inlineStatsBuilders)
+                {
+                    (StatsItem inlineStatItem, StringBuilder inlineStatsBuilder) = item;
+                    statsBuilder.Append(inlineStatsBuilder.ToString());
+                }
+
+                foreach (var item in componentStatsBuilders)
+                {
+                    (StatsItem componentStatItem, StringBuilder componentStatsBuilder) = item;
+                    statsBuilder.Append(componentStatsBuilder.ToString());
+                }
+
+                return statsBuilder.ToString();
+            }
         }
 
         /// <inheritdoc />
