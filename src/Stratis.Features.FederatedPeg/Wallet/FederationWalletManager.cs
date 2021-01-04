@@ -713,8 +713,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     foundTransaction.CreationTime = DateTimeOffset.FromUnixTimeSeconds(block.Header.Time);
                 }
             }
-
-            //this.SaveWallet();
         }
 
         /// <summary>
