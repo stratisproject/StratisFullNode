@@ -418,6 +418,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (!this.Synchronize())
                             return;
 
+                        this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing {maturedBlockDeposits.SelectMany(d => d.Deposits).Count()} a total of deposits.");
+
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
                             if (maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight)
@@ -483,7 +485,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     {
                                         status = CrossChainTransferStatus.Rejected;
                                     }
-                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) 
+                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial)
                                         + this.depositsIdsByStatus.Count(t => t.Key == CrossChainTransferStatus.Partial)) >= MaximumPartialTransactions)
                                     {
                                         haveSuspendedTransfers = true;
