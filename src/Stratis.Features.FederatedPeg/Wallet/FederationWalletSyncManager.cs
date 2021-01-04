@@ -16,7 +16,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 {
     public class FederationWalletSyncManager : IFederationWalletSyncManager, IDisposable
     {
-        protected readonly IFederationWalletManager walletManager;
+        protected readonly IFederationWalletManager federationWalletManager;
 
         protected readonly ChainIndexer chain;
 
@@ -53,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
             Guard.NotNull(asyncProvider, nameof(asyncProvider));
 
-            this.walletManager = walletManager;
+            this.federationWalletManager = walletManager;
             this.chain = chain;
             this.blockStore = blockStore;
             this.coinType = (CoinType)network.Consensus.CoinType;
@@ -74,9 +74,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
             if (this.storeSettings.PruningEnabled)
                 throw new WalletException("Wallet can not yet run on a pruned node");
 
-            this.logger.LogInformation("WalletSyncManager initialized. Wallet at block {0}.", this.walletManager.LastBlockSyncedHashHeight().Height);
+            this.logger.LogInformation("WalletSyncManager initialized. Wallet at block {0}.", this.federationWalletManager.LastBlockSyncedHashHeight().Height);
 
-            this.walletTip = this.chain.GetHeader(this.walletManager.WalletTipHash);
+            this.walletTip = this.chain.GetHeader(this.federationWalletManager.WalletTipHash);
             if (this.walletTip == null)
             {
                 // The wallet tip was not found in the main chain.
@@ -87,11 +87,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 // that in the wallet. The block locator will help finding
                 // a common fork and bringing the wallet back to a good
                 // state (behind the best chain).
-                ICollection<uint256> locators = this.walletManager.GetWallet().BlockLocator;
+                ICollection<uint256> locators = this.federationWalletManager.GetWallet().BlockLocator;
                 var blockLocator = new BlockLocator { Blocks = locators.ToList() };
                 ChainedHeader fork = this.chain.FindFork(blockLocator);
-                this.walletManager.RemoveBlocks(fork);
-                this.walletManager.WalletTipHash = fork.HashBlock;
+                this.federationWalletManager.RemoveBlocks(fork);
+                this.federationWalletManager.WalletTipHash = fork.HashBlock;
                 this.walletTip = fork;
             }
         }
@@ -144,7 +144,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                     this.logger.LogInformation("Reorg detected, going back from '{0}' to '{1}'.", this.walletTip, fork);
 
-                    this.walletManager.RemoveBlocks(fork);
+                    this.federationWalletManager.RemoveBlocks(fork);
                     this.walletTip = fork;
 
                     this.logger.LogDebug("Wallet tip set to '{0}'.", this.walletTip);
@@ -209,7 +209,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                         }
 
                         this.walletTip = next;
-                        this.walletManager.ProcessBlock(nextblock, next);
+                        this.federationWalletManager.ProcessBlock(nextblock, next);
                     }
                 }
                 else
@@ -227,7 +227,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             else this.logger.LogDebug("New block follows the previously known block '{0}'.", this.walletTip);
 
             this.walletTip = newTip;
-            this.walletManager.ProcessBlock(block, newTip);
+            this.federationWalletManager.ProcessBlock(block, newTip);
         }
 
         /// <inheritdoc />
@@ -245,7 +245,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
             this.logger.LogDebug("Processing transaction from mempool: {0}", transaction.GetHash());
 
-            this.walletManager.ProcessTransaction(transaction);
+            if (this.federationWalletManager.ProcessTransaction(transaction))
+                this.federationWalletManager.SaveWallet();
         }
 
         /// <inheritdoc />
@@ -260,7 +261,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             ChainedHeader chainedBlock = this.chain.GetHeader(height);
             this.walletTip = chainedBlock ?? throw new WalletException("Invalid block height");
-            this.walletManager.WalletTipHash = chainedBlock.HashBlock;
+            this.federationWalletManager.WalletTipHash = chainedBlock.HashBlock;
         }
 
         /// <inheritdoc />

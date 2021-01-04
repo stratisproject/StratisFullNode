@@ -86,7 +86,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>
         /// Gets some general information about a wallet.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The federation wallet instance.</returns>
         FederationWallet GetWallet();
 
         /// <summary>

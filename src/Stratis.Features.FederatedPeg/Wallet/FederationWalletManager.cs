@@ -417,9 +417,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     bool trxFound = this.ProcessTransaction(transaction, chainedHeader.Height, chainedHeader.HashBlock, block);
                     if (trxFound)
-                    {
                         walletUpdated = true;
-                    }
                 }
 
                 walletUpdated |= this.CleanTransactionsPastMaxReorg(chainedHeader.Height);
@@ -430,9 +428,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 this.UpdateLastBlockSyncedHeight(chainedHeader);
 
                 if (walletUpdated)
-                {
                     this.SaveWallet();
-                }
             }
         }
 
@@ -538,10 +534,10 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (foundSendingTrx || foundReceivingTrx)
                 {
                     // Save the wallet when the transaction was not included in a block.
-                    if (blockHeight == null)
-                    {
-                        this.SaveWallet();
-                    }
+                    //if (blockHeight == null)
+                    //{
+                    //this.SaveWallet();
+                    //}
                 }
 
                 return foundSendingTrx || foundReceivingTrx;
@@ -728,7 +724,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 }
             }
 
-            this.TransactionFoundInternal(script);
+            //this.SaveWallet();
         }
 
         /// <summary>
@@ -861,12 +857,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
             }
 
             return spendingDetails;
-        }
-
-        public void TransactionFoundInternal(Script script)
-        {
-            // Persists the wallet file.
-            this.SaveWallet();
         }
 
         /// <inheritdoc />

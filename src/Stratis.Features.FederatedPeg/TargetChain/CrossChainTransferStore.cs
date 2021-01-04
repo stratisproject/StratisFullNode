@@ -693,8 +693,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         {
                             dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
 
-                            this.federationWalletManager.ProcessTransaction(transfer.PartialTransaction);
-                            this.federationWalletManager.SaveWallet();
+                            if (this.federationWalletManager.ProcessTransaction(transfer.PartialTransaction))
+                                this.federationWalletManager.SaveWallet();
 
                             if (this.ValidateTransaction(transfer.PartialTransaction, true))
                             {
@@ -720,8 +720,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             // Restore expected store state in case the calling code retries / continues using the store.
                             transfer.SetPartialTransaction(oldTransaction);
-                            this.federationWalletManager.ProcessTransaction(oldTransaction);
-                            this.federationWalletManager.SaveWallet();
+
+                            if (this.federationWalletManager.ProcessTransaction(oldTransaction))
+                                this.federationWalletManager.SaveWallet();
+
                             this.RollbackAndThrowTransactionError(dbreezeTransaction, err, "MERGE_ERROR");
                         }
 
@@ -799,7 +801,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             Transaction transaction = block.Transactions.Single(t => t.GetHash() == withdrawal.Id);
 
                             // Ensure that the wallet is in step.
-                            this.federationWalletManager.ProcessTransaction(transaction, withdrawal.BlockNumber, withdrawal.BlockHash, block);
+                            if (this.federationWalletManager.ProcessTransaction(transaction, withdrawal.BlockNumber, withdrawal.BlockHash, block))
+                                this.federationWalletManager.SaveWallet();
 
                             if (crossChainTransfers[i] == null)
                             {
