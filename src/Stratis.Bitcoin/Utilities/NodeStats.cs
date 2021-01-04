@@ -85,8 +85,10 @@ namespace Stratis.Bitcoin.Utilities
         {
             lock (this.locker)
             {
-                var inlineStatsItems = this.stats.Where(x => x.StatsType == StatsType.Inline).ToArray();
-                var inlineStatsBuilders = inlineStatsItems.Select(inlineStatItem => (inlineStatItem, new StringBuilder())).ToArray();
+                var inlineStatsBuilders = this.stats
+                    .Where(x => x.StatsType == StatsType.Inline)
+                    .Select(inlineStatItem => (inlineStatItem, new StringBuilder()))
+                    .ToArray();
 
                 Parallel.ForEach(inlineStatsBuilders, item =>
                 {
@@ -98,7 +100,7 @@ namespace Stratis.Bitcoin.Utilities
                         {
                             Task.Run(() =>
                             {
-                                item.inlineStatItem.AppendStatsAction(inlineStatsBuilder);
+                                inlineStatItem.AppendStatsAction(inlineStatsBuilder);
                             }).WithCancellationAsync(cts.Token).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
                     }
@@ -112,8 +114,10 @@ namespace Stratis.Bitcoin.Utilities
                     }
                 });
 
-                var componentStatsItems = this.stats.Where(x => x.StatsType == StatsType.Component).ToArray();
-                var componentStatsBuilders = componentStatsItems.Select(componentStatItem => (componentStatItem, new StringBuilder())).ToArray();
+                var componentStatsBuilders = this.stats
+                    .Where(x => x.StatsType == StatsType.Component)
+                    .Select(componentStatItem => (componentStatItem, new StringBuilder()))
+                    .ToArray();
 
                 Parallel.ForEach(componentStatsBuilders, item =>
                 {
