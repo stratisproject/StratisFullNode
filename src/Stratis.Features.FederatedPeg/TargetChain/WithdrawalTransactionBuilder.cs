@@ -25,6 +25,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ILogger logger;
         private readonly Network network;
 
+        private readonly Script cirrusRewardDummyAddressScriptPubKey;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IFederationWalletTransactionHandler federationWalletTransactionHandler;
         private readonly IFederatedPegSettings federatedPegSettings;
@@ -47,6 +48,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.federatedPegSettings = federatedPegSettings;
             this.signals = signals;
             this.distributionManager = distributionManager;
+
+            this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
         }
 
         /// <inheritdoc />
@@ -72,7 +75,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 };
 
                 // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey)
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
                 {
                     // Use the distribution manager to determine the actual list of recipients.
                     // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead

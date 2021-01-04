@@ -69,6 +69,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
+        private readonly Script cirrusRewardDummyAddressScriptPubKey;
         private readonly IWithdrawalExtractor withdrawalExtractor;
         private readonly IBlockRepository blockRepository;
         private readonly CancellationTokenSource cancellation;
@@ -116,6 +117,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.settings = settings;
             this.signals = signals;
             this.stateRepositoryRoot = stateRepositoryRoot;
+
+            this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
 
             // Future-proof store name.
             string depositStoreName = "federatedTransfers" + settings.MultiSigAddress.ToString();
@@ -498,7 +501,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                         {
                                             bool isdistribution = false;
                                             if (!this.settings.IsMainChain)
-                                                isdistribution = recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
+                                                isdistribution = recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey;
 
                                             // Reserve the UTXOs before building the next transaction.
                                             walletUpdated |= this.federationWalletManager.ProcessTransaction(transaction, isDistribution: isdistribution);
