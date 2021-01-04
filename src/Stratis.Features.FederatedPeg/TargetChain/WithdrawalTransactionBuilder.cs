@@ -31,6 +31,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ISignals signals;
         private readonly IRewardDistributionManager distributionManager;
+        private int previousDistributionHeight;
 
         public WithdrawalTransactionBuilder(
             ILoggerFactory loggerFactory,
@@ -50,6 +51,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.distributionManager = distributionManager;
 
             this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
+            this.previousDistributionHeight = 0;
         }
 
         /// <inheritdoc />
@@ -74,23 +76,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     Time = this.network.Consensus.IsProofOfStake ? blockTime : (uint?)null
                 };
 
+                multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
+
                 // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
                 if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
                 {
                     // Use the distribution manager to determine the actual list of recipients.
                     // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
-                    multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
-
-                    // This should never happen as we should always have at least one federation member with a configured wallet.
-                    if (multiSigContext.Recipients.Count == 0)
+                    if (this.previousDistributionHeight != blockHeight)
                     {
-                        this.logger.LogWarning("Could not identify recipients for the distribution transaction, adding dummy recipient to avoid the CCTS suspending irrecoverably.");
-                        multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
+                        multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
+                        this.previousDistributionHeight = blockHeight;
                     }
-                }
-                else
-                {
-                    multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) }; // The fee known to the user is taken.
                 }
 
                 // TODO: Amend this so we're not picking coins twice.
