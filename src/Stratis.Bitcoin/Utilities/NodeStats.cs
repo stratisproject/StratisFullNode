@@ -85,6 +85,8 @@ namespace Stratis.Bitcoin.Utilities
         {
             lock (this.locker)
             {
+                string date = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
+
                 var inlineStatsBuilders = this.stats
                     .Where(x => x.StatsType == StatsType.Inline)
                     .Select(inlineStatItem => (inlineStatItem, new StringBuilder()))
@@ -144,8 +146,6 @@ namespace Stratis.Bitcoin.Utilities
                 });
 
                 var statsBuilder = new StringBuilder();
-
-                string date = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
 
                 statsBuilder.AppendLine($"======Node stats====== {date}");
 
