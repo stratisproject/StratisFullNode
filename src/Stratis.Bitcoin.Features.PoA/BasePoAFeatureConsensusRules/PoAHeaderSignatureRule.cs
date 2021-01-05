@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
@@ -87,15 +88,15 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                 // Mining slots shift when the federation changes. 
                 // Only raise an error if the federation did not change.
-                uint newRoundTime = this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count);
-                if (newRoundTime != roundTime)
+                if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
                     break;
 
-                // Exempt this one block that somehow got included in the chain where the miner managed to mine too early.
-                if (prevHeader.HashBlock == uint256.Parse("7d67ea42010f03971edd6ba5e1b644d09c9fd0191ca8d312255c12d23f7cd147"))
+                if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
                     break;
 
-                this.Logger.LogWarning($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
+                this.Logger.LogDebug($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
+                this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
         }
     }
