@@ -50,7 +50,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.signals = signals;
             this.distributionManager = distributionManager;
 
-            this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
+            if (!this.federatedPegSettings.IsMainChain)
+                this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
+
             this.previousDistributionHeight = 0;
         }
 
