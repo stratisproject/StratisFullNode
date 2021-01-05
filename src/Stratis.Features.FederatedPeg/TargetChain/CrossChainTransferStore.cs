@@ -418,6 +418,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (!this.Synchronize())
                             return;
 
+                        this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing a total of {maturedBlockDeposits.SelectMany(d => d.Deposits).Where(a => a.Amount > 0).Count()} deposits.");
+
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
                             if (maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight)
@@ -483,7 +485,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     {
                                         status = CrossChainTransferStatus.Rejected;
                                     }
-                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) 
+                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial)
                                         + this.depositsIdsByStatus.Count(t => t.Key == CrossChainTransferStatus.Partial)) >= MaximumPartialTransactions)
                                     {
                                         haveSuspendedTransfers = true;
@@ -494,12 +496,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                         if (transaction != null)
                                         {
-                                            bool isdistribution = false;
-                                            if (!this.settings.IsMainChain)
-                                                isdistribution = recipient.ScriptPubKey == BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
-
                                             // Reserve the UTXOs before building the next transaction.
-                                            walletUpdated |= this.federationWalletManager.ProcessTransaction(transaction, isDistribution: isdistribution);
+                                            walletUpdated |= this.federationWalletManager.ProcessTransaction(transaction);
 
                                             if (!this.ValidateTransaction(transaction))
                                             {
@@ -688,8 +686,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         {
                             dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
 
-                            this.federationWalletManager.ProcessTransaction(transfer.PartialTransaction);
-                            this.federationWalletManager.SaveWallet();
+                            if (this.federationWalletManager.ProcessTransaction(transfer.PartialTransaction))
+                                this.federationWalletManager.SaveWallet();
 
                             if (this.ValidateTransaction(transfer.PartialTransaction, true))
                             {
@@ -715,8 +713,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             // Restore expected store state in case the calling code retries / continues using the store.
                             transfer.SetPartialTransaction(oldTransaction);
-                            this.federationWalletManager.ProcessTransaction(oldTransaction);
-                            this.federationWalletManager.SaveWallet();
+
+                            if (this.federationWalletManager.ProcessTransaction(oldTransaction))
+                                this.federationWalletManager.SaveWallet();
+
                             this.RollbackAndThrowTransactionError(dbreezeTransaction, err, "MERGE_ERROR");
                         }
 
@@ -794,7 +794,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             Transaction transaction = block.Transactions.Single(t => t.GetHash() == withdrawal.Id);
 
                             // Ensure that the wallet is in step.
-                            this.federationWalletManager.ProcessTransaction(transaction, withdrawal.BlockNumber, withdrawal.BlockHash, block);
+                            if (this.federationWalletManager.ProcessTransaction(transaction, withdrawal.BlockNumber, withdrawal.BlockHash, block))
+                                this.federationWalletManager.SaveWallet();
 
                             if (crossChainTransfers[i] == null)
                             {
