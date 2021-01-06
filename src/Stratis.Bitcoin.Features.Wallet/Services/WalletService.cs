@@ -1488,6 +1488,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
 
+                if (request.Broadcast)
+                {
+                    this.broadcasterManager.BroadcastTransactionAsync(transaction);
+                }
+
                 return transaction.ToHex();
             }, cancellationToken);
         }
@@ -1498,15 +1503,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             return size <= (0.95m * this.network.Consensus.Options.MaxStandardTxWeight);
         }
 
-        private int GetTransactionSizeForUtxoCount(List<UnspentOutputReference> utxos, int count, WalletAccountReference accountReference, Script destination)
+        private int GetTransactionSizeForUtxoCount(List<UnspentOutputReference> utxos, int targetCount, WalletAccountReference accountReference, Script destination)
         {
             Money totalToSend = Money.Zero;
             var outpoints = new List<OutPoint>();
 
-            foreach (var utxo in utxos)
+            int count = 0;
+            foreach (UnspentOutputReference utxo in utxos)
             {
+                if (count >= targetCount)
+                    break;
+
                 totalToSend += utxo.Transaction.Amount;
                 outpoints.Add(utxo.ToOutPoint());
+                count++;
             }
 
             var context = new TransactionBuildContext(this.network)
