@@ -81,11 +81,16 @@ namespace Stratis.Features.PoA.Voting
             };
 
             var walletClient = new WalletClient(this.loggerFactory, this.httpClientFactory, $"http://{this.counterChainSettings.CounterChainApiHost}", this.counterChainSettings.CounterChainApiPort);
-            string signature = await walletClient.SignMessageAsync(signMessageRequest, cancellationToken);
-            if (signature == null)
-                throw new Exception("The call to sign the join federation request failed. It could have timed-out or the counter chain node is offline.");
 
-            joinRequest.AddSignature(signature);
+            try
+            {
+                string signature = await walletClient.SignMessageAsync(signMessageRequest, cancellationToken);
+                joinRequest.AddSignature(signature);
+            }
+            catch (Exception err)
+            {
+                throw new Exception($"The call to sign the join federation request failed: '{err.Message}'.");
+            }
 
             IWalletTransactionHandler walletTransactionHandler = this.fullNode.NodeService<IWalletTransactionHandler>();
             var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
