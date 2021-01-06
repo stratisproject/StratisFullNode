@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet.Controllers
 {
