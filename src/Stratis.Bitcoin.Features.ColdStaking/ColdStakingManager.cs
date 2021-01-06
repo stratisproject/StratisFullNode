@@ -7,9 +7,9 @@ using NBitcoin;
 using NBitcoin.BuilderExtensions;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -456,6 +456,93 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             Money estimatedFee = walletTransactionHandler.EstimateFee(context);
 
             return estimatedFee;
+        }
+
+        /// <summary>
+        /// Builds an unsigned transaction template for a cold staking withdrawal transaction.
+        /// This requires specialised logic due to the lack of a private key for the cold account.
+        /// </summary>
+        public BuildOfflineSignResponse BuildOfflineColdStakingWithdrawalRequest(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
+            string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
+        {
+            TransactionBuildContext context = this.GetOfflineWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, feeAmount, subtractFeeFromAmount);
+
+            Transaction transactionResult = walletTransactionHandler.BuildTransaction(context);
+
+            var utxos = new List<UtxoDescriptor>();
+            var addresses = new List<AddressDescriptor>();
+            foreach (ICoin coin in context.TransactionBuilder.FindSpentCoins(transactionResult))
+            {
+                utxos.Add(new UtxoDescriptor()
+                {
+                    Amount = coin.TxOut.Value.ToUnit(MoneyUnit.BTC).ToString(),
+                    TransactionId = coin.Outpoint.Hash.ToString(),
+                    Index = coin.Outpoint.N.ToString(),
+                    ScriptPubKey = coin.TxOut.ScriptPubKey.ToHex()
+                });
+
+                // We do not include address descriptors as the cold staking scripts are not really regarded as having addresses in the conventional sense.
+                // There is also typically only a single script involved so the keypath hinting is of little use.
+            }
+
+            var hotAccountReference = new WalletAccountReference(walletName, accountName);
+
+            // Return transaction hex and UTXO list.
+            return new BuildOfflineSignResponse()
+            {
+                WalletName = hotAccountReference.WalletName,
+                WalletAccount = hotAccountReference.AccountName,
+                Fee = context.TransactionFee.ToUnit(MoneyUnit.BTC).ToString(),
+                UnsignedTransaction = transactionResult.ToHex(),
+                Utxos = utxos,
+                Addresses = addresses
+            };
+        }
+
+        public Money EstimateOfflineWithdrawalFee(IWalletTransactionHandler walletTransactionHandler, string receivingAddress,
+            string walletName, string accountName, Money amount, bool subtractFeeFromAmount)
+        {
+            TransactionBuildContext context = this.GetOfflineWithdrawalBuildContext(receivingAddress, walletName, accountName, amount, null, subtractFeeFromAmount);
+
+            context.TransactionBuilder.Extensions.Add(new ColdStakingBuilderExtension(false));
+
+            return walletTransactionHandler.EstimateFee(context);
+        }
+
+        private TransactionBuildContext GetOfflineWithdrawalBuildContext(string receivingAddress, string walletName, string accountName, Money amount, Money feeAmount, bool subtractFeeFromAmount)
+        {
+            // We presume that the amount given by the user is accurate and optimistically pass it to the build context.
+            var recipient = new List<Recipient>() { new Recipient() { Amount = amount, ScriptPubKey = BitcoinAddress.Create(receivingAddress, this.network).ScriptPubKey, SubtractFeeFromAmount = subtractFeeFromAmount } };
+
+            var hotAccountReference = new WalletAccountReference(walletName, accountName);
+
+            // As a simplification, the change address is defaulted to be the same cold staking script the UTXOs originate from.
+            UnspentOutputReference coldStakingUtxo = this.GetSpendableTransactionsInAccount(hotAccountReference, 0).FirstOrDefault();
+
+            if (coldStakingUtxo == null)
+            {
+                throw new WalletException("No unspent transactions found in cold staking hot account.");
+            }
+
+            var context = new TransactionBuildContext(this.network)
+            {
+                AccountReference = hotAccountReference,
+                TransactionFee = feeAmount,
+                MinConfirmations = 0,
+                Shuffle = true, // We shuffle transaction outputs by default as it's better for anonymity.
+                Recipients = recipient,
+                ChangeScript = coldStakingUtxo.Transaction.ScriptPubKey, // We specifically use this instead of ChangeAddress.
+
+                Sign = false
+            };
+
+            // As we don't actually know when the signed offline transaction will be broadcast, give it the highest chance of success if no fee was specified.
+            if (context.TransactionFee == null)
+            {
+                context.FeeType = FeeType.High;
+            }
+
+            return context;
         }
 
         /// <summary>

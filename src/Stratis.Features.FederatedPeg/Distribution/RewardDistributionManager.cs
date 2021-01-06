@@ -26,6 +26,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly int epoch;
         private readonly int epochWindow;
 
+        private readonly Dictionary<uint256, Block> blocksByHashDictionary = new Dictionary<uint256, Block>();
+        private readonly Dictionary<uint256, int?> commitmentHeightsByHash = new Dictionary<uint256, int?>();
+
         // The reward each miner receives upon distribution is computed as a proportion of the overall accumulated reward since the last distribution.
         // The proportion is based on how many blocks that miner produced in the period (each miner is identified by their block's coinbase's scriptPubKey).
         // It is therefore not in any miner's advantage to delay or skip producing their blocks as it will affect their proportion of the produced blocks.
@@ -69,15 +72,32 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             do
             {
-                if (currentHeader.Block == null)
-                    currentHeader.Block = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
+                this.blocksByHashDictionary.TryGetValue(currentHeader.HashBlock, out Block blockToCheck);
 
-                (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(currentHeader.Block.Transactions[0]);
-                if (heightOfMainChainCommitment != null)
+                if (blockToCheck == null)
                 {
-                    this.logger.LogDebug($"{currentHeader} : {nameof(heightOfMainChainCommitment)}={heightOfMainChainCommitment}");
+                    blockToCheck = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
+                    this.blocksByHashDictionary.TryAdd(currentHeader.HashBlock, blockToCheck);
+                }
 
-                    if (heightOfMainChainCommitment <= applicableMainChainDepositHeight)
+                // Do we have this commitment height cached already?
+                this.commitmentHeightsByHash.TryGetValue(currentHeader.HashBlock, out int? commitmentHeightToCheck);
+                if (commitmentHeightToCheck == null)
+                {
+                    // If not extract from the block.
+                    (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(blockToCheck.Transactions[0]);
+                    if (heightOfMainChainCommitment != null)
+                    {
+                        commitmentHeightToCheck = heightOfMainChainCommitment.Value;
+                        this.commitmentHeightsByHash.Add(currentHeader.HashBlock, commitmentHeightToCheck);
+                    }
+                }
+
+                if (commitmentHeightToCheck != null)
+                {
+                    this.logger.LogDebug($"{currentHeader} : {nameof(commitmentHeightToCheck)}={commitmentHeightToCheck}");
+
+                    if (commitmentHeightToCheck <= applicableMainChainDepositHeight)
                         break;
                 }
 

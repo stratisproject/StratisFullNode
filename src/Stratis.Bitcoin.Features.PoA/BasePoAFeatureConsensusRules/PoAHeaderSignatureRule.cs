@@ -71,20 +71,32 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
             }
 
-            uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
-
             // Look at the last round of blocks to find the previous time that the miner mined.
-            ChainedHeader prevHeader = context.ValidationContext.ChainedHeaderToValidate.Previous;
-            while (prevHeader.Previous != null && (header.Time - prevHeader.Header.Time) < roundTime)
+            uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
+            int blockCounter = 0;
+
+            for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
             {
+                blockCounter += 1;
+
+                if ((header.Time - prevHeader.Header.Time) >= roundTime)
+                    break;
+
                 // If the miner is found again within the same round then throw a consensus error.
-                PubKey nextPubKey = this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey;
-                if (nextPubKey == pubKey)
-                {
-                    this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
-                    ConsensusErrors.BlockTimestampTooEarly.Throw();
-                }
-                prevHeader = prevHeader.Previous;
+                if (this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey != pubKey)
+                    continue;
+
+                // Mining slots shift when the federation changes. 
+                // Only raise an error if the federation did not change.
+                if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
+                    break;
+
+                if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
+                    break;
+
+                this.Logger.LogDebug($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
+                this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
         }
     }

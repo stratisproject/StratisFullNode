@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.votingManager.ScheduleVote(new VotingData());
 
-            Assert.Equal(1, this.votingManager.GetAndCleanScheduledVotes().Count);
+            Assert.Single(this.votingManager.GetAndCleanScheduledVotes());
 
             Assert.Empty(this.votingManager.GetScheduledVotes());
         }
@@ -98,7 +98,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
         }
-
 
         [Fact]
         public void CanCreateVotingRequest()

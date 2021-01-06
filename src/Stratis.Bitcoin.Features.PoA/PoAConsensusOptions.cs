@@ -32,6 +32,19 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public uint? FederationMemberActivationTime { get; set; }
 
+        /// <summary>
+        /// The height at which a federation members will be resolved via the <see cref="FederationHistory"/> class.
+        /// <para>
+        /// A poll was incorrectly executed at block 1476880 because the legacy GetFederationMemberForTimestamp incorrectly
+        /// derived a federation member for a mined block.
+        /// </para>
+        /// <para>
+        /// After this block height, federation member votes will derived using the <see cref="FederationHistory.GetFederationMemberForBlock(ChainedHeader)"/>
+        /// method which resolves the pubkey from the signature directly.
+        /// </para>
+        /// </summary>
+        public int VotingManagerV2ActivationHeight { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,

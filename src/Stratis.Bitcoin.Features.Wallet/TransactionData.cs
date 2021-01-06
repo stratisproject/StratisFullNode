@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         [JsonConverter(typeof(ScriptJsonConverter))]
         public Script AddressScriptPubKey { get; set; }
 
-        /// <summary>.Get
+        /// <summary>
         /// The script pub key for this address.
         /// </summary>
         [JsonProperty(PropertyName = "scriptPubKey")]

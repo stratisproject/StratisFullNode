@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.Miner.Models;
+using Stratis.Bitcoin.Features.Miner.Staking;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -125,6 +126,62 @@ namespace Stratis.Bitcoin.Features.Miner.Controllers
                 }
 
                 this.fullNode.NodeFeature<MiningFeature>(true).StartStaking(request.Name, request.Password);
+
+                return this.Ok();
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Start staking for multiple wallets simultaneously.
+        /// </summary>
+        /// <param name="request">The list of wallet credentials to stake with.</param>
+        /// <returns>An <see cref="OkResult"/> object that produces a status code 200 HTTP response.</returns>
+        /// <response code="200">Staking has started</response>
+        /// <response code="400">An exception occurred</response>
+        /// <response code="405">Consensus is not PoS</response>
+        /// <response code="500">Request is null</response>
+        [Route("startmultistaking")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.MethodNotAllowed)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult StartMultiStaking([FromBody] StartMultiStakingRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            try
+            {
+                if (!this.fullNode.Network.Consensus.IsProofOfStake)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.MethodNotAllowed, "Method not allowed", "Method not available if not Proof of Stake");
+
+                if (!this.ModelState.IsValid)
+                {
+                    IEnumerable<string> errors = this.ModelState.Values.SelectMany(e => e.Errors.Select(m => m.ErrorMessage));
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Formatting error", string.Join(Environment.NewLine, errors));
+                }
+
+                foreach (WalletSecret credential in request.WalletCredentials)
+                {
+                    Wallet.Wallet wallet = this.walletManager.GetWallet(credential.WalletName);
+
+                    // Check the password
+                    try
+                    {
+                        Key.Parse(wallet.EncryptedSeed, credential.WalletPassword, wallet.Network);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new SecurityException(ex.Message);
+                    }
+                }
+
+                this.fullNode.NodeFeature<MiningFeature>(true).StartMultiStaking(request.WalletCredentials);
 
                 return this.Ok();
             }

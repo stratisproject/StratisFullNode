@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
@@ -63,7 +64,12 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
 
             // Start staking on the node.
             IPosMinting minter = nodeA.FullNode.NodeService<IPosMinting>();
-            minter.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
+            minter.Stake(new List<WalletSecret>() {
+                new WalletSecret()
+                {
+                    WalletName = "mywallet", WalletPassword = "password"
+                }
+            });
 
             // Stake to block height 40
             TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40, 120), waitTimeSeconds: 120);

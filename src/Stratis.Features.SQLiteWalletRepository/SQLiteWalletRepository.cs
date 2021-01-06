@@ -283,9 +283,10 @@ namespace Stratis.Features.SQLiteWalletRepository
             walletContainer.WriteLockWait();
 
             DBConnection conn = walletContainer.Conn;
-            conn.BeginTransaction();
             try
             {
+                conn.BeginTransaction();
+
                 // Add the UTXOs being freed up. If rewinding to start there will be nothing to add.
                 if (lastBlockSynced != null)
                     walletContainer.TransactionsOfInterest.AddSpendableTransactions(wallet.WalletId, fromBlock: lastBlockSynced.Height);
@@ -298,8 +299,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 else
                     this.logger.LogDebug("Wallet '{0}' rewound to height '{1}'.", walletName, lastBlockSynced);
 
-                walletContainer.WriteLockRelease();
-
                 return (true, res.Select(i => (uint256.Parse(i.txId), DateTimeOffset.FromUnixTimeSeconds(i.creationTime))).ToList());
             }
             catch (Exception ex)
@@ -311,10 +310,13 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 this.logger.LogError(ex.ToString());
 
-                walletContainer.WriteLockRelease();
                 conn.Rollback();
 
                 throw;
+            }
+            finally
+            {
+                walletContainer.WriteLockRelease();
             }
         }
 
@@ -480,10 +482,11 @@ namespace Stratis.Features.SQLiteWalletRepository
             (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
             walletContainer.WriteLockWait();
-            conn.BeginTransaction();
 
             try
             {
+                conn.BeginTransaction();
+
                 IEnumerable<HDAccount> accounts = conn.GetAccounts(wallet.WalletId);
 
                 if (accounts.Any(a => a.ExtPubKey != null && ExtPubKey.Parse(a.ExtPubKey) == extPubKey))
@@ -504,15 +507,17 @@ namespace Stratis.Features.SQLiteWalletRepository
                 conn.Commit();
 
                 walletContainer.AddressesOfInterest.AddAll(wallet.WalletId, accountIndex);
-                walletContainer.WriteLockRelease();
 
                 return this.ToHdAccount(account);
             }
             catch (Exception)
             {
-                walletContainer.WriteLockRelease();
                 conn.Rollback();
                 throw;
+            }
+            finally
+            {
+                walletContainer.WriteLockRelease();
             }
         }
 
@@ -556,12 +561,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         public void AddWatchOnlyTransactions(string walletName, string accountName, HdAddress address, ICollection<TransactionData> transactions, bool force = false)
         {
             WalletContainer walletContainer = this.GetWalletContainer(walletName);
-            (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
+            DBConnection conn = walletContainer.Conn;
 
             walletContainer.WriteLockWait();
-            conn.BeginTransaction();
             try
             {
+                conn.BeginTransaction();
+
                 HDAccount account = conn.GetAccountByName(walletName, accountName);
                 if (!force && !this.TestMode && account.ExtPubKey != null)
                     throw new Exception("Transactions can only be added to watch-only addresses.");
@@ -570,13 +576,16 @@ namespace Stratis.Features.SQLiteWalletRepository
                 conn.Commit();
 
                 walletContainer.TransactionsOfInterest.AddSpendableTransactions(account.WalletId, account.AccountIndex);
-                walletContainer.WriteLockRelease();
             }
             catch (Exception)
             {
-                walletContainer.WriteLockRelease();
                 conn.Rollback();
+
                 throw;
+            }
+            finally 
+            {
+                walletContainer.WriteLockRelease();
             }
         }
 
@@ -654,9 +663,9 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             WalletContainer walletContainer = GetWalletContainer(accountReference.WalletName);
 
-            walletContainer.WriteLockWait();
-
             DBConnection conn = walletContainer.Conn;
+
+            walletContainer.WriteLockWait();
 
             try
             {
@@ -705,9 +714,9 @@ namespace Stratis.Features.SQLiteWalletRepository
         {
             WalletContainer walletContainer = GetWalletContainer(accountReference.WalletName);
 
-            walletContainer.WriteLockWait();
-
             DBConnection conn = walletContainer.Conn;
+
+            walletContainer.WriteLockWait();
 
             try
             {
