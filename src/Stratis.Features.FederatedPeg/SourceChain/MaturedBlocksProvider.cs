@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 // Don't process blocks below the requested maturity height.
                 if (chainedHeaderBlock.ChainedHeader.Height < maturityHeight)
                 {
-                    this.logger.LogDebug($"{chainedHeaderBlock.ChainedHeader} below maturity height of {maturityHeight}.");
+                    this.logger.LogDebug("{0} below maturity height of {1}.", chainedHeaderBlock.ChainedHeader, maturityHeight);
                     continue;
                 }
 
@@ -126,7 +126,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     }
                 }
 
-                this.logger.LogDebug($"{maturedDeposits.Count} mature deposits retrieved from block '{chainedHeaderBlock.ChainedHeader}'.");
+                this.logger.LogDebug("{0} mature deposits retrieved from block '{1}'.", maturedDeposits.Count, chainedHeaderBlock.ChainedHeader);
 
                 result.Value.Add(new MaturedBlockDepositsModel(new MaturedBlockInfoModel()
                 {
@@ -171,13 +171,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             // Already have this recorded?
             if (this.deposits.TryGetValue(chainedHeaderBlock.ChainedHeader.Height, out BlockDeposits blockDeposits) && blockDeposits.BlockHash == chainedHeaderBlock.ChainedHeader.HashBlock)
             {
-                this.logger.LogDebug($"Deposits already recorded for '{chainedHeaderBlock.ChainedHeader}'.");
+                this.logger.LogDebug("Deposits already recorded for '{0}'.", chainedHeaderBlock.ChainedHeader);
                 return;
             }
 
             IReadOnlyList<IDeposit> deposits = this.depositExtractor.ExtractDepositsFromBlock(chainedHeaderBlock.Block, chainedHeaderBlock.ChainedHeader.Height, retrievalTypes);
 
-            this.logger.LogDebug($"{deposits.Count} potential deposits extracted from block '{chainedHeaderBlock.ChainedHeader}'.");
+            this.logger.LogDebug("{0} potential deposits extracted from block '{1}'.", deposits.Count, chainedHeaderBlock.ChainedHeader);
 
             this.deposits[chainedHeaderBlock.ChainedHeader.Height] = new BlockDeposits()
             {
