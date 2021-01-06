@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet.Controllers
 {
@@ -29,9 +30,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <inheritdoc />
-        public Task<string> SignMessageAsync(SignMessageRequest request, CancellationToken cancellation = default)
+        public async Task<string> SignMessageAsync(SignMessageRequest request, CancellationToken cancellation = default)
         {
-            return this.SendPostRequestAsync<SignMessageRequest, string>(request, "signmessage", cancellation);
+            var res = await this.SendPostRequestAsync<SignMessageRequest, SerializableResult<string>>(request, "signmessage", cancellation);
+            if (res != null)
+                return res.Value;
+
+            throw new System.Exception(res.Message);
         }
     }
 }
