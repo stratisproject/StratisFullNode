@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<string> SignMessageAsync(SignMessageRequest request, CancellationToken cancellation = default)
         {
             var res = await this.SendPostRequestAsync<SignMessageRequest, SerializableResult<string>>(request, "signmessage", cancellation);
-            if (res != null)
+            if (res.Value != null)
                 return res.Value;
 
             throw new System.Exception(res.Message);
