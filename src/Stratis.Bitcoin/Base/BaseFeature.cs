@@ -466,9 +466,6 @@ namespace Stratis.Bitcoin.Base
 
                     // Console
                     services.AddSingleton<INodeStats, NodeStats>();
-
-                    // Controller
-                    services.AddTransient<NodeController>();
                 });
             });
 
