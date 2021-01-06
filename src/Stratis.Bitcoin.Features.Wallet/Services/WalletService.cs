@@ -1389,11 +1389,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 if (!string.IsNullOrWhiteSpace(request.SingleAddress))
                 {
-                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName, 1).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
                 }
                 else
                 {
-                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference, 1).OrderBy(u2 => u2.Transaction.Amount).ToList();
                 }
 
                 if (utxos.Count == 0)
