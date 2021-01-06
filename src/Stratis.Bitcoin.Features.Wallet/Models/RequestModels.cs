@@ -1049,5 +1049,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [MoneyFormat(isRequired: false, ErrorMessage = "The amount is not in the correct format.")]
         public string UtxoValueThreshold { get; set; }
+
+        /// <summary>
+        /// For convenience, whether the built consolidated transaction should be automatically broadcast.
+        /// </summary>
+        public bool Broadcast { get; set; }
     }
 }

@@ -1488,6 +1488,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
 
+                if (request.Broadcast)
+                {
+                    this.broadcasterManager.BroadcastTransactionAsync(transaction);
+                }
+
                 return transaction.ToHex();
             }, cancellationToken);
         }
