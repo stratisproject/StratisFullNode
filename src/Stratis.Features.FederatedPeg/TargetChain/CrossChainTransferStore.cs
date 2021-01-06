@@ -214,7 +214,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 List<(Transaction transaction, IWithdrawal withdrawal)> walletData = this.federationWalletManager.FindWithdrawalTransactions(partialTransfer.DepositTransactionId);
 
-                this.logger.LogDebug($"DepositTransactionId:{partialTransfer.DepositTransactionId}; {nameof(walletData)}:{walletData.Count}");
+                this.logger.LogDebug("DepositTransactionId:{0}; {1}:{}", partialTransfer.DepositTransactionId, nameof(walletData), walletData.Count);
 
                 if (walletData.Count == 1 && this.ValidateTransaction(walletData[0].transaction))
                 {
@@ -450,8 +450,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             for (int i = 0; i < deposits.Count; i++)
                             {
-                                this.logger.LogDebug($"{i}={transfers[i]} | {transfers[i]?.Status} || {transfers[i]?.BlockHeight} | {transfers[i]?.DepositTransactionId}");
-
                                 if (transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended)
                                     continue;
 
@@ -524,13 +522,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                 {
                                     transfers[i] = new CrossChainTransfer(status, deposit.Id, scriptPubKey, deposit.Amount, maturedDeposit.BlockInfo.BlockHeight, transaction, null, null);
                                     tracker.SetTransferStatus(transfers[i]);
-                                    this.logger.LogDebug($"Set {transfers[i]?.DepositTransactionId} to {status}.");
+                                    this.logger.LogDebug("Set {0} to {1}.", transfers[i]?.DepositTransactionId, status);
                                 }
                                 else
                                 {
                                     transfers[i].SetPartialTransaction(transaction);
                                     tracker.SetTransferStatus(transfers[i], CrossChainTransferStatus.Partial);
-                                    this.logger.LogDebug($"Set {transfers[i]?.DepositTransactionId} to Partial.");
+                                    this.logger.LogDebug("Set {0} to Partial.", transfers[i]?.DepositTransactionId);
                                 }
                             }
 
@@ -625,44 +623,47 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         return transfer.PartialTransaction;
                     }
 
+                    /*
+                     * // Log this incase we run into issues where the transaction templates doesn't match.
+                     * 
                     try
                     {
-                        // Log this incase we run into issues where the transaction templates doesn't match.
-                        this.logger.LogDebug($"Partial Transaction inputs:{partialTransactions[0].Inputs.Count}");
-                        this.logger.LogDebug($"Partial Transaction outputs:{partialTransactions[0].Outputs.Count}");
+                        
+                        this.logger.LogDebug("Partial Transaction inputs:{0}", partialTransactions[0].Inputs.Count);
+                        this.logger.LogDebug("Partial Transaction outputs:{1}", partialTransactions[0].Outputs.Count);
 
                         for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
                         {
                             TxIn input = partialTransactions[0].Inputs[i];
-                            this.logger.LogDebug($"Partial Transaction Input N:{input.PrevOut.N} : Hash:{input.PrevOut.Hash}");
+                            this.logger.LogDebug("Partial Transaction Input N:{0} : Hash:{1}", input.PrevOut.N, input.PrevOut.Hash);
                         }
 
                         for (int i = 0; i < partialTransactions[0].Outputs.Count; i++)
                         {
                             TxOut output = partialTransactions[0].Outputs[i];
-                            this.logger.LogDebug($"Partial Transaction Output Value:{output.Value} : ScriptPubKey:{output.ScriptPubKey}");
+                            this.logger.LogDebug("Partial Transaction Output Value:{0} : ScriptPubKey:{1}", output.Value, output.ScriptPubKey);
                         }
 
-                        // Log this incase we run into issues where the transaction templates doesn't match.
-                        this.logger.LogDebug($"Transfer Partial Transaction inputs:{transfer.PartialTransaction.Inputs.Count}");
-                        this.logger.LogDebug($"Transfer Partial Transaction outputs:{transfer.PartialTransaction.Outputs.Count}");
+                        this.logger.LogDebug("Transfer Partial Transaction inputs:{0}", transfer.PartialTransaction.Inputs.Count);
+                        this.logger.LogDebug("Transfer Partial Transaction outputs:{1}", transfer.PartialTransaction.Outputs.Count);
 
                         for (int i = 0; i < transfer.PartialTransaction.Inputs.Count; i++)
                         {
                             TxIn transferInput = transfer.PartialTransaction.Inputs[i];
-                            this.logger.LogDebug($"Transfer Partial Transaction Input N:{transferInput.PrevOut.N} : Hash:{transferInput.PrevOut.Hash}");
+                            this.logger.LogDebug("Transfer Partial Transaction Input N:{0} : Hash:{1}", transferInput.PrevOut.N, transferInput.PrevOut.Hash);
                         }
 
                         for (int i = 0; i < transfer.PartialTransaction.Outputs.Count; i++)
                         {
                             TxOut transferOutput = transfer.PartialTransaction.Outputs[i];
-                            this.logger.LogDebug($"Transfer Partial Transaction Output Value:{transferOutput.Value} : ScriptPubKey:{transferOutput.ScriptPubKey}");
+                            this.logger.LogDebug("Transfer Partial Transaction Output Value:{0} : ScriptPubKey:{1}", transferOutput.Value, transferOutput.ScriptPubKey);
                         }
                     }
                     catch (Exception err)
                     {
                         this.logger.LogDebug("Failed to log transactions: {0}.", err.Message);
                     }
+                    */
 
                     this.logger.LogDebug("Merging signatures for deposit : {0}", depositId);
 

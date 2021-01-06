@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
@@ -18,15 +17,16 @@ namespace Stratis.Features.FederatedPeg.Distribution
     {
         private const int DefaultEpoch = 240;
 
-        private readonly Network network;
         private readonly ChainIndexer chainIndexer;
         private readonly IConsensusManager consensusManager;
-        private readonly ILogger logger;
-
+        private readonly CollateralHeightCommitmentEncoder encoder;
         private readonly int epoch;
         private readonly int epochWindow;
+        private readonly ILogger logger;
+        private readonly Network network;
 
-        private readonly Dictionary<uint256, Block> blocksByHashDictionary = new Dictionary<uint256, Block>();
+        private readonly Dictionary<Script, long> blocksMinedEach = new Dictionary<Script, long>();
+        private readonly Dictionary<uint256, Transaction> commitmentTransactionByHashDictionary = new Dictionary<uint256, Transaction>();
         private readonly Dictionary<uint256, int?> commitmentHeightsByHash = new Dictionary<uint256, int?>();
 
         // The reward each miner receives upon distribution is computed as a proportion of the overall accumulated reward since the last distribution.
@@ -42,6 +42,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.consensusManager = consensusManager;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
+            this.encoder = new CollateralHeightCommitmentEncoder(this.logger);
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
             this.epochWindow = this.epoch * 2;
 
@@ -59,11 +60,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
         /// <inheritdoc />
         public List<Recipient> Distribute(int heightOfRecordedDistributionDeposit, Money totalReward)
         {
-            var encoder = new CollateralHeightCommitmentEncoder(this.logger);
-
             // First determine the main chain blockheight of the recorded deposit less max reorg * 2 (epoch window)
             var applicableMainChainDepositHeight = heightOfRecordedDistributionDeposit - this.epochWindow;
-            this.logger.LogDebug($"{nameof(applicableMainChainDepositHeight)} : {applicableMainChainDepositHeight}");
+            this.logger.LogDebug("{0} : {1}", nameof(applicableMainChainDepositHeight), applicableMainChainDepositHeight);
 
             // Then find the header on the sidechain that contains the applicable commitment height.
             int sidechainTipHeight = this.chainIndexer.Tip.Height;
@@ -72,12 +71,12 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             do
             {
-                this.blocksByHashDictionary.TryGetValue(currentHeader.HashBlock, out Block blockToCheck);
+                this.commitmentTransactionByHashDictionary.TryGetValue(currentHeader.HashBlock, out Transaction transactionToCheck);
 
-                if (blockToCheck == null)
+                if (transactionToCheck == null)
                 {
-                    blockToCheck = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block;
-                    this.blocksByHashDictionary.TryAdd(currentHeader.HashBlock, blockToCheck);
+                    transactionToCheck = this.consensusManager.GetBlockData(currentHeader.HashBlock).Block.Transactions[0];
+                    this.commitmentTransactionByHashDictionary.TryAdd(currentHeader.HashBlock, transactionToCheck);
                 }
 
                 // Do we have this commitment height cached already?
@@ -85,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (commitmentHeightToCheck == null)
                 {
                     // If not extract from the block.
-                    (int? heightOfMainChainCommitment, _) = encoder.DecodeCommitmentHeight(blockToCheck.Transactions[0]);
+                    (int? heightOfMainChainCommitment, _) = this.encoder.DecodeCommitmentHeight(transactionToCheck);
                     if (heightOfMainChainCommitment != null)
                     {
                         commitmentHeightToCheck = heightOfMainChainCommitment.Value;
@@ -95,7 +94,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 if (commitmentHeightToCheck != null)
                 {
-                    this.logger.LogDebug($"{currentHeader} : {nameof(commitmentHeightToCheck)}={commitmentHeightToCheck}");
+                    this.logger.LogDebug("{0} : {1}={2}", currentHeader, nameof(commitmentHeightToCheck), commitmentHeightToCheck);
 
                     if (commitmentHeightToCheck <= applicableMainChainDepositHeight)
                         break;
@@ -108,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Get the set of miners (more specifically, the scriptPubKeys they generated blocks with) to distribute rewards to.
             // Based on the computed 'common block height' we define the distribution epoch:
             int sidechainStartHeight = currentHeader.Height;
-            this.logger.LogDebug($"Initial {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
+            this.logger.LogDebug("Initial {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
 
             // This is a special case which will not be the case on the live network.
             if (sidechainStartHeight < this.epoch)
@@ -118,16 +117,19 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (sidechainStartHeight > this.epoch)
                 sidechainStartHeight -= this.epoch;
 
-            this.logger.LogDebug($"Adjusted {nameof(sidechainStartHeight)} : {sidechainStartHeight}");
+            this.logger.LogDebug("Adjusted {0} : {1}", nameof(sidechainStartHeight), sidechainStartHeight);
 
-            var blocksMinedEach = new Dictionary<Script, long>();
+            // Ensure that the dictionary is cleared on every run.
+            // As this is a static class, new instances of this dictionary will
+            // only be cleaned up once the node shutsdown. It is therefore better
+            // to use a single instance to work with.
+            this.blocksMinedEach.Clear();
 
-            var totalBlocks = CalculateBlocksMinedPerMiner(blocksMinedEach, sidechainStartHeight, currentHeader.Height);
-            List<Recipient> recipients = ConstructRecipients(heightOfRecordedDistributionDeposit, blocksMinedEach, totalBlocks, totalReward);
-            return recipients;
+            var totalBlocks = CalculateBlocksMinedPerMiner(sidechainStartHeight, currentHeader.Height);
+            return ConstructRecipients(heightOfRecordedDistributionDeposit, totalBlocks, totalReward);
         }
 
-        private long CalculateBlocksMinedPerMiner(Dictionary<Script, long> blocksMinedEach, int sidechainStartHeight, int sidechainEndHeight)
+        private long CalculateBlocksMinedPerMiner(int sidechainStartHeight, int sidechainEndHeight)
         {
             long totalBlocks = 0;
 
@@ -137,7 +139,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (chainedHeader.Block == null)
                     chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
 
-                Transaction coinBase = chainedHeader.Block.Transactions.First();
+                Transaction coinBase = chainedHeader.Block.Transactions[0];
 
                 // Regard the first 'spendable' scriptPubKey in the coinbase as belonging to the miner's wallet.
                 // This avoids trying to recover the pubkey from the block signature.
@@ -147,17 +149,20 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 // In this case the block shouldn't count as it was "not mined by anyone".
                 if (!Script.IsNullOrEmpty(minerScript))
                 {
-                    if (!blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
+                    if (!this.blocksMinedEach.TryGetValue(minerScript, out long minerBlockCount))
                         minerBlockCount = 0;
 
-                    blocksMinedEach[minerScript] = ++minerBlockCount;
+                    this.blocksMinedEach[minerScript] = ++minerBlockCount;
 
                     totalBlocks++;
                 }
                 else
-                    this.logger.LogDebug($"A block was mined with an empty script at height '{currentHeight}' (the miner probably did not have a wallet at the time.");
+                    this.logger.LogDebug("A block was mined with an empty script at height '{0}' (the miner probably did not have a wallet at the time.", currentHeight);
             }
 
+            /*
+             * TODO: Uncomment this if debugging is ever required, otherwise implement a IsDebug setting on NodeSettings.
+             * 
             var minerLog = new StringBuilder();
             minerLog.AppendLine($"Total Blocks      = {totalBlocks}");
             minerLog.AppendLine($"Side Chain Start  = {sidechainStartHeight}");
@@ -169,17 +174,18 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
 
             this.logger.LogDebug(minerLog.ToString());
+            */
 
             return totalBlocks;
         }
 
-        private List<Recipient> ConstructRecipients(int heightOfRecordedDistributionDeposit, Dictionary<Script, long> blocksMinedEach, long totalBlocks, Money totalReward)
+        private List<Recipient> ConstructRecipients(int heightOfRecordedDistributionDeposit, long totalBlocks, Money totalReward)
         {
             var recipients = new List<Recipient>();
 
-            foreach (Script scriptPubKey in blocksMinedEach.Keys)
+            foreach (Script scriptPubKey in this.blocksMinedEach.Keys)
             {
-                Money amount = totalReward * blocksMinedEach[scriptPubKey] / totalBlocks;
+                Money amount = totalReward * this.blocksMinedEach[scriptPubKey] / totalBlocks;
 
                 // Only convert to P2PKH if it is a pay-to-pubkey script. Leave the other types alone; the mempool should filter out anything that isn't allowed.
                 // Note that the node wallets can detect transactions with a destination of either the P2PK or P2PKH scriptPubKey corresponding to one of their pubkeys.
@@ -194,14 +200,18 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     recipients.Add(new Recipient() { Amount = amount, ScriptPubKey = scriptPubKey });
             }
 
+            /*
+             * TODO: Uncomment this if debugging is ever required, otherwise implement a IsDebug setting on NodeSettings.
+             * 
             var recipientLog = new StringBuilder();
             foreach (Recipient recipient in recipients)
             {
                 recipientLog.AppendLine($"{recipient.ScriptPubKey} - {recipient.Amount}");
             }
             this.logger.LogDebug(recipientLog.ToString());
+            */
 
-            this.logger.LogInformation($"Reward distribution at main chain height {heightOfRecordedDistributionDeposit} will distribute {totalReward} STRAX between {recipients.Count} mining keys.");
+            this.logger.LogInformation("Reward distribution at main chain height {0} will distribute {1} STRAX between {2} mining keys.", heightOfRecordedDistributionDeposit, totalReward, recipients.Count);
 
             return recipients;
         }
