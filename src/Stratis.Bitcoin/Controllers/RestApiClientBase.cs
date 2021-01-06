@@ -138,7 +138,6 @@ namespace Stratis.Bitcoin.Controllers
             if (!httpResponse.IsSuccessStatusCode)
             {
                 this.logger.LogTrace("(-)[NOT_SUCCESS_CODE]:null");
-
                 return null;
             }
 
