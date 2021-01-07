@@ -67,7 +67,9 @@ namespace Stratis.Features.Collateral
             if (commitmentHeight <= 0)
             {
                 dropTemplate = true;
-                this.logger.LogWarning("Counter chain should first advance at least at {0}! Block can't be produced.", maxReorgLength + AddressIndexer.SyncBuffer);
+                if (counterChainHeight != 0)
+                    this.logger.LogWarning("Counter chain should first advance at least at {0}! Block can't be produced.", maxReorgLength + AddressIndexer.SyncBuffer);
+
                 this.logger.LogTrace("(-)[LOW_COMMITMENT_HEIGHT]");
                 return;
             }
