@@ -627,6 +627,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     Category = category,
                     Amount = trxInWallet.Amount.ToDecimal(MoneyUnit.BTC),
                     OutputIndex = trxInWallet.Index
+                    // TODO: Fee is null here - is that correct?
                 });
             }
 

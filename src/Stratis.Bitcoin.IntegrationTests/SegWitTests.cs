@@ -527,9 +527,6 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
-        /*
-        TODO: Fix this test case.
-
         [Fact]
         public void SegwitWalletTransactionBuildingAndPropagationTest()
         {
@@ -615,6 +612,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
                 TestBase.WaitLoop(() => listener.CreateRPCClient().GetRawMempool().Length > 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
+                TestBase.WaitLoop(() => testBehavior.receivedMessageTracker.ContainsKey("tx"), cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
 
                 var txMessages = testBehavior.receivedMessageTracker["tx"];
                 var txMessage = txMessages.First();
@@ -623,15 +621,23 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var parsedTransaction = receivedTransaction.Obj;
                 var nonWitnessTransaction = parsedTransaction.WithOptions(TransactionOptions.None, listener.FullNode.Network.Consensus.ConsensusFactory);
 
+                // The node that does not support being sent witness data will perceive the transaction to be smaller in size.
                 Assert.True(parsedTransaction.GetSerializedSize() > nonWitnessTransaction.GetSerializedSize());
+
+                // However, as the witness data is not used in the determination of the txid the txid should be identical for both serialisations.
+                Assert.Equal(parsedTransaction.GetHash(), nonWitnessTransaction.GetHash());
 
                 miner.GenerateBlocks(new ReserveScript(mineAddress.ScriptPubKey), 1, int.MaxValue);
 
                 TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length == 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
                 TestBase.WaitLoop(() => listener.CreateRPCClient().GetRawMempool().Length == 0, cancellationToken: new CancellationTokenSource(TimeSpan.FromMinutes(1)).Token);
+
+                // Basic sanity test to ensure that a segwit transaction can be retrieved normally via RPC.
+                Transaction rpcTransaction = node.CreateRPCClient().GetTransaction(parsedTransaction.GetHash());
+                Assert.NotNull(rpcTransaction);
+                Assert.True(rpcTransaction.GetSerializedSize() == parsedTransaction.GetSerializedSize());
             }
         }
-        */
 
         [Fact]
         public void SegwitWalletTransactionBuildingTest_SpendP2WPKHAndNormalUTXOs()
