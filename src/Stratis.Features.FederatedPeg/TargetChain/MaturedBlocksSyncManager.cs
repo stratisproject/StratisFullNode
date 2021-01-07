@@ -31,11 +31,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederationGatewayClient federationGatewayClient;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
+        private int previousRequestedHeight = 0;
 
         private IAsyncLoop requestDepositsTask;
-
-        /// <summary>The maximum amount of blocks to request at a time from alt chain.</summary>
-        public const int MaxBlocksToRequest = 1000;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
         private const int RefreshDelaySeconds = 10;
@@ -79,7 +77,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
         {
-            this.logger.LogInformation($"Fetching deposits from height {this.crossChainTransferStore.NextMatureDepositHeight}");
+            if (this.previousRequestedHeight == this.crossChainTransferStore.NextMatureDepositHeight)
+            {
+                this.logger.LogInformation($"Deposits already requested from height {this.previousRequestedHeight}.");
+                return true;
+            }
+
+            this.logger.LogInformation($"Fetching deposits from height {this.crossChainTransferStore.NextMatureDepositHeight}.");
 
             SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
@@ -126,6 +130,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             // If we received a portion of blocks we can ask for new portion without any delay.
             RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
+
+            // If we received a response from the API and actually recorded deposits, set the previous recorded height.
+            if (result.MatureDepositRecorded)
+                this.previousRequestedHeight = this.crossChainTransferStore.NextMatureDepositHeight;
+
             return !result.MatureDepositRecorded;
         }
 

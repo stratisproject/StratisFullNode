@@ -121,7 +121,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
             // Ensure that the dictionary is cleared on every run.
             // As this is a static class, new instances of this dictionary will
-            // only be cleaned up once the node shutsdown. It is therefore better
+            // only be cleaned up once the node shuts down. It is therefore better
             // to use a single instance to work with.
             this.blocksMinedEach.Clear();
 
