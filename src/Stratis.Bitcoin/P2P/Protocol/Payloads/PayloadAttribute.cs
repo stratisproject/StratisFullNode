@@ -31,6 +31,17 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
         }
     }
 
+    public class PayloadTypeMetric
+    {
+        public int ReceivedCount { get; set; }
+
+        public int SentCount { get; set; }
+
+        public long BytesSentCount { get; set; }
+
+        public long BytesReceivedCount { get; set; }
+    }
+
     /// <summary>
     /// A provider that maps <see cref="PayloadAttribute"/> types with <see cref="Message.Command"/>.
     /// This is used by the P2P code to map and deserialize messages that are received from the tcp network to a concrete type.
@@ -47,6 +58,62 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
         /// </summary>
         private readonly Dictionary<Type, string> typeToName;
 
+        private readonly Dictionary<Type, PayloadTypeMetric> payloadTypeMetrics;
+
+        private readonly object locker = new object();
+
+        public PayloadTypeMetric GetPayloadTypeMetric(Type type)
+        {
+            lock (this.locker)
+            {
+                if (!this.payloadTypeMetrics.TryGetValue(type, out PayloadTypeMetric metric))
+                {
+                    metric = new PayloadTypeMetric();
+
+                        this.payloadTypeMetrics[type] = metric;
+                }
+
+                return metric;
+            }
+        }
+
+        public Dictionary<Type, PayloadTypeMetric> GetPayloadTypeMetrics()
+        {
+            lock (this.locker)
+            {
+                return this.payloadTypeMetrics;
+            }
+        }
+
+        public PayloadTypeMetric GetPayloadTypeMetric(Payload payload)
+        {
+            Type type = payload.GetType();
+
+            return this.GetPayloadTypeMetric(type);
+        }
+
+        public void RecordMessageSentMetric(Message message, int bytesSent)
+        {
+            PayloadTypeMetric metric = this.GetPayloadTypeMetric(message.Payload);
+
+            lock (this.locker)
+            {
+                metric.SentCount++;
+                metric.BytesSentCount += bytesSent;
+            }
+        }
+
+        public void RecordMessageReceivedMetric(Message message, int bytesReceived)
+        {
+            PayloadTypeMetric metric = this.GetPayloadTypeMetric(message.Payload);
+
+            lock (this.locker)
+            {
+                metric.ReceivedCount++;
+                metric.BytesReceivedCount += bytesReceived;
+            }
+        }
+
         /// <summary>
         /// Initialize a new instance of the object.
         /// </summary>
@@ -54,6 +121,7 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
         {
             this.nameToType = new Dictionary<string, Type>();
             this.typeToName = new Dictionary<Type, string>();
+            this.payloadTypeMetrics = new Dictionary<Type, PayloadTypeMetric>();
         }
 
         /// <summary>

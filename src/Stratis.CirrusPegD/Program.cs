@@ -13,7 +13,6 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
@@ -39,13 +38,6 @@ namespace Stratis.CirrusPegD
             { NetworkType.Mainnet, CirrusNetwork.NetworksSelector.Mainnet },
             { NetworkType.Testnet, CirrusNetwork.NetworksSelector.Testnet },
             { NetworkType.Regtest, CirrusNetwork.NetworksSelector.Regtest }
-        };
-
-        private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
-        {
-            { NetworkType.Mainnet, Networks.Strax.Mainnet},
-            { NetworkType.Testnet, Networks.Strax.Testnet },
-            { NetworkType.Regtest, Networks.Strax.Regtest }
         };
 
         private static void Main(string[] args)
@@ -113,16 +105,15 @@ namespace Stratis.CirrusPegD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
-            bool enableFedKicking = nodeSettings.ConfigReader.GetOrDefault("enablefedkicking", true);
-            ((PoAConsensusOptions)nodeSettings.Network.Consensus.Options).AutoKickIdleMembers = enableFedKicking;
-
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
-                .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
-                .UseFederatedPegPoAMining()
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+                .AddPoAFeature()
+                .UsePoAConsensus()
                 .AddFederatedPeg()
-                .CheckForPoAMembersCollateral(true) // This is a mining node so we will check the commitment height data as well as the full set of collateral checks.
+                .AddPoACollateralMiningCapability()
+                .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()

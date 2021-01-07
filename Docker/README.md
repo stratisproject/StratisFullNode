@@ -6,7 +6,7 @@ Here we have some basic Docker images for StraxD. The images build from the full
 
 ```
 cd Stratis.StraxD
-docker build -t stratisfullnode/straxtest . 
+docker build -t stratisfullnode/straxmain . 
 ```
 
 # Run the Docker container

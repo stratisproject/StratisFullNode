@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -6,6 +8,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Features.ColdStaking.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
@@ -112,9 +115,19 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
 
             try
             {
+                ExtPubKey extPubKey = null;
+
+                try
+                {
+                    extPubKey = ExtPubKey.Parse(request.ExtPubKey);
+                }
+                catch
+                {
+                }
+
                 var model = new CreateColdStakingAccountResponse
                 {
-                    AccountName = this.ColdStakingManager.GetOrCreateColdStakingAccount(request.WalletName, request.IsColdWalletAccount, request.WalletPassword).Name
+                    AccountName = this.ColdStakingManager.GetOrCreateColdStakingAccount(request.WalletName, request.IsColdWalletAccount, request.WalletPassword, extPubKey).Name
                 };
 
                 this.logger.LogTrace("(-):'{0}'", model);
@@ -210,7 +223,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                 Money amount = Money.Parse(request.Amount);
                 Money feeAmount = Money.Parse(request.Fees);
 
-                Transaction transaction = this.ColdStakingManager.GetColdStakingSetupTransaction(
+                (Transaction transaction, _) = this.ColdStakingManager.GetColdStakingSetupTransaction(
                     this.walletTransactionHandler,
                     request.ColdWalletAddress,
                     request.HotWalletAddress,
@@ -219,11 +232,106 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     request.WalletPassword,
                     amount,
                     feeAmount,
+                    request.SubtractFeeFromAmount,
+                    false,
+                    request.SplitCount,
                     request.SegwitChangeAddress);
 
                 var model = new SetupColdStakingResponse
                 {
                     TransactionHex = transaction.ToHex()
+                };
+
+                this.logger.LogTrace("(-):'{0}'", model);
+                return this.Json(model);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Creates a cold staking setup transaction in an unsigned state, so that the unsigned transaction can be transferred to
+        /// an offline node that possesses the necessary private keys to sign it.
+        /// </summary>
+        /// <param name="request">A <see cref="SetupOfflineColdStakingRequest"/> object containing the cold staking setup parameters.</param>
+        /// <returns>A <see cref="BuildOfflineSignResponse"/> object containing the hex representation of the unsigned transaction, as well as other metadata for offline signing.</returns>
+        /// <response code="200">Returns offline setup transaction response</response>
+        /// <response code="400">Invalid request or unexpected exception occurred</response>
+        /// <response code="500">Request is null</response>
+        [Route("setup-offline-cold-staking")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult SetupOfflineColdStaking([FromBody] SetupOfflineColdStakingRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+                Money feeAmount = Money.Parse(request.Fees);
+
+                (Transaction transaction, TransactionBuildContext context) = this.ColdStakingManager.GetColdStakingSetupTransaction(
+                    this.walletTransactionHandler,
+                    request.ColdWalletAddress,
+                    request.HotWalletAddress,
+                    request.WalletName,
+                    request.WalletAccount,
+                    null,
+                    amount,
+                    feeAmount,
+                    request.SubtractFeeFromAmount,
+                    true,
+                    request.SplitCount,
+                    request.SegwitChangeAddress);
+
+                // TODO: We use the same code in the regular wallet for offline signing request construction, perhaps it should be moved to a common method
+                // Need to be able to look up the keypath for the UTXOs that were used.
+                IEnumerable<UnspentOutputReference> spendableTransactions = this.ColdStakingManager.GetSpendableTransactionsInAccount(
+                        new WalletAccountReference(request.WalletName, request.WalletAccount)).ToList();
+
+                var utxos = new List<UtxoDescriptor>();
+                var addresses = new List<AddressDescriptor>();
+                foreach (ICoin coin in context.TransactionBuilder.FindSpentCoins(transaction))
+                {
+                    utxos.Add(new UtxoDescriptor()
+                    {
+                        Amount = coin.TxOut.Value.ToUnit(MoneyUnit.BTC).ToString(),
+                        TransactionId = coin.Outpoint.Hash.ToString(),
+                        Index = coin.Outpoint.N.ToString(),
+                        ScriptPubKey = coin.TxOut.ScriptPubKey.ToHex()
+                    });
+
+                    UnspentOutputReference outputReference = spendableTransactions.FirstOrDefault(u => u.Transaction.Id == coin.Outpoint.Hash && u.Transaction.Index == coin.Outpoint.N);
+
+                    if (outputReference != null)
+                    {
+                        bool segwit = outputReference.Transaction.ScriptPubKey.IsScriptType(ScriptType.P2WPKH);
+                        addresses.Add(new AddressDescriptor() { Address = segwit ? outputReference.Address.Bech32Address : outputReference.Address.Address, AddressType = segwit ? "p2wpkh" : "p2pkh", KeyPath = outputReference.Address.HdPath });
+                    }
+                }
+
+                // Return transaction hex, UTXO list, address list. The offline signer will infer from the transaction structure that a cold staking setup is being made.
+                var model = new BuildOfflineSignResponse()
+                {
+                    WalletName = request.WalletName,
+                    WalletAccount = request.WalletAccount,
+                    Fee = context.TransactionFee.ToUnit(MoneyUnit.BTC).ToString(),
+                    UnsignedTransaction = transaction.ToHex(),
+                    Utxos = utxos,
+                    Addresses = addresses
                 };
 
                 this.logger.LogTrace("(-):'{0}'", model);
@@ -266,7 +374,53 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                     request.WalletPassword,
                     amount,
                     request.SubtractFeeFromAmount,
-                    request.SegwitChangeAddress);
+                    false,
+                    request.SegwitChangeAddress,
+                    request.SplitCount);
+
+                this.logger.LogTrace("(-):'{0}'", estimatedFee);
+                return this.Json(estimatedFee);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("estimate-offline-cold-staking-setup-tx-fee")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult EstimateOfflineColdStakingSetupFee([FromBody] SetupOfflineColdStakingRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+
+                Money estimatedFee = this.ColdStakingManager.EstimateSetupTransactionFee(
+                    this.walletTransactionHandler,
+                    request.ColdWalletAddress,
+                    request.HotWalletAddress,
+                    request.WalletName,
+                    request.WalletAccount,
+                    null,
+                    amount,
+                    request.SubtractFeeFromAmount,
+                    true,
+                    request.SegwitChangeAddress,
+                    request.SplitCount);
 
                 this.logger.LogTrace("(-):'{0}'", estimatedFee);
                 return this.Json(estimatedFee);
@@ -321,6 +475,77 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Controllers
                 this.logger.LogTrace("(-):'{0}'", model);
 
                 return this.Json(model);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("offline-cold-staking-withdrawal")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult OfflineColdStakingWithdrawal([FromBody] OfflineColdStakingWithdrawalRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+                Money feeAmount = Money.Parse(request.Fees);
+
+                BuildOfflineSignResponse response = this.ColdStakingManager.BuildOfflineColdStakingWithdrawalRequest(this.walletTransactionHandler,
+                    request.ReceivingAddress, request.WalletName, request.AccountName, amount, feeAmount, request.SubtractFeeFromAmount);
+
+                this.logger.LogTrace("(-):'{0}'", response);
+
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.LogTrace("(-)[ERROR]");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("estimate-offline-cold-staking-withdrawal-tx-fee")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult EstimateOfflineColdStakingWithdrawalFee([FromBody] OfflineColdStakingWithdrawalFeeEstimationRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            // Checks the request is valid.
+            if (!this.ModelState.IsValid)
+            {
+                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                Money amount = Money.Parse(request.Amount);
+
+                Money estimatedFee = this.ColdStakingManager.EstimateOfflineWithdrawalFee(this.walletTransactionHandler,
+                    request.ReceivingAddress, request.WalletName, request.AccountName, amount, request.SubtractFeeFromAmount);
+
+                this.logger.LogTrace("(-):'{0}'", estimatedFee);
+
+                return this.Json(estimatedFee);
             }
             catch (Exception e)
             {

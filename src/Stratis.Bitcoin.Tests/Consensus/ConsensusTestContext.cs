@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.connectionManager = new ConnectionManager(this.dateTimeProvider, this.loggerFactory, this.Network, this.networkPeerFactory, this.nodeSettings,
                 this.nodeLifetime, new NetworkPeerConnectionParameters(), this.peerAddressManager, new IPeerConnector[] { },
-                peerDiscovery, this.selfEndpointTracker, connectionSettings, new VersionProvider(), this.nodeStats, this.asyncProvider);
+                peerDiscovery, this.selfEndpointTracker, connectionSettings, new VersionProvider(), this.nodeStats, this.asyncProvider, new PayloadProvider());
 
             this.deployments = new NodeDeployments(this.Network, this.chainIndexer);
 

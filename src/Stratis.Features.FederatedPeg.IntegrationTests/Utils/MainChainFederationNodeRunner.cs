@@ -40,7 +40,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(this.counterChainNetwork)
-                .AddFederatedPeg()
+                .AddFederatedPeg(true)
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()

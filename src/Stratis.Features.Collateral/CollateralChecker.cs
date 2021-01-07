@@ -15,7 +15,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
 {

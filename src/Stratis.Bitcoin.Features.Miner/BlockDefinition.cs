@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Miner
             // and modifying them for their already included ancestors.
             this.UpdatePackagesForAdded(this.inBlock, mapModifiedTx);
 
-            List<TxMempoolEntry> ancestorScoreList = this.MempoolLock.ReadAsync(() => this.Mempool.MapTx.AncestorScore).ConfigureAwait(false).GetAwaiter().GetResult().ToList();
+            List<TxMempoolEntry> ancestorScoreList = this.MempoolLock.ReadAsync(() => this.Mempool.MapTx.AncestorScore.ToList()).ConfigureAwait(false).GetAwaiter().GetResult().ToList();
 
             TxMempoolEntry mempoolEntry;
 

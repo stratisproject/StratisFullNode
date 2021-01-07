@@ -126,7 +126,7 @@ namespace Stratis.Features.FederatedPeg
 
             uint256 oldHash = transfer[0].PartialTransaction.GetHash();
 
-            Transaction signedTransaction = await this.crossChainTransferStore.MergeTransactionSignaturesAsync(payload.DepositId, new[] { payload.PartialTransaction }).ConfigureAwait(false);
+            Transaction signedTransaction = this.crossChainTransferStore.MergeTransactionSignatures(payload.DepositId, new[] { payload.PartialTransaction });
 
             if (signedTransaction == null)
             {

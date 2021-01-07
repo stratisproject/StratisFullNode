@@ -417,9 +417,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     bool trxFound = this.ProcessTransaction(transaction, chainedHeader.Height, chainedHeader.HashBlock, block);
                     if (trxFound)
-                    {
                         walletUpdated = true;
-                    }
                 }
 
                 walletUpdated |= this.CleanTransactionsPastMaxReorg(chainedHeader.Height);
@@ -430,14 +428,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 this.UpdateLastBlockSyncedHeight(chainedHeader);
 
                 if (walletUpdated)
-                {
                     this.SaveWallet();
-                }
             }
         }
 
         /// <inheritdoc />
-        public bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null, bool isDistribution = false)
+        public bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null)
         {
             Guard.NotNull(transaction, nameof(transaction));
             Guard.Assert(blockHash == (blockHash ?? block?.GetHash()));
@@ -532,16 +528,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                     this.AddSpendingTransactionToWalletLocked(transaction, paidOutTo, tTx.Id, tTx.Index, blockHeight, blockHash, block, withdrawal);
                     foundSendingTrx = true;
-                }
-
-                // Figure out what to do when this transaction is found to affect the wallet.
-                if (foundSendingTrx || foundReceivingTrx)
-                {
-                    // Save the wallet when the transaction was not included in a block.
-                    if (blockHeight == null)
-                    {
-                        this.SaveWallet();
-                    }
                 }
 
                 return foundSendingTrx || foundReceivingTrx;
@@ -727,8 +713,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     foundTransaction.CreationTime = DateTimeOffset.FromUnixTimeSeconds(block.Header.Time);
                 }
             }
-
-            this.TransactionFoundInternal(script);
         }
 
         /// <summary>
@@ -827,6 +811,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     case TxOutType.TX_MULTISIG:
                     case TxOutType.TX_NULL_DATA:
                     case TxOutType.TX_SEGWIT:
+                    case TxOutType.TX_COLDSTAKE:
                         break;
                 }
 
@@ -860,12 +845,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
             }
 
             return spendingDetails;
-        }
-
-        public void TransactionFoundInternal(Script script)
-        {
-            // Persists the wallet file.
-            this.SaveWallet();
         }
 
         /// <inheritdoc />
@@ -961,6 +940,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     // Multiple UTXOs may be spent by the one withdrawal, so if it's already added then no need to add it again.
                     if (withdrawals.Any(w => w.withdrawal.Id == spendingDetail.TransactionId))
                         continue;
+
+                    if (spendingDetail.WithdrawalDetails == null)
+                    {
+                        this.logger.LogError($"Spending detail with txId '{spendingDetail.TransactionId}' has null withdrawal details, deposit id '{depositId}'");
+                    }
 
                     var withdrawal = new Withdrawal(
                         spendingDetail.WithdrawalDetails.MatchingDepositId,

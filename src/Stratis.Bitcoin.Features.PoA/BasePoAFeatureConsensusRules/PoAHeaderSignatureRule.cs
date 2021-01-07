@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
-using Stratis.Bitcoin.Features.PoA.Voting;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 {
@@ -21,11 +18,9 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private ISlotsManager slotsManager;
 
+        private IFederationHistory federationHistory;
+
         private uint maxReorg;
-
-        private bool votingEnabled;
-
-        private VotingManager votingManager;
 
         private IChainState chainState;
 
@@ -38,77 +33,70 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             var engine = this.Parent as PoAConsensusRuleEngine;
 
+            // TODO: Consider adding these via a constructor on this rule.
             this.slotsManager = engine.SlotsManager;
+            this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
-            this.votingManager = engine.VotingManager;
             this.chainState = engine.ChainState;
             this.network = this.Parent.Network;
 
             this.maxReorg = this.network.Consensus.MaxReorgLength;
-            this.votingEnabled = ((PoAConsensusOptions)this.network.Consensus.Options).VotingEnabled;
         }
 
         public override async Task RunAsync(RuleContext context)
         {
-            var header = context.ValidationContext.ChainedHeaderToValidate.Header as PoABlockHeader;
+            ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
-            PubKey pubKey = this.slotsManager.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, this.votingManager).PubKey;
+            var header = chainedHeader.Header as PoABlockHeader;
 
-            if (!this.validator.VerifySignature(pubKey, header))
+            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(chainedHeader);
+
+            PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, federation)?.PubKey;
+
+            if (pubKey == null || !this.validator.VerifySignature(pubKey, header))
             {
-                if (this.votingEnabled)
+                ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
+
+                // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
+                // that we have not yet processed all the votes that may determine the federation make-up.
+                bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
+                if (mightBeInsufficient)
                 {
-                    ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
-
-                    // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
-                    // that we have not yet processed all the votes that may determine the federation make-up.
-                    bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-                    if (mightBeInsufficient)
-                    {
-                        // Mark header as insufficient to avoid banning the peer that presented it.
-                        // When we advance consensus we will be able to validate it.
-                        context.ValidationContext.InsufficientHeaderInformation = true;
-                    }
+                    // Mark header as insufficient to avoid banning the peer that presented it.
+                    // When we advance consensus we will be able to validate it.
+                    context.ValidationContext.InsufficientHeaderInformation = true;
                 }
-
-                try
-                {
-                    // Gather all past and present mining public keys.
-                    IEnumerable<PubKey> genesisFederation = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Select(m => m.PubKey);
-                    var knownKeys = new HashSet<PubKey>(genesisFederation);
-                    foreach (Poll poll in this.votingManager.GetFinishedPolls().Where(x => ((x.VotingData.Key == VoteKey.AddFederationMember) || (x.VotingData.Key == VoteKey.KickFederationMember))))
-                    {
-                        IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
-                        knownKeys.Add(federationMember.PubKey);
-                    }
-
-                    // Try to provide the public key that signed the block.
-                    var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
-                    for (int recId = 0; recId < 4; recId++)
-                    {
-                        PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, header.GetHash(), true);
-                        if (pubKeyForSig == null)
-                        {
-                            this.Logger.LogDebug($"Could not match candidate keys to any known key.");
-                            break;
-                        }
-
-                        this.Logger.LogDebug($"Attempting to match candidate key '{ pubKeyForSig.ToHex() }' to known keys.");
-
-                        if (!knownKeys.Any(pk => pk == pubKeyForSig))
-                            continue;
-
-                        IEnumerable<PubKey> modifiedFederation = this.votingManager?.GetModifiedFederation(context.ValidationContext.ChainedHeaderToValidate).Select(m => m.PubKey) ?? genesisFederation;
-
-                        this.Logger.LogDebug($"Block {context.ValidationContext.ChainedHeaderToValidate}:{context.ValidationContext.ChainedHeaderToValidate.Header.Time} is signed by '{pubKeyForSig.ToHex()}' but expected '{pubKey}' from: { string.Join(" ", modifiedFederation.Select(pk => pk.ToHex()))}.");
-
-                        break;
-                    };
-                }
-                catch (Exception) { }
 
                 this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
                 PoAConsensusErrors.InvalidHeaderSignature.Throw();
+            }
+
+            // Look at the last round of blocks to find the previous time that the miner mined.
+            uint roundTime = this.slotsManager.GetRoundLengthSeconds(federation.Count);
+            int blockCounter = 0;
+
+            for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
+            {
+                blockCounter += 1;
+
+                if ((header.Time - prevHeader.Header.Time) >= roundTime)
+                    break;
+
+                // If the miner is found again within the same round then throw a consensus error.
+                if (this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey != pubKey)
+                    continue;
+
+                // Mining slots shift when the federation changes. 
+                // Only raise an error if the federation did not change.
+                if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
+                    break;
+
+                if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
+                    break;
+
+                this.Logger.LogDebug($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
+                this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
+                ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
         }
     }

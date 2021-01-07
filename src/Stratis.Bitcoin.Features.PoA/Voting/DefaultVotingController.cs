@@ -69,14 +69,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                IFederationMember federationMember = this.federationManager.GetCurrentFederationMember();
+                if (this.federationManager.CurrentFederationKey == null)
+                    throw new Exception("Your node is not registered as a federation member.");
 
                 var federationMemberModel = new FederationMemberDetailedModel
                 {
-                    PubKey = federationMember.PubKey
+                    PubKey = this.federationManager.CurrentFederationKey.PubKey
                 };
 
-                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMember.PubKey);
+                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMemberModel.PubKey);
                 if (lastActive.Key != null)
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
@@ -84,7 +85,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Is this member part of a pending poll
-                Poll poll = this.votingManager.GetPendingPolls().MemberPollsOnly().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                Poll poll = this.votingManager.GetPendingPolls().MemberPolls().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
@@ -93,13 +94,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll finished?
-                poll = this.votingManager.GetFinishedPolls().MemberPollsOnly().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                poll = this.votingManager.GetApprovedPolls().MemberPolls().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
                     federationMemberModel.PollStartBlockHeight = poll.PollStartBlockData.Height;
                     federationMemberModel.PollNumberOfVotesAcquired = poll.PubKeysHexVotedInFavor.Count;
                     federationMemberModel.PollFinishedBlockHeight = poll.PollVotedInFavorBlockData.Height;
+                    federationMemberModel.MemberWillStartMiningAtBlockHeight = poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength;
+                    federationMemberModel.MemberWillStartEarningRewardsEstimateHeight = federationMemberModel.MemberWillStartMiningAtBlockHeight + 480;
 
                     if (this.chainIndexer.Height > poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength)
                         federationMemberModel.PollWillFinishInBlocks = 0;
@@ -108,17 +111,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll executed?
-                poll = this.votingManager.GetExecutedPolls().MemberPollsOnly().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMember.PubKey);
+                poll = this.votingManager.GetExecutedPolls().MemberPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
                 if (poll != null)
-                {
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
-
-                    if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                    {
-                        federationMemberModel.MemberWillStartMiningAtBlockHeight = poll.PollExecutedBlockData.Height + this.network.Consensus.MaxReorgLength;
-                        federationMemberModel.MemberWillStartEarningRewardsEstimateHeight = federationMemberModel.MemberWillStartMiningAtBlockHeight + 480;
-                    }
-                }
 
                 federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
 
@@ -214,7 +209,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                IEnumerable<Poll> polls = this.votingManager.GetFinishedPolls().Where(v => v.VotingData.Key == voteType);
+                IEnumerable<Poll> polls = this.votingManager.GetApprovedPolls().Where(v => v.VotingData.Key == voteType);
                 IEnumerable<PollViewModel> models = polls.Select(x => new PollViewModel(x, this.pollExecutor));
 
                 if (!string.IsNullOrEmpty(pubKeyOfMemberBeingVotedOn))

@@ -26,12 +26,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
     public class WalletService : IWalletService
     {
         private const int MaxHistoryItemsPerAccount = 1000;
-        private readonly IWalletManager walletManager;
+        protected readonly IWalletManager walletManager;
         private readonly IWalletTransactionHandler walletTransactionHandler;
         private readonly IWalletSyncManager walletSyncManager;
         private readonly IConnectionManager connectionManager;
         private readonly IConsensusManager consensusManager;
-        private readonly Network network;
+        protected readonly Network network;
         private readonly ChainIndexer chainIndexer;
         private readonly IBroadcasterManager broadcasterManager;
         private readonly IDateTimeProvider dateTimeProvider;
@@ -356,31 +356,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         // Create a record for a 'receive' transaction.
                         if (!address.IsChangeAddress())
                         {
-                            // First check if we already have a similar transaction output, in which case we just sum up the amounts
-                            TransactionItemModel existingReceivedItem =
-                                this.FindSimilarReceivedTransactionOutput(transactionItems, transaction);
-
-                            if (existingReceivedItem == null)
+                            var receivedItem = new TransactionItemModel
                             {
-                                // Add incoming fund transaction details.
-                                var receivedItem = new TransactionItemModel
-                                {
-                                    Type = TransactionItemType.Received,
-                                    ToAddress = address.Address,
-                                    Amount = transaction.Amount,
-                                    Id = transaction.Id,
-                                    Timestamp = transaction.CreationTime,
-                                    ConfirmedInBlock = transaction.BlockHeight,
-                                    BlockIndex = transaction.BlockIndex
-                                };
+                                Type = TransactionItemType.Received,
+                                ToAddress = address.Address,
+                                Amount = transaction.Amount,
+                                Id = transaction.Id,
+                                Timestamp = transaction.CreationTime,
+                                ConfirmedInBlock = transaction.BlockHeight,
+                                BlockIndex = transaction.BlockIndex
+                            };
 
-                                transactionItems.Add(receivedItem);
-                                uniqueProcessedTxIds.Add(receivedItem.Id);
-                            }
-                            else
-                            {
-                                existingReceivedItem.Amount += transaction.Amount;
-                            }
+                            transactionItems.Add(receivedItem);
+                            uniqueProcessedTxIds.Add(receivedItem.Id);
                         }
                     }
 
@@ -597,6 +585,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     TransactionId = r.transactionId,
                     CreationTime = r.creationTime
                 });
+            }, cancellationToken);
+        }
+
+        public async Task RemoveWallet(RemoveWalletModel request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Run(() =>
+            {
+                this.walletManager.DeleteWallet(request.WalletName);
             }, cancellationToken);
         }
 
@@ -1323,7 +1320,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
+        public virtual async Task<WalletBuildTransactionModel> OfflineSignRequest(OfflineSignRequest request, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
             {
@@ -1334,7 +1331,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 var builder = new TransactionBuilder(this.network);
                 var coins = new List<Coin>();
                 var signingKeys = new List<ISecret>();
-                
+
                 ExtKey seedExtKey = this.walletManager.GetExtKey(new WalletAccountReference() { AccountName = request.WalletAccount, WalletName = request.WalletName }, request.WalletPassword);
 
                 // Have to determine which private key to use for each UTXO being spent.
@@ -1370,7 +1367,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 builder.AddKeys(signingKeys.ToArray());
                 builder.SignTransactionInPlace(unsignedTransaction);
 
-                if (!builder.Verify(unsignedTransaction))
+                // TODO: Do something with the errors
+                if (!builder.Verify(unsignedTransaction, out TransactionPolicyError[] errors))
                 {
                     throw new FeatureException(HttpStatusCode.BadRequest, "Failed to validate signed transaction.",
                         $"Failed to validate signed transaction '{unsignedTransaction.GetHash()}' from offline request '{originalTxId}'.");
@@ -1391,11 +1389,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 if (!string.IsNullOrWhiteSpace(request.SingleAddress))
                 {
-                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName, 1).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
                 }
                 else
                 {
-                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference, 1).OrderBy(u2 => u2.Transaction.Amount).ToList();
                 }
 
                 if (utxos.Count == 0)
@@ -1404,18 +1402,23 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         "Failed to locate any unspent outputs to consolidate.");
                 }
 
-                if (utxos.Count == 1)
-                {
-                    throw new FeatureException(HttpStatusCode.BadRequest, "Already consolidated.",
-                        "Already consolidated.");
-                }
-
-
                 if (!string.IsNullOrWhiteSpace(request.UtxoValueThreshold))
                 {
                     var threshold = Money.Parse(request.UtxoValueThreshold);
 
                     utxos = utxos.Where(u => u.Transaction.Amount <= threshold).ToList();
+                }
+
+                if (utxos.Count == 0)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "After filtering for size, failed to locate any unspent outputs to consolidate.",
+                        "After filtering for size, failed to locate any unspent outputs to consolidate.");
+                }
+
+                if (utxos.Count == 1)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Already consolidated.",
+                        "Already consolidated.");
                 }
 
                 Script destination;
@@ -1428,38 +1431,50 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     destination = this.walletManager.GetUnusedAddress(accountReference).ScriptPubKey;
                 }
 
-                Money totalToSend = Money.Zero;
-                var outpoints = new List<OutPoint>();
+                // Set the maximum upper bound at 1000, as we don't expect any transaction can ever have that many inputs and still
+                // be under the size limit.
+                int upperBound = Math.Min(utxos.Count, 1000);
+                int lowerBound = 0;
+                int iterations = 0;
 
-                TransactionBuildContext context = null;
-
-                foreach (var utxo in utxos)
+                // Assuming a worst case binary search of log2(1000) + 1.
+                // Mostly we just want to bound the attempts.
+                while (iterations < 11)
                 {
-                    totalToSend += utxo.Transaction.Amount;
-                    outpoints.Add(utxo.ToOutPoint());
-                    
-                    context = new TransactionBuildContext(this.network)
-                    {
-                        AccountReference = accountReference,
-                        AllowOtherInputs = false,
-                        FeeType = FeeType.Medium,
-                        // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
-                        Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
-                        SelectedInputs = outpoints,
-
-                        Sign = false
-                    };
-
-                    // Note that this is the virtual size taking the witness scale factor of the current network into account, and not the raw byte count.
-                    int size = this.walletTransactionHandler.EstimateSize(context);
-
-                    // Leave a bit of an error margin for size estimates that are not completely correct.
-                    if (size > (0.95m * this.network.Consensus.Options.MaxStandardTxWeight))
+                    if (lowerBound == upperBound)
                         break;
+
+                    // We perform a form of binary search through the UTXO list in order to find a reasonable number of UTXOs to include for consolidation.
+                    int candidate = (lowerBound + upperBound) / 2;
+
+                    // When the values of the bounds start getting too close together, just short circuit further checks.
+                    if (candidate == lowerBound || candidate == upperBound)
+                        break;
+
+                    // First check if (lower + upper) / 2 is under the size limit and move the lower bound upwards if it is.
+                    int size = this.GetTransactionSizeForUtxoCount(utxos, candidate, accountReference, destination);
+
+                    // If the midpoint resulted in a transaction that was too big then move the upper bound downwards.
+                    if (this.SizeAcceptable(size))
+                        lowerBound = candidate;
+                    else
+                        upperBound = candidate;
+
+                    iterations++;
                 }
-                
+
+                // This is exceedingly unlikely unless the smallest-value UTXO was gigantic.
+                if (lowerBound == 0)
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Unable to consolidate.",
+                        "Unable to consolidate.");
+
+                // lowerBound will have converged to approximately the highest possible acceptable UTXO count.
+                List<UnspentOutputReference> finalUtxos = utxos.Take(lowerBound).ToList();
+                List<OutPoint> outpoints = finalUtxos.Select(u => u.ToOutPoint()).ToList();
+                Money totalToSend = finalUtxos.Sum(a => a.Transaction.Amount);
+
                 // Build the final version of the consolidation transaction.
-                context = new TransactionBuildContext(this.network)
+                var context = new TransactionBuildContext(this.network)
                 {
                     AccountReference = accountReference,
                     AllowOtherInputs = false,
@@ -1473,8 +1488,53 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
 
+                if (request.Broadcast)
+                {
+                    this.broadcasterManager.BroadcastTransactionAsync(transaction);
+                }
+
                 return transaction.ToHex();
             }, cancellationToken);
+        }
+
+        private bool SizeAcceptable(int size)
+        {
+            // Leave a bit of an error margin for size estimates that are not completely correct.
+            return size <= (0.95m * this.network.Consensus.Options.MaxStandardTxWeight);
+        }
+
+        private int GetTransactionSizeForUtxoCount(List<UnspentOutputReference> utxos, int targetCount, WalletAccountReference accountReference, Script destination)
+        {
+            Money totalToSend = Money.Zero;
+            var outpoints = new List<OutPoint>();
+
+            int count = 0;
+            foreach (UnspentOutputReference utxo in utxos)
+            {
+                if (count >= targetCount)
+                    break;
+
+                totalToSend += utxo.Transaction.Amount;
+                outpoints.Add(utxo.ToOutPoint());
+                count++;
+            }
+
+            var context = new TransactionBuildContext(this.network)
+            {
+                AccountReference = accountReference,
+                AllowOtherInputs = false,
+                FeeType = FeeType.Medium,
+                // Prevent mempool transactions from being considered for inclusion.
+                MinConfirmations = 1,
+                // It is intended that consolidation should result in no change address, so the fee has to be subtracted from the single recipient.
+                Recipients = new List<Recipient>() { new Recipient() { ScriptPubKey = destination, Amount = totalToSend, SubtractFeeFromAmount = true } },
+                SelectedInputs = outpoints,
+
+                Sign = false
+            };
+
+            // Note that this is the virtual size taking the witness scale factor of the current network into account, and not the raw byte count.
+            return this.walletTransactionHandler.EstimateSize(context);
         }
 
         private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,

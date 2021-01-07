@@ -13,6 +13,30 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
         /// Adds a feature to the node that will allow certain services to be overridden.
         /// </summary>
         /// <param name="fullNodeBuilder">The object used to build the current node.</param>
+        /// <typeparam name="TFeature">The feature that the service should be added to.</typeparam>
+        /// <typeparam name="T">The serice to add.</typeparam>
+        /// <returns>The full node builder, enriched with the new component.</returns>
+        public static IFullNodeBuilder AddService<TFeature, T>(this IFullNodeBuilder fullNodeBuilder)
+        {
+            fullNodeBuilder.ConfigureFeature(features =>
+            {
+                IFeatureRegistration feature = features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(TFeature));
+                if (feature != null)
+                {
+                    feature.FeatureServices(services =>
+                    {
+                        services.AddSingleton(typeof(T));
+                    });
+                }
+            });
+
+            return fullNodeBuilder;
+        }
+
+        /// <summary>
+        /// Adds a feature to the node that will allow certain services to be overridden.
+        /// </summary>
+        /// <param name="fullNodeBuilder">The object used to build the current node.</param>
         /// <param name="serviceToOverride">Callback routine that will override a given service.</param>
         /// <typeparam name="T">The feature that the service will be replaced in.</typeparam>
         /// <returns>The full node builder, enriched with the new component.</returns>

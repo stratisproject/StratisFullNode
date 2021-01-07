@@ -324,8 +324,8 @@ namespace NBitcoin.Tests
         {
             Network network = this.straxMain;
 
-            Assert.Equal(8, network.Checkpoints.Count);
-            Assert.Single(network.DNSSeeds);
+            Assert.Equal(14, network.Checkpoints.Count);
+            Assert.Equal(2, network.DNSSeeds.Count);
             Assert.Empty(network.SeedNodes);
 
             Assert.Equal("StraxMain", network.Name);

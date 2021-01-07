@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka"; // Cirrus main address
+            this.RewardClaimerBatchActivationHeight = 119_200; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+            this.RewardClaimerBlockInterval = 100;
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
@@ -152,7 +154,13 @@ namespace Stratis.Bitcoin.Networks
                 { 100, new CheckpointInfo(new uint256("0x00bc48e8eae5b053e0d48b42997d637e8b36816c311339eb7e36c6eaca6f4674"), new uint256("0x0ad1e1ea9c0b8c90ff67b286cee07f25c9f1552b3749461e66c3ed2f4cd18d54")) },
                 { 500, new CheckpointInfo(new uint256("0xf88ead17d09223d914e5bdca27f27ff861c4c1e5bfb4ab3bc4a4627d4ddd442a"), new uint256("0xf6ea71dcc38a4dbf6c66dd1d3e54568269d6f7cd411c15304de6fce5394a9702")) },
                 { 800, new CheckpointInfo(new uint256("0x3bb02167ae32be4915c1a78150d5fc7ed9924be00c57c6e9693d7603d94970dc"), new uint256("0x995ff9e10f2ef8cddae35a9c40237bdd48fd7bc9982955d9aac50ee32d69d097")) },
-                { 1500, new CheckpointInfo(new uint256("0x0d28f45849a2e535a7ef72690fc49fc9a5c101494c5d5753fdeb1ac121ffb120"), new uint256("0x4a8a47deb226784606625bc4fd545bfaf5aa314c4a20076185cb86e524a36173")) }
+                { 1500, new CheckpointInfo(new uint256("0x0d28f45849a2e535a7ef72690fc49fc9a5c101494c5d5753fdeb1ac121ffb120"), new uint256("0x4a8a47deb226784606625bc4fd545bfaf5aa314c4a20076185cb86e524a36173")) },
+                { 10000, new CheckpointInfo(new uint256("0xc1c4b7d64b6669d32493c0ed08b42a8f193e07590a95f76a9212a86dc66057f0"), new uint256("0x10130e76efbf5f4cf093594430ea0d160728a3f3d6b5926887aaf7b674ad65b1")) },
+                { 20000, new CheckpointInfo(new uint256("0xeb493db4b643a3cfbc5912bcda5296532ff1bccbdcb320b863698c63ecfea174"), new uint256("0xb35462fd7f43709f59efb0e7225d961c2e8a7569fc44102db5c99400ba9ad6bd")) },
+                { 30000, new CheckpointInfo(new uint256("0x4d0f2a809ef915721ced21f5ec51b6177b684eee06cadd49bcedc57daa243b8b"), new uint256("0xd9b7f8c92f289d66cb35a517e0b5c11c3e7e23a6507ce8ba2f042642849dcba0")) },
+                { 40000, new CheckpointInfo(new uint256("0xdc10671e67350eda9518b220e329ca9f661cd98c0e12d246471f8ec4f8a81c71"), new uint256("0xeb13622df7b0fc95068c0146d718bb2eaf2fd8943b3bea89396d8d58f5af8c15")) },
+                { 50000, new CheckpointInfo(new uint256("0xe3398765bc0da5b481a5dfe60f0acf14f4b1fc8582bab8f7a166317aea9aa026"), new uint256("0x350db25ca3ff01ec589681c94c325f619e5013bdc06efcbefa981776f4dcca4f")) },
+                { 60000, new CheckpointInfo(new uint256("0x9cbc20fd1720529c59073ade6f5511ab5c2cf168556c9a10cb41ff9d8dac724f"), new uint256("0xe363394313d2e1af248a1c0d18b79e6074a08884dddbebfca90e8ae716edb645")) }
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];
@@ -162,7 +170,8 @@ namespace Stratis.Bitcoin.Networks
 
             this.DNSSeeds = new List<DNSSeedData>
             {
-                new DNSSeedData("straxmainnet1.stratisnetwork.com", "straxmainnet1.stratisnetwork.com")
+                new DNSSeedData("straxmainnet1.stratisnetwork.com", "straxmainnet1.stratisnetwork.com"),
+                new DNSSeedData("straxmainnet2.stratisnetwork.com", "straxmainnet2.stratisnetwork.com")
             };
 
             this.SeedNodes = new List<NetworkAddress>

@@ -23,9 +23,10 @@ namespace Stratis.Features.Collateral
         private readonly VotingManager votingManager;
         private readonly Network network;
         private readonly Network counterChainNetwork;
+        private readonly IFederationManager federationManager;
         private readonly HashSet<uint256> pollsCheckedWithJoinFederationRequestMonitor;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, ISignals signals, ILoggerFactory loggerFactory)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals, ILoggerFactory loggerFactory)
         {
             this.signals = signals;
             this.loggerFactory = loggerFactory;
@@ -33,6 +34,7 @@ namespace Stratis.Features.Collateral
             this.votingManager = votingManager;
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
+            this.federationManager = federationManager;
             this.pollsCheckedWithJoinFederationRequestMonitor = new HashSet<uint256>();
         }
 
@@ -47,10 +49,16 @@ namespace Stratis.Features.Collateral
 
         public void OnBlockConnected(BlockConnected blockConnectedData)
         {
-            this.pollsCheckedWithJoinFederationRequestMonitor.Add(blockConnectedData.ConnectedBlock.ChainedHeader.HashBlock);
-
             if (!(this.network.Consensus.ConsensusFactory is CollateralPoAConsensusFactory consensusFactory))
                 return;
+
+            // Only mining federation members vote to include new members.
+            if (this.federationManager.CurrentFederationKey?.PubKey == null)
+                return;
+
+            List<IFederationMember> modifiedFederation = null;
+
+            this.pollsCheckedWithJoinFederationRequestMonitor.Add(blockConnectedData.ConnectedBlock.ChainedHeader.HashBlock);
 
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
 
@@ -70,6 +78,11 @@ namespace Stratis.Features.Collateral
                     // Skip if the member already exists.
                     if (this.votingManager.IsFederationMember(request.PubKey))
                         continue;
+
+                    // Only mining federation members vote to include new members.
+                    modifiedFederation = modifiedFederation ?? this.votingManager.GetModifiedFederation(blockConnectedData.ConnectedBlock.ChainedHeader);
+                    if (!modifiedFederation.Any(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey))
+                        return;
 
                     // Check if the collateral amount is valid.
                     decimal collateralAmount = request.CollateralAmount.ToDecimal(MoneyUnit.BTC);
@@ -98,7 +111,7 @@ namespace Stratis.Features.Collateral
                     }
 
                     // Populate the RemovalEventId.
-                    Poll poll = this.votingManager.GetFinishedPolls().FirstOrDefault(x => x.IsExecuted &&
+                    Poll poll = this.votingManager.GetApprovedPolls().FirstOrDefault(x => x.IsExecuted &&
                           x.VotingData.Key == VoteKey.KickFederationMember && x.VotingData.Data.SequenceEqual(federationMemberBytes));
 
                     request.RemovalEventId = (poll == null) ? Guid.Empty : new Guid(poll.PollExecutedBlockData.Hash.ToBytes().TakeLast(16).ToArray());

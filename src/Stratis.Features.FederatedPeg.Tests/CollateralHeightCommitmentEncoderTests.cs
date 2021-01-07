@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Features.Collateral;
+using Stratis.Features.PoA.Collateral;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests

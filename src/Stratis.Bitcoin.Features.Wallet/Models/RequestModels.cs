@@ -561,6 +561,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         }
     }
 
+    public class RemoveWalletModel : RequestModel
+    {
+        /// <summary>
+        /// The name of the wallet to remove.
+        /// </summary>
+        [Required(ErrorMessage = "The name of the wallet is required.")]
+        public string WalletName { get; set; }
+    }
+
     /// <summary>
     /// A class containing the necessary parameters for a list accounts request.  
     /// </summary>
@@ -1040,5 +1049,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [MoneyFormat(isRequired: false, ErrorMessage = "The amount is not in the correct format.")]
         public string UtxoValueThreshold { get; set; }
+
+        /// <summary>
+        /// For convenience, whether the built consolidated transaction should be automatically broadcast.
+        /// </summary>
+        public bool Broadcast { get; set; }
     }
 }

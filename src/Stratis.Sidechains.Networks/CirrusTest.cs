@@ -128,7 +128,8 @@ namespace Stratis.Sidechains.Networks
             )
             {
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
-                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
+                VotingManagerV2ActivationHeight = 1_999_500
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -219,7 +220,8 @@ namespace Stratis.Sidechains.Networks
                 { 1500000, new CheckpointInfo(new uint256("0xb458117f195f936d7767f7299d0976ad90700e321870c18ec1e3481924f2afc3")) },
                 { 1600000, new CheckpointInfo(new uint256("0x696cd64ec08b67ed3a3ec1e3add77c0e8203d8d6c0bb7df96dd9508dda4ba67e")) },
                 { 1700000, new CheckpointInfo(new uint256("0xf42564107701d81e847e5dc6bd95da6bf32cb54e762d84118a7764349b414e68")) },
-                { 1800000, new CheckpointInfo(new uint256("0x57a3119de52cf43b66d6e805a644c20fdee63557038cd68c429d47b21d111084")) }
+                { 1800000, new CheckpointInfo(new uint256("0x57a3119de52cf43b66d6e805a644c20fdee63557038cd68c429d47b21d111084")) },
+                { 1950000, new CheckpointInfo(new uint256("0xf64b399a0c22cb0641c2aee63c60ced5bc65992ed08ddcec6f061e8bfb3b6b70")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>

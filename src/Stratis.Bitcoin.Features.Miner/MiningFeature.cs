@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -109,10 +111,13 @@ namespace Stratis.Bitcoin.Features.Miner
             {
                 this.logger.LogInformation("Staking enabled on wallet '{0}'.", walletName);
 
-                this.posMinting.Stake(new WalletSecret
+                this.posMinting.Stake(new List<WalletSecret>()
                 {
-                    WalletPassword = walletPassword,
-                    WalletName = walletName
+                    new WalletSecret()
+                    {
+                        WalletPassword = walletPassword,
+                        WalletName = walletName
+                    }
                 });
             }
             else
@@ -124,7 +129,33 @@ namespace Stratis.Bitcoin.Features.Miner
         }
 
         /// <summary>
-        /// Stop a staking wallet.
+        /// Starts staking with multiple wallets simultaneously.
+        /// </summary>
+        /// <param name="walletSecrets">The list of wallet credentials.</param>
+        public void StartMultiStaking(List<WalletSecret> walletSecrets)
+        {
+            if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
+            {
+                string errorMessage = "Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
+                                                                                                                                  + "Please adjust your system time and restart the node.";
+                this.logger.LogError(errorMessage);
+                throw new ConfigurationException(errorMessage);
+            }
+
+            if (walletSecrets.Any(walletSecret => string.IsNullOrEmpty(walletSecret.WalletName) || string.IsNullOrEmpty(walletSecret.WalletPassword)))
+            {
+                string errorMessage = "Staking not started, wallet name or password were not provided for at least one wallet.";
+                this.logger.LogError(errorMessage);
+                throw new ConfigurationException(errorMessage);
+            }
+
+            this.logger.LogInformation("Staking enabled on multiple wallets.");
+
+            this.posMinting.Stake(walletSecrets);
+        }
+
+        /// <summary>
+        /// Stop any staking wallets.
         /// </summary>
         public void StopStaking()
         {
@@ -133,7 +164,7 @@ namespace Stratis.Bitcoin.Features.Miner
         }
 
         /// <summary>
-        /// Stop a Proof of Work miner.
+        /// Stop the Proof of Work miner.
         /// </summary>
         public void StopMining()
         {

@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stratis.Bitcoin.Controllers;
-using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Collateral.CounterChain;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests.RestClientsTests
 {
     public class RestApiClientBaseTests
     {
-        private IHttpClientFactory httpClientFactory;
+        private readonly IHttpClientFactory httpClientFactory;
 
         private readonly ILoggerFactory loggerFactory;
 
@@ -24,7 +24,7 @@ namespace Stratis.Features.FederatedPeg.Tests.RestClientsTests
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
-            this.httpClientFactory = new Bitcoin.Controllers.HttpClientFactory();
+            this.httpClientFactory = new HttpClientFactory();
         }
 
         [Fact]

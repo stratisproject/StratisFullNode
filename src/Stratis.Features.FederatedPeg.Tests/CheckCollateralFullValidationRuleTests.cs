@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.PoA.Collateral;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
@@ -34,10 +35,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.slotsManagerMock = new Mock<ISlotsManager>();
 
             this.ibdMock.Setup(x => x.IsInitialBlockDownload()).Returns(false);
-            this.slotsManagerMock
-                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), null))
-                .Returns(new CollateralFederationMember(new Key().PubKey, false, new Money(1), "addr1"));
-
             this.ruleContext = new RuleContext(new ValidationContext(), DateTimeOffset.Now);
             var header = new BlockHeader() { Time = 5234 };
             this.ruleContext.ValidationContext.BlockToValidate = new Block(header);
@@ -76,7 +73,12 @@ namespace Stratis.Features.FederatedPeg.Tests
             var consensusManager = new Mock<IConsensusManager>();
             fullnode.Setup(x => x.NodeService<IConsensusManager>(false)).Returns(consensusManager.Object);
 
-            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, this.slotsManagerMock.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork(), null)
+            var federationHistory = new Mock<IFederationHistory>();
+            federationHistory
+                .Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>()))
+                .Returns(new CollateralFederationMember(new Key().PubKey, false, new Money(1), "addr1"));
+
+            this.rule = new CheckCollateralFullValidationRule(this.ibdMock.Object, this.collateralCheckerMock.Object, new Mock<IDateTimeProvider>().Object, new PoANetwork(), federationHistory.Object)
             {
                 Logger = logger
             };

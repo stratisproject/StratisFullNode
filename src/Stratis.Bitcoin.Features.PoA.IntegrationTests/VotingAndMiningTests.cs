@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 {
     public class VotingAndMiningTests : IDisposable
     {
-        private readonly TestPoANetwork network;
+        private readonly TestPoANetwork poaNetwork;
 
         private readonly PoANodeBuilder builder;
 
@@ -32,13 +32,13 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         public VotingAndMiningTests()
         {
             this.testPubKey = new Mnemonic("lava frown leave virtual wedding ghost sibling able liar wide wisdom mammal").DeriveExtKey().PrivateKey.PubKey;
-            this.network = new TestPoANetwork();
+            this.poaNetwork = new TestPoANetwork();
 
             this.builder = PoANodeBuilder.CreatePoANodeBuilder(this);
 
-            this.node1 = this.builder.CreatePoANode(this.network, this.network.FederationKey1).Start();
-            this.node2 = this.builder.CreatePoANode(this.network, this.network.FederationKey2).Start();
-            this.node3 = this.builder.CreatePoANode(this.network, this.network.FederationKey3).Start();
+            this.node1 = this.builder.CreatePoANode(this.poaNetwork, this.poaNetwork.FederationKey1).Start();
+            this.node2 = this.builder.CreatePoANode(this.poaNetwork, this.poaNetwork.FederationKey2).Start();
+            this.node3 = this.builder.CreatePoANode(this.poaNetwork, this.poaNetwork.FederationKey3).Start();
         }
 
         [Fact]
@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             await this.node1.MineBlocksAsync(3);
 
             IFederationMember federationMember = new FederationMember(new PubKey("03025fcadedd28b12665de0542c8096f4cd5af8e01791a4d057f67e2866ca66ba7"));
-            byte[] fedMemberBytes = (this.network.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(federationMember);
+            byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(federationMember);
             var votingData = new VotingData()
             {
                 Key = VoteKey.AddFederationMember,
@@ -82,7 +82,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             // Node 2 votes. After that it will be enough to change the federation.
             this.node2.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
 
-            await this.node2.MineBlocksAsync((int)this.network.Consensus.MaxReorgLength + 1);
+            await this.node2.MineBlocksAsync((int)this.poaNetwork.Consensus.MaxReorgLength + 1);
 
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
@@ -103,7 +103,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             TestHelper.Connect(this.node1, this.node2);
 
             IFederationMember federationMember = new FederationMember(new PubKey("03025fcadedd28b12665de0542c8096f4cd5af8e01791a4d057f67e2866ca66ba7"));
-            byte[] fedMemberBytes = (this.network.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(federationMember);
+            byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(federationMember);
             var votingData = new VotingData()
             {
                 Key = VoteKey.AddFederationMember,
@@ -116,7 +116,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             await this.node1.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
-            await this.node2.MineBlocksAsync((int)this.network.Consensus.MaxReorgLength * 3);
+            await this.node2.MineBlocksAsync((int)this.poaNetwork.Consensus.MaxReorgLength * 3);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             List<IFederationMember> newFedMembers = this.node1.FullNode.NodeService<IFederationManager>().GetFederationMembers();
@@ -149,7 +149,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
 
             TestHelper.Connect(this.node1, this.node2);
 
-            byte[] fedMemberBytes = (this.network.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(this.network.FederationKey2.PubKey));
+            byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(this.poaNetwork.FederationKey2.PubKey));
             var votingData = new VotingData()
             {
                 Key = VoteKey.KickFederationMember,
@@ -162,7 +162,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             await this.node2.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
-            await this.node1.MineBlocksAsync((int)this.network.Consensus.MaxReorgLength * 3);
+            await this.node1.MineBlocksAsync((int)this.poaNetwork.Consensus.MaxReorgLength * 3);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             Assert.Equal(originalFedMembersCount - 1, this.node1.FullNode.NodeService<IFederationManager>().GetFederationMembers().Count);
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         {
             TestHelper.Connect(this.node1, this.node2);
 
-            byte[] fedMemberBytes = (this.network.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(this.testPubKey));
+            byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(this.testPubKey));
             var votingData = new VotingData() { Key = VoteKey.AddFederationMember, Data = fedMemberBytes };
             this.node1.FullNode.NodeService<VotingManager>().ScheduleVote(votingData);
 
@@ -213,14 +213,14 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetPendingPolls());
-            Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetFinishedPolls());
+            Assert.Single(this.node2.FullNode.NodeService<VotingManager>().GetApprovedPolls());
 
             await this.node3.MineBlocksAsync(4);
             TestHelper.Connect(this.node2, this.node3);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2, this.node3);
 
             Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetPendingPolls());
-            Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetFinishedPolls());
+            Assert.Empty(this.node2.FullNode.NodeService<VotingManager>().GetApprovedPolls());
         }
 
         private async Task AllVoteAndMineAsync(PubKey key, bool add)
@@ -229,12 +229,12 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             await this.VoteAndMineBlockAsync(key, add, this.node2);
             await this.VoteAndMineBlockAsync(key, add, this.node3);
 
-            await this.node1.MineBlocksAsync((int)this.network.Consensus.MaxReorgLength + 1);
+            await this.node1.MineBlocksAsync((int)this.poaNetwork.Consensus.MaxReorgLength + 1);
         }
 
         private async Task VoteAndMineBlockAsync(PubKey key, bool add, CoreNode node)
         {
-            byte[] fedMemberBytes = (this.network.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(key));
+            byte[] fedMemberBytes = (this.poaNetwork.Consensus.ConsensusFactory as PoAConsensusFactory).SerializeFederationMember(new FederationMember(key));
             var votingData = new VotingData()
             {
                 Key = add ? VoteKey.AddFederationMember : VoteKey.KickFederationMember,
@@ -251,7 +251,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
         [Fact]
         public async Task CanVoteToWhitelistAndRemoveHashesAsync()
         {
-            int maxReorg = (int)this.network.Consensus.MaxReorgLength;
+            int maxReorg = (int)this.poaNetwork.Consensus.MaxReorgLength;
 
             Assert.Empty(this.node1.FullNode.NodeService<IWhitelistedHashesRepository>().GetHashes());
             TestHelper.Connect(this.node1, this.node2);
@@ -449,7 +449,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));
 
                 var encoder = new JoinFederationRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
-                JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.network, request, encoder, walletName, walletAccount, walletPassword);
+                JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.poaNetwork, request, encoder, walletName, walletAccount, walletPassword);
 
                 await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(result.Transaction.ToHex()));
 

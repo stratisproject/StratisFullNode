@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
+using Stratis.Features.PoA.Voting;
 
 namespace Stratis.Features.Collateral
 {
@@ -21,24 +22,20 @@ namespace Stratis.Features.Collateral
     /// <summary>Controller providing operations on collateral federation members.</summary>
     [ApiVersion("1")]
     [Route("api/[controller]")]
-    public class CollateralController : Controller
+    public sealed class CollateralController : Controller
     {
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
-
-        /// <summary>Current network for the active controller instance.</summary>
         private readonly Network network;
+        private readonly IJoinFederationRequestService joinFederationRequestService;
 
-        /// <summary>The collateral federation mananager.</summary>
-        private readonly IFederationManager federationManager;
-
-        public CollateralController(Network network,
+        public CollateralController(
+            IJoinFederationRequestService joinFederationRequestService,
             ILoggerFactory loggerFactory,
-            IFederationManager federationManager)
+            Network network)
         {
-            this.network = network;
+            this.joinFederationRequestService = joinFederationRequestService;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.federationManager = federationManager;
+            this.network = network;
         }
 
         /// <summary>
@@ -70,7 +67,7 @@ namespace Stratis.Features.Collateral
 
             try
             {
-                PubKey minerPubKey = await (this.federationManager as CollateralFederationManager).JoinFederationAsync(request, cancellationToken);
+                PubKey minerPubKey = await this.joinFederationRequestService.JoinFederationAsync(request, cancellationToken);
 
                 var model = new JoinFederationResponseModel
                 {

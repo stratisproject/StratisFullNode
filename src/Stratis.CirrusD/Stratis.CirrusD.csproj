@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Version>1.0.4.2</Version>
+    <Version>1.0.6.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <Company>Stratis Group Ltd.</Company>
     <Product />
@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Stratis.Bitcoin.Features.SignalR\Stratis.Bitcoin.Features.SignalR.csproj" />
+    <ProjectReference Include="..\Stratis.Bitcoin.Networks\Stratis.Bitcoin.Networks.csproj" />
     <ProjectReference Include="..\Stratis.Features.Diagnostic\Stratis.Features.Diagnostic.csproj" />
     <ProjectReference Include="..\Stratis.Features.FederatedPeg\Stratis.Features.FederatedPeg.csproj" />
     <ProjectReference Include="..\Stratis.Features.SQLiteWalletRepository\Stratis.Features.SQLiteWalletRepository.csproj" />

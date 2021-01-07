@@ -19,6 +19,7 @@ using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -114,6 +115,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             this.nodeSettings = nodeSettings;
             this.walletSettings = walletSettings;
 
+            // The wallet feature displays these.
             //nodeStats.RemoveStats(StatsType.Component, typeof(WalletFeature).Name);
             //nodeStats.RemoveStats(StatsType.Inline, typeof(WalletFeature).Name);
 
@@ -161,7 +163,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             if (walletNames.Any())
             {
                 benchLog.AppendLine();
-                benchLog.AppendLine("======Wallets123======");
+                benchLog.AppendLine("======Wallets======");
 
                 foreach (string walletName in walletNames)
                 {
@@ -246,6 +248,9 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 {
                     services.RemoveSingleton<IWalletManager>();
                     services.AddSingleton<IWalletManager, ColdStakingManager>();
+
+                    services.RemoveSingleton<IWalletService>();
+                    services.AddSingleton<IWalletService, ColdStakingWalletService>();
 
                     services.AddSingleton<ScriptAddressReader>();
                     services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(ColdStakingDestinationReader), ServiceLifetime.Singleton));

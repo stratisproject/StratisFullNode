@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Tests.Base
 
                     foreach (ChainedHeader block in blocks)
                     {
-                        batch.Put(DBH.Key(1, BitConverter.GetBytes(block.Height)),
+                        batch.Put(1, BitConverter.GetBytes(block.Height),
                             new ChainRepository.ChainRepositoryData()
                                     { Hash = block.HashBlock, Work = block.ChainWorkBytes }
                                 .ToBytes(this.Network.Consensus.ConsensusFactory));

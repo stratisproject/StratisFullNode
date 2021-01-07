@@ -67,6 +67,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         public string WalletName => this.builderWalletName;
         public string WalletPassword => this.builderWalletPassword;
 
+        private bool addRewardClaimer;
         private bool builderAlwaysFlushBlocks;
         private bool builderEnablePeerDiscovery;
         private bool builderNoValidation;
@@ -123,6 +124,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         public CoreNode NoValidation()
         {
             this.builderNoValidation = true;
+            return this;
+        }
+
+        public CoreNode AddRewardClaimer()
+        {
+            this.addRewardClaimer = true;
             return this;
         }
 
@@ -298,6 +305,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         {
             lock (this.lockObject)
             {
+                this.runner.AddRewardClaimer = this.addRewardClaimer;
                 this.runner.AlwaysFlushBlocks = this.builderAlwaysFlushBlocks;
                 this.runner.EnablePeerDiscovery = this.builderEnablePeerDiscovery;
                 this.runner.OverrideDateTimeProvider = this.builderOverrideDateTimeProvider;
