@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using NBitcoin.Networks;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -31,7 +32,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public WithdrawalTransactionBuilderTests()
         {
             this.loggerFactory = new Mock<ILoggerFactory>();
-            this.network = new CirrusRegTest();
+            this.network = NetworkRegistration.Register(new CirrusRegTest());
             this.federationWalletManager = new Mock<IFederationWalletManager>();
             this.federationWalletTransactionHandler = new Mock<IFederationWalletTransactionHandler>();
             this.federationGatewaySettings = new Mock<IFederatedPegSettings>();
