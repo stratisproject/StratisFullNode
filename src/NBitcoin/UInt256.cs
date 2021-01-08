@@ -289,6 +289,10 @@ namespace NBitcoin
                 throw new ArgumentOutOfRangeException();
         }
 
+        public uint256(uint256 value) : this(value.pn)
+        {
+        }
+
         public uint256(string hex) : base(WIDTH, hex)
         {
         }
@@ -309,7 +313,6 @@ namespace NBitcoin
             return true;
         }
 
-        private static readonly HexEncoder Encoder = new HexEncoder();
         private const int WIDTH_BYTE = 256 / 8;
 
         public uint256(ulong b) : this()
@@ -322,8 +325,17 @@ namespace NBitcoin
         {
         }
 
-        public uint256(byte[] vch)
-            : this(vch, true)
+        public static uint256 operator >>(uint256 a, int shift)
+        {
+            return (uint256)((NumArray<uint>)a >> shift);
+        }
+
+        public static uint256 operator <<(uint256 a, int shift)
+        {
+            return (uint256)((NumArray<uint>)a << shift);
+        }
+
+        public uint256(byte[] vch) : this(vch, true)
         {
         }
         
