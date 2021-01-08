@@ -94,7 +94,15 @@ namespace NBitcoin
             if (!((HexEncoder)Encoders.Hex).IsValid(hex))
                 return false;
 
-            result = new uint256(hex);
+            try
+            {
+                result = new uint256(hex);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
             return true;
         }
 
