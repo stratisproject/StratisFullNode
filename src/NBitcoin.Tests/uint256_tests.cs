@@ -112,6 +112,18 @@ namespace NBitcoin.Tests
             Assert.True(vs2.SequenceEqual(vs));
         }
 
+        [Fact]
+        [Trait("UnitTest", "UnitTest")]
+        public void CanMultiply()
+        {
+            uint256 v1 = new uint256("0000000000000000000000000000000000000000000000000000000000001234");
+            uint256 v2 = new uint256("0000000000000000000000000000000000000000000000000000000000005678");
+            uint256 v3 = v1 * v2;
+
+            Assert.Equal(new uint256("0000000000000000000000000000000000000000000000000000000006260060"), v3);
+        }
+
+
         private void AssertEquals(uint256 a, uint256 b)
         {
             Assert.Equal(a, b);

@@ -1,236 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using NBitcoin.DataEncoders;
 
 namespace NBitcoin
 {
-    public class NumConverter<T> where T : struct, IComparable
-    {
-        static Dictionary<Type, Func<byte[], object>> conversions = new Dictionary<Type, Func<byte[], object>>() {
-            { typeof(byte), x => (byte)BitConverter.ToChar(x) },
-            { typeof(ushort), x => BitConverter.ToUInt16(x) },
-            { typeof(uint), x => BitConverter.ToUInt32(x) },
-            { typeof(ulong), x => BitConverter.ToUInt64(x) },
-        };
-
-        public static T FromBytes(Type type, byte[] bytes)
-        {
-            return (T)conversions[type](bytes);
-        }
-    }
-
-    public class NumArray<T> : IComparable where T:struct, IComparable
-    {
-        // Least significant first.
-        protected T[] pn;
-
-        private static int SIZE = Marshal.SizeOf(new T());
-        private static int BITS = 1 << SIZE;
-        private static readonly HexEncoder Encoder = new HexEncoder();
-
-        private int WIDTH_BYTE => this.pn.Length * SIZE;
-
-        public NumArray(int size)
-        {
-            this.pn = new T[size];
-        }
-
-        public NumArray(NumArray<T> value) : this(value.pn)
-        {
-        }
-
-        public NumArray(T[] pn)
-        {
-            this.pn = (T[])pn.Clone();
-        }
-
-        public NumArray(int size, byte[] vch, bool lendian = true) : this(size)
-        {
-            if (vch.Length != size * SIZE)
-                throw new FormatException($"The byte array should be { (size * SIZE) } bytes long.");
-
-            if (!lendian)
-                vch = vch.Reverse().ToArray();
-
-            using (MemoryStream ms = new MemoryStream(vch))
-            {
-                for (int i = 0; i < size; i++)
-                    this.pn[i] = NumConverter<T>.FromBytes(typeof(T), ms.ReadBytes(SIZE));
-            }
-        }
-
-        private static byte[] HexBytes(string str)
-        {
-            str = str.Trim();
-
-            if (str.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                str = str.Substring(2);
-
-            return Encoder.DecodeData(str).Reverse().ToArray();
-        }
-
-        public NumArray(int size, string str) : this(size, HexBytes(str), true)
-        {
-        }
-
-        protected T[] ToArray()
-        {
-            return (T[])this.pn.Clone();
-        }
-
-        protected static T[] ShiftLeft(T[] source, int shift)
-        {
-            var target = new T[source.Length];
-            int k = shift / BITS;
-            shift = shift % BITS;
-
-            for (int i = 0; i < target.Length; i++)
-            {
-                if (i + k + 1 < target.Length && shift != 0)
-                    target[i + k + 1] |= ((dynamic)source[i] >> (BITS - shift));
-                if (i + k < target.Length)
-                    target[i + k] |= ((dynamic)source[i] << shift);
-            }
-
-            return target;
-        }
-
-        public static NumArray<T> operator <<(NumArray<T> a, int shift)
-        {
-            return new NumArray<T>(ShiftLeft(a.ToArray(), shift));
-        }
-
-        protected static T[] ShiftRight(T[] source, int shift)
-        {
-            var target = new T[source.Length];
-            int k = shift / BITS;
-            shift = shift % BITS;
-            for (int i = 0; i < target.Length; i++)
-            {
-                if (i - k - 1 >= 0 && shift != 0)
-                    target[i - k - 1] |= ((dynamic)source[i] << (BITS - shift));
-                if (i - k >= 0)
-                    target[i - k] |= ((dynamic)source[i] >> shift);
-            }
-
-            return target;
-        }
-
-        public static NumArray<T> operator >>(NumArray<T> a, int shift)
-        {
-            return new NumArray<T>(ShiftRight(a.ToArray(), shift));
-        }
-
-        public int CompareTo(object obj)
-        {
-            var item = obj as NumArray<T>;
-            if (item == null)
-                return 1;
-
-            for (int i = this.pn.Length - 1; i >= 0; i--)
-            {
-                int cmp = this.pn[i].CompareTo(item.pn[i]);
-                if (cmp != 0)
-                    return cmp;
-            }
-
-            return 0;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return this.CompareTo(obj) == 0;
-        }
-
-        public static int Comparison(NumArray<T> a, NumArray<T> b)
-        {
-            if (a == null)
-                throw new ArgumentNullException("a");
-            if (b == null)
-                throw new ArgumentNullException("b");
-
-            return a.CompareTo(b);
-        }
-
-        public static bool operator ==(NumArray<T> a, NumArray<T> b)
-        {
-            if (ReferenceEquals(a, b))
-                return true;
-
-            if (((object)a == null) || ((object)b == null))
-                return false;
-
-            return a.Equals(b);
-        }
-
-        public static bool operator !=(NumArray<T> a, NumArray<T> b)
-        {
-            return !(a == b);
-        }
-
-        public static bool operator <(NumArray<T> a, NumArray<T> b)
-        {
-            return Comparison(a, b) < 0;
-        }
-
-        public static bool operator >(NumArray<T> a, NumArray<T> b)
-        {
-            return Comparison(a, b) > 0;
-        }
-
-        public static bool operator <=(NumArray<T> a, NumArray<T> b)
-        {
-            return Comparison(a, b) <= 0;
-        }
-
-        public static bool operator >=(NumArray<T> a, NumArray<T> b)
-        {
-            return Comparison(a, b) >= 0;
-        }
-
-        public byte GetByte(int index)
-        {
-            int uintIndex = index / SIZE;
-            if (uintIndex >= this.pn.Length)
-                throw new ArgumentOutOfRangeException("index");
-
-            return (byte)((dynamic)this.pn[uintIndex] >> ((index % SIZE) * 8));
-        }
-
-        public byte[] ToBytes(bool lendian = true)
-        {
-            var arr = new byte[this.pn.Length * SIZE];
-            for (int i = 0; i < this.pn.Length; i++)
-                Buffer.BlockCopy(Utils.ToBytes((dynamic)this.pn[i], true), 0, arr, SIZE * i, SIZE);
-            if (!lendian)
-                Array.Reverse(arr);
-            return arr;
-        }
-
-        public override string ToString()
-        {
-            return Encoder.EncodeData(ToBytes().Reverse().ToArray());
-        }
-
-        public static bool TryParse(int size, string hex, out NumArray<T> result)
-        {
-            if (hex == null)
-                throw new ArgumentNullException("hex");
-            if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                hex = hex.Substring(2);
-            result = null;
-            if (hex.Length != size * SIZE * 2)
-                return false;
-            if (!((HexEncoder)Encoders.Hex).IsValid(hex))
-                return false;
-            result = new NumArray<T>(size, hex);
-            return true;
-        }
-    }
-
     public class uint256 : NumArray<uint>
     {
         public class MutableUint256 : IBitcoinSerializable
@@ -277,6 +50,7 @@ namespace NBitcoin
         }
 
         private static readonly uint256 _Zero = new uint256();
+
         public static uint256 Zero
         {
             get { return _Zero; }
@@ -344,6 +118,11 @@ namespace NBitcoin
         public static uint256 operator <<(uint256 a, int shift)
         {
             return new uint256(ShiftLeft(a.ToArray(), shift));
+        }
+
+        public static uint256 operator *(uint256 a, uint256 b)
+        {
+            return new uint256(Multiply(a.ToArray(), b.ToArray()));
         }
 
         public uint256(byte[] vch) : this(vch, true)
