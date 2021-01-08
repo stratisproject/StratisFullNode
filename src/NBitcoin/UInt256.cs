@@ -76,17 +76,17 @@ namespace NBitcoin
         {
         }
 
-        private T[] ToArray()
+        protected T[] ToArray()
         {
             return (T[])this.pn.Clone();
         }
 
-        public static NumArray<T> operator <<(NumArray<T> a, int shift)
+        protected static T[] ShiftLeft(T[] source, int shift)
         {
-            T[] source = a.ToArray();
             var target = new T[source.Length];
             int k = shift / BITS;
             shift = shift % BITS;
+
             for (int i = 0; i < target.Length; i++)
             {
                 if (i + k + 1 < target.Length && shift != 0)
@@ -94,12 +94,17 @@ namespace NBitcoin
                 if (i + k < target.Length)
                     target[i + k] |= ((dynamic)source[i] << shift);
             }
-            return new NumArray<T>(target);
+
+            return target;
         }
 
-        public static NumArray<T> operator >>(NumArray<T> a, int shift)
+        public static NumArray<T> operator <<(NumArray<T> a, int shift)
         {
-            T[] source = a.ToArray();
+            return new NumArray<T>(ShiftLeft(a.ToArray(), shift));
+        }
+
+        protected static T[] ShiftRight(T[] source, int shift)
+        {
             var target = new T[source.Length];
             int k = shift / BITS;
             shift = shift % BITS;
@@ -110,7 +115,13 @@ namespace NBitcoin
                 if (i - k >= 0)
                     target[i - k] |= ((dynamic)source[i] >> shift);
             }
-            return new NumArray<T>(target);
+
+            return target;
+        }
+
+        public static NumArray<T> operator >>(NumArray<T> a, int shift)
+        {
+            return new NumArray<T>(ShiftRight(a.ToArray(), shift));
         }
 
         public int CompareTo(object obj)
@@ -327,12 +338,12 @@ namespace NBitcoin
 
         public static uint256 operator >>(uint256 a, int shift)
         {
-            return (uint256)((NumArray<uint>)a >> shift);
+            return new uint256(ShiftRight(a.ToArray(), shift));
         }
 
         public static uint256 operator <<(uint256 a, int shift)
         {
-            return (uint256)((NumArray<uint>)a << shift);
+            return new uint256(ShiftLeft(a.ToArray(), shift));
         }
 
         public uint256(byte[] vch) : this(vch, true)
