@@ -36,7 +36,7 @@ namespace Stratis.CirrusD
             try
             {
                 // set the console window title to identify this as a Cirrus full node (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = "Cirrus full node";
+                Console.Title = "Cirrus Full Node";
                 var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
