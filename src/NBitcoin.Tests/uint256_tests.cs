@@ -158,6 +158,13 @@ namespace NBitcoin.Tests
             Assert.Equal(new uint256("0000000000000000000000000000000000000000000000000000000000001234"), v3);
         }
 
+        [Fact]
+        [Trait("UnitTest", "UnitTest")]
+        public void CanParseBigIntegers()
+        {
+            var x = uint256.Parse("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+        }
+
         private void AssertEquals(uint256 a, uint256 b)
         {
             Assert.Equal(a, b);

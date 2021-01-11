@@ -30,9 +30,19 @@ namespace NBitcoin
             return Encoder.DecodeData(str).Reverse().ToArray();
         }
 
+        private static bool TooBig(BigInteger newValue)
+        {
+            var bytes = newValue.ToByteArray();
+            if (bytes.Length <= 32)
+                return false;
+            if (bytes.Length == 33 && bytes[32] == 0)
+                return false;
+            return true;
+        }
+
         private void SetValue(BigInteger newValue)
         {
-            if (newValue.GetByteCount() > 32)
+            if (TooBig(newValue))
                 throw new OverflowException();
 
             this.value = newValue;
@@ -69,7 +79,7 @@ namespace NBitcoin
             if (!lendian)
                 vch = vch.Reverse().ToArray();
 
-            SetValue(new BigInteger(vch));
+            SetValue(new BigInteger(vch, true));
         }
 
         public BigInteger256(uint[] array)
@@ -92,9 +102,9 @@ namespace NBitcoin
 
         public byte[] ToBytes(bool lendian = true)
         {
+            var arr1 = this.value.ToByteArray();
             var arr = new byte[32];
-            
-            this.value.ToByteArray().CopyTo(arr, 0);
+            Array.Copy(arr1, arr, Math.Min(arr1.Length, arr.Length));
 
             if (!lendian)
                 Array.Reverse(arr);
