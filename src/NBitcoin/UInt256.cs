@@ -95,6 +95,9 @@ namespace NBitcoin
         {
             result = null;
 
+            if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                hex = hex.Substring(2);
+
             if (!((HexEncoder)Encoders.Hex).IsValid(hex))
                 return false;
 

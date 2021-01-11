@@ -30,9 +30,8 @@ namespace NBitcoin
             return Encoder.DecodeData(str).Reverse().ToArray();
         }
 
-        private static bool TooBig(BigInteger newValue)
+        private static bool TooBig(byte[] bytes)
         {
-            var bytes = newValue.ToByteArray();
             if (bytes.Length <= 32)
                 return false;
             if (bytes.Length == 33 && bytes[32] == 0)
@@ -42,7 +41,7 @@ namespace NBitcoin
 
         private void SetValue(BigInteger newValue)
         {
-            if (TooBig(newValue))
+            if (TooBig(newValue.ToByteArray()))
                 throw new OverflowException();
 
             this.value = newValue;
@@ -97,6 +96,9 @@ namespace NBitcoin
 
         public byte GetByte(int n)
         {
+            if (n >= 32)
+                throw new ArgumentOutOfRangeException();
+
             return this.ToBytes()[n];
         }
 
