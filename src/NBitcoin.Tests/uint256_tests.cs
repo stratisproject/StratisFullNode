@@ -114,6 +114,30 @@ namespace NBitcoin.Tests
 
         [Fact]
         [Trait("UnitTest", "UnitTest")]
+        public void CanAdd()
+        {
+            uint256 v1 = new uint256("0000000000000000000000000000000000000000000000000000000000000325");
+            uint256 v2 = new uint256("0000000000000000000000000000000000000000000000000000000000000F0F");
+            uint256 v3 = v1 + v2;
+
+            Assert.Equal(new uint256("0000000000000000000000000000000000000000000000000000000000001234"), v3);
+        }
+
+
+        [Fact]
+        [Trait("UnitTest", "UnitTest")]
+        public void CanSubtract()
+        {
+            uint256 v1 = new uint256("0000000000000000000000000000000000000000000000000000000000001234");
+            uint256 v2 = new uint256("0000000000000000000000000000000000000000000000000000000000000325");
+            uint256 v3 = v1 - v2;
+
+            Assert.Equal(new uint256("0000000000000000000000000000000000000000000000000000000000000F0F"), v3);
+        }
+
+
+        [Fact]
+        [Trait("UnitTest", "UnitTest")]
         public void CanMultiply()
         {
             uint256 v1 = new uint256("0000000000000000000000000000000000000000000000000000000000001234");
@@ -123,6 +147,16 @@ namespace NBitcoin.Tests
             Assert.Equal(new uint256("0000000000000000000000000000000000000000000000000000000006260060"), v3);
         }
 
+        [Fact]
+        [Trait("UnitTest", "UnitTest")]
+        public void CanDivide()
+        {
+            uint256 v1 = new uint256("0000000000000000000000000000000000000000000000000000000006260060");
+            uint256 v2 = new uint256("0000000000000000000000000000000000000000000000000000000000005678");
+            uint256 v3 = v1 / v2;
+
+            Assert.Equal(new uint256("0000000000000000000000000000000000000000000000000000000000001234"), v3);
+        }
 
         private void AssertEquals(uint256 a, uint256 b)
         {

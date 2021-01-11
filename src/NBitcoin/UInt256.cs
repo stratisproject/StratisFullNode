@@ -4,7 +4,7 @@ using NBitcoin.DataEncoders;
 
 namespace NBitcoin
 {
-    public class uint256 : NumArray<uint>
+    public class uint256 : BigInteger256
     {
         public class MutableUint256 : IBitcoinSerializable
         {
@@ -48,7 +48,7 @@ namespace NBitcoin
                 }
             }
         }
-
+        
         private static readonly uint256 _Zero = new uint256();
 
         public static uint256 Zero
@@ -61,8 +61,8 @@ namespace NBitcoin
         {
             get { return _One; }
         }
-
-        public uint256() : base(WIDTH)
+        
+        public uint256() : base()
         {
         }
 
@@ -74,11 +74,15 @@ namespace NBitcoin
                 throw new ArgumentOutOfRangeException();
         }
 
-        public uint256(uint256 value) : this(value.pn)
+        private uint256(BigInteger256 value) : base(value)
         {
         }
 
-        public uint256(string hex) : base(WIDTH, hex)
+        public uint256(uint256 value) : this(value.ToUIntArray())
+        {
+        }
+
+        public uint256(string hex) : base(hex)
         {
         }
 
@@ -108,29 +112,47 @@ namespace NBitcoin
 
         private const int WIDTH_BYTE = 256 / 8;
 
-        public uint256(ulong b) : this()
+        public uint256(ulong b) : base(b)
         {
-            this.pn[0] = (uint)b;
-            this.pn[1] = (uint)(b >> 32);
         }
 
-        public uint256(byte[] vch, bool lendian = true) : base(WIDTH, vch, lendian)
+        public uint256(byte[] vch, bool lendian = true) : base(vch, lendian)
         {
         }
 
         public static uint256 operator >>(uint256 a, int shift)
         {
-            return new uint256(ShiftRight(a.ToArray(), shift));
+            return new uint256(ShiftRight(a, shift));
         }
 
         public static uint256 operator <<(uint256 a, int shift)
         {
-            return new uint256(ShiftLeft(a.ToArray(), shift));
+            return new uint256(ShiftLeft(a, shift));
+        }
+
+        public static uint256 operator -(uint256 a, uint256 b)
+        {
+            return new uint256(Subtract(a, b));
+        }
+
+        public static uint256 operator +(uint256 a, uint256 b)
+        {
+            return new uint256(Add(a, b));
         }
 
         public static uint256 operator *(uint256 a, uint256 b)
         {
-            return new uint256(Multiply(a.ToArray(), b.ToArray()));
+            return new uint256(Multiply(a, b));
+        }
+
+        public static uint256 operator /(uint256 a, uint256 b)
+        {
+            return new uint256(Divide(a, b));
+        }
+
+        public static uint256 operator %(uint256 a, uint256 b)
+        {
+            return new uint256(Mod(a, b));
         }
 
         public uint256(byte[] vch) : this(vch, true)
@@ -155,6 +177,22 @@ namespace NBitcoin
         public static bool operator >=(uint256 a, uint256 b)
         {
             return Comparison(a, b) >= 0;
+        }
+
+        public static bool operator ==(uint256 a, uint256 b)
+        {
+            if (ReferenceEquals(a, b))
+                return true;
+
+            if (((object)a == null) != ((object)b == null))
+                return false;
+
+            return Comparison(a, b) == 0;
+        }
+
+        public static bool operator !=(uint256 a, uint256 b)
+        {
+            return !(a == b);
         }
 
         public static bool operator ==(uint256 a, ulong b)
@@ -192,31 +230,29 @@ namespace NBitcoin
 
         public ulong GetLow64()
         {
-            return this.pn[0] | (ulong) this.pn[1] << 32;
+            var pn = ToUIntArray();
+            return pn[0] | (ulong)pn[1] << 32;
         }
 
         public uint GetLow32()
         {
-            return this.pn[0];
-        }
-
-        public override int GetHashCode()
-        {
-            return (int)this.pn[0];
+            var pn = ToUIntArray();
+            return pn[0];
         }
 
         public ulong GetULong(int position)
         {
+            var pn = ToUIntArray();
             switch (position)
             {
                 case 0:
-                    return (ulong)this.pn[0] + (ulong)((ulong)this.pn[1] << 32);
+                    return (ulong)pn[0] + (ulong)((ulong)pn[1] << 32);
                 case 1:
-                    return (ulong)this.pn[2] + (ulong)((ulong)this.pn[3] << 32);
+                    return (ulong)pn[2] + (ulong)((ulong)pn[3] << 32);
                 case 2:
-                    return (ulong)this.pn[4] + (ulong)((ulong)this.pn[5] << 32);
+                    return (ulong)pn[4] + (ulong)((ulong)pn[5] << 32);
                 case 3:
-                    return (ulong)this.pn[6] + (ulong)((ulong)this.pn[7] << 32);
+                    return (ulong)pn[6] + (ulong)((ulong)pn[7] << 32);
                 default:
                     throw new ArgumentOutOfRangeException("position should be less than 4", "position");
             }
