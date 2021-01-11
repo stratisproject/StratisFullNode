@@ -91,7 +91,7 @@ namespace NBitcoin
             for (int i = 0; i < 8; i++)
                 BitConverter.GetBytes(array[i]).CopyTo(bytes, i * 4);
 
-            SetValue(new BigInteger(bytes));
+            SetValue(new BigInteger(bytes, true));
         }
 
         public byte GetByte(int n)
