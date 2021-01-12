@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
-using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Controllers
@@ -37,17 +36,12 @@ namespace Stratis.Features.FederatedPeg.Controllers
     [Route("api/[controller]")]
     public class FederationWalletController : Controller
     {
+        private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationWalletManager federationWalletManager;
-
+        private readonly Network network;
         private readonly IFederationWalletSyncManager walletSyncManager;
-
-        private readonly CoinType coinType;
-
         private readonly IConnectionManager connectionManager;
-
         private readonly ChainIndexer chainIndexer;
-
-        private readonly IWithdrawalHistoryProvider withdrawalHistoryProvider;
 
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
@@ -59,16 +53,15 @@ namespace Stratis.Features.FederatedPeg.Controllers
             IConnectionManager connectionManager,
             Network network,
             ChainIndexer chainIndexer,
-            IDateTimeProvider dateTimeProvider,
-            IWithdrawalHistoryProvider withdrawalHistoryProvider)
+            ICrossChainTransferStore crossChainTransferStore)
         {
-            this.federationWalletManager = walletManager;
-            this.walletSyncManager = walletSyncManager;
             this.connectionManager = connectionManager;
-            this.withdrawalHistoryProvider = withdrawalHistoryProvider;
-            this.coinType = (CoinType)network.Consensus.CoinType;
+            this.crossChainTransferStore = crossChainTransferStore;
             this.chainIndexer = chainIndexer;
+            this.federationWalletManager = walletManager;
+            this.network = network;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.walletSyncManager = walletSyncManager;
         }
 
         /// <summary>
@@ -136,13 +129,13 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     return this.NotFound("No federation wallet found.");
                 }
 
-                (Money ConfirmedAmount, Money UnConfirmedAmount) result = this.federationWalletManager.GetSpendableAmount();
+                (Money ConfirmedAmount, Money UnConfirmedAmount) = this.federationWalletManager.GetSpendableAmount();
 
                 var balance = new AccountBalanceModel
                 {
-                    CoinType = this.coinType,
-                    AmountConfirmed = result.ConfirmedAmount,
-                    AmountUnconfirmed = result.UnConfirmedAmount,
+                    CoinType = (CoinType)this.network.Consensus.CoinType,
+                    AmountConfirmed = ConfirmedAmount,
+                    AmountUnconfirmed = UnConfirmedAmount,
                 };
 
                 var model = new WalletBalanceModel();
@@ -175,11 +168,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
             {
                 FederationWallet wallet = this.federationWalletManager.GetWallet();
                 if (wallet == null)
-                {
                     return this.NotFound("No federation wallet found.");
-                }
 
-                List<WithdrawalModel> result = this.withdrawalHistoryProvider.GetHistory(maxEntriesToReturn);
+                List<WithdrawalModel> result = this.crossChainTransferStore.GetCompletedWithdrawals(maxEntriesToReturn);
 
                 return this.Json(result);
             }
@@ -235,7 +226,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult EnableFederation([FromBody]EnableFederationRequest request)
+        public IActionResult EnableFederation([FromBody] EnableFederationRequest request)
         {
             Guard.NotNull(request, nameof(request));
 
@@ -282,7 +273,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult RemoveTransactions([FromQuery]RemoveFederationTransactionsModel request)
+        public IActionResult RemoveTransactions([FromQuery] RemoveFederationTransactionsModel request)
         {
             Guard.NotNull(request, nameof(request));
 
