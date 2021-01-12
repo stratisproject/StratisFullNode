@@ -6,7 +6,7 @@ namespace NBitcoin
 {
     public class uint128 : BigInteger128
     {
-        public class Mutableuint128 : IBitcoinSerializable
+        public class MutableUint128 : IBitcoinSerializable
         {
             private uint128 _Value;
 
@@ -24,11 +24,11 @@ namespace NBitcoin
 
             public uint128 MaxValue => uint128.Parse("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-            public Mutableuint128()
+            public MutableUint128()
             {
                 this._Value = Zero;
             }
-            public Mutableuint128(uint128 value)
+            public MutableUint128(uint128 value)
             {
                 this._Value = value;
             }
@@ -203,9 +203,9 @@ namespace NBitcoin
             return new uint128(value);
         }
 
-        public Mutableuint128 AsBitcoinSerializable()
+        public MutableUint128 AsBitcoinSerializable()
         {
-            return new Mutableuint128(this);
+            return new MutableUint128(this);
         }
     }
 }
