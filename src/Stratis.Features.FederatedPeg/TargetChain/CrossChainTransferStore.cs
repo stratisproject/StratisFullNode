@@ -1439,7 +1439,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             benchLog.AppendLine(
                 "CCTS.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + this.TipHashAndHeight?.Height.ToString().PadRight(8) +
-                "CCTS.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.TipHashAndHeight?.HashBlock);
+                "CCTS.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.TipHashAndHeight?.HashBlock.ToString().PadRight(8));
         }
 
         private void AddComponentStats(StringBuilder benchLog)
@@ -1447,7 +1447,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             benchLog.AppendLine("====== Cross Chain Transfer Store ======");
             benchLog.AppendLine("NextDepositHeight:".PadRight(LoggingConfiguration.ColumnLength) + this.NextMatureDepositHeight);
             benchLog.AppendLine("Partial Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
-            benchLog.AppendLine("Suspended Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
+            benchLog.AppendLine("Suspended Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Suspended));
+            benchLog.AppendLine();
         }
 
         /// <inheritdoc />
