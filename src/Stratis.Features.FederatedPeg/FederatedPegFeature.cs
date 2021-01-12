@@ -13,7 +13,6 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
-using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.SmartContracts;
@@ -127,7 +126,6 @@ namespace Stratis.Features.FederatedPeg
             payloadProvider.AddPayload(typeof(RequestPartialTransactionPayload));
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
-            nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
         }
 
         public override async Task InitializeAsync()
@@ -197,22 +195,6 @@ namespace Stratis.Features.FederatedPeg
         }
 
         [NoTrace]
-        private void AddInlineStats(StringBuilder benchLogs)
-        {
-            if (this.federationWalletManager == null)
-                return;
-
-            int height = this.federationWalletManager.LastBlockSyncedHashHeight().Height;
-            ChainedHeader block = this.chainIndexer.GetHeader(height);
-            uint256 hashBlock = block == null ? 0 : block.HashBlock;
-
-            FederationWallet federationWallet = this.federationWalletManager.GetWallet();
-            benchLogs.AppendLine("Fed.Wallet.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) +
-                                 (federationWallet != null ? height.ToString().PadRight(8) : "No Wallet".PadRight(8)) +
-                                 (federationWallet != null ? (" Fed.Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + hashBlock) : string.Empty));
-        }
-
-        [NoTrace]
         private void AddComponentStats(StringBuilder benchLog)
         {
             try
@@ -230,30 +212,6 @@ namespace Stratis.Features.FederatedPeg
         private string CollectStats()
         {
             StringBuilder benchLog = new StringBuilder();
-            benchLog.AppendLine("====== Federation Wallet ======");
-
-            (Money ConfirmedAmount, Money UnConfirmedAmount) = this.federationWalletManager.GetSpendableAmount();
-
-            bool isFederationActive = this.federationWalletManager.IsFederationWalletActive();
-
-            benchLog.AppendLine("Federation Wallet: ".PadRight(LoggingConfiguration.ColumnLength)
-                                + " Confirmed balance: " + ConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
-                                + " Reserved for withdrawals: " + UnConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
-                                + " Federation Status: " + (isFederationActive ? "Active" : "Inactive"));
-            benchLog.AppendLine();
-
-            if (!isFederationActive)
-            {
-                var apiSettings = (ApiSettings)this.fullNode.Services.ServiceProvider.GetService(typeof(ApiSettings));
-
-                benchLog.AppendLine("".PadRight(59, '=') + " W A R N I N G " + "".PadRight(59, '='));
-                benchLog.AppendLine();
-                benchLog.AppendLine("This federation node is not enabled. You will not be able to store or participate in signing of transactions until you enable it.");
-                benchLog.AppendLine("If not done previously, please enable your federation node using " + $"{apiSettings.ApiUri}/api/FederationWallet/{FederationWalletRouteEndPoint.EnableFederation}.");
-                benchLog.AppendLine();
-                benchLog.AppendLine("".PadRight(133, '='));
-                benchLog.AppendLine();
-            }
 
             List<ConsolidationTransaction> consolidationPartials = this.inputConsolidator.ConsolidationTransactions;
 
