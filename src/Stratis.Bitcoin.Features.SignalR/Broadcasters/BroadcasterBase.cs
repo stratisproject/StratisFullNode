@@ -33,7 +33,8 @@ namespace Stratis.Bitcoin.Features.SignalR.Broadcasters
 
         public void Init(ClientEventBroadcasterSettings broadcasterSettings)
         {
-            this.logger.LogDebug($"Initialising SignalR Broadcaster {this.GetType().Name}");
+            this.logger.LogDebug("Initialising SignalR Broadcaster {0}", this.GetType().Name);
+
             this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop(
                 $"Broadcast {this.GetType().Name}",
                 async token =>

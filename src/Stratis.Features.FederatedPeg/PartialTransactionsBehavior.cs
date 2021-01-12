@@ -60,13 +60,13 @@ namespace Stratis.Features.FederatedPeg
 
         protected override void AttachCore()
         {
-            this.logger.LogDebug($"Attaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
+            this.logger.LogDebug("Attaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Register(this.OnMessageReceivedAsync, true);
         }
 
         protected override void DetachCore()
         {
-            this.logger.LogDebug($"Detaching behaviour for {this.AttachedPeer.PeerEndPoint.Address}");
+            this.logger.LogDebug("Detaching behaviour for {0}", this.AttachedPeer.PeerEndPoint.Address);
             this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
@@ -76,7 +76,7 @@ namespace Stratis.Features.FederatedPeg
         /// <param name="payload">The payload to broadcast.</param>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
-            this.logger.LogDebug($"Broadcasting to {this.AttachedPeer.PeerEndPoint.Address}");
+            this.logger.LogDebug("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
             await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
         }
 
@@ -93,7 +93,7 @@ namespace Stratis.Features.FederatedPeg
                 return;
             }
 
-            this.logger.LogDebug($"{nameof(RequestPartialTransactionPayload)} received from '{peer.PeerEndPoint.Address}':'{peer.RemoteSocketEndpoint.Address}'.");
+            this.logger.LogDebug("{0} received from '{1}':'{2}'.", nameof(RequestPartialTransactionPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address);
 
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
 
@@ -143,7 +143,7 @@ namespace Stratis.Features.FederatedPeg
             }
             else
             {
-                this.logger.LogDebug($"The old and signed hash matches '{oldHash}'.");
+                this.logger.LogDebug("The old and signed hash matches '{0}'.", oldHash);
             }
         }
 

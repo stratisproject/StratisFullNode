@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
                 startFrom = startFrom.Previous;
             }
 
-            this.logger.LogDebug($"{chainedHeadersToDelete.Count} blocks will be pruned.");
+            this.logger.LogDebug("{0} blocks will be pruned.", chainedHeadersToDelete.Count);
 
             ChainedHeader prunedTip = chainedHeadersToDelete.First();
 
