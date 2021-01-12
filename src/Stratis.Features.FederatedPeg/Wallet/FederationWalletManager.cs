@@ -161,6 +161,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.blockStore = blockStore;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+            nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
         }
 
         /// <summary>
