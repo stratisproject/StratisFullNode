@@ -352,7 +352,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             log.AppendLine("======ProvenBlockHeaderStore======");
             log.AppendLine($"Batch Size: {Math.Round(totalBatchInMb, 2)} Mb ({count} headers)");
             log.AppendLine($"Cache Size: {Math.Round(totalCacheInMb, 2)}/{Math.Round(totalMaxCacheInMb, 2)} MB");
-
+            log.AppendLine();
         }
 
         /// <inheritdoc />
