@@ -34,9 +34,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private IAsyncLoop requestDepositsTask;
 
-        /// <summary>The maximum amount of blocks to request at a time from alt chain.</summary>
-        public const int MaxBlocksToRequest = 1000;
-
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
         private const int RefreshDelaySeconds = 10;
 
