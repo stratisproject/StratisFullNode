@@ -160,9 +160,13 @@ namespace NBitcoin.Tests
 
         [Fact]
         [Trait("UnitTest", "UnitTest")]
-        public void CanParseBigIntegers()
+        public void CanParseLargeNumbers()
         {
-            var x = uint256.Parse("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+            uint256 v1 = uint256.Parse("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+            uint256 v2 = uint256.Parse("0000000000000000000000000000000ebaaedce6af48a03bbfd25e8cd0364141");
+            uint256 v3 = v1 - v2;
+
+            Assert.Equal(new uint256("fffffffffffffffffffffffffffffff000000000000000000000000000000000"), v3);
         }
 
         private void AssertEquals(uint256 a, uint256 b)
