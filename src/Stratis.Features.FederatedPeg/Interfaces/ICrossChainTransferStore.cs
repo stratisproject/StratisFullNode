@@ -96,6 +96,13 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         /// <param name="transactionsToCheck">The list of input transactions.</param>
         /// <returns>The list of transactions that are completed (or unknown) wihdrawals.</returns>
-        List<Transaction> CompletedWithdrawals(IEnumerable<Transaction> transactionsToCheck);
+        List<Transaction> GetCompletedWithdrawalsForTransactions(IEnumerable<Transaction> transactionsToCheck);
+
+        /// <summary>
+        /// Returns a list of completed withdrawals (those that are seen-in-block).
+        /// </summary>
+        /// <param name="transfersToDisplay">The max items to display.</param>
+        /// <returns>The completed withdrawals.</returns>
+        List<WithdrawalModel> GetCompletedWithdrawals(int transfersToDisplay);
     }
 }
