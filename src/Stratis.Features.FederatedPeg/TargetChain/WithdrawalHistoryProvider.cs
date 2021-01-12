@@ -11,56 +11,50 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 {
     public interface IWithdrawalHistoryProvider
     {
-        List<WithdrawalModel> GetHistory(int maximumEntriesToReturn);
-        List<WithdrawalModel> GetPending();
+        List<WithdrawalModel> GetHistory(IEnumerable<ICrossChainTransfer> crossChainTransfers, int maximumEntriesToReturn);
+        List<WithdrawalModel> GetPendingWithdrawals(IEnumerable<ICrossChainTransfer> crossChainTransfers);
     }
 
     public class WithdrawalHistoryProvider : IWithdrawalHistoryProvider
     {
-        private readonly Network network;
         private readonly IFederatedPegSettings federatedPegSettings;
-        private readonly ICrossChainTransferStore crossChainTransferStore;
-        private readonly IWithdrawalExtractor withdrawalExtractor;
         private readonly MempoolManager mempoolManager;
+        private readonly Network network;
+        private readonly IWithdrawalExtractor withdrawalExtractor;
 
         /// <summary>
         /// The <see cref="WithdrawalHistoryProvider"/> constructor.
         /// </summary>
         /// <param name="network">Network we are running on.</param>
         /// <param name="federatedPegSettings">Federation settings providing access to number of signatures required.</param>
-        /// <param name="crossChainTransferStore">Store which provides access to the statuses.</param>
         /// <param name="mempoolManager">Mempool which provides information about transactions in the mempool.</param>
         /// <param name="loggerFactory">Logger factory.</param>
         /// <param name="counterChainNetworkWrapper">Counter chain network.</param>
+        /// 
         public WithdrawalHistoryProvider(
             Network network,
             IFederatedPegSettings federatedPegSettings,
-            ICrossChainTransferStore crossChainTransferStore,
             MempoolManager mempoolManager,
             ILoggerFactory loggerFactory,
             CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             this.network = network;
             this.federatedPegSettings = federatedPegSettings;
-            this.crossChainTransferStore = crossChainTransferStore;
             this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, new OpReturnDataReader(loggerFactory, counterChainNetworkWrapper), network);
             this.mempoolManager = mempoolManager;
         }
 
-        // TODO: These can be more efficient, i.e. remove the wallet calls from GetHistory
-        // And use a different model for Withdrawals. It doesn't quite map to the Withdrawal class.
-
         /// <summary>
         /// Get the history of successful withdrawals.
         /// </summary>
+        /// <param name="crossChainTransfers">The list of transfers to report on.</param>
         /// <param name="maximumEntriesToReturn">The maximum number of entries to return.</param>
         /// <returns>A <see cref="WithdrawalModel"/> object containing a history of withdrawals.</returns>
-        public List<WithdrawalModel> GetHistory(int maximumEntriesToReturn)
+        public List<WithdrawalModel> GetHistory(IEnumerable<ICrossChainTransfer> crossChainTransfers, int maximumEntriesToReturn)
         {
             var result = new List<WithdrawalModel>();
-            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.SeenInBlock });
 
-            foreach (ICrossChainTransfer transfer in transfers.OrderByDescending(t => t.BlockHeight))
+            foreach (ICrossChainTransfer transfer in crossChainTransfers.OrderByDescending(t => t.BlockHeight))
             {
                 if (maximumEntriesToReturn-- <= 0)
                     break;
@@ -76,20 +70,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Get pending withdrawals.
         /// </summary>
+        /// <param name="crossChainTransfers">The list of transfers to report on.</param>
         /// <returns>A <see cref="WithdrawalModel"/> object containing pending withdrawals and statuses.</returns>
-        public List<WithdrawalModel> GetPending()
+        public List<WithdrawalModel> GetPendingWithdrawals(IEnumerable<ICrossChainTransfer> crossChainTransfers)
         {
             var result = new List<WithdrawalModel>();
 
-            // Get all Suspended, all Partial, and all FullySigned transfers.
-            ICrossChainTransfer[] inProgressTransfers = this.crossChainTransferStore.GetTransfersByStatus(new CrossChainTransferStatus[]
-            {
-                CrossChainTransferStatus.Suspended,
-                CrossChainTransferStatus.Partial,
-                CrossChainTransferStatus.FullySigned
-            }, true, false);
-
-            foreach (ICrossChainTransfer transfer in inProgressTransfers)
+            foreach (ICrossChainTransfer transfer in crossChainTransfers)
             {
                 var model = new WithdrawalModel(this.network, transfer);
                 string status = transfer?.Status.ToString();
