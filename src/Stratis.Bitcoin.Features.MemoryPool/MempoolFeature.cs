@@ -11,7 +11,6 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
-using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
@@ -77,7 +76,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         {
             if (this.mempoolManager != null)
             {
-                log.AppendLine();
                 log.AppendLine("=======Mempool=======");
                 log.AppendLine(this.mempoolManager.PerformanceCounter.ToString());
             }
