@@ -326,6 +326,8 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
                     benchLog.AppendLine((snapShot - this.latestPerformanceSnapShot).ToString());
 
                 this.latestPerformanceSnapShot = snapShot;
+
+                benchLog.AppendLine();
             }
         }
 

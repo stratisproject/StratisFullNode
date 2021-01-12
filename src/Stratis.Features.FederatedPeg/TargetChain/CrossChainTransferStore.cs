@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DBreeze;
@@ -10,6 +11,7 @@ using DBreeze.Utils;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
@@ -66,22 +68,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>Access to DBreeze database.</summary>
         private readonly DBreezeEngine DBreeze;
 
-        private readonly DBreezeSerializer dBreezeSerializer;
-        private readonly Network network;
-        private readonly ChainIndexer chainIndexer;
-        private readonly IWithdrawalExtractor withdrawalExtractor;
         private readonly IBlockRepository blockRepository;
         private readonly CancellationTokenSource cancellation;
+        private readonly ChainIndexer chainIndexer;
+        private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IFederationWalletManager federationWalletManager;
-        private readonly IWithdrawalTransactionBuilder withdrawalTransactionBuilder;
+        private readonly Network network;
+        private readonly INodeStats nodeStats;
         private readonly IFederatedPegSettings settings;
         private readonly ISignals signals;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
+        private readonly IWithdrawalExtractor withdrawalExtractor;
+        private readonly IWithdrawalTransactionBuilder withdrawalTransactionBuilder;
 
         /// <summary>Provider of time functions.</summary>
         private readonly object lockObj;
 
-        public CrossChainTransferStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer, IFederatedPegSettings settings, IDateTimeProvider dateTimeProvider,
+        public CrossChainTransferStore(Network network, INodeStats nodeStats, DataFolder dataFolder, ChainIndexer chainIndexer, IFederatedPegSettings settings, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, IWithdrawalExtractor withdrawalExtractor, IBlockRepository blockRepository, IFederationWalletManager federationWalletManager,
             IWithdrawalTransactionBuilder withdrawalTransactionBuilder, DBreezeSerializer dBreezeSerializer, ISignals signals, IStateRepositoryRoot stateRepositoryRoot = null)
         {
@@ -102,6 +105,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Guard.NotNull(withdrawalTransactionBuilder, nameof(withdrawalTransactionBuilder));
 
             this.network = network;
+            this.nodeStats = nodeStats;
             this.chainIndexer = chainIndexer;
             this.blockRepository = blockRepository;
             this.federationWalletManager = federationWalletManager;
@@ -126,6 +130,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Initialize tracking deposits by status.
             foreach (object status in typeof(CrossChainTransferStatus).GetEnumValues())
                 this.depositsIdsByStatus[(CrossChainTransferStatus)status] = new HashSet<uint256>();
+
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+            nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
         }
 
         /// <summary>Performs any needed initialisation for the database.</summary>
@@ -419,6 +426,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             return;
 
                         this.logger.LogInformation($"{maturedBlockDeposits.Count} blocks received, containing a total of {maturedBlockDeposits.SelectMany(d => d.Deposits).Where(a => a.Amount > 0).Count()} deposits.");
+                        this.logger.LogInformation($"Block Range : {maturedBlockDeposits.Min(a => a.BlockInfo.BlockHeight)} to {maturedBlockDeposits.Max(a => a.BlockInfo.BlockHeight)}.");
 
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
@@ -1380,21 +1388,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         }
 
         /// <inheritdoc />
-        public Dictionary<CrossChainTransferStatus, int> GetCrossChainTransferStatusCounter()
-        {
-            lock (this.lockObj)
-            {
-                Dictionary<CrossChainTransferStatus, int> result = new Dictionary<CrossChainTransferStatus, int>();
-                foreach (CrossChainTransferStatus status in Enum.GetValues(typeof(CrossChainTransferStatus)).Cast<CrossChainTransferStatus>())
-                {
-                    result[status] = this.depositsIdsByStatus.TryGet(status)?.Count ?? 0;
-                }
-
-                return result;
-            }
-        }
-
-        /// <inheritdoc />
         public List<Transaction> CompletedWithdrawals(IEnumerable<Transaction> transactionsToCheck)
         {
             var res = new List<Transaction>();
@@ -1440,6 +1433,21 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 default:
                     return mempoolError.ConsensusError == null;
             }
+        }
+
+        private void AddInlineStats(StringBuilder benchLog)
+        {
+            benchLog.AppendLine(
+                "CCTS.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + this.TipHashAndHeight?.Height.ToString().PadRight(8) +
+                "CCTS.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.TipHashAndHeight?.HashBlock);
+        }
+
+        private void AddComponentStats(StringBuilder benchLog)
+        {
+            benchLog.AppendLine("====== Cross Chain Transfer Store ======");
+            benchLog.AppendLine("NextDepositHeight:".PadRight(LoggingConfiguration.ColumnLength) + this.NextMatureDepositHeight);
+            benchLog.AppendLine("Partial Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
+            benchLog.AppendLine("Suspended Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
         }
 
         /// <inheritdoc />
