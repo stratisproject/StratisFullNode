@@ -11,7 +11,6 @@ using DBreeze.Utils;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
@@ -1437,10 +1436,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private void AddComponentStats(StringBuilder benchLog)
         {
             benchLog.AppendLine("====== Cross Chain Transfer Store ======");
-            benchLog.AppendLine("Height:".PadRight(LoggingConfiguration.ColumnLength) + this.TipHashAndHeight.Height + "Hash:".PadRight(LoggingConfiguration.ColumnLength) + this.TipHashAndHeight.HashBlock);
-            benchLog.AppendLine("NextDepositHeight:".PadRight(LoggingConfiguration.ColumnLength) + this.NextMatureDepositHeight);
-            benchLog.AppendLine("Partial Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
-            benchLog.AppendLine("Suspended Txs:".PadRight(LoggingConfiguration.ColumnLength) + GetTransfersByStatusCount(CrossChainTransferStatus.Suspended));
+            benchLog.AppendLine("Height:".PadRight(20) + this.TipHashAndHeight.Height + $" [{this.TipHashAndHeight.HashBlock}]");
+            benchLog.AppendLine("NextDepositHeight:".PadRight(20) + this.NextMatureDepositHeight);
+            benchLog.AppendLine("Partial Txs:".PadRight(20) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
+            benchLog.AppendLine("Suspended Txs:".PadRight(20) + GetTransfersByStatusCount(CrossChainTransferStatus.Suspended));
             benchLog.AppendLine();
         }
 
