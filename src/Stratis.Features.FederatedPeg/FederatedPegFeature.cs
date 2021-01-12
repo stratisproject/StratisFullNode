@@ -230,7 +230,6 @@ namespace Stratis.Features.FederatedPeg
         private string CollectStats()
         {
             StringBuilder benchLog = new StringBuilder();
-            benchLog.AppendLine();
             benchLog.AppendLine("====== Federation Wallet ======");
 
             (Money ConfirmedAmount, Money UnConfirmedAmount) = this.federationWalletManager.GetSpendableAmount();
@@ -261,7 +260,8 @@ namespace Stratis.Features.FederatedPeg
             if (consolidationPartials != null)
             {
                 benchLog.AppendLine("--- Consolidation Transactions in Memory ---");
-                foreach (ConsolidationTransaction partial in consolidationPartials)
+
+                foreach (ConsolidationTransaction partial in consolidationPartials.Take(20))
                 {
                     benchLog.AppendLine(
                         string.Format("Tran#={0} TotalOut={1,12} Status={2} Signatures=({3}/{4})",
@@ -273,6 +273,10 @@ namespace Stratis.Features.FederatedPeg
                         )
                     );
                 }
+
+                if (consolidationPartials.Count > 20)
+                    benchLog.AppendLine($"and {consolidationPartials.Count - 20} more...");
+
                 benchLog.AppendLine();
             }
 
@@ -329,47 +333,7 @@ namespace Stratis.Features.FederatedPeg
                 benchLog.AppendLine();
             }
 
-            benchLog.AppendLine("====== Cross Chain Transfer Store ======");
-            this.AddBenchmarkLine(benchLog, new (string, int)[] {
-                ("Height:", LoggingConfiguration.ColumnLength),
-                (this.crossChainTransferStore.TipHashAndHeight.Height.ToString(), LoggingConfiguration.ColumnLength),
-                ("Hash:",LoggingConfiguration.ColumnLength),
-                (this.crossChainTransferStore.TipHashAndHeight.HashBlock.ToString(), 0),
-                ("NextDepositHeight:", LoggingConfiguration.ColumnLength),
-                (this.crossChainTransferStore.NextMatureDepositHeight.ToString(), LoggingConfiguration.ColumnLength),
-                ("HasSuspended:",LoggingConfiguration.ColumnLength),
-                (this.crossChainTransferStore.HasSuspended().ToString(), 0)
-            },
-            4);
-
-            this.AddBenchmarkLine(benchLog,
-                this.crossChainTransferStore.GetCrossChainTransferStatusCounter().SelectMany(item => new (string, int)[]{
-                    (item.Key.ToString()+":", LoggingConfiguration.ColumnLength),
-                    (item.Value.ToString(), LoggingConfiguration.ColumnLength)
-                    }).ToArray(),
-                4);
-
             return benchLog.ToString();
-        }
-
-        [NoTrace]
-        private void AddBenchmarkLine(StringBuilder benchLog, (string Value, int ValuePadding)[] items, int maxItemsPerLine = int.MaxValue)
-        {
-            if (items == null)
-                return;
-
-            int itemsAdded = 0;
-            foreach ((string Value, int ValuePadding) in items)
-            {
-                if (itemsAdded++ >= maxItemsPerLine)
-                {
-                    benchLog.AppendLine();
-                    itemsAdded = 1;
-                }
-                benchLog.Append(Value.PadRight(ValuePadding));
-            }
-
-            benchLog.AppendLine();
         }
     }
 

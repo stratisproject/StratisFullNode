@@ -92,12 +92,6 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         int NextMatureDepositHeight { get; }
 
         /// <summary>
-        /// Gets the counter of the cross chain transfer for each available status
-        /// </summary>
-        /// <returns>The counter of the cross chain transfer for each <see cref="CrossChainTransferStatus"/> status</returns>
-        Dictionary<CrossChainTransferStatus, int> GetCrossChainTransferStatusCounter();
-
-        /// <summary>
         /// Determines, for a list of input transactions, which of those are completed or unknown withdrawals.
         /// </summary>
         /// <param name="transactionsToCheck">The list of input transactions.</param>
