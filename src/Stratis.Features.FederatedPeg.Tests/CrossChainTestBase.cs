@@ -206,6 +206,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager = new FederationWalletManager(
                 this.loggerFactory,
                 this.network,
+                Substitute.For<INodeStats>(),
                 this.ChainIndexer,
                 dataFolder,
                 this.walletFeePolicy,

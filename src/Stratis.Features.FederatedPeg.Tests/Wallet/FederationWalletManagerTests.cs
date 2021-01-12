@@ -113,6 +113,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             var federationWalletManager = new FederationWalletManager(
                 loggerFactory.Object,
                 this.network,
+                new Mock<INodeStats>().Object,
                 chainIndexer,
                 dataFolder,
                 new Mock<IWalletFeePolicy>().Object,
