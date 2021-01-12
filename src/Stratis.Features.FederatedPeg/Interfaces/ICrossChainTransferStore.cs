@@ -52,13 +52,6 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         ICrossChainTransfer[] GetTransfersByStatus(CrossChainTransferStatus[] statuses, bool sort = false, bool validate = true);
 
         /// <summary>
-        /// Returns a transfer count based on status.
-        /// </summary>
-        /// <param name="status">The status to count.</param>
-        /// <returns>The count of transfers for a particular status.</returns>
-        int GetTransfersByStatusCount(CrossChainTransferStatus status);
-
-        /// <summary>
         /// Updates partial transactions in the store with signatures obtained from the passed transactions.
         /// The <see cref="CrossChainTransferStatus.FullySigned"/> status is set on fully signed transactions.
         /// </summary>

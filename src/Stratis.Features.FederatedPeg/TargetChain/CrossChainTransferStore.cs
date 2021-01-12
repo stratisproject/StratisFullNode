@@ -1229,8 +1229,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
         }
 
-        /// <inheritdoc />
-        public int GetTransfersByStatusCount(CrossChainTransferStatus status)
+        private int GetTransfersByStatusCount(CrossChainTransferStatus status)
         {
             return this.depositsIdsByStatus[status].Count;
         }
