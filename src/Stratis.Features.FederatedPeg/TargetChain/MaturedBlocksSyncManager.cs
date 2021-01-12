@@ -79,7 +79,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
         {
-            this.logger.LogInformation($"Fetching deposits from height {this.crossChainTransferStore.NextMatureDepositHeight}");
+            this.logger.LogInformation($"CCTS Partials: {this.crossChainTransferStore.GetTransfersByStatusCount(CrossChainTransferStatus.Partial)} Suspended: {this.crossChainTransferStore.GetTransfersByStatusCount(CrossChainTransferStatus.Suspended)}");
+            this.logger.LogInformation($"CCTS Tip: {this.crossChainTransferStore.TipHashAndHeight.Height} Next Deposit Height: {this.crossChainTransferStore.NextMatureDepositHeight},");
 
             SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 

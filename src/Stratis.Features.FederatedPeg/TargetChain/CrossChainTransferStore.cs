@@ -483,10 +483,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     {
                                         status = CrossChainTransferStatus.Rejected;
                                     }
-                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial)
-                                        + this.depositsIdsByStatus.Count(t => t.Key == CrossChainTransferStatus.Partial)) >= MaximumPartialTransactions)
+                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= MaximumPartialTransactions)
                                     {
                                         haveSuspendedTransfers = true;
+                                        this.logger.LogInformation($"Partial transaction limit reached, processing of deposits will continue once the partial transaction count falls below {MaximumPartialTransactions}.");
                                     }
                                     else
                                     {
@@ -1221,6 +1221,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         .ToArray();
                 });
             }
+        }
+
+        /// <inheritdoc />
+        public int GetTransfersByStatusCount(CrossChainTransferStatus status)
+        {
+            return this.depositsIdsByStatus[status].Count;
         }
 
         /// <summary>Persist the cross-chain transfer information into the database.</summary>
