@@ -25,7 +25,6 @@ using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.InputConsolidation;
 using Stratis.Features.FederatedPeg.Interfaces;
-using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.Notifications;
 using Stratis.Features.FederatedPeg.Payloads;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -40,16 +39,6 @@ namespace Stratis.Features.FederatedPeg
 {
     internal class FederatedPegFeature : FullNodeFeature
     {
-        /// <summary>
-        /// Given that we can have up to 10 UTXOs going at once.
-        /// </summary>
-        private const int TransfersToDisplay = 10;
-
-        /// <summary>
-        /// The maximum number of pending transactions to display in the console logging.
-        /// </summary>
-        private const int PendingToDisplay = 25;
-
         public const string FederationGatewayFeatureNamespace = "federationgateway";
 
         private readonly IConnectionManager connectionManager;
@@ -64,8 +53,6 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly IFederationWalletSyncManager walletSyncManager;
 
-        private readonly ChainIndexer chainIndexer;
-
         private readonly Network network;
 
         private readonly ICrossChainTransferStore crossChainTransferStore;
@@ -77,8 +64,6 @@ namespace Stratis.Features.FederatedPeg
         private readonly ISignedMultisigTransactionBroadcaster signedBroadcaster;
 
         private readonly IMaturedBlocksSyncManager maturedBlocksSyncManager;
-
-        private readonly IWithdrawalHistoryProvider withdrawalHistoryProvider;
 
         private readonly IInputConsolidator inputConsolidator;
 
@@ -92,14 +77,12 @@ namespace Stratis.Features.FederatedPeg
             IFederationWalletManager federationWalletManager,
             IFederationWalletSyncManager walletSyncManager,
             Network network,
-            ChainIndexer chainIndexer,
             INodeStats nodeStats,
             ICrossChainTransferStore crossChainTransferStore,
             IPartialTransactionRequester partialTransactionRequester,
             MempoolCleaner mempoolCleaner,
             ISignedMultisigTransactionBroadcaster signedBroadcaster,
             IMaturedBlocksSyncManager maturedBlocksSyncManager,
-            IWithdrawalHistoryProvider withdrawalHistoryProvider,
             IInputConsolidator inputConsolidator,
             ICollateralChecker collateralChecker = null)
         {
@@ -107,7 +90,6 @@ namespace Stratis.Features.FederatedPeg
             this.connectionManager = connectionManager;
             this.federatedPegSettings = federatedPegSettings;
             this.fullNode = fullNode;
-            this.chainIndexer = chainIndexer;
             this.federationWalletManager = federationWalletManager;
             this.walletSyncManager = walletSyncManager;
             this.network = network;
@@ -115,7 +97,6 @@ namespace Stratis.Features.FederatedPeg
             this.partialTransactionRequester = partialTransactionRequester;
             this.mempoolCleaner = mempoolCleaner;
             this.maturedBlocksSyncManager = maturedBlocksSyncManager;
-            this.withdrawalHistoryProvider = withdrawalHistoryProvider;
             this.signedBroadcaster = signedBroadcaster;
             this.inputConsolidator = inputConsolidator;
 
@@ -255,39 +236,6 @@ namespace Stratis.Features.FederatedPeg
                 if (maturingDeposits.Length > 10)
                     benchLog.AppendLine("...");
 
-                benchLog.AppendLine();
-            }
-
-            try
-            {
-                List<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPending();
-
-                if (pendingWithdrawals.Count > 0)
-                {
-                    benchLog.AppendLine("--- Pending Withdrawals ---");
-                    foreach (WithdrawalModel withdrawal in pendingWithdrawals.Take(PendingToDisplay))
-                        benchLog.AppendLine(withdrawal.ToString());
-
-                    if (pendingWithdrawals.Count > PendingToDisplay)
-                        benchLog.AppendLine($"And {pendingWithdrawals.Count - PendingToDisplay} more...");
-
-                    benchLog.AppendLine();
-                }
-            }
-            catch (Exception exception)
-            {
-                benchLog.AppendLine("--- Pending Withdrawals ---");
-                benchLog.AppendLine("Failed to retrieve data");
-                this.logger.LogError("Exception occurred while getting pending withdrawals: '{0}'.", exception.ToString());
-            }
-
-            List<WithdrawalModel> completedWithdrawals = this.withdrawalHistoryProvider.GetHistory(TransfersToDisplay);
-
-            if (completedWithdrawals.Count > 0)
-            {
-                benchLog.AppendLine("--- Recently Completed Withdrawals ---");
-                foreach (WithdrawalModel withdrawal in completedWithdrawals)
-                    benchLog.AppendLine(withdrawal.ToString());
                 benchLog.AppendLine();
             }
 

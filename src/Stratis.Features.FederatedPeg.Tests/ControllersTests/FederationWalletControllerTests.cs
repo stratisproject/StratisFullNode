@@ -54,7 +54,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             this.withdrawalHistoryProvider = Substitute.For<IWithdrawalHistoryProvider>();
 
             this.controller = new FederationWalletController(this.loggerFactory, this.walletManager, this.walletSyncManager,
-                this.connectionManager, this.network, this.chainIndexer, this.dateTimeProvider, this.withdrawalHistoryProvider);
+                this.connectionManager, this.network, this.chainIndexer, Substitute.For<ICrossChainTransferStore>());
 
             this.fedWallet = new FederationWallet
             {
@@ -106,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var withdrawals = new List<WithdrawalModel>() { new WithdrawalModel(), new WithdrawalModel() };
 
-            this.withdrawalHistoryProvider.GetHistory(0).ReturnsForAnyArgs(withdrawals);
+            this.withdrawalHistoryProvider.GetHistory(new[] { new CrossChainTransfer() }, 0).ReturnsForAnyArgs(withdrawals);
 
             IActionResult result = this.controller.GetHistory(5);
             List<WithdrawalModel> model = this.ActionResultToModel<List<WithdrawalModel>>(result);
@@ -141,8 +141,10 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         [Fact]
         public void RemoveTransactions()
         {
-            var hashSet = new HashSet<(uint256, DateTimeOffset)>();
-            hashSet.Add((uint256.One, DateTimeOffset.MinValue));
+            var hashSet = new HashSet<(uint256, DateTimeOffset)>
+            {
+                (uint256.One, DateTimeOffset.MinValue)
+            };
 
             this.walletManager.RemoveAllTransactions().Returns(info => hashSet);
 
