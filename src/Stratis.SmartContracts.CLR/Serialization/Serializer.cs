@@ -175,6 +175,19 @@ namespace Stratis.SmartContracts.CLR.Serialization
             return success ? result : default(ulong);
         }
 
+        public uint256 ToUInt256(byte[] val)
+        {
+            if (val == null)
+                return 0;
+
+            if (val.Length < 32)
+                return 0;
+
+            (bool success, uint256 result) = this.TryDeserializeValue<uint256>(val);
+
+            return success ? result : 0;
+        }
+
         public string ToString(byte[] val)
         {
             if (val == null || val.Length == 0)
