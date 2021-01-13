@@ -103,11 +103,11 @@ namespace Stratis.SmartContracts.CLR
             return this.Serializer.ToUInt64(bytes);
         }
 
-        public uint256 GetUInt256(string key)
+        public UInt256 GetUInt256(string key)
         {
             byte[] bytes = this.GetBytes(key);
 
-            return this.Serializer.ToUInt256(bytes);
+            return new UInt256(bytes);
         }
 
         public string GetString(string key)
@@ -178,9 +178,9 @@ namespace Stratis.SmartContracts.CLR
             this.SetBytes(key, this.Serializer.Serialize(value));
         }
 
-        public void SetUInt256(string key, uint256 value)
+        public void SetUInt256(string key, UInt256 value)
         {
-            this.SetBytes(key, this.Serializer.Serialize(value));
+            this.SetBytes(key, value.ToBytes());
         }
 
         public void SetString(string key, string value)
