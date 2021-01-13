@@ -458,6 +458,7 @@ namespace Stratis.Bitcoin.Base
                         consensusSettings: provider.GetService<ConsensusSettings>(),
                         dateTimeProvider: provider.GetService<IDateTimeProvider>()));
 
+                    services.AddSingleton<IChainWorkComparer, ChainWorkComparer>();
                     services.AddSingleton<IChainedHeaderTree, ChainedHeaderTree>();
                     services.AddSingleton<IHeaderValidator, HeaderValidator>();
                     services.AddSingleton<IIntegrityValidator, IntegrityValidator>();

@@ -121,7 +121,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
                   this.ChainState.Object,
                   this.FinalizedBlockMock.Object,
                   this.ConsensusSettings,
-                  this.hashStore);
+                  this.hashStore,
+                  new ChainWorkComparer());
 
             this.peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, this.nodeSettings.DataFolder, this.loggerFactory, this.selfEndpointTracker);
 
@@ -148,7 +149,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             this.consensusRules.SetupRulesEngineParent();
 
             var tree = new ChainedHeaderTree(this.Network, this.loggerFactory, this.HeaderValidator.Object, this.checkpoints.Object,
-                this.ChainState.Object, this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore);
+                this.ChainState.Object, this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore, new ChainWorkComparer());
 
             this.PartialValidator = new Mock<IPartialValidator>();
             this.FullValidator = new Mock<IFullValidator>();

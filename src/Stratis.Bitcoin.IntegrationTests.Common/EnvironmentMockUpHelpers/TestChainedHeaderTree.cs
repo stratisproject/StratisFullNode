@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             IFinalizedBlockInfoRepository finalizedBlockInfo,
             ConsensusSettings consensusSettings,
             IInvalidBlockHashStore invalidHashesStore) : base(network, loggerFactory, headerValidator, checkpoints,
-                chainState, finalizedBlockInfo, consensusSettings, invalidHashesStore)
+                chainState, finalizedBlockInfo, consensusSettings, invalidHashesStore, new ChainWorkComparer())
         {
         }
 

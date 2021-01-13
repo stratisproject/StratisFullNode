@@ -206,6 +206,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager = new FederationWalletManager(
                 this.loggerFactory,
                 this.network,
+                Substitute.For<INodeStats>(),
                 this.ChainIndexer,
                 dataFolder,
                 this.walletFeePolicy,
@@ -244,8 +245,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         protected ICrossChainTransferStore CreateStore()
         {
-            return new CrossChainTransferStore(this.network, this.dataFolder, this.ChainIndexer, this.federatedPegSettings, this.dateTimeProvider,
-                this.loggerFactory, this.withdrawalExtractor, this.blockRepository, this.federationWalletManager, this.withdrawalTransactionBuilder, this.dBreezeSerializer, this.signals, this.stateRepositoryRoot);
+            return new CrossChainTransferStore(this.network, Substitute.For<INodeStats>(), this.dataFolder, this.ChainIndexer, this.federatedPegSettings, this.dateTimeProvider,
+                this.loggerFactory, this.withdrawalExtractor, Substitute.For<IWithdrawalHistoryProvider>(), this.blockRepository, this.federationWalletManager, this.withdrawalTransactionBuilder, this.dBreezeSerializer, this.signals, this.stateRepositoryRoot);
         }
 
         /// <summary>

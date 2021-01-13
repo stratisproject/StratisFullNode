@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                 if (this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
                     break;
 
-                this.Logger.LogDebug($"Block {prevHeader.HashBlock} was mined by the same miner '{pubKey.ToHex()}' as {blockCounter} blocks ({header.Time - prevHeader.Header.Time})s ago and there was no federation change.");
+                this.Logger.LogDebug("Block {0} was mined by the same miner '{1}' as {2} blocks ({3})s ago and there was no federation change.", prevHeader.HashBlock, pubKey.ToHex(), blockCounter, header.Time - prevHeader.Header.Time);
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }

@@ -34,9 +34,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private IAsyncLoop requestDepositsTask;
 
-        /// <summary>The maximum amount of blocks to request at a time from alt chain.</summary>
-        public const int MaxBlocksToRequest = 1000;
-
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
         private const int RefreshDelaySeconds = 10;
 
@@ -79,8 +76,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
         {
-            this.logger.LogInformation($"Fetching deposits from height {this.crossChainTransferStore.NextMatureDepositHeight}");
-
             SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
             if (model == null)

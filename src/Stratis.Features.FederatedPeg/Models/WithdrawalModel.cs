@@ -50,7 +50,7 @@ namespace Stratis.Features.FederatedPeg.Models
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.Append(string.Format("Block Height={0,8} Paying={1} Amount={2,12} Status={3}",
+            stringBuilder.Append(string.Format("Block Height={0,8} Paying={1} Amount={2,14} Status={3}",
                 this.BlockHeight == 0 ? "Unconfirmed" : this.BlockHeight.ToString(),
                 this.PayingTo,
                 this.Amount.ToString(),
