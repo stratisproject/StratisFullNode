@@ -1482,7 +1482,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 this.logger.LogError("Exception occurred while getting pending withdrawals: '{0}'.", exception.ToString());
             }
 
-            List<WithdrawalModel> completedWithdrawals = GetCompletedWithdrawals(TransfersToDisplay);
+            List<WithdrawalModel> completedWithdrawals = GetCompletedWithdrawals(10);
             if (completedWithdrawals.Count > 0)
             {
                 benchLog.AppendLine("--- Recently Completed Withdrawals ---");
