@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             testChainContext.DateTimeProvider = DateTimeProvider.Default;
 
             testChainContext.Signals = new Signals.Signals(testChainContext.NodeSettings.LoggerFactory, null);
-            testChainContext.AsyncProvider = new AsyncProvider(testChainContext.NodeSettings.LoggerFactory, testChainContext.Signals, new Mock<INodeLifetime>().Object);
+            testChainContext.AsyncProvider = new AsyncProvider(testChainContext.NodeSettings.LoggerFactory, testChainContext.Signals);
 
             network.Consensus.Options = new ConsensusOptions();
             //new FullNodeBuilderConsensusExtension.PowConsensusRulesRegistration().RegisterRules(network.Consensus);

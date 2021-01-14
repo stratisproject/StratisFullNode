@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             this.provenBlockHeaderStore = new Mock<IProvenBlockHeaderStore>().Object;
 
             this.signals = new Signals.Signals(this.extendedLoggerFactory, null);
-            this.asyncProvider = new AsyncProvider(this.extendedLoggerFactory, this.signals, new Mock<INodeLifetime>().Object);
+            this.asyncProvider = new AsyncProvider(this.extendedLoggerFactory, this.signals);
         }
 
         private Mock<INetworkPeer> CreatePeerMock()

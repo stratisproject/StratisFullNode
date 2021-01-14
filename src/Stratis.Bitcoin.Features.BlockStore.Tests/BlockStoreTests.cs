@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.loggerFactory = new LoggerFactory();
             this.signals = new Signals.Signals(this.loggerFactory, null);
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushCondition, this.storeSettings,
                 this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);

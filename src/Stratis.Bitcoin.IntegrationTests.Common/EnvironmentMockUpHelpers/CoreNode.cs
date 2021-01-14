@@ -293,7 +293,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         private IAsyncProvider GetOrCreateAsyncProvider()
         {
             if (this.runner.FullNode == null)
-                return new AsyncProvider(this.loggerFactory, new Signals.Signals(this.loggerFactory, null), new NodeLifetime());
+                return new AsyncProvider(this.loggerFactory, new Signals.Signals(this.loggerFactory, null));
             else
                 return this.runner.FullNode.NodeService<IAsyncProvider>();
         }

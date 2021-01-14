@@ -1236,7 +1236,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
         }
 
-        private int GetTransfersByStatusCount(CrossChainTransferStatus status)
+        /// <inheritdoc />
+        public int GetTransferCountByStatus(CrossChainTransferStatus status)
         {
             return this.depositsIdsByStatus[status].Count;
         }
@@ -1444,8 +1445,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             benchLog.AppendLine("====== Cross Chain Transfer Store ======");
             benchLog.AppendLine("Height:".PadRight(20) + this.TipHashAndHeight.Height + $" [{this.TipHashAndHeight.HashBlock}]");
             benchLog.AppendLine("NextDepositHeight:".PadRight(20) + this.NextMatureDepositHeight);
-            benchLog.AppendLine("Partial Txs:".PadRight(20) + GetTransfersByStatusCount(CrossChainTransferStatus.Partial));
-            benchLog.AppendLine("Suspended Txs:".PadRight(20) + GetTransfersByStatusCount(CrossChainTransferStatus.Suspended));
+            benchLog.AppendLine("Partial Txs:".PadRight(20) + GetTransferCountByStatus(CrossChainTransferStatus.Partial));
+            benchLog.AppendLine("Suspended Txs:".PadRight(20) + GetTransferCountByStatus(CrossChainTransferStatus.Suspended));
             benchLog.AppendLine();
 
             var depositIds = new HashSet<uint256>();

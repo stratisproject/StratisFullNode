@@ -151,7 +151,7 @@ namespace Stratis.Bitcoin.Tests.Base
             var peer = new Mock<INetworkPeer>();
 
             var signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, signals, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(this.loggerFactory, signals);
 
             var connection = new NetworkPeerConnection(KnownNetworks.StraxMain, peer.Object, new TcpClient(), 0, (message, token) => Task.CompletedTask,
                 new DateTimeProvider(), this.loggerFactory, new PayloadProvider(), asyncProvider);

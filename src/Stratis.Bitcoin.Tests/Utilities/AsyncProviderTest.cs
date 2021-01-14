@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.Tests.Utilities
             var signals = new Bitcoin.Signals.Signals(mockLoggerFactory.Object, null);
             var nodeLifetime = new Mock<INodeLifetime>().Object;
 
-            this.asyncProvider = new AsyncProvider(mockLoggerFactory.Object, signals, nodeLifetime);
+            this.asyncProvider = new AsyncProvider(mockLoggerFactory.Object, signals);
         }
 
         /// <summary>

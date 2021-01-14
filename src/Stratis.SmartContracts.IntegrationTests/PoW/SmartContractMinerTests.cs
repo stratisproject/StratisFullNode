@@ -226,7 +226,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 var receiptRepository = new PersistentReceiptRepository(new DataFolder(this.Folder));
 
                 var signals = new Signals(this.loggerFactory, null);
-                var asyncProvider = new AsyncProvider(this.loggerFactory, signals, new NodeLifetime());
+                var asyncProvider = new AsyncProvider(this.loggerFactory, signals);
 
                 var consensusRulesContainer = new ConsensusRulesContainer();
 

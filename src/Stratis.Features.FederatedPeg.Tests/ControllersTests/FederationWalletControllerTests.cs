@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
-using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
 using Xunit;
 
@@ -31,8 +30,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private readonly IConnectionManager connectionManager;
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
-        private readonly IDateTimeProvider dateTimeProvider;
-        private readonly IWithdrawalHistoryProvider withdrawalHistoryProvider;
 
         private readonly FederationWalletController controller;
         private readonly FederationWallet fedWallet;
@@ -50,11 +47,10 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(100, ChainedHeadersHelper.CreateGenesisChainedHeader(this.network), true, null, this.network).Last();
             this.chainIndexer.SetTip(tip);
 
-            this.dateTimeProvider = Substitute.For<IDateTimeProvider>();
-            this.withdrawalHistoryProvider = Substitute.For<IWithdrawalHistoryProvider>();
+            ICrossChainTransferStore crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
+            crossChainTransferStore.GetCompletedWithdrawals(5).ReturnsForAnyArgs(new List<WithdrawalModel>() { new WithdrawalModel() });
 
-            this.controller = new FederationWalletController(this.loggerFactory, this.walletManager, this.walletSyncManager,
-                this.connectionManager, this.network, this.chainIndexer, Substitute.For<ICrossChainTransferStore>());
+            this.controller = new FederationWalletController(this.loggerFactory, this.walletManager, this.walletSyncManager, this.connectionManager, this.network, this.chainIndexer, crossChainTransferStore);
 
             this.fedWallet = new FederationWallet
             {
@@ -104,14 +100,10 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         [Fact]
         public void GetHistory()
         {
-            var withdrawals = new List<WithdrawalModel>() { new WithdrawalModel(), new WithdrawalModel() };
-
-            this.withdrawalHistoryProvider.GetHistory(new[] { new CrossChainTransfer() }, 0).ReturnsForAnyArgs(withdrawals);
-
             IActionResult result = this.controller.GetHistory(5);
             List<WithdrawalModel> model = this.ActionResultToModel<List<WithdrawalModel>>(result);
 
-            Assert.Equal(withdrawals.Count, model.Count);
+            Assert.Single(model);
         }
 
         [Fact]
