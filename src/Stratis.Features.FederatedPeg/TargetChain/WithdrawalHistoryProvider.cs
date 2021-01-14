@@ -90,7 +90,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
                         break;
                     case CrossChainTransferStatus.Partial:
-                        status += " (" + transfer.GetSignatureCount(this.network) + "/" + this.federatedPegSettings.MultiSigM + ")";
+                        model.SignatureCount = transfer.GetSignatureCount(this.network);
+                        status += " (" + model.SignatureCount + "/" + this.federatedPegSettings.MultiSigM + ")";
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
                         break;
                 }

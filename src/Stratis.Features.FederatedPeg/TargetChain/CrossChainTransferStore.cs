@@ -1461,16 +1461,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 IEnumerable<ICrossChainTransfer> inprogress = transfers.Where(x => x.Status != CrossChainTransferStatus.Suspended && x.Status != CrossChainTransferStatus.Rejected);
                 IEnumerable<ICrossChainTransfer> suspended = transfers.Where(x => x.Status == CrossChainTransferStatus.Suspended || x.Status == CrossChainTransferStatus.Rejected);
 
-                List<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPendingWithdrawals(inprogress.Concat(suspended));
+                IEnumerable<WithdrawalModel> pendingWithdrawals = this.withdrawalHistoryProvider.GetPendingWithdrawals(inprogress.Concat(suspended)).OrderByDescending(p => p.SignatureCount);
 
-                if (pendingWithdrawals.Count > 0)
+                if (pendingWithdrawals.Count() > 0)
                 {
                     benchLog.AppendLine("--- Pending Withdrawals ---");
                     foreach (WithdrawalModel withdrawal in pendingWithdrawals.Take(TransfersToDisplay))
                         benchLog.AppendLine(withdrawal.ToString());
 
-                    if (pendingWithdrawals.Count > TransfersToDisplay)
-                        benchLog.AppendLine($"and {pendingWithdrawals.Count - TransfersToDisplay} more...");
+                    if (pendingWithdrawals.Count() > TransfersToDisplay)
+                        benchLog.AppendLine($"and {pendingWithdrawals.Count() - TransfersToDisplay} more...");
 
                     benchLog.AppendLine();
                 }
