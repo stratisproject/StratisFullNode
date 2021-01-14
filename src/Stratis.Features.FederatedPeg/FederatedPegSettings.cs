@@ -8,6 +8,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.TargetChain;
 
 namespace Stratis.Features.FederatedPeg
 {
@@ -65,6 +66,8 @@ namespace Stratis.Features.FederatedPeg
         /// Fee applied to consolidating transactions.
         /// </summary>
         public static readonly Money ConsolidationFee = Money.Coins(0.01m);
+
+        public const string MaximumPartialTransactionsParam = "maxpartials";
 
         /// <summary>
         /// The maximum number of inputs we want our built withdrawal transactions to have. We don't want them to get too big for Standardness reasons.
@@ -145,11 +148,15 @@ namespace Stratis.Features.FederatedPeg
             this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
+            this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
 
         /// <inheritdoc/>
         public bool IsMainChain { get; }
+
+        /// <inheritdoc/>
+        public int MaximumPartialTransactionThreshold { get; }
 
         /// <inheritdoc />
         public int MinimumConfirmationsSmallDeposits { get; }

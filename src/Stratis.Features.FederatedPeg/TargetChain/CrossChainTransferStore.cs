@@ -29,7 +29,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Given that we can have up to 10 UTXOs going at once.
         /// </summary>
-        private const int TransfersToDisplay = 10;
+        private const int TransfersToDisplay = 20;
 
         /// <summary>
         /// Maximum number of partial transactions.
@@ -78,7 +78,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly Network network;
-        private readonly INodeStats nodeStats;
         private readonly IFederatedPegSettings settings;
         private readonly ISignals signals;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
@@ -110,7 +109,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Guard.NotNull(withdrawalTransactionBuilder, nameof(withdrawalTransactionBuilder));
 
             this.network = network;
-            this.nodeStats = nodeStats;
             this.chainIndexer = chainIndexer;
             this.blockRepository = blockRepository;
             this.federationWalletManager = federationWalletManager;
@@ -496,10 +494,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     {
                                         status = CrossChainTransferStatus.Rejected;
                                     }
-                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= MaximumPartialTransactions)
+                                    else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= this.settings.MaximumPartialTransactionThreshold)
                                     {
                                         haveSuspendedTransfers = true;
-                                        this.logger.LogInformation($"Partial transaction limit reached, processing of deposits will continue once the partial transaction count falls below {MaximumPartialTransactions}.");
+                                        this.logger.LogInformation($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
                                     }
                                     else
                                     {
@@ -1472,7 +1470,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         benchLog.AppendLine(withdrawal.ToString());
 
                     if (pendingWithdrawals.Count > TransfersToDisplay)
-                        benchLog.AppendLine($"And {pendingWithdrawals.Count - TransfersToDisplay} more...");
+                        benchLog.AppendLine($"and {pendingWithdrawals.Count - TransfersToDisplay} more...");
 
                     benchLog.AppendLine();
                 }
