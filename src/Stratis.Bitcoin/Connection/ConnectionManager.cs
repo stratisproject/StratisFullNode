@@ -318,28 +318,28 @@ namespace Stratis.Bitcoin.Connection
 
             if (whiteListedBuilder.Length > 0)
             {
-                builder.AppendLine(">>> Whitelisted:");
+                builder.AppendLine($">>> Whitelisted: {whiteListedBuilder.Length}");
                 builder.Append(whiteListedBuilder.ToString());
                 builder.AppendLine("<<<");
             }
 
             if (addNodeBuilder.Length > 0)
             {
-                builder.AppendLine(">>> AddNode:");
+                builder.AppendLine($">>> AddNode: {addNodeBuilder.Length}");
                 builder.Append(addNodeBuilder.ToString());
                 builder.AppendLine("<<<");
             }
 
             if (oneTryBuilder.Length > 0)
             {
-                builder.AppendLine(">>> OneTry:");
+                builder.AppendLine($">>> OneTry: {oneTryBuilder.Length}");
                 builder.Append(oneTryBuilder.ToString());
                 builder.AppendLine("<<<");
             }
 
             if (connectBuilder.Length > 0)
             {
-                builder.AppendLine(">>> Connect:");
+                builder.AppendLine($">>> Connect: {connectBuilder.Length}");
                 builder.Append(connectBuilder.ToString());
                 builder.AppendLine("<<<");
             }

@@ -84,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Broadcast the partial transaction with the earliest inputs.
             IEnumerable<ICrossChainTransfer> partialtransfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
 
-            this.logger.LogInformation($"Requesting partial templates for {partialtransfers} transfers.");
+            this.logger.LogInformation($"Requesting partial templates for {partialtransfers.Count()} transfers.");
 
             foreach (ICrossChainTransfer transfer in partialtransfers)
             {
