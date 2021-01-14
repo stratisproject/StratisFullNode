@@ -58,6 +58,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 if (maximumEntriesToReturn-- <= 0)
                     break;
+
                 // Extract the withdrawal details from the recorded "PartialTransaction".
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
                 var model = new WithdrawalModel(this.network, withdrawal, transfer);
@@ -89,7 +90,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
                         break;
                     case CrossChainTransferStatus.Partial:
-                        status += " (" + transfer.GetSignatureCount(this.network) + "/" + this.federatedPegSettings.MultiSigM + ")";
+                        model.SignatureCount = transfer.GetSignatureCount(this.network);
+                        status += " (" + model.SignatureCount + "/" + this.federatedPegSettings.MultiSigM + ")";
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
                         break;
                 }

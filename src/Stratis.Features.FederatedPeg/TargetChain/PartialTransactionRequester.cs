@@ -82,16 +82,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Broadcast the partial transaction with the earliest inputs.
-            IEnumerable<ICrossChainTransfer> transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
+            IEnumerable<ICrossChainTransfer> partialtransfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, true);
 
-            foreach (ICrossChainTransfer transfer in transfers)
+            this.logger.LogInformation($"Requesting partial templates for {partialtransfers.Count()} transfers.");
+
+            foreach (ICrossChainTransfer transfer in partialtransfers)
             {
                 await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId).AddPartial(transfer.PartialTransaction));
                 this.logger.LogDebug("Partial template requested for deposit ID {0}", transfer.DepositTransactionId);
             }
 
             // If we don't have any broadcastable transactions, check if we have any consolidating transactions to sign.
-            if (!transfers.Any())
+            if (!partialtransfers.Any())
             {
                 List<ConsolidationTransaction> consolidationTransactions = this.inputConsolidator.ConsolidationTransactions;
                 if (consolidationTransactions != null)
