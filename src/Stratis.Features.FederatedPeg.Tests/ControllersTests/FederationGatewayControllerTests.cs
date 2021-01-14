@@ -76,7 +76,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
             var controller = new FederationGatewayController(
-                TODO, new ChainIndexer(),
+                Substitute.For<IAsyncProvider>(),
+                new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -206,7 +207,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
-                TODO, new ChainIndexer(),
+                Substitute.For<IAsyncProvider>(),
+                new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -299,7 +301,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
-                TODO, new ChainIndexer(),
+                Substitute.For<IAsyncProvider>(),
+                new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
