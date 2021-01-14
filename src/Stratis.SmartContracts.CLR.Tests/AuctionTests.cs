@@ -125,7 +125,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public Address Sender { get; set; }
 
-        public ulong Value { get; set; }
+        public UInt256 Value { get; set; }
     }
 
     public class TestPersistentState : IPersistentState
