@@ -22,7 +22,7 @@ namespace Stratis.SmartContracts.CLR
 
         ///<inheritdoc />
         public ICreateResult Create<T>(ISmartContractState smartContractState,
-            ulong amountToTransfer,
+            UInt256 amountToTransfer,
             object[] parameters,
             ulong gasLimit = 0)
         {
@@ -65,7 +65,7 @@ namespace Stratis.SmartContracts.CLR
         public ITransferResult Call(
             ISmartContractState smartContractState,
             Address addressTo,
-            ulong amountToTransfer,
+            UInt256 amountToTransfer,
             string methodName,
             object[] parameters,
             ulong gasLimit = 0)
@@ -104,7 +104,7 @@ namespace Stratis.SmartContracts.CLR
         }
 
         ///<inheritdoc />
-        public ITransferResult Transfer(ISmartContractState smartContractState, Address addressTo, ulong amountToTransfer)
+        public ITransferResult Transfer(ISmartContractState smartContractState, Address addressTo, UInt256 amountToTransfer)
         {
             RuntimeObserver.Gas gasRemaining = this.gasMeter.GasAvailable;
 
