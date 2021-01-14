@@ -228,18 +228,20 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         }
 
         /// <summary>
-        /// Tests that RPC method 'GetNewAddress' can be called and returns an address.
+        /// Tests that RPC method 'getnewaddress' can be called and returns a new address each time.
         /// </summary>
         [Fact]
         public void GetNewAddress()
         {
             // Try creating with default parameters.
-            BitcoinAddress address = this.rpcTestFixture.RpcClient.GetNewAddress();
-            Assert.NotNull(address);
+            BitcoinAddress address1 = this.rpcTestFixture.RpcClient.GetNewAddress();
+            Assert.NotNull(address1);
 
             // Try creating with optional parameters.
-            address = BitcoinAddress.Create(this.rpcTestFixture.RpcClient.SendCommand(RPCOperations.getnewaddress, new[] { string.Empty, "legacy" }).ResultString, this.rpcTestFixture.RpcClient.Network);
-            Assert.NotNull(address);
+            BitcoinAddress address2 = BitcoinAddress.Create(this.rpcTestFixture.RpcClient.SendCommand(RPCOperations.getnewaddress, new[] { string.Empty, "legacy" }).ResultString, this.rpcTestFixture.RpcClient.Network);
+            Assert.NotNull(address2);
+
+            Assert.NotEqual(address1, address2);
         }
 
         [Fact]

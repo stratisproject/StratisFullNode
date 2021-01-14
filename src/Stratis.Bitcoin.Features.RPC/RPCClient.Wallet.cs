@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 using Newtonsoft.Json.Linq;
 
@@ -26,7 +27,7 @@ namespace Stratis.Bitcoin.Features.RPC
         wallet             getrawchangeaddress
         wallet             getreceivedbyaccount
         wallet             getreceivedbyaddress         Yes
-        wallet             gettransaction
+        wallet             gettransaction               Yes
         wallet             getunconfirmedbalance
         wallet             getwalletinfo
         wallet             importprivkey                Yes
@@ -265,6 +266,29 @@ namespace Stratis.Bitcoin.Features.RPC
         public void ImportPubKey(string pubkey, bool rescan = true)
         {
             SendCommand(RPCOperations.importpubkey, pubkey, "", rescan);
+        }
+
+        public Transaction GetTransaction(uint256 txid, bool include_watchonly = false, bool throwIfNotFound = true)
+        {
+            return GetTransactionAsync(txid, include_watchonly, throwIfNotFound).GetAwaiter().GetResult();
+        }
+
+        public async Task<Transaction> GetTransactionAsync(uint256 txid, bool include_watchonly = false, bool throwIfNotFound = true)
+        {
+            RPCResponse response = await SendCommandAsync(new RPCRequest(RPCOperations.gettransaction, new[] { txid.ToString(), include_watchonly.ToString() }), throwIfNotFound).ConfigureAwait(false);
+
+            if (throwIfNotFound)
+                response.ThrowIfError();
+
+            if (response.Error != null && response.Error.Code == RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY)
+                return null;
+
+            response.ThrowIfError();
+
+            // TODO: Return a GetTransactionModel instead
+            Transaction tx = this.network.CreateTransaction();
+            tx.ReadWrite(Encoders.Hex.DecodeData(response.Result["hex"].ToString()), this.network.Consensus.ConsensusFactory);
+            return tx;
         }
 
         // importprivkey

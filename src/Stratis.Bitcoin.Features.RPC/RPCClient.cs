@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.RPC
         wallet             getaccount
         wallet             getaddressesbyaccount
         wallet             getbalance
-        wallet             getnewaddress
+        wallet             getnewaddress                Yes
         wallet             getrawchangeaddress
         wallet             getreceivedbyaccount
         wallet             getreceivedbyaddress
