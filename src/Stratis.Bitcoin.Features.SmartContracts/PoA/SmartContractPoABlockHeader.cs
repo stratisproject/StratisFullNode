@@ -3,6 +3,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Interfaces;
 using TracerAttributes;
+using uint256 = NBitcoin.uint256;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 {
