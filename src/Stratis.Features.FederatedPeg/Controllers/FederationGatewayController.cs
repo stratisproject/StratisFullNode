@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
@@ -31,6 +32,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
     [Route("api/[controller]")]
     public class FederationGatewayController : Controller
     {
+        private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederatedPegSettings federatedPegSettings;
@@ -42,6 +44,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         private readonly Network network;
 
         public FederationGatewayController(
+            IAsyncProvider asyncProvider,
             ChainIndexer chainIndexer,
             ICrossChainTransferStore crossChainTransferStore,
             ILoggerFactory loggerFactory,
@@ -49,9 +52,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
             Network network,
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
-            IFullNode fullNode,
-            IFederationManager federationManager = null)
+            IFullNode fullNode, IFederationManager federationManager = null)
         {
+            this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federatedPegSettings = federatedPegSettings;
@@ -140,8 +143,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             {
                 var model = new FederationMemberInfoModel
                 {
-                    AsyncLoopCount = 0,
-                    AsyncLoopFaultedCount = 0,
+                    AsyncLoopState = this.asyncProvider.GetStatistics(true),
                     ConsensusHeight = this.chainIndexer.Tip.Height,
                     CrossChainStoreHeight = this.crossChainTransferStore.TipHashAndHeight.Height,
                     CrossChainStoreNextDepositHeight = this.crossChainTransferStore.NextMatureDepositHeight,

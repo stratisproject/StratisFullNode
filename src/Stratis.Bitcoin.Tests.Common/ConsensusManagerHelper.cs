@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Tests.Common
             IDateTimeProvider dateTimeProvider = DateTimeProvider.Default;
 
             var signals = new Signals.Signals(loggerFactory, null);
-            var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
+            var asyncProvider = new AsyncProvider(loggerFactory, signals);
 
             network.Consensus.Options = new ConsensusOptions();
 

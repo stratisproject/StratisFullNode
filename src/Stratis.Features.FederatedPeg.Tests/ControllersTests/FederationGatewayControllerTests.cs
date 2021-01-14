@@ -76,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
             var controller = new FederationGatewayController(
-                new ChainIndexer(),
+                TODO, new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -206,7 +206,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
-                new ChainIndexer(),
+                TODO, new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -250,7 +250,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private VotingManager InitializeVotingManager(NodeSettings nodeSettings)
         {
             var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new Mock<INodeLifetime>().Object);
+            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
             var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
@@ -299,7 +299,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
-                new ChainIndexer(),
+                TODO, new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),

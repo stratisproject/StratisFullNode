@@ -87,7 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.nodeLifetime = new NodeLifetime();
             this.logger = Substitute.For<ILogger>();
             this.signals = Substitute.For<ISignals>();
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
             this.dateTimeProvider = DateTimeProvider.Default;
             this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper);

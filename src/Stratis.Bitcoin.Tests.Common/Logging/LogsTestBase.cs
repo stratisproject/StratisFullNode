@@ -115,7 +115,7 @@ namespace Stratis.Bitcoin.Tests.Common.Logging
             var loggerFactory = new ExtendedLoggerFactory();
             var signals = new Signals.Signals(loggerFactory, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory, signals);
 
             return asyncProvider;
         }

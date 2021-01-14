@@ -4,11 +4,8 @@ namespace Stratis.Features.FederatedPeg.Models
 {
     public sealed class FederationMemberInfoModel
     {
-        [JsonProperty(PropertyName = "asyncLoopCount")]
-        public int AsyncLoopCount { get; set; }
-
-        [JsonProperty(PropertyName = "asyncLoopFaultedCount")]
-        public int AsyncLoopFaultedCount { get; set; }
+        [JsonProperty(PropertyName = "asyncLoopState")]
+        public string AsyncLoopState { get; set; }
 
         [JsonProperty(PropertyName = "consensusHeight")]
         public int ConsensusHeight { get; set; }
