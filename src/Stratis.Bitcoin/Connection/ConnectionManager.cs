@@ -339,6 +339,7 @@ namespace Stratis.Bitcoin.Connection
 
             if (connectBuilder.Length > 0)
             {
+                builder.AppendLine(">>> Connect:");
                 builder.Append(connectBuilder.ToString());
                 builder.AppendLine("<<<");
             }
