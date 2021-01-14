@@ -25,9 +25,6 @@ namespace Stratis.Features.FederatedPeg.Models
         [JsonProperty(PropertyName = "federationWalletActive")]
         public bool FederationWalletActive { get; set; }
 
-        [JsonProperty(PropertyName = "federationWalletBalance")]
-        public decimal FederationWalletBalance { get; set; }
-
         [JsonProperty(PropertyName = "federationWalletHeight")]
         public int FederationWalletHeight { get; set; }
 
