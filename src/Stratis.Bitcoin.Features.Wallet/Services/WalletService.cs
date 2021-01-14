@@ -653,10 +653,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 var recipients = new List<Recipient>();
 
+                bool seenSubtractFlag = false;
                 foreach (RecipientModel recipientModel in request.Recipients)
                 {
                     if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
                         throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
+
+                    if (recipientModel.SubtractFeeFromAmount)
+                    {
+                        if (seenSubtractFlag)
+                        {
+                            throw new FeatureException(HttpStatusCode.BadRequest, "Multiple fee subtraction recipients.", "The transaction fee can only be removed from a single output.");
+                        }
+
+                        seenSubtractFlag = true;
+                    }
 
                     Script destination;
 
@@ -672,7 +683,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     recipients.Add(new Recipient
                     {
                         ScriptPubKey = destination,
-                        Amount = recipientModel.Amount
+                        Amount = recipientModel.Amount,
+                        SubtractFeeFromAmount = recipientModel.SubtractFeeFromAmount
                     });
                 }
 
@@ -1208,10 +1220,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 var recipients = new List<Recipient>();
 
+                bool seenSubtractFlag = false;
                 foreach (RecipientModel recipientModel in request.Recipients)
                 {
                     if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
                         throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
+
+                    if (recipientModel.SubtractFeeFromAmount)
+                    {
+                        if (seenSubtractFlag)
+                        {
+                            throw new FeatureException(HttpStatusCode.BadRequest, "Multiple fee subtraction recipients.", "The transaction fee can only be removed from a single output.");
+                        }
+
+                        seenSubtractFlag = true;
+                    }
 
                     Script destination;
 
@@ -1227,7 +1250,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     recipients.Add(new Recipient
                     {
                         ScriptPubKey = destination,
-                        Amount = recipientModel.Amount
+                        Amount = recipientModel.Amount,
+                        SubtractFeeFromAmount = recipientModel.SubtractFeeFromAmount
                     });
                 }
 
