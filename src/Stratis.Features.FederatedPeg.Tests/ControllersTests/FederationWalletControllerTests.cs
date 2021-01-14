@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
-using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
 using Xunit;
 
@@ -31,7 +30,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private readonly IConnectionManager connectionManager;
         private readonly Network network;
         private readonly ChainIndexer chainIndexer;
-        private readonly IWithdrawalHistoryProvider withdrawalHistoryProvider;
 
         private readonly FederationWalletController controller;
         private readonly FederationWallet fedWallet;
@@ -48,8 +46,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             ChainedHeader tip = ChainedHeadersHelper.CreateConsecutiveHeaders(100, ChainedHeadersHelper.CreateGenesisChainedHeader(this.network), true, null, this.network).Last();
             this.chainIndexer.SetTip(tip);
-
-            this.withdrawalHistoryProvider = Substitute.For<IWithdrawalHistoryProvider>();
 
             ICrossChainTransferStore crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             crossChainTransferStore.GetCompletedWithdrawals(5).ReturnsForAnyArgs(new List<WithdrawalModel>() { new WithdrawalModel() });
@@ -107,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             IActionResult result = this.controller.GetHistory(5);
             List<WithdrawalModel> model = this.ActionResultToModel<List<WithdrawalModel>>(result);
 
-            Assert.Equal(1, model.Count);
+            Assert.Single(model);
         }
 
         [Fact]
