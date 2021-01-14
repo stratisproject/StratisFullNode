@@ -1497,12 +1497,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <inheritdoc />
         public List<WithdrawalModel> GetCompletedWithdrawals(int transfersToDisplay)
         {
-            var depositIds = new HashSet<uint256>();
-            foreach (CrossChainTransferStatus status in new[] { CrossChainTransferStatus.SeenInBlock })
-                depositIds.UnionWith(this.depositsIdsByStatus[status]);
-
+            HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.SeenInBlock];
             ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
-
             return this.withdrawalHistoryProvider.GetHistory(transfers, transfersToDisplay);
         }
 
