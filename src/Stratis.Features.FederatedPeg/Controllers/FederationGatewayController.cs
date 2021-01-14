@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
@@ -22,7 +21,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetFederationInfo = "info";
         public const string GetTransfers = "gettransfers";
-        public const string GetFederationMemberState = "member/state";
+        public const string GetFederationMemberInfo = "info/member";
     }
 
     /// <summary>
@@ -77,7 +76,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetMaturedBlockDeposits([FromQuery(Name = "h")] int blockHeight)
+        public IActionResult GetMaturedBlockDeposits([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             if (!this.ModelState.IsValid)
             {
@@ -126,20 +125,20 @@ namespace Stratis.Features.FederatedPeg.Controllers
         }
 
         /// <summary>
-        /// Gets some info on the state of the federation.
+        /// Gets info on the state of a multisig member.
         /// </summary>
-        /// <returns>A <see cref="FederationGatewayInfoModel"/> with information about the federation.</returns>
-        /// <response code="200">Returns federation info</response>
+        /// <returns>A <see cref="FederationMemberInfoModel"/> with information about the federation member.</returns>
+        /// <response code="200">Returns federation member info.</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route(FederationGatewayRouteEndPoint.GetFederationMemberState)]
+        [Route(FederationGatewayRouteEndPoint.GetFederationMemberInfo)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetFederationMemberState()
+        public IActionResult GetFederationMemberInfo()
         {
             try
             {
-                var model = new FederationMemberStateModel
+                var model = new FederationMemberInfoModel
                 {
                     AsyncLoopCount = 0,
                     AsyncLoopFaultedCount = 0,
@@ -204,18 +203,6 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationInfo, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
-        }
-
-        /// <summary>
-        /// Builds an <see cref="IActionResult"/> containing errors contained in the <see cref="ControllerBase.ModelState"/>.
-        /// </summary>
-        /// <returns>A result containing the errors.</returns>
-        private static IActionResult BuildErrorResponse(ModelStateDictionary modelState)
-        {
-            List<ModelError> errors = modelState.Values.SelectMany(e => e.Errors).ToList();
-            return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest,
-                string.Join(Environment.NewLine, errors.Select(m => m.ErrorMessage)),
-                string.Join(Environment.NewLine, errors.Select(m => m.Exception?.Message)));
         }
     }
 }

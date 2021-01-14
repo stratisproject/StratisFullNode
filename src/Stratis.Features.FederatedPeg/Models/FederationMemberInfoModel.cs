@@ -2,7 +2,7 @@
 
 namespace Stratis.Features.FederatedPeg.Models
 {
-    public sealed class FederationMemberStateModel
+    public sealed class FederationMemberInfoModel
     {
         [JsonProperty(PropertyName = "asyncLoopCount")]
         public int AsyncLoopCount { get; set; }
