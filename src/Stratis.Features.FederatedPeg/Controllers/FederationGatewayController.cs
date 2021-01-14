@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
@@ -14,16 +14,15 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
-using Stratis.Features.FederatedPeg.TargetChain;
 
 namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
         public const string GetMaturedBlockDeposits = "deposits";
-        public const string GetInfo = "info";
+        public const string GetFederationInfo = "info";
         public const string GetTransfers = "gettransfers";
-        public const string BroadcastFullySignedTransfers = "pushfullysignedtransfers";
+        public const string GetFederationMemberState = "member/state";
     }
 
     /// <summary>
@@ -33,40 +32,36 @@ namespace Stratis.Features.FederatedPeg.Controllers
     [Route("api/[controller]")]
     public class FederationGatewayController : Controller
     {
+        private readonly ChainIndexer chainIndexer;
         private readonly ICrossChainTransferStore crossChainTransferStore;
-
         private readonly IFederatedPegSettings federatedPegSettings;
-
         private readonly IFederationWalletManager federationWalletManager;
-
         private readonly IFederationManager federationManager;
-
+        private readonly IFullNode fullNode;
         private readonly ILogger logger;
-
         private readonly IMaturedBlocksProvider maturedBlocksProvider;
-
         private readonly Network network;
 
-        private readonly ISignedMultisigTransactionBroadcaster signedMultisigTransactionBroadcaster;
-
         public FederationGatewayController(
+            ChainIndexer chainIndexer,
             ICrossChainTransferStore crossChainTransferStore,
             ILoggerFactory loggerFactory,
             IMaturedBlocksProvider maturedBlocksProvider,
             Network network,
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
-            ISignedMultisigTransactionBroadcaster signedMultisigTransactionBroadcaster,
+            IFullNode fullNode,
             IFederationManager federationManager = null)
         {
+            this.chainIndexer = chainIndexer;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.federationManager = federationManager;
+            this.fullNode = fullNode;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.maturedBlocksProvider = maturedBlocksProvider;
             this.network = network;
-            this.signedMultisigTransactionBroadcaster = signedMultisigTransactionBroadcaster;
         }
 
         /// <summary>
@@ -130,22 +125,40 @@ namespace Stratis.Features.FederatedPeg.Controllers
             return this.Json(transactions.OrderByDescending(t => t.Transaction.BlockTime).Take(amount.Value));
         }
 
-        [Route(FederationGatewayRouteEndPoint.BroadcastFullySignedTransfers)]
+        /// <summary>
+        /// Gets some info on the state of the federation.
+        /// </summary>
+        /// <returns>A <see cref="FederationGatewayInfoModel"/> with information about the federation.</returns>
+        /// <response code="200">Returns federation info</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(FederationGatewayRouteEndPoint.GetFederationMemberState)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> BroadcastFullySignedTransfersAsync()
+        public IActionResult GetFederationMemberState()
         {
-
             try
             {
-                SignedMultisigTransactionBroadcastResult result = await this.signedMultisigTransactionBroadcaster.BroadcastFullySignedTransfersAsync();
-                return Json(result);
+                var model = new FederationMemberStateModel
+                {
+                    AsyncLoopCount = 0,
+                    AsyncLoopFaultedCount = 0,
+                    ConsensusHeight = this.chainIndexer.Tip.Height,
+                    CrossChainStoreHeight = this.crossChainTransferStore.TipHashAndHeight.Height,
+                    CrossChainStoreNextDepositHeight = this.crossChainTransferStore.NextMatureDepositHeight,
+                    CrossChainStorePartialTxs = this.crossChainTransferStore.GetTransferCountByStatus(CrossChainTransferStatus.Partial),
+                    CrossChainStoreSuspendedTxs = this.crossChainTransferStore.GetTransferCountByStatus(CrossChainTransferStatus.Suspended),
+                    FederationWalletActive = this.federationWalletManager.IsFederationWalletActive(),
+                    FederationWalletHeight = this.federationWalletManager.WalletTipHeight,
+                    NodeVersion = this.fullNode.Version?.ToString() ?? "0",
+                    PubKey = this.federationManager.CurrentFederationKey?.ToString()
+                };
+
+                return this.Json(model);
             }
             catch (Exception e)
             {
-                this.logger.LogDebug("Exception {0}", e.Message);
+                this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationInfo, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
@@ -156,7 +169,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <returns>A <see cref="FederationGatewayInfoModel"/> with information about the federation.</returns>
         /// <response code="200">Returns federation info</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route(FederationGatewayRouteEndPoint.GetInfo)]
+        [Route(FederationGatewayRouteEndPoint.GetFederationInfo)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -188,7 +201,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetInfo, e.Message);
+                this.logger.LogDebug("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationInfo, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }

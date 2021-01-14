@@ -76,13 +76,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
             var controller = new FederationGatewayController(
+                new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
                 this.federatedPegSettings,
                 this.federationWalletManager,
-                this.signedMultisigTransactionBroadcaster,
+                Substitute.For<IFullNode>(),
                 this.federationManager);
 
             return controller;
@@ -205,13 +206,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
+                new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
                 federatedPegSettings,
                 this.federationWalletManager,
-                this.signedMultisigTransactionBroadcaster,
+                Substitute.For<IFullNode>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -297,13 +299,14 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
+                new ChainIndexer(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
                 this.network,
                 settings,
                 this.federationWalletManager,
-                this.signedMultisigTransactionBroadcaster,
+                Substitute.For<IFullNode>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

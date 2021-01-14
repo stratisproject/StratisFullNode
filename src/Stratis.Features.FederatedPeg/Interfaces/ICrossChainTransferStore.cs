@@ -43,6 +43,13 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         void RejectTransfer(ICrossChainTransfer crossChainTransfer);
 
         /// <summary>
+        /// Returns a count of transfers based on status.
+        /// </summary>
+        /// <param name="status">The status to check.</param>
+        /// <returns>Transfer count for a given status.</returns>
+        int GetTransferCountByStatus(CrossChainTransferStatus status);
+
+        /// <summary>
         /// Returns transfers based on their status.
         /// </summary>
         /// <param name="statuses">Set of statuses to get transfers for.</param>
