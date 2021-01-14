@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Tests.P2P
             var ipandport = client.Client.RemoteEndPoint.ToString();
             if (client.Client.RemoteEndPoint.AddressFamily == AddressFamily.InterNetwork)
             {
-                ip = ipandport.Replace(ipandport.Substring(ipandport.IndexOf(':')), "");
+                ip = ipandport.Replace(ipandport[ipandport.IndexOf(':')..], "");
             }
             else
             {
@@ -90,15 +90,15 @@ namespace Stratis.Bitcoin.Tests.P2P
             connectionManagerSettings.Bind.Add(new NodeServerEndpoint(endpointDiscovered, isWhiteListed));
 
             // Act
-            var result = networkPeerServer.InvokeMethod("AllowClientConnection", client);
+            var result = networkPeerServer.InvokeMethod("AllowClientConnection", client, new NetworkPeerCollection(), new List<IPEndPoint>());
 
             // Assert
             Assert.True((inIBD && !isWhiteListed) == closeClient);
 
             this.testOutput.WriteLine(
-                $"In IBD : {inIBD.ToString()}, " +
-                $"Is White Listed : {isWhiteListed.ToString()}, " +
-                $"Close Client : {result.ToString()}");
+                $"In IBD : {inIBD}, " +
+                $"Is White Listed : {isWhiteListed}, " +
+                $"Close Client : {result}");
         }
     }
 }
