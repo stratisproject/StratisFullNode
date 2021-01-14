@@ -76,7 +76,7 @@ namespace Stratis.Features.FederatedPeg
         /// <param name="payload">The payload to broadcast.</param>
         private async Task BroadcastAsync(RequestPartialTransactionPayload payload)
         {
-            this.logger.LogDebug("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
+            this.logger.LogInformation("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
             await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
         }
 
@@ -93,7 +93,7 @@ namespace Stratis.Features.FederatedPeg
                 return;
             }
 
-            this.logger.LogDebug("{0} received from '{1}':'{2}'.", nameof(RequestPartialTransactionPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address);
+            this.logger.LogInformation("{0} received from '{1}':'{2}'.", nameof(RequestPartialTransactionPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address);
 
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
 
@@ -102,25 +102,25 @@ namespace Stratis.Features.FederatedPeg
             // on chain and as such the store was not able to sync.
             if (transfer == null)
             {
-                this.logger.LogDebug("{0}: Unable to retrieve transfers for deposit {1} at this time, the store is not synced.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogInformation("{0}: Unable to retrieve transfers for deposit {1} at this time, the store is not synced.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
             if (transfer[0] == null)
             {
-                this.logger.LogDebug("{0}: Deposit {1} does not exist.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogInformation("{0}: Deposit {1} does not exist.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
             if (transfer[0].Status != CrossChainTransferStatus.Partial)
             {
-                this.logger.LogDebug("{0}: Deposit {1} is {2}.", nameof(this.OnMessageReceivedAsync), payload.DepositId, transfer[0].Status);
+                this.logger.LogInformation("{0}: Deposit {1} is {2}.", nameof(this.OnMessageReceivedAsync), payload.DepositId, transfer[0].Status);
                 return;
             }
 
             if (transfer[0].PartialTransaction == null)
             {
-                this.logger.LogDebug("{0}: Deposit {1}, PartialTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogInformation("{0}: Deposit {1}, PartialTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
@@ -130,20 +130,20 @@ namespace Stratis.Features.FederatedPeg
 
             if (signedTransaction == null)
             {
-                this.logger.LogDebug("{0}: Deposit {1}, signedTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
+                this.logger.LogInformation("{0}: Deposit {1}, signedTransaction not found.", nameof(this.OnMessageReceivedAsync), payload.DepositId);
                 return;
             }
 
             if (oldHash != signedTransaction.GetHash())
             {
-                this.logger.LogDebug("Signed transaction (deposit={0}) to produce {1} from {2}.", payload.DepositId, signedTransaction.GetHash(), oldHash);
+                this.logger.LogInformation("Signed transaction (deposit={0}) to produce {1} from {2}.", payload.DepositId, signedTransaction.GetHash(), oldHash);
 
                 // Respond back to the peer that requested a signature.
                 await this.BroadcastAsync(payload.AddPartial(signedTransaction));
             }
             else
             {
-                this.logger.LogDebug("The old and signed hash matches '{0}'.", oldHash);
+                this.logger.LogInformation("The old and signed hash matches '{0}'.", oldHash);
             }
         }
 
