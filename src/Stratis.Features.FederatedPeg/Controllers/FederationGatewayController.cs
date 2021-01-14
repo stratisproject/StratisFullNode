@@ -143,7 +143,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             {
                 var model = new FederationMemberInfoModel
                 {
-                    AsyncLoopState = this.asyncProvider.GetStatistics(true),
+                    AsyncLoopState = this.asyncProvider.GetStatistics(true, true),
                     ConsensusHeight = this.chainIndexer.Tip.Height,
                     CrossChainStoreHeight = this.crossChainTransferStore.TipHashAndHeight.Height,
                     CrossChainStoreNextDepositHeight = this.crossChainTransferStore.NextMatureDepositHeight,
@@ -152,7 +152,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     FederationWalletActive = this.federationWalletManager.IsFederationWalletActive(),
                     FederationWalletHeight = this.federationWalletManager.WalletTipHeight,
                     NodeVersion = this.fullNode.Version?.ToString() ?? "0",
-                    PubKey = this.federationManager.CurrentFederationKey?.ToString()
+                    PubKey = this.federationManager.CurrentFederationKey?.PubKey?.ToHex()
                 };
 
                 return this.Json(model);
