@@ -418,7 +418,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string DestinationScript { get; set; }
 
         /// <summary>
-        /// An indicator if the transaction fee should be subtracted from the current recipient.
+        /// An indicator whether the transaction fee should be subtracted from the current recipient.
         /// </summary>
         /// <remarks>Only one recipient in a transaction can have this flag set.</remarks>
         public bool SubtractFeeFromAmount { get; set; }
