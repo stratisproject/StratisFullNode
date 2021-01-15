@@ -31,6 +31,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             IEnumerable<INetworkPeer> connectedPeers = this.connectionManager.ConnectedPeers.Where(peer => (peer?.IsConnected ?? false) && this.federatedPegSettings.FederationNodeIpAddresses.Contains(peer.PeerEndPoint.Address));
 
+            this.logger.LogInformation($"Broadcasting to {connectedPeers.Count()} federation nodes.");
+
             Parallel.ForEach(connectedPeers, async (INetworkPeer peer) =>
             {
                 try
