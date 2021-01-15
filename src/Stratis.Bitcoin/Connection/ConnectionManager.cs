@@ -147,6 +147,9 @@ namespace Stratis.Bitcoin.Connection
 
             foreach (IPeerConnector peerConnector in this.PeerConnectors)
             {
+                if (peerConnector is PeerConnectorAddNode && this.ConnectionSettings.DisableAddNodePeerConnector)
+                    continue;
+
                 peerConnector.Initialize(this);
                 peerConnector.StartConnectAsync();
             }
