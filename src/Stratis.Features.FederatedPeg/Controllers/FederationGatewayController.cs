@@ -158,7 +158,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     FederationWalletActive = this.federationWalletManager.IsFederationWalletActive(),
                     FederationWalletHeight = this.federationWalletManager.WalletTipHeight,
                     NodeVersion = this.fullNode.Version?.ToString() ?? "0",
-                    PubKey = this.federationManager?.CurrentFederationKey?.PubKey?.ToHex()
+                    PubKey = this.federationManager?.CurrentFederationKey?.PubKey?.ToHex(),
                 };
 
                 foreach (IPEndPoint federationIpEndpoints in this.federatedPegSettings.FederationNodeIpEndPoints)
@@ -171,6 +171,8 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                     infoModel.FederationMemberConnections.Add(federationMemberConnection);
                 }
+
+                infoModel.FederationConnectionState = $"{infoModel.FederationMemberConnections.Count(f => f.Connected)} out of {infoModel.FederationMemberConnections.Count}";
 
                 return this.Json(infoModel);
             }
