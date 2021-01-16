@@ -56,7 +56,8 @@ namespace Stratis.Features.FederatedPeg.Controllers
             Network network,
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
-            IFullNode fullNode, IFederationManager federationManager = null)
+            IFullNode fullNode,
+            IFederationManager federationManager = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -157,7 +158,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     FederationWalletActive = this.federationWalletManager.IsFederationWalletActive(),
                     FederationWalletHeight = this.federationWalletManager.WalletTipHeight,
                     NodeVersion = this.fullNode.Version?.ToString() ?? "0",
-                    PubKey = this.federationManager.CurrentFederationKey?.PubKey?.ToHex()
+                    PubKey = this.federationManager?.CurrentFederationKey?.PubKey?.ToHex()
                 };
 
                 foreach (IPEndPoint federationIpEndpoints in this.federatedPegSettings.FederationNodeIpEndPoints)
@@ -166,10 +167,9 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                     INetworkPeer peer = this.connectionManager.FindNodeByEndpoint(federationIpEndpoints);
                     if (peer != null && peer.IsConnected)
-                    {
                         federationMemberConnection.Connected = true;
-                        infoModel.FederationMemberConnections.Add(federationMemberConnection);
-                    }
+
+                    infoModel.FederationMemberConnections.Add(federationMemberConnection);
                 }
 
                 return this.Json(infoModel);
