@@ -1,9 +1,15 @@
-﻿using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Stratis.Features.FederatedPeg.Models
 {
     public sealed class FederationMemberInfoModel
     {
+        public FederationMemberInfoModel()
+        {
+            this.FederationMemberConnections = new List<FederationMemberConnectionInfo>();
+        }
+
         [JsonProperty(PropertyName = "asyncLoopState")]
         public string AsyncLoopState { get; set; }
 
@@ -33,5 +39,19 @@ namespace Stratis.Features.FederatedPeg.Models
 
         [JsonProperty(PropertyName = "pubKey")]
         public string PubKey { get; set; }
+
+        [JsonProperty(PropertyName = "federationConnectionState")]
+        public string FederationConnectionState { get; internal set; }
+
+        public List<FederationMemberConnectionInfo> FederationMemberConnections { get; set; }
+    }
+
+    public sealed class FederationMemberConnectionInfo
+    {
+        [JsonProperty(PropertyName = "federationMemberIp")]
+        public string FederationMemberIp { get; set; }
+
+        [JsonProperty(PropertyName = "isConnected")]
+        public bool Connected { get; set; }
     }
 }

@@ -346,7 +346,7 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 if (this.network.ConsensusOptions.AutoKickIdleMembers)
                 {
-                   // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+                    // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
                     this.idleFederationMembersKicker.Execute(this.consensusManager.Tip);
                 }
 
@@ -369,9 +369,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (account == null)
                 return null;
-            
+
             HdAddress address = account.ExternalAddresses.FirstOrDefault();
-            
+
             return address?.Pubkey;
         }
 
@@ -405,7 +405,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (this.ibdState.IsInitialBlockDownload())
             {
-                log.AppendLine($"Mining information is not available during IBD.");
+                log.AppendLine("Mining information is not available whilst the node is syncing.");
+                log.AppendLine("The node will mine once it reaches the network's height.");
                 log.AppendLine();
                 return;
             }
