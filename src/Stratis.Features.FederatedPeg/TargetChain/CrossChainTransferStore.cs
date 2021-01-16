@@ -1482,15 +1482,21 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 this.logger.LogError("Exception occurred while getting pending withdrawals: '{0}'.", exception.ToString());
             }
 
-            List<WithdrawalModel> completedWithdrawals = GetCompletedWithdrawals(10);
-            if (completedWithdrawals.Count > 0)
+            // Only display this on the mainchain for now as the sidechain has too many SeenInBlock
+            // deposits making the query exectute too long.
+            // TODO: We need to look at including the block height in the dictionary perhaps.
+            if (this.settings.IsMainChain)
             {
-                benchLog.AppendLine("--- Recently Completed Withdrawals ---");
+                List<WithdrawalModel> completedWithdrawals = GetCompletedWithdrawals(10);
+                if (completedWithdrawals.Count > 0)
+                {
+                    benchLog.AppendLine("--- Recently Completed Withdrawals ---");
 
-                foreach (WithdrawalModel withdrawal in completedWithdrawals)
-                    benchLog.AppendLine(withdrawal.ToString());
+                    foreach (WithdrawalModel withdrawal in completedWithdrawals)
+                        benchLog.AppendLine(withdrawal.ToString());
 
-                benchLog.AppendLine();
+                    benchLog.AppendLine();
+                }
             }
         }
 
