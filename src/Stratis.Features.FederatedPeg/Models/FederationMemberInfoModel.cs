@@ -40,7 +40,7 @@ namespace Stratis.Features.FederatedPeg.Models
         [JsonProperty(PropertyName = "pubKey")]
         public string PubKey { get; set; }
 
-        public List<FederationMemberConnectionInfo> FederationMemberConnections { get; set }
+        public List<FederationMemberConnectionInfo> FederationMemberConnections { get; set; }
     }
 
     public sealed class FederationMemberConnectionInfo

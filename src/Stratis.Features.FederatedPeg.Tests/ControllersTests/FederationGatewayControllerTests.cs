@@ -12,6 +12,7 @@ using NSubstitute.Core;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.PoA;
@@ -78,6 +79,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
                 new ChainIndexer(),
+                Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -209,6 +211,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
                 new ChainIndexer(),
+                Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
@@ -303,6 +306,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var controller = new FederationGatewayController(
                 Substitute.For<IAsyncProvider>(),
                 new ChainIndexer(),
+                Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
                 this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
