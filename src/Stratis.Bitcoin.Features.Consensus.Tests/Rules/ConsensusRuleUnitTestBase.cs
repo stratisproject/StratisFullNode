@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             else
                 this.ruleContext = new PowRuleContext(new ValidationContext(), this.dateTimeProvider.Object.GetTimeOffset());
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object);
         }
 
         protected void AddBlocksToChain(ChainIndexer chainIndexer, int blockAmount)
@@ -150,7 +150,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
                 this.ruleContext = new PowRuleContext(new ValidationContext(), this.dateTimeProvider.Object.GetTimeOffset());
             }
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object);
         }
 
         public virtual T InitializeConsensusRules()

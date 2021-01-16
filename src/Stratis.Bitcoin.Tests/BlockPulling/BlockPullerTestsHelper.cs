@@ -61,7 +61,7 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
             var peer = new Mock<INetworkPeer>();
 
             var signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, signals, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(this.loggerFactory, signals);
 
             var connection = new NetworkPeerConnection(new StraxMain(), peer.Object, new TcpClient(), this.currentPeerId, (message, token) => Task.CompletedTask,
                 new DateTimeProvider(), this.loggerFactory, new PayloadProvider(), asyncProvider);

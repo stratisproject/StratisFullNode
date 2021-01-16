@@ -39,7 +39,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <inheritdoc />
         public Task<SerializableResult<List<MaturedBlockDepositsModel>>> GetMaturedBlockDepositsAsync(int height, CancellationToken cancellation = default)
         {
-            return this.SendGetRequestAsync<SerializableResult<List<MaturedBlockDepositsModel>>>(FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, $"h={height}", cancellation);
+            return this.SendGetRequestAsync<SerializableResult<List<MaturedBlockDepositsModel>>>(FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, $"blockHeight={height}", cancellation);
         }
     }
 }

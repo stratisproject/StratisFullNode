@@ -29,7 +29,7 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 using LogLevel = NLog.LogLevel;
 using Target = NBitcoin.Target;
 
-namespace Stratis.Bitcoin.Controllers
+namespace Stratis.Bitcoin.Features.Api
 {
     /// <summary>
     /// Provides methods that interact with the full node.
@@ -95,8 +95,8 @@ namespace Stratis.Bitcoin.Controllers
             Network network,
             IAsyncProvider asyncProvider,
             ISelfEndpointTracker selfEndpointTracker,
-            IConsensusManager consensusManager = null,
-            IBlockStore blockStore = null,
+            IConsensusManager consensusManager,
+            IBlockStore blockStore,
             IGetUnspentTransaction getUnspentTransaction = null,
             INetworkDifficulty networkDifficulty = null,
             IPooledGetUnspentTransaction pooledGetUnspentTransaction = null,
@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Controllers
         /// </summary>
         /// <param name="hash">The hash of the block to retrieve.</param>
         /// <param name="isJsonFormat">A flag that specifies whether to return the block header in the JSON format. Defaults to true. A value of false is currently not supported.</param>
-        /// <returns>Json formatted <see cref="BlockHeaderModel"/>. <c>null</c> if block not found. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
+        /// <returns>Json formatted <see cref="BlockHeaderModel"/>. <c>null</c> if block not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="NotImplementedException">Thrown if isJsonFormat = false</exception>"
         /// <exception cref="ArgumentException">Thrown if hash is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown if logger is not provided.</exception>
@@ -249,7 +249,7 @@ namespace Stratis.Bitcoin.Controllers
         /// </summary>
         /// <param name="trxid">The transaction ID (a hash of the trancaction).</param>
         /// <param name="verbose">A flag that specifies whether to return verbose information about the transaction.</param>
-        /// <returns>Json formatted <see cref="TransactionBriefModel"/> or <see cref="TransactionVerboseModel"/>. <c>null</c> if transaction not found. Returns <see cref="IActionResult"/> formatted error if otherwise fails.</returns>
+        /// <returns>Json formatted <see cref="TransactionBriefModel"/> or <see cref="TransactionVerboseModel"/>. <c>null</c> if transaction not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if otherwise fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if fullNode, network, or chain are not available.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid<see cref="uint256"/>.</exception>
         /// <remarks>Requires txindex=1, otherwise only txes that spend or create UTXOs for a wallet can be returned.</remarks>
@@ -281,7 +281,7 @@ namespace Stratis.Bitcoin.Controllers
 
                 if (verbose)
                 {
-                    ChainedHeader block = this.GetTransactionBlock(txid, this.fullNode, this.chainIndexer);
+                    ChainedHeader block = this.GetTransactionBlock(txid, this.chainIndexer);
                     return this.Json(new TransactionVerboseModel(trx, this.network, block, this.chainState?.ConsensusTip));
                 }
                 else
@@ -325,7 +325,7 @@ namespace Stratis.Bitcoin.Controllers
         /// Validates a bech32 or base58 bitcoin address.
         /// </summary>
         /// <param name="address">A Bitcoin address to validate in a string format.</param>
-        /// <returns>Json formatted <see cref="ValidatedAddress"/> containing a boolean indicating address validity. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
+        /// <returns>Json formatted <see cref="ValidatedAddress"/> containing a boolean indicating address validity. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentException">Thrown if address provided is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown if network is not provided.</exception>
         [Route("validateaddress")]
@@ -387,7 +387,7 @@ namespace Stratis.Bitcoin.Controllers
         /// <param name="trxid">The transaction ID as a hash string.</param>
         /// <param name="vout">The vout to get the unspent outputs for.</param>
         /// <param name="includeMemPool">A flag that specifies whether to include transactions in the mempool.</param>
-        /// <returns>Json formatted <see cref="GetTxOutModel"/>. <c>null</c> if no unspent outputs given parameters. Returns <see cref="IActionResult"/> formatted error if fails.</returns>
+        /// <returns>Json formatted <see cref="GetTxOutModel"/>. <c>null</c> if no unspent outputs given parameters. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if network or chain not provided.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid <see cref="uint256"/></exception>
         [Route("gettxout")]
@@ -516,7 +516,7 @@ namespace Stratis.Bitcoin.Controllers
         /// Changes the log levels for the specified loggers.
         /// </summary>
         /// <param name="request">The request containing the loggers to modify.</param>
-        /// <returns><see cref="OkResult"/></returns>
+        /// <returns><see cref="Microsoft.AspNetCore.Mvc.OkResult"/></returns>
         [HttpPut]
         [Route("loglevels")]
         public IActionResult UpdateLogLevel([FromBody] LogRulesRequest request)
@@ -663,17 +663,15 @@ namespace Stratis.Bitcoin.Controllers
         /// This function is used by other methods in this class and not explicitly by RPC/API.
         /// </summary>
         /// <param name="trxid">A valid uint256 hash</param>
-        /// <param name="fullNode">The full node. Used to access <see cref="IBlockStore"/>.</param>
         /// <param name="chain">The full node's chain. Used to get <see cref="ChainedHeader"/> block.</param>
         /// <returns>A <see cref="ChainedHeader"/> for the given transaction hash. Returns <c>null</c> if fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if fullnode is not provided.</exception>
-        internal ChainedHeader GetTransactionBlock(uint256 trxid, IFullNode fullNode, ChainIndexer chain)
+        internal ChainedHeader GetTransactionBlock(uint256 trxid, ChainIndexer chain)
         {
             Guard.NotNull(fullNode, nameof(fullNode));
 
             ChainedHeader block = null;
-            var blockStore = fullNode.NodeFeature<IBlockStore>();
-            uint256 blockid = blockStore?.GetBlockIdByTransactionId(trxid);
+            uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);
             if (blockid != null)
             {
                 block = chain?.GetHeader(blockid);

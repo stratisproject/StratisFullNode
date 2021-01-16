@@ -22,10 +22,11 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         void Stop();
 
-        /// <summary>
-        /// The last processed block.
-        /// </summary>
+        /// <summary> The last processed block's hash.</summary>
         uint256 WalletTipHash { get; set; }
+
+        /// <summary> The last processed block's height.</summary>
+        int WalletTipHeight { get; set; }
 
         /// <summary>
         /// Lists all spendable transactions from all accounts in the wallet.
@@ -93,7 +94,6 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>
         /// Updates the wallet with the height of the last block synced.
         /// </summary>
-        /// <param name="wallet">The wallet to update.</param>
         /// <param name="chainedBlock">The height of the last block synced.</param>
         void UpdateLastBlockSyncedHeight(ChainedHeader chainedBlock);
 

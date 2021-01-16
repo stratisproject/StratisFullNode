@@ -116,7 +116,8 @@ namespace Stratis.Bitcoin.AsyncWork
         /// Returns statistics about running or faulted async loops.
         /// </summary>
         /// <param name="faultyOnly">if set to <c>true</c> dump information only for loops in faulty state.</param>
-        string GetStatistics(bool faultyOnly);
+        /// <param name="summaryOnly">if set to <c>true</c> only return a summary (running and faulted count string).</param>
+        string GetStatistics(bool faultyOnly, bool summaryOnly = false);
 
         /// <summary>
         /// temporary hack to expose signals to most of the components (every component currently using asyncprovider), while we decide if we should introduce a component
@@ -126,7 +127,7 @@ namespace Stratis.Bitcoin.AsyncWork
         /// Having a single entry point for COMMON SERVICES allows us to speed up changes.
         /// </summary>
         ISignals Signals { get; }
-     
+
         /// <summary>
         /// Returns a list of friendly names of all loops, as well as their current status.
         /// </summary>

@@ -42,6 +42,8 @@ namespace Stratis.Features.FederatedPeg.Models
 
         public uint256 BlockHash { get; set; }
 
+        public int SignatureCount { get; set; }
+
         public string SpendingOutputDetails { get; set; }
 
         public string TransferStatus { get; set; }

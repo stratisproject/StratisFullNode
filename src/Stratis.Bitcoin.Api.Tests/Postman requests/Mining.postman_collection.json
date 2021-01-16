@@ -13,12 +13,12 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://localhost:37221/api/miner/getstakinginfo",
+					"raw": "http://localhost:17103/api/staking/getstakinginfo",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "37221",
+					"port": "17103",
 					"path": [
 						"api",
 						"miner",
@@ -44,12 +44,12 @@
 					"raw": "{\n\t\"password\": \"123456\",\n\t\"name\": \"restore1\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:37221/api/miner/startstaking",
+					"raw": "http://localhost:17103/api/staking/startstaking",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "37221",
+					"port": "17103",
 					"path": [
 						"api",
 						"miner",
@@ -75,12 +75,12 @@
 					"raw": "{\n\t\"password\": \"123456\",\n\t\"name\": \"restore1\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:37221/api/miner/stopstaking",
+					"raw": "http://localhost:17103/api/staking/stopstaking",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "37221",
+					"port": "17103",
 					"path": [
 						"api",
 						"miner",
