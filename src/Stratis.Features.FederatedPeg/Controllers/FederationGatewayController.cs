@@ -7,8 +7,10 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -34,6 +36,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
     {
         private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
+        private readonly IConnectionManager connectionManager;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
@@ -46,6 +49,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public FederationGatewayController(
             IAsyncProvider asyncProvider,
             ChainIndexer chainIndexer,
+            IConnectionManager connectionManager,
             ICrossChainTransferStore crossChainTransferStore,
             ILoggerFactory loggerFactory,
             IMaturedBlocksProvider maturedBlocksProvider,
@@ -56,6 +60,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
+            this.connectionManager = connectionManager;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
@@ -141,7 +146,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         {
             try
             {
-                var model = new FederationMemberInfoModel
+                var infoModel = new FederationMemberInfoModel
                 {
                     AsyncLoopState = this.asyncProvider.GetStatistics(true, true),
                     ConsensusHeight = this.chainIndexer.Tip.Height,
@@ -155,7 +160,19 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     PubKey = this.federationManager.CurrentFederationKey?.PubKey?.ToHex()
                 };
 
-                return this.Json(model);
+                foreach (IPEndPoint federationIpEndpoints in this.federatedPegSettings.FederationNodeIpEndPoints)
+                {
+                    var federationMemberConnection = new FederationMemberConnectionInfo() { FederationMemberIp = federationIpEndpoints.ToString() };
+
+                    INetworkPeer peer = this.connectionManager.FindNodeByEndpoint(federationIpEndpoints);
+                    if (peer != null && peer.IsConnected)
+                    {
+                        federationMemberConnection.Connected = true;
+                        infoModel.FederationMemberConnections.Add(federationMemberConnection);
+                    }
+                }
+
+                return this.Json(infoModel);
             }
             catch (Exception e)
             {
