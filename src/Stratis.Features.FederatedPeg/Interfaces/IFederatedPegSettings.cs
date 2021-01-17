@@ -61,6 +61,9 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         int CounterChainDepositStartBlock { get; }
 
+        /// <summary> The maximum amount of partial transactions that can be processed in the <see cref="ICrossChainTransferStore"/>.</summary>
+        int MaximumPartialTransactionThreshold { get; }
+
         /// <summary>
         /// Similar to <see cref="MinimumConfirmationsNormalDeposits"/> and <see cref="MinimumConfirmationsLargeDeposits"/> but this settings allows us to specify 
         /// how mature small deposits needs to be in order to be considered for a cross chain transfer.

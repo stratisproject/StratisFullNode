@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
             testRulesContext.ChainState = new ChainState();
 
             testRulesContext.Signals = new Signals.Signals(testRulesContext.LoggerFactory, null);
-            testRulesContext.AsyncProvider = new AsyncProvider(testRulesContext.LoggerFactory, testRulesContext.Signals, new NodeLifetime());
+            testRulesContext.AsyncProvider = new AsyncProvider(testRulesContext.LoggerFactory, testRulesContext.Signals);
 
             NodeDeployments deployments = new NodeDeployments(testRulesContext.Network, testRulesContext.ChainIndexer);
 

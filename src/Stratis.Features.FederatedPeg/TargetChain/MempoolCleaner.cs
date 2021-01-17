@@ -120,7 +120,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 completedTransactions = this.CompletedTransactions(transactionsToCheck).ToList();
             });
 
-            List<Transaction> transactionsToRemove = this.store.CompletedWithdrawals(transactionsToCheck)
+            List<Transaction> transactionsToRemove = this.store.GetCompletedWithdrawalsForTransactions(transactionsToCheck)
                 .Union(completedTransactions)
                 .ToList();
 

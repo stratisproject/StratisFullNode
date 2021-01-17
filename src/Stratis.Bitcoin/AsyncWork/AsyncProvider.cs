@@ -36,7 +36,6 @@ namespace Stratis.Bitcoin.AsyncWork
         private ILoggerFactory loggerFactory;
         private ILogger logger;
         private ISignals signals;
-        private readonly INodeLifetime nodeLifetime;
 
         private (string Name, int Width)[] benchmarkColumnsDefinition = new[]
         {
@@ -48,7 +47,7 @@ namespace Stratis.Bitcoin.AsyncWork
         /// <inheritdoc />
         public ISignals Signals => this.signals;
 
-        public AsyncProvider(ILoggerFactory loggerFactory, ISignals signals, INodeLifetime nodeLifetime)
+        public AsyncProvider(ILoggerFactory loggerFactory, ISignals signals)
         {
             this.lockAsyncDelegates = new object();
             this.lockRegisteredTasks = new object();
@@ -60,7 +59,6 @@ namespace Stratis.Bitcoin.AsyncWork
             this.logger = this.loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.signals = Guard.NotNull(signals, nameof(signals));
-            this.nodeLifetime = Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
         }
 
         /// <inheritdoc />
@@ -248,7 +246,7 @@ namespace Stratis.Bitcoin.AsyncWork
 
         /// <inheritdoc />
         [NoTrace]
-        public string GetStatistics(bool faultyOnly)
+        public string GetStatistics(bool faultyOnly, bool summaryOnly = false)
         {
             var taskInformations = new List<AsyncTaskInfo>();
             lock (this.lockAsyncDelegates)
@@ -264,9 +262,12 @@ namespace Stratis.Bitcoin.AsyncWork
             int running = taskInformations.Where(info => info.IsRunning).Count();
             int faulted = taskInformations.Where(info => !info.IsRunning).Count();
 
+            if (summaryOnly)
+                return $"Running: {running} Faulted: {faulted}";
+
             var sb = new StringBuilder();
             sb.AppendLine();
-            sb.AppendLine($"====== Async loops ======   [Running: {running.ToString()}] [Faulted: {faulted.ToString()}]");
+            sb.AppendLine($"====== Async loops ======   [Running: {running}] [Faulted: {faulted}]");
 
             if (faultyOnly && faulted == 0)
                 return sb.ToString(); // If there are no faulty tasks and faultOnly is set to true, return just the header.

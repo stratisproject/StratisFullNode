@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Networks
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
             this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka"; // Cirrus main address
+            this.RewardClaimerBatchActivationHeight = 119_200; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
+            this.RewardClaimerBlockInterval = 100;
             this.InteroperabilityDummyAddress = "CHYdxLeH2rQkCpkJ8gC5kmXCmVfRNvrxLW";
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
@@ -169,7 +171,8 @@ namespace Stratis.Bitcoin.Networks
 
             this.DNSSeeds = new List<DNSSeedData>
             {
-                new DNSSeedData("straxmainnet1.stratisnetwork.com", "straxmainnet1.stratisnetwork.com")
+                new DNSSeedData("straxmainnet1.stratisnetwork.com", "straxmainnet1.stratisnetwork.com"),
+                new DNSSeedData("straxmainnet2.stratisnetwork.com", "straxmainnet2.stratisnetwork.com")
             };
 
             this.SeedNodes = new List<NetworkAddress>

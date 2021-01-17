@@ -120,7 +120,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return transferItem;
             }
 
-            this.logger.LogInformation("Broadcasting deposit '{0}', a signed multisig transaction '{1'} to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
+            this.logger.LogInformation("Broadcasting deposit '{0}', a signed multisig transaction '{1}' to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
 
             await this.broadcasterManager.BroadcastTransactionAsync(crossChainTransfer.PartialTransaction).ConfigureAwait(false);
 

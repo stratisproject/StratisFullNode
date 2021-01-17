@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Tests.P2P
             this.extendedLoggerFactory = ExtendedLoggerFactory.Create();
             this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(this.Network));
             this.signals = new Bitcoin.Signals.Signals(this.extendedLoggerFactory, null);
-            this.asyncProvider = new AsyncProvider(this.extendedLoggerFactory, this.signals, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.extendedLoggerFactory, this.signals);
 
             this.networkPeerFactory = new NetworkPeerFactory(this.Network,
                 DateTimeProvider.Default,

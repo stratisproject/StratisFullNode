@@ -2,16 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using TracerAttributes;
@@ -120,6 +123,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         public FederationWalletManager(
             ILoggerFactory loggerFactory,
             Network network,
+            INodeStats nodeStats,
             ChainIndexer chainIndexer,
             DataFolder dataFolder,
             IWalletFeePolicy walletFeePolicy,
@@ -155,6 +159,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.withdrawalExtractor = withdrawalExtractor;
             this.isFederationActive = false;
             this.blockStore = blockStore;
+
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+            nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
         }
 
         /// <summary>
@@ -417,9 +424,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     bool trxFound = this.ProcessTransaction(transaction, chainedHeader.Height, chainedHeader.HashBlock, block);
                     if (trxFound)
-                    {
                         walletUpdated = true;
-                    }
                 }
 
                 walletUpdated |= this.CleanTransactionsPastMaxReorg(chainedHeader.Height);
@@ -430,14 +435,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 this.UpdateLastBlockSyncedHeight(chainedHeader);
 
                 if (walletUpdated)
-                {
                     this.SaveWallet();
-                }
             }
         }
 
         /// <inheritdoc />
-        public bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null, bool isDistribution = false)
+        public bool ProcessTransaction(Transaction transaction, int? blockHeight = null, uint256 blockHash = null, Block block = null)
         {
             Guard.NotNull(transaction, nameof(transaction));
             Guard.Assert(blockHash == (blockHash ?? block?.GetHash()));
@@ -532,16 +535,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                     this.AddSpendingTransactionToWalletLocked(transaction, paidOutTo, tTx.Id, tTx.Index, blockHeight, blockHash, block, withdrawal);
                     foundSendingTrx = true;
-                }
-
-                // Figure out what to do when this transaction is found to affect the wallet.
-                if (foundSendingTrx || foundReceivingTrx)
-                {
-                    // Save the wallet when the transaction was not included in a block.
-                    if (blockHeight == null)
-                    {
-                        this.SaveWallet();
-                    }
                 }
 
                 return foundSendingTrx || foundReceivingTrx;
@@ -727,8 +720,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     foundTransaction.CreationTime = DateTimeOffset.FromUnixTimeSeconds(block.Header.Time);
                 }
             }
-
-            this.TransactionFoundInternal(script);
         }
 
         /// <summary>
@@ -861,12 +852,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
             }
 
             return spendingDetails;
-        }
-
-        public void TransactionFoundInternal(Script script)
-        {
-            // Persists the wallet file.
-            this.SaveWallet();
         }
 
         /// <inheritdoc />
@@ -1303,6 +1288,38 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 long total = transactions.Sum(t => t.SpendableAmount(false));
 
                 return (confirmed, total - confirmed);
+            }
+        }
+
+        private void AddInlineStats(StringBuilder benchLogs)
+        {
+            string hash = this.Wallet?.LastBlockSyncedHash == null ? "N/A" : this.Wallet.LastBlockSyncedHash.ToString();
+            string height = this.Wallet?.LastBlockSyncedHeight == null ? "N/A" : this.Wallet.LastBlockSyncedHeight.ToString();
+
+            benchLogs.AppendLine("Fed.Wallet.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + height.ToString().PadRight(8) + " Fed.Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + hash);
+        }
+
+        private void AddComponentStats(StringBuilder benchLog)
+        {
+            benchLog.AppendLine("====== Federation Wallet ======");
+
+            (Money ConfirmedAmount, Money UnConfirmedAmount) = GetSpendableAmount();
+
+            benchLog.AppendLine("Federation Wallet: ".PadRight(LoggingConfiguration.ColumnLength)
+                                + " Confirmed balance: " + ConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
+                                + " Reserved for withdrawals: " + UnConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
+                                + " Federation Status: " + (this.isFederationActive ? "Active" : "Inactive"));
+            benchLog.AppendLine();
+
+            if (!this.isFederationActive)
+            {
+                benchLog.AppendLine("".PadRight(59, '=') + " W A R N I N G " + "".PadRight(59, '='));
+                benchLog.AppendLine();
+                benchLog.AppendLine("This federation node is not enabled. You will not be able to store or participate in signing of transactions until you enable it.");
+                benchLog.AppendLine("If not done previously, please enable your federation node using " + $"/api/FederationWallet/{FederationWalletRouteEndPoint.EnableFederation}.");
+                benchLog.AppendLine();
+                benchLog.AppendLine("".PadRight(133, '='));
+                benchLog.AppendLine();
             }
         }
     }

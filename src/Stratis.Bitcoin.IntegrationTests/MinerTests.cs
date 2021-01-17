@@ -159,7 +159,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings);
 
                 var signals = new Signals.Signals(loggerFactory, null);
-                var asyncProvider = new AsyncProvider(loggerFactory, signals, new NodeLifetime());
+                var asyncProvider = new AsyncProvider(loggerFactory, signals);
 
                 var connectionSettings = new ConnectionManagerSettings(nodeSettings);
                 var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, new SelfEndpointTracker(loggerFactory, connectionSettings));

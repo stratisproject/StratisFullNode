@@ -87,7 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.nodeLifetime = new NodeLifetime();
             this.logger = Substitute.For<ILogger>();
             this.signals = Substitute.For<ISignals>();
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
             this.dateTimeProvider = DateTimeProvider.Default;
             this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper);
@@ -166,6 +166,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.redeemScript);
             this.federatedPegSettings.MultiSigAddress.Returns(this.redeemScript.Hash.GetAddress(this.network));
             this.federatedPegSettings.PublicKey.Returns(this.extendedKey.PrivateKey.PubKey.ToHex());
+            this.federatedPegSettings.MaximumPartialTransactionThreshold.Returns(CrossChainTransferStore.MaximumPartialTransactions);
             this.withdrawalExtractor = new WithdrawalExtractor(this.federatedPegSettings, this.opReturnDataReader, this.network);
         }
 
@@ -206,6 +207,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager = new FederationWalletManager(
                 this.loggerFactory,
                 this.network,
+                Substitute.For<INodeStats>(),
                 this.ChainIndexer,
                 dataFolder,
                 this.walletFeePolicy,
@@ -244,8 +246,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         protected ICrossChainTransferStore CreateStore()
         {
-            return new CrossChainTransferStore(this.network, this.dataFolder, this.ChainIndexer, this.federatedPegSettings, this.dateTimeProvider,
-                this.loggerFactory, this.withdrawalExtractor, this.blockRepository, this.federationWalletManager, this.withdrawalTransactionBuilder, this.dBreezeSerializer, this.signals, this.stateRepositoryRoot);
+            return new CrossChainTransferStore(this.network, Substitute.For<INodeStats>(), this.dataFolder, this.ChainIndexer, this.federatedPegSettings, this.dateTimeProvider,
+                this.loggerFactory, this.withdrawalExtractor, Substitute.For<IWithdrawalHistoryProvider>(), this.blockRepository, this.federationWalletManager, this.withdrawalTransactionBuilder, this.dBreezeSerializer, this.signals, this.stateRepositoryRoot);
         }
 
         /// <summary>

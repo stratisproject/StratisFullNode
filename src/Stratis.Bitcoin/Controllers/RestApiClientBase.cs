@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Utilities.JsonErrors;
 
 namespace Stratis.Bitcoin.Controllers
 {
@@ -108,6 +109,13 @@ namespace Stratis.Bitcoin.Controllers
         protected async Task<Response> SendPostRequestAsync<Model, Response>(Model requestModel, string apiMethodName, CancellationToken cancellation) where Response : class where Model : class
         {
             HttpResponseMessage response = await this.SendPostRequestAsync(requestModel, apiMethodName, cancellation).ConfigureAwait(false);
+
+            if (response != null && !response.IsSuccessStatusCode && response.Content != null)
+            {
+                string errorJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(errorJson);
+                throw new Exception(errorResponse.Errors[0].Message);
+            }
 
             return await this.ParseHttpResponseMessageAsync<Response>(response).ConfigureAwait(false);
         }

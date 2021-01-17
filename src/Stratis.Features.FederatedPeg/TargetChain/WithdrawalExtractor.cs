@@ -97,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
             else
             {
-                // Reward distribution trnsactions will have more than 3 outputs.
+                // Reward distribution transactions will have more than 3 outputs.
                 IEnumerable<TxOut> txOuts = transaction.Outputs.Where(output => output.ScriptPubKey != this.multisigAddress.ScriptPubKey && !output.ScriptPubKey.IsUnspendable);
                 if (!txOuts.Any())
                     return null;

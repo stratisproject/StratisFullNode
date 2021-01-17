@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.consensusSettings = new ConsensusSettings(Configuration.NodeSettings.Default(this.network));
             var initialBlockDownloadState = new InitialBlockDownloadState(this.chainState.Object, this.network, this.consensusSettings, new Checkpoints(), this.loggerFactory.Object, DateTimeProvider.Default);
             var signals = new Signals.Signals(this.loggerFactory.Object, null);
-            var asyncProvider = new AsyncProvider(this.loggerFactory.Object, signals, new Mock<INodeLifetime>().Object);
+            var asyncProvider = new AsyncProvider(this.loggerFactory.Object, signals);
 
             var consensusRulesContainer = new ConsensusRulesContainer();
             foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             // Create the chained header tree.
             var chainedHeaderTree = new ChainedHeaderTree(this.network, this.loggerFactory.Object, headerValidator, this.checkpoints.Object,
-                this.chainState.Object, new Mock<IFinalizedBlockInfoRepository>().Object, this.consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()));
+                this.chainState.Object, new Mock<IFinalizedBlockInfoRepository>().Object, this.consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
 
             // Create consensus manager.
             var consensus = new ConsensusManager(chainedHeaderTree, this.network, this.loggerFactory.Object, this.chainState.Object, integrityValidator,

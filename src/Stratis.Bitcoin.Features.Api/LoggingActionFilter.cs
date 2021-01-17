@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Features.Api
     /// <summary>
     /// An asynchronous action filter whose role is to log details from the Http requests to the API.
     /// </summary>
-    /// <seealso cref="Microsoft.AspNetCore.Mvc.Filters.IAsyncActionFilter" />
+    /// <seealso cref="IAsyncActionFilter" />
     public class LoggingActionFilter : IAsyncActionFilter
     {
         private readonly ILogger logger;
@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.Api
                 body = string.Join(Environment.NewLine, arguments.Values);
             }
 
-            this.logger.LogDebug($"Received {request.Method} {request.GetDisplayUrl()}. Body: '{body}'");
+            this.logger.LogDebug("Received {0} {1}. Body: '{2}'", request.Method, request.GetDisplayUrl(), body);
             await next();
         }
     }
