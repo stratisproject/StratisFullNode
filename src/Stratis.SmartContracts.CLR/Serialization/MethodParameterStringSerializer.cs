@@ -103,6 +103,12 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
             if (o is int)
                 return MethodParameterDataType.Int;
+
+            if (o is UInt128)
+                return MethodParameterDataType.UInt128;
+
+            if (o is UInt256)
+                return MethodParameterDataType.UInt256;
             
             // Any other types are not supported.
             throw new MethodParameterStringSerializerException(string.Format("{0} is not supported.", o.GetType().Name));
@@ -170,6 +176,12 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
                     else if (parameterSignature[0] == MethodParameterDataType.ByteArray.ToString("d"))
                         processedParameters.Add(parameterSignature[1].HexToByteArray());
+
+                    else if (parameterSignature[0] == MethodParameterDataType.UInt128.ToString("d"))
+                        processedParameters.Add(UInt128.Parse(parameterSignature[1]));
+
+                    else if (parameterSignature[0] == MethodParameterDataType.UInt256.ToString("d"))
+                        processedParameters.Add(UInt256.Parse(parameterSignature[1]));
 
                     else
                         throw new MethodParameterStringSerializerException($"Parameter type '{parameterType}' is not supported.");
