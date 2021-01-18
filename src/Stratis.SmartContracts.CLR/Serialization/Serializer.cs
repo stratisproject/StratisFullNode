@@ -185,7 +185,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
             (bool success, UInt128 result) = this.TryDeserializeValue<UInt128>(val);
 
-            return success ? result : 0;
+            return success ? result : UInt128.Zero;
         }
 
         public UInt256 ToUInt256(byte[] val)
@@ -198,7 +198,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
             (bool success, UInt256 result) = this.TryDeserializeValue<UInt256>(val);
 
-            return success ? result : 0;
+            return success ? result : UInt256.Zero;
         }
 
         public string ToString(byte[] val)
