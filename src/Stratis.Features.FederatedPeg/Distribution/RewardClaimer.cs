@@ -255,7 +255,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         private void LoadLastDistributionHeight()
         {
-            if (this.network.RewardClaimerBatchActivationHeight == 0)
+            if (this.network.RewardClaimerBatchActivationHeight == 0 && !this.network.IsRegTest())
                 throw new Exception("The network's reward claimer height for version 2 has not been set.");
 
             // Load from database
