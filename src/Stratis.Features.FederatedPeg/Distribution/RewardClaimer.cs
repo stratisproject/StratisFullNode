@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
+using NLog;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
@@ -47,7 +47,6 @@ namespace Stratis.Features.FederatedPeg.Distribution
             IConsensusManager consensusManager,
             IInitialBlockDownloadState initialBlockDownloadState,
             IKeyValueRepository keyValueRepository,
-            ILoggerFactory loggerFactory,
             Network network,
             ISignals signals)
         {
@@ -56,7 +55,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             this.consensusManager = consensusManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.keyValueRepository = keyValueRepository;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.signals = signals;
 
@@ -85,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
                 var startFromHeight = (this.lastDistributionHeight + 1) - minStakeConfirmations;
 
-                this.logger.LogInformation($"[Reward Batching] Calculating rewards from height {startFromHeight} to {startFromHeight + this.network.RewardClaimerBlockInterval} (last distribution [{this.lastDistributionHeight + 1}] less minimum stake confirmations [{minStakeConfirmations}]).");
+                this.logger.Info($"[Reward Batching] Calculating rewards from height {startFromHeight} to {startFromHeight + this.network.RewardClaimerBlockInterval} (last distribution [{this.lastDistributionHeight + 1}] less minimum stake confirmations [{minStakeConfirmations}]).");
                 for (int height = startFromHeight; height < startFromHeight + this.network.RewardClaimerBlockInterval; height++)
                 {
                     // Get the block that is minStakeConfirmations behind the current tip.
@@ -169,13 +168,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (errors.Any())
             {
                 foreach (TransactionPolicyError error in errors)
-                    this.logger.LogWarning("Unable to validate reward claim transaction '{0}', error: {1}", builtTransaction.ToHex(), error.ToString());
+                    this.logger.Warn("Unable to validate reward claim transaction '{0}', error: {1}", builtTransaction.ToHex(), error.ToString());
 
                 // Not much further can be done at this point.
                 return null;
             }
 
-            this.logger.LogInformation($"Reward distribution transaction built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
+            this.logger.Info($"Reward distribution transaction built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
             return builtTransaction;
         }
 
@@ -190,7 +189,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // If we still don't have the block data, just return.
             if (maturedBlock == null)
             {
-                this.logger.LogDebug("Consensus does not have the block data for '{0}'", chainedHeader);
+                this.logger.Debug("Consensus does not have the block data for '{0}'", chainedHeader);
                 return null;
             }
 
@@ -220,19 +219,19 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     if (blockConnected.ConnectedBlock.ChainedHeader.Height - (this.lastDistributionHeight + 1) > this.network.RewardClaimerBlockInterval)
                     {
                         this.lastDistributionHeight = blockConnected.ConnectedBlock.ChainedHeader.Height - this.network.RewardClaimerBlockInterval - 1;
-                        this.logger.LogInformation($"[Reward Batching] The last reward window was skipped, resetting to {this.lastDistributionHeight}.");
+                        this.logger.Info($"[Reward Batching] The last reward window was skipped, resetting to {this.lastDistributionHeight}.");
                     }
 
-                    this.logger.LogInformation($"[Reward Batching] Triggered at height {blockConnected.ConnectedBlock.ChainedHeader.Height}.");
+                    this.logger.Info($"[Reward Batching] Triggered at height {blockConnected.ConnectedBlock.ChainedHeader.Height}.");
 
                     BuildAndCompleteRewardClaim(true, this.lastDistributionHeight + this.network.RewardClaimerBlockInterval);
                 }
                 else
-                    this.logger.LogInformation($"[Reward Batching] The next distribution will be triggered at block {this.lastDistributionHeight + 1 + this.network.RewardClaimerBlockInterval}.");
+                    this.logger.Info($"[Reward Batching] The next distribution will be triggered at block {this.lastDistributionHeight + 1 + this.network.RewardClaimerBlockInterval}.");
             }
             else
             {
-                this.logger.LogInformation($"Per block reward claiming in effect until block {this.network.RewardClaimerBatchActivationHeight} (rewards are not batched).");
+                this.logger.Info($"Per block reward claiming in effect until block {this.network.RewardClaimerBatchActivationHeight} (rewards are not batched).");
                 BuildAndCompleteRewardClaim(false, blockConnected.ConnectedBlock.ChainedHeader.Height);
             }
         }
@@ -266,13 +265,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
             if (this.lastDistributionHeight == 0)
                 this.lastDistributionHeight = this.network.RewardClaimerBatchActivationHeight;
 
-            this.logger.LogInformation($"Last reward distribution height set to {this.lastDistributionHeight}.");
+            this.logger.Info($"Last reward distribution height set to {this.lastDistributionHeight}.");
         }
 
         private void SaveLastDistributionHeight()
         {
             this.keyValueRepository.SaveValueJson(LastDistributionHeightKey, this.lastDistributionHeight);
-            this.logger.LogInformation($"Last reward distribution saved as {this.lastDistributionHeight}.");
+            this.logger.Info($"Last reward distribution saved as {this.lastDistributionHeight}.");
         }
 
         public void Dispose()

@@ -49,7 +49,7 @@ namespace Stratis.Features.Collateral
                 return Task.CompletedTask;
             }
 
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
+            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
             (int? commitmentHeight, uint? commitmentNetworkMagic) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)
             {

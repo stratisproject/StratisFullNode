@@ -232,7 +232,7 @@ namespace Stratis.Bitcoin.Base
 
             this.chainState.ConsensusTip = this.consensusManager.Tip;
 
-            this.nodeStats.RegisterStats(sb => sb.Append(this.asyncProvider.GetStatistics(!this.nodeSettings.Log.DebugArgs.Any())), StatsType.Component, this.GetType().Name, 100);
+            this.nodeStats.RegisterStats(sb => sb.Append(this.asyncProvider.GetStatistics(!this.nodeSettings.LogSettings.DebugArgs.Any())), StatsType.Component, this.GetType().Name, 100);
 
             // TODO: Should this always be called?
             ((IBlockStoreQueue)this.blockStore).ReindexChain(this.consensusManager, this.nodeLifetime.ApplicationStopping);

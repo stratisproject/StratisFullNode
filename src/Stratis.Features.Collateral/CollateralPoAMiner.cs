@@ -47,7 +47,7 @@ namespace Stratis.Features.Collateral
         {
             this.counterChainNetwork = counterChainSettings.CounterChainNetwork;
             this.collateralChecker = collateralChecker;
-            this.encoder = new CollateralHeightCommitmentEncoder(this.logger);
+            this.encoder = new CollateralHeightCommitmentEncoder();
             this.chainIndexer = chainIndexer;
             this.joinFederationRequestMonitor = joinFederationRequestMonitor;
         }

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
@@ -28,9 +28,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
         private readonly Func<Block, CancellationToken, Task> callback;
 
-        public BlockQueueProcessor(ILogger logger, IAsyncProvider asyncProvider, Func<Block, CancellationToken, Task> callback, int maxQueueSize = 100 * 1024 * 1024, string friendlyName = null)
+        public BlockQueueProcessor(IAsyncProvider asyncProvider, Func<Block, CancellationToken, Task> callback, int maxQueueSize = 100 * 1024 * 1024, string friendlyName = null)
         {
-            this.logger = logger;
+            this.logger = LogManager.GetCurrentClassLogger();
             this.MaxQueueSize = maxQueueSize;
             this.callback = callback;
 
@@ -51,7 +51,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             long currentBlockQueueSize = Interlocked.Add(ref this.blocksQueueSize, -block.BlockSize.Value);
 
-            this.logger.LogDebug("Block '{0}' queued for processing. Queue size changed to {1} bytes.", block.GetHash(), currentBlockQueueSize);
+            this.logger.Debug("Block '{0}' queued for processing. Queue size changed to {1} bytes.", block.GetHash(), currentBlockQueueSize);
 
             await this.callback(block, cancellationToken);
         }
@@ -72,7 +72,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (this.blocksQueueSize >= this.MaxQueueSize)
                 {
                     this.maxQueueSizeReached = true;
-                    this.logger.LogTrace("(-)[REACHED_MAX_QUEUE_SIZE]");
+                    this.logger.Trace("(-)[REACHED_MAX_QUEUE_SIZE]");
                 }
             }
             else
@@ -84,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             if (!this.maxQueueSizeReached)
             {
                 long currentBlockQueueSize = Interlocked.Add(ref this.blocksQueueSize, block.BlockSize.Value);
-                this.logger.LogDebug("Queue sized changed to {0} bytes.", currentBlockQueueSize);
+                this.logger.Debug("Queue sized changed to {0} bytes.", currentBlockQueueSize);
 
                 this.blocksQueue.Enqueue(block);
 

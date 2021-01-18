@@ -119,7 +119,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
         private ChainedHeaderBlock CreateBlockWithVotingRequest(JoinFederationRequest votingRequest, int height)
         {
-            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
+            var encoder = new JoinFederationRequestEncoder();
 
             var votingRequestData = new List<byte>();
             votingRequestData.AddRange(encoder.Encode(votingRequest));
