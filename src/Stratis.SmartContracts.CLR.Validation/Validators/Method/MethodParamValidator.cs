@@ -21,6 +21,8 @@ namespace Stratis.SmartContracts.CLR.Validation
             typeof(int).FullName,
             typeof(ulong).FullName,
             typeof(long).FullName,
+            typeof(UInt128).FullName,
+            typeof(UInt256).FullName,
             typeof(Address).FullName,
             typeof(byte[]).FullName
         };

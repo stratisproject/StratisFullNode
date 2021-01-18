@@ -52,6 +52,16 @@ namespace Stratis.SmartContracts.CLR.Serialization
             return this.primitiveSerializer.Serialize(ul);
         }
 
+        public byte[] Serialize(UInt128 u128)
+        {
+            return this.primitiveSerializer.Serialize(u128);
+        }
+
+        public byte[] Serialize(UInt256 u256)
+        {
+            return this.primitiveSerializer.Serialize(u256);
+        }
+
         public byte[] Serialize(string s)
         {
             if (s == null)
@@ -70,6 +80,13 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public byte[] Serialize<T>(T s) where T : struct
         {
+            // TODO: This is a temporary hack. Stratis.SmartContracts.ISerializer must be updated to add the customer Serialize methods!
+            if (s is UInt128 u128)
+                return Serialize(u128);
+
+            if (s is UInt256 u256)
+                return Serialize(u256);
+
             var toEncode = new List<byte[]>();
 
             foreach (FieldInfo field in s.GetType().GetFields())
