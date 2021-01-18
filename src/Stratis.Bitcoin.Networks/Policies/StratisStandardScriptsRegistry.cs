@@ -34,11 +34,6 @@ namespace Stratis.Bitcoin.Networks.Policies
             }
         }
 
-        public override bool IsStandardTransaction(Transaction tx, Network network)
-        {
-            return base.IsStandardTransaction(tx, network);
-        }
-
         public override bool AreOutputsStandard(Network network, Transaction tx)
         {
             return base.AreOutputsStandard(network, tx);

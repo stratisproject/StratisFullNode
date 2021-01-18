@@ -8,7 +8,7 @@ namespace NBitcoin
     {
         void RegisterStandardScriptTemplate(ScriptTemplate scriptTemplate);
 
-        bool IsStandardTransaction(Transaction tx, Network network);
+        bool IsStandardTransaction(Transaction tx, Network network, int blockHeight, uint256 blockHash);
 
         bool AreOutputsStandard(Network network, Transaction tx);
 

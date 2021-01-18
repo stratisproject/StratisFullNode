@@ -25,13 +25,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
 
             foreach (Transaction transaction in block.Transactions)
             {
-                CheckTransaction(this.network, transaction);
+                CheckTransaction(this.network, transaction, context.ValidationContext.ChainedHeaderToValidate.Height, context.ValidationContext.ChainedHeaderToValidate.HashBlock);
             }
 
             return Task.CompletedTask;
         }
 
-        public static void CheckTransaction(Network network, Transaction transaction)
+        public static void CheckTransaction(Network network, Transaction transaction, int blockHeight = -1, uint256 blockHash = null)
         {
             // Why dodge coinbase?
             // 1) Coinbase can only be written by Authority nodes anyhow.
@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             {
                 foreach (TxOut output in transaction.Outputs)
                 {
-                    CheckOutput(network, output);
+                    CheckOutput(network, output, blockHeight, blockHash);
                 }
 
                 foreach (TxIn input in transaction.Inputs)
@@ -50,7 +50,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             }
         }
 
-        private static void CheckOutput(Network network, TxOut output)
+        private static void CheckOutput(Network network, TxOut output, int blockHeight, uint256 blockHash)
         {
             if (output.ScriptPubKey.IsSmartContractExec())
                 return;
@@ -58,24 +58,26 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (output.ScriptPubKey.IsSmartContractInternalCall())
                 return;
 
+            Script script = (blockHeight < 0) ? output.ScriptPubKey : new ScriptAtHeight(output.ScriptPubKey, blockHeight, blockHash);
+
             // Pay to side chain miner.	
-            if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
+            if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(script))
                 return;
 
             // For cross-chain transfers	
-            if (PayToScriptHashTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
+            if (PayToScriptHashTemplate.Instance.CheckScriptPubKey(script))
                 return;
 
             // For cross-chain transfers	
-            if (PayToMultiSigTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
+            if (PayToMultiSigTemplate.Instance.CheckScriptPubKey(script))
                 return;
 
             // For cross-chain transfers	
-            if (PayToFederationTemplate.Instance.CheckScriptPubKey(output.ScriptPubKey))
+            if (PayToFederationTemplate.Instance.CheckScriptPubKey(script))
                 return;
 
             // For cross-chain transfers	
-            if (network.StandardScriptsRegistry[typeof(TxNullDataTemplate)].CheckScriptPubKey(output.ScriptPubKey))
+            if (network.StandardScriptsRegistry[typeof(TxNullDataTemplate)].CheckScriptPubKey(script))
                 return;
 
             new ConsensusError("disallowed-output-script", $"Only the following script types are allowed on smart contracts network: P2PKH, P2SH, P2MultiSig, OP_RETURN and smart contracts.").Throw();
