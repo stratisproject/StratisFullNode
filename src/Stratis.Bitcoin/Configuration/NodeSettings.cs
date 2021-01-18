@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Networks;
 using NBitcoin.Protocol;
-using NLog.Extensions.Logging;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -45,7 +44,7 @@ namespace Stratis.Bitcoin.Configuration
         public ILogger Logger { get; private set; }
 
         /// <summary>The settings of the Full Node's logger.</summary>
-        public LogSettings Log { get; private set; }
+        public LogSettings LogSettings { get; private set; }
 
         /// <summary>A list of paths to folders which Full Node components use to store data. These folders are found
         /// in the <see cref="DataDir"/>.
@@ -216,11 +215,9 @@ namespace Stratis.Bitcoin.Configuration
             this.DataFolder = new DataFolder(this.DataDir);
 
             // Attempt to load NLog configuration from the DataFolder.
-            this.Log = new LogSettings();
-            this.Log.Load(this.ConfigReader);
-            this.LoggerFactory = ExtendedLoggerFactory.Create(this.Log);
-            this.LoggerFactory.AddNLog();
-            this.LoggerFactory.LoadNLogConfiguration(this.DataFolder);
+            this.LogSettings = new LogSettings();
+            this.LogSettings.Load(this.ConfigReader);
+            this.LoggerFactory = ExtendedLoggerFactory.Create(this.LogSettings, this.DataFolder);
             this.Logger = this.LoggerFactory.CreateLogger(typeof(NodeSettings).FullName);
 
             // Get the configuration file name for the network if it was not specified on the command line.
@@ -236,7 +233,7 @@ namespace Stratis.Bitcoin.Configuration
             this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR", false, this.Logger);
 
             // Create the custom logger factory.
-            this.LoggerFactory.AddFilters(this.Log, this.DataFolder);
+            this.LoggerFactory.AddFilters(this.LogSettings, this.DataFolder);
 
             // Load the configuration.
             this.LoadConfiguration();

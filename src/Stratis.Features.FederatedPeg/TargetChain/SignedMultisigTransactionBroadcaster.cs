@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
@@ -47,7 +47,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         public SignedMultisigTransactionBroadcaster(
             IAsyncProvider asyncProvider,
-            ILoggerFactory loggerFactory,
             MempoolManager mempoolManager,
             IBroadcasterManager broadcasterManager,
             IInitialBlockDownloadState ibdState,
@@ -63,7 +62,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.ibdState = Guard.NotNull(ibdState, nameof(ibdState));
             this.nodeLifetime = nodeLifetime;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -82,7 +81,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
             {
-                this.logger.LogInformation("Federation wallet isn't active or the node is in IBD.");
+                this.logger.Info("Federation wallet isn't active or the node is in IBD.");
                 return new SignedMultisigTransactionBroadcastResult() { Message = "The federation wallet isn't active or the node is in IBD." };
             }
 
@@ -90,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (fullySignedTransfers.Length == 0)
             {
-                this.logger.LogInformation("There are no fully signed transactions to broadcast.");
+                this.logger.Info("There are no fully signed transactions to broadcast.");
                 return new SignedMultisigTransactionBroadcastResult() { Message = "There are no fully signed transactions to broadcast." };
             }
 
@@ -115,12 +114,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             TxMempoolInfo txMempoolInfo = await this.mempoolManager.InfoAsync(crossChainTransfer.PartialTransaction.GetHash()).ConfigureAwait(false);
             if (txMempoolInfo != null)
             {
-                this.logger.LogInformation("Deposit '{0}' already in the mempool.", crossChainTransfer.DepositTransactionId);
+                this.logger.Info("Deposit '{0}' already in the mempool.", crossChainTransfer.DepositTransactionId);
                 transferItem.ItemMessage = $"Deposit '{crossChainTransfer.DepositTransactionId}' already in the mempool.";
                 return transferItem;
             }
 
-            this.logger.LogInformation("Broadcasting deposit '{0}', a signed multisig transaction '{1}' to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
+            this.logger.Info("Broadcasting deposit '{0}', a signed multisig transaction '{1}' to the network.", crossChainTransfer.DepositTransactionId, crossChainTransfer.PartialTransaction.GetHash());
 
             await this.broadcasterManager.BroadcastTransactionAsync(crossChainTransfer.PartialTransaction).ConfigureAwait(false);
 
@@ -135,7 +134,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (transactionBroadCastEntry.TransactionBroadcastState == TransactionBroadcastState.CantBroadcast && !CrossChainTransferStore.IsMempoolErrorRecoverable(transactionBroadCastEntry.MempoolError))
             {
-                this.logger.LogWarning("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
+                this.logger.Warn("Deposit '{0}' rejected: '{1}'.", crossChainTransfer.DepositTransactionId, transactionBroadCastEntry.ErrorMessage);
                 this.crossChainTransferStore.RejectTransfer(crossChainTransfer);
                 transferItem.ItemMessage = $"Deposit '{crossChainTransfer.DepositTransactionId}' rejected: '{transactionBroadCastEntry.ErrorMessage}'.";
                 return transferItem;

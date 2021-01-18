@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             VotingManager votingManager,
             IFederationManager federationManager) : base(network, mempool, mempoolSettings, chainIndexer, loggerFactory)
         {
-            this.encoder = new JoinFederationRequestEncoder(loggerFactory);
+            this.encoder = new JoinFederationRequestEncoder();
             this.votingManager = votingManager;
             this.federationManager = federationManager;
         }

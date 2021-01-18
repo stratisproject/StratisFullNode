@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// </para>
         /// </summary>
         public WalletClient(ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory, string url, int port)
-            : base(loggerFactory, httpClientFactory, port, "Wallet", url)
+            : base(httpClientFactory, port, "Wallet", url)
         {
         }
 

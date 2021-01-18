@@ -50,7 +50,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ICrossChainTransferStore crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             crossChainTransferStore.GetCompletedWithdrawals(5).ReturnsForAnyArgs(new List<WithdrawalModel>() { new WithdrawalModel() });
 
-            this.controller = new FederationWalletController(this.loggerFactory, this.walletManager, this.walletSyncManager, this.connectionManager, this.network, this.chainIndexer, crossChainTransferStore);
+            this.controller = new FederationWalletController(this.walletManager, this.walletSyncManager, this.connectionManager, this.network, this.chainIndexer, crossChainTransferStore);
 
             this.fedWallet = new FederationWallet
             {

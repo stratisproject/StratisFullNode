@@ -16,7 +16,7 @@ namespace Stratis.Features.FederatedPeg
     public class FedMultiSigManualWithdrawalTransactionBuilder
     {
         private readonly IFederatedPegSettings federatedPegSettings;
-        
+
         private readonly Network network;
 
         private readonly IWalletFeePolicy walletFeePolicy;
@@ -52,7 +52,7 @@ namespace Stratis.Features.FederatedPeg
             // MultiSigAddress from the wallet is not safe. It's only pulled from multisig-wallet.json and can
             // be different from the *actual* multisig address for the current redeem script.
             // Instead, use the address from settings - it's derived from the redeem script provided at startup.
-            var multiSigAddress = this.federatedPegSettings.MultiSigAddress.ScriptPubKey;
+            Script multiSigAddress = this.federatedPegSettings.MultiSigAddress.ScriptPubKey;
 
             var transactionBuilder = new TransactionBuilder(this.network);
 
@@ -78,7 +78,7 @@ namespace Stratis.Features.FederatedPeg
                 // Throw an exception with a useful message.
                 throw new WalletException($"Coin input amount of {coinAmount} was less than total amount + fees {totalAmountWithFees} (fee {fee} sats). Adjust the amount you are trying to send.");
             }
-            
+
             transactionBuilder.SendFees(fee);
 
             foreach (Recipient recipient in recipients)
