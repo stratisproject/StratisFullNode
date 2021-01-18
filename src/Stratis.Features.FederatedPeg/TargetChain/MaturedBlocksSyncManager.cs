@@ -115,7 +115,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.Debug(deposit.ToString());
+                    this.logger.Trace(deposit.ToString());
                 }
             }
 
