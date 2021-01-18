@@ -12,7 +12,7 @@ public class StandardToken : SmartContract, IStandardToken
     /// </summary>
     /// <param name="smartContractState">The execution state for the contract.</param>
     /// <param name="totalSupply">The total token supply.</param>
-    public StandardToken(ISmartContractState smartContractState, ulong totalSupply)
+    public StandardToken(ISmartContractState smartContractState, UInt256 totalSupply)
         : base(smartContractState)
     {
         this.TotalSupply = totalSupply;
@@ -22,19 +22,19 @@ public class StandardToken : SmartContract, IStandardToken
     /// <inheritdoc />
     public UInt256 TotalSupply
     {
-        get => PersistentState.GetUInt64(nameof(this.TotalSupply));
-        private set => PersistentState.SetUInt64(nameof(this.TotalSupply), value);
+        get => PersistentState.GetUInt256(nameof(this.TotalSupply));
+        private set => PersistentState.SetUInt256(nameof(this.TotalSupply), value);
     }
 
     /// <inheritdoc />
     public UInt256 GetBalance(Address address)
     {
-        return PersistentState.GetUInt64($"Balance:{address}");
+        return PersistentState.GetUInt256($"Balance:{address}");
     }
 
-    private void SetBalance(Address address, ulong value)
+    private void SetBalance(Address address, UInt256 value)
     {
-        PersistentState.SetUInt64($"Balance:{address}", value);
+        PersistentState.SetUInt256($"Balance:{address}", value);
     }
 
     /// <inheritdoc />
@@ -47,7 +47,7 @@ public class StandardToken : SmartContract, IStandardToken
             return true;
         }
 
-        ulong senderBalance = GetBalance(Message.Sender);
+        UInt256 senderBalance = GetBalance(Message.Sender);
 
         if (senderBalance < amount)
         {
@@ -73,8 +73,8 @@ public class StandardToken : SmartContract, IStandardToken
             return true;
         }
 
-        ulong senderAllowance = Allowance(from, Message.Sender);
-        ulong fromBalance = GetBalance(from);
+        UInt256 senderAllowance = Allowance(from, Message.Sender);
+        UInt256 fromBalance = GetBalance(from);
 
         if (senderAllowance < amount || fromBalance < amount)
         {
@@ -107,15 +107,15 @@ public class StandardToken : SmartContract, IStandardToken
         return true;
     }
 
-    private void SetApproval(Address owner, Address spender, ulong value)
+    private void SetApproval(Address owner, Address spender, UInt256 value)
     {
-        PersistentState.SetUInt64($"Allowance:{owner}:{spender}", value);
+        PersistentState.SetUInt256($"Allowance:{owner}:{spender}", value);
     }
 
     /// <inheritdoc />
     public UInt256 Allowance(Address owner, Address spender)
     {
-        return PersistentState.GetUInt64($"Allowance:{owner}:{spender}");
+        return PersistentState.GetUInt256($"Allowance:{owner}:{spender}");
     }
 
     /// <inheritdoc />
@@ -133,7 +133,7 @@ public class StandardToken : SmartContract, IStandardToken
         [Index]
         public Address To;
 
-        public ulong Amount;
+        public UInt256 Amount;
     }
 
     public struct ApprovalLog
@@ -144,8 +144,8 @@ public class StandardToken : SmartContract, IStandardToken
         [Index]
         public Address Spender;
 
-        public ulong OldAmount;
+        public UInt256 OldAmount;
 
-        public ulong Amount;
+        public UInt256 Amount;
     }
 }
