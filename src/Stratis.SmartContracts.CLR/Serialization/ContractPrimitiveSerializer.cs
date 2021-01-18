@@ -58,6 +58,12 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (o is ulong ul)
                 return this.Serialize(ul);
 
+            if (o is UInt128 u128)
+                return this.Serialize(u128);
+
+            if (o is UInt256 u256)
+                return this.Serialize(u256);
+
             if (o is string s)
                 return this.Serialize(s);
 
@@ -97,6 +103,16 @@ namespace Stratis.SmartContracts.CLR.Serialization
         private byte[] Serialize(ulong ul)
         {
             return BitConverter.GetBytes(ul);
+        }
+
+        private byte[] Serialize(UInt128 u128)
+        {
+            return u128.ToBytes();
+        }
+
+        private byte[] Serialize(UInt256 u256)
+        {
+            return u256.ToBytes();
         }
 
         private byte[] Serialize(char c)
@@ -188,6 +204,12 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (type == typeof(ulong))
                 return this.ToUInt64(stream);
 
+            if (type == typeof(UInt128))
+                return this.ToUInt128(stream);
+
+            if (type == typeof(UInt256))
+                return this.ToUInt256(stream);
+
             if (type.IsValueType)
                 return this.DeserializeStruct(type, stream);
                 
@@ -229,6 +251,16 @@ namespace Stratis.SmartContracts.CLR.Serialization
         private ulong ToUInt64(byte[] val)
         {
             return BitConverter.ToUInt64(val, 0);
+        }
+
+        private UInt128 ToUInt128(byte[] val)
+        {
+            return new UInt128(val);
+        }
+
+        private UInt256 ToUInt256(byte[] val)
+        {
+            return new UInt256(val);
         }
 
         private char ToChar(byte[] val)
