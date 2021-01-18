@@ -30,7 +30,7 @@ namespace NBitcoin
 
         public static bool IsStandardTransaction(Transaction tx, Network network)
         {
-            return new StandardTransactionPolicy(network).Check(tx, null, -1, null).Length == 0;
+            return new StandardTransactionPolicy(network).Check(tx, null).Length == 0;
         }
 
         public static bool AreOutputsStandard(Network network, Transaction tx)

@@ -62,7 +62,7 @@ namespace NBitcoin.Policy
             this.CheckScriptPubKey = true;
         }
 
-        public TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins, int blockHeight, uint256 blockHash)
+        public TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins, int blockHeight = -1, uint256 blockHash = null)
         {
             if (transaction == null)
                 throw new ArgumentNullException("transaction");

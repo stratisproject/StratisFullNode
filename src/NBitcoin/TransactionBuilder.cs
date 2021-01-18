@@ -1446,9 +1446,9 @@ namespace NBitcoin
                 throw new ArgumentNullException("tx");
             ICoin[] coins = tx.Inputs.Select(i => FindCoin(i.PrevOut)).Where(c => c != null).ToArray();
             var exceptions = new List<TransactionPolicyError>();
-            TransactionPolicyError[] policyErrors = MinerTransactionPolicy.Instance.Check(tx, coins, -1, null);
+            TransactionPolicyError[] policyErrors = MinerTransactionPolicy.Instance.Check(tx, coins);
             exceptions.AddRange(policyErrors);
-            policyErrors = this.StandardTransactionPolicy.Check(tx, coins, -1, null);
+            policyErrors = this.StandardTransactionPolicy.Check(tx, coins);
             exceptions.AddRange(policyErrors);
             if (expectedFees != null)
             {
