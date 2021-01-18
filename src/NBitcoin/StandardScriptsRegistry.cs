@@ -26,7 +26,7 @@ namespace NBitcoin
             get => this.GetScriptTemplates.FirstOrDefault(template => template.GetType() == key);
         }
 
-        public virtual bool IsStandardTransaction(Transaction tx, Network network, int blockHeight, uint256 blockHash)
+        public virtual bool IsStandardTransaction(Transaction tx, Network network, int blockHeight = -1, uint256 blockHash = null)
         {
             return new StandardTransactionPolicy(network).Check(tx, null, blockHeight, blockHash).Length == 0;
         }

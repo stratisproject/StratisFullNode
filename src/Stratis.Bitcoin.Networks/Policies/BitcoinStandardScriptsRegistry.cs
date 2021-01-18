@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Networks.Policies
             }
         }
 
-        public override bool IsStandardTransaction(Transaction tx, Network network, int blockHeight, uint256 blockHash)
+        public override bool IsStandardTransaction(Transaction tx, Network network, int blockHeight = -1, uint256 blockHash = null)
         {
             return base.IsStandardTransaction(tx, network, blockHeight, blockHash);
         }
