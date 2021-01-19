@@ -2,8 +2,8 @@
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -28,13 +28,12 @@ namespace Stratis.Features.FederatedPeg.Controllers
         private readonly ILogger logger;
 
         public MultisigController(
-            ILoggerFactory loggerFactory,
             FedMultiSigManualWithdrawalTransactionBuilder fedMultiSigManualWithdrawalTransactionBuilder,
             Network network)
         {
             this.fedMultiSigManualWithdrawalTransactionBuilder = fedMultiSigManualWithdrawalTransactionBuilder;
             this.network = network;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <summary>
@@ -86,7 +85,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                LoggerExtensions.LogError(this.logger, "Exception occurred: {0}", e.ToString());
+                this.logger.Error("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }

@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Primitives;
@@ -51,12 +51,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly ILogger logger;
         private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
 
-        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings, ILoggerFactory loggerFactory)
+        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings)
         {
             this.consensusManager = consensusManager;
             this.depositExtractor = depositExtractor;
             this.federatedPegSettings = federatedPegSettings;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             // Take a copy of the tip upfront so that we work with the same tip later.
             this.deposits = new ConcurrentDictionary<int, BlockDeposits>();
@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 // Don't process blocks below the requested maturity height.
                 if (chainedHeaderBlock.ChainedHeader.Height < maturityHeight)
                 {
-                    this.logger.LogDebug("{0} below maturity height of {1}.", chainedHeaderBlock.ChainedHeader, maturityHeight);
+                    this.logger.Debug("{0} below maturity height of {1}.", chainedHeaderBlock.ChainedHeader, maturityHeight);
                     continue;
                 }
 
@@ -126,7 +126,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     }
                 }
 
-                this.logger.LogDebug("{0} mature deposits retrieved from block '{1}'.", maturedDeposits.Count, chainedHeaderBlock.ChainedHeader);
+                this.logger.Debug("{0} mature deposits retrieved from block '{1}'.", maturedDeposits.Count, chainedHeaderBlock.ChainedHeader);
 
                 result.Value.Add(new MaturedBlockDepositsModel(new MaturedBlockInfoModel()
                 {
@@ -171,13 +171,13 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             // Already have this recorded?
             if (this.deposits.TryGetValue(chainedHeaderBlock.ChainedHeader.Height, out BlockDeposits blockDeposits) && blockDeposits.BlockHash == chainedHeaderBlock.ChainedHeader.HashBlock)
             {
-                this.logger.LogDebug("Deposits already recorded for '{0}'.", chainedHeaderBlock.ChainedHeader);
+                this.logger.Debug("Deposits already recorded for '{0}'.", chainedHeaderBlock.ChainedHeader);
                 return;
             }
 
             IReadOnlyList<IDeposit> deposits = this.depositExtractor.ExtractDepositsFromBlock(chainedHeaderBlock.Block, chainedHeaderBlock.ChainedHeader.Height, retrievalTypes);
 
-            this.logger.LogDebug("{0} potential deposits extracted from block '{1}'.", deposits.Count, chainedHeaderBlock.ChainedHeader);
+            this.logger.Debug("{0} potential deposits extracted from block '{1}'.", deposits.Count, chainedHeaderBlock.ChainedHeader);
 
             this.deposits[chainedHeaderBlock.ChainedHeader.Height] = new BlockDeposits()
             {

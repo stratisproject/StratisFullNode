@@ -111,7 +111,6 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
             // Create the wallet manager.
             var federationWalletManager = new FederationWalletManager(
-                loggerFactory.Object,
                 this.network,
                 new Mock<INodeStats>().Object,
                 chainIndexer,

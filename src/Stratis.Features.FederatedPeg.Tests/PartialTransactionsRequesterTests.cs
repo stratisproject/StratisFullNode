@@ -45,7 +45,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.ibdState.IsInitialBlockDownload().Returns(true);
 
             var partialRequester = new PartialTransactionRequester(
-                this.loggerFactory,
                 this.store,
                 this.asyncProvider,
                 this.nodeLifetime,
@@ -65,7 +64,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager.IsFederationWalletActive().Returns(false);
 
             var partialRequester = new PartialTransactionRequester(
-                this.loggerFactory,
                 this.store,
                 this.asyncProvider,
                 this.nodeLifetime,
