@@ -20,4 +20,10 @@
     <ProjectReference Include="..\Stratis.SmartContracts.Core\Stratis.SmartContracts.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Stratis.SmartContracts.Standards %2864 bit%29.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
