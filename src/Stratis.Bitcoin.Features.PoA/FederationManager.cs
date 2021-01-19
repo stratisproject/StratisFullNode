@@ -324,7 +324,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.lastBlockChecked = fork;
             this.multisigMinersApplicabilityHeight = null;
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.logger);
+            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
 
             ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked && h.Height >= this.network.CollateralCommitmentActivationHeight).Reverse().ToArray();
 

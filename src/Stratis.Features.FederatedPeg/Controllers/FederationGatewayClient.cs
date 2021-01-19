@@ -32,7 +32,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ILoggerFactory loggerFactory,
             ICounterChainSettings counterChainSettings,
             IHttpClientFactory httpClientFactory)
-            : base(loggerFactory, httpClientFactory, counterChainSettings.CounterChainApiPort, "FederationGateway", $"http://{counterChainSettings.CounterChainApiHost}")
+            : base(httpClientFactory, counterChainSettings.CounterChainApiPort, "FederationGateway", $"http://{counterChainSettings.CounterChainApiHost}")
         {
         }
 

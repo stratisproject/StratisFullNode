@@ -90,7 +90,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
             this.dateTimeProvider = DateTimeProvider.Default;
-            this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper);
+            this.opReturnDataReader = new OpReturnDataReader(this.counterChainNetworkWrapper);
             this.blockRepository = Substitute.For<IBlockRepository>();
             this.fullNode = Substitute.For<IFullNode>();
             this.withdrawalTransactionBuilder = Substitute.For<IWithdrawalTransactionBuilder>();
@@ -205,7 +205,6 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // Create the wallet manager.
             this.federationWalletManager = new FederationWalletManager(
-                this.loggerFactory,
                 this.network,
                 Substitute.For<INodeStats>(),
                 this.ChainIndexer,
@@ -223,14 +222,14 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.wallet = this.federationWalletManager.GetWallet();
 
             // TODO: The transaction builder, cross-chain store and fed wallet tx handler should be tested individually.
-            this.FederationWalletTransactionHandler = new FederationWalletTransactionHandler(this.loggerFactory, this.federationWalletManager, this.walletFeePolicy, this.network, this.federatedPegSettings);
+            this.FederationWalletTransactionHandler = new FederationWalletTransactionHandler(this.federationWalletManager, this.walletFeePolicy, this.network, this.federatedPegSettings);
             this.stateRepositoryRoot = Substitute.For<IStateRepositoryRoot>();
-            this.withdrawalTransactionBuilder = new WithdrawalTransactionBuilder(this.loggerFactory, this.network, this.federationWalletManager, this.FederationWalletTransactionHandler, this.federatedPegSettings, this.signals, null);
+            this.withdrawalTransactionBuilder = new WithdrawalTransactionBuilder(this.network, this.federationWalletManager, this.FederationWalletTransactionHandler, this.federatedPegSettings, this.signals, null);
 
             var storeSettings = (StoreSettings)FormatterServices.GetUninitializedObject(typeof(StoreSettings));
 
-            this.federationWalletSyncManager = new FederationWalletSyncManager(this.loggerFactory, this.federationWalletManager, this.ChainIndexer, this.network,
-                this.blockRepository, storeSettings, Substitute.For<INodeLifetime>(), this.asyncProvider);
+            this.federationWalletSyncManager = new FederationWalletSyncManager(this.federationWalletManager, this.ChainIndexer, this.network, this.blockRepository,
+                storeSettings, Substitute.For<INodeLifetime>(), this.asyncProvider);
 
             this.federationWalletSyncManager.Initialize();
 
@@ -247,7 +246,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         protected ICrossChainTransferStore CreateStore()
         {
             return new CrossChainTransferStore(this.network, Substitute.For<INodeStats>(), this.dataFolder, this.ChainIndexer, this.federatedPegSettings, this.dateTimeProvider,
-                this.loggerFactory, this.withdrawalExtractor, Substitute.For<IWithdrawalHistoryProvider>(), this.blockRepository, this.federationWalletManager, this.withdrawalTransactionBuilder, this.dBreezeSerializer, this.signals, this.stateRepositoryRoot);
+                this.withdrawalExtractor, Substitute.For<IWithdrawalHistoryProvider>(), this.blockRepository, this.federationWalletManager, this.withdrawalTransactionBuilder, this.dBreezeSerializer, this.signals, this.stateRepositoryRoot);
         }
 
         /// <summary>

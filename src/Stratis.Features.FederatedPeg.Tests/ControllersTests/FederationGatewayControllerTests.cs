@@ -81,7 +81,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 new ChainIndexer(),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
                 this.federatedPegSettings,
@@ -109,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 return blocks;
             });
 
-            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, this.loggerFactory);
+            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings);
         }
 
         [Fact]
@@ -213,7 +212,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 new ChainIndexer(),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
                 federatedPegSettings,
@@ -308,7 +306,6 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 new ChainIndexer(),
                 Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
                 this.network,
                 settings,

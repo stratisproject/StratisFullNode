@@ -3,9 +3,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Features.BlockStore.Models;
+using NLog;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -30,11 +29,10 @@ namespace Stratis.Features.Collateral
 
         public CollateralController(
             IJoinFederationRequestService joinFederationRequestService,
-            ILoggerFactory loggerFactory,
             Network network)
         {
             this.joinFederationRequestService = joinFederationRequestService;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
         }
 
@@ -58,7 +56,7 @@ namespace Stratis.Features.Collateral
             // Checks that the request is valid.
             if (!this.ModelState.IsValid)
             {
-                this.logger.LogTrace("(-)[MODEL_STATE_INVALID]");
+                this.logger.Trace("(-)[MODEL_STATE_INVALID]");
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
             }
 
@@ -74,13 +72,13 @@ namespace Stratis.Features.Collateral
                     MinerPublicKey = minerPubKey.ToHex()
                 };
 
-                this.logger.LogTrace("(-):'{0}'", model);
+                this.logger.Trace("(-):'{0}'", model);
                 return this.Json(model);
             }
             catch (Exception e)
             {
-                this.logger.LogError("Exception occurred: {0}", e.ToString());
-                this.logger.LogTrace("(-)[ERROR]");
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                this.logger.Trace("(-)[ERROR]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
