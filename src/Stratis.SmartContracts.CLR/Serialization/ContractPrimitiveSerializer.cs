@@ -25,52 +25,25 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public byte[] Serialize(object o)
         {
-            if (o is null)
-                return null;
-
-            if (o is byte[] bytes)
-                return bytes;
-
-            if (o is Array array)
-                return this.Serialize(array);
-
-            if (o is byte b1)
-                return new byte[] { b1 };
-
-            if (o is char c)
-                return this.Serialize(c);
-
-            if (o is Address address)
-                return this.Serialize(address);
-
-            if (o is bool b)
-                return this.Serialize(b);
-
-            if (o is int i)
-                return this.Serialize(i);
-
-            if (o is long l)
-                return this.Serialize(l);
-
-            if (o is uint u)
-                return this.Serialize(u);
-
-            if (o is ulong ul)
-                return this.Serialize(ul);
-
-            if (o is UInt128 u128)
-                return this.Serialize(u128);
-
-            if (o is UInt256 u256)
-                return this.Serialize(u256);
-
-            if (o is string s)
-                return this.Serialize(s);
-
-            if (o.GetType().IsValueType)
-                return this.SerializeStruct(o);
-                
-            throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", o.GetType().Name));
+            return o switch
+            {
+                null => null,
+                byte[] bytes => bytes,
+                Array array => Serialize(array),
+                byte b1 => new byte[] { b1 },
+                char c => Serialize(c),
+                Address address => Serialize(address),
+                bool b => Serialize(b),
+                int i => Serialize(i),
+                long l => Serialize(l),
+                UInt128 u => Serialize(u),
+                UInt256 u => Serialize(u),
+                uint u => Serialize(u),
+                ulong u => Serialize(u),
+                string s => Serialize(s),
+                _ when o.GetType().IsValueType => SerializeStruct(o),
+                _ => throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", o.GetType().Name))
+            };
         }
 
         #region Primitive serialization
@@ -171,48 +144,59 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (stream == null || stream.Length == 0)
                 return null;
 
-            if (type == typeof(byte[]))
-                return stream;
+            switch (Type.GetTypeCode(type))
+            {
+                case TypeCode.Byte:
+                    return stream[0];
 
-            if (type.IsArray)
-                return this.DeserializeArray(type.GetElementType(), stream);
+                case TypeCode.Char:
+                    return this.ToChar(stream);
 
-            if (type == typeof(byte))
-                return stream[0];
+                case TypeCode.Boolean:
+                    return this.ToBool(stream);
 
-            if (type == typeof(char))
-                return this.ToChar(stream);
+                case TypeCode.Int32:
+                    return this.ToInt32(stream);
 
-            if (type == typeof(Address))
-                return this.ToAddress(stream);
+                case TypeCode.Int64:
+                    return this.ToInt64(stream);
 
-            if (type == typeof(bool))
-                return this.ToBool(stream);
+                case TypeCode.String:
+                    return this.ToString(stream);
 
-            if (type == typeof(int))
-                return this.ToInt32(stream);
+                case TypeCode.UInt32:
+                    return this.ToUInt32(stream);
 
-            if (type == typeof(long))
-                return this.ToInt64(stream);
+                case TypeCode.UInt64:
+                    return this.ToUInt64(stream);
 
-            if (type == typeof(string))
-                return this.ToString(stream);
+                case TypeCode.Object:
+                    if (type.IsValueType)
+                    {
+                        if (type == typeof(UInt256))
+                            return this.ToUInt256(stream);
 
-            if (type == typeof(uint))
-                return this.ToUInt32(stream);
+                        if (type == typeof(UInt128))
+                            return this.ToUInt128(stream);
 
-            if (type == typeof(ulong))
-                return this.ToUInt64(stream);
+                        if (type == typeof(Address))
+                            return this.ToAddress(stream);
 
-            if (type == typeof(UInt128))
-                return this.ToUInt128(stream);
+                        return this.DeserializeStruct(type, stream);
+                    }
 
-            if (type == typeof(UInt256))
-                return this.ToUInt256(stream);
+                    if (type.IsArray)
+                    {
+                        Type elementType = type.GetElementType();
+                        if (elementType == typeof(byte))
+                            return stream;
 
-            if (type.IsValueType)
-                return this.DeserializeStruct(type, stream);
-                
+                        return this.DeserializeArray(elementType, stream);
+                    }
+
+                    break;
+            }
+    
             throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", type.Name));
         }
 
