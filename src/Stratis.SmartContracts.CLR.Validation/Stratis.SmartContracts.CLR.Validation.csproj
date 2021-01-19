@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     
-    <Version>1.0.2.1</Version>
+    <Version>1.0.6.3</Version>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
 

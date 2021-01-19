@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     
-    <AssemblyVersion>1.0.2.1</AssemblyVersion>
-    <FileVersion>1.0.2.1</FileVersion>
-    <Version>1.0.2.1</Version>
+    <AssemblyVersion>1.0.6.3</AssemblyVersion>
+    <FileVersion>1.0.6.3</FileVersion>
+    <Version>1.0.6.3</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <Product>Stratis.SmartContracts.CLR</Product>
   </PropertyGroup>
