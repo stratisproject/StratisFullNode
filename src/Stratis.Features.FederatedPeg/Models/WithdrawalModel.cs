@@ -6,6 +6,8 @@ namespace Stratis.Features.FederatedPeg.Models
 {
     public sealed class WithdrawalModel
     {
+        private const string RewardsString = "Rewards";
+
         public WithdrawalModel() { }
 
         public WithdrawalModel(Network network, ICrossChainTransfer transfer)
@@ -14,7 +16,7 @@ namespace Stratis.Features.FederatedPeg.Models
             this.Id = transfer.PartialTransaction?.GetHash();
             this.Amount = transfer.DepositAmount;
             var target = transfer.DepositTargetAddress.GetDestinationAddress(network).ToString();
-            this.PayingTo = target == network.CirrusRewardDummyAddress ? "Reward Distribution" : target;
+            this.PayingTo = target == network.CirrusRewardDummyAddress ? RewardsString : target;
             this.BlockHeight = transfer.BlockHeight ?? 0;
             this.BlockHash = transfer.BlockHash;
         }
@@ -26,7 +28,7 @@ namespace Stratis.Features.FederatedPeg.Models
             this.Amount = withdrawal.Amount;
             this.BlockHash = withdrawal.BlockHash;
             this.BlockHeight = withdrawal.BlockNumber;
-            this.PayingTo = withdrawal.TargetAddress == network.CirrusRewardDummyAddress ? "Reward Distribution" : withdrawal.TargetAddress;
+            this.PayingTo = withdrawal.TargetAddress == network.CirrusRewardDummyAddress ? RewardsString : withdrawal.TargetAddress;
             this.TransferStatus = transfer?.Status.ToString();
         }
 
@@ -52,11 +54,12 @@ namespace Stratis.Features.FederatedPeg.Models
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.Append(string.Format("Block Height={0,8} Paying={1} Amount={2,14} Status={3}",
+            stringBuilder.Append(string.Format("Height={0,8} Paying={1} Amount={2,14} Status={3} DepositId={4}",
                 this.BlockHeight == 0 ? "Unconfirmed" : this.BlockHeight.ToString(),
-                this.PayingTo,
+                this.PayingTo.Length > RewardsString.Length ? this.PayingTo.Substring(0, RewardsString.Length) : this.PayingTo,
                 this.Amount.ToString(),
-                this.TransferStatus));
+                this.TransferStatus,
+                this.DepositId.ToString()));
 
             if (this.SpendingOutputDetails != null)
                 stringBuilder.Append($" Spending={this.SpendingOutputDetails} ");

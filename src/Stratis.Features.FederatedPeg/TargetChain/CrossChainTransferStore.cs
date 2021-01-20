@@ -1386,7 +1386,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         public bool ValidateTransaction(Transaction transaction, bool checkSignature = false)
         {
-            return this.federationWalletManager.ValidateTransaction(transaction, checkSignature);
+            return this.federationWalletManager.ValidateTransaction(transaction, checkSignature).IsValid;
         }
 
         /// <inheritdoc />
