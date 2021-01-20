@@ -114,7 +114,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetTransfersPending([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
         {
-            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }).ToArray();
+            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, false, false).ToArray();
 
             CrossChainTransferModel[] transactions = transfers
                 .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
@@ -137,7 +137,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult GetTransfers([FromQuery(Name = "depositId")] string depositId = "", [FromQuery(Name = "transactionId")] string transactionId = "")
         {
-            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned }).ToArray();
+            ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned }, false, false).ToArray();
 
             CrossChainTransferModel[] transactions = transfers
                 .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
@@ -259,7 +259,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             if (!uint256.TryParse(depositIdTransactionId, out uint256 id))
                 return this.Json("Invalid deposit transaction id");
 
-            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id });
+            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id }, false);
 
             if (transfers != null && transfers.Any())
                 return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction));
