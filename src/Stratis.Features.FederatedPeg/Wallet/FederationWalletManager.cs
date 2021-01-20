@@ -1036,7 +1036,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         }
 
         /// <inheritdoc />
-        public bool ValidateTransaction(Transaction transaction, bool checkSignature = false)
+        public ValidateTransactionResult ValidateTransaction(Transaction transaction, bool checkSignature = false)
         {
             lock (this.lockObject)
             {
@@ -1045,7 +1045,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 // Verify that the transaction has valid UTXOs.
                 if (!this.TransactionHasValidUTXOs(transaction, coins))
-                    return false;
+                    return ValidateTransactionResult.Failed("Transaction does not have valid UTXOs.");
 
                 // Verify that there are no earlier unspent UTXOs.
                 var comparer = Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData);
@@ -1058,7 +1058,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                                                              .OrderByDescending(t => t, comparer)
                                                              .FirstOrDefault();
                     if (oldestInput != null && DeterministicCoinOrdering.CompareTransactionData(earliestUnspent, oldestInput) < 0)
-                        return false;
+                        return ValidateTransactionResult.Failed("Earlier unspent UTXOs exist.");
                 }
 
                 // Verify that all inputs are signed.
@@ -1067,18 +1067,22 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     TransactionBuilder builder = new TransactionBuilder(this.Wallet.Network).AddCoins(coins);
 
                     if (builder.Verify(transaction, this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count), out TransactionPolicyError[] errors))
-                        return true;
+                        return ValidateTransactionResult.Valid();
+
+                    var errorList = new List<string>();
 
                     // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
                     foreach (TransactionPolicyError transactionPolicyError in errors)
                     {
                         this.logger.Debug("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
+                        errorList.Add(transactionPolicyError.ToString());
                     }
 
-                    return false;
+                    return ValidateTransactionResult.Failed(errorList.ToArray());
+
                 }
 
-                return true;
+                return ValidateTransactionResult.Valid();
             }
         }
 
