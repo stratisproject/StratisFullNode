@@ -127,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     TransferStatus = t.Status.ToString(),
                 }).ToArray();
 
-            return this.Json(transactions.OrderByDescending(t => t.DepositId));
+            return this.Json(transactions);
         }
 
         [Route(FederationGatewayRouteEndPoint.GetTransfersFullySignedEndpoint)]
@@ -150,7 +150,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     TransferStatus = t.Status.ToString(),
                 }).ToArray();
 
-            return this.Json(transactions.OrderByDescending(t => t.DepositId));
+            return this.Json(transactions);
         }
 
         /// <summary>
