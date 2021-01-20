@@ -262,7 +262,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id }, false);
 
             if (transfers != null && transfers.Any())
-                return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction));
+                return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction, true));
 
             return this.Json($"{depositIdTransactionId} does not exist.");
         }
