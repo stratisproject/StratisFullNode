@@ -74,44 +74,22 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         private static MethodParameterDataType GetPrimitiveType(object o)
         {
-            if (o is bool)
-                return MethodParameterDataType.Bool;
-
-            if (o is byte)
-                return MethodParameterDataType.Byte;
-
-            if (o is byte[])
-                return MethodParameterDataType.ByteArray;
-
-            if (o is char)
-                return MethodParameterDataType.Char;         
-
-            if (o is string)
-                return MethodParameterDataType.String;
-
-            if (o is uint)
-                return MethodParameterDataType.UInt;
-            
-            if (o is ulong)
-                return MethodParameterDataType.ULong;
-
-            if (o is Address)
-                return MethodParameterDataType.Address;
-
-            if (o is long)
-                return MethodParameterDataType.Long;
-
-            if (o is int)
-                return MethodParameterDataType.Int;
-
-            if (o is UInt128)
-                return MethodParameterDataType.UInt128;
-
-            if (o is UInt256)
-                return MethodParameterDataType.UInt256;
-            
-            // Any other types are not supported.
-            throw new MethodParameterStringSerializerException(string.Format("{0} is not supported.", o.GetType().Name));
+            return o switch
+            {
+                bool _ => MethodParameterDataType.Bool,
+                byte _ => MethodParameterDataType.Byte,
+                byte[] _ => MethodParameterDataType.ByteArray,
+                char _ => MethodParameterDataType.Char,
+                string _ => MethodParameterDataType.String,
+                uint _ => MethodParameterDataType.UInt,
+                ulong _ => MethodParameterDataType.ULong,
+                Address _ => MethodParameterDataType.Address,
+                long _ => MethodParameterDataType.Long,
+                int _ => MethodParameterDataType.Int,
+                UInt128 _ => MethodParameterDataType.UInt128,
+                UInt256 _ => MethodParameterDataType.UInt256,
+                _ => throw new MethodParameterStringSerializerException(string.Format("{0} is not supported.", o.GetType().Name))
+            };
         }
 
         public object[] Deserialize(string[] parameters)

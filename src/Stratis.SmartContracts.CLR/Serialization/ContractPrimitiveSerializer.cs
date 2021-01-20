@@ -144,60 +144,24 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (stream == null || stream.Length == 0)
                 return null;
 
-            switch (Type.GetTypeCode(type))
+            return Type.GetTypeCode(type) switch
             {
-                case TypeCode.Byte:
-                    return stream[0];
-
-                case TypeCode.Char:
-                    return this.ToChar(stream);
-
-                case TypeCode.Boolean:
-                    return this.ToBool(stream);
-
-                case TypeCode.Int32:
-                    return this.ToInt32(stream);
-
-                case TypeCode.Int64:
-                    return this.ToInt64(stream);
-
-                case TypeCode.String:
-                    return this.ToString(stream);
-
-                case TypeCode.UInt32:
-                    return this.ToUInt32(stream);
-
-                case TypeCode.UInt64:
-                    return this.ToUInt64(stream);
-
-                case TypeCode.Object:
-                    if (type.IsValueType)
-                    {
-                        if (type == typeof(UInt256))
-                            return this.ToUInt256(stream);
-
-                        if (type == typeof(UInt128))
-                            return this.ToUInt128(stream);
-
-                        if (type == typeof(Address))
-                            return this.ToAddress(stream);
-
-                        return this.DeserializeStruct(type, stream);
-                    }
-
-                    if (type.IsArray)
-                    {
-                        Type elementType = type.GetElementType();
-                        if (elementType == typeof(byte))
-                            return stream;
-
-                        return this.DeserializeArray(elementType, stream);
-                    }
-
-                    break;
-            }
-    
-            throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", type.Name));
+                TypeCode.Byte => stream[0],
+                TypeCode.Char => ToChar(stream),
+                TypeCode.Boolean => ToBool(stream),
+                TypeCode.Int32 => ToInt32(stream),
+                TypeCode.Int64 => ToInt64(stream),
+                TypeCode.String => ToString(stream),
+                TypeCode.UInt32 => ToUInt32(stream),
+                TypeCode.UInt64 => ToUInt64(stream),
+                _ when type == typeof(byte[]) => stream,
+                _ when type == typeof(UInt128) => ToUInt128(stream),
+                _ when type == typeof(uint256) => ToUInt256(stream),
+                _ when type == typeof(Address) => ToAddress(stream),
+                _ when type.IsArray => DeserializeArray(type.GetElementType(), stream),
+                _ when type.IsValueType => DeserializeStruct(type, stream),
+                _ => throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", type.Name)),
+            };
         }
 
         public Address ToAddress(string address)
