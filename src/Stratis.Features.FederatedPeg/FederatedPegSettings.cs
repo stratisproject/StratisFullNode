@@ -197,6 +197,10 @@ namespace Stratis.Features.FederatedPeg
         public int MultiSigN { get; }
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// TODO: In future we need to look at dynamically calculating the fee by also including
+        /// the number of outputs in the calculation.
+        /// </remarks>
         public Money GetWithdrawalTransactionFee(int numInputs)
         {
             return BaseTransactionFee + numInputs * InputTransactionFee;
