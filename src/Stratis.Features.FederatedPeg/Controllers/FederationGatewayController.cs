@@ -253,8 +253,11 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> VerifyPartialTransactionAsync([FromQuery(Name = "depositIdTransactionId")] string depositIdTransactionId)
         {
-            if (uint256.TryParse(depositIdTransactionId, out uint256 id))
-                return this.Json("Invalid deposits transaction id");
+            if (string.IsNullOrEmpty("depositIdTransactionId"))
+                return this.Json("Deposit transaction id not specified.");
+
+            if (!uint256.TryParse(depositIdTransactionId, out uint256 id))
+                return this.Json("Invalid deposit transaction id");
 
             ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id });
 
