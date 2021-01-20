@@ -156,7 +156,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
                 TypeCode.UInt64 => ToUInt64(stream),
                 _ when type == typeof(byte[]) => stream,
                 _ when type == typeof(UInt128) => ToUInt128(stream),
-                _ when type == typeof(uint256) => ToUInt256(stream),
+                _ when type == typeof(UInt256) => ToUInt256(stream),
                 _ when type == typeof(Address) => ToAddress(stream),
                 _ when type.IsArray => DeserializeArray(type.GetElementType(), stream),
                 _ when type.IsValueType => DeserializeStruct(type, stream),
