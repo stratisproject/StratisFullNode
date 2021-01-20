@@ -633,12 +633,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         return transfer.PartialTransaction;
                     }
 
-                    /*
-                     * // Log this incase we run into issues where the transaction templates doesn't match.
-                     * 
                     try
                     {
-                        
+
                         this.logger.Debug("Partial Transaction inputs:{0}", partialTransactions[0].Inputs.Count);
                         this.logger.Debug("Partial Transaction outputs:{1}", partialTransactions[0].Outputs.Count);
 
@@ -673,7 +670,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     {
                         this.logger.Debug("Failed to log transactions: {0}.", err.Message);
                     }
-                    */
 
                     this.logger.Debug("Merging signatures for deposit : {0}", depositId);
 
@@ -1386,7 +1382,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         public bool ValidateTransaction(Transaction transaction, bool checkSignature = false)
         {
-            return this.federationWalletManager.ValidateTransaction(transaction, checkSignature);
+            return this.federationWalletManager.ValidateTransaction(transaction, checkSignature).IsValid;
         }
 
         /// <inheritdoc />

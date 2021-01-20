@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="transaction">The transaction to check.</param>
         /// <param name="checkSignature">Indicates whether to check the signature.</param>
         /// <returns><c>True</c> if all's well and <c>false</c> otherwise.</returns>
-        bool ValidateTransaction(Transaction transaction, bool checkSignature = false);
+        ValidateTransactionResult ValidateTransaction(Transaction transaction, bool checkSignature = false);
 
         /// <summary>
         /// Verifies that a transaction's inputs aren't being consumed by any other transactions.
