@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -11,6 +12,7 @@ namespace Stratis.SmartContracts.CLR.Loader
     public class SmartContractLoadContext : AssemblyLoadContext
     {
         private AssemblyLoadContext defaultContext;
+        private static Dictionary<AssemblyName, byte[]> cache = new Dictionary<AssemblyName, byte[]>();
 
         public SmartContractLoadContext(AssemblyLoadContext defaultContext)
         {
@@ -32,7 +34,7 @@ namespace Stratis.SmartContracts.CLR.Loader
                 {
                     Directory.CreateDirectory(assemblyFolder);
 
-                    string downloadLink = $"http://www.nuget.org/api/v2/package/{assemblyName.Name.ToLower()}/{version}";
+                    string downloadLink = $"https://www.nuget.org/api/v2/package/{assemblyName.Name.ToLower()}/{version}";
 
                     try
                     {
@@ -58,7 +60,18 @@ namespace Stratis.SmartContracts.CLR.Loader
         {
             // Ensure that an exact compatible version is used.
             if (assemblyName.Name == "Stratis.SmartContracts" || assemblyName.Name == "Stratis.SmartContracts.Standards")
-                return this.LoadFromAssemblyPath(GetExactAssembly(assemblyName));
+            {
+                if (!cache.TryGetValue(assemblyName, out byte[] bytes))
+                {
+                    bytes = File.ReadAllBytes(GetExactAssembly(assemblyName));
+                    cache[assemblyName] = bytes;
+                }
+
+                using (var stream = new MemoryStream(bytes))
+                {
+                    return this.LoadFromStream(stream);
+                }
+            }
 
             return this.defaultContext.LoadFromAssemblyName(assemblyName);
         }
