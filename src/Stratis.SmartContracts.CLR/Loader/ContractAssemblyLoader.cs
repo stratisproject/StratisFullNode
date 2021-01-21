@@ -32,11 +32,18 @@ namespace Stratis.SmartContracts.CLR.Loader
                 {
                     Directory.CreateDirectory(assemblyFolder);
 
-                    using (var client = new WebClient())
+                    string downloadLink = $"http://www.nuget.org/api/v2/package/{assemblyName.Name.ToLower()}/{version}";
+
+                    try
                     {
-                        // TODO: DLLs should be distributed via the Cirrus blockchain.
-                        string downloadLink = $"http://www.nuget.org/api/v2/package/{assemblyName.Name.ToLower()}/{version}";
-                        client.DownloadFile(downloadLink, downloadFile);
+                        using (var client = new WebClient())
+                        {
+                            client.DownloadFile(downloadLink, downloadFile);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw new FileNotFoundException($"Could not find '{downloadFile}'. Get the file from '{downloadLink}' and copy it to this location.");
                     }
                 }
 
