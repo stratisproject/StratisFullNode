@@ -12,7 +12,7 @@ namespace Stratis.SmartContracts.CLR.Loader
     public class SmartContractLoadContext : AssemblyLoadContext
     {
         private AssemblyLoadContext defaultContext;
-        private static Dictionary<AssemblyName, byte[]> cache = new Dictionary<AssemblyName, byte[]>();
+        private static Dictionary<string, byte[]> cache = new Dictionary<string, byte[]>();
 
         public SmartContractLoadContext(AssemblyLoadContext defaultContext)
         {
@@ -61,10 +61,10 @@ namespace Stratis.SmartContracts.CLR.Loader
             // Ensure that an exact compatible version is used.
             if (assemblyName.Name == "Stratis.SmartContracts" || assemblyName.Name == "Stratis.SmartContracts.Standards")
             {
-                if (!cache.TryGetValue(assemblyName, out byte[] bytes))
+                if (!cache.TryGetValue(assemblyName.FullName, out byte[] bytes))
                 {
                     bytes = File.ReadAllBytes(GetExactAssembly(assemblyName));
-                    cache[assemblyName] = bytes;
+                    cache[assemblyName.FullName] = bytes;
                 }
 
                 using (var stream = new MemoryStream(bytes))
