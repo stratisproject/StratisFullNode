@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -56,18 +57,18 @@ namespace Stratis.SmartContracts.CLR.Compilation
         /// Get the compiled bytecode for the specified C# source code.
         /// </summary>
         /// <param name="source"></param>
-        public static ContractCompilationResult Compile(string source, OptimizationLevel optimizationLevel = OptimizationLevel.Release)
+        public static ContractCompilationResult Compile(string source, OptimizationLevel optimizationLevel = OptimizationLevel.Release, HashSet<Assembly> allowedAssemblies = null)
         {
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
-            return Compile(new[] { syntaxTree }, optimizationLevel);
+            return Compile(new[] { syntaxTree }, optimizationLevel, allowedAssemblies);
         }
 
-        private static ContractCompilationResult Compile(IEnumerable<SyntaxTree> syntaxTrees, OptimizationLevel optimizationLevel)
+        private static ContractCompilationResult Compile(IEnumerable<SyntaxTree> syntaxTrees, OptimizationLevel optimizationLevel, HashSet<Assembly> allowedAssemblies = null)
         {
             CSharpCompilation compilation = CSharpCompilation.Create(
                 AssemblyName,
                 syntaxTrees,
-                GetReferences(),
+                GetReferences(allowedAssemblies),
                 new CSharpCompilationOptions(
                     OutputKind.DynamicallyLinkedLibrary,
                     checkOverflow: true,
@@ -90,9 +91,9 @@ namespace Stratis.SmartContracts.CLR.Compilation
         /// Gets all references needed for compilation. Ideally should use the same list as the contract validator.
         /// </summary>
         /// <returns></returns>
-        private static IEnumerable<MetadataReference> GetReferences()
+        private static IEnumerable<MetadataReference> GetReferences(HashSet<Assembly> allowedAssemblies = null)
         {
-            return ReferencedAssemblyResolver.AllowedAssemblies.Select(a => MetadataReference.CreateFromFile(a.Location));
+            return (allowedAssemblies ?? ReferencedAssemblyResolver.AllowedAssemblies).Select(a => MetadataReference.CreateFromFile(a.Location));
         }
     }
 }
