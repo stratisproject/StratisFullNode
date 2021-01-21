@@ -19,7 +19,7 @@ namespace Stratis.SmartContracts.CLR.Loader
         {
             // Ensure that an exact compatible version is used.
             if (assemblyName.Name == "Stratis.SmartContracts.Standards" && assemblyName.Version.Major == 1 && assemblyName.Version.Minor < 4)
-                return this.LoadFromAssemblyPath(Path.GetFullPath("Stratis.SmartContracts.Standards (v1).dll"));
+                return this.LoadFromAssemblyPath(Path.GetFullPath(Path.Combine("LegacyStandardsDLLs", "Stratis.SmartContracts.Standards (v1).dll")));
 
             return this.defaultContext.LoadFromAssemblyName(assemblyName);
         }
