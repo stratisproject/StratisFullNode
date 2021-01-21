@@ -56,11 +56,11 @@ public class FruitVendor : SmartContract, IStandardToken
         {
             // Create the byte code of a contract that contains new data types that are not (normally) supported by the current node.
             string smartContracts130Path = SmartContractLoadContext.GetExactAssembly(new AssemblyName("Stratis.SmartContracts, Version=1.3.0.0"));
-            SmartContractLoadContext smartContracts130Ctx = new SmartContractLoadContext(AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly()));
+            AssemblyLoadContext smartContracts130Ctx = new AssemblyLoadContext(nameof(smartContracts130Ctx));
             Assembly smartContracts130 = smartContracts130Ctx.LoadFromAssemblyPath(smartContracts130Path);
 
             string smartContractsStandards130Path = SmartContractLoadContext.GetExactAssembly(new AssemblyName("Stratis.SmartContracts.Standards, Version=1.3.0.0"));
-            SmartContractLoadContext smartContractsStandards130Ctx = new SmartContractLoadContext(AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly()));
+            AssemblyLoadContext smartContractsStandards130Ctx = new AssemblyLoadContext(nameof(smartContractsStandards130Ctx));
             Assembly smartContractsStandards130 = smartContractsStandards130Ctx.LoadFromAssemblyPath(smartContractsStandards130Path);
 
             Assembly Runtime = Assembly.Load("System.Runtime");
