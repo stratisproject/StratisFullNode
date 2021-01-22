@@ -45,7 +45,7 @@ namespace Stratis.SmartContracts.IntegrationTests.RPC
                 // Create a valid transaction.
                 byte[] toSend = ContractCompiler.CompileFile("SmartContracts/StandardToken.cs").Compilation;
 
-                var createParams = new[] { this.methodParameterStringSerializer.Serialize((UInt256)10000) };
+                var createParams = new[] { this.methodParameterStringSerializer.Serialize(10000uL) };
                 BuildCreateContractTransactionResponse createResponse = node1.SendCreateContractTransaction(toSend, 0, createParams);
                 node2.WaitMempoolCount(1);
 
@@ -61,7 +61,7 @@ namespace Stratis.SmartContracts.IntegrationTests.RPC
                 var parameters = new string[]
                 {
                     this.methodParameterStringSerializer.Serialize(node1.MinerAddress.Address.ToAddress(node1.CoreNode.FullNode.Network)),
-                    this.methodParameterStringSerializer.Serialize((UInt256)1)
+                    this.methodParameterStringSerializer.Serialize(1uL)
                 };
 
                 BuildCallContractTransactionResponse callResponse = node1.SendCallContractTransaction("TransferTo", createResponse.NewContractAddress, 0, parameters);

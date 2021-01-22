@@ -118,7 +118,6 @@ public class StandardToken : SmartContract, IStandardToken
         return PersistentState.GetUInt64($"Allowance:{owner}:{spender}");
     }
 
-
     public struct TransferLog
     {
         [Index]
