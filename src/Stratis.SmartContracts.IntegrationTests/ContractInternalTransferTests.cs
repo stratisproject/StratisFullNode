@@ -633,11 +633,11 @@ namespace Stratis.SmartContracts.IntegrationTests
         [Fact]
         public void Token_Standards_Test()
         {
-            UInt256 totalSupply = 100_000;
+            ulong totalSupply = 100_000;
             // Deploy contract
             ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/StandardToken.cs");
             Assert.True(compilationResult.Success);
-            string[] constructorParams = new string[] { string.Format("{0}#{1}", (int)MethodParameterDataType.UInt256, totalSupply) };
+            string[] constructorParams = new string[] { string.Format("{0}#{1}", (int)MethodParameterDataType.ULong, totalSupply) };
             BuildCreateContractTransactionResponse preResponse = this.node1.SendCreateContractTransaction(compilationResult.Compilation, 0, constructorParams);
             this.mockChain.WaitAllMempoolCount(1);
             this.mockChain.MineBlocks(1);
