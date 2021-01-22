@@ -13,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />
     <PackageReference Include="ICSharpCode.Decompiler" Version="3.2.0.3856" />
-    <PackageReference Include="Stratis.SmartContracts.Standards" Version="1.4.1-alpha" />
+    <PackageReference Include="Stratis.SmartContracts.Standards" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +22,9 @@
 
   <ItemGroup>
     <None Update="LegacyStandardsDLLs\Stratis.SmartContracts.Standards (v1).dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="LegacyStandardsDLLs\stratis.smartcontracts.standards.1.0.0.0.nupkg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
