@@ -21,9 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="LegacyStandardsDLLs\Stratis.SmartContracts.Standards (v1).dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="LegacyStandardsDLLs\stratis.smartcontracts.standards.1.0.0.0.nupkg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
