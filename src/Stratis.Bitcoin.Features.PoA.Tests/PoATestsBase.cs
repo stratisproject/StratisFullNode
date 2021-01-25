@@ -67,7 +67,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(dataFolder, this.dBreezeSerializer), this.loggerFactory, this.asyncProvider);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(dataFolder, this.dBreezeSerializer), this.asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             var federationManager = new FederationManager(counterChainSettings, fullNode.Object, network, nodeSettings, loggerFactory, signals);
             var asyncProvider = new AsyncProvider(loggerFactory, signals);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();

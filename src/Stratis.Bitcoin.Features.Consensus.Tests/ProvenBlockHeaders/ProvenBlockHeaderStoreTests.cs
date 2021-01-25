@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
             this.provenBlockHeaderRepository = new ProvenBlockHeaderRepository(this.Network, CreateTestDir(this), dBreezeSerializer);
 
-            this.provenBlockHeaderStore = new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, nodeStats, ibdMock.Object);
+            this.provenBlockHeaderStore = new ProvenBlockHeaderStore(DateTimeProvider.Default, this.provenBlockHeaderRepository, nodeStats, ibdMock.Object);
         }
 
         [Fact]
@@ -445,7 +445,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             var ibdMock = new Mock<IInitialBlockDownloadState>();
             ibdMock.Setup(s => s.IsInitialBlockDownload()).Returns(false);
 
-            return new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, new NodeStats(DateTimeProvider.Default, this.LoggerFactory.Object), ibdMock.Object);
+            return new ProvenBlockHeaderStore(DateTimeProvider.Default, this.provenBlockHeaderRepository, new NodeStats(DateTimeProvider.Default, this.LoggerFactory.Object), ibdMock.Object);
         }
 
         private static void WaitLoop(Func<bool> act, string failureReason = "Unknown Reason", int retryDelayInMiliseconds = 1000, CancellationToken cancellationToken = default(CancellationToken))

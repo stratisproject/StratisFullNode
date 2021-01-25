@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -90,16 +90,14 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
         public ProvenBlockHeaderStore(
             IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory,
             IProvenBlockHeaderRepository provenBlockHeaderRepository,
             INodeStats nodeStats,
             IInitialBlockDownloadState initialBlockDownloadState)
         {
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(provenBlockHeaderRepository, nameof(provenBlockHeaderRepository));
             Guard.NotNull(nodeStats, nameof(nodeStats));
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.provenBlockHeaderRepository = provenBlockHeaderRepository;
             this.initialBlockDownloadState = initialBlockDownloadState;
 
@@ -147,7 +145,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                     if (tip == null)
                     {
-                        this.logger.LogDebug("[TIP_NOT_FOUND]:{0}", highestHeader);
+                        this.logger.Debug("[TIP_NOT_FOUND]:{0}", highestHeader);
                         throw new ProvenBlockHeaderException($"{highestHeader} was not found in the store.");
                     }
                 }
@@ -157,7 +155,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             else
                 this.TipHashHeight = new HashHeightPair(tip.HashBlock, tip.Height);
 
-            this.logger.LogDebug("Proven block header store initialized at '{0}'.", this.TipHashHeight);
+            this.logger.Debug("Proven block header store initialized at '{0}'.", this.TipHashHeight);
 
             return tip;
         }
@@ -171,25 +169,25 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
                 {
                     if (this.pendingBatch.TryGetValue(blockHeight, out ProvenBlockHeader headerFromBatch))
                     {
-                        this.logger.LogTrace("(-)[FROM_BATCH]");
+                        this.logger.Trace("(-)[FROM_BATCH]");
                         return headerFromBatch;
                     }
                 }
 
                 if (this.Cache.TryGetValue(blockHeight, out ProvenBlockHeader header))
                 {
-                    this.logger.LogTrace("(-)[FROM_CACHE]");
+                    this.logger.Trace("(-)[FROM_CACHE]");
                     return header;
                 }
 
                 // Check the repository.
-                this.logger.LogDebug($"Get block header '{blockHeight}'");
+                this.logger.Debug($"Get block header '{blockHeight}'");
                 header = await this.provenBlockHeaderRepository.GetAsync(blockHeight).ConfigureAwait(false);
 
                 if (header != null)
                 {
                     this.Cache.AddOrUpdate(blockHeight, header, header.HeaderSize);
-                    this.logger.LogTrace("(-)[FROM_REPO]");
+                    this.logger.Trace("(-)[FROM_REPO]");
                     return header;
                 }
 
@@ -200,7 +198,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <inheritdoc />
         public void AddToPendingBatch(ProvenBlockHeader provenBlockHeader, HashHeightPair newTip)
         {
-            this.logger.LogDebug("({0}:'{1}',{2}:'{3}')", nameof(provenBlockHeader), provenBlockHeader, nameof(newTip), newTip);
+            this.logger.Debug("({0}:'{1}',{2}:'{3}')", nameof(provenBlockHeader), provenBlockHeader, nameof(newTip), newTip);
 
             Guard.Assert(provenBlockHeader.GetHash() == newTip.Hash);
 
@@ -246,7 +244,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             if (this.pendingTipHashHeight == null)
             {
-                this.logger.LogTrace("(-)[PENDING_HEIGHT_NULL]");
+                this.logger.Trace("(-)[PENDING_HEIGHT_NULL]");
                 return;
             }
 
@@ -268,7 +266,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 if (pendingBatchInsert.Count == 0)
                 {
-                    this.logger.LogTrace("(-)[NO_PROVEN_HEADER_ITEMS]");
+                    this.logger.Trace("(-)[NO_PROVEN_HEADER_ITEMS]");
                     return;
                 }
 
@@ -296,7 +294,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             catch (Exception ex)
             {
                 this.saveAsyncLoopException = ex;
-                this.logger.LogError("Error saving the batch {0}", ex);
+                this.logger.Error("Error saving the batch {0}", ex);
                 throw;
             }
         }
@@ -307,7 +305,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             if (!keys.SequenceEqual(Enumerable.Range(keys.First(), keys.Count)))
             {
-                this.logger.LogError("(-)[PROVEN_BLOCK_HEADERS_NOT_IN_CONSECUTIVE_SEQUENCE]: {0}", string.Join(",", keys));
+                this.logger.Error("(-)[PROVEN_BLOCK_HEADERS_NOT_IN_CONSECUTIVE_SEQUENCE]: {0}", string.Join(",", keys));
                 throw new ProvenBlockHeaderException("Proven block headers are not in the correct consecutive sequence.");
             }
         }

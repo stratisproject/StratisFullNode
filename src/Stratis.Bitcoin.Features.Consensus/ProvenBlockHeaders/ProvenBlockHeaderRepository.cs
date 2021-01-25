@@ -42,11 +42,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         private static readonly byte provenBlockHeaderTable = 1;
         private static readonly byte blockHashHeightTable = 2;
 
-        /// <summary>
-        /// Current <see cref="ProvenBlockHeader"/> tip.
-        /// </summary>
-        private ProvenBlockHeader provenBlockHeaderTip;
-
         private readonly DBreezeSerializer dBreezeSerializer;
 
         /// <inheritdoc />
@@ -191,9 +186,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
                     this.leveldb.Write(batch, new WriteOptions() { Sync = true });
                 }
             }
-
-            // Store the latest ProvenBlockHeader in memory.
-            this.provenBlockHeaderTip = headers.Last().Value;
         }
 
         /// <summary>

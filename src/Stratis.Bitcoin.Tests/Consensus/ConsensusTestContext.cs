@@ -115,7 +115,6 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.ChainedHeaderTree = new ChainedHeaderTree(
                   this.Network,
-                  this.loggerFactory,
                   this.HeaderValidator.Object,
                   this.checkpoints.Object,
                   this.ChainState.Object,
@@ -148,8 +147,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.consensusRules.SetupRulesEngineParent();
 
-            var tree = new ChainedHeaderTree(this.Network, this.loggerFactory, this.HeaderValidator.Object, this.checkpoints.Object,
-                this.ChainState.Object, this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore, new ChainWorkComparer());
+            var tree = new ChainedHeaderTree(this.Network, this.HeaderValidator.Object, this.checkpoints.Object, this.ChainState.Object,
+                this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore, new ChainWorkComparer());
 
             this.PartialValidator = new Mock<IPartialValidator>();
             this.FullValidator = new Mock<IFullValidator>();
@@ -159,10 +158,10 @@ namespace Stratis.Bitcoin.Tests.Consensus
             this.IntegrityValidator.Setup(i => i.VerifyBlockIntegrity(It.IsAny<ChainedHeader>(), It.IsAny<Block>()))
                 .Returns(new ValidationContext());
 
-            ConsensusManager consensusManager = new ConsensusManager(tree, this.Network, this.loggerFactory, this.ChainState.Object, this.IntegrityValidator.Object,
-                this.PartialValidator.Object, this.FullValidator.Object, this.consensusRules,
-                this.FinalizedBlockMock.Object, this.signals, this.peerBanning, this.ibd.Object, this.chainIndexer,
-                this.BlockPuller.Object, this.BlockStore.Object, this.connectionManager, this.nodeStats, this.nodeLifetime, this.ConsensusSettings, this.dateTimeProvider);
+            ConsensusManager consensusManager = new ConsensusManager(tree, this.Network, this.ChainState.Object, this.IntegrityValidator.Object, this.PartialValidator.Object,
+                this.FullValidator.Object, this.consensusRules, this.FinalizedBlockMock.Object,
+                this.signals, this.peerBanning, this.ibd.Object, this.chainIndexer, this.BlockPuller.Object,
+                this.BlockStore.Object, this.connectionManager, this.nodeStats, this.nodeLifetime, this.ConsensusSettings, this.dateTimeProvider);
 
             this.TestConsensusManager = new TestConsensusManager(consensusManager);
         }

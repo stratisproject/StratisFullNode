@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;
 
@@ -63,12 +63,11 @@ namespace Stratis.Bitcoin.Consensus
             this.finalizedBlockInfo = finalizedBlockInfo;
         }
 
-        public FinalizedBlockInfoRepository(IKeyValueRepository keyValueRepo, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider)
+        public FinalizedBlockInfoRepository(IKeyValueRepository keyValueRepo, IAsyncProvider asyncProvider)
         {
             Guard.NotNull(keyValueRepo, nameof(keyValueRepo));
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             this.keyValueRepo = keyValueRepo;
             this.finalizedBlockInfosToSave = new Queue<HashHeightPair>();
@@ -111,7 +110,7 @@ namespace Stratis.Bitcoin.Consensus
 
                 this.keyValueRepo.SaveValue(FinalizedBlockKey, lastFinalizedBlock);
 
-                this.logger.LogDebug("Finalized info saved: '{0}'.", lastFinalizedBlock);
+                this.logger.Debug("Finalized info saved: '{0}'.", lastFinalizedBlock);
             }
         }
 
@@ -142,7 +141,7 @@ namespace Stratis.Bitcoin.Consensus
         {
             if (this.finalizedBlockInfo != null && height <= this.finalizedBlockInfo.Height)
             {
-                this.logger.LogTrace("(-)[CANT_GO_BACK]:false");
+                this.logger.Trace("(-)[CANT_GO_BACK]:false");
                 return false;
             }
 

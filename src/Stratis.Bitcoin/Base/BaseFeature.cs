@@ -439,7 +439,6 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IConsensusManager>(provider => new ConsensusManager(
                         chainedHeaderTree: provider.GetService<IChainedHeaderTree>(),
                         network: provider.GetService<Network>(),
-                        loggerFactory: provider.GetService<ILoggerFactory>(),
                         chainState: provider.GetService<IChainState>(),
                         integrityValidator: provider.GetService<IIntegrityValidator>(),
                         partialValidator: provider.GetService<IPartialValidator>(),

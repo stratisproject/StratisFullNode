@@ -56,14 +56,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             var fullValidator = new FullValidator(consensusRuleEngine, this.loggerFactory.Object);
 
             // Create the chained header tree.
-            var chainedHeaderTree = new ChainedHeaderTree(this.network, this.loggerFactory.Object, headerValidator, this.checkpoints.Object,
-                this.chainState.Object, new Mock<IFinalizedBlockInfoRepository>().Object, this.consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
+            var chainedHeaderTree = new ChainedHeaderTree(this.network, headerValidator, this.checkpoints.Object, this.chainState.Object,
+                new Mock<IFinalizedBlockInfoRepository>().Object, this.consensusSettings, new InvalidBlockHashStore(new DateTimeProvider()), new ChainWorkComparer());
 
             // Create consensus manager.
-            var consensus = new ConsensusManager(chainedHeaderTree, this.network, this.loggerFactory.Object, this.chainState.Object, integrityValidator,
-                partialValidator, fullValidator, consensusRuleEngine, new Mock<IFinalizedBlockInfoRepository>().Object, signals,
-                new Mock<IPeerBanning>().Object, initialBlockDownloadState, this.ChainIndexer, new Mock<IBlockPuller>().Object, new Mock<IBlockStore>().Object,
-                new Mock<IConnectionManager>().Object, new Mock<INodeStats>().Object, new Mock<INodeLifetime>().Object, this.consensusSettings, this.dateTimeProvider.Object);
+            var consensus = new ConsensusManager(chainedHeaderTree, this.network, this.chainState.Object, integrityValidator, partialValidator,
+                fullValidator, consensusRuleEngine, new Mock<IFinalizedBlockInfoRepository>().Object, signals, new Mock<IPeerBanning>().Object,
+                initialBlockDownloadState, this.ChainIndexer, new Mock<IBlockPuller>().Object, new Mock<IBlockStore>().Object, new Mock<IConnectionManager>().Object,
+                new Mock<INodeStats>().Object, new Mock<INodeLifetime>().Object, this.consensusSettings, this.dateTimeProvider.Object);
 
             // Mock the coinviews "FetchCoinsAsync" method. We will use the "unspentOutputs" dictionary to track spendable outputs.
             this.coinView.Setup(d => d.FetchCoins(It.IsAny<OutPoint[]>()))

@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text;
 using DBreeze;
 using DBreeze.DataTypes;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -40,13 +40,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private DBreezeSerializer dBreezeSerializer;
 
         public DBreezeCoindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
-            : this(network, dataFolder.CoindbPath, dateTimeProvider, loggerFactory, nodeStats, dBreezeSerializer)
+            INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
+            : this(network, dataFolder.CoindbPath, dateTimeProvider, nodeStats, dBreezeSerializer)
         {
         }
 
         public DBreezeCoindb(Network network, string folder, IDateTimeProvider dateTimeProvider,
-            ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
+            INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotEmpty(folder, nameof(folder));
@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             // Create the coinview folder if it does not exist.
             Directory.CreateDirectory(folder);
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.dBreeze = new DBreezeEngine(folder);
             this.network = network;
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>("Coins", outPoint.ToBytes());
                         Coins outputs = row.Exists ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(row.Value) : null;
 
-                        this.logger.LogTrace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
+                        this.logger.Trace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
                         res.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, outputs));
                     }
@@ -169,7 +169,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     HashHeightPair current = this.GetTipHash(transaction);
                     if (current != oldBlockHash)
                     {
-                        this.logger.LogTrace("(-)[BLOCKHASH_MISMATCH]");
+                        this.logger.Trace("(-)[BLOCKHASH_MISMATCH]");
                         throw new InvalidOperationException("Invalid oldBlockHash");
                     }
 
@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     {
                         if (coin.Coins == null)
                         {
-                            this.logger.LogDebug("Outputs of transaction ID '{0}' are prunable and will be removed from the database.", coin.OutPoint);
+                            this.logger.Debug("Outputs of transaction ID '{0}' are prunable and will be removed from the database.", coin.OutPoint);
                             transaction.RemoveKey("Coins", coin.OutPoint.ToBytes());
                         }
                         else
@@ -196,7 +196,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     for (int i = 0; i < toInsert.Count; i++)
                     {
                         var coin = toInsert[i];
-                        this.logger.LogDebug("Outputs of transaction ID '{0}' are NOT PRUNABLE and will be inserted into the database. {1}/{2}.", coin.OutPoint, i, toInsert.Count);
+                        this.logger.Debug("Outputs of transaction ID '{0}' are NOT PRUNABLE and will be inserted into the database. {1}/{2}.", coin.OutPoint, i, toInsert.Count);
 
                         transaction.Insert("Coins", coin.OutPoint.ToBytes(), this.dBreezeSerializer.Serialize(coin.Coins));
                     }
@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         {
                             var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
 
-                            this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
+                            this.logger.Debug("Rewind state #{0} created.", nextRewindIndex);
 
                             transaction.Insert("Rewind", nextRewindIndex, this.dBreezeSerializer.Serialize(rewindData));
                         }
@@ -267,13 +267,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 foreach (OutPoint outPoint in rewindData.OutputsToRemove)
                 {
-                    this.logger.LogTrace("Outputs of outpoint '{0}' will be removed.", outPoint);
+                    this.logger.Trace("Outputs of outpoint '{0}' will be removed.", outPoint);
                     transaction.RemoveKey("Coins", outPoint.ToBytes());
                 }
 
                 foreach (RewindDataOutput rewindDataOutput in rewindData.OutputsToRestore)
                 {
-                    this.logger.LogTrace("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
+                    this.logger.Trace("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
                     transaction.Insert("Coins", rewindDataOutput.OutPoint.ToBytes(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
                 }
 
@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 foreach (StakeItem blockStake in blocklist)
                 {
-                    this.logger.LogTrace("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
+                    this.logger.Trace("Loading POS block hash '{0}' from the database.", blockStake.BlockId);
                     Row<byte[], byte[]> stakeRow = transaction.Select<byte[], byte[]>("Stake", blockStake.BlockId.ToBytes(false));
 
                     if (stakeRow.Exists)

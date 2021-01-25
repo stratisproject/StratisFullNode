@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
@@ -12,11 +11,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
 {
     public class FinalizedBlockInfoRepositoryTest : TestBase
     {
-        private readonly ILoggerFactory loggerFactory;
-
         public FinalizedBlockInfoRepositoryTest() : base(KnownNetworks.StraxRegTest)
         {
-            this.loggerFactory = new LoggerFactory();
         }
 
         [Fact]
@@ -27,12 +23,12 @@ namespace Stratis.Bitcoin.Tests.Consensus
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
             }
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 await repo.LoadFinalizedBlockInfoAsync(this.Network);
                 Assert.Equal(777, repo.GetFinalizedBlockInfo().Height);
@@ -47,7 +43,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 555);
@@ -55,7 +51,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
                 Assert.Equal(777, repo.GetFinalizedBlockInfo().Height);
             }
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 await repo.LoadFinalizedBlockInfoAsync(this.Network);
                 Assert.Equal(777, repo.GetFinalizedBlockInfo().Height);
