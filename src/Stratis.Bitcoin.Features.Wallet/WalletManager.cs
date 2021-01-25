@@ -926,21 +926,19 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // Get transactions contained in the account.
                 var query = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
 
-                if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
-                    items = query.SelectMany(s => s.Transactions.Where(t => t.Id == parsedTxId).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                // When the account is a normal one, we want to filter out all cold stake UTXOs.
+                if (account.IsNormalAccount())
+                {
+                    if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
+                        items = query.SelectMany(s => s.Transactions.Where(t => (t.IsColdCoinStake == null || t.IsColdCoinStake == false) && t.Id == parsedTxId).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    else
+                        items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                }
                 else
                 {
-                    if (account.IsNormalAccount())
-                    {
-                        // When the account is a normal one, we want to filter out all cold stake UTXOs.
-                        items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
-                    }
-                    else
-                    {
-                        items = account.GetCombinedAddresses()
-                            .Where(a => a.Transactions.Any())
-                            .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
-                    }
+                    items = account.GetCombinedAddresses()
+                        .Where(a => a.Transactions.Any())
+                        .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
                 }
             }
 
