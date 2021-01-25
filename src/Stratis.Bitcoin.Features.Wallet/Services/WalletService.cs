@@ -186,8 +186,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletHistoryModel> GetHistory(WalletHistoryRequest request,
-            CancellationToken cancellationToken)
+        public async Task<WalletHistoryModel> GetHistory(WalletHistoryRequest request, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
             {
@@ -230,8 +229,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                     // Represents a sublist of transactions associated with receive addresses + a sublist of already spent transactions associated with change addresses.
                     // In effect, we filter out 'change' transactions that are not spent, as we don't want to show these in the history.
-                    foreach (FlatHistory item in items.Where(t =>
-                        !t.Address.IsChangeAddress() || (t.Address.IsChangeAddress() && t.Transaction.IsSpent())))
+                    foreach (FlatHistory item in items.Where(t => !t.Address.IsChangeAddress() || (t.Address.IsChangeAddress() && t.Transaction.IsSpent())))
                     {
                         // Count only unique transactions and limit it to MaxHistoryItemsPerAccount.
                         int processedTransactions = uniqueProcessedTxIds.Count;
