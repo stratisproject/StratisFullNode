@@ -926,7 +926,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // Get transactions contained in the account.
                 var query = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
 
-                if (uint256.TryParse(searchQuery, out uint256 parsedTxId))
+                if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
                     items = query.SelectMany(s => s.Transactions.Where(t => t.Id == parsedTxId).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
                 else
                 {
