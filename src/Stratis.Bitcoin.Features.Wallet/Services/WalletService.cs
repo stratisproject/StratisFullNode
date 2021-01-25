@@ -194,9 +194,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 // Get a list of all the transactions found in an account (or in a wallet if no account is specified), with the addresses associated with them.
                 IEnumerable<AccountHistory> accountsHistory = request.Take == null
-                    ? this.walletManager.GetHistory(request.WalletName, request.AccountName)
-                    : this.walletManager.GetHistory(request.WalletName, request.AccountName, request.PrevOutputTxTime,
-                        request.PrevOutputIndex, request.Take);
+                    ? this.walletManager.GetHistory(request.WalletName, request.AccountName, request.SearchQuery)
+                    : this.walletManager.GetHistory(request.WalletName, request.AccountName, request.PrevOutputTxTime, request.PrevOutputIndex, request.Take);
 
                 foreach (AccountHistory accountHistory in accountsHistory)
                 {
