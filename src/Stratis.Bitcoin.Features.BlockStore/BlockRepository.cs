@@ -4,13 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using DBreeze.Utils;
+using LevelDB;
+using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
-using DBreeze.Utils;
-using LevelDB;
-using Microsoft.Extensions.Logging;
-using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.BlockStore
 {
@@ -109,13 +109,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
 
-        public BlockRepository(Network network, DataFolder dataFolder,
-            ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
-            : this(network, dataFolder.BlockPath, loggerFactory, dBreezeSerializer)
+        public BlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer)
+            : this(network, dataFolder.BlockPath, dBreezeSerializer)
         {
         }
 
-        public BlockRepository(Network network, string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
+        public BlockRepository(Network network, string folder, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotEmpty(folder, nameof(folder));
@@ -125,7 +124,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.leveldb = new DB(options, folder);
             this.locker = new object();
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.dBreezeSerializer = dBreezeSerializer;
             this.genesisTransactions = network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
@@ -157,75 +156,23 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             if (!this.TxIndex)
             {
-                this.logger.LogTrace("(-)[TX_INDEXING_DISABLED]:null");
+                this.logger.Trace("(-)[TX_INDEXING_DISABLED]:null");
                 return default(Transaction);
             }
 
             if (this.genesisTransactions.TryGetValue(trxid, out Transaction genesisTransaction))
-            {
                 return genesisTransaction;
-            }
 
-            Transaction res = null;
-            lock (this.locker)
+            try
             {
-                byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxid.ToBytes());
-
-                if (transactionRow == null)
+                Transaction transaction = null;
+                lock (this.locker)
                 {
-                    this.logger.LogTrace("(-)[NO_BLOCK]:null");
-                    return null;
-                }
+                    byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxid.ToBytes());
 
-                byte[] blockRow = this.leveldb.Get(BlockTableName, transactionRow);
-
-                if (blockRow != null)
-                {
-                    var block = this.dBreezeSerializer.Deserialize<Block>(blockRow);
-                    res = block.Transactions.FirstOrDefault(t => t.GetHash() == trxid);
-                }
-            }
-
-            return res;
-        }
-
-        /// <inheritdoc/>
-        public Transaction[] GetTransactionsByIds(uint256[] trxids, CancellationToken cancellation = default(CancellationToken))
-        {
-            if (!this.TxIndex)
-            {
-                this.logger.LogTrace("(-)[TX_INDEXING_DISABLED]:null");
-                return null;
-            }
-
-            Transaction[] txes = new Transaction[trxids.Length];
-
-            lock (this.locker)
-            {
-                for (int i = 0; i < trxids.Length; i++)
-                {
-                    cancellation.ThrowIfCancellationRequested();
-
-                    bool alreadyFetched = trxids.Take(i).Any(x => x == trxids[i]);
-
-                    if (alreadyFetched)
-                    {
-                        this.logger.LogDebug("Duplicated transaction encountered. Tx id: '{0}'.", trxids[i]);
-
-                        txes[i] = txes.First(x => x.GetHash() == trxids[i]);
-                        continue;
-                    }
-
-                    if (this.genesisTransactions.TryGetValue(trxids[i], out Transaction genesisTransaction))
-                    {
-                        txes[i] = genesisTransaction;
-                        continue;
-                    }
-
-                    byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxids[i].ToBytes());
                     if (transactionRow == null)
                     {
-                        this.logger.LogTrace("(-)[NO_TX_ROW]:null");
+                        this.logger.Trace("(-)[NO_BLOCK]:null");
                         return null;
                     }
 
@@ -233,18 +180,84 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                     if (blockRow != null)
                     {
-                        this.logger.LogTrace("(-)[NO_BLOCK]:null");
-                        return null;
+                        var block = this.dBreezeSerializer.Deserialize<Block>(blockRow);
+                        transaction = block.Transactions.FirstOrDefault(t => t.GetHash() == trxid);
                     }
-
-                    var block = this.dBreezeSerializer.Deserialize<Block>(blockRow);
-                    Transaction tx = block.Transactions.FirstOrDefault(t => t.GetHash() == trxids[i]);
-
-                    txes[i] = tx;
                 }
+
+                return transaction;
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
+            }
+        }
+
+        /// <inheritdoc/>
+        public Transaction[] GetTransactionsByIds(uint256[] trxids, CancellationToken cancellation = default(CancellationToken))
+        {
+            if (!this.TxIndex)
+            {
+                this.logger.Trace("(-)[TX_INDEXING_DISABLED]:null");
+                return null;
             }
 
-            return txes;
+            try
+            {
+                Transaction[] txes = new Transaction[trxids.Length];
+
+                lock (this.locker)
+                {
+                    for (int i = 0; i < trxids.Length; i++)
+                    {
+                        cancellation.ThrowIfCancellationRequested();
+
+                        bool alreadyFetched = trxids.Take(i).Any(x => x == trxids[i]);
+
+                        if (alreadyFetched)
+                        {
+                            this.logger.Debug("Duplicated transaction encountered. Tx id: '{0}'.", trxids[i]);
+
+                            txes[i] = txes.First(x => x.GetHash() == trxids[i]);
+                            continue;
+                        }
+
+                        if (this.genesisTransactions.TryGetValue(trxids[i], out Transaction genesisTransaction))
+                        {
+                            txes[i] = genesisTransaction;
+                            continue;
+                        }
+
+                        byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxids[i].ToBytes());
+                        if (transactionRow == null)
+                        {
+                            this.logger.Trace("(-)[NO_TX_ROW]:null");
+                            return null;
+                        }
+
+                        byte[] blockRow = this.leveldb.Get(BlockTableName, transactionRow);
+
+                        if (blockRow != null)
+                        {
+                            this.logger.Trace("(-)[NO_BLOCK]:null");
+                            return null;
+                        }
+
+                        var block = this.dBreezeSerializer.Deserialize<Block>(blockRow);
+                        Transaction tx = block.Transactions.FirstOrDefault(t => t.GetHash() == trxids[i]);
+
+                        txes[i] = tx;
+                    }
+                }
+
+                return txes;
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
+            }
         }
 
         /// <inheritdoc />
@@ -254,7 +267,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             if (!this.TxIndex)
             {
-                this.logger.LogTrace("(-)[NO_TXINDEX]:null");
+                this.logger.Trace("(-)[NO_TXINDEX]:null");
                 return default(uint256);
             }
 
@@ -263,15 +276,23 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 return this.network.GenesisHash;
             }
 
-            uint256 res = null;
-            lock (this.locker)
+            try
             {
-                byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxid.ToBytes());
-                if (transactionRow != null)
-                    res = new uint256(transactionRow);
-            }
+                uint256 res = null;
+                lock (this.locker)
+                {
+                    byte[] transactionRow = this.leveldb.Get(TransactionTableName, trxid.ToBytes());
+                    if (transactionRow != null)
+                        res = new uint256(transactionRow);
+                }
 
-            return res;
+                return res;
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
+            }
         }
 
         protected virtual void OnInsertBlocks(List<Block> blocks)
@@ -335,7 +356,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             }
         }
 
-        public IEnumerable<Block> EnumeratehBatch(List<ChainedHeader> headers)
+        public IEnumerable<Block> EnumerateBatch(List<ChainedHeader> headers)
         {
             lock (this.locker)
             {
@@ -369,7 +390,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     warningMessage.AppendLine("".PadRight(133, '='));
                     warningMessage.AppendLine();
 
-                    this.logger.LogInformation(warningMessage.ToString());
+                    this.logger.Info(warningMessage.ToString());
                     using (var batch = new WriteBatch())
                     {
                         var enumerator = this.leveldb.GetEnumerator();
@@ -386,7 +407,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                                 // inform the user about the ongoing operation
                                 if (++rowCount % 1000 == 0)
                                 {
-                                    this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", rowCount, totalBlocksCount);
+                                    this.logger.Info("Reindex in process... {0}/{1} blocks processed.", rowCount, totalBlocksCount);
                                 }
                             }
                         }
@@ -394,7 +415,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         this.leveldb.Write(batch, new WriteOptions() { Sync = true });
                     }
 
-                    this.logger.LogInformation("Reindex completed successfully.");
+                    this.logger.Info("Reindex completed successfully.");
                 }
                 else
                 {
@@ -547,40 +568,48 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
         public List<Block> GetBlocksFromHashes(List<uint256> hashes)
         {
-            var results = new Dictionary<uint256, Block>();
-
-            // Access hash keys in sorted order.
-            var byteListComparer = new ByteListComparer();
-            List<(uint256, byte[])> keys = hashes.Select(hash => (hash, hash.ToBytes())).ToList();
-
-            keys.Sort((key1, key2) => byteListComparer.Compare(key1.Item2, key2.Item2));
-
-            foreach ((uint256, byte[]) key in keys)
+            try
             {
-                // If searching for genesis block, return it.
-                if (key.Item1 == this.network.GenesisHash)
+                var results = new Dictionary<uint256, Block>();
+
+                // Access hash keys in sorted order.
+                var byteListComparer = new ByteListComparer();
+                List<(uint256, byte[])> keys = hashes.Select(hash => (hash, hash.ToBytes())).ToList();
+
+                keys.Sort((key1, key2) => byteListComparer.Compare(key1.Item2, key2.Item2));
+
+                foreach ((uint256, byte[]) key in keys)
                 {
-                    results[key.Item1] = this.network.GetGenesis();
-                    continue;
+                    // If searching for genesis block, return it.
+                    if (key.Item1 == this.network.GenesisHash)
+                    {
+                        results[key.Item1] = this.network.GetGenesis();
+                        continue;
+                    }
+
+                    byte[] blockRow = this.leveldb.Get(BlockTableName, key.Item2);
+                    if (blockRow != null)
+                    {
+                        results[key.Item1] = this.dBreezeSerializer.Deserialize<Block>(blockRow);
+
+                        this.logger.Debug("Block hash '{0}' loaded from the store.", key.Item1);
+                    }
+                    else
+                    {
+                        results[key.Item1] = null;
+
+                        this.logger.Debug("Block hash '{0}' not found in the store.", key.Item1);
+                    }
                 }
 
-                byte[] blockRow = this.leveldb.Get(BlockTableName, key.Item2);
-                if (blockRow != null)
-                {
-                    results[key.Item1] = this.dBreezeSerializer.Deserialize<Block>(blockRow);
-
-                    this.logger.LogDebug("Block hash '{0}' loaded from the store.", key.Item1);
-                }
-                else
-                {
-                    results[key.Item1] = null;
-
-                    this.logger.LogDebug("Block hash '{0}' not found in the store.", key.Item1);
-                }
+                // Return the result in the order that the hashes were presented.
+                return hashes.Select(hash => results[hash]).ToList();
             }
-
-            // Return the result in the order that the hashes were presented.
-            return hashes.Select(hash => results[hash]).ToList();
+            catch (Exception ex)
+            {
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
+            }
         }
 
         /// <inheritdoc />

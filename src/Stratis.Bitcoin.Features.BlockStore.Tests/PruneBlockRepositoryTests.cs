@@ -29,7 +29,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             var dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
 
-            var blockRepository = new BlockRepository(this.Network, dataFolder, this.LoggerFactory.Object, dBreezeSerializer);
+            var blockRepository = new BlockRepository(this.Network, dataFolder, dBreezeSerializer);
             blockRepository.PutBlocks(new HashHeightPair(posBlocks.Last().GetHash(), 50), posBlocks);
 
             var storeSettings = new StoreSettings(NodeSettings.Default(this.Network))
@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             var dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
 
-            var blockRepository = new BlockRepository(this.Network, dataFolder, this.LoggerFactory.Object, dBreezeSerializer);
+            var blockRepository = new BlockRepository(this.Network, dataFolder, dBreezeSerializer);
             blockRepository.PutBlocks(new HashHeightPair(posBlocks.Take(100).Last().GetHash(), 100), posBlocks.Take(100).ToList());
 
             var storeSettings = new StoreSettings(NodeSettings.Default(this.Network))
@@ -98,7 +98,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             var dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
 
-            var blockRepository = new BlockRepository(this.Network, dataFolder, this.LoggerFactory.Object, dBreezeSerializer);
+            var blockRepository = new BlockRepository(this.Network, dataFolder, dBreezeSerializer);
             blockRepository.PutBlocks(new HashHeightPair(posBlocks.Last().GetHash(), 50), posBlocks);
 
             var storeSettings = new StoreSettings(NodeSettings.Default(this.Network))

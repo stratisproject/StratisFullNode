@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus;
@@ -100,7 +100,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
             IBlockStoreQueueFlushCondition blockStoreQueueFlushCondition,
             StoreSettings storeSettings,
             IBlockRepository blockRepository,
-            ILoggerFactory loggerFactory,
             INodeStats nodeStats,
             IAsyncProvider asyncProvider)
         {
@@ -108,7 +107,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
             Guard.NotNull(chainState, nameof(chainState));
             Guard.NotNull(storeSettings, nameof(storeSettings));
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(blockRepository, nameof(blockRepository));
             Guard.NotNull(nodeStats, nameof(nodeStats));
 
@@ -122,7 +120,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.blocksCacheLock = new object();
             this.blocksQueue = asyncProvider.CreateAsyncQueue<ChainedHeaderBlock>();
             this.pendingBlocksCache = new Dictionary<uint256, ChainedHeaderBlock>();
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.cancellation = new CancellationTokenSource();
             this.saveAsyncLoopException = null;
 
@@ -142,37 +140,44 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (this.storeTip.FindFork(consensusManager.Tip) != consensusManager.Tip)
                 throw new Exception("Store and chain tip are not on same fork.");
 
-            List<ChainedHeader> headers = new List<ChainedHeader>();
-            foreach (ChainedHeader chainedHeader in this.storeTip.EnumerateToGenesis())
+            try
             {
-                if (chainedHeader.Height == consensusManager.Tip.Height)
-                    break;
-
-                headers.Add(chainedHeader);
-            }
-
-            headers.Reverse();
-
-            BlockRepository blockRepository = (BlockRepository)this.blockRepository;
-
-            foreach (Block block in blockRepository.EnumeratehBatch(headers))
-            {
-                if (block == null)
-                    throw new Exception();
-
-                ChainedHeader newChainedHeader = consensusManager.BlockMinedAsync(block, true).Result;
-
-                if (newChainedHeader == null)
-                    throw new Exception();
-
-                if (nodeCancellation.IsCancellationRequested)
-                    return;
-
-                if (newChainedHeader.Height % 1000 == 0)
+                List<ChainedHeader> headers = new List<ChainedHeader>();
+                foreach (ChainedHeader chainedHeader in this.storeTip.EnumerateToGenesis())
                 {
-                    this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.storeTip.Height);
+                    if (chainedHeader.Height == consensusManager.Tip.Height)
+                        break;
+
+                    headers.Add(chainedHeader);
                 }
 
+                headers.Reverse();
+
+                BlockRepository blockRepository = (BlockRepository)this.blockRepository;
+
+                foreach (Block block in blockRepository.EnumerateBatch(headers))
+                {
+                    if (block == null)
+                        throw new Exception();
+
+                    ChainedHeader newChainedHeader = consensusManager.BlockMinedAsync(block, true).Result;
+
+                    if (newChainedHeader == null)
+                        throw new Exception();
+
+                    if (nodeCancellation.IsCancellationRequested)
+                        return;
+
+                    if (newChainedHeader.Height % 1000 == 0)
+                    {
+                        this.logger.Info("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.storeTip.Height);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
             }
         }
 
@@ -200,13 +205,13 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             ChainedHeader initializationTip = RecoverStoreTip();
             this.SetStoreTip(initializationTip);
-            this.logger.LogDebug("Initialized block store tip at '{0}'.", initializationTip);
+            this.logger.Debug("Initialized block store tip at '{0}'.", initializationTip);
 
             if (this.storeSettings.TxIndex != this.blockRepository.TxIndex)
             {
                 if (this.storeTip != this.chainIndexer.Genesis)
                 {
-                    this.logger.LogTrace("(-)[REBUILD_REQUIRED]");
+                    this.logger.Trace("(-)[REBUILD_REQUIRED]");
                     throw new BlockStoreException("You need to rebuild the block store database using -reindex to change -txindex");
                 }
 
@@ -219,8 +224,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             // This is needed in order to rewind consensus in case it is initialized ahead of the block store.
             if (this.chainState.ConsensusTip != null)
             {
-                this.logger.LogCritical("Block store initialized after the consensus!");
-                this.logger.LogTrace("(-)[INITIALIZATION_ERROR]");
+                this.logger.Fatal("Block store initialized after the consensus!");
+                this.logger.Trace("(-)[INITIALIZATION_ERROR]");
                 throw new BlockStoreException("Block store initialized after consensus!");
             }
 
@@ -239,7 +244,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             // Only look for transactions if they're indexed.
             if (!this.storeSettings.TxIndex)
             {
-                this.logger.LogTrace("(-)[TX_INDEX_DISABLED]:null");
+                this.logger.Trace("(-)[TX_INDEX_DISABLED]:null");
                 return default(Transaction);
             }
 
@@ -251,7 +256,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                     if (tx != null)
                     {
-                        this.logger.LogDebug("Transaction '{0}' was found in the pending blocks cache.", trxid);
+                        this.logger.Debug("Transaction '{0}' was found in the pending blocks cache.", trxid);
                         return tx;
                     }
                 }
@@ -266,7 +271,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             // Only look for transactions if they're indexed.
             if (!this.storeSettings.TxIndex)
             {
-                this.logger.LogTrace("(-)[TX_INDEX_DISABLED]:null");
+                this.logger.Trace("(-)[TX_INDEX_DISABLED]:null");
                 return null;
             }
 
@@ -282,7 +287,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                     if (tx != null)
                     {
-                        this.logger.LogDebug("Transaction '{0}' was found in the pending blocks cache.", txId);
+                        this.logger.Debug("Transaction '{0}' was found in the pending blocks cache.", txId);
                         txes[i] = tx;
                     }
                 }
@@ -302,7 +307,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             if (fetchedTxes == null)
             {
-                this.logger.LogTrace("(-)[NOT_FOUND_IN_REPOSITORY]:null");
+                this.logger.Trace("(-)[NOT_FOUND_IN_REPOSITORY]:null");
                 return null;
             }
 
@@ -333,7 +338,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     {
                         uint256 blockId = chainedHeaderBlock.Block.GetHash();
 
-                        this.logger.LogDebug("Block Id '{0}' with tx '{1}' was found in the pending blocks cache.", blockId, trxid);
+                        this.logger.Debug("Block Id '{0}' with tx '{1}' was found in the pending blocks cache.", blockId, trxid);
                         return blockId;
                     }
                 }
@@ -349,14 +354,14 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 if (this.pendingBlocksCache.TryGetValue(blockHash, out ChainedHeaderBlock chainedHeaderBlock))
                 {
-                    this.logger.LogTrace("(-)[FOUND_IN_DICTIONARY]");
+                    this.logger.Trace("(-)[FOUND_IN_DICTIONARY]");
                     return chainedHeaderBlock.Block;
                 }
             }
 
             Block block = this.blockRepository.GetBlock(blockHash);
 
-            this.logger.LogDebug("Block '{0}' was{1} found in the repository.", blockHash, (block == null) ? " not" : "");
+            this.logger.Debug("Block '{0}' was{1} found in the repository.", blockHash, (block == null) ? " not" : "");
 
             if (block == null)
             {
@@ -367,8 +372,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     // If the block repository tip is on the consensus chain then the block should have been present.
                     if (this.chainIndexer.GetHeader(this.blockRepository.TipHashAndHeight.Hash) != null)
                     {
-                        this.logger.LogError("The block repository is missing some blocks that should be present given the advertised tip.");
-                        this.logger.LogInformation("You will have to re-sync your node to correct this issue.");
+                        this.logger.Error("The block repository is missing some blocks that should be present given the advertised tip.");
+                        this.logger.Info("You will have to re-sync your node to correct this issue.");
                     }
                 }
             }
@@ -391,7 +396,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 foreach ((Block block, int hashIndex) in this.blockRepository.GetBlocks(storeHashes).Select((x, n) => (x, n)))
                     res[storeHashes[hashIndex]] = block;
 
-                this.logger.LogTrace("{0} blocks were found in the cache of a total of {1} blocks.", cacheCount, res.Count);
+                this.logger.Trace("{0} blocks were found in the cache of a total of {1} blocks.", cacheCount, res.Count);
 
                 return blockHashes.Select(bh => res[bh]).ToList();
             }
@@ -446,7 +451,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             this.chainIndexer.Initialize(newTip); // we have to set chain store to be same as the store tip.
 
-            this.logger.LogWarning("Block store tip recovered to block '{0}'.", newTip);
+            this.logger.Warn("Block store tip recovered to block '{0}'.", newTip);
 
             return newTip;
         }
@@ -474,14 +479,14 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 if (this.pendingBlocksCache.TryAdd(chainedHeaderBlock.ChainedHeader.HashBlock, chainedHeaderBlock))
                 {
-                    this.logger.LogDebug("Block '{0}' was added to pending.", chainedHeaderBlock.ChainedHeader);
+                    this.logger.Debug("Block '{0}' was added to pending.", chainedHeaderBlock.ChainedHeader);
                 }
                 else
                 {
                     // If the chained header block already exists, we need to remove it and add to the back of the collection.
                     this.pendingBlocksCache.Remove(chainedHeaderBlock.ChainedHeader.HashBlock);
                     this.pendingBlocksCache.Add(chainedHeaderBlock.ChainedHeader.HashBlock, chainedHeaderBlock);
-                    this.logger.LogDebug("Block '{0}' was re-added to pending.", chainedHeaderBlock.ChainedHeader);
+                    this.logger.Debug("Block '{0}' was re-added to pending.", chainedHeaderBlock.ChainedHeader);
                 }
 
                 this.BlockStoreCacheTip = chainedHeaderBlock.ChainedHeader;
@@ -523,7 +528,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     // We want to save whatever is in the batch before exiting the loop.
                     saveBatch = true;
 
-                    this.logger.LogDebug("Node is shutting down. Save batch.");
+                    this.logger.Debug("Node is shutting down. Save batch.");
                 }
 
                 // Save batch if timer ran out or we've dequeued a new block and reached the consensus tip
@@ -611,12 +616,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 // Save the batch.
                 ChainedHeader newTip = clearedBatch.Last().ChainedHeader;
 
-                this.logger.LogDebug("Saving batch of {0} blocks, total size: {1} bytes.", clearedBatch.Count, this.currentBatchSizeBytes);
+                this.logger.Debug("Saving batch of {0} blocks, total size: {1} bytes.", clearedBatch.Count, this.currentBatchSizeBytes);
 
                 this.blockRepository.PutBlocks(new HashHeightPair(newTip), clearedBatch.Select(b => b.Block).ToList());
 
                 this.SetStoreTip(newTip);
-                this.logger.LogDebug("Store tip set to '{0}'.", this.storeTip);
+                this.logger.Debug("Store tip set to '{0}'.", this.storeTip);
 
                 // If an error occurred above then this code which clears the batch will not execute.
                 lock (this.blocksCacheLock)
@@ -633,7 +638,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             }
             catch (Exception err)
             {
-                this.logger.LogError("Could not save blocks to the block repository. Exiting due to '{0}'.", err.Message);
+                this.logger.Error("Could not save blocks to the block repository. Exiting due to '{0}'.", err);
                 this.saveAsyncLoopException = err;
                 throw;
             }
@@ -657,7 +662,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             {
                 if (this.batch[i].ChainedHeader.HashBlock != current.ChainedHeader.Previous.HashBlock)
                 {
-                    this.logger.LogDebug("Block '{0}' removed from the batch because it was reorged.", this.batch[i].ChainedHeader);
+                    this.logger.Debug("Block '{0}' removed from the batch because it was reorged.", this.batch[i].ChainedHeader);
                     continue;
                 }
 
@@ -688,12 +693,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 currentHeader = currentHeader.Previous;
             }
 
-            this.logger.LogDebug("Block store reorg detected. Removing {0} blocks from the database.", blocksToDelete.Count);
+            this.logger.Debug("Block store reorg detected. Removing {0} blocks from the database.", blocksToDelete.Count);
 
             this.blockRepository.Delete(new HashHeightPair(currentHeader), blocksToDelete);
 
             this.SetStoreTip(expectedStoreTip);
-            this.logger.LogDebug("Store tip rewound to '{0}'.", this.storeTip);
+            this.logger.Debug("Store tip rewound to '{0}'.", this.storeTip);
         }
 
         /// <inheritdoc />

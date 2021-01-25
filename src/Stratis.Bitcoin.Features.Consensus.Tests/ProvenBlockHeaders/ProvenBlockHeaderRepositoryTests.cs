@@ -178,7 +178,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
         private ProvenBlockHeaderRepository SetupRepository(Network network, string folder)
         {
-            var repo = new ProvenBlockHeaderRepository(network, folder, this.LoggerFactory.Object, this.dBreezeSerializer);
+            var repo = new ProvenBlockHeaderRepository(network, folder, this.dBreezeSerializer);
 
             Task task = repo.InitializeAsync();
 

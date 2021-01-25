@@ -222,8 +222,8 @@ namespace NBitcoin
 
             this.CalculateChainWork();
 
-            if (header is ProvenBlockHeader)
-                this.ProvenBlockHeader = (ProvenBlockHeader)header;
+            if (header is ProvenBlockHeader provenBlockHeader)
+                this.ProvenBlockHeader = provenBlockHeader;
         }
 
         /// <summary>
@@ -247,8 +247,8 @@ namespace NBitcoin
 
             this.CalculateChainWork();
 
-            if (header is ProvenBlockHeader)
-                this.ProvenBlockHeader = (ProvenBlockHeader)header;
+            if (header is ProvenBlockHeader provenBlockHeader)
+                this.ProvenBlockHeader = provenBlockHeader;
         }
 
         /// <summary>

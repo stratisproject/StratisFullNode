@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using LevelDB;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Configuration;
+using NLog;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Base
@@ -25,21 +22,14 @@ namespace Stratis.Bitcoin.Base
     {
         private readonly IChainStore chainStore;
 
-        /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
         private BlockLocator locator;
 
-        public Network Network { get; }
-
-        public ChainRepository(ILoggerFactory loggerFactory, IChainStore chainStore, Network network)
+        public ChainRepository(IChainStore chainStore)
         {
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
-
             this.chainStore = chainStore;
-            this.Network = network;
-
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -47,39 +37,49 @@ namespace Stratis.Bitcoin.Base
         {
             Task<ChainedHeader> task = Task.Run(() =>
             {
-                ChainedHeader tip = null;
-
-                ChainData data = this.chainStore.GetChainData(0);
-
-                if (data == null)
+                try
                 {
-                    genesisHeader.SetChainStore(this.chainStore);
-                    return genesisHeader;
-                }
+                    ChainedHeader tip = null;
 
-                Guard.Assert(data.Hash == genesisHeader.HashBlock); // can't swap networks
-
-                int index = 0;
-                while (true)
-                {
-                    data = this.chainStore.GetChainData((index));
+                    ChainData data = this.chainStore.GetChainData(0);
 
                     if (data == null)
-                        break;
+                    {
+                        genesisHeader.SetChainStore(this.chainStore);
+                        return genesisHeader;
+                    }
 
-                    tip = new ChainedHeader(data.Hash, data.Work, tip);
-                    if (tip.Height == 0) tip.SetChainStore(this.chainStore);
-                    index++;
+                    Guard.Assert(data.Hash == genesisHeader.HashBlock); // can't swap networks
+
+                    int index = 0;
+                    while (true)
+                    {
+                        data = this.chainStore.GetChainData((index));
+
+                        if (data == null)
+                            break;
+
+                        tip = new ChainedHeader(data.Hash, data.Work, tip);
+                        if (tip.Height == 0)
+                            tip.SetChainStore(this.chainStore);
+
+                        index++;
+                    }
+
+                    if (tip == null)
+                    {
+                        genesisHeader.SetChainStore(this.chainStore);
+                        tip = genesisHeader;
+                    }
+
+                    this.locator = tip.GetLocator();
+                    return tip;
                 }
-
-                if (tip == null)
+                catch (Exception ex)
                 {
-                    genesisHeader.SetChainStore(this.chainStore);
-                    tip = genesisHeader;
+                    this.logger.Error($"An exception occurred: {ex}");
+                    throw;
                 }
-
-                this.locator = tip.GetLocator();
-                return tip;
             });
 
             return task;

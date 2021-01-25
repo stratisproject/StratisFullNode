@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using LevelDB;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -23,6 +24,8 @@ namespace Stratis.Bitcoin.Consensus
 
         private object locker;
 
+        private readonly ILogger logger;
+
         public LeveldbHeaderStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer)
         {
             this.network = network;
@@ -33,6 +36,8 @@ namespace Stratis.Bitcoin.Consensus
             // Open a connection to a new DB and create if not found
             var options = new Options { CreateIfMissing = true };
             this.leveldb = new DB(options, dataFolder.ChainPath);
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         public ChainIndexer ChainIndexer { get; }
@@ -44,27 +49,35 @@ namespace Stratis.Bitcoin.Consensus
                 return blockHeader;
             }
 
-            // TODO: Bring in uint256 span optimisations
-            byte[] bytes = hash.ToBytes();
-
-            lock (this.locker)
+            try
             {
-                bytes = this.leveldb.Get(HeaderTableName, bytes);
-            }
+                // TODO: Bring in uint256 span optimisations
+                byte[] bytes = hash.ToBytes();
 
-            if (bytes == null)
+                lock (this.locker)
+                {
+                    bytes = this.leveldb.Get(HeaderTableName, bytes);
+                }
+
+                if (bytes == null)
+                {
+                    throw new ApplicationException("Header must exist if requested");
+                }
+
+                blockHeader = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+                blockHeader.FromBytes(bytes, this.network.Consensus.ConsensusFactory);
+
+                // If the header is 500 blocks behind tip or 100 blocks ahead cache it.
+                if ((chainedHeader.Height > this.ChainIndexer.Height - 500) && (chainedHeader.Height <= this.ChainIndexer.Height + 100))
+                    this.headers.AddOrUpdate(hash, blockHeader);
+
+                return blockHeader;
+            }
+            catch (Exception ex)
             {
-                throw new ApplicationException("Header must exist if requested");
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
             }
-
-            blockHeader = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
-            blockHeader.FromBytes(bytes, this.network.Consensus.ConsensusFactory);
-
-            // If the header is 500 blocks behind tip or 100 blocks ahead cache it.
-            if ((chainedHeader.Height > this.ChainIndexer.Height - 500) && (chainedHeader.Height <= this.ChainIndexer.Height + 100))
-                this.headers.AddOrUpdate(hash, blockHeader);
-
-            return blockHeader;
         }
 
         public bool PutHeader(BlockHeader blockHeader)

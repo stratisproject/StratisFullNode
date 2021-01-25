@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using LevelDB;
+using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
-using LevelDB;
-using Microsoft.Extensions.Logging;
-using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 {
@@ -57,11 +57,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// </summary>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
         /// <param name="folder"><see cref="ProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
-        /// <param name="loggerFactory">Factory to create a logger for this type.</param>
         /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
-        public ProvenBlockHeaderRepository(Network network, DataFolder folder, ILoggerFactory loggerFactory,
-            DBreezeSerializer dBreezeSerializer)
-        : this(network, folder.ProvenBlockHeaderPath, loggerFactory, dBreezeSerializer)
+        /// 
+        public ProvenBlockHeaderRepository(Network network, DataFolder folder, DBreezeSerializer dBreezeSerializer)
+        : this(network, folder.ProvenBlockHeaderPath, dBreezeSerializer)
         {
         }
 
@@ -70,16 +69,15 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// </summary>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
         /// <param name="folder"><see cref="ProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
-        /// <param name="loggerFactory">Factory to create a logger for this type.</param>
         /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
-        public ProvenBlockHeaderRepository(Network network, string folder, ILoggerFactory loggerFactory,
-            DBreezeSerializer dBreezeSerializer)
+        /// 
+        public ProvenBlockHeaderRepository(Network network, string folder, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(folder, nameof(folder));
             this.dBreezeSerializer = dBreezeSerializer;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             Directory.CreateDirectory(folder);
 
@@ -116,17 +114,26 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             Task<ProvenBlockHeader> task = Task.Run(() =>
             {
-                byte[] row = null;
-
-                lock (this.locker)
+                try
                 {
-                    row = this.leveldb.Get(provenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
+                    byte[] row = null;
+
+                    lock (this.locker)
+                    {
+                        row = this.leveldb.Get(provenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
+                    }
+
+                    if (row != null)
+                        return this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(row);
+
+                    return null;
+
                 }
-
-                if (row != null)
-                    return this.dBreezeSerializer.Deserialize<ProvenBlockHeader>(row);
-
-                return null;
+                catch (Exception ex)
+                {
+                    this.logger.Error($"An exception occurred: {ex}");
+                    throw;
+                }
             });
 
             return task;
@@ -142,7 +149,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             Task task = Task.Run(() =>
             {
-                this.logger.LogDebug("({0}.Count():{1})", nameof(headers), headers.Count());
+                this.logger.Debug("({0}.Count():{1})", nameof(headers), headers.Count());
 
                 this.InsertHeaders(headers);
 
@@ -157,7 +164,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <summary>
         /// Set's the hash and height tip of the new <see cref="ProvenBlockHeader"/>.
         /// </summary>
-        /// <param name="transaction"> Open database transaction.</param>
         /// <param name="newTip"> Hash height pair of the new block tip.</param>
         private void SetTip(HashHeightPair newTip)
         {
@@ -196,18 +202,26 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <returns> Hash of blocks current tip.</returns>
         private HashHeightPair GetTipHash()
         {
-            HashHeightPair tipHash = null;
-
-            byte[] row = null;
-            lock (this.locker)
+            try
             {
-                row = this.leveldb.Get(blockHashHeightTable, blockHashHeightKey);
+                HashHeightPair tipHash = null;
+
+                byte[] row = null;
+                lock (this.locker)
+                {
+                    row = this.leveldb.Get(blockHashHeightTable, blockHashHeightKey);
+                }
+
+                if (row != null)
+                    tipHash = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);
+
+                return tipHash;
             }
-
-            if (row != null)
-                tipHash = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);
-
-            return tipHash;
+            catch (Exception ex)
+            {
+                this.logger.Error($"An exception occurred: {ex}");
+                throw;
+            }
         }
 
         /// <inheritdoc />
