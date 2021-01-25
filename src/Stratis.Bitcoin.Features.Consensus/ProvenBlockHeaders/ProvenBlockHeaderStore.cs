@@ -183,6 +183,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
                 }
 
                 // Check the repository.
+                this.logger.LogDebug($"Get block header '{blockHeight}'");
                 header = await this.provenBlockHeaderRepository.GetAsync(blockHeight).ConfigureAwait(false);
 
                 if (header != null)

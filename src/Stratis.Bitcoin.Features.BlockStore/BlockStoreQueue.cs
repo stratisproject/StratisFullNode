@@ -140,9 +140,13 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (this.storeTip.FindFork(consensusManager.Tip) != consensusManager.Tip)
                 throw new Exception("Store and chain tip are not on same fork.");
 
+
+            this.logger.Debug("Re-indexeing Chain...");
+
             try
             {
                 List<ChainedHeader> headers = new List<ChainedHeader>();
+
                 foreach (ChainedHeader chainedHeader in this.storeTip.EnumerateToGenesis())
                 {
                     if (chainedHeader.Height == consensusManager.Tip.Height)
@@ -154,6 +158,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 headers.Reverse();
 
                 BlockRepository blockRepository = (BlockRepository)this.blockRepository;
+
+                this.logger.Debug("EnumerateBatch start...");
 
                 foreach (Block block in blockRepository.EnumerateBatch(headers))
                 {
@@ -173,6 +179,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         this.logger.Info("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.storeTip.Height);
                     }
                 }
+
+                this.logger.Debug("EnumerateBatch end...");
             }
             catch (Exception ex)
             {

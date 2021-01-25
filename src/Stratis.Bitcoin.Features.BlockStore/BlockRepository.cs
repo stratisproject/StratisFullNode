@@ -314,11 +314,15 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             using (var batch = new WriteBatch())
             {
+                this.logger.Debug("Inserting blocks...");
+
                 // Index blocks.
                 foreach (KeyValuePair<uint256, Block> kv in blockList)
                 {
                     uint256 blockId = kv.Key;
                     Block block = kv.Value;
+
+                    this.logger.Debug($"Checking insert for block '{kv.Key}'");
 
                     // If the block is already in store don't write it again.
                     byte[] blockRow = this.leveldb.Get(BlockTableName, blockId.ToBytes());
@@ -334,7 +338,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     }
                 }
 
+                this.logger.Debug("Batch created...");
                 this.leveldb.Write(batch, new WriteOptions() { Sync = true });
+                this.logger.Debug("Batch written...");
             }
 
             if (this.TxIndex)
@@ -578,6 +584,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
                 keys.Sort((key1, key2) => byteListComparer.Compare(key1.Item2, key2.Item2));
 
+                this.logger.Debug("GetBlocksFromHashes...");
+
                 foreach ((uint256, byte[]) key in keys)
                 {
                     // If searching for genesis block, return it.
@@ -586,6 +594,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         results[key.Item1] = this.network.GetGenesis();
                         continue;
                     }
+
+                    this.logger.Debug($"Getting block for {key.Item1}");
 
                     byte[] blockRow = this.leveldb.Get(BlockTableName, key.Item2);
                     if (blockRow != null)

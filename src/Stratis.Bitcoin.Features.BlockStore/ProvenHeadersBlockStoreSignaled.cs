@@ -55,6 +55,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             else
             {
                 // Ensure we doesn't have already the ProvenHeader in the store.
+                this.logger.LogDebug($"Get block '{blockPair.ChainedHeader.Height}'");
                 ProvenBlockHeader provenHeader = this.provenBlockHeaderStore.GetAsync(blockPair.ChainedHeader.Height).GetAwaiter().GetResult();
 
                 // Proven Header not found? create it now.

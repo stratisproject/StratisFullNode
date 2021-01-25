@@ -157,6 +157,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
                 ProvenBlockHeader provenBlockHeader = header.ProvenBlockHeader;
                 if (provenBlockHeader == null)
                 {
+                    this.logger.LogDebug($"Get block header '{header.Height}'");
                     provenBlockHeader = this.provenBlockHeaderStore.GetAsync(header.Height).GetAwaiter().GetResult();
 
                     if (provenBlockHeader == null)
