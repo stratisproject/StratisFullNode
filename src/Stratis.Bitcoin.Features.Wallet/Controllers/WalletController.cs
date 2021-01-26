@@ -298,11 +298,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("history")]
         [HttpGet]
-        public async Task<IActionResult> GetHistory([FromQuery] WalletHistoryRequest request,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IActionResult> GetHistoryAsync([FromQuery] WalletHistoryRequest request, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.Execute(request, cancellationToken,
-                async (req, token) => this.Json(await this.walletService.GetHistory(req, token)));
+            return await this.Execute(request, cancellationToken, async (req, token) => this.Json(await this.walletService.GetHistory(req, token)));
         }
 
 

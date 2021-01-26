@@ -8,10 +8,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.BuilderExtensions;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -94,19 +92,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         // <summary>As per RPC method definition this should be the max allowable expiry duration.</summary>
         private const int MaxWalletUnlockDurationInSeconds = 1073741824;
 
-        /// <summary>Quantity of accounts created in a wallet file when a wallet is restored.</summary>
-        private const int WalletRecoveryAccountsCount = 1;
-
         /// <summary>Quantity of accounts created in a wallet file when a wallet is created.</summary>
         private const int WalletCreationAccountsCount = 1;
 
         /// <summary>File extension for wallet files.</summary>
         private const string WalletFileExtension = "wallet.json";
-
-        /// <summary>Timer for saving wallet files to the file system.</summary>
-        private const int WalletSavetimeIntervalInMinutes = 5;
-
-        private const string DownloadChainLoop = "WalletManager.DownloadChain";
 
         /// <summary>
         /// A lock object that protects access to the <see cref="Wallet"/>.
@@ -114,9 +104,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </summary>
         protected readonly object lockObject;
         protected readonly object lockProcess;
-
-        /// <summary>Factory for creating background async loop tasks.</summary>
-        private readonly IAsyncProvider asyncProvider;
 
         public WalletCollection Wallets;
 
@@ -129,26 +116,17 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>The chain of headers.</summary>
         protected readonly ChainIndexer ChainIndexer;
 
-        /// <summary>Global application life cycle control - triggers when application shuts down.</summary>
-        private readonly INodeLifetime nodeLifetime;
-
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
         /// <summary>An object capable of storing <see cref="Wallet"/>s to the file system.</summary>
         private readonly FileStorage<Wallet> fileStorage;
 
-        /// <summary>The broadcast manager.</summary>
-        private readonly IBroadcasterManager broadcasterManager;
-
         /// <summary>Provider of time functions.</summary>
         private readonly IDateTimeProvider dateTimeProvider;
 
         /// <summary>The settings for the wallet feature.</summary>
         private readonly WalletSettings walletSettings;
-
-        /// <summary>The settings for the wallet feature.</summary>
-        private readonly IScriptAddressReader scriptAddressReader;
 
         /// <summary>The private key cache for unlocked wallets.</summary>
         private readonly MemoryCache privateKeyCache;
@@ -170,12 +148,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             WalletSettings walletSettings,
             DataFolder dataFolder,
             IWalletFeePolicy walletFeePolicy,
-            IAsyncProvider asyncProvider,
-            INodeLifetime nodeLifetime,
             IDateTimeProvider dateTimeProvider,
-            IScriptAddressReader scriptAddressReader,
-            IWalletRepository walletRepository,
-            IBroadcasterManager broadcasterManager = null) // no need to know about transactions the node will broadcast to.
+            IWalletRepository walletRepository) // no need to know about transactions the node will broadcast to.
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(network, nameof(network));
@@ -183,9 +157,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             Guard.NotNull(walletSettings, nameof(walletSettings));
             Guard.NotNull(dataFolder, nameof(dataFolder));
             Guard.NotNull(walletFeePolicy, nameof(walletFeePolicy));
-            Guard.NotNull(asyncProvider, nameof(asyncProvider));
-            Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
-            Guard.NotNull(scriptAddressReader, nameof(scriptAddressReader));
             Guard.NotNull(walletRepository, nameof(walletRepository));
 
             this.Wallets = new WalletCollection(this);
@@ -198,11 +169,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.network = network;
             this.coinType = (CoinType)network.Consensus.CoinType;
             this.ChainIndexer = chainIndexer;
-            this.asyncProvider = asyncProvider;
-            this.nodeLifetime = nodeLifetime;
             this.fileStorage = new FileStorage<Wallet>(dataFolder.WalletPath);
-            this.broadcasterManager = broadcasterManager;
-            this.scriptAddressReader = scriptAddressReader;
             this.dateTimeProvider = dateTimeProvider;
             this.WalletRepository = walletRepository;
             this.ExcludeTransactionsFromWalletImports = true;
@@ -919,7 +886,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         protected AccountHistory GetHistoryForAccount(HdAccount account, long? prevOutputTxTime = null, int? prevOutputIndex = null, int take = int.MaxValue, string searchQuery = null)
         {
             Guard.NotNull(account, nameof(account));
-            FlatHistory[] items;
+            var items = Enumerable.Empty<FlatHistory>();
 
             lock (this.lockObject)
             {
@@ -930,7 +897,11 @@ namespace Stratis.Bitcoin.Features.Wallet
                 if (account.IsNormalAccount())
                 {
                     if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
-                        items = query.SelectMany(s => s.Transactions.Where(t => (t.IsColdCoinStake == null || t.IsColdCoinStake == false) && t.Id == parsedTxId).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    {
+                        (TransactionData transactionData, HdAddress address) = this.WalletRepository.GetTransactionById(account.AccountRoot.Wallet.Name, parsedTxId);
+                        if (transactionData != null)
+                            items = new[] { new FlatHistory() { Address = address, Transaction = transactionData } };
+                    }
                     else
                         items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
                 }

@@ -357,6 +357,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <returns>The Transaction Count</returns>
         int GetTransactionCount(string walletName, string accountName = null);
 
+        /// <summary>
+        /// Returns a transaction and address based on it's id.
+        /// </summary>
+        /// <param name="walletName">The wallet to query</param>
+        /// <param name="transactionId">The id of the transaction to find.</param>
+        /// <returns>The requested transaction as well as the address it relates to.</returns>
+        (TransactionData, HdAddress) GetTransactionById(string walletName, uint256 transactionId);
+
         Func<string, string> Bech32AddressFunc { get; set; }
     }
 }

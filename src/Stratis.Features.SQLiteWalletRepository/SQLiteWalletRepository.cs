@@ -583,7 +583,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 throw;
             }
-            finally 
+            finally
             {
                 walletContainer.WriteLockRelease();
             }
@@ -1485,8 +1485,6 @@ namespace Stratis.Features.SQLiteWalletRepository
             WalletContainer walletContainer = this.GetWalletContainer(walletName);
             (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var accounts = new List<HDAccount>();
-
             foreach (HDAccount account in conn.GetAccounts(wallet.WalletId, accountName))
             {
                 var history = new List<FlatHistory>();
@@ -1723,6 +1721,14 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 yield return addressBase58s;
             }
+        }
+
+        /// <inheritdoc />
+        public (TransactionData, HdAddress) GetTransactionById(string walletName, uint256 transactionId)
+        {
+            WalletContainer walletContainer = this.GetWalletContainer(walletName);
+            var hdTransactionData = HDTransactionData.GetTransactionById(walletContainer.Conn, transactionId.ToString()).FirstOrDefault();
+            return (this.ToTransactionData(hdTransactionData, null), new HdAddress() { Address = hdTransactionData.Address, AddressType = hdTransactionData.AddressType });
         }
     }
 }
