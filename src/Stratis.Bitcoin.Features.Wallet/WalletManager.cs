@@ -149,7 +149,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             DataFolder dataFolder,
             IWalletFeePolicy walletFeePolicy,
             IDateTimeProvider dateTimeProvider,
-            IWalletRepository walletRepository) // no need to know about transactions the node will broadcast to.
+            IWalletRepository walletRepository)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(network, nameof(network));
