@@ -47,22 +47,19 @@ public class FruitVendor : SmartContract, IStandardToken
         public void ContractAssemblyLoaderIsForwardCompatibleWithSmartContractAndStandardsUpdates()
         {
             // Create the byte code of a contract that contains new data types that are not (normally) supported by the current node.
-            string smartContracts130Path = SmartContractLoadContext.GetExactAssembly(new AssemblyName("Stratis.SmartContracts, Version=1.3.0.0"), out _);
-            AssemblyLoadContext smartContracts130Ctx = new AssemblyLoadContext(nameof(smartContracts130Ctx));
-            Assembly smartContracts130 = smartContracts130Ctx.LoadFromAssemblyPath(smartContracts130Path);
+            string smartContractsStandards141Path = SmartContractLoadContext.GetExactAssembly(new AssemblyName("Stratis.SmartContracts.Standards, Version=1.4.1.0"), out _);
 
-            string smartContractsStandards130Path = SmartContractLoadContext.GetExactAssembly(new AssemblyName("Stratis.SmartContracts.Standards, Version=1.3.0.0"), out _);
-            AssemblyLoadContext smartContractsStandards130Ctx = new AssemblyLoadContext(nameof(smartContractsStandards130Ctx));
-            Assembly smartContractsStandards130 = smartContractsStandards130Ctx.LoadFromAssemblyPath(smartContractsStandards130Path);
+            AssemblyLoadContext smartContractsStandards141Ctx = new AssemblyLoadContext(nameof(smartContractsStandards141Ctx));
+            Assembly smartContractsStandards141 = smartContractsStandards141Ctx.LoadFromAssemblyPath(smartContractsStandards141Path);
 
             Assembly Runtime = Assembly.Load("System.Runtime");
             Assembly Core = typeof(object).Assembly;
             HashSet<Assembly> allowedAssemblies = new HashSet<Assembly> {
                 Runtime,
                 Core,
-                smartContracts130,
+                typeof(SmartContract).Assembly,
                 typeof(Enumerable).Assembly,
-                smartContractsStandards130
+                smartContractsStandards141
             };
 
             ContractCompilationResult result = ContractCompiler.Compile(this.testContract, allowedAssemblies: allowedAssemblies);
