@@ -13,6 +13,7 @@ namespace Stratis.SmartContracts.CLR.Loader
 {
     public class SmartContractLoadContext : AssemblyLoadContext
     {
+        private static bool allowDownloads = false;
         private readonly ILogger logger;
         private readonly AssemblyLoadContext defaultContext;
         private static Dictionary<string, byte[]> cache = new Dictionary<string, byte[]>();
@@ -43,16 +44,20 @@ namespace Stratis.SmartContracts.CLR.Loader
 
                     string downloadLink = $"https://www.nuget.org/api/v2/package/{assemblyName.Name.ToLower()}/{version}";
 
+                    errorMessage = $"Could not find '{downloadFile}'. Get the file from '{downloadLink}' and copy it to this location.";
+                    if (!allowDownloads)
+                        return null;
+
                     try
                     {
                         using (var client = new WebClient())
                         {
                             client.DownloadFile(downloadLink, downloadFile);
+                            errorMessage = null;
                         }
                     }
                     catch (Exception)
                     {
-                        errorMessage = $"Could not find '{downloadFile}'. Get the file from '{downloadLink}' and copy it to this location.";
                         return null;
                     }
                 }
