@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -80,7 +81,7 @@ namespace Stratis.SmartContracts.CLR.Loader
                         this.logger.LogWarning(error);
                         return this.defaultContext.LoadFromAssemblyName(assemblyName);
                     }
-
+                    
                     bytes = File.ReadAllBytes(exactAssembly);
                     cache[assemblyName.FullName] = bytes;
                 }
@@ -90,11 +91,48 @@ namespace Stratis.SmartContracts.CLR.Loader
 
                 using (var stream = new MemoryStream(bytes))
                 {
-                    return this.LoadFromStream(stream);
+                    Assembly assembly = this.LoadFromStream(stream);
+                    if (!ValidateStandardsAssembly(assembly, out string error))
+                    {
+                        if (this.logger == null)
+                            throw new Exception(error);
+
+                        this.logger.LogWarning(error);
+
+                        return null;
+                    }
+                    return assembly;
                 }
             }
 
             return this.defaultContext.LoadFromAssemblyName(assemblyName);
+        }
+
+        private bool ValidateStandardsAssembly(Assembly assembly, out string error)
+        {
+            Assembly Runtime = Assembly.Load("System.Runtime");
+            Assembly Core = typeof(object).Assembly;
+
+            HashSet<string> AllowedAssemblies = new HashSet<string> {
+                Runtime.GetName().Name,
+                Core.GetName().Name,
+                typeof(SmartContract).Assembly.GetName().Name,
+            };
+
+            if (assembly.Modules.Count() != 1)
+                error = "The assembly was expected to contain only one module.";
+            else if (assembly.DefinedTypes.Count() != 1 || assembly.DefinedTypes.First().Name != "IStandardToken" || !assembly.DefinedTypes.First().IsInterface)
+                error = "The assembly was expected to only contain the IStandardToken interface.";
+            else if (assembly.GetReferencedAssemblies().Any(a => !AllowedAssemblies.Contains(a.Name)))
+                error = "The assembly references assemblies that are not in the allowed list.";
+            else
+            {
+                error = "";
+
+                return true;
+            }
+
+            return false;
         }
     }
 
