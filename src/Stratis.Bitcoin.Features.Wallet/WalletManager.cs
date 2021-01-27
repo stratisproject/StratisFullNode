@@ -898,9 +898,10 @@ namespace Stratis.Bitcoin.Features.Wallet
                 {
                     if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
                     {
-                        (TransactionData transactionData, HdAddress address) = this.WalletRepository.GetTransactionById(account.AccountRoot.Wallet.Name, parsedTxId);
-                        if (transactionData != null && (transactionData.IsColdCoinStake == null || transactionData.IsColdCoinStake == false))
-                            items = new[] { new FlatHistory() { Address = address, Transaction = transactionData } };
+                        (IEnumerable<TransactionData> transactionData, HdAddress address) = this.WalletRepository.GetTransactionById(account.AccountRoot.Wallet.Name, parsedTxId);
+                        var addressResult = query.Where(a => a.Address == address.Address);
+                        var result = transactionData.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false);
+                        items = result.Select(t => new FlatHistory { Address = address, Transaction = t });
                     }
                     else
                         items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
