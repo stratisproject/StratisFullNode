@@ -29,6 +29,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
     <PackageReference Include="Microsoft.FASTER" Version="2020.2.1.1" />
     <PackageReference Include="RocksDB" Version="6.15.4.15287" />
+    <PackageReference Include="RocksDbNative" Version="6.2.2" />
   </ItemGroup>
 
   <ItemGroup>

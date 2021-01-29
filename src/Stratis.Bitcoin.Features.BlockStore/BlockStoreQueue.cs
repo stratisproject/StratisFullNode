@@ -13,7 +13,6 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
-using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.BlockStore
 {
@@ -451,18 +450,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
             return newTip;
         }
 
-        [NoTrace]
-        private void AddComponentStats(StringBuilder log)
-        {
-            if (this.storeTip != null)
-            {
-                log.AppendLine();
-                log.AppendLine("======BlockStore======");
-                log.AppendLine($"Batch Size: {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched blocks)");
-                log.AppendLine($"Queue Size: {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued blocks)");
-            }
-        }
-
         /// <inheritdoc />
         public void AddToPending(ChainedHeaderBlock chainedHeaderBlock)
         {
@@ -694,6 +681,17 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             this.SetStoreTip(expectedStoreTip);
             this.logger.LogDebug("Store tip rewound to '{0}'.", this.storeTip);
+        }
+
+        private void AddComponentStats(StringBuilder log)
+        {
+            if (this.storeTip != null)
+            {
+                log.AppendLine("======BlockStore======");
+                log.AppendLine($"Batch Size: {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched blocks)");
+                log.AppendLine($"Queue Size: {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued blocks)");
+                log.AppendLine();
+            }
         }
 
         /// <inheritdoc />
