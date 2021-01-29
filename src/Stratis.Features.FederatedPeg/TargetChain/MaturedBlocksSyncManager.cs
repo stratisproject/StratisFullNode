@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Features.SmartContracts.Interop;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
+using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
@@ -31,6 +33,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederationGatewayClient federationGatewayClient;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
+        private readonly IConversionRequestRepository conversionRequestRepository;
 
         private IAsyncLoop requestDepositsTask;
 
@@ -41,12 +44,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
         private const int InitializationDelaySeconds = 10;
 
-        public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, INodeLifetime nodeLifetime)
+        public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient,
+            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository)
         {
             this.asyncProvider = asyncProvider;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
             this.nodeLifetime = nodeLifetime;
+            this.conversionRequestRepository = conversionRequestRepository;
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -107,11 +112,28 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            // Log what we've received.
+            // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDepositsResult.Value)
             {
-                // Order transactions in block deterministically
-                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+                foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d => d.RetrievalType == DepositRetrievalType.Conversion))
+                {
+                    this.logger.Debug("Conversion transaction: " + conversionTransaction.ToString());
+
+                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) == null)
+                    {
+                        this.conversionRequestRepository.Save(new ConversionRequest()
+                        {
+                            RequestId = conversionTransaction.Id.ToString(),
+                            RequestType = (int)ConversionRequestType.Mint,
+                            Processed = false,
+                            RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                            Amount = conversionTransaction.Amount
+                        });
+                    }
+                }
+
+                // Order all other transactions in the block deterministically.
+                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.Where(d => d.RetrievalType != DepositRetrievalType.Conversion).OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {

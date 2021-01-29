@@ -442,13 +442,19 @@ namespace NBitcoin
 
         public IFederations Federations { get; protected set; }
 
-        /// <summary> This is used for reward distribution transactions. </summary>
+        /// <summary>
+        /// This is used for reward distribution transactions.
+        /// </summary>
         public string CirrusRewardDummyAddress { get; protected set; }
 
-        /// <summary>The height at which reward batching will be activated.</summary>
+        /// <summary>
+        /// The height at which reward batching will be activated.
+        /// </summary>
         public int RewardClaimerBatchActivationHeight { get; set; }
 
-        /// <summary>Rewards will be claimed every N blocks, as defined here.</summary>
+        /// <summary>
+        /// Rewards will be claimed every N blocks, as defined here.
+        /// </summary>
         public int RewardClaimerBlockInterval { get; set; }
 
         /// <summary>

@@ -72,14 +72,25 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!depositsToMultisig.Any())
                 return null;
 
+            // Check the common case first.
+            bool conversionTransaction = false;
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
-                return null;
+            {
+                if (!this.opReturnDataReader.TryGetTargetEthereumAddress(transaction, out targetAddress))
+                {
+                    return null;
+                }
+                
+                conversionTransaction = true;
+            }
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
             if (targetAddress == this.network.CirrusRewardDummyAddress)
                 depositRetrievalType = DepositRetrievalType.Distribution;
+            else if (conversionTransaction)
+                depositRetrievalType = DepositRetrievalType.Conversion;
             else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                 depositRetrievalType = DepositRetrievalType.Large;
             else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
