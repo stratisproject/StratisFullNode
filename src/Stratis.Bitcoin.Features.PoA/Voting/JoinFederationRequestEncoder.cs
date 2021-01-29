@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 using DBreeze.Utils;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Features.PoA;
 
 namespace Stratis.Bitcoin.PoA.Features.Voting
@@ -13,9 +13,9 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
         private readonly ILogger logger;
 
-        public JoinFederationRequestEncoder(ILoggerFactory loggerFactory)
+        public JoinFederationRequestEncoder()
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <summary>Encodes voting request data.</summary>
@@ -46,7 +46,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
                     deserializeStream.ReadWrite(ref prefix);
 
                     // It's not a voting request if the prefix does not match.
-                    if (!prefix._ByteArrayEquals(VotingRequestOutputPrefixBytes))                       
+                    if (!prefix._ByteArrayEquals(VotingRequestOutputPrefixBytes))
                         return null;
 
                     var decoded = new JoinFederationRequest();
@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
 
                     if (deserializeStream.ProcessedBytes != votingRequestDataBytes.Length)
                     {
-                        this.logger.LogTrace("(-)[INVALID_SIZE]");
+                        this.logger.Trace("(-)[INVALID_SIZE]");
                         PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                     }
 
@@ -64,8 +64,8 @@ namespace Stratis.Bitcoin.PoA.Features.Voting
             }
             catch (Exception e)
             {
-                this.logger.LogDebug("Exception during deserialization: '{0}'.", e.ToString());
-                this.logger.LogTrace("(-)[DESERIALIZING_EXCEPTION]");
+                this.logger.Debug("Exception during deserialization: '{0}'.", e.ToString());
+                this.logger.Trace("(-)[DESERIALIZING_EXCEPTION]");
 
                 PoAConsensusErrors.VotingRequestInvalidFormat.Throw();
                 return null;

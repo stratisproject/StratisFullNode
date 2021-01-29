@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             testRulesContext.ChainIndexer = new ChainIndexer(network);
             testRulesContext.ChainState = new ChainState();
             testRulesContext.Signals = new Signals.Signals(testRulesContext.LoggerFactory, null);
-            testRulesContext.AsyncProvider = new AsyncProvider(testRulesContext.LoggerFactory, testRulesContext.Signals, new NodeLifetime());
+            testRulesContext.AsyncProvider = new AsyncProvider(testRulesContext.LoggerFactory, testRulesContext.Signals);
 
             var deployments = new NodeDeployments(testRulesContext.Network, testRulesContext.ChainIndexer);
             testRulesContext.ConsensusRuleEngine = new PowConsensusRuleEngine(testRulesContext.Network, testRulesContext.LoggerFactory, testRulesContext.DateTimeProvider,

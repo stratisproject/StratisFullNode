@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Features.Collateral.CounterChain;
@@ -28,19 +27,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <param name="network">Network we are running on.</param>
         /// <param name="federatedPegSettings">Federation settings providing access to number of signatures required.</param>
         /// <param name="mempoolManager">Mempool which provides information about transactions in the mempool.</param>
-        /// <param name="loggerFactory">Logger factory.</param>
         /// <param name="counterChainNetworkWrapper">Counter chain network.</param>
-        /// 
         public WithdrawalHistoryProvider(
             Network network,
             IFederatedPegSettings federatedPegSettings,
             MempoolManager mempoolManager,
-            ILoggerFactory loggerFactory,
             CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             this.network = network;
             this.federatedPegSettings = federatedPegSettings;
-            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, new OpReturnDataReader(loggerFactory, counterChainNetworkWrapper), network);
+            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, new OpReturnDataReader(counterChainNetworkWrapper), network);
             this.mempoolManager = mempoolManager;
         }
 
@@ -58,6 +54,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 if (maximumEntriesToReturn-- <= 0)
                     break;
+
                 // Extract the withdrawal details from the recorded "PartialTransaction".
                 IWithdrawal withdrawal = this.withdrawalExtractor.ExtractWithdrawalFromTransaction(transfer.PartialTransaction, transfer.BlockHash, (int)transfer.BlockHeight);
                 var model = new WithdrawalModel(this.network, withdrawal, transfer);
@@ -89,7 +86,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
                         break;
                     case CrossChainTransferStatus.Partial:
-                        status += " (" + transfer.GetSignatureCount(this.network) + "/" + this.federatedPegSettings.MultiSigM + ")";
+                        model.SignatureCount = transfer.GetSignatureCount(this.network);
+                        status += " (" + model.SignatureCount + "/" + this.federatedPegSettings.MultiSigM + ")";
                         model.SpendingOutputDetails = this.GetSpendingInfo(transfer.PartialTransaction);
                         break;
                 }

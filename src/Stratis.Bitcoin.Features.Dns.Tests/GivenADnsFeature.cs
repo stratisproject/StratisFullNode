@@ -292,7 +292,7 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
             this.defaultConstructorParameters.nodeLifetime.Setup(n => n.StopApplication()).Callback(() => source.Cancel());
             this.defaultConstructorParameters.nodeLifetime.Setup(n => n.ApplicationStopping).Returns(source.Token);
 
-            this.defaultConstructorParameters.asyncProvider = new AsyncProvider(this.defaultConstructorParameters.loggerFactory.Object, this.defaultConstructorParameters.signals, this.defaultConstructorParameters.nodeLifetime.Object);
+            this.defaultConstructorParameters.asyncProvider = new AsyncProvider(this.defaultConstructorParameters.loggerFactory.Object, this.defaultConstructorParameters.signals);
 
             using (var feature = this.BuildDefaultDnsFeature())
             {

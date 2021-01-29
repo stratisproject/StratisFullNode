@@ -62,7 +62,7 @@ namespace NBitcoin.Policy
             this.CheckScriptPubKey = true;
         }
 
-        public TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins)
+        public TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins, int blockHeight = -1, uint256 blockHash = null)
         {
             if (transaction == null)
                 throw new ArgumentNullException("transaction");
@@ -78,7 +78,9 @@ namespace NBitcoin.Policy
                 {
                     if (this.ScriptVerify != null)
                     {
-                        if (!input.VerifyScript(this.Network, coin.TxOut.ScriptPubKey, coin.TxOut.Value, this.ScriptVerify.Value, out ScriptError error))
+                        var script = (blockHeight < 0) ? coin.TxOut.ScriptPubKey : new ScriptAtHeight(coin.TxOut.ScriptPubKey, blockHeight, blockHash);
+
+                        if (!input.VerifyScript(this.Network, script, coin.TxOut.Value, this.ScriptVerify.Value, out ScriptError error))
                         {
                             errors.Add(new ScriptPolicyError(input, error, this.ScriptVerify.Value, coin.TxOut.ScriptPubKey));
                         }

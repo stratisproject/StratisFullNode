@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             this.Network.Consensus.Options = new ConsensusOptions();
 
             this.signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             // Dont check PoW of a header in this test.
             this.Network.Consensus.ConsensusRules.HeaderValidationRules.RemoveAll(x => x.GetType() == typeof(CheckDifficultyPowRule));
@@ -352,7 +352,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             var networkPeer = new Mock<INetworkPeer>();
 
             var signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             var connection = new NetworkPeerConnection(this.Network, networkPeer.Object, new TcpClient(), 0, (message, token) => Task.CompletedTask,
             this.dateTimeProvider, this.loggerFactory, new PayloadProvider().DiscoverPayloads(), asyncProvider);

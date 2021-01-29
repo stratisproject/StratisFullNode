@@ -239,7 +239,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler);
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, new Mock<ISignals>().Object);
 
             this.coldStakingManager.Start();
         }

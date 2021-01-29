@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -148,7 +148,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -169,7 +169,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act

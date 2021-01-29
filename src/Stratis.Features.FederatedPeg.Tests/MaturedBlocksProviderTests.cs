@@ -91,7 +91,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(0);
 
@@ -139,7 +139,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             int nextMaturedBlockHeight = 1;
             for (int i = 1; i < this.blocks.Count; i++)
@@ -200,7 +200,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
 
@@ -254,7 +254,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
 
@@ -310,7 +310,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -367,7 +367,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -424,7 +424,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -486,7 +486,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -549,7 +549,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, this.loggerFactory);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 

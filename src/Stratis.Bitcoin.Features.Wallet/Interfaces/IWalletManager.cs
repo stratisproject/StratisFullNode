@@ -156,7 +156,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="extPubKey">The extended public key.</param>
         /// <param name="accountIndex">The account number.</param>
         /// <param name="creationTime">The date and time this wallet was created.</param>
-        /// <returns></returns>
+        /// <returns>The recovered wallet.</returns>
         Wallet RecoverWallet(string name, ExtPubKey extPubKey, int accountIndex, DateTime creationTime, ChainedHeader lastBlockSynced = null);
 
         /// <summary>
@@ -244,8 +244,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// </summary>
         /// <param name="walletName">The wallet name.</param>
         /// <param name="accountName">The account name.</param>
+        /// <param name="searchQuery">For now this can only be a transaction Id.</param>
         /// <returns>Collection of address history and transaction pairs.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null);
+        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null);
 
         /// <summary>
         /// Gets the history of transactions contained in an account.
@@ -256,8 +257,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="prevOutputTxTime">Previous OutputTxTime, used for pagination</param>
         /// <param name="prevOutputIndex">Previous prevOutputIndex, used for pagination</param>
         /// <param name="take">Number of records to Take</param>
+        /// <param name="searchQuery">For now this can only be a transaction Id.</param>
         /// <returns>Collection of address history and transaction pairs.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, long? prevOutputTxTime = null, int? prevOutputIndex = null, int? take = int.MaxValue);
+        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, long? prevOutputTxTime = null, int? prevOutputIndex = null, int? take = int.MaxValue, string searchQuery = null);
 
         /// <summary>
         /// Gets the history of the transactions in addresses contained in this account.

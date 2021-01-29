@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Utilities;
@@ -23,13 +23,13 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
         protected readonly ILogger logger;
 
-        public CollateralVotingController(IFederationManager fedManager, ILoggerFactory loggerFactory, VotingManager votingManager, Network network)
+        public CollateralVotingController(IFederationManager fedManager, VotingManager votingManager, Network network)
         {
             this.fedManager = fedManager;
             this.votingManager = votingManager;
             this.network = network;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <response code="400">Not yet implemented</response>
@@ -38,7 +38,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult VoteKickFedMember([FromBody]CollateralFederationMemberModel request)
+        public IActionResult VoteKickFedMember([FromBody] CollateralFederationMemberModel request)
         {
             return this.VoteAddKickFedMember(request, false);
         }
@@ -74,7 +74,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             }
             catch (Exception e)
             {
-                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                this.logger.Error("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a command.", e.ToString());
             }
         }

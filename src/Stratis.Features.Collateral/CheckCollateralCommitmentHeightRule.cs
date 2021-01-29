@@ -25,7 +25,7 @@ namespace Stratis.Features.Collateral
             if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.Parent.Network as PoANetwork).CollateralCommitmentActivationHeight)
                 return Task.CompletedTask;
 
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(this.Logger);
+            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
 
             (int? commitmentHeight, _) = commitmentHeightEncoder.DecodeCommitmentHeight(context.ValidationContext.BlockToValidate.Transactions.First());
             if (commitmentHeight == null)

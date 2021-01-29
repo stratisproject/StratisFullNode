@@ -86,13 +86,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Controllers
             List<FlatHistory> flat = addresses.SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
 
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-            this.walletManager.Setup(w => w.GetHistory(walletName, It.IsAny<string>())).Returns(accountsHistory);
+            this.walletManager.Setup(w => w.GetHistory(walletName, It.IsAny<string>(), null)).Returns(accountsHistory);
             this.walletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
             this.walletManager.Setup(w => w.GetAccounts(walletName)).Returns(new List<HdAccount> { account });
 
             var receipt = new Receipt(null, 12345, new Log[0], null, null, null, uint160.Zero, true, null, null, 2, 100000);
             this.receiptRepository.Setup(x => x.RetrieveMany(It.IsAny<IList<uint256>>()))
-                .Returns(new List<Receipt> {receipt});
+                .Returns(new List<Receipt> { receipt });
             this.callDataSerializer.Setup(x => x.Deserialize(It.IsAny<byte[]>()))
                 .Returns(Result.Ok(new ContractTxData(0, 0, (Stratis.SmartContracts.RuntimeObserver.Gas)0, new uint160(0), null, null)));
 
@@ -151,12 +151,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Controllers
 
             for (int i = 0; i < totalHistoryLength; i++)
             {
-                TransactionData createTransaction = WalletTestsHelpers.CreateTransaction(new uint256((ulong) i), new Money(500000), 100 + i);
+                TransactionData createTransaction = WalletTestsHelpers.CreateTransaction(new uint256((ulong)i), new Money(500000), 100 + i);
                 createTransaction.SpendingDetails = new SpendingDetails
                 {
                     BlockHeight = 100 + i,
                     CreationTime = DateTimeOffset.Now,
-                    TransactionId = new uint256((ulong) i),
+                    TransactionId = new uint256((ulong)i),
                     Payments = new List<PaymentDetails>
                     {
                         new PaymentDetails
@@ -180,7 +180,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Controllers
             List<FlatHistory> flat = addresses.SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
 
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-            this.walletManager.Setup(w => w.GetHistory(walletName, It.IsAny<string>())).Returns(accountsHistory);
+            this.walletManager.Setup(w => w.GetHistory(walletName, It.IsAny<string>(), null)).Returns(accountsHistory);
             this.walletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
             this.walletManager.Setup(w => w.GetAccounts(walletName)).Returns(new List<HdAccount> { account });
 

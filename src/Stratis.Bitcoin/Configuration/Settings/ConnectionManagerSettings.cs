@@ -170,6 +170,8 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
             this.Agent = string.IsNullOrEmpty(agentPrefix) ? nodeSettings.Agent : $"{agentPrefix}-{nodeSettings.Agent}";
             this.logger.LogDebug("Agent set to '{0}'.", this.Agent);
+
+            this.DisableAddNodePeerConnector = config.GetOrDefault("disableaddnodeconnector", false, this.logger);
         }
 
         public void AddAddNode(IPEndPoint addNode)
@@ -331,5 +333,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
 
         /// <summary>List of white listed IP endpoint. The node will flags peers that connects to the node, or that the node connects to, as whitelisted.</summary>
         public List<IPEndPoint> Whitelist { get; set; }
+
+        public bool DisableAddNodePeerConnector { get; set; }
     }
 }

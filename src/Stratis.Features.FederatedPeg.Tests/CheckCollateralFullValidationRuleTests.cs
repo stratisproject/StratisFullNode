@@ -63,7 +63,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(votingData.ToArray()));
             block.Transactions[0].AddOutput(Money.Zero, votingOutputScript);
 
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder(logger);
+            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
             byte[] encodedHeight = commitmentHeightEncoder.EncodeCommitmentHeight(1000);
             var commitmentHeightData = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedHeight));
             block.Transactions[0].AddOutput(Money.Zero, commitmentHeightData);

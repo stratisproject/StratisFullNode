@@ -61,7 +61,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             ISignals signals = new Signals(loggerFactory, new DefaultSubscriptionErrorHandler(loggerFactory));
             var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
-            var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
+            var asyncProvider = new AsyncProvider(loggerFactory, signals);
             var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
 
@@ -79,7 +79,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             federationManager.Initialize();
 
-            this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
+            this.collateralChecker = new CollateralChecker(clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
         }
 
         [Fact]

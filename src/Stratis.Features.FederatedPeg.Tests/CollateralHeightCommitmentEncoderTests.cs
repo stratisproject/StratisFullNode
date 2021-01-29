@@ -17,7 +17,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         public CollateralHeightCommitmentEncoderTests()
         {
             ILogger logger = new Mock<ILogger>().Object;
-            this.encoder = new CollateralHeightCommitmentEncoder(logger);
+            this.encoder = new CollateralHeightCommitmentEncoder();
             this.r = new Random();
         }
 

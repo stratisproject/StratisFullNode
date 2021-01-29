@@ -65,7 +65,7 @@ namespace NBitcoin.Policy
 
         #region ITransactionPolicy Members
 
-        public TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins)
+        public TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins, int blockHeight = -1, uint256 blockHash = null)
         {
             spentCoins = spentCoins ?? new ICoin[0];
             var errors = new List<TransactionPolicyError>();

@@ -25,7 +25,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.federationWalletManager,
                 broadcasterManager.Object,
                 this.federatedPegSettings,
-                this.loggerFactory,
                 this.signals,
                 this.asyncProvider,
                 this.network);
@@ -47,7 +46,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.federationWalletManager,
                 broadcasterManager.Object,
                 this.federatedPegSettings,
-                this.loggerFactory,
                 this.signals,
                 this.asyncProvider,
                 this.network);

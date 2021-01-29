@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using NLog;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
@@ -18,12 +18,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         public FederatedPegBroadcaster(
             IConnectionManager connectionManager,
-            IFederatedPegSettings federatedPegSettings,
-            ILoggerFactory loggerFactory = null)
+            IFederatedPegSettings federatedPegSettings)
         {
             this.connectionManager = connectionManager;
             this.federatedPegSettings = federatedPegSettings;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -42,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
                 catch (Exception ex)
                 {
-                    this.logger.LogError($"Error sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}:{ex.ToString()}");
+                    this.logger.Error($"Error sending {payload.GetType().Name} to {peer.PeerEndPoint.Address}:{ex.ToString()}");
                 }
             });
         }

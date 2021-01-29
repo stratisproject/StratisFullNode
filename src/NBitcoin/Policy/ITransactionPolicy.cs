@@ -262,6 +262,6 @@ namespace NBitcoin.Policy
         /// <param name="transaction">The transaction</param>
         /// <param name="spentCoins">The previous coins</param>
         /// <returns>Policy errors</returns>
-        TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins);
+        TransactionPolicyError[] Check(Transaction transaction, ICoin[] spentCoins, int blockHeight = -1, uint256 blockHash = null);
     }
 }

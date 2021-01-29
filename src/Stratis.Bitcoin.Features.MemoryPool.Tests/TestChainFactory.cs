@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var chainState = new ChainState();
             var deployments = new NodeDeployments(network, chain);
 
-            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object);
 
             var stakeChain = new StakeChainStore(network, chain, null, loggerFactory);
             ConsensusRuleEngine consensusRules = new PosConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
@@ -227,7 +227,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var chain = new ChainIndexer(network);
             var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chain.Tip));
 
-            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object);
 
             var chainState = new ChainState();
             var deployments = new NodeDeployments(network, chain);

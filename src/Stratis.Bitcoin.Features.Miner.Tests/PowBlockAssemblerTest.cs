@@ -396,7 +396,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 consensusRulesContainer.FullValidationRules.Add(rule);
             }
 
-            var asyncProvider = new AsyncProvider(this.LoggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(this.LoggerFactory.Object, new Mock<ISignals>().Object);
 
             var powConsensusRules = new PowConsensusRuleEngine(this.testNet,
                     this.LoggerFactory.Object, this.dateTimeProvider.Object, chainIndexer,

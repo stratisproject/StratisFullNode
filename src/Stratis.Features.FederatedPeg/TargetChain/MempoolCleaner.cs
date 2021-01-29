@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Utilities;
@@ -44,21 +44,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private IAsyncLoop asyncLoop;
 
         public MempoolCleaner(
-            ILoggerFactory loggerFactory,
             MempoolOrphans mempoolOrphans,
             ICrossChainTransferStore crossChainTransferStore,
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
             IFederationWalletManager federationWalletManager)
         {
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.mempoolOrphans = Guard.NotNull(mempoolOrphans, nameof(mempoolOrphans));
             this.store = Guard.NotNull(crossChainTransferStore, nameof(crossChainTransferStore));
             this.asyncProvider = Guard.NotNull(asyncProvider, nameof(asyncProvider));
             this.nodeLifetime = Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
             this.federationWalletManager = Guard.NotNull(federationWalletManager, nameof(federationWalletManager));
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         private IEnumerable<Transaction> CompletedTransactions(IEnumerable<Transaction> transactionsToCheck)
@@ -128,14 +126,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 this.mempoolOrphans.RemoveForBlock(transactionsToRemove);
 
-                this.logger.LogDebug("Removed {0} transactions from mempool", transactionsToRemove.Count);
+                this.logger.Debug("Removed {0} transactions from mempool", transactionsToRemove.Count);
             }
         }
 
         /// <inheritdoc />
         public void Start()
         {
-            this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(MempoolCleaner), async token => {
+            this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(MempoolCleaner), async token =>
+            {
                 await this.CleanMempoolAsync().ConfigureAwait(false);
             },
             this.nodeLifetime.ApplicationStopping,
