@@ -1,11 +1,20 @@
 {
   "profiles": {
     "Stratis.StraxD": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-txindex=1 -addnode=172.16.64.117 -apiurl=http://0.0.0.0"
+    },
+    "Stratis.StraxD Alternate Datadir": {
+      "commandName": "Project",
+      "commandLineArgs": "-connect=0 -txindex=1 -datadir=c:/StraxMain"
     },
     "Stratis.StraxD Test": {
       "commandName": "Project",
-      "commandLineArgs": "-testnet"
+      "commandLineArgs": "-testnet -addressindex=1 -connect=172.16.64.122"
+    },
+    "Stratis.StraxD Test Alternate Datadir": {
+      "commandName": "Project",
+      "commandLineArgs": "-testnet -addressindex=1 -connect=172.16.64.122 -datadir=c:/Strax"
     },
     "Stratis.StraxD Test with Default wallet": {
       "commandName": "Project",
@@ -13,7 +22,7 @@
     },
     "Stratis.StraxD Test with RPC": {
       "commandName": "Project",
-      "commandLineArgs": "-testnet -server -rpcpassword=rpcpassword -rpcuser=rpcuser"
+      "commandLineArgs": "-testnet -server -rpcpassword=rpcpassword -rpcuser=rpcuser -rpcallowip=127.0.0.1"
     },
     "Stratis.StraxD Test Keepalive 60s": {
       "commandName": "Project",

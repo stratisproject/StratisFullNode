@@ -16,6 +16,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.Interop;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -272,6 +273,10 @@ namespace Stratis.Features.FederatedPeg
                         services.AddSingleton<IPartialTransactionRequester, PartialTransactionRequester>();
                         services.AddSingleton<MempoolCleaner>();
                         services.AddSingleton<IFederationGatewayClient, FederationGatewayClient>();
+
+                        services.AddSingleton<IConversionRequestKeyValueStore, ConversionRequestKeyValueStore>();
+                        services.AddSingleton<IConversionRequestRepository, ConversionRequestRepository>();
+
                         services.AddSingleton<IMaturedBlocksSyncManager, MaturedBlocksSyncManager>();
                         services.AddSingleton<IWithdrawalHistoryProvider, WithdrawalHistoryProvider>();
                         services.AddSingleton<FederatedPegSettings>();

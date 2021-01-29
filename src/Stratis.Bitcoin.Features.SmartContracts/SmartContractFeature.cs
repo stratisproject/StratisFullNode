@@ -162,10 +162,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 {
                     services.AddSingleton<InteropSettings>();
                     services.AddSingleton<IEthereumClientBase, EthereumClientBase>();
-                    services.AddSingleton<IInteropRequestRepository, InteropRequestRepository>();
-                    services.AddSingleton<IInteropRequestKeyValueStore, InteropRequestKeyValueStore>();
-                    services.AddSingleton<IConversionRequestKeyValueStore, ConversionRequestKeyValueStore>();
-                    services.AddSingleton<IConversionRequestRepository, ConversionRequestRepository>();
+                    //services.AddSingleton<IInteropRequestRepository, InteropRequestRepository>();
+                    //services.AddSingleton<IInteropRequestKeyValueStore, InteropRequestKeyValueStore>();
                     services.AddSingleton<IInteropTransactionManager, InteropTransactionManager>();
                     services.AddSingleton<InteropPoller>();
                 });

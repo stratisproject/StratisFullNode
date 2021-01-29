@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
             if (context.SigOpsCost > this.network.Consensus.Options.MaxStandardTxSigopsCost)
             {
                 this.logger.LogTrace("(-)[FAIL_TOO_MANY_SIGOPS]");
-                context.State.Fail(MempoolErrors.TooManySigops).Throw();
+                //context.State.Fail(MempoolErrors.TooManySigops).Throw();
             }
         }
     }

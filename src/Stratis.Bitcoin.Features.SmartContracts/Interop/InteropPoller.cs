@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             IInitialBlockDownloadState initialBlockDownloadState,
             IFederationManager federationManager,
             IFederationHistory federationHistory,
-            IInteropRequestRepository interopRequestRepository,
+            //IInteropRequestRepository interopRequestRepository,
             IBlockStoreQueue blockStoreQueue,
             IKeyValueRepository keyValueRepo,
             IConversionRequestRepository conversionRequestRepository,
@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.federationManager = federationManager;
             this.federationHistory = federationHistory;
-            this.interopRequestRepository = interopRequestRepository;
+            //this.interopRequestRepository = interopRequestRepository;
             this.blockStoreQueue = blockStoreQueue;
             this.keyValueRepo = keyValueRepo;
             this.conversionRequestRepository = conversionRequestRepository;

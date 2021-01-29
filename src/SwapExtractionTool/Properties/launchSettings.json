@@ -2,7 +2,7 @@
   "profiles": {
     "SwapExtractionTool": {
       "commandName": "Project",
-      "commandLineArgs": "-swap"
+      "commandLineArgs": "-collateralvote -testnet"
     }
   }
 }
