@@ -1,0 +1,15 @@
+﻿{
+  "profiles": {
+    "Stratis.CirrusD": {
+      "commandName": "Project"
+    },
+    "Stratis.CirrusD Test": {
+      "commandName": "Project",
+      "commandLineArgs": "-testnet -addressindex=0"
+    },
+    "Stratis.CirrusD RegTest": {
+      "commandName": "Project",
+      "commandLineArgs": "-regtest -addressindex=0"
+    }
+  }
+}
