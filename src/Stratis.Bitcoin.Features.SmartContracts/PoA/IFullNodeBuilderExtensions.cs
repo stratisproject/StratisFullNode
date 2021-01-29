@@ -46,7 +46,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         /// <summary>
         /// Configures the side chain node with the PoA consensus rule engine.
         /// </summary>
-        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType coindbType = DbType.Leveldb)
+        public static IFullNodeBuilder UsePoAConsensus(this IFullNodeBuilder fullNodeBuilder, DbType dbType = DbType.Leveldb)
         {
             LoggingConfiguration.RegisterFeatureNamespace<ConsensusFeature>("consensus");
 
@@ -57,8 +57,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     .DependOn<PoAFeature>()
                     .FeatureServices(services =>
                     {
-                        services.ConfigureCoindbImplementation(coindbType);
-
+                        services.ConfigureCoindbImplementation(dbType);
                         services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
                         services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
                         services.AddSingleton<ICoinView, CachedCoinView>();

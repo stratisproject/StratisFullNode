@@ -6,6 +6,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SignalR;
@@ -57,7 +58,7 @@ namespace Stratis.CirrusD
         {
             IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+                .UseBlockStore(DbType.RocksDb)
                 .UseMempool()
                 .AddSmartContracts(options =>
                 {
@@ -65,7 +66,7 @@ namespace Stratis.CirrusD
                     options.UsePoAWhitelistedContracts();
                 })
                 .AddPoAFeature()
-                .UsePoAConsensus()
+                .UsePoAConsensus(DbType.RocksDb)
                 .CheckCollateralCommitment()
 
                 // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
