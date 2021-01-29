@@ -448,11 +448,6 @@ namespace NBitcoin
         public string CirrusRewardDummyAddress { get; protected set; }
 
         /// <summary>
-        /// This is used for identifying cross chain transfers that need to be processed by the blockchain interoperability subsystem.
-        /// </summary>
-        public string InteroperabilityDummyAddress { get; protected set; }
-
-        /// <summary>
         /// The height at which reward batching will be activated.
         /// </summary>
         public int RewardClaimerBatchActivationHeight { get; set; }

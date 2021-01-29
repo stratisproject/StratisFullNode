@@ -8,6 +8,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         Burn
     }
 
+    public enum ConversionRequestStatus
+    {
+        Unprocessed,
+        Submitted,
+        Processed
+    }
+
     public class ConversionRequest : IBitcoinSerializable
     {
         /// <summary>
@@ -16,6 +23,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         private string requestId;
 
         private int requestType;
+
+        private int requestStatus;
 
         /// <summary>
         /// Either the Ethereum address to send the minted funds to, or the Cirrus address to send funds to.
@@ -37,6 +46,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
         public int RequestType { get { return this.requestType; } set { this.requestType = value; } }
 
+        public int RequestStatus { get { return this.requestStatus; } set { this.requestStatus = value; } }
+
         public string DestinationAddress { get { return this.destinationAddress; } set { this.destinationAddress = value; } }
 
         public ulong Amount { get { return this.amount; } set { this.amount = value; } }
@@ -50,6 +61,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         {
             s.ReadWrite(ref this.requestId);
             s.ReadWrite(ref this.requestType);
+            s.ReadWrite(ref this.requestStatus);
             s.ReadWrite(ref this.destinationAddress);
             s.ReadWrite(ref this.amount);
             s.ReadWrite(ref this.processed);

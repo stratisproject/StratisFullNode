@@ -33,7 +33,6 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             };
 
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
-            this.InteroperabilityDummyAddress = "P9m5PjBxnfL2kP3UY19pgdSQxUPgWFhSE7";
 
             this.StraxMiningMultisigMembers = genesisFederationMembers.Select(m => m.PubKey).ToArray();
 

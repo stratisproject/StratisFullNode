@@ -119,13 +119,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     this.logger.LogDebug("Conversion transaction: " + conversionTransaction.ToString());
 
-                    this.conversionRequestRepository.Save(new ConversionRequest()
+                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) == null)
                     {
-                        RequestId = conversionTransaction.Id.ToString(),
-                        RequestType = (int)ConversionRequestType.Mint,
-                        Processed = false,
-                        Amount = conversionTransaction.Amount
-                    });
+                        this.conversionRequestRepository.Save(new ConversionRequest()
+                        {
+                            RequestId = conversionTransaction.Id.ToString(),
+                            RequestType = (int)ConversionRequestType.Mint,
+                            Processed = false,
+                            RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                            Amount = conversionTransaction.Amount
+                        });
+                    }
                 }
 
                 // Order all other transactions in the block deterministically.

@@ -16,6 +16,7 @@ using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
 using Stratis.Bitcoin.Features.SmartContracts.Interop;
+using Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.Bitcoin.Interfaces;
@@ -159,10 +160,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 IFeatureRegistration feature = fullNodeBuilder.Features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(SmartContractFeature));
                 feature.FeatureServices(services =>
                 {
+                    services.AddSingleton<InteropSettings>();
+                    services.AddSingleton<IEthereumClientBase, EthereumClientBase>();
                     services.AddSingleton<IInteropRequestRepository, InteropRequestRepository>();
                     services.AddSingleton<IInteropRequestKeyValueStore, InteropRequestKeyValueStore>();
                     services.AddSingleton<IConversionRequestKeyValueStore, ConversionRequestKeyValueStore>();
                     services.AddSingleton<IConversionRequestRepository, ConversionRequestRepository>();
+                    services.AddSingleton<IInteropTransactionManager, InteropTransactionManager>();
                     services.AddSingleton<InteropPoller>();
                 });
             });

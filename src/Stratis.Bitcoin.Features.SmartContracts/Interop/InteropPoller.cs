@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient;
 using Stratis.Bitcoin.Features.SmartContracts.Interop.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
@@ -17,13 +20,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 {
     public class InteropPoller : IDisposable
     {
-        public const string InteropKey = "interop";
-        public const string InteropContractAddressesKey = "interopcontractaddress";
-        public const string WrappedStraxContractAddressKey = "wrappedstraxcontractaddress";
-        public const string EthereumClientUrlKey = "ethereumclienturl";
-        public const string EthereumAccountKey = "ethereumaccount";
-        public const string EthereumPassphraseKey = "ethereumpassphrase";
-
         private const string LastScannedHeightKey = "InteropLastScannedHeight";
         private const int InteropBatchSize = 100;
 
@@ -32,6 +28,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         private const string ParameterKeyPrefix = "P";
         private const string ParameterCountMarker = "X";
 
+        private readonly InteropSettings interopSettings;
+        private readonly IEthereumClientBase ethereumClientBase;
         private readonly Network network;
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
@@ -40,41 +38,42 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         private readonly ILogger logger;
         private readonly IContractPrimitiveSerializer primitiveSerializer;
         private readonly IStateRepositoryRoot stateRoot;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly IFederationManager federationManager;
+        private readonly IFederationHistory federationHistory;
         private readonly IInteropRequestRepository interopRequestRepository;
         private readonly IBlockStoreQueue blockStoreQueue;
         private readonly IKeyValueRepository keyValueRepo;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly IInteropTransactionManager interopTransactionManager;
 
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
 
-        private bool interop;
-
-        private readonly HashSet<uint160> interopContractAddresses;
-        private readonly string wrappedStraxContractAddress;
-
         //private readonly ApiLogDeserializer deserializer;
-
-        private string ethereumClientUrl;
 
         private ChainedHeader lastScanned;
 
-        private EthereumClient client;
-        private string ethereumAccount;
-        private string ethereumPassphrase;
-
         public InteropPoller(NodeSettings nodeSettings,
+            InteropSettings interopSettings,
+            IEthereumClientBase ethereumClientBase,
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
             ChainIndexer chainIndexer,
             IConsensusManager consensusManager,
             IContractPrimitiveSerializer primitiveSerializer,
             IStateRepositoryRoot stateRoot,
+            IInitialBlockDownloadState initialBlockDownloadState,
+            IFederationManager federationManager,
+            IFederationHistory federationHistory,
             IInteropRequestRepository interopRequestRepository,
             IBlockStoreQueue blockStoreQueue,
             IKeyValueRepository keyValueRepo,
-            IConversionRequestRepository conversionRequestRepository)
+            IConversionRequestRepository conversionRequestRepository,
+            IInteropTransactionManager interopTransactionManager)
         {
+            this.interopSettings = interopSettings;
+            this.ethereumClientBase = ethereumClientBase;
             this.network = nodeSettings.Network;
             this.asyncProvider = asyncProvider;
             this.nodeLifetime = nodeLifetime;
@@ -82,36 +81,26 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.consensusManager = consensusManager;
             this.primitiveSerializer = primitiveSerializer;
             this.stateRoot = stateRoot;
+            this.initialBlockDownloadState = initialBlockDownloadState;
+            this.federationManager = federationManager;
+            this.federationHistory = federationHistory;
             this.interopRequestRepository = interopRequestRepository;
             this.blockStoreQueue = blockStoreQueue;
             this.keyValueRepo = keyValueRepo;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.interopTransactionManager = interopTransactionManager;
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
             
-            this.interop = nodeSettings.ConfigReader.GetOrDefault(InteropKey, false);
-
-            string[] contractAddresses = nodeSettings.ConfigReader.GetAll(InteropContractAddressesKey);
-            this.interopContractAddresses = contractAddresses.Select(a => uint160.Parse(a)).ToHashSet();
-
-            this.wrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault<string>(WrappedStraxContractAddressKey, null);
-
-            this.ethereumClientUrl = nodeSettings.ConfigReader.GetOrDefault(EthereumClientUrlKey, "");
-            this.ethereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
-            this.ethereumPassphrase = nodeSettings.ConfigReader.GetOrDefault(EthereumPassphraseKey, "");
-
-            if (!string.IsNullOrWhiteSpace(this.ethereumClientUrl))
-                this.client = new EthereumClient(new Uri(this.ethereumClientUrl), this.ethereumAccount, this.ethereumPassphrase);
-
             this.lastScanned = this.chainIndexer.Genesis;
         }
 
         public void Initialize()
         {
-            if (!this.interop)
+            if (!this.interopSettings.Enabled)
                 return;
 
-            if (string.IsNullOrWhiteSpace(this.ethereumClientUrl))
-                throw new Exception($"Cannot initialize interoperability poller without -{EthereumClientUrlKey} specified.");
+            if (!this.federationManager.IsFederationMember)
+                return;
 
             this.logger.LogDebug($"Interoperability enabled, initializing periodic loop.");
 
@@ -128,6 +117,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             // Initialize the interop polling loop, to check for interop contract requests.
             this.interopLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckInterop", async (cancellation) =>
                 {
+                    if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                        return;
+
                     this.logger.LogTrace("Beginning interop loop.");
 
                     try
@@ -153,6 +145,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             // Initialize the conversion polling loop, to check for conversion requests.
             this.conversionLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckConversionStore", async (cancellation) =>
                 {
+                    if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                        return;
+
                     this.logger.LogTrace("Beginning conversion processing loop.");
 
                     try
@@ -177,21 +172,69 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
             foreach (ConversionRequest request in mintRequests)
             {
-                this.client.Transfer(this.wrappedStraxContractAddress, request.DestinationAddress, request.Amount).GetAwaiter().GetResult();
+                IFederationMember member = this.federationHistory.GetFederationMemberForBlock(this.chainIndexer.Tip);
+
+                bool originator = member.Equals(this.federationManager.GetCurrentFederationMember());
+
+                // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
+                if (originator)
+                {
+                    // First construct the necessary minting transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
+                    string abiData = this.ethereumClientBase.EncodeMintParams(request.DestinationAddress, request.Amount);
+
+                    this.ethereumClientBase.SubmitTransaction(request.DestinationAddress, 0, abiData);
+
+                    // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
+                    // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
+                    // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation node.
+                    // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
+                    // The transactionId must be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified.
+
+                    // The originator isn't responsible for anything further at this point.
+                    request.RequestStatus = (int)ConversionRequestStatus.Processed;
+                    request.Processed = true;
+
+                    this.conversionRequestRepository.Save(request);
+                }
+                else
+                {
+                    // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
+                    // Initially there will not be a quorum of nodes that agree on the transactionId.
+                    // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
+                    // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
+                    int quorum = this.network.Federations.GetOnlyFederation().GetFederationDetails().signaturesRequired;
+
+                    // Each node must only ever confirm a single transactionId for a given conversion transaction.
+                    BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, quorum);
+
+                    if (agreedUponId != BigInteger.MinusOne)
+                    {
+                        // Once a quorum is reached, each node confirms the agreed transactionId.
+                        // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
+                        this.ethereumClientBase.ConfirmTransaction(agreedUponId);
+
+                        request.RequestStatus = (int)ConversionRequestStatus.Processed; // TODO: .Confirmed?
+                        request.Processed = true;
+
+                        this.conversionRequestRepository.Save(request);
+                    }
+                }
             }
 
-            //this.conversionRequestRepository.GetAllBurn(true);
+            List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
 
-            //foreach (ConversionRequest burn in burnRequests)
-            //{
-                // Properly processing burn transactions will currently require emulating a withdrawal from the Cirrus chain.
+            foreach (ConversionRequest burn in burnRequests)
+            {
+                // Unlike the mint requests, burns are not initiated by the multisig wallet.
+
+                // Properly processing burn transactions requires emulating a withdrawal from the Cirrus chain.
                 // It will be easier when conversion can be done directly to and from a Cirrus contract.
-            //}
+            }
         }
 
         private void CheckForEthereumRequests()
         {
-            if (this.interopContractAddresses.Count == 0)
+            if (string.IsNullOrWhiteSpace(this.interopSettings.InteropContractCirrusAddress))
                 return;
 
             // TODO: Is reorg recovery needed? In any case we can't really undo a request from the other chain if we've returned a response to it already
@@ -229,7 +272,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                     block = res.Block;
                 }
 
-                List<InteropRequest> requests = ExtractInteropRequests(block, this.stateRoot, this.interopContractAddresses, this.logger);
+                List<InteropRequest> requests = ExtractInteropRequests(block, this.stateRoot, this.interopSettings.InteropContractCirrusAddress, this.logger);
 
                 foreach (InteropRequest request in requests)
                 {
@@ -244,7 +287,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.keyValueRepo.SaveValue<HashHeightPair>(LastScannedHeightKey, lastScannedHashHeight);
         }
 
-        public static List<InteropRequest> ExtractInteropRequests(Block block, IStateRepositoryRoot stateRoot, HashSet<uint160> interopContractAddresses, ILogger logger)
+        public static List<InteropRequest> ExtractInteropRequests(Block block, IStateRepositoryRoot stateRoot, string interopContractAddress, ILogger logger)
         {
             var requests = new List<InteropRequest>();
             /*
@@ -260,7 +303,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
                 // Our primary identification for whether the receipt is for an interop request, is if it involves an interop contract at all.
                 // So we check the address first as a quick filter.
-                if (!interopContractAddresses.Contains(receipt.ContractAddress))
+                if (receipt.ContractAddress != uint160.Parse(interopContractAddress))
                     continue;
 
                 logger.LogTrace($"Found a receipt for interop contract address {receipt.ContractAddress}.");
@@ -373,9 +416,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
         private void ProcessEthereumRequests()
         {
-            if (string.IsNullOrWhiteSpace(this.ethereumClientUrl))
-                return;
-
             List<InteropRequest> requests = this.interopRequestRepository.GetAllEthereum(true);
 
             foreach (InteropRequest request in requests)
@@ -411,15 +451,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
         private void CheckForStratisRequests()
         {
-            if (string.IsNullOrWhiteSpace(this.ethereumClientUrl))
-                return;
-
             List<EthereumRequestModel> requests;
 
             try
             {
                 // Retrieved from the logs of the Ethereum interop contract.
-                requests = this.client.GetStratisInteropRequests();
+                requests = this.ethereumClientBase.GetStratisInteropRequests();
             }
             catch (Exception e)
             {
@@ -547,6 +584,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         public void Dispose()
         {
             this.interopLoop?.Dispose();
+            this.conversionLoop?.Dispose();
 
             var lastScannedHashHeight = new HashHeightPair(this.lastScanned);
             this.keyValueRepo.SaveValue<HashHeightPair>(LastScannedHeightKey, lastScannedHashHeight);
