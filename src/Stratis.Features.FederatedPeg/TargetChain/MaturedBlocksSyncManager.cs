@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.SmartContracts.Interop;
 using Stratis.Bitcoin.Utilities;
@@ -45,7 +45,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private const int InitializationDelaySeconds = 10;
 
         public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient,
-            ILoggerFactory loggerFactory, INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository)
+            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository)
         {
             this.asyncProvider = asyncProvider;
             this.crossChainTransferStore = crossChainTransferStore;
@@ -53,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -85,13 +85,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (model == null)
             {
-                this.logger.LogDebug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
+                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
                 return true;
             }
 
             if (model.Value == null)
             {
-                this.logger.LogDebug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, model.Message ?? "none");
+                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, model.Message ?? "none");
                 return true;
             }
 
@@ -103,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // "Value"'s count will be 0 if we are using NewtonSoft's serializer, null if using .Net Core 3's serializer.
             if (matureBlockDepositsResult.Value.Count == 0)
             {
-                this.logger.LogDebug("Considering ourselves fully synced since no blocks were received.");
+                this.logger.Debug("Considering ourselves fully synced since no blocks were received.");
 
                 // If we've received nothing we assume we are at the tip and should flush.
                 // Same mechanic as with syncing headers protocol.
@@ -117,7 +117,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d => d.RetrievalType == DepositRetrievalType.Conversion))
                 {
-                    this.logger.LogDebug("Conversion transaction: " + conversionTransaction.ToString());
+                    this.logger.Debug("Conversion transaction: " + conversionTransaction.ToString());
 
                     if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) == null)
                     {
@@ -137,7 +137,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.LogDebug(deposit.ToString());
+                    this.logger.Trace(deposit.ToString());
                 }
             }
 

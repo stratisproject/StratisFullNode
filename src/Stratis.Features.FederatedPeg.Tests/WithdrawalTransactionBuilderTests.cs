@@ -84,7 +84,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 });
 
             var txBuilder = new WithdrawalTransactionBuilder(
-                this.loggerFactory.Object,
                 this.network,
                 this.federationWalletManager.Object,
                 this.federationWalletTransactionHandler.Object,
@@ -120,7 +119,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 .Throws(new WalletException(FederationWalletTransactionHandler.NoSpendableTransactionsMessage));
 
             var txBuilder = new WithdrawalTransactionBuilder(
-                this.loggerFactory.Object,
                 this.network,
                 this.federationWalletManager.Object,
                 this.federationWalletTransactionHandler.Object,
@@ -154,7 +152,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 .Throws(new WalletException(FederationWalletTransactionHandler.NotEnoughFundsMessage));
 
             var txBuilder = new WithdrawalTransactionBuilder(
-                this.loggerFactory.Object,
                 this.network,
                 this.federationWalletManager.Object,
                 this.federationWalletTransactionHandler.Object,

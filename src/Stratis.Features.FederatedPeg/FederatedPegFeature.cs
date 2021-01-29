@@ -5,8 +5,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
@@ -47,8 +47,6 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly IFullNode fullNode;
 
-        private readonly ILoggerFactory loggerFactory;
-
         private readonly IFederationWalletManager federationWalletManager;
 
         private readonly IFederationWalletSyncManager walletSyncManager;
@@ -70,7 +68,6 @@ namespace Stratis.Features.FederatedPeg
         private readonly ILogger logger;
 
         public FederatedPegFeature(
-            ILoggerFactory loggerFactory,
             IConnectionManager connectionManager,
             IFederatedPegSettings federatedPegSettings,
             IFullNode fullNode,
@@ -86,7 +83,6 @@ namespace Stratis.Features.FederatedPeg
             IInputConsolidator inputConsolidator,
             ICollateralChecker collateralChecker = null)
         {
-            this.loggerFactory = loggerFactory;
             this.connectionManager = connectionManager;
             this.federatedPegSettings = federatedPegSettings;
             this.fullNode = fullNode;
@@ -100,7 +96,7 @@ namespace Stratis.Features.FederatedPeg
             this.signedBroadcaster = signedBroadcaster;
             this.inputConsolidator = inputConsolidator;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
 
             // add our payload
             var payloadProvider = (PayloadProvider)this.fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
@@ -144,8 +140,8 @@ namespace Stratis.Features.FederatedPeg
 
             // Respond to requests to sign transactions from other nodes.
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new PartialTransactionsBehavior(this.loggerFactory, this.federationWalletManager,
-                this.network, this.federatedPegSettings, this.crossChainTransferStore, this.inputConsolidator));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new PartialTransactionsBehavior(this.federationWalletManager, this.network,
+                this.federatedPegSettings, this.crossChainTransferStore, this.inputConsolidator));
         }
 
         /// <summary>
@@ -185,7 +181,7 @@ namespace Stratis.Features.FederatedPeg
             }
             catch (Exception e)
             {
-                this.logger.LogError(e.ToString());
+                this.logger.Error(e.ToString());
             }
         }
 

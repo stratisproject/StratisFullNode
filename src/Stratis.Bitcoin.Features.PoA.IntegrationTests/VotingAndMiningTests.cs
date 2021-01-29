@@ -448,7 +448,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
                 // In practice this signature will come from calling the counter-chain "signmessage" API.
                 request.AddSignature(collateralKey.SignMessage(request.SignatureMessage));
 
-                var encoder = new JoinFederationRequestEncoder(nodeA.FullNode.NodeService<Microsoft.Extensions.Logging.ILoggerFactory>());
+                var encoder = new JoinFederationRequestEncoder();
                 JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(nodeA.FullNode.WalletTransactionHandler(), this.poaNetwork, request, encoder, walletName, walletAccount, walletPassword);
 
                 await nodeA.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(result.Transaction.ToHex()));

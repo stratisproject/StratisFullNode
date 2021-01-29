@@ -107,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             ICrossChainTransferStore crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             crossChainTransferStore.GetTransfersByStatus(default).ReturnsForAnyArgs(new[] { transfer });
 
-            using (var signedMultisigTransactionBroadcaster = new SignedMultisigTransactionBroadcaster(this.asyncProvider, this.loggerFactory, this.mempoolManager, this.broadcasterManager, this.ibdState, this.federationWalletManager, this.nodeLifetime, crossChainTransferStore))
+            using (var signedMultisigTransactionBroadcaster = new SignedMultisigTransactionBroadcaster(this.asyncProvider, this.mempoolManager, this.broadcasterManager, this.ibdState, this.federationWalletManager, this.nodeLifetime, crossChainTransferStore))
             {
                 await signedMultisigTransactionBroadcaster.BroadcastFullySignedTransfersAsync();
                 await this.broadcasterManager.Received(1).BroadcastTransactionAsync(Arg.Any<Transaction>());
@@ -126,7 +126,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             ICrossChainTransferStore crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             crossChainTransferStore.GetTransfersByStatus(default).ReturnsForAnyArgs(new[] { transfer });
 
-            using (var signedMultisigTransactionBroadcaster = new SignedMultisigTransactionBroadcaster(this.asyncProvider, this.loggerFactory, this.mempoolManager, this.broadcasterManager, this.ibdState, this.federationWalletManager, this.nodeLifetime))
+            using (var signedMultisigTransactionBroadcaster = new SignedMultisigTransactionBroadcaster(this.asyncProvider, this.mempoolManager, this.broadcasterManager, this.ibdState, this.federationWalletManager, this.nodeLifetime))
             {
                 await signedMultisigTransactionBroadcaster.BroadcastFullySignedTransfersAsync();
                 await this.broadcasterManager.Received(0).BroadcastTransactionAsync(Arg.Any<Transaction>());
@@ -147,7 +147,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             ICrossChainTransferStore crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             crossChainTransferStore.GetTransfersByStatus(default).ReturnsForAnyArgs(new[] { transfer });
 
-            using (var signedMultisigTransactionBroadcaster = new SignedMultisigTransactionBroadcaster(this.asyncProvider, this.loggerFactory, this.mempoolManager, this.broadcasterManager, this.ibdState, this.federationWalletManager, this.nodeLifetime))
+            using (var signedMultisigTransactionBroadcaster = new SignedMultisigTransactionBroadcaster(this.asyncProvider, this.mempoolManager, this.broadcasterManager, this.ibdState, this.federationWalletManager, this.nodeLifetime))
             {
                 await signedMultisigTransactionBroadcaster.BroadcastFullySignedTransfersAsync();
                 await this.broadcasterManager.Received(0).BroadcastTransactionAsync(Arg.Any<Transaction>());

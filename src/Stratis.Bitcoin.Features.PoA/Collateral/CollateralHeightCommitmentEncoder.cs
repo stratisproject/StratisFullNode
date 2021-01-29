@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 
 namespace Stratis.Features.PoA.Collateral
 {
@@ -13,9 +13,9 @@ namespace Stratis.Features.PoA.Collateral
 
         private readonly ILogger logger;
 
-        public CollateralHeightCommitmentEncoder(ILogger logger)
+        public CollateralHeightCommitmentEncoder()
         {
-            this.logger = logger;
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <summary>Converts <paramref name="height"/> to a byte array which has a prefix of <see cref="HeightCommitmentOutputPrefixBytes"/>.</summary>
@@ -40,7 +40,7 @@ namespace Stratis.Features.PoA.Collateral
             byte[] commitmentData = null;
             byte[] magic = null;
 
-            this.logger.LogDebug("Transaction contains {0} OP_RETURN outputs.", opReturnOutputs.Count());
+            this.logger.Debug("Transaction contains {0} OP_RETURN outputs.", opReturnOutputs.Count());
 
             foreach (Script script in opReturnOutputs)
             {
@@ -55,7 +55,7 @@ namespace Stratis.Features.PoA.Collateral
 
                 if (!correctPrefix)
                 {
-                    this.logger.LogDebug("Push data contains incorrect prefix for height commitment.");
+                    this.logger.Debug("Push data contains incorrect prefix for height commitment.");
                     continue;
                 }
 

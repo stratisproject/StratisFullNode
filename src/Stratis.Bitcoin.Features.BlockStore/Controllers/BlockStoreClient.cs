@@ -2,7 +2,6 @@
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Controllers.Models;
 
@@ -27,8 +26,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// In a production/live scenario the sidechain and mainnet federation nodes should run on the same machine.
         /// </para>
         /// </summary>
-        public BlockStoreClient(ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory, string url, int port)
-            : base(loggerFactory, httpClientFactory, port, "BlockStore", url)
+        public BlockStoreClient(IHttpClientFactory httpClientFactory, string url, int port)
+            : base(httpClientFactory, port, "BlockStore", url)
         {
         }
 

@@ -93,7 +93,7 @@ namespace Stratis.Features.PoA.Voting
             }
 
             IWalletTransactionHandler walletTransactionHandler = this.fullNode.NodeService<IWalletTransactionHandler>();
-            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
+            var encoder = new JoinFederationRequestEncoder();
             JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(walletTransactionHandler, this.network, joinRequest, encoder, request.WalletName, request.WalletAccount, request.WalletPassword);
             if (result.Transaction == null)
                 throw new Exception(result.Errors);

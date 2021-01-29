@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Features.Collateral.CounterChain;
 using TracerAttributes;
 
@@ -45,9 +45,9 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly Network counterChainNetwork;
 
-        public OpReturnDataReader(ILoggerFactory loggerFactory, CounterChainNetworkWrapper counterChainNetworkWrapper)
+        public OpReturnDataReader(CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
         }
 
@@ -129,7 +129,7 @@ namespace Stratis.Features.FederatedPeg
             }
             catch (Exception ex)
             {
-                this.logger.LogDebug("Address {destination} could not be converted to a valid address. Reason {message}.", destination, ex.Message);
+                this.logger.Debug("Address {destination} could not be converted to a valid address. Reason {message}.", destination, ex.Message);
                 return null;
             }
         }
@@ -160,7 +160,7 @@ namespace Stratis.Features.FederatedPeg
             }
             catch (Exception ex)
             {
-                this.logger.LogDebug("Candidate hash {data} could not be converted to a valid uint256. Reason {message}.", data, ex.Message);
+                this.logger.Debug("Candidate hash {data} could not be converted to a valid uint256. Reason {message}.", data, ex.Message);
                 return null;
             }
         }
