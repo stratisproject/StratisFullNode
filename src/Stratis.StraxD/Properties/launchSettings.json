@@ -1,7 +1,9 @@
 {
   "profiles": {
     "Stratis.StraxD": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-datadir=c:\\stratis\\testdb",
+      "sqlDebugging": true
     },
     "Stratis.StraxD Test": {
       "commandName": "Project",

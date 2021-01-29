@@ -36,8 +36,8 @@ namespace Stratis.StraxD
 
                 IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
                     .UseNodeSettings(nodeSettings)
-                    .UseBlockStore()
-                    .UsePosConsensus()
+                    .UseBlockStore(DbType.RocksDb)
+                    .UsePosConsensus(DbType.RocksDb)
                     .UseMempool()
                     .UseColdStakingWallet()
                     .AddSQLiteWalletRepository()

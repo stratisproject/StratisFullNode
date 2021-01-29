@@ -153,9 +153,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             headers.Reverse();
 
-            BlockRepository blockRepository = (BlockRepository)this.blockRepository;
+            //LevelDbBlockRepository blockRepository = (LevelDbBlockRepository)this.blockRepository;
 
-            foreach (Block block in blockRepository.EnumeratehBatch(headers))
+            foreach (Block block in this.blockRepository.EnumerateBatch(headers))
             {
                 if (block == null)
                     throw new Exception();

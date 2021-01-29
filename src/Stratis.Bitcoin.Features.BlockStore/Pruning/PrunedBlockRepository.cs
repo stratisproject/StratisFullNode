@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
@@ -30,7 +29,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
         /// <inheritdoc />
         public void Initialize()
         {
-            this.LoadPrunedTip(this.blockRepository.Leveldb);
+            this.LoadPrunedTip();
         }
 
         /// <inheritdoc />
@@ -44,7 +43,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
 
                 this.PrunedTip = new HashHeightPair(genesis.GetHash(), 0);
 
-                this.blockRepository.Leveldb.Put(BlockRepository.CommonTableName, prunedTipKey, this.dBreezeSerializer.Serialize(this.PrunedTip));
+                this.blockRepository.Put(BlockRepositoryConstants.CommonTableName, prunedTipKey, this.dBreezeSerializer.Serialize(this.PrunedTip));
             }
 
             if (nodeInitializing)
@@ -102,12 +101,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
             this.UpdatePrunedTip(blockRepositoryTip.GetAncestor(upperHeight));
         }
 
-        private void LoadPrunedTip(DB leveldb)
+        private void LoadPrunedTip()
         {
-            if (this.PrunedTip != null) 
+            if (this.PrunedTip != null)
                 return;
 
-            byte[] row = leveldb.Get(BlockRepository.CommonTableName, prunedTipKey);
+            byte[] row = this.blockRepository.Get(BlockRepositoryConstants.CommonTableName, prunedTipKey);
 
             if (row != null)
                 this.PrunedTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);

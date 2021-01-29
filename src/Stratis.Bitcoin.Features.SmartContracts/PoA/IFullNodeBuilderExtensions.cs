@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     .DependOn<PoAFeature>()
                     .FeatureServices(services =>
                     {
-                        AddCoindbImplementation(services, coindbType);
+                        services.ConfigureCoindbImplementation(coindbType);
 
                         services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
                         services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
@@ -66,18 +66,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
             });
 
             return fullNodeBuilder;
-        }
-
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
-        {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
-
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
-
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
         }
     }
 }

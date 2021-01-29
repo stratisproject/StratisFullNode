@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.Consensus
                     .AddFeature<PowConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        AddCoindbImplementation(services, coindbType);
+                        ConfigureCoindbImplementation(services, coindbType);
                         services.AddSingleton<ConsensusOptions, ConsensusOptions>();
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<IConsensusRuleEngine, PowConsensusRuleEngine>();
@@ -51,8 +51,8 @@ namespace Stratis.Bitcoin.Features.Consensus
                     .AddFeature<PosConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        AddCoindbImplementation(services, coindbType);
-                        services.AddSingleton<IStakedb>(provider => (IStakedb)provider.GetService<ICoindb>());
+                        services.ConfigureCoindbImplementation(coindbType);
+                        services.AddSingleton(provider => (IStakedb)provider.GetService<ICoindb>());
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<StakeChainStore>().AddSingleton<IStakeChain, StakeChainStore>(provider => provider.GetService<StakeChainStore>());
                         services.AddSingleton<IStakeValidator, StakeValidator>();
@@ -70,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Consensus
             return fullNodeBuilder;
         }
 
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        public static void ConfigureCoindbImplementation(this IServiceCollection services, DbType coindbType)
         {
             if (coindbType == DbType.Dbreeze)
                 services.AddSingleton<ICoindb, DBreezeCoindb>();
@@ -80,6 +80,9 @@ namespace Stratis.Bitcoin.Features.Consensus
 
             if (coindbType == DbType.Faster)
                 services.AddSingleton<ICoindb, FasterCoindb>();
+
+            if (coindbType == DbType.RocksDb)
+                services.AddSingleton<ICoindb, RocksDbCoindb>();
         }
     }
 
@@ -87,6 +90,7 @@ namespace Stratis.Bitcoin.Features.Consensus
     {
         Leveldb,
         Dbreeze,
-        Faster
+        Faster,
+        RocksDb
     }
 }

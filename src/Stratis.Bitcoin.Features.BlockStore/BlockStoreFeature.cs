@@ -12,6 +12,8 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Pruning;
+using Stratis.Bitcoin.Features.BlockStore.Repositories;
+using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -176,7 +178,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
     /// </summary>
     public static class FullNodeBuilderBlockStoreExtension
     {
-        public static IFullNodeBuilder UseBlockStore(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseBlockStore(this IFullNodeBuilder fullNodeBuilder, DbType dbType = DbType.Leveldb)
         {
             LoggingConfiguration.RegisterFeatureNamespace<BlockStoreFeature>("db");
 
@@ -187,7 +189,13 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 .FeatureServices(services =>
                     {
                         services.AddSingleton<IBlockStoreQueue, BlockStoreQueue>().AddSingleton<IBlockStore>(provider => provider.GetService<IBlockStoreQueue>());
-                        services.AddSingleton<IBlockRepository, BlockRepository>();
+
+                        if (dbType == DbType.Leveldb)
+                            services.AddSingleton<IBlockRepository, LevelDbBlockRepository>();
+
+                        if (dbType == DbType.RocksDb)
+                            services.AddSingleton<IBlockRepository, RocksDbBlockRepository>();
+
                         services.AddSingleton<IPrunedBlockRepository, PrunedBlockRepository>();
 
                         if (fullNodeBuilder.Network.Consensus.IsProofOfStake)
