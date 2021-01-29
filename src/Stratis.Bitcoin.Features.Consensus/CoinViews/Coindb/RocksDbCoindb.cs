@@ -117,17 +117,17 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             int insertedEntities = 0;
 
-            using (var batch = new WriteBatch())
+            HashHeightPair current = this.GetTipHash();
+            if (current != oldBlockHash)
             {
-                using (new StopwatchDisposable(o => this.performanceCounter.AddInsertTime(o)))
-                {
-                    HashHeightPair current = this.GetTipHash();
-                    if (current != oldBlockHash)
-                    {
-                        this.logger.Trace("(-)[BLOCKHASH_MISMATCH]");
-                        throw new InvalidOperationException("Invalid oldBlockHash");
-                    }
+                this.logger.Trace("(-)[BLOCKHASH_MISMATCH]");
+                throw new InvalidOperationException("Invalid oldBlockHash");
+            }
 
+            using (new StopwatchDisposable(o => this.performanceCounter.AddInsertTime(o)))
+            {
+                using (var batch = new WriteBatch())
+                {
                     // Here we'll add items to be inserted in a second pass.
                     List<UnspentOutput> toInsert = new List<UnspentOutput>();
 
@@ -170,9 +170,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                     using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
                     rocksDb.Write(batch);
-
-                    this.SetBlockHash(nextBlockHash);
                 }
+
+                this.SetBlockHash(nextBlockHash);
             }
 
             this.performanceCounter.AddInsertedEntities(insertedEntities);
@@ -214,9 +214,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                     rocksDb.Write(batch);
                 }
-
-                this.SetBlockHash(previousBlockHash);
             }
+
+            this.SetBlockHash(previousBlockHash);
 
             return previousBlockHash;
         }
