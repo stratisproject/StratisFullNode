@@ -10,12 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="libsnappy.redist" Version="1.1.7" />
-    <PackageReference Include="RocksDbNative" Version="6.2.2" />
-    <PackageReference Include="SnappyLib" Version="1.1.7" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Stratis.Bitcoin.Features.SignalR\Stratis.Bitcoin.Features.SignalR.csproj" />
     <ProjectReference Include="..\Stratis.Bitcoin.Networks\Stratis.Bitcoin.Networks.csproj" />
     <ProjectReference Include="..\Stratis.Features.Diagnostic\Stratis.Features.Diagnostic.csproj" />
