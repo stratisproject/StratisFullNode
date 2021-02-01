@@ -983,12 +983,12 @@ namespace Stratis.Bitcoin.BlockPulling
             double blocksPerSec = Math.Round(totalSpeedBytesPerSec / avgBlockSizeBytes, 2);
 
             statsBuilder.AppendLine(
-                "Total Download Speed".PadRight(30) + $": {Math.Round(totalSpeedKbPerSec, 2)} KB/sec".PadRight(17, ' ') +
+                "Total Download Speed".PadRight(30) + $": {Math.Round(totalSpeedKbPerSec, 2)} KB/sec".PadRight(20, ' ') +
                 "Block Download Average".PadRight(30) + $": {timeToDownloadBlockMs} ms"
                 );
 
             statsBuilder.AppendLine(
-                "Average block size".PadRight(30) + $": {Math.Round(averageBlockSizeKb, 2)} KB".PadRight(17, ' ') +
+                "Average block size".PadRight(30) + $": {Math.Round(averageBlockSizeKb, 2)} KB".PadRight(20, ' ') +
                 "Blocks downloadable in 1 sec".PadRight(30) + $": {blocksPerSec}");
 
             statsBuilder.AppendLine();
