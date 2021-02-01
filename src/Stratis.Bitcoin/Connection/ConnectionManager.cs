@@ -357,12 +357,13 @@ namespace Stratis.Bitcoin.Connection
                 return string.Format("{0:0.000}", (double)((bytes + 500) / 1000) / 1000);
             }
 
+            var metricsBuilder = new StringBuilder();
             var metrics = this.payloadProvider.GetPayloadTypeMetrics();
             if (metrics.Count > 0)
             {
                 long bytesIn = metrics.Sum(m => m.Value.BytesReceivedCount);
                 long bytesOut = metrics.Sum(m => m.Value.BytesSentCount);
-                builder.AppendLine($"---Payload Bandwidth Breakdown (In/Out MB = {ToMB(bytesIn)}/{ToMB(bytesOut)})---");
+                metricsBuilder.AppendLine($"---Payload Bandwidth Breakdown (In/Out MB = {ToMB(bytesIn)}/{ToMB(bytesOut)})---");
                 int i = 0;
                 foreach (Type payloadType in metrics.Keys)
                 {
@@ -374,14 +375,16 @@ namespace Stratis.Bitcoin.Connection
                     string sentCnt = metric.SentCount.ToString().PadLeft(6);
                     string bytesSentCnt = ToMB(metric.BytesSentCount).PadLeft(9);
 
-                    builder.Append($"{name} -- In: {receivedCnt} ({bytesReceivedCnt} MB), Out: {sentCnt} ({bytesSentCnt} MB)");
+                    metricsBuilder.Append($"{name} -- In: {receivedCnt} ({bytesReceivedCnt} MB), Out: {sentCnt} ({bytesSentCnt} MB)");
 
                     if ((++i % 2) == 0)
-                        builder.AppendLine();
+                        metricsBuilder.AppendLine();
                 }
 
                 if ((i % 2) != 0)
-                    builder.AppendLine();
+                    metricsBuilder.AppendLine();
+
+                this.logger.LogDebug(metricsBuilder.ToString());
             }
         }
 

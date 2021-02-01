@@ -957,37 +957,39 @@ namespace Stratis.Bitcoin.BlockPulling
         [NoTrace]
         private void AddComponentStats(StringBuilder statsBuilder)
         {
-            statsBuilder.AppendLine("======Block Puller======");
+            statsBuilder.AppendLine(">> Block Puller");
+
+            int pendingBlocks = 0;
+            int unassignedDownloads = 0;
 
             lock (this.assignedLock)
             {
-                int pendingBlocks = this.assignedDownloadsByHash.Count;
-                statsBuilder.AppendLine($"Blocks being downloaded: {pendingBlocks}");
+                pendingBlocks = this.assignedDownloadsByHash.Count;
             }
 
             lock (this.queueLock)
             {
-                int unassignedDownloads = 0;
-
                 foreach (DownloadJob downloadJob in this.downloadJobsQueue)
                     unassignedDownloads += downloadJob.Headers.Count;
-
-                statsBuilder.AppendLine($"Queued downloads: {unassignedDownloads}");
             }
 
-            double avgBlockSizeBytes = this.GetAverageBlockSizeBytes();
-            double averageBlockSizeKb = avgBlockSizeBytes / 1024.0;
-            statsBuilder.AppendLine($"Average block size: {Math.Round(averageBlockSizeKb, 2)} KB");
+            statsBuilder.AppendLine("Blocks being downloaded".PadRight(30) + $": {pendingBlocks} ({unassignedDownloads} queued)");
 
             double totalSpeedBytesPerSec = this.GetTotalSpeedOfAllPeersBytesPerSec();
             double totalSpeedKbPerSec = (totalSpeedBytesPerSec / 1024.0);
-            statsBuilder.AppendLine($"Total download speed: {Math.Round(totalSpeedKbPerSec, 2)} KB/sec");
-
+            double avgBlockSizeBytes = this.GetAverageBlockSizeBytes();
+            double averageBlockSizeKb = avgBlockSizeBytes / 1024.0;
             double timeToDownloadBlockMs = Math.Round((avgBlockSizeBytes / totalSpeedBytesPerSec) * 1000, 2);
-            statsBuilder.AppendLine($"Average time to download a block: {timeToDownloadBlockMs} ms");
-
             double blocksPerSec = Math.Round(totalSpeedBytesPerSec / avgBlockSizeBytes, 2);
-            statsBuilder.AppendLine($"Amount of blocks node can download in 1 second: {blocksPerSec}");
+
+            statsBuilder.AppendLine(
+                "Total Download Speed".PadRight(30) + $": {Math.Round(totalSpeedKbPerSec, 2)} KB/sec".PadRight(17, ' ') +
+                "Block Download Average".PadRight(30) + $": {timeToDownloadBlockMs} ms"
+                );
+
+            statsBuilder.AppendLine(
+                "Average block size".PadRight(30) + $": {Math.Round(averageBlockSizeKb, 2)} KB".PadRight(17, ' ') +
+                "Blocks downloadable in 1 sec".PadRight(30) + $": {blocksPerSec}");
 
             statsBuilder.AppendLine();
 

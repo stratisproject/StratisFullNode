@@ -693,9 +693,9 @@ namespace Stratis.Bitcoin.Features.BlockStore
         {
             if (this.storeTip != null)
             {
-                log.AppendLine("======BlockStore======");
-                log.AppendLine($"Batch Size: {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched blocks)");
-                log.AppendLine($"Queue Size: {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued blocks)");
+                log.AppendLine(">> Block Store");
+                log.AppendLine("Batch Size".PadRight(30, ' ') + $": {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched)");
+                log.AppendLine("Queue Size".PadRight(30, ' ') + $": {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued)");
                 log.AppendLine();
             }
         }

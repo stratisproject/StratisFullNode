@@ -266,11 +266,14 @@ namespace Stratis.Bitcoin.AsyncWork
                 return $"Running: {running} Faulted: {faulted}";
 
             var sb = new StringBuilder();
-            sb.AppendLine();
-            sb.AppendLine($"====== Async loops ======   [Running: {running}] [Faulted: {faulted}]");
+            sb.AppendLine($">> Async Loops");
+            sb.AppendLine($"Status".PadRight(30, ' ') + $": {running} running [{faulted} faulted]");
 
             if (faultyOnly && faulted == 0)
+            {
+                sb.AppendLine();
                 return sb.ToString(); // If there are no faulty tasks and faultOnly is set to true, return just the header.
+            }
 
             var data =
                 from info in taskInformations
@@ -316,6 +319,8 @@ namespace Stratis.Bitcoin.AsyncWork
             }
 
             sb.AppendLine("-".PadRight(this.benchmarkColumnsDefinition.Sum(column => column.Width), '-'));
+
+            sb.AppendLine();
 
             return sb.ToString();
         }
