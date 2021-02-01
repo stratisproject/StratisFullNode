@@ -127,7 +127,7 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
 
         public ExtendedBlockPuller(IChainState chainState, NodeSettings nodeSettings, IDateTimeProvider dateTimeProvider, INodeStats nodeStats, ILoggerFactory loggerFactory)
         {
-            this.puller = new BlockPuller(chainState, nodeSettings, dateTimeProvider, nodeStats, loggerFactory);
+            this.puller = new BlockPuller(chainState, nodeSettings, dateTimeProvider, nodeStats);
         }
 
         public Dictionary<int, IBlockPullerBehavior> PullerBehaviorsByPeerId => (Dictionary<int, IBlockPullerBehavior>)this.puller.GetMemberValue("pullerBehaviorsByPeerId");
