@@ -56,28 +56,34 @@ namespace Stratis.CirrusD
 
         private static IFullNode GetSideChainFullNode(NodeSettings nodeSettings)
         {
+            var dbTypeString = nodeSettings.ConfigReader.GetOrDefault("dbtype", "leveldb");
+
+            DbType dbType = DbType.Leveldb;
+            if (dbTypeString == DbType.RocksDb.ToString().ToLowerInvariant())
+                dbType = DbType.RocksDb;
+
             IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore(DbType.RocksDb)
-                .UseMempool()
-                .AddSmartContracts(options =>
-                {
-                    options.UseReflectionExecutor();
-                    options.UsePoAWhitelistedContracts();
-                })
-                .AddPoAFeature()
-                .UsePoAConsensus(DbType.RocksDb)
-                .CheckCollateralCommitment()
+            .UseNodeSettings(nodeSettings)
+            .UseBlockStore(dbType)
+            .UseMempool()
+            .AddSmartContracts(options =>
+            {
+                options.UseReflectionExecutor();
+                options.UsePoAWhitelistedContracts();
+            })
+            .AddPoAFeature()
+            .UsePoAConsensus(dbType)
+            .CheckCollateralCommitment()
 
-                // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
-                // Perhaps we can introduce a block height check rather?
-                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+            // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
+            // Perhaps we can introduce a block height check rather?
+            .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
 
-                .UseSmartContractWallet()
-                .AddSQLiteWalletRepository()
-                .UseApi()
-                .AddRPC()
-                .UseDiagnosticFeature();
+            .UseSmartContractWallet()
+            .AddSQLiteWalletRepository()
+            .UseApi()
+            .AddRPC()
+            .UseDiagnosticFeature();
 
             if (nodeSettings.EnableSignalR)
             {

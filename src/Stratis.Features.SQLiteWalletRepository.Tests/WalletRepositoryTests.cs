@@ -89,7 +89,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
             var serializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
 
             // Build the chain from the block store.
-            this.BlockRepo = new LevelDbBlockRepository(network, this.NodeSettings.DataFolder, this.NodeSettings.LoggerFactory, serializer);
+            this.BlockRepo = new LevelDbBlockRepository(network, this.NodeSettings.DataFolder, serializer);
             this.BlockRepo.Initialize();
 
             var prevBlock = new Dictionary<uint256, uint256>();

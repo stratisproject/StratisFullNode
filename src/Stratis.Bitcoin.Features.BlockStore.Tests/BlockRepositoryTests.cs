@@ -537,7 +537,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         {
             var dBreezeSerializer = new DBreezeSerializer(main.Consensus.ConsensusFactory);
 
-            var repository = new LevelDbBlockRepository(main, dir, this.LoggerFactory.Object, dBreezeSerializer);
+            var repository = new LevelDbBlockRepository(main, dir);
             repository.Initialize();
 
             return repository;
