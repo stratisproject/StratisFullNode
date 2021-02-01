@@ -4,9 +4,9 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SignalR;
@@ -63,7 +63,7 @@ namespace Stratis.CirrusD
                 dbType = DbType.RocksDb;
 
             IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
-            .UseNodeSettings(nodeSettings)
+            .UseNodeSettings(nodeSettings, dbType)
             .UseBlockStore(dbType)
             .UseMempool()
             .AddSmartContracts(options =>

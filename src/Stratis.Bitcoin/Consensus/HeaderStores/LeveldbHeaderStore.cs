@@ -5,7 +5,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
-namespace Stratis.Bitcoin.Consensus
+namespace Stratis.Bitcoin.Consensus.HeaderStores
 {
     public class LeveldbHeaderStore : IChainStore, IDisposable
     {
@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Consensus
 
         private readonly DB leveldb;
 
-        private object locker;
+        private readonly object locker;
 
         public LeveldbHeaderStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer)
         {

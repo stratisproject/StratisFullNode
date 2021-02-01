@@ -533,13 +533,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             }
         }
 
-        private IBlockRepository SetupRepository(Network main, string dir)
+        private IBlockRepository SetupRepository(Network main, string dataFolder)
         {
             var dBreezeSerializer = new DBreezeSerializer(main.Consensus.ConsensusFactory);
-
-            var repository = new LevelDbBlockRepository(main, dir);
+            var repository = new LevelDbBlockRepository(main, dataFolder, dBreezeSerializer);
             repository.Initialize();
-
             return repository;
         }
     }

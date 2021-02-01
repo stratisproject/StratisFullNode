@@ -85,12 +85,4 @@ namespace Stratis.Bitcoin.Features.Consensus
                 services.AddSingleton<ICoindb, RocksDbCoindb>();
         }
     }
-
-    public enum DbType
-    {
-        Leveldb,
-        Dbreeze,
-        Faster,
-        RocksDb
-    }
 }

@@ -1,20 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DBreeze.DataTypes;
+using Microsoft.Extensions.Logging;
+using NBitcoin;
+using NBitcoin.Crypto;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Consensus.HeaderStores;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using DBreeze.DataTypes;
-using Microsoft.Extensions.Logging;
-using NBitcoin;
-using NBitcoin.Crypto;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests

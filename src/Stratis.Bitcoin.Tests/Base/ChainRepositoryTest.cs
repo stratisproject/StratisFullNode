@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Consensus.HeaderStores;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -15,11 +15,8 @@ namespace Stratis.Bitcoin.Tests.Base
 {
     public class ChainRepositoryTest : TestBase
     {
-        private readonly DBreezeSerializer dBreezeSerializer;
-
         public ChainRepositoryTest() : base(KnownNetworks.StraxRegTest)
         {
-            this.dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
         }
 
         [Fact]
@@ -79,7 +76,7 @@ namespace Stratis.Bitcoin.Tests.Base
                     {
                         batch.Put(1, BitConverter.GetBytes(block.Height),
                             new ChainRepository.ChainRepositoryData()
-                                    { Hash = block.HashBlock, Work = block.ChainWorkBytes }
+                            { Hash = block.HashBlock, Work = block.ChainWorkBytes }
                                 .ToBytes(this.Network.Consensus.ConsensusFactory));
                     }
 

@@ -317,7 +317,9 @@ namespace Stratis.Bitcoin.Connection
             int inbound = this.ConnectedPeers.Count(x => x.Inbound);
 
             builder.AppendLine();
-            builder.AppendLine($"======Connection====== agent {this.Parameters.UserAgent} [in:{inbound} out:{this.ConnectedPeers.Count() - inbound}] [recv: {totalRead.BytesToMegaBytes()} MB sent: {totalWritten.BytesToMegaBytes()} MB]");
+            builder.AppendLine($">> Connections (In:{inbound}) (Out:{this.ConnectedPeers.Count() - inbound})");
+            builder.AppendLine($"Agent".PadRight(30, ' ') + $": { this.Parameters.UserAgent} (Recv: {totalRead.BytesToMegaBytes()} MB) (Sent: {totalWritten.BytesToMegaBytes()} MB)");
+            builder.AppendLine();
 
             if (whiteListedBuilder.Length > 0)
             {

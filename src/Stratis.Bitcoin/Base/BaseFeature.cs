@@ -16,9 +16,9 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Consensus.HeaderStores;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -366,7 +366,7 @@ namespace Stratis.Bitcoin.Base
         /// </summary>
         /// <param name="fullNodeBuilder">Builder responsible for creating the node.</param>
         /// <returns>Full node builder's interface to allow fluent code.</returns>
-        public static IFullNodeBuilder UseBaseFeature(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseBaseFeature(this IFullNodeBuilder fullNodeBuilder, DbType dbType = DbType.Leveldb)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -389,7 +389,13 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>();
                     services.AddSingleton<IChainState, ChainState>();
                     services.AddSingleton<IChainRepository, ChainRepository>();
-                    services.AddSingleton<IChainStore, LeveldbHeaderStore>();
+
+                    if (dbType == DbType.Leveldb)
+                        services.AddSingleton<IChainStore, LeveldbHeaderStore>();
+
+                    if (dbType == DbType.RocksDb)
+                        services.AddSingleton<IChainStore, RocksDbChainStore>();
+
                     services.AddSingleton<IFinalizedBlockInfoRepository, FinalizedBlockInfoRepository>();
                     services.AddSingleton<ITimeSyncBehaviorState, TimeSyncBehaviorState>();
                     services.AddSingleton<NodeDeployments>();
