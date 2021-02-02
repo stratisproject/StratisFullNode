@@ -5,7 +5,7 @@ using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
-namespace Stratis.Bitcoin.Consensus.HeaderStores
+namespace Stratis.Bitcoin.Persistence.HeaderStores
 {
     /// <summary>
     /// Rocksdb implementation of the chain storage

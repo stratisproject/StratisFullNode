@@ -4,6 +4,7 @@ using System.Linq;
 using LevelDB;
 using NBitcoin;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
 using Xunit;

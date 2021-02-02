@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using LevelDB;
 
-namespace Stratis.Bitcoin.Utilities
+namespace Stratis.Bitcoin.Persistence
 {
     public static class DBH
     {

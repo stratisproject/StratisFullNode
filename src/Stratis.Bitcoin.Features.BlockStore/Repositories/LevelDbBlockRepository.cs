@@ -9,6 +9,7 @@ using LevelDB;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.BlockStore.Repositories

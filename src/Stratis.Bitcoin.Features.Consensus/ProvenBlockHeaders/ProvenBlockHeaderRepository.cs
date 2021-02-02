@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Utilities;
 using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 {
