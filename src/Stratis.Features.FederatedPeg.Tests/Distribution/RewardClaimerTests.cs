@@ -80,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public void RewardClaimer_RetrieveSingleDeposits()
         {
             DataFolder dataFolder = TestBase.CreateDataFolder(this);
-            var keyValueRepository = new LevelDbKeyValueStore(dataFolder, this.dbreezeSerializer);
+            var keyValueRepository = new LevelDbKeyValueRepository(dataFolder, this.dbreezeSerializer);
 
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public void RewardClaimer_RetrieveBatchedDeposits()
         {
             DataFolder dataFolder = TestBase.CreateDataFolder(this);
-            var keyValueRepository = new LevelDbKeyValueStore(dataFolder, this.dbreezeSerializer);
+            var keyValueRepository = new LevelDbKeyValueRepository(dataFolder, this.dbreezeSerializer);
 
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);

@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.Tests.Base
             var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             this.AppendBlock(chain);
 
-            using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
+            using (var repo = new ChainRepository(new LeveldbChainStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
                 repo.SaveAsync(chain).GetAwaiter().GetResult();
             }
@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Tests.Base
                 }
             }
 
-            using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
+            using (var repo = new ChainRepository(new LeveldbChainStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
                 var testChain = new ChainIndexer(KnownNetworks.StraxRegTest);
                 testChain.SetTip(repo.LoadAsync(testChain.Genesis).GetAwaiter().GetResult());

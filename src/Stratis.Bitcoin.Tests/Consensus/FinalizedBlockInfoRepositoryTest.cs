@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
         public async Task FinalizedHeightSavedOnDiskAsync()
         {
             string dir = CreateTestDir(this);
-            var kvRepo = new LevelDbKeyValueStore(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
+            var kvRepo = new LevelDbKeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
         public async Task FinalizedHeightCantBeDecreasedAsync()
         {
             string dir = CreateTestDir(this);
-            var kvRepo = new LevelDbKeyValueStore(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
+            var kvRepo = new LevelDbKeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 

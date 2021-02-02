@@ -56,11 +56,7 @@ namespace Stratis.CirrusD
 
         private static IFullNode GetSideChainFullNode(NodeSettings nodeSettings)
         {
-            var dbTypeString = nodeSettings.ConfigReader.GetOrDefault("dbtype", "leveldb");
-
-            DbType dbType = DbType.Leveldb;
-            if (dbTypeString == DbType.RocksDb.ToString().ToLowerInvariant())
-                dbType = DbType.RocksDb;
+            DbType dbType = nodeSettings.GetDbType();
 
             IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
             .UseNodeSettings(nodeSettings, dbType)

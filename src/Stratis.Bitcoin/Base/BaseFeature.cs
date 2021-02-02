@@ -393,16 +393,21 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IChainRepository, ChainRepository>();
 
                     if (dbType == DbType.Leveldb)
-                        services.AddSingleton<IChainStore, LeveldbHeaderStore>();
+                    {
+                        services.AddSingleton<IChainStore, LeveldbChainStore>();
+                        services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
+                    }
 
                     if (dbType == DbType.RocksDb)
+                    {
                         services.AddSingleton<IChainStore, RocksDbChainStore>();
+                        services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
+                    }
 
                     services.AddSingleton<IFinalizedBlockInfoRepository, FinalizedBlockInfoRepository>();
                     services.AddSingleton<ITimeSyncBehaviorState, TimeSyncBehaviorState>();
                     services.AddSingleton<NodeDeployments>();
                     services.AddSingleton<IInitialBlockDownloadState, InitialBlockDownloadState>();
-                    services.AddSingleton<IKeyValueRepository, LevelDbKeyValueStore>();
                     services.AddSingleton<ITipsManager, TipsManager>();
                     services.AddSingleton<IAsyncProvider, AsyncProvider>();
 

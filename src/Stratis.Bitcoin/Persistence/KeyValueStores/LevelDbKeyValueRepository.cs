@@ -7,18 +7,18 @@ using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Persistence.KeyValueStores
 {
-    public class LevelDbKeyValueStore : IKeyValueRepository
+    public class LevelDbKeyValueRepository : IKeyValueRepository
     {
         /// <summary>Access to database.</summary>
         private readonly DB leveldb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public LevelDbKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.KeyValueRepositoryPath, dBreezeSerializer)
+        public LevelDbKeyValueRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.KeyValueRepositoryPath, dBreezeSerializer)
         {
         }
 
-        public LevelDbKeyValueStore(string folder, DBreezeSerializer dBreezeSerializer)
+        public LevelDbKeyValueRepository(string folder, DBreezeSerializer dBreezeSerializer)
         {
             Directory.CreateDirectory(folder);
             this.dBreezeSerializer = dBreezeSerializer;

@@ -35,10 +35,12 @@ namespace Stratis.StraxD
                     MinProtocolVersion = ProtocolVersion.PROVEN_HEADER_VERSION
                 };
 
+                DbType dbType = nodeSettings.GetDbType();
+
                 IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
-                    .UseNodeSettings(nodeSettings)
-                    .UseBlockStore(DbType.RocksDb)
-                    .UsePosConsensus(DbType.RocksDb)
+                    .UseNodeSettings(nodeSettings, dbType)
+                    .UseBlockStore(dbType)
+                    .UsePosConsensus(dbType)
                     .UseMempool()
                     .UseColdStakingWallet()
                     .AddSQLiteWalletRepository()

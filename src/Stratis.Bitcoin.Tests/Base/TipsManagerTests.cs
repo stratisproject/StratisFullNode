@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Tests.Base
     public class TipsManagerTests : TestBase
     {
         private readonly LoggerFactory loggerFactory;
-        private readonly LevelDbKeyValueStore keyValueRepo;
+        private readonly LevelDbKeyValueRepository keyValueRepo;
         private readonly ITipsManager tipsManager;
 
         private readonly List<ChainedHeader> mainChainHeaders;
@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Tests.Base
         {
             this.loggerFactory = new LoggerFactory();
             string dir = CreateTestDir(this);
-            this.keyValueRepo = new LevelDbKeyValueStore(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
+            this.keyValueRepo = new LevelDbKeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
 
             this.tipsManager = new TipsManager(this.keyValueRepo, this.loggerFactory);
 
