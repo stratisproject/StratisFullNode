@@ -46,6 +46,7 @@ namespace Stratis.Bitcoin.Utilities
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly ILogger logger;
         private readonly NodeSettings nodeSettings;
+        private readonly string nodeStartedOn;
         private List<StatsItem> stats;
         private readonly IVersionProvider versionProvider;
 
@@ -57,6 +58,8 @@ namespace Stratis.Bitcoin.Utilities
             this.nodeSettings = nodeSettings;
             this.stats = new List<StatsItem>();
             this.versionProvider = versionProvider;
+
+            this.nodeStartedOn = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
         }
 
         /// <inheritdoc />
@@ -90,7 +93,7 @@ namespace Stratis.Bitcoin.Utilities
         {
             lock (this.locker)
             {
-                string date = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
+                string currentDateTime = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
 
                 var inlineStatsBuilders = this.stats
                     .Where(x => x.StatsType == StatsType.Inline)
@@ -155,7 +158,8 @@ namespace Stratis.Bitcoin.Utilities
                 statsBuilder.AppendLine();
                 statsBuilder.AppendLine($">> Node Stats");
                 statsBuilder.AppendLine("Agent".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Agent}:{this.versionProvider.GetVersion()} ({(int)this.nodeSettings.ProtocolVersion})");
-                statsBuilder.AppendLine("Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { date}");
+                statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeStartedOn}");
+                statsBuilder.AppendLine("Current Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentDateTime}");
                 statsBuilder.AppendLine();
 
                 foreach (var item in inlineStatsBuilders)

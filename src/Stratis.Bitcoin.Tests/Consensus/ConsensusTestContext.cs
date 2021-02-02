@@ -101,7 +101,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.loggerFactory = this.nodeSettings.LoggerFactory;
 
-            this.nodeStats = new NodeStats(this.dateTimeProvider);
+            this.nodeStats = new NodeStats(DateTimeProvider.Default, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object);
 
             var connectionSettings = new ConnectionManagerSettings(this.nodeSettings);
             this.selfEndpointTracker = new SelfEndpointTracker(this.loggerFactory, connectionSettings);
