@@ -156,8 +156,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             headers.Reverse();
 
-            //LevelDbBlockRepository blockRepository = (LevelDbBlockRepository)this.blockRepository;
-
             foreach (Block block in this.blockRepository.EnumerateBatch(headers))
             {
                 if (block == null)
@@ -175,7 +173,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 {
                     this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.storeTip.Height);
                 }
-
             }
         }
 
@@ -531,12 +528,12 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     if (this.blockStoreQueueFlushCondition.ShouldFlush)
                         this.FlushAllCollections();
 
+                    // If we are out of IBD, don't allow the block store to fall MaxReorg length behind consensus tip
+                    // otherwise the chain will need to rewind further than it's capable of doing.
                     if (!this.initialBlockDownloadState.IsInitialBlockDownload())
                     {
-                        // Don't allow block store to fall MaxReorg length behind consensus tip
-                        // otherwise the chain will need to rewind further than it's capable of doing.
                         if ((this.blocksQueue.Count + this.batch.Count) >= this.chainIndexer.Network.Consensus.MaxReorgLength / 2)
-                            this.FlushAllCollections(); this.FlushAllCollections();
+                            this.FlushAllCollections();
                     }
                 }
                 else
