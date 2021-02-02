@@ -14,6 +14,8 @@ namespace Stratis.Bitcoin.Utilities
 {
     public interface INodeStats
     {
+        bool DisplayBenchStats { get; set; }
+
         /// <summary>Registers action that will be used to append node stats when they are being collected.</summary>
         /// <param name="appendStatsAction">Action that will be invoked during stats collection.</param>
         /// <param name="statsType">Type of stats.</param>
@@ -37,6 +39,8 @@ namespace Stratis.Bitcoin.Utilities
 
     public class NodeStats : INodeStats
     {
+        public bool DisplayBenchStats { get; set; }
+
         // The amount of seconds the period loop will wait on a component to return it's stats before cancelling.
         private const int ComponentStatsWaitSeconds = 10;
 
@@ -52,6 +56,7 @@ namespace Stratis.Bitcoin.Utilities
 
         public NodeStats(IDateTimeProvider dateTimeProvider, NodeSettings nodeSettings, IVersionProvider versionProvider)
         {
+            this.DisplayBenchStats = nodeSettings.ConfigReader.GetOrDefault("displaybenchstats", false);
             this.dateTimeProvider = dateTimeProvider;
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
@@ -158,6 +163,7 @@ namespace Stratis.Bitcoin.Utilities
                 statsBuilder.AppendLine();
                 statsBuilder.AppendLine($">> Node Stats");
                 statsBuilder.AppendLine("Agent".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Agent}:{this.versionProvider.GetVersion()} ({(int)this.nodeSettings.ProtocolVersion})");
+                statsBuilder.AppendLine("Database".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.ConfigReader.GetOrDefault("dbtype", string.Empty)}");
                 statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeStartedOn}");
                 statsBuilder.AppendLine("Current Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentDateTime}");
                 statsBuilder.AppendLine();
