@@ -13,7 +13,6 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Pruning;
 using Stratis.Bitcoin.Features.BlockStore.Repositories;
-using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -93,10 +92,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             if (highestBlock != null)
             {
-                var builder = new StringBuilder();
-                builder.Append("BlockStore.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + highestBlock.Height.ToString().PadRight(8));
-                builder.Append(" BlockStore.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + highestBlock.HashBlock);
-                log.AppendLine(builder.ToString());
+                log.AppendLine("BlockStore Height".PadRight(LoggingConfiguration.ColumnLength) + $": {highestBlock.Height}".PadRight(10) + $"(Hash: {highestBlock.HashBlock})");
             }
         }
 

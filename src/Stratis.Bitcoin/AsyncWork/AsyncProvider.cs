@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
@@ -267,7 +268,7 @@ namespace Stratis.Bitcoin.AsyncWork
 
             var sb = new StringBuilder();
             sb.AppendLine($">> Async Loops");
-            sb.AppendLine($"Status".PadRight(30, ' ') + $": {running} running [{faulted} faulted]");
+            sb.AppendLine($"Status".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {running} running [{faulted} faulted]");
 
             if (faultyOnly && faulted == 0)
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using System.Threading;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
@@ -97,7 +98,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         public override string ToString()
         {
             var benchLogs = new StringBuilder();
-            benchLogs.Append("Tx Count".PadRight(30, ' ') + $": {this.MempoolSize} (Dynamic Size: {this.MempoolDynamicSize / 1000} kb) (Orphan Size: {this.MempoolOrphanSize})");
+            benchLogs.Append("Tx Count".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.MempoolSize} (Dynamic Size: {this.MempoolDynamicSize / 1000} kb) (Orphan Size: {this.MempoolOrphanSize})");
             return benchLogs.ToString();
         }
     }

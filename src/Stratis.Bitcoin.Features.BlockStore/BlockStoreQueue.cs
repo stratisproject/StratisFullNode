@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Primitives;
@@ -694,8 +695,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             if (this.storeTip != null)
             {
                 log.AppendLine(">> Block Store");
-                log.AppendLine("Batch Size".PadRight(30, ' ') + $": {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched)");
-                log.AppendLine("Queue Size".PadRight(30, ' ') + $": {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued)");
+                log.AppendLine("Batch Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched)");
+                log.AppendLine("Queue Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued)");
                 log.AppendLine();
             }
         }

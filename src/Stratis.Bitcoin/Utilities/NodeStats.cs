@@ -5,7 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using NLog;
+using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Utilities
 {
@@ -41,17 +44,19 @@ namespace Stratis.Bitcoin.Utilities
         private readonly object locker;
 
         private readonly IDateTimeProvider dateTimeProvider;
-
         private readonly ILogger logger;
-
+        private readonly NodeSettings nodeSettings;
         private List<StatsItem> stats;
+        private readonly IVersionProvider versionProvider;
 
-        public NodeStats(IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory)
+        public NodeStats(IDateTimeProvider dateTimeProvider, NodeSettings nodeSettings, IVersionProvider versionProvider)
         {
             this.dateTimeProvider = dateTimeProvider;
             this.locker = new object();
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
+            this.nodeSettings = nodeSettings;
             this.stats = new List<StatsItem>();
+            this.versionProvider = versionProvider;
         }
 
         /// <inheritdoc />
@@ -108,11 +113,11 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.LogWarning("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.Warn("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.LogError("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
+                        this.logger.Warn("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
                     }
                 });
 
@@ -137,17 +142,21 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.LogWarning("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.Warn("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.LogError("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
+                        this.logger.Warn("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
                     }
                 });
 
                 var statsBuilder = new StringBuilder();
 
-                statsBuilder.AppendLine($"======Node stats====== {date}");
+                statsBuilder.AppendLine();
+                statsBuilder.AppendLine($">> Node Stats");
+                statsBuilder.AppendLine("Agent".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Agent}:{this.versionProvider.GetVersion()} ({(int)this.nodeSettings.ProtocolVersion})");
+                statsBuilder.AppendLine("Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { date}");
+                statsBuilder.AppendLine();
 
                 foreach (var item in inlineStatsBuilders)
                 {

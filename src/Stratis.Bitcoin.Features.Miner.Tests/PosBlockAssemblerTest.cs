@@ -465,7 +465,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 new Mock<IStakeValidator>().Object,
                 new Mock<IChainState>().Object,
                 new InvalidBlockHashStore(dateTimeProvider),
-                new NodeStats(dateTimeProvider, this.LoggerFactory.Object),
+                new NodeStats(dateTimeProvider),
                 new Mock<IRewindDataIndexCache>().Object,
                 this.CreateAsyncProvider(),
                 consensusRulesContainer);

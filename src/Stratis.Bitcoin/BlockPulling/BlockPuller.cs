@@ -8,6 +8,7 @@ using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -973,7 +974,7 @@ namespace Stratis.Bitcoin.BlockPulling
                     unassignedDownloads += downloadJob.Headers.Count;
             }
 
-            statsBuilder.AppendLine("Blocks being downloaded".PadRight(30) + $": {pendingBlocks} ({unassignedDownloads} queued)");
+            statsBuilder.AppendLine("Blocks being downloaded".PadRight(LoggingConfiguration.ColumnLength) + $": {pendingBlocks} ({unassignedDownloads} queued)");
 
             double totalSpeedBytesPerSec = this.GetTotalSpeedOfAllPeersBytesPerSec();
             double totalSpeedKbPerSec = (totalSpeedBytesPerSec / 1024.0);
@@ -983,13 +984,13 @@ namespace Stratis.Bitcoin.BlockPulling
             double blocksPerSec = Math.Round(totalSpeedBytesPerSec / avgBlockSizeBytes, 2);
 
             statsBuilder.AppendLine(
-                "Total Download Speed".PadRight(30) + $": {Math.Round(totalSpeedKbPerSec, 2)} KB/sec".PadRight(20, ' ') +
-                "Block Download Average".PadRight(30) + $": {timeToDownloadBlockMs} ms"
+                "Total Download Speed".PadRight(LoggingConfiguration.ColumnLength) + $": {Math.Round(totalSpeedKbPerSec, 2)} KB/sec".PadRight(20, ' ') +
+                "Block Download Average".PadRight(LoggingConfiguration.ColumnLength) + $": {timeToDownloadBlockMs} ms"
                 );
 
             statsBuilder.AppendLine(
-                "Average block size".PadRight(30) + $": {Math.Round(averageBlockSizeKb, 2)} KB".PadRight(20, ' ') +
-                "Blocks downloadable in 1 sec".PadRight(30) + $": {blocksPerSec}");
+                "Average block size".PadRight(LoggingConfiguration.ColumnLength) + $": {Math.Round(averageBlockSizeKb, 2)} KB".PadRight(20, ' ') +
+                "Blocks downloadable in 1 sec".PadRight(LoggingConfiguration.ColumnLength) + $": {blocksPerSec}");
 
             statsBuilder.AppendLine();
 

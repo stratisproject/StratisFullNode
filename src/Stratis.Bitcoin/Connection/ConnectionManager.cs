@@ -265,7 +265,7 @@ namespace Stratis.Bitcoin.Connection
 
                 string agent = peer.PeerVersion != null ? peer.PeerVersion.UserAgent : "[Unknown]";
                 peerBuilder.AppendLine(
-                    (peer.Inbound ? "IN  " : "OUT ") + "Peer:" + (peer.RemoteSocketEndpoint + ", ").PadRight(LoggingConfiguration.ColumnLength + 15)
+                    (peer.Inbound ? "IN  " : "OUT ") + $"{peer.RemoteSocketEndpoint.Address}:{peer.RemoteSocketEndpoint.Port}".PadRight(LoggingConfiguration.ColumnLength + 15)
                     + peerHeights.PadRight(LoggingConfiguration.ColumnLength + 14)
                     + peerTraffic.PadRight(LoggingConfiguration.ColumnLength + 7)
                     + " agent:" + agent);
@@ -318,7 +318,8 @@ namespace Stratis.Bitcoin.Connection
 
             builder.AppendLine();
             builder.AppendLine($">> Connections (In:{inbound}) (Out:{this.ConnectedPeers.Count() - inbound})");
-            builder.AppendLine($"Agent".PadRight(30, ' ') + $": { this.Parameters.UserAgent} (Recv: {totalRead.BytesToMegaBytes()} MB) (Sent: {totalWritten.BytesToMegaBytes()} MB)");
+            builder.AppendLine("Data Transfer".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": (Received: {totalRead.BytesToMegaBytes()} MB) (Sent: {totalWritten.BytesToMegaBytes()} MB)");
+
             builder.AppendLine();
 
             if (whiteListedBuilder.Length > 0)
