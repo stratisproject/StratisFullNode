@@ -12,6 +12,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         private readonly string dataFolder;
         private readonly DBreezeSerializer dataStoreSerializer;
         private readonly DbOptions dbOptions;
+        private readonly RocksDb rocksdb;
 
         public RocksDbKeyValueRepository(DataFolder dataFolder, DBreezeSerializer dataStoreSerializer)
         {
@@ -19,15 +20,14 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             Directory.CreateDirectory(this.dataFolder);
             this.dataStoreSerializer = dataStoreSerializer;
             this.dbOptions = new DbOptions().SetCreateIfMissing(true);
+            this.rocksdb = RocksDb.Open(this.dbOptions, this.dataFolder);
         }
 
         /// <inheritdoc />
         public void SaveBytes(string key, byte[] bytes)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
-
-            using var rocksdb = RocksDb.Open(this.dbOptions, this.dataFolder);
-            rocksdb.Put(keyBytes, bytes);
+            this.rocksdb.Put(keyBytes, bytes);
         }
 
         /// <inheritdoc />
@@ -49,9 +49,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         public byte[] LoadBytes(string key)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
-
-            using var rocksdb = RocksDb.Open(this.dbOptions, this.dataFolder);
-            byte[] row = rocksdb.Get(keyBytes);
+            byte[] row = this.rocksdb.Get(keyBytes);
 
             if (row == null)
                 return null;
@@ -65,7 +63,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             byte[] bytes = this.LoadBytes(key);
 
             if (bytes == null)
-                return default(T);
+                return default;
 
             T value = this.dataStoreSerializer.Deserialize<T>(bytes);
             return value;
@@ -77,7 +75,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             byte[] bytes = this.LoadBytes(key);
 
             if (bytes == null)
-                return default(T);
+                return default;
 
             string json = Encoding.ASCII.GetString(bytes);
 
@@ -89,6 +87,7 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         /// <inheritdoc />
         public void Dispose()
         {
+            this.rocksdb.Dispose();
         }
     }
 }
