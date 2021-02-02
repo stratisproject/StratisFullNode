@@ -86,6 +86,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                     log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height}".PadRight(10) + $"(Hash: {hashBlock})");
                 else
                     log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + ": No Wallet");
+
+                log.AppendLine("");
             }
         }
 
