@@ -40,10 +40,10 @@ namespace Stratis.SmartContracts.CLR.Compilation
 
             // From all of these, work out which ones contain code in the given namespace.
             List<SyntaxTree> selectedNamespaceTrees = new List<SyntaxTree>();
-            foreach (SyntaxTree tree in syntaxTrees)
+            foreach(SyntaxTree tree in syntaxTrees)
             {
                 IEnumerable<NamespaceDeclarationSyntax> namespaceDeclarationSyntaxes = tree.GetRoot().DescendantNodes().OfType<NamespaceDeclarationSyntax>();
-                if (namespaceDeclarationSyntaxes.Any(x => x.Name.ToString() == selectedNamespace))
+                if (namespaceDeclarationSyntaxes.Any(x=>x.Name.ToString() == selectedNamespace))
                 {
                     selectedNamespaceTrees.Add(tree);
                 }
