@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
                     .AddFeature<ConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        services.ConfigureCoindbImplementation(coindbType);
+                        services.ConfigureDataBaseImplementation(coindbType);
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<StakeChainStore>().AddSingleton<IStakeChain, StakeChainStore>(provider => provider.GetService<StakeChainStore>());
                         services.AddSingleton<IStakeValidator, StakeValidator>();

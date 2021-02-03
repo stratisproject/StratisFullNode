@@ -25,7 +25,7 @@ using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Persistence;
-using Stratis.Bitcoin.Persistence.HeaderStores;
+using Stratis.Bitcoin.Persistence.ChainStores;
 using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -394,7 +394,7 @@ namespace Stratis.Bitcoin.Base
 
                     if (dbType == DbType.Leveldb)
                     {
-                        services.AddSingleton<IChainStore, LeveldbChainStore>();
+                        services.AddSingleton<IChainStore, LevelDbChainStore>();
                         services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
                     }
 

@@ -27,7 +27,8 @@ namespace Stratis.Bitcoin.Features.Consensus
                     .AddFeature<PowConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        ConfigureCoindbImplementation(services, coindbType);
+                        ConfigureDataBaseImplementation(services, coindbType);
+
                         services.AddSingleton<ConsensusOptions, ConsensusOptions>();
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<IConsensusRuleEngine, PowConsensusRuleEngine>();
@@ -51,7 +52,8 @@ namespace Stratis.Bitcoin.Features.Consensus
                     .AddFeature<PosConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        services.ConfigureCoindbImplementation(coindbType);
+                        services.ConfigureDataBaseImplementation(coindbType);
+
                         services.AddSingleton(provider => (IStakedb)provider.GetService<ICoindb>());
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<StakeChainStore>().AddSingleton<IStakeChain, StakeChainStore>(provider => provider.GetService<StakeChainStore>());
@@ -62,27 +64,33 @@ namespace Stratis.Bitcoin.Features.Consensus
                         services.AddSingleton<ConsensusQuery>()
                             .AddSingleton<INetworkDifficulty, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>())
                             .AddSingleton<IGetUnspentTransaction, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>());
+
                         services.AddSingleton<IProvenBlockHeaderStore, ProvenBlockHeaderStore>();
-                        services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository>();
                     });
             });
 
             return fullNodeBuilder;
         }
 
-        public static void ConfigureCoindbImplementation(this IServiceCollection services, DbType coindbType)
+        public static void ConfigureDataBaseImplementation(this IServiceCollection services, DbType coindbType)
         {
             if (coindbType == DbType.Dbreeze)
                 services.AddSingleton<ICoindb, DBreezeCoindb>();
 
             if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
+            {
+                services.AddSingleton<ICoindb, LevelDbCoindb>();
+                services.AddSingleton<IProvenBlockHeaderRepository, LevelDbProvenBlockHeaderRepository>();
+            }
 
             if (coindbType == DbType.Faster)
                 services.AddSingleton<ICoindb, FasterCoindb>();
 
             if (coindbType == DbType.RocksDb)
+            {
                 services.AddSingleton<ICoindb, RocksDbCoindb>();
+                services.AddSingleton<IProvenBlockHeaderRepository, RocksDbProvenBlockHeaderRepository>();
+            }
         }
     }
 }
