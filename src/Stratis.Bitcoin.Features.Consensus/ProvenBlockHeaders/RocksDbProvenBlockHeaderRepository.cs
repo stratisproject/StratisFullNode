@@ -20,10 +20,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
     {
         private readonly string dataFolder;
         private readonly DBreezeSerializer dBreezeSerializer;
-        private readonly DbOptions dbOptions;
         private readonly object locker;
         private readonly ILogger logger;
         private readonly Network network;
+        private readonly RocksDb rocksDb;
 
         /// <inheritdoc />
         public HashHeightPair TipHashHeight { get; private set; }
@@ -57,7 +57,9 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             this.dataFolder = dataFolder;
             Directory.CreateDirectory(dataFolder);
 
-            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
+            var dbOptions = new DbOptions().SetCreateIfMissing(true);
+            this.rocksDb = RocksDb.Open(dbOptions, this.dataFolder);
+
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -92,8 +94,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
-                    row = rocksDb.Get(DBH.Key(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight)));
+                    row = this.rocksDb.Get(DBH.Key(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight)));
                 }
 
                 if (row != null)
@@ -137,8 +138,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             lock (this.locker)
             {
-                using var rocksdb = RocksDb.Open(this.dbOptions, this.dataFolder);
-                rocksdb.Put(DBH.Key(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey), this.dBreezeSerializer.Serialize(newTip));
+                this.rocksDb.Put(DBH.Key(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey), this.dBreezeSerializer.Serialize(newTip));
             }
         }
 
@@ -155,8 +155,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
-                    rocksDb.Write(batch);
+                    this.rocksDb.Write(batch);
                 }
             }
         }
@@ -172,8 +171,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             byte[] row = null;
             lock (this.locker)
             {
-                using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
-                row = rocksDb.Get(DBH.Key(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey));
+                row = this.rocksDb.Get(DBH.Key(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey));
             }
 
             if (row != null)
@@ -185,6 +183,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <inheritdoc />
         public void Dispose()
         {
+            this.rocksDb.Dispose();
         }
     }
 }
