@@ -11,6 +11,8 @@ public class CreateWithAllArrays : SmartContract
         byte[] longBytes,
         byte[] uintBytes,
         byte[] ulongBytes,
+        byte[] uint128Bytes,
+        byte[] uint256Bytes,
         byte[] stringBytes) 
         : base(state)
     {
@@ -53,6 +55,18 @@ public class CreateWithAllArrays : SmartContract
         Assert(ulongs[1] == 123);
         Assert(ulongs[2] == UInt64.MaxValue);
         this.PersistentState.SetArray("ulongs", ulongs);
+
+        UInt128[] uint128s = this.Serializer.ToArray<UInt128>(uint128Bytes);
+        Assert(uint128s[0] == 1);
+        Assert(uint128s[1] == 123);
+        Assert(uint128s[2] == UInt128.MaxValue);
+        this.PersistentState.SetArray("uint128s", uint128s);
+
+        UInt256[] uint256s = this.Serializer.ToArray<UInt256>(uint256Bytes);
+        Assert(uint256s[0] == 1);
+        Assert(uint256s[1] == 123);
+        Assert(uint256s[2] == UInt256.MaxValue);
+        this.PersistentState.SetArray("uint256s", uint256s);
 
         string[] strings = this.Serializer.ToArray<string>(stringBytes);
         Assert(strings[0] == "Test");

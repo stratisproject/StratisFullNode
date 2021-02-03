@@ -14,6 +14,8 @@ public class CallWithAllParameters : SmartContract
         long aLong,
         uint aUint,
         ulong aUlong,
+        UInt128 aUInt128,
+        UInt256 aUInt256,
         string aString)
     {
         byte[] charBytes = this.Serializer.Serialize(aChar);
@@ -43,6 +45,14 @@ public class CallWithAllParameters : SmartContract
         byte[] ulongBytes = this.Serializer.Serialize(aUlong);
         ulong ulongResult = this.Serializer.ToUInt64(ulongBytes);
         Assert(ulongResult == aUlong, "Ulong failed.");
+
+        byte[] u128Bytes = this.Serializer.Serialize(aUInt128);
+        UInt128 u128Result = this.Serializer.ToUInt128(u128Bytes);
+        Assert(u128Result == aUInt128, "UInt128 failed.");
+
+        byte[] u256Bytes = this.Serializer.Serialize(aUInt256);
+        UInt256 u256Result = this.Serializer.ToUInt256(u256Bytes);
+        Assert(u256Result == aUInt256, "UInt256 failed.");
 
         byte[] stringBytes = this.Serializer.Serialize(aString);
         string stringResult = this.Serializer.ToString(stringBytes);

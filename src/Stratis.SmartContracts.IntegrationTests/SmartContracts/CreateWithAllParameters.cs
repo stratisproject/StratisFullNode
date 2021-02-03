@@ -10,6 +10,8 @@ public class CreateWithAllParameters : SmartContract
         long aLong,
         uint aUint,
         ulong aUlong,
+        UInt128 aUInt128,
+        UInt256 aUInt256,
         string aString,
         byte[] bytes) : base(state)
     {
@@ -20,6 +22,8 @@ public class CreateWithAllParameters : SmartContract
         PersistentState.SetInt64("long", aLong);
         PersistentState.SetUInt32("uint", aUint);
         PersistentState.SetUInt64("ulong",aUlong);
+        PersistentState.SetUInt128("UInt128", aUInt128);
+        PersistentState.SetUInt256("UInt256", aUInt256);
         PersistentState.SetString("string", aString);
         PersistentState.SetBytes("bytes", bytes);
         this.Log(new Log
@@ -31,6 +35,8 @@ public class CreateWithAllParameters : SmartContract
             Long = aLong,
             Uint = aUint,
             Ulong = aUlong,
+            UInt128 = aUInt128,
+            UInt256 = aUInt256,
             String = aString,
             Bytes = bytes
         });
@@ -39,6 +45,8 @@ public class CreateWithAllParameters : SmartContract
         Assert(PersistentState.GetBool("bool") == aBool);
         Assert(PersistentState.GetInt32("int") == anInt);
         Assert(PersistentState.GetInt64("long") == aLong);
+        Assert(PersistentState.GetUInt128("UInt128") == aUInt128);
+        Assert(PersistentState.GetUInt256("UInt256") == aUInt256);
         Assert(PersistentState.GetString("string") == aString);
         byte[] bytesStored = PersistentState.GetBytes("bytes");
         Assert(bytesStored.Length == bytes.Length);
@@ -70,6 +78,12 @@ public class CreateWithAllParameters : SmartContract
 
         [Index]
         public ulong Ulong;
+
+        [Index]
+        public UInt128 UInt128;
+
+        [Index]
+        public UInt256 UInt256;
 
         [Index]
         public string String;
