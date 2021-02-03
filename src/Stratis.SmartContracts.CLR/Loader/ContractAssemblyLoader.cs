@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net;
 using System.Reflection;
-using System.Runtime.Loader;
 using CSharpFunctionalExtensions;
-using Microsoft.Extensions.Logging;
 
 namespace Stratis.SmartContracts.CLR.Loader
 {
