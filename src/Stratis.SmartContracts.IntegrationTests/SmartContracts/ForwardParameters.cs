@@ -10,6 +10,8 @@ public class ForwardParameters : SmartContract
         long aLong,
         uint aUint,
         ulong aUlong,
+        UInt128 aUInt128,
+        UInt256 aUInt256,
         string aString,
         Address sendTo) : base(state)
     {
@@ -22,6 +24,8 @@ public class ForwardParameters : SmartContract
             aLong,
             aUint,
             aUlong,
+            aUInt128,
+            aUInt256,
             aString
         });
 

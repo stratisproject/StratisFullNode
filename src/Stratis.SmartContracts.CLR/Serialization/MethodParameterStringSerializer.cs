@@ -74,38 +74,22 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         private static MethodParameterDataType GetPrimitiveType(object o)
         {
-            if (o is bool)
-                return MethodParameterDataType.Bool;
-
-            if (o is byte)
-                return MethodParameterDataType.Byte;
-
-            if (o is byte[])
-                return MethodParameterDataType.ByteArray;
-
-            if (o is char)
-                return MethodParameterDataType.Char;         
-
-            if (o is string)
-                return MethodParameterDataType.String;
-
-            if (o is uint)
-                return MethodParameterDataType.UInt;
-            
-            if (o is ulong)
-                return MethodParameterDataType.ULong;
-
-            if (o is Address)
-                return MethodParameterDataType.Address;
-
-            if (o is long)
-                return MethodParameterDataType.Long;
-
-            if (o is int)
-                return MethodParameterDataType.Int;
-            
-            // Any other types are not supported.
-            throw new MethodParameterStringSerializerException(string.Format("{0} is not supported.", o.GetType().Name));
+            return o switch
+            {
+                bool _ => MethodParameterDataType.Bool,
+                byte _ => MethodParameterDataType.Byte,
+                byte[] _ => MethodParameterDataType.ByteArray,
+                char _ => MethodParameterDataType.Char,
+                string _ => MethodParameterDataType.String,
+                uint _ => MethodParameterDataType.UInt,
+                ulong _ => MethodParameterDataType.ULong,
+                Address _ => MethodParameterDataType.Address,
+                long _ => MethodParameterDataType.Long,
+                int _ => MethodParameterDataType.Int,
+                UInt128 _ => MethodParameterDataType.UInt128,
+                UInt256 _ => MethodParameterDataType.UInt256,
+                _ => throw new MethodParameterStringSerializerException(string.Format("{0} is not supported.", o.GetType().Name))
+            };
         }
 
         public object[] Deserialize(string[] parameters)
@@ -170,6 +154,12 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
                     else if (parameterSignature[0] == MethodParameterDataType.ByteArray.ToString("d"))
                         processedParameters.Add(parameterSignature[1].HexToByteArray());
+
+                    else if (parameterSignature[0] == MethodParameterDataType.UInt128.ToString("d"))
+                        processedParameters.Add(UInt128.Parse(parameterSignature[1]));
+
+                    else if (parameterSignature[0] == MethodParameterDataType.UInt256.ToString("d"))
+                        processedParameters.Add(UInt256.Parse(parameterSignature[1]));
 
                     else
                         throw new MethodParameterStringSerializerException($"Parameter type '{parameterType}' is not supported.");

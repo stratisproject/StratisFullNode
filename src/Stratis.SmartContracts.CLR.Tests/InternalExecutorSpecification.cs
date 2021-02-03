@@ -1,5 +1,6 @@
 ﻿using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Xunit;
 
 namespace Stratis.SmartContracts.CLR.Tests
@@ -11,7 +12,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         {
             ulong amount = 100UL;
             var parameters = new object[] { };
-            var gasLimit = (RuntimeObserver.Gas)100_000;
+            var gasLimit = (RuntimeObserver.Gas)SmartContractFormatLogic.GasLimitMaximum;
 
             var fixture = new InternalExecutorTestFixture();
             
@@ -54,7 +55,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         {
             ulong amount = 100UL;
             var parameters = new object[] { };
-            var gasLimit = (RuntimeObserver.Gas)100_000;
+            var gasLimit = (RuntimeObserver.Gas)SmartContractFormatLogic.GasLimitMaximum;
 
             var fixture = new InternalExecutorTestFixture();
 
@@ -97,7 +98,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         {
             ulong amount = 100UL;
             var parameters = new object[] { };
-            var gasLimit = (RuntimeObserver.Gas)100_000;
+            var gasLimit = (RuntimeObserver.Gas)SmartContractFormatLogic.GasLimitMaximum;
 
             var fixture = new InternalExecutorTestFixture();
 
@@ -132,7 +133,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             var to = "0x95D34980095380851902ccd9A1Fb4C813C2cb639".HexToAddress();
             var method = "Test";
             var parameters = new object[] { };
-            var gasLimit = (RuntimeObserver.Gas)100_000;
+            var gasLimit = (RuntimeObserver.Gas)SmartContractFormatLogic.GasLimitMaximum;
 
             
             fixture.SetGasMeterLimitAbove(gasLimit);
@@ -179,7 +180,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             var to = "0x95D34980095380851902ccd9A1Fb4C813C2cb639".HexToAddress();
             var method = "Test";
             var parameters = new object[] { };
-            var gasLimit = (RuntimeObserver.Gas)100_000;
+            var gasLimit = (RuntimeObserver.Gas)SmartContractFormatLogic.GasLimitMaximum;
             
             fixture.SetGasMeterLimitAbove(gasLimit);
 
@@ -225,7 +226,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             var to = "0x95D34980095380851902ccd9A1Fb4C813C2cb639".HexToAddress();
             var method = "Test";
             var parameters = new object[] { };
-            var gasLimit = (RuntimeObserver.Gas)100_000;
+            var gasLimit = (RuntimeObserver.Gas)SmartContractFormatLogic.GasLimitMaximum;
 
             fixture.SetGasMeterLimitBelow(gasLimit);
 

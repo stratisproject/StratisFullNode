@@ -11,6 +11,8 @@
         ULong = 7,
         Long = 8,
         Address = 9,
-        ByteArray = 10
+        ByteArray = 10,
+        UInt128 = 11,
+        UInt256 = 12
     }
 }
