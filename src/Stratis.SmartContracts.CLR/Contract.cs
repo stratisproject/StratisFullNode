@@ -222,7 +222,9 @@ namespace Stratis.SmartContracts.CLR
         /// </summary>
         private static void SetStateField(SmartContract smartContract, ISmartContractState contractState)
         {
-            FieldInfo field = typeof(SmartContract).GetField("state", DefaultBindingFlags);
+            FieldInfo field = typeof(SmartContract).GetField("contractState", DefaultBindingFlags);
+            if (field == null)
+                field = typeof(SmartContract).GetField("state", DefaultBindingFlags);
 
             field.SetValue(smartContract, contractState);
         }
