@@ -166,6 +166,10 @@ namespace Stratis.Bitcoin.Utilities
                 statsBuilder.AppendLine("Database".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.ConfigReader.GetOrDefault("dbtype", "leveldb")}");
                 statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeStartedOn}");
                 statsBuilder.AppendLine("Current Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentDateTime}");
+
+                if (this.nodeSettings.ConfigReader.GetOrDefault("displayextendednodestats", false))
+                    statsBuilder.AppendLine("Data Folder".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.DataFolder.RootPath}");
+
                 statsBuilder.AppendLine();
 
                 foreach (var item in inlineStatsBuilders)

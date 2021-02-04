@@ -30,6 +30,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
 
         public override void BuildNode()
         {
+            this.configParameters.Add("displayextendednodestats", "true");
+
             var argsAsStringArray = this.configParameters.AsConsoleArgArray();
 
             NodeSettings settings;
