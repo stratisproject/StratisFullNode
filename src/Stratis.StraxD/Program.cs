@@ -28,12 +28,13 @@ namespace Stratis.StraxD
         {
             try
             {
-                // set the console window title to identify this as a Strax full node (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = "Strax Full Node";
                 var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.PROVEN_HEADER_VERSION
                 };
+
+                // Set the console window title to identify this as a Strax full node (for clarity when running Strax and Cirrus on the same machine).
+                Console.Title = $"Strax Full Node {nodeSettings.Network.NetworkType}";
 
                 DbType dbType = nodeSettings.GetDbType();
 
