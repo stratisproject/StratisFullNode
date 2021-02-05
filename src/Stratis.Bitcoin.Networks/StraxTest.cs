@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Networks
                 maxStandardVersion: 2,
                 maxStandardTxWeight: 150_000,
                 maxBlockSigopsCost: 20_000,
-                maxStandardTxSigopsCost: 20_000 / 5,
+                maxStandardTxSigopsCost: 20_000 / 2,
                 witnessScaleFactor: 4
                 );
 
