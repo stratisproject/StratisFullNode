@@ -73,6 +73,20 @@ rm "src\Stratis.Features.SQLiteWalletRepository\bin\Release\" -Recurse -Force
 dotnet pack src\Stratis.Features.SQLiteWalletRepository --configuration Release --include-source --include-symbols
 dotnet nuget push "src\Stratis.Features.SQLiteWalletRepository\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
 
+# TEST PROJECTS
+
+rm "src\Stratis.Bitcoin.Tests.Common\bin\Release\" -Recurse -Force
+dotnet pack src\Stratis.Bitcoin.Tests.Common --configuration Release --include-source --include-symbols
+dotnet nuget push "src\Stratis.Bitcoin.Tests.Common\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
+
+rm "src\Stratis.Bitcoin.IntegrationTests.Common\bin\Release\" -Recurse -Force
+dotnet pack src\Stratis.Bitcoin.IntegrationTests.Common --configuration Release --include-source --include-symbols
+dotnet nuget push "src\Stratis.Bitcoin.IntegrationTests.Common\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
+
+rm "src\Stratis.Bitcoin.Features.PoA.IntegrationTests.Common\bin\Release\" -Recurse -Force
+dotnet pack src\Stratis.Bitcoin.Features.PoA.IntegrationTests.Common --configuration Release --include-source --include-symbols
+dotnet nuget push "src\Stratis.Bitcoin.Features.PoA.IntegrationTests.Common\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
+
 # TOOLS PROJECTS
 
 rm "src\FodyNlogAdapter\bin\Release\" -Recurse -Force
