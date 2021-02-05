@@ -14,9 +14,9 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <AssemblyVersion>1.0.6.4</AssemblyVersion>
-    <FileVersion>1.0.6.4</FileVersion>
-    <Version>1.0.6.4</Version>
+    <AssemblyVersion>1.0.6.5</AssemblyVersion>
+    <FileVersion>1.0.6.5</FileVersion>
+    <Version>1.0.6.5</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
