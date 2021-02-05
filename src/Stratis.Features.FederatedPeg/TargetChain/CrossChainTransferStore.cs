@@ -11,6 +11,7 @@ using DBreeze.Utils;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Signals;
@@ -29,12 +30,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Given that we can have up to 10 UTXOs going at once.
         /// </summary>
-        private const int TransfersToDisplay = 20;
+        private const int TransfersToDisplay = 10;
 
         /// <summary>
         /// Maximum number of partial transactions.
         /// </summary>
-        public const int MaximumPartialTransactions = 20;
+        public const int MaximumPartialTransactions = 5;
 
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
@@ -1436,10 +1437,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private void AddComponentStats(StringBuilder benchLog)
         {
             benchLog.AppendLine("====== Cross Chain Transfer Store ======");
-            benchLog.AppendLine("Height:".PadRight(20) + this.TipHashAndHeight.Height + $" [{this.TipHashAndHeight.HashBlock}]");
-            benchLog.AppendLine("NextDepositHeight:".PadRight(20) + this.NextMatureDepositHeight);
-            benchLog.AppendLine("Partial Txs:".PadRight(20) + GetTransferCountByStatus(CrossChainTransferStatus.Partial));
-            benchLog.AppendLine("Suspended Txs:".PadRight(20) + GetTransferCountByStatus(CrossChainTransferStatus.Suspended));
+            benchLog.AppendLine("Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.TipHashAndHeight.Height} [{this.TipHashAndHeight.HashBlock}]");
+            benchLog.AppendLine("NextDepositHeight".PadRight(LoggingConfiguration.ColumnLength) + $": {this.NextMatureDepositHeight}");
+            benchLog.AppendLine("Partial Txs".PadRight(LoggingConfiguration.ColumnLength) + $": {GetTransferCountByStatus(CrossChainTransferStatus.Partial)}");
+            benchLog.AppendLine("Suspended Txs".PadRight(LoggingConfiguration.ColumnLength) + $": {GetTransferCountByStatus(CrossChainTransferStatus.Suspended)}");
             benchLog.AppendLine();
 
             var depositIds = new HashSet<uint256>();
@@ -1476,24 +1477,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 benchLog.AppendLine("Failed to retrieve data");
                 this.logger.Error("Exception occurred while getting pending withdrawals: '{0}'.", exception.ToString());
             }
-
-            // Only display this on the mainchain for now as the sidechain has too many SeenInBlock
-            // deposits making the query exectute too long.
-            // TODO: We need to look at including the block height in the dictionary perhaps.
-            if (this.settings.IsMainChain)
-            {
-                List<WithdrawalModel> completedWithdrawals = GetCompletedWithdrawals(10);
-                if (completedWithdrawals.Count > 0)
-                {
-                    benchLog.AppendLine("--- Recently Completed Withdrawals ---");
-
-                    foreach (WithdrawalModel withdrawal in completedWithdrawals)
-                        benchLog.AppendLine(withdrawal.ToString());
-
-                    benchLog.AppendLine();
-                }
-            }
         }
+
 
         /// <inheritdoc />
         public List<WithdrawalModel> GetCompletedWithdrawals(int transfersToDisplay)
