@@ -12,10 +12,6 @@ namespace Stratis.Bitcoin.Configuration
             string minor = match.Groups[3].Value;
             string build = match.Groups[5].Value;
             string revision = match.Groups[7].Value;
-
-            if (revision == "0")
-                return $"{major}.{minor}.{build}";
-
             return $"{major}.{minor}.{build}.{revision}";
         }
     }

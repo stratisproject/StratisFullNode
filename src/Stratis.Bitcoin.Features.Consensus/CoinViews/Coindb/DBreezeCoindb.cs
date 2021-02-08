@@ -344,7 +344,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void AddBenchStats(StringBuilder log)
         {
-            log.AppendLine("======DBreezeCoinView Bench======");
+            log.AppendLine(">> DBreezeCoinView Bench");
 
             BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 

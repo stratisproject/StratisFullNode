@@ -402,7 +402,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void AddBenchStats(StringBuilder log)
         {
-            log.AppendLine("======Faster Bench======");
+            log.AppendLine(">> Faster Bench");
 
             BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 

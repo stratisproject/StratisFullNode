@@ -60,8 +60,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             if (walletNamesSQL.Any())
             {
-                log.AppendLine();
-                log.AppendLine("======Wallets======");
+                log.AppendLine(">> Wallets");
 
                 var walletManager = (WalletManager)this.walletManager;
 
@@ -69,12 +68,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 {
                     foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
                     {
-                        log.AppendLine(
-                            ($"{walletName}/{accountBalance.Account.Name}" + ",").PadRight(
-                                LoggingConfiguration.ColumnLength + 10)
-                            + (" Confirmed balance: " + accountBalance.AmountConfirmed.ToString()).PadRight(
-                                LoggingConfiguration.ColumnLength + 20)
-                            + " Unconfirmed balance: " + accountBalance.AmountUnconfirmed.ToString());
+                        log.AppendLine($"{walletName}/{accountBalance.Account.Name}".PadRight(LoggingConfiguration.ColumnLength) + $": Confirmed balance: {accountBalance.AmountConfirmed}".PadRight(LoggingConfiguration.ColumnLength + 20) + $" Unconfirmed balance: {accountBalance.AmountUnconfirmed}");
                     }
                 }
             }
@@ -88,9 +82,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 ChainedHeader block = this.chainIndexer.GetHeader(height);
                 uint256 hashBlock = block == null ? 0 : block.HashBlock;
 
-                log.AppendLine("Wallet[SC].Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) +
-                                        (walletManager.ContainsWallets ? height.ToString().PadRight(8) : "No Wallet".PadRight(8)) +
-                                        (walletManager.ContainsWallets ? (" Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + hashBlock) : string.Empty));
+                if (this.walletManager.ContainsWallets)
+                    log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height}".PadRight(10) + $"(Hash: {hashBlock})");
+                else
+                    log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + ": No Wallet");
+
+                log.AppendLine("");
             }
         }
 
