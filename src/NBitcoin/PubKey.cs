@@ -303,6 +303,11 @@ namespace NBitcoin
             return key.GetPubKey(compressed);
         }
 
+        public static PubKey RecoverFromSignature(int recId, ECDSASignature sig, uint256 hash, bool compressed)
+        {
+            ECKey key = ECKey.RecoverFromSignature(recId, sig, hash, compressed);
+            return key?.GetPubKey(compressed);
+        }
 
         public PubKey Derivate(byte[] cc, uint nChild, out byte[] ccChild)
         {

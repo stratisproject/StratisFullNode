@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.network = new TestPoANetwork();
             this.consensusOptions = this.network.ConsensusOptions;
 
-            this.federationManager = PoATestsBase.CreateFederationManager(this);
+            this.federationManager = PoATestsBase.CreateFederationManager(this).federationManager;
             this.chainIndexer = new Mock<ChainIndexer>();
             this.slotsManager = new SlotsManager(this.network, this.federationManager, this.chainIndexer.Object, new LoggerFactory());
         }
@@ -40,39 +40,22 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         }
 
         [Fact]
-        public void ValidSlotAssigned()
-        {
-            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
-            uint roundStart = this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count * 5;
-
-            int currentFedIndex = -1;
-
-            for (int i = 0; i < 20; i++)
-            {
-                currentFedIndex++;
-                if (currentFedIndex > federationMembers.Count - 1)
-                    currentFedIndex = 0;
-
-                Assert.Equal(federationMembers[currentFedIndex].PubKey, this.slotsManager.GetFederationMemberForTimestamp(roundStart + this.consensusOptions.TargetSpacingSeconds * (uint)i).PubKey);
-            }
-        }
-
-        [Fact]
         public void GetMiningTimestamp()
         {
             var tool = new KeyTool(new DataFolder(string.Empty));
             Key key = tool.GeneratePrivateKey();
             this.network = new TestPoANetwork(new List<PubKey>() { tool.GeneratePrivateKey().PubKey, key.PubKey, tool.GeneratePrivateKey().PubKey });
 
-            IFederationManager fedManager = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null));
-            this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(new BlockHeader(), 0, 0));
+            IFederationManager fedManager = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null)).federationManager;
+            var header = new BlockHeader();
+            this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             this.slotsManager = new SlotsManager(this.network, fedManager, this.chainIndexer.Object, new LoggerFactory());
 
             List<IFederationMember> federationMembers = fedManager.GetFederationMembers();
             uint roundStart = this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count * 5;
 
-            fedManager.SetPrivatePropertyValue(typeof(FederationManagerBase), nameof(IFederationManager.CurrentFederationKey), key);
-            fedManager.SetPrivatePropertyValue(typeof(FederationManagerBase), nameof(this.federationManager.IsFederationMember), true);
+            fedManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(IFederationManager.CurrentFederationKey), key);
+            fedManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(this.federationManager.IsFederationMember), true);
 
             Assert.Equal(roundStart + this.consensusOptions.TargetSpacingSeconds, this.slotsManager.GetMiningTimestamp(roundStart));
             Assert.Equal(roundStart + this.consensusOptions.TargetSpacingSeconds, this.slotsManager.GetMiningTimestamp(roundStart + 4));
@@ -94,10 +77,12 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Assert.Equal(thisTurnTimestamp, this.slotsManager.GetMiningTimestamp(thisTurnTimestamp + 1));
 
             // If we are only just past our last timestamp, but we've already mined a block there, then get the NEXT turn's timestamp.
-            this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(new BlockHeader
+            header = new BlockHeader
             {
                 Time = thisTurnTimestamp
-            }, 0, 0));
+            };
+
+            this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             this.slotsManager = new SlotsManager(this.network, fedManager, this.chainIndexer.Object, new LoggerFactory());
             Assert.Equal(nextTurnTimestamp, this.slotsManager.GetMiningTimestamp(thisTurnTimestamp + 1));
 

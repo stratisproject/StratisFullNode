@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             this.dateTimeProvider = new DateTimeProvider();
             this.hashStore = new InvalidBlockHashStore(this.dateTimeProvider);
 
-            this.coinView = new TestInMemoryCoinView(this.chainIndexer.Tip.HashBlock);
+            this.coinView = new TestInMemoryCoinView(new HashHeightPair(this.chainIndexer.Tip));
             this.HeaderValidator = new Mock<IHeaderValidator>();
             this.HeaderValidator.Setup(hv => hv.ValidateHeader(It.IsAny<ChainedHeader>())).Returns(new ValidationContext());
 
@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             this.Network.Consensus.Options = new ConsensusOptions();
 
             this.signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             // Dont check PoW of a header in this test.
             this.Network.Consensus.ConsensusRules.HeaderValidationRules.RemoveAll(x => x.GetType() == typeof(CheckDifficultyPowRule));
@@ -121,7 +121,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
                   this.ChainState.Object,
                   this.FinalizedBlockMock.Object,
                   this.ConsensusSettings,
-                  this.hashStore);
+                  this.hashStore,
+                  new ChainWorkComparer());
 
             this.peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, this.nodeSettings.DataFolder, this.loggerFactory, this.selfEndpointTracker);
 
@@ -138,7 +139,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             this.connectionManager = new ConnectionManager(this.dateTimeProvider, this.loggerFactory, this.Network, this.networkPeerFactory, this.nodeSettings,
                 this.nodeLifetime, new NetworkPeerConnectionParameters(), this.peerAddressManager, new IPeerConnector[] { },
-                peerDiscovery, this.selfEndpointTracker, connectionSettings, new VersionProvider(), this.nodeStats, this.asyncProvider);
+                peerDiscovery, this.selfEndpointTracker, connectionSettings, new VersionProvider(), this.nodeStats, this.asyncProvider, new PayloadProvider());
 
             this.deployments = new NodeDeployments(this.Network, this.chainIndexer);
 
@@ -148,7 +149,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             this.consensusRules.SetupRulesEngineParent();
 
             var tree = new ChainedHeaderTree(this.Network, this.loggerFactory, this.HeaderValidator.Object, this.checkpoints.Object,
-                this.ChainState.Object, this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore);
+                this.ChainState.Object, this.FinalizedBlockMock.Object, this.ConsensusSettings, this.hashStore, new ChainWorkComparer());
 
             this.PartialValidator = new Mock<IPartialValidator>();
             this.FullValidator = new Mock<IFullValidator>();
@@ -351,7 +352,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             var networkPeer = new Mock<INetworkPeer>();
 
             var signals = new Bitcoin.Signals.Signals(this.loggerFactory, null);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             var connection = new NetworkPeerConnection(this.Network, networkPeer.Object, new TcpClient(), 0, (message, token) => Task.CompletedTask,
             this.dateTimeProvider, this.loggerFactory, new PayloadProvider().DiscoverPayloads(), asyncProvider);

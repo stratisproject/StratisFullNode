@@ -3,6 +3,7 @@ using System.Linq;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -15,6 +16,7 @@ using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core;
+using Stratis.SmartContracts.Core.Interfaces;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Core.Util;
@@ -53,8 +55,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
             ISenderRetriever senderRetriever,
             IStateRepositoryRoot stateRoot,
             IBlockExecutionResultCache executionCache,
-            ICallDataSerializer callDataSerializer)
-            : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network)
+            ICallDataSerializer callDataSerializer,
+            NodeDeployments nodeDeployments)
+            : base(consensusManager, dateTimeProvider, loggerFactory, mempool, mempoolLock, minerSettings, network, nodeDeployments)
         {
             this.coinView = coinView;
             this.executorFactory = executorFactory;

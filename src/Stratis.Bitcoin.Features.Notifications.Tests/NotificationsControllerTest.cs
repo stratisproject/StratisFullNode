@@ -6,6 +6,7 @@ using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Notifications.Controllers;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
@@ -20,7 +21,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
         public NotificationsControllerTest()
         {
-            this.network = KnownNetworks.StratisMain;
+            this.network = new StraxMain();
         }
 
         [Theory]
@@ -35,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             var notificationController = new NotificationsController(blockNotification.Object, chain.Object);
@@ -54,10 +55,10 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         {
             // Set up
             int heightLocation = 480946;
-            string hashLocation = "000000000000000000c03dbe6ee5fedb25877a12e32aa95bc1d3bd480d7a93f9";
-            uint256 hash = uint256.Parse(hashLocation);
+            var header = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+            uint256 hash = header.GetHash();
 
-            var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
+            var chainedHeader = new ChainedHeader(header, hash, null);
             var chain = new Mock<ChainIndexer>();
             chain.Setup(c => c.GetHeader(heightLocation)).Returns(chainedHeader);
 
@@ -65,7 +66,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -82,8 +83,9 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
         {
             // Set up
             int heightLocation = 480946;
-            string hashLocation = "000000000000000000c03dbe6ee5fedb25877a12e32aa95bc1d3bd480d7a93f9";
-            uint256 hash = uint256.Parse(hashLocation);
+            var header = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
+            uint256 hash = header.GetHash();
+            string hashLocation = hash.ToString();
 
             var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
             var chain = new Mock<ChainIndexer>();
@@ -93,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -118,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -146,7 +148,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act
@@ -167,7 +169,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             var loggerFactory = new Mock<LoggerFactory>();
             var signals = new Signals.Signals(loggerFactory.Object, null);
             var nodeLifetime = new NodeLifetime();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals);
             var blockNotification = new Mock<BlockNotification>(this.LoggerFactory.Object, chain.Object, consensusManager, signals, asyncProvider, nodeLifetime);
 
             // Act

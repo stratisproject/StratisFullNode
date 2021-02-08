@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SwapExtractionTool": {
+      "commandName": "Project",
+      "commandLineArgs": "-swap"
+    }
+  }
+}

@@ -20,8 +20,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
             this.regTest = new BitcoinRegTest();
         }
 
+        /// <summary>
+        /// MineBlockCheckPeerHasNewBlock
+        /// </summary>
         [Fact]
-        public void MiningAndPropagatingPOW_MineBlockCheckPeerHasNewBlock()
+        public void MiningAndPropagatingPOW_Scenario1_Async()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -46,8 +49,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
             }
         }
 
+        /// <summary>
+        /// MineBlockNotPushedToConsensusCode_SupercededByBetterBlockOnReorg_InitialBlockRejected
+        /// </summary>
         [Fact]
-        public async Task MiningAndPropagatingPOW_MineBlockNotPushedToConsensusCode_SupercededByBetterBlockOnReorg_InitialBlockRejectedAsync()
+        public async Task MiningAndPropagatingPOW_Scenario2_Async()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -59,7 +65,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
 
                 TestHelper.Disconnect(node1, node2);
 
-                // Create block manually on node1 without pushing to consensus (BlockMined wont be called).
+                // Create block manually on node1 without pushing to consensus (BlockMined won't be called).
                 Block manualBlock = TestHelper.GenerateBlockManually(node1, new List<Transaction>(), 0, false);
 
                 // Mine another 2 blocks on node 2 chain up to height 7.

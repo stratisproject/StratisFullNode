@@ -3,9 +3,9 @@
   <PropertyGroup>
     <Description>Stratis Bitcoin Features PoA</Description>
     <AssemblyTitle>Stratis.Bitcoin.Features.PoA</AssemblyTitle>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>Stratis.Bitcoin.Features.PoA</AssemblyName>
-    <PackageId>Stratis.Bitcoin.Features.PoA</PackageId>
+    <PackageId>Stratis.Features.PoA</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -14,15 +14,10 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <Version>3.0.6.0-beta</Version>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>1.0.7.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Tracer.Fody" Version="3.1.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Stratis.Bitcoin.Features.Consensus\Stratis.Bitcoin.Features.Consensus.csproj" />

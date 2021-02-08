@@ -35,7 +35,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// The pubkeys for this address, from all signatories.
         /// </summary>
         [JsonProperty(PropertyName = "pubkeys")]
-        public ICollection<Script> Pubkeys { get; set; }
+        public ICollection<string> Pubkeys { get; set; }
 
         /// <summary>
         /// The redeemScript for this address. Needed for P2SH multisig as the full script is not present

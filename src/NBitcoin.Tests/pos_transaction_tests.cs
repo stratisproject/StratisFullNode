@@ -24,7 +24,7 @@ namespace NBitcoin.Tests
 
         public Pos_Transaction_Tests()
         {
-            this.stratisMain = KnownNetworks.StratisMain;
+            this.stratisMain = KnownNetworks.StraxMain;
             this.consensusFactory = this.stratisMain.Consensus.ConsensusFactory;
         }
 
@@ -147,7 +147,8 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void CanExtractTxOutDestinationEasily()
         {
-            var secret = new BitcoinSecret("VHqBm5xVQvosc7u4dDwMmzbr8mL4KzZBn5VgqjunovgURtXBo5cV", this.stratisMain);
+            var privateKey = new Key();
+            var secret = new BitcoinSecret(privateKey, this.stratisMain);
 
             Transaction tx = this.stratisMain.CreateTransaction();
             var p2pkh = new TxOut(new Money((UInt64)45000000), secret.GetAddress());
@@ -1237,7 +1238,7 @@ namespace NBitcoin.Tests
         {
             Action<Transaction, TransactionBuilder> AssertEstimatedSize = (tx, b) =>
             {
-                int expectedVSize = tx.GetVirtualSize(KnownNetworks.StratisMain.Consensus.Options.WitnessScaleFactor);
+                int expectedVSize = tx.GetVirtualSize(KnownNetworks.StraxMain.Consensus.Options.WitnessScaleFactor);
                 int actualVSize = b.EstimateSize(tx, true);
                 int expectedSize = tx.GetSerializedSize();
                 int actualSize = b.EstimateSize(tx, false);
@@ -1628,20 +1629,21 @@ namespace NBitcoin.Tests
         //https://gist.github.com/gavinandresen/3966071
         public void CanPartiallySignTransaction()
         {
-            Key[] privKeys = new[]{"7R3MeCSVTTzp3w3Ny4g7RWpvMYu7CfuERZJcPqn1VRL3kyV9A2p",
-                        "7R41movhhKW2ZencnZvzcoDssFpKfNCv4yRqHnXco85rBLN1C2D",
-                        "7Qidst55wkYRJpJN4aEnGjz64Mnf7BrSehVuX2HqWWPpYNEkqQJ"}
-                        .Select(k => new BitcoinSecret(k).PrivateKey).ToArray();
+            Key[] privKeys = new[]
+            {
+                new Key(),
+                new Key(),
+                new Key()
+            }.Select(k => new BitcoinSecret(k, this.stratisMain).PrivateKey).ToArray();
 
             //First: combine the three keys into a multisig address
             Script redeem = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(2, privKeys.Select(k => k.PubKey).ToArray());
-            BitcoinAddress scriptAddress = redeem.Hash.GetAddress(this.stratisMain);
-            Assert.Equal("sgs9e5cF7ykb3ZXRztgwMhiGwjRF7hRkvn", scriptAddress.ToString());
 
-            // Next, create a transaction to send funds into that multisig. Transaction d6f72... is
-            // an unspent transaction in my wallet (which I got from the 'listunspent' RPC call):
-            // Taken from example
-            Transaction fundingTransaction = this.stratisMain.CreateTransaction("01000000ec7b1a580189632848f99722915727c5c75da8db2dbf194342a0429828f66ff88fab2af7d6000000008b483045022100abbc8a73fe2054480bda3f3281da2d0c51e2841391abd4c09f4f908a2034c18d02205bc9e4d68eafb918f3e9662338647a4419c0de1a650ab8983f1d216e2a31d8e30141046f55d7adeff6011c7eac294fe540c57830be80e9355c83869c9260a4b8bf4767a66bacbd70b804dc63d5beeb14180292ad7f3b083372b1d02d7a37dd97ff5c9effffffff0140420f000000000017a914f815b036d9bbbce5e9f2a00abd1bf3dc91e955108700000000");
+            // Next, create a transaction to send funds into that multisig.
+            Transaction fundingTransaction = this.stratisMain.CreateTransaction();
+
+            fundingTransaction.Inputs.Add(new TxIn(new OutPoint(uint256.One, 0)));
+            fundingTransaction.Outputs.Add(new TxOut(Money.Coins(1.0m), redeem.PaymentScript));
 
             // Create the spend-from-multisig transaction. Since the fund-the-multisig transaction
             // hasn't been sent yet, I need to give txid, scriptPubKey and redeemScript:
@@ -1667,11 +1669,6 @@ namespace NBitcoin.Tests
             partiallySigned.Sign(this.stratisMain, privKeys[1], true);
 
             AssertCorrectlySigned(partiallySigned, fundingTransaction.Outputs[0].ScriptPubKey, this.allowHighS);
-
-            //Verify the transaction from the gist is also correctly signed
-            Transaction gistTransaction = this.stratisMain.CreateTransaction("010000009d4f1b5801e1f87273f4e266d0f2d08a4a08807dc2c2e8f6e47bcc488201652a03778de19600000000fd5e0100483045022100d62e6327a72ca014778d87ba225ef8fc08610e2345fe1c543bb429777f82052a02207832b67b2f03bd8bfdfd79597a51a269c3f569fcd89a347db370a07146292c7501483045022100eff296780357c91f1b1334011e11150dac30de70be3d428e4799fd66456055ee02205313912c3c17e59533e1aa86c7526a365faef59c2dd55dd3bb5292cbada52eb9014cc952410491bba2510912a5bd37da1fb5b1673010e43d2c6d812c514e91bfa9f2eb129e1c183329db55bd868e209aac2fbc02cb33d98fe74bf23f0c235d6126b1d8334f864104865c40293a680cb9c020e7b1e106d8c1916d3cef99aa431a56d253e69256dac09ef122b1a986818a7cb624532f062c1d1f8722084861c5c3291ccffef4ec687441048d2455d2403e08708fc1f556002f1b6cd83f992d085097f9974ab08a28838f07896fbab08f39495e15fa6fad6edbfb1e754e35fa1c7844c41f322a1863d4621353aeffffffff0140420f00000000001976a914ae56b4db13554d321c402db3961187aed1bbed5b88ac00000000");
-
-            AssertCorrectlySigned(gistTransaction, fundingTransaction.Outputs[0].ScriptPubKey, this.allowHighS); //One sig in the hard code tx is high
 
             //Can sign out of order
             partiallySigned = this.stratisMain.CreateTransaction(spendTransaction.ToBytes());
@@ -1868,21 +1865,18 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void CanParseWitTransaction()
         {
-            string hex = "01000000ec7b1a580001015d896079097272b13ed9cb22acfabeca9ce83f586d98cc15a08ea2f9c558013b0300000000ffffffff01605af40500000000160014a8cbb5eca9af499cecaa08457690ab367f23d95b0247304402200b6baba4287f3321ae4ec6ba66420d9a48c3f3bc331603e7dca6b12ca75cce6102207fa582041b025605c0474b99a2d3ab5080d6ea14ae3a50b7de92596abf40fb4b012102cdfc0f4701e0c8db3a0913de5f635d0ea76663a8f80925567358d558603fae3500000000";
+            string hex = "010000000001010fb1f97d1f2f24037754894becd5bb2bdd03642fba5a55b2d1a6adeb29f0a6780100000000ffffffff03005a6202000000001976a914942a8e6f9e80ca0d260a3eb67d5514485a4ba09888ac005a620200000000160014942a8e6f9e80ca0d260a3eb67d5514485a4ba09860a62f01000000001976a914e6b87184b9a3837e1bc3aef5e2afa59519d5301d88ac02483045022100e71ac97fb4e6e36836775b605e3b3aa2ec77027ef5dadfd63d1ad4a7389ed77502200457178eeaa4b29fa43e7ed9bb7321f99754f5ae4931e2f61d2a8d967f1ca57c0121032fac96cf91f5dd7c557d7848c45768068d1e789513ceb44922221931f1e33c3900000000";
             Transaction tx = this.stratisMain.CreateTransaction(hex);
             byte[] bytes = tx.ToBytes();
             Assert.Equal(Encoders.Hex.EncodeData(bytes), hex);
 
-            Assert.Equal("0d66186b23359c2ea9e4f87f0d5784c23025be8f077c4c87a34454c115afeaac", tx.GetHash().ToString());
-            Assert.Equal("fee5cfa83e2fe1e516788963b00412667d70c1667609fa73f3bfe9dc6254689d", tx.GetWitHash().ToString());
+            Assert.Equal("db708fee5d0b5488fab7e8dc1d601cf01d11b40c24df25fd88dd73da47c20a99", tx.GetHash().ToString());
+            Assert.Equal("f6383b914d4f1e6602f1633cd65c839b1fba4492e2d59eb9346d11c4ded1c189", tx.GetWitHash().ToString());
 
             Transaction noWit = tx.WithOptions(TransactionOptions.None, this.consensusFactory);
             Assert.True(noWit.GetSerializedSize() < tx.GetSerializedSize());
 
-            tx = this.stratisMain.CreateTransaction("01000000ec7b1a580001015d896079097272b13ed9cb22acfabeca9ce83f586d98cc15a08ea2f9c558013b0200000000ffffffff01605af40500000000160014a8cbb5eca9af499cecaa08457690ab367f23d95b02483045022100d3edd272c4ff247c36a1af34a2394859ece319f61ee85f759b94ec0ecd61912402206dbdc7c6ca8f7279405464d2d935b5e171dfd76656872f76399dbf333c0ac3a001fd08020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000");
-
-            ScriptError error;
-            Assert.False(tx.Inputs.AsIndexedInputs().First().VerifyScript(this.stratisMain, new Script("0 b7854eb547106248b136ca2bf48d8df2f1167588"), out error));
+            Assert.False(tx.Inputs.AsIndexedInputs().First().VerifyScript(this.stratisMain, new Script("0 b7854eb547106248b136ca2bf48d8df2f1167588"), out ScriptError error));
             Assert.Equal(ScriptError.EqualVerify, error);
         }
 
@@ -1914,7 +1908,7 @@ namespace NBitcoin.Tests
             Assert.Equal(ScriptError.PushSize, error);
         }
 
-        [Fact]
+        [Fact(Skip="This test would need all the sample transactions regenerated without the time field serialised")]
         [Trait("UnitTest", "UnitTest")]
         //http://brainwallet.org/#tx
         public void CanParseTransaction()
@@ -2700,7 +2694,6 @@ namespace NBitcoin.Tests
         {
             Transaction outputm = this.stratisMain.CreateTransaction();
             outputm.Version = 1;
-            outputm.Time = Utils.DateTimeToUnixTime(posTimeStamp);
             outputm.Inputs.Add(new TxIn());
             outputm.Inputs[0].PrevOut = new OutPoint();
             outputm.Inputs[0].ScriptSig = Script.Empty;
@@ -2719,7 +2712,6 @@ namespace NBitcoin.Tests
 
             Transaction inputm = this.stratisMain.CreateTransaction();
             inputm.Version = 1;
-            outputm.Time = Utils.DateTimeToUnixTime(posTimeStamp);
             inputm.Inputs.Add(new TxIn());
             inputm.Inputs[0].PrevOut.Hash = output.GetHash();
             inputm.Inputs[0].PrevOut.N = 0;
@@ -3055,12 +3047,12 @@ namespace NBitcoin.Tests
             t.Outputs[0].ScriptPubKey = new Script() + OpcodeType.OP_1;
             Assert.True(!StandardScripts.IsStandardTransaction(t, this.stratisMain));
 
-            // 40-byte TX_NULL_DATA (standard)
-            t.Outputs[0].ScriptPubKey = new Script() + OpcodeType.OP_RETURN + ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f00");
+            // 80-byte TX_NULL_DATA (standard)
+            t.Outputs[0].ScriptPubKey = new Script() + OpcodeType.OP_RETURN + new byte[80];
             Assert.True(this.stratisMain.StandardScriptsRegistry.IsStandardTransaction(t, this.stratisMain));
-
-            // 41-byte TX_NULL_DATA (non-standard)
-            t.Outputs[0].ScriptPubKey = new Script() + OpcodeType.OP_RETURN + ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f0000");
+            
+            // 81-byte TX_NULL_DATA (non-standard)
+            t.Outputs[0].ScriptPubKey = new Script() + OpcodeType.OP_RETURN + new byte[81];
             Assert.True(!this.stratisMain.StandardScriptsRegistry.IsStandardTransaction(t, this.stratisMain));
 
             // TX_NULL_DATA w/o PUSHDATA

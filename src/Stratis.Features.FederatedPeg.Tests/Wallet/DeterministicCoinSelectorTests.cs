@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
-using Stratis.Bitcoin.Tests.Common;
+using Stratis.Bitcoin.Networks;
 using Stratis.Features.FederatedPeg.Wallet;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
         public DeterministicCoinSelectorTests()
         {
             this.deterministicCoinSelector = new DeterministicCoinSelector();
-            this.network = KnownNetworks.StratisMain;
+            this.network = new StraxMain();
         }
 
         [Fact]

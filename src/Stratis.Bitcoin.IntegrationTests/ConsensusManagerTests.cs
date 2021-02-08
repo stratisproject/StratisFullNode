@@ -19,7 +19,6 @@ using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Bitcoin.Utilities;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
@@ -45,7 +44,8 @@ namespace Stratis.Bitcoin.IntegrationTests
                 maxStandardVersion: 2,
                 maxStandardTxWeight: 100_000,
                 maxBlockSigopsCost: 20_000,
-                maxStandardTxSigopsCost: 20_000 / 5)
+                maxStandardTxSigopsCost: 20_000 / 5,
+                witnessScaleFactor: 4)
             {
             }
 
@@ -55,11 +55,11 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
-        public class StratisConsensusOptionsOverrideTest : StratisRegTest
+        public class StratisConsensusOptionsOverrideTest : StraxRegTest
         {
             public StratisConsensusOptionsOverrideTest()
             {
-                this.Name = Guid.NewGuid().ToString();
+                this.Name = Guid.NewGuid().ToString().Substring(32);
             }
         }
 
@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             public BitcoinOverrideRegTest() : base()
             {
-                this.Name = Guid.NewGuid().ToString();
+                this.Name = Guid.NewGuid().ToString().Substring(32);
             }
         }
 
@@ -141,7 +141,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Fork_Occurs_Node_Reorgs_AndResyncs_ToBestHeight()
+        public void CM_Fork_Occurs_Node_Reorgs_AndResyncs_ToBestHeight()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -181,7 +181,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Fork_Occurs_Node_Gets_Disconnected_Due_To_InvalidStakeDepth()
+        public void CM_Fork_Occurs_Node_Gets_Disconnected_Due_To_InvalidStakeDepth()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -202,7 +202,13 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Miner A stakes a coin that increases the network height to 56.
                 var minter = minerA.FullNode.NodeService<IPosMinting>();
-                minter.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
+                minter.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
 
                 Assert.True(TestHelper.IsNodeSyncedAtHeight(minerA, 56));
 
@@ -227,8 +233,11 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
+        /// <summary>
+        /// CM_Fork_Occurs_Node_Gets_Disconnected_Due_To_MaxReorgViolation
+        /// </summary>
         [Fact]
-        public void ConsensusManager_Fork_Occurs_Node_Gets_Disconnected_Due_To_MaxReorgViolation()
+        public void MaxReorgViolation()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -269,7 +278,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Reorgs_Then_Old_Chain_Becomes_Longer_Then_Reorg_Back()
+        public void CM_Reorgs_Then_Old_Chain_Becomes_Longer_Then_Reorg_Back()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -312,7 +321,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Reorgs_Then_Try_To_Connect_Longer_Chain_With_Connected_Blocks_And_Fail_Then_Revert_Back()
+        public void CM_Reorgs_Connect_Longer_Chain_With_Connected_Blocks_Fails_Reverts()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -357,7 +366,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Reorgs_Then_Try_To_Connect_Longer_Chain_With_No_Connected_Blocks_And_Fail_Then_Revert_Back()
+        public void CMReorgsTryConnectLongerChainNoConnectedBlocksFailsReverts()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -398,7 +407,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Reorg_To_Longest_Chain_Multiple_Times_Without_Invalid_Blocks()
+        public void CM_Reorg_To_Longest_Chain_Multiple_Times_Without_Invalid_Blocks()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -449,7 +458,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Connect_New_Block_Failed()
+        public void CM_Connect_New_Block_Failed()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -476,7 +485,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Fork_Of_100_Blocks_Occurs_Node_Reorgs_And_Resyncs_ToBestHeight()
+        public void CM_Fork_Of_100_Blocks_Occurs_Node_Reorgs_And_Resyncs_ToBestHeight()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -510,11 +519,11 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         /// <summary>This test assumes CoinbaseMaturity is 10 and at block 2 there is a huge premine, adjust the test if this changes.</summary>
         [Fact]
-        public void ConsensusManager_Fork_Occurs_When_Stake_Coins_Are_Spent_And_Found_In_Rewind_Data()
+        public void CM_Fork_Occurs_When_Stake_Coins_Are_Spent_And_Found_In_Rewind_Data()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var sharedMnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
 
@@ -522,13 +531,14 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var minerA = builder.CreateStratisPosNode(network, "cm-10-minerA").OverrideDateTimeProvider().WithWallet(walletMnemonic: sharedMnemonic).Start();
                 var minerB = builder.CreateStratisPosNode(network, "cm-10-minerB").OverrideDateTimeProvider().WithWallet(walletMnemonic: sharedMnemonic).Start();
 
-                // MinerA mines 2 blocks to get the big premine coin and mature them (regtest maturity is 10).
-                TestHelper.MineBlocks(minerA, 12);
+                // MinerA mines 2 blocks to get the big premine coin and mature them.
+                var minStakeConfirmations = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
+                TestHelper.MineBlocks(minerA, minStakeConfirmations + 2);
 
-                // Sync the peers A and B (height 3)
+                // Sync the peers A and B.
                 TestHelper.ConnectAndSync(minerA, minerB);
 
-                // Miner A will spend the coins 
+                // Miner A will spend the coins
                 WalletSendTransactionModel walletSendTransactionModel = $"http://localhost:{minerA.ApiPort}/api"
                     .AppendPathSegment("wallet/splitcoins")
                     .PostJsonAsync(new SplitCoinsRequest
@@ -542,8 +552,8 @@ namespace Stratis.Bitcoin.IntegrationTests
                     .ReceiveJson<WalletSendTransactionModel>().Result;
 
                 TestBase.WaitLoop(() => minerA.FullNode.MempoolManager().InfoAll().Count > 0);
-                TestHelper.MineBlocks(minerA, 12);
-                TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == 24);
+                TestHelper.MineBlocks(minerA, minStakeConfirmations + 2);
+                TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations * 2 + 4));
                 Assert.Empty(minerA.FullNode.MempoolManager().InfoAll());
 
                 TestBase.WaitLoop(() => TestHelper.AreNodesSynced(minerA, minerB));
@@ -551,16 +561,28 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // Disconnect Miner A and B.
                 TestHelper.Disconnect(minerA, minerB);
 
-                // Miner A stakes one coin. (height 13)
+                // Miner A stakes one coin.
                 var minterA = minerA.FullNode.NodeService<IPosMinting>();
-                minterA.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
-                TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == 25);
+                minterA.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
+                TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations * 2 + 5));
                 minterA.StopStake();
 
                 TestHelper.MineBlocks(minerB, 2); // this will push minerB total work to be highest
                 var minterB = minerB.FullNode.NodeService<IPosMinting>();
-                minterB.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
-                TestBase.WaitLoop(() => minerB.FullNode.ConsensusManager().Tip.Height == 27);
+                minterB.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
+                TestBase.WaitLoop(() => minerB.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations * 2 + 7));
                 minterB.StopStake();
 
                 var expectedValidChainHeight = minerB.FullNode.ConsensusManager().Tip.Height;
@@ -575,11 +597,11 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         /// <summary>We test that two chains that used the same UTXO to stake, the shorter chain can still swap to the longer chain.</summary>
         [Fact]
-        public void ConsensusManager_Fork_Occurs_When_Stake_Coins_Are_Mined_And_Found_In_Rewind_Data()
+        public void CM_Fork_Occurs_When_Stake_Coins_Are_Mined_And_Found_In_Rewind_Data()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var sharedMnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
 
@@ -587,25 +609,38 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var minerA = builder.CreateStratisPosNode(network, "cm-10-minerA").OverrideDateTimeProvider().WithWallet(walletMnemonic: sharedMnemonic).Start();
                 var minerB = builder.CreateStratisPosNode(network, "cm-10-minerB").OverrideDateTimeProvider().WithWallet(walletMnemonic: sharedMnemonic).Start();
 
-                // MinerA mines 2 blocks to get the big premine coin and mature them (regtest maturity is 10).
-                TestHelper.MineBlocks(minerA, 12);
+                // MinerA mines 2 blocks to get the big premine coin and mature them.
+                var minStakeConfirmations = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
+                TestHelper.MineBlocks(minerA, minStakeConfirmations + 2);
 
-                // Sync the peers A and B (height 12)
+                // Sync the peers A and B.
                 TestHelper.ConnectAndSync(minerA, minerB);
 
                 // Disconnect Miner A and B.
                 TestHelper.DisconnectAll(minerA, minerB);
 
-                // Miner A stakes one coin. (height 13)
+                // Miner A stakes one coin.
                 var minterA = minerA.FullNode.NodeService<IPosMinting>();
-                minterA.Stake(new WalletSecret() { WalletName = "mywallet", WalletPassword = "password" });
-                TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == 13);
+                minterA.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = "mywallet", WalletPassword = "password"
+                    }
+                });
+                TestBase.WaitLoop(() => minerA.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations + 3));
                 minterA.StopStake();
 
                 TestHelper.MineBlocks(minerB, 2); // this will push minerB total work to be highest
                 var minterB = minerB.FullNode.NodeService<IPosMinting>();
-                minterB.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
-                TestBase.WaitLoop(() => minerB.FullNode.ConsensusManager().Tip.Height == 15);
+                minterB.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
+                TestBase.WaitLoop(() => minerB.FullNode.ConsensusManager().Tip.Height == (minStakeConfirmations + 5));
                 minterB.StopStake();
 
                 var expectedValidChainHeight = minerB.FullNode.ConsensusManager().Tip.Height;
@@ -619,21 +654,21 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Fork_Occurs_When_Same_Coins_Are_Staked_On_Different_Chains()
+        public void CM_Fork_Occurs_When_Same_Coins_Are_Staked_On_Different_Chains()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var minerA = builder.CreateStratisPosNode(network, "cm-11-minerA").OverrideDateTimeProvider().WithWallet().Start();
                 var minerB = builder.CreateStratisPosNode(network, "cm-11-minerB").OverrideDateTimeProvider().Start();
 
                 minerB.FullNode.WalletManager().CreateWallet(Password, WalletName, Passphrase, minerA.Mnemonic);
 
-                var coinbaseMaturity = (int)network.Consensus.CoinbaseMaturity;
+                var minStakeConfirmations = ((PosConsensusOptions)network.Consensus.Options).GetStakeMinConfirmations(0, network);
 
                 // MinerA mines maturity +2 blocks to get the big premine coin and make it stakable.
-                TestHelper.MineBlocks(minerA, coinbaseMaturity + 2);
+                TestHelper.MineBlocks(minerA, minStakeConfirmations + 2);
 
                 // Sync the peers A and B (height 12)
                 TestHelper.ConnectAndSync(minerA, minerB);
@@ -644,14 +679,26 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // Miner A stakes one coin. (height 13)
                 var minterA = minerA.FullNode.NodeService<IPosMinting>();
                 var minterAHeigh = minerA.FullNode.ConsensusManager().Tip.Height;
-                minterA.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
+                minterA.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
                 Assert.True(TestHelper.IsNodeSyncedAtHeight(minerA, minterAHeigh + 1));
 
                 minterA.StopStake();
 
                 var minterB = minerB.FullNode.NodeService<IPosMinting>();
                 var minterBHeigh = minerB.FullNode.ConsensusManager().Tip.Height;
-                minterB.Stake(new WalletSecret() { WalletName = WalletName, WalletPassword = Password });
+                minterB.Stake(new List<WalletSecret>()
+                {
+                    new WalletSecret()
+                    {
+                        WalletName = WalletName, WalletPassword = Password
+                    }
+                });
                 Assert.True(TestHelper.IsNodeSyncedAtHeight(minerB, minterBHeigh + 1));
 
                 minterB.StopStake();
@@ -668,11 +715,11 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void ConsensusManager_Block_That_Failed_Partial_Validation_Is_Rejected()
+        public void CM_Block_That_Failed_Partial_Validation_Is_Rejected()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 // MinerA requires a physical wallet to stake with.
                 var minerA = builder.CreateStratisPosNode(network, "minerA").WithWallet().Start();
@@ -717,10 +764,6 @@ namespace Stratis.Bitcoin.IntegrationTests
                 Value = txWithBigPremine.Outputs[0].Value - new Money(1, MoneyUnit.BTC),
                 ScriptPubKey = minerB.MinerHDAddress.ScriptPubKey
             });
-
-            var dateTimeProvider = minerA.FullNode.NodeService<IDateTimeProvider>();
-            txThatSpendCoinstake.Time = (uint)dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
-
 
             Coin spentCoin = new Coin(txWithBigPremine, 0);
             List<ICoin> coins = new List<ICoin> { spentCoin };

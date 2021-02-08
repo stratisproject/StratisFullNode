@@ -11,7 +11,7 @@ using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
 namespace Stratis.Bitcoin.Features.PoA.Behaviors
 {
-    public class PoABlockStoreBehavior : BlockStoreBehavior
+    public sealed class PoABlockStoreBehavior : BlockStoreBehavior
     {
         public PoABlockStoreBehavior(ChainIndexer chainIndexer, IChainState chainState, ILoggerFactory loggerFactory, IConsensusManager consensusManager, IBlockStoreQueue blockStoreQueue)
             : base(chainIndexer, chainState, loggerFactory, consensusManager, blockStoreQueue)
@@ -19,22 +19,20 @@ namespace Stratis.Bitcoin.Features.PoA.Behaviors
         }
 
         /// <inheritdoc />
-        protected override Payload BuildHeadersAnnouncePayload(IEnumerable<BlockHeader> headers)
+        protected override Payload BuildHeadersAnnouncePayload(IEnumerable<ChainedHeader> headers)
         {
-            var poaHeaders = headers.Cast<PoABlockHeader>().ToList();
-
+            var poaHeaders = headers.Select(s => s.Header).Cast<PoABlockHeader>().ToList();
             return new PoAHeadersPayload(poaHeaders);
         }
 
         public override object Clone()
         {
-            var res = new PoABlockStoreBehavior(this.ChainIndexer, this.chainState, this.loggerFactory, this.consensusManager, this.blockStoreQueue)
+            var clone = new PoABlockStoreBehavior(this.ChainIndexer, this.chainState, this.loggerFactory, this.consensusManager, this.blockStoreQueue)
             {
-                CanRespondToGetBlocksPayload = this.CanRespondToGetBlocksPayload,
                 CanRespondToGetDataPayload = this.CanRespondToGetDataPayload
             };
 
-            return res;
+            return clone;
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
+using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Networks.Policies;
@@ -60,7 +61,8 @@ namespace Stratis.Bitcoin.Networks
                 maxStandardVersion: 2,
                 maxStandardTxWeight: 100_000,
                 maxBlockSigopsCost: 20_000,
-                maxStandardTxSigopsCost: 20_000 / 5
+                maxStandardTxSigopsCost: 20_000 / 5,
+                witnessScaleFactor: 4
             );
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -72,6 +74,21 @@ namespace Stratis.Bitcoin.Networks
 
             var bip9Deployments = new StratisBIP9Deployments()
             {
+                [StratisBIP9Deployments.TestDummy] = new BIP9DeploymentsParameters("TestDummy", 28,
+                    new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultTestnetThreshold),
+
+                [StratisBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0,
+                    new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultTestnetThreshold),
+
+                [StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1,
+                    new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2020, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultTestnetThreshold),
+                
                 [StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2,
                     new DateTime(2018, 11, 1, 0, 0, 0, DateTimeKind.Utc),
                     new DateTime(2019, 6, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -99,7 +116,7 @@ namespace Stratis.Bitcoin.Networks
                 premineReward: Money.Coins(98000000),
                 proofOfWorkReward: Money.Coins(4),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                powTargetSpacing: TimeSpan.FromSeconds(10 * 60),
+                targetSpacing: TimeSpan.FromSeconds(64),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: false,
@@ -112,10 +129,17 @@ namespace Stratis.Bitcoin.Networks
                 proofOfStakeReward: Money.COIN
             );
 
+            this.Consensus.PosEmptyCoinbase = true;
+
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (65) };
             this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (196) };
             this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (65 + 128) };
-            
+
+            this.Bech32Encoders = new Bech32Encoder[2];
+            var encoder = new Bech32Encoder("tstrat");
+            this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
+            this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
+
             this.Checkpoints = new Dictionary<int, CheckpointInfo>
             {
                 { 0, new CheckpointInfo(new uint256("0x00000e246d7b73b88c9ab55f2e5e94d9e22d471def3df5ea448f5576b1d156b9"), new uint256("0x0000000000000000000000000000000000000000000000000000000000000000")) },
@@ -132,7 +156,9 @@ namespace Stratis.Bitcoin.Networks
                 { 720000, new CheckpointInfo(new uint256("0x041fb27f49f96be3a10034db0148290e9e2551b1c6196823b46521c36c69fbe2"), new uint256("0xba96e9c84c4134a2204d07e41b7738a9ae6e56c4322f443dcfe11421f1643e6e")) }, // 14-01-2019
                 { 900000, new CheckpointInfo(new uint256("0xd48702aabf727570d96bbcd8bad220427a35113efa90c3adc91ae94a4b09c6e5"), new uint256("0x31515a27d55f819131f2dc0a263f46fb63c56ec0ff129bcb0b1c13d5922a62c2")) }, // 14-01-2019
                 { 1000000, new CheckpointInfo(new uint256("0xa8775bca139bb50c16c803a64e324f83eec70e3f9b5e762265e590cc773b9930"), new uint256("0x3664cc8571bfea578cc22a2b8478148da05704226624ce203f2ea646a7339a38")) },
-                { 1150000, new CheckpointInfo(new uint256("0xca63e5cc3b023f98bfddbf7f8df8dcb3dc90f37bec79b6396823b3da77ab9a24"), new uint256("0xd0a2024250b92ba7dbc8348e6e5dd3a83a770154e6a2ca7f7280284c8a25ba18")) }
+                { 1150000, new CheckpointInfo(new uint256("0xca63e5cc3b023f98bfddbf7f8df8dcb3dc90f37bec79b6396823b3da77ab9a24"), new uint256("0xd0a2024250b92ba7dbc8348e6e5dd3a83a770154e6a2ca7f7280284c8a25ba18")) },
+                { 1245000, new CheckpointInfo(new uint256("0x759dfad85feb187710b85f07d4709a745700c220fae56755c78bc051f447f289"), new uint256("0x3d0b0e29ab715c2bd003bf2677d3646d85d2ce8f7a831e3b79d6ff783140646a")) },
+                { 1400000, new CheckpointInfo(new uint256("0xf9e99174917a68159e7218c39f100545001e2c076bdfa11c00807df0936dd59b"), new uint256("0x5c5e728b113fb39dc6a14cd92d1a7f6a821cea0ad42eaafb50bc7dec5a5efdd1")) }
              };
 
             this.DNSSeeds = new List<DNSSeedData>
@@ -149,8 +175,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
 
-            // 64 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 64 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x00000e246d7b73b88c9ab55f2e5e94d9e22d471def3df5ea448f5576b1d156b9"));
 
             this.RegisterRules(this.Consensus);

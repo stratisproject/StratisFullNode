@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using DBreeze.DataTypes;
+using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
@@ -31,10 +30,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
         /// <inheritdoc />
         public void Initialize()
         {
-            using (DBreeze.Transactions.Transaction transaction = this.blockRepository.DBreeze.GetTransaction())
-            {
-                this.LoadPrunedTip(transaction);
-            }
+            this.LoadPrunedTip(this.blockRepository.Leveldb);
         }
 
         /// <inheritdoc />
@@ -48,11 +44,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
 
                 this.PrunedTip = new HashHeightPair(genesis.GetHash(), 0);
 
-                using (DBreeze.Transactions.Transaction transaction = this.blockRepository.DBreeze.GetTransaction())
-                {
-                    transaction.Insert(BlockRepository.CommonTableName, prunedTipKey, this.dBreezeSerializer.Serialize(this.PrunedTip));
-                    transaction.Commit();
-                }
+                this.blockRepository.Leveldb.Put(BlockRepository.CommonTableName, prunedTipKey, this.dBreezeSerializer.Serialize(this.PrunedTip));
             }
 
             if (nodeInitializing)
@@ -63,7 +55,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
                 this.PrepareDatabaseForCompacting(blockRepositoryTip);
             }
 
-            this.CompactDataBase();
+            // LevelDB has its own internal compaction logic
 
             this.logger.LogInformation($"Pruning complete.");
 
@@ -110,57 +102,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.Pruning
             this.UpdatePrunedTip(blockRepositoryTip.GetAncestor(upperHeight));
         }
 
-        private void LoadPrunedTip(DBreeze.Transactions.Transaction dbreezeTransaction)
+        private void LoadPrunedTip(DB leveldb)
         {
-            if (this.PrunedTip == null)
-            {
-                dbreezeTransaction.ValuesLazyLoadingIsOn = false;
+            if (this.PrunedTip != null) 
+                return;
 
-                Row<byte[], byte[]> row = dbreezeTransaction.Select<byte[], byte[]>(BlockRepository.CommonTableName, prunedTipKey);
-                if (row.Exists)
-                    this.PrunedTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(row.Value);
+            byte[] row = leveldb.Get(BlockRepository.CommonTableName, prunedTipKey);
 
-                dbreezeTransaction.ValuesLazyLoadingIsOn = true;
-            }
-        }
-
-        /// <summary>
-        /// Compacts the block and transaction database by recreating the tables without the deleted references.
-        /// </summary>
-        private void CompactDataBase()
-        {
-            Task task = Task.Run(() =>
-            {
-                using (DBreeze.Transactions.Transaction dbreezeTransaction = this.blockRepository.DBreeze.GetTransaction())
-                {
-                    dbreezeTransaction.SynchronizeTables(BlockRepository.BlockTableName, BlockRepository.TransactionTableName);
-
-                    var tempBlocks = dbreezeTransaction.SelectDictionary<byte[], byte[]>(BlockRepository.BlockTableName);
-
-                    if (tempBlocks.Count != 0)
-                    {
-                        this.logger.LogInformation($"{tempBlocks.Count} blocks will be copied to the pruned table.");
-
-                        dbreezeTransaction.RemoveAllKeys(BlockRepository.BlockTableName, true);
-                        dbreezeTransaction.InsertDictionary(BlockRepository.BlockTableName, tempBlocks, false);
-
-                        var tempTransactions = dbreezeTransaction.SelectDictionary<byte[], byte[]>(BlockRepository.TransactionTableName);
-                        if (tempTransactions.Count != 0)
-                        {
-                            this.logger.LogInformation($"{tempTransactions.Count} transactions will be copied to the pruned table.");
-                            dbreezeTransaction.RemoveAllKeys(BlockRepository.TransactionTableName, true);
-                            dbreezeTransaction.InsertDictionary(BlockRepository.TransactionTableName, tempTransactions, false);
-                        }
-
-                        // Save the hash and height of where the node was pruned up to.
-                        dbreezeTransaction.Insert(BlockRepository.CommonTableName, prunedTipKey, this.dBreezeSerializer.Serialize(this.PrunedTip));
-                    }
-
-                    dbreezeTransaction.Commit();
-                }
-
-                return Task.CompletedTask;
-            });
+            if (row != null)
+                this.PrunedTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);
         }
 
         /// <inheritdoc />

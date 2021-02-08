@@ -48,15 +48,15 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
     {
         public const string Passphrase = "password";
 
-        public Key[] MultisigPrivateKeys { get;  }
+        public Key[] MultisigPrivateKeys { get; }
 
         public Mnemonic[] MultisigMnemonics { get; }
 
-        public Script PayToMultiSig { get;  }
+        public Script PayToMultiSig { get; }
 
-        public Script SourceChainPayToScriptHash { get;  }
+        public Script SourceChainPayToScriptHash { get; }
 
-        public Script TargetChainPayToScriptHash { get;  }
+        public Script TargetChainPayToScriptHash { get; }
 
         public BitcoinAddress SourceChainMultisigAddress { get; }
 
@@ -65,6 +65,8 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
         public MultisigAddressHelper(Network targetChainNetwork, Network sourceChainNetwork, int quorum = 2, int sigCount = 3)
             : base(targetChainNetwork, sourceChainNetwork)
         {
+            // TODO: This still needs some work.
+
             this.MultisigMnemonics = Enumerable.Range(0, sigCount)
                 .Select(i => new Mnemonic(Wordlist.English, WordCount.Twelve))
                 .ToArray();
@@ -73,8 +75,10 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
                 .Select(m => m.DeriveExtKey(Passphrase).PrivateKey)
                 .ToArray();
 
-            this.PayToMultiSig = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
-                quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());
+            FederationId federationId = targetChainNetwork.Federations.GetOnlyFederation().Id;
+            this.PayToMultiSig = targetChainNetwork.Federations.GetOnlyFederation().MultisigScript;
+            //PayToMultiSigTemplate.Instance.GenerateScriptPubKey(
+            //quorum, this.MultisigPrivateKeys.Select(k => k.PubKey).ToArray());
 
             this.SourceChainMultisigAddress = this.PayToMultiSig.Hash.GetAddress(this.SourceChainNetwork);
             this.SourceChainPayToScriptHash = this.SourceChainMultisigAddress.ScriptPubKey;

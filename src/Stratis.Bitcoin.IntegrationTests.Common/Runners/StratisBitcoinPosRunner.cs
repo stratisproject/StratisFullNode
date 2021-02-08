@@ -11,27 +11,24 @@ using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.P2P;
+using Stratis.Features.FederatedPeg.Distribution;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
 {
     public sealed class StratisBitcoinPosRunner : NodeRunner
     {
-        private readonly bool isGateway;
-
-        public StratisBitcoinPosRunner(string dataDir, Network network, string agent = "StratisBitcoin", bool isGateway = false)
+        public StratisBitcoinPosRunner(string dataDir, Network network, string agent = "StratisBitcoin")
             : base(dataDir, agent)
         {
             this.Network = network;
-            this.isGateway = isGateway;
         }
 
         public override void BuildNode()
         {
-            var settings = new NodeSettings(this.Network, ProtocolVersion.PROVEN_HEADER_VERSION, this.Agent, args: new string[] { "-conf=stratis.conf", "-datadir=" + this.DataFolder });
-
-            if (this.isGateway)
-                settings.MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION;
+            var settings = new NodeSettings(this.Network, ProtocolVersion.PROVEN_HEADER_VERSION, this.Agent, args: new string[] { $"-conf={this.Network.DefaultConfigFilename}", "-datadir=" + this.DataFolder });
 
             var builder = new FullNodeBuilder()
                 .UseNodeSettings(settings)
@@ -39,7 +36,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
                 .UsePosConsensus()
                 .UseMempool()
                 .UseWallet()
-                .AddPowPosMining()
+                .AddSQLiteWalletRepository()
+                .AddPowPosMining(!(this.Network is StratisMain || this.Network is StratisTest || this.Network is StratisRegTest))
                 .AddRPC()
                 .UseApi()
                 .UseTestChainedHeaderTree()
@@ -47,6 +45,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
 
             if (this.OverrideDateTimeProvider)
                 builder.OverrideDateTimeProviderFor<MiningFeature>();
+
+            if (this.AddRewardClaimer)
+                builder.AddService<BaseFeature, RewardClaimer>();
 
             if (!this.EnablePeerDiscovery)
             {
@@ -67,14 +68,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
         /// but all the features required for it are enabled.</remarks>
         public static IFullNode BuildStakingNode(string dataDir, bool staking = true)
         {
-            var nodeSettings = new NodeSettings(networksSelector: Networks.Networks.Stratis, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: new string[] { $"-datadir={dataDir}", $"-stake={(staking ? 1 : 0)}", "-walletname=dummy", "-walletpassword=dummy" });
+            var nodeSettings = new NodeSettings(networksSelector: Networks.Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: new string[] { $"-datadir={dataDir}", $"-stake={(staking ? 1 : 0)}", "-walletname=dummy", "-walletpassword=dummy" });
             var fullNodeBuilder = new FullNodeBuilder(nodeSettings);
             IFullNode fullNode = fullNodeBuilder
                                 .UseBlockStore()
                                 .UsePosConsensus()
                                 .UseMempool()
                                 .UseWallet()
-                                .AddPowPosMining()
+                                .AddSQLiteWalletRepository()
+                                .AddPowPosMining(true)
                                 .AddRPC()
                                 .MockIBD()
                                 .UseTestChainedHeaderTree()

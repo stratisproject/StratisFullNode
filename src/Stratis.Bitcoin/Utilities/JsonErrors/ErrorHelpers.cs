@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net;
+using Stratis.Bitcoin.Builder.Feature;
 
 namespace Stratis.Bitcoin.Utilities.JsonErrors
 {
@@ -21,6 +22,24 @@ namespace Stratis.Bitcoin.Utilities.JsonErrors
             };
 
             return new ErrorResult((int)statusCode, errorResponse);
+        }
+
+        public static ErrorResult MapToErrorResponse(this FeatureException featureException)
+        {
+            var errorResponse = new ErrorResponse
+            {
+                Errors = new List<ErrorModel>
+                {
+                    new ErrorModel
+                    {
+                        Status = (int) featureException.HttpStatusCode,
+                        Message = featureException.Message,
+                        Description = featureException.Description
+                    }
+                }
+            };
+
+            return new ErrorResult((int)featureException.HttpStatusCode, errorResponse);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Configuration;
@@ -20,15 +21,14 @@ namespace Stratis.Bitcoin.Tests.P2P
 {
     public sealed class NetworkPeerServerTests : LogsTestBase
     {
-        private readonly ExtendedLoggerFactory extendedLoggerFactory;
+        private readonly ILoggerFactory extendedLoggerFactory;
 
         private readonly ITestOutputHelper testOutput;
 
         public NetworkPeerServerTests(ITestOutputHelper output)
         {
             this.testOutput = output;
-            this.extendedLoggerFactory = new ExtendedLoggerFactory();
-            this.extendedLoggerFactory.AddConsoleWithFilters();
+            this.extendedLoggerFactory = ExtendedLoggerFactory.Create();
         }
 
         [Theory]
@@ -73,8 +73,16 @@ namespace Stratis.Bitcoin.Tests.P2P
             const int portNumber = 80;
             var client = new TcpClient("www.stratisplatform.com", portNumber);
 
+            string ip = string.Empty;
             var ipandport = client.Client.RemoteEndPoint.ToString();
-            var ip = ipandport.Replace(ipandport.Substring(ipandport.IndexOf(':')), "");
+            if (client.Client.RemoteEndPoint.AddressFamily == AddressFamily.InterNetwork)
+            {
+                ip = ipandport.Replace(ipandport[ipandport.IndexOf(':')..], "");
+            }
+            else
+            {
+                ip = ipandport.Substring(1, ipandport.LastIndexOf(']') - 1);
+            }
 
             var endpointDiscovered = new IPEndPoint(IPAddress.Parse(ip), portNumber);
 
@@ -82,15 +90,15 @@ namespace Stratis.Bitcoin.Tests.P2P
             connectionManagerSettings.Bind.Add(new NodeServerEndpoint(endpointDiscovered, isWhiteListed));
 
             // Act
-            var result = networkPeerServer.InvokeMethod("AllowClientConnection", client);
+            var result = networkPeerServer.InvokeMethod("AllowClientConnection", client, new NetworkPeerCollection(), new List<IPEndPoint>());
 
             // Assert
             Assert.True((inIBD && !isWhiteListed) == closeClient);
 
             this.testOutput.WriteLine(
-                $"In IBD : {inIBD.ToString()}, " +
-                $"Is White Listed : {isWhiteListed.ToString()}, " +
-                $"Close Client : {result.ToString()}");
+                $"In IBD : {inIBD}, " +
+                $"Is White Listed : {isWhiteListed}, " +
+                $"Close Client : {result}");
         }
     }
 }

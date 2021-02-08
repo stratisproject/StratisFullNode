@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using DBreeze.DataTypes;
 using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Configuration;
@@ -12,6 +11,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.ColdStaking;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -30,7 +30,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
         }
 
         public TempDataFolder([CallerFilePath] string classOrFileName = "", [CallerMemberName] string callingMethod = "")
-            : base(TestBase.AssureEmptyDir(TestBase.GetTestDirectoryPath(Path.Combine(ClassNameFromFileName(classOrFileName), callingMethod))))
+            : base(TestBase.AssureEmptyDir(TestBase.GetTestDirectoryPath(Path.Combine(ClassNameFromFileName(classOrFileName), callingMethod))).FullName)
         {
             try
             {
@@ -95,16 +95,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
 
             var prevBlock = new Dictionary<uint256, uint256>();
 
-            using (DBreeze.Transactions.Transaction transaction = this.BlockRepo.DBreeze.GetTransaction())
+            byte[] hashBytes = uint256.Zero.ToBytes();
+
+            using (var itr = this.BlockRepo.Leveldb.GetEnumerator())
             {
-                transaction.ValuesLazyLoadingIsOn = true;
-
-                byte[] hashBytes = uint256.Zero.ToBytes();
-
-                foreach (Row<byte[], byte[]> blockRow in transaction.SelectForward<byte[], byte[]>("Block"))
+                while (itr.MoveNext())
                 {
-                    uint256 hashPrev = serializer.Deserialize<uint256>(blockRow.GetValuePart(sizeof(int), (uint)hashBytes.Length));
-                    var hashThis = new uint256(blockRow.Key);
+                    uint256 hashPrev = serializer.Deserialize<uint256>(itr.Current.Value);
+                    var hashThis = new uint256(itr.Current.Key);
                     prevBlock[hashThis] = hashPrev;
                     if (prevBlock.Count >= blockLimit)
                         break;
@@ -173,14 +171,70 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
         public WalletRepositoryTests(bool dbPerWallet = true)
         {
             this.dbPerWallet = dbPerWallet;
-            this.network = KnownNetworks.StratisTest;
+            //this.network = KnownNetworks.StraxTest;
+            this.network = KnownNetworks.StraxMain;
 
-            // Configure this to point to your "StratisTest" root folder and wallet.
-            this.walletNames = new[] { "test2", "test" };
-            this.dataDir = @"E:\RunNodes\SideChains\Data\MainchainUser";
+
+            //Configure this to point to your "StratisTest" root folder and wallet.
+            //this.walletNames = new[] { "test2", "test" };
+            //this.dataDir = @"E:\RunNodes\SideChains\Data\MainchainUser";
+            this.walletNames = new[] { "wallettABA" };
+            this.dataDir = @"C:\Dev\InternalTestnet_Data\Runtime\NodeMDA";
         }
 
         static object lockObj = new object();
+
+        [Fact]
+        public void CanRecordWatchOnlyAddresses()
+        {
+            lock (lockTest)
+            {
+                using (var dataFolder = new TempDataFolder(this.GetType().Name))
+                {
+                    var nodeSettings = new NodeSettings(this.network, args: new[] { $"-datadir={dataFolder.RootPath}" }, protocolVersion: ProtocolVersion.ALT_PROTOCOL_VERSION);
+
+                    var repo = new SQLiteWalletRepository(nodeSettings.LoggerFactory, dataFolder, this.network, DateTimeProvider.Default, new ColdStakingDestinationReader(new ScriptAddressReader()))
+                    {
+                        WriteMetricsToFile = true
+                    };
+
+                    repo.Initialize(this.dbPerWallet);
+
+                    string password = "test";
+                    var account = new WalletAccountReference("test2", Wallet.WatchOnlyAccountName);
+                    var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
+                    ExtKey extendedKey = HdOperations.GetExtendedKey(mnemonic, password);
+
+                    // Create a wallet file.
+                    string encryptedSeed = extendedKey.PrivateKey.GetEncryptedBitcoinSecret(password, this.network).ToWif();
+
+                    // Create "test2" as an empty wallet.
+                    byte[] chainCode = extendedKey.ChainCode;
+                    ITransactionContext dbTran = repo.BeginTransaction(account.WalletName);
+                    var hdWallet = repo.CreateWallet(account.WalletName, encryptedSeed, chainCode);
+
+                    // Get the extended pub key used to generate addresses for this account.
+                    Key privateKey = Key.Parse(encryptedSeed, password, this.network);
+                    var seedExtKey = new ExtKey(privateKey, chainCode);
+                    ExtKey addressExtKey = seedExtKey.Derive(new KeyPath($"m/44'/{this.network.Consensus.CoinType}'/0'"));
+                    ExtPubKey extPubKey = addressExtKey.Neuter();
+
+                    repo.CreateAccount(account.WalletName, 0, account.AccountName, null);
+                    dbTran.Commit();
+
+                    var pubKeyScripts = Enumerable.Range(0, 10).Select(n => PayToPubkeyTemplate.Instance.GenerateScriptPubKey(new Key().PubKey)).ToList();
+
+                    foreach (var pubKeyScript in pubKeyScripts)
+                    {
+                        repo.AddWatchOnlyAddresses("test2", Wallet.WatchOnlyAccountName, 0, new List<HdAddress> { new HdAddress() { Pubkey = pubKeyScript } });
+                    }
+
+                    var addresses = repo.GetAccountAddresses(account, 0, pubKeyScripts.Count + 1).ToArray();
+
+                    Assert.Equal(pubKeyScripts, addresses.Select(a => a.Pubkey));
+                }
+            }
+        }
 
         [Fact]
         public void CanCreateWalletAndTransactionsAndAddressesAndCanRewind()
@@ -191,8 +245,11 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                 {
                     var nodeSettings = new NodeSettings(this.network, args: new[] { $"-datadir={dataFolder.RootPath}" }, protocolVersion: ProtocolVersion.ALT_PROTOCOL_VERSION);
 
-                    var repo = new SQLiteWalletRepository(nodeSettings.LoggerFactory, dataFolder, this.network, DateTimeProvider.Default, new ColdStakingDestinationReader(new ScriptAddressReader()));
-                    repo.WriteMetricsToFile = true;
+                    var repo = new SQLiteWalletRepository(nodeSettings.LoggerFactory, dataFolder, this.network, DateTimeProvider.Default, new ColdStakingDestinationReader(new ScriptAddressReader()))
+                    {
+                        WriteMetricsToFile = true
+                    };
+
                     repo.Initialize(this.dbPerWallet);
 
                     string password = "test";
@@ -206,7 +263,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     // Create "test2" as an empty wallet.
                     byte[] chainCode = extendedKey.ChainCode;
                     ITransactionContext dbTran = repo.BeginTransaction(account.WalletName);
-                    repo.CreateWallet(account.WalletName, encryptedSeed, chainCode);
+                    var hdWallet = repo.CreateWallet(account.WalletName, encryptedSeed, chainCode);
 
                     // Get the extended pub key used to generate addresses for this account.
                     Key privateKey = Key.Parse(encryptedSeed, password, this.network);
@@ -217,55 +274,99 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     repo.CreateAccount(account.WalletName, 0, account.AccountName, extPubKey);
                     dbTran.Commit();
 
-                    // Verify the wallet exisits.
+                    // Verify the wallet exists.
                     Assert.Equal(account.WalletName, repo.GetWalletNames().First());
 
                     // Create block 1.
                     Block block0 = this.network.Consensus.ConsensusFactory.CreateBlock();
                     BlockHeader blockHeader0 = block0.Header;
-                    var chainedHeader0 = new ChainedHeader(blockHeader0, this.network.GenesisHash, null);
+                    var chainedHeader0 = new ChainedHeader(blockHeader0, blockHeader0.GetHash(), null);
 
-                    repo.ProcessBlock(block0, chainedHeader0, account.WalletName);
+                    Block block1a = this.network.Consensus.ConsensusFactory.CreateBlock();
+                    BlockHeader blockHeader1a = block1a.Header;
+                    blockHeader1a.HashPrevBlock = blockHeader0.GetHash();
 
-                    Block block1 = this.network.Consensus.ConsensusFactory.CreateBlock();
-                    BlockHeader blockHeader1 = block1.Header;
-                    blockHeader1.HashPrevBlock = this.network.GenesisHash;
+                    // Will send 100 coins to this address.
+                    HdAddress address = hdWallet.AccountsRoot.First().Accounts.First().ExternalAddresses.ElementAt(19);
 
-                    // Create transaction 1.
-                    Transaction transaction1 = this.network.CreateTransaction();
+                    // Create transaction 1a.
+                    Transaction transaction1a = this.network.CreateTransaction();
 
-                    // Send 100 coins to the first unused address in the wallet.
-                    HdAddress address = repo.GetUnusedAddresses(account, 1).FirstOrDefault();
-                    transaction1.Outputs.Add(new TxOut(Money.COIN * 100, address.ScriptPubKey));
+                    // Send 30 coins to the nominated address.
+                    transaction1a.Outputs.Add(new TxOut(Money.COIN * 30, address.ScriptPubKey));
 
-                    // Add transaction 1 to block 1.
-                    block1.Transactions.Add(transaction1);
+                    // Add transaction 1a to block 1a.
+                    block1a.Transactions.Add(transaction1a);
 
-                    // Process block 1.
-                    var chainedHeader1 = new ChainedHeader(blockHeader1, blockHeader1.GetHash(), chainedHeader0);
-                    repo.ProcessBlock(block1, chainedHeader1, account.WalletName);
+                    // Chained header for block 1a.
+                    var chainedHeader1a = new ChainedHeader(blockHeader1a, blockHeader1a.GetHash(), chainedHeader0);
 
-                    (Money totalAmount1, Money confirmedAmount1, Money spendableAmount1) = repo.GetAccountBalance(account, chainedHeader1.Height, 2);
+                    // Block 1b.
+                    Block block1b = this.network.Consensus.ConsensusFactory.CreateBlock();
+                    BlockHeader blockHeader1b = block1b.Header;
+                    blockHeader1b.HashPrevBlock = chainedHeader1a.HashBlock;
+
+                    // Create transaction 1b.
+                    Transaction transaction1b = this.network.CreateTransaction();
+
+                    // Send 70 coins to the nominated address.
+                    transaction1b.Outputs.Add(new TxOut(Money.COIN * 70, address.ScriptPubKey));
+
+                    // Add transaction 1b to block 1b.
+                    block1b.Transactions.Add(transaction1b);
+
+                    // Chained header for block 1b.
+                    var chainedHeader1b = new ChainedHeader(blockHeader1b, blockHeader1b.GetHash(), chainedHeader1a);
+
+                    // Process all blocks.
+                    repo.ProcessBlocks(new[] { (chainedHeader0, block0), (chainedHeader1a, block1a), (chainedHeader1b, block1b) }, account.WalletName);
+
+                    // Verify that the UTXO's are being tracked.
+                    IWalletTransactionReadOnlyLookup transactionLookup = repo.GetWalletTransactionLookup(account.WalletName);
+                    Assert.True(transactionLookup.Contains(new OutPoint(transaction1a.GetHash(), 0), out HashSet<AddressIdentifier> addresses1a));
+                    Assert.Equal(address.ScriptPubKey.ToHex(), addresses1a.ElementAt(0).ScriptPubKey);
+                    Assert.True(transactionLookup.Contains(new OutPoint(transaction1b.GetHash(), 0), out HashSet<AddressIdentifier> addresses1b));
+                    Assert.Equal(address.ScriptPubKey.ToHex(), addresses1b.ElementAt(0).ScriptPubKey);
+
+                    // Verify that all addresses are being tracked.
+                    IWalletAddressReadOnlyLookup addressLookup = repo.GetWalletAddressLookup(account.WalletName);
+                    var usedExternalAddresses = repo.GetUsedAddresses(account, false).ToList();
+                    var unusedExternalAddresses = repo.GetUnusedAddresses(account, false).ToList();
+                    var usedInternalAddresses = repo.GetUsedAddresses(account, true).ToList();
+                    var unusedInternalAddresses = repo.GetUnusedAddresses(account, true).ToList();
+                    var externalAddresses = unusedExternalAddresses.Concat(usedExternalAddresses.Select(a => a.address));
+                    var internalAddresses = unusedInternalAddresses.Concat(usedInternalAddresses.Select(a => a.address));
+
+                    Assert.Single(usedExternalAddresses);
+                    Assert.Equal(39, unusedExternalAddresses.Count);
+                    Assert.Empty(usedInternalAddresses);
+                    Assert.Equal(20, unusedInternalAddresses.Count);
+                    foreach (HdAddress hdAddress in externalAddresses.Concat(internalAddresses))
+                        Assert.True(addressLookup.Contains(hdAddress.ScriptPubKey, out _));
+
+                    (Money totalAmount1, Money confirmedAmount1, Money spendableAmount1) = repo.GetAccountBalance(account, chainedHeader1b.Height, 2);
                     Assert.Equal(new Money(100m, MoneyUnit.BTC), totalAmount1);
                     Assert.Equal(new Money(100m, MoneyUnit.BTC), confirmedAmount1);
-                    Assert.Equal(new Money(0m, MoneyUnit.BTC), spendableAmount1);
+                    Assert.Equal(new Money(30m, MoneyUnit.BTC), spendableAmount1);
 
                     // List the unspent outputs.
-                    List<UnspentOutputReference> outputs1 = repo.GetSpendableTransactionsInAccount(account, chainedHeader1.Height, 0).ToList();
-                    Assert.Single(outputs1);
-                    Assert.Equal(Money.COIN * 100, (long)outputs1[0].Transaction.Amount);
+                    List<UnspentOutputReference> outputs1 = repo.GetSpendableTransactionsInAccount(account, chainedHeader1b.Height, 0).ToList();
+                    Assert.Equal(2, outputs1.Count);
+                    Assert.Equal(Money.COIN * 30, (long)outputs1[0].Transaction.Amount);
+                    Assert.Equal(Money.COIN * 70, (long)outputs1[1].Transaction.Amount);
 
                     // Create block 2.
                     Block block2 = this.network.Consensus.ConsensusFactory.CreateBlock();
                     BlockHeader blockHeader2 = block2.Header;
-                    blockHeader2.HashPrevBlock = blockHeader1.GetHash();
+                    blockHeader2.HashPrevBlock = blockHeader1b.GetHash();
 
                     // Create transaction 2.
                     Transaction transaction2 = this.network.CreateTransaction();
 
                     // Send the 90 coins to a fictituous external address.
                     Script dest = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(new KeyId());
-                    transaction2.Inputs.Add(new TxIn(new OutPoint(transaction1.GetHash(), 0)));
+                    transaction2.Inputs.Add(new TxIn(new OutPoint(transaction1a.GetHash(), 0)));
+                    transaction2.Inputs.Add(new TxIn(new OutPoint(transaction1b.GetHash(), 0)));
                     transaction2.Outputs.Add(new TxOut(Money.COIN * 90, dest));
 
                     // Send 9 coins change to my first unused change address.
@@ -276,10 +377,10 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     block2.Transactions.Add(transaction2);
 
                     // Process block 2.
-                    var chainedHeader2 = new ChainedHeader(blockHeader2, blockHeader2.HashPrevBlock, chainedHeader1);
+                    var chainedHeader2 = new ChainedHeader(blockHeader2, blockHeader2.HashPrevBlock, chainedHeader1b);
                     repo.ProcessBlock(block2, chainedHeader2, account.WalletName);
 
-                    (Money totalAmount2, Money confirmedAmount2, Money spendableAmount2) = repo.GetAccountBalance(account, chainedHeader1.Height, 2);
+                    (Money totalAmount2, Money confirmedAmount2, Money spendableAmount2) = repo.GetAccountBalance(account, chainedHeader1a.Height, 2);
                     Assert.Equal(new Money(9m, MoneyUnit.BTC), totalAmount2);
                     Assert.Equal(new Money(9m, MoneyUnit.BTC), confirmedAmount2);
                     Assert.Equal(new Money(0m, MoneyUnit.BTC), spendableAmount2);
@@ -290,34 +391,58 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     Assert.Equal(Money.COIN * 9, (long)outputs2[0].Transaction.Amount);
 
                     // Check the wallet history.
-                    List<AccountHistory> accountHistories = repo.GetHistory(account.WalletName, account.AccountName).ToList();
-                    Assert.Single(accountHistories);
-                    List<FlatHistory> history = accountHistories[0].History.ToList();
-                    Assert.Equal(2, history.Count);
+                    Wallet wallet = repo.GetWallet(account.WalletName);
+                    HdAccount hdAccount = repo.GetAccounts(wallet, account.AccountName).First();
+                    AccountHistory accountHistory = repo.GetHistory(hdAccount);
+                    List<FlatHistory> history = accountHistory.History.ToList();
+                    Assert.Equal(3, history.Count);
 
                     // Verify 100 coins sent to first unused external address in the wallet.
                     Assert.Equal(address.Address, history[0].Address.Address);
                     Assert.Equal(address.HdPath, history[0].Address.HdPath);
-                    Assert.Equal(0, history[0].Address.Index);
-                    Assert.Equal(Money.COIN * 100, (long)history[0].Transaction.Amount);
+                    Assert.Equal(19, history[0].Address.Index);
+                    Assert.Equal(Money.COIN * 70, (long)history[0].Transaction.Amount);
+                    Assert.Equal(Money.COIN * 30, (long)history[1].Transaction.Amount);
 
                     // Looking at the spending tx we see 90 coins sent out and 9 sent to internal change address.
-                    List<PaymentDetails> payments = history[0].Transaction.SpendingDetails.Payments.ToList();
-                    Assert.Equal(2, payments.Count);
-                    Assert.Equal(Money.COIN * 90, (long)payments[0].Amount);
-                    Assert.Equal(dest, payments[0].DestinationScriptPubKey);
-                    Assert.Equal(Money.COIN * 9, (long)payments[1].Amount);
-                    Assert.Equal(changeAddress.ScriptPubKey, payments[1].DestinationScriptPubKey);
+                    List<PaymentDetails> payments0 = history[0].Transaction.SpendingDetails.Payments.ToList();
+                    List<PaymentDetails> change0 = history[0].Transaction.SpendingDetails.Change.ToList();
+                    Assert.Single(payments0);
+                    Assert.Equal(Money.COIN * 90, (long)payments0[0].Amount);
+                    Assert.Equal(dest, payments0[0].DestinationScriptPubKey);
+                    Assert.Single(change0);
+                    Assert.Equal(Money.COIN * 9, (long)change0[0].Amount);
+                    Assert.Equal(changeAddress.ScriptPubKey, change0[0].DestinationScriptPubKey);
+
+                    List<PaymentDetails> payments1 = history[0].Transaction.SpendingDetails.Payments.ToList();
+                    List<PaymentDetails> change1 = history[0].Transaction.SpendingDetails.Change.ToList();
+                    Assert.Single(payments1);
+                    Assert.Equal(Money.COIN * 90, (long)payments1[0].Amount);
+                    Assert.Equal(dest, payments1[0].DestinationScriptPubKey);
+                    Assert.Single(change1);
+                    Assert.Equal(Money.COIN * 9, (long)change1[0].Amount);
+                    Assert.Equal(changeAddress.ScriptPubKey, change1[0].DestinationScriptPubKey);
 
                     // Verify 9 coins sent to first unused change address in the wallet.
-                    Assert.Equal(changeAddress.Address, history[1].Address.Address);
-                    Assert.Equal(changeAddress.HdPath, history[1].Address.HdPath);
-                    Assert.Equal(0, history[1].Address.Index);
-                    Assert.Equal(Money.COIN * 9, (long)history[1].Transaction.Amount);
+                    Assert.Equal(changeAddress.Address, history[2].Address.Address);
+                    Assert.Equal(changeAddress.HdPath, history[2].Address.HdPath);
+                    Assert.Equal(0, history[2].Address.Index);
+                    Assert.Equal(Money.COIN * 9, (long)history[2].Transaction.Amount);
+
+                    // Verify that the external destination UTXO is not tracked.
+                    Assert.False(transactionLookup.Contains(new OutPoint(transaction2.GetHash(), 0), out HashSet<AddressIdentifier> addresses2a));
+
+                    // Verify that the change address UTXO is being tracked.
+                    Assert.True(transactionLookup.Contains(new OutPoint(transaction2.GetHash(), 1), out HashSet<AddressIdentifier> addresses2b));
+                    Assert.Equal(changeAddress.ScriptPubKey.ToHex(), addresses2b.ElementAt(0).ScriptPubKey);
+
+                    // Verify that all addresses are being tracked.
+                    foreach (HdAddress hdAddress in repo.GetUnusedAddresses(account, false).Concat(repo.GetUsedAddresses(account, true).Select(a => a.address)))
+                        Assert.True(addressLookup.Contains(hdAddress.ScriptPubKey, out _));
 
                     // FINDFORK
                     // See if FindFork can be run from multiple threads
-                    var forks = new ChainedHeader[100];
+                    var forks = new ChainedHeader[1];
                     Parallel.ForEach(forks.Select((f,n) => n), n =>
                     {
                         forks[n] = repo.FindFork("test2", chainedHeader2);
@@ -326,37 +451,43 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     Assert.DoesNotContain(forks, f => f.Height != chainedHeader2.Height);
 
                     // REWIND: Remove block 1.
-                    repo.RewindWallet(account.WalletName, chainedHeader1);
+                    repo.RewindWallet(account.WalletName, chainedHeader1b);
 
                     // FINDFORK
                     // See if FindFork can be run from multiple threads
                     forks = new ChainedHeader[100];
                     Parallel.ForEach(forks.Select((f, n) => n), n =>
                     {
-                        forks[n] = repo.FindFork("test2", chainedHeader2);
+                        forks[n] = repo.FindFork("test2", chainedHeader1b);
                     });
 
-                    Assert.DoesNotContain(forks, f => f.Height != chainedHeader1.Height);
+                    Assert.DoesNotContain(forks, f => f.Height != chainedHeader1b.Height);
 
                     // List the unspent outputs.
-                    outputs1 = repo.GetSpendableTransactionsInAccount(account, chainedHeader1.Height, 0).ToList();
-                    Assert.Single(outputs1);
-                    Assert.Equal(Money.COIN * 100, (long)outputs1[0].Transaction.Amount);
+                    outputs1 = repo.GetSpendableTransactionsInAccount(account, chainedHeader1b.Height, 0).ToList();
+                    Assert.Equal(2, outputs1.Count);
+                    Assert.Equal(Money.COIN * 30, (long)outputs1[0].Transaction.Amount);
+                    Assert.Equal(Money.COIN * 70, (long)outputs1[1].Transaction.Amount);
 
                     // Check the wallet history.
                     List<AccountHistory> accountHistories2 = repo.GetHistory(account.WalletName, account.AccountName).ToList();
                     Assert.Single(accountHistories2);
                     List<FlatHistory> history2 = accountHistories2[0].History.ToList();
-                    Assert.Single(history2);
+                    Assert.Equal(2, history2.Count);
 
                     // Verify 100 coins sent to first unused external address in the wallet.
                     Assert.Equal(address.Address, history2[0].Address.Address);
                     Assert.Equal(address.HdPath, history2[0].Address.HdPath);
-                    Assert.Equal(0, history2[0].Address.Index);
-                    Assert.Equal(Money.COIN * 100, (long)history2[0].Transaction.Amount);
+                    Assert.Equal(19, history2[0].Address.Index);
+                    Assert.Equal(Money.COIN * 70, (long)history2[0].Transaction.Amount);
+                    Assert.Equal(address.Address, history2[1].Address.Address);
+                    Assert.Equal(address.HdPath, history2[1].Address.HdPath);
+                    Assert.Equal(19, history2[1].Address.Index);
+                    Assert.Equal(Money.COIN * 30, (long)history2[1].Transaction.Amount);
 
                     // Verify that the spending details have been removed.
                     Assert.Null(history2[0].Transaction.SpendingDetails);
+                    Assert.Null(history2[1].Transaction.SpendingDetails);
 
                     // Delete the wallet.
                     Assert.True(repo.DeleteWallet(account.WalletName));
@@ -381,7 +512,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
             foreach (HdAccount hdAccount in wallet.GetAccounts())
             {
                 var extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey);
-                repo.CreateAccount(walletName, hdAccount.Index, hdAccount.Name, extPubKey);
+                repo.CreateAccount(walletName, hdAccount.Index, hdAccount.Name, extPubKey);//, addressCounts: (1000, 1000));
             }
         }
 
@@ -418,7 +549,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     foreach (HdAccount hdAccount in wallet.GetAccounts())
                     {
                         // Get the total balances.
-                        (Money amountConfirmed, Money amountUnconfirmed) = hdAccount.GetBalances();
+                        (Money amountConfirmed, Money amountUnconfirmed) = hdAccount.GetBalances(hdAccount.IsNormalAccount());
 
                         int walletHeight = (int)wallet.AccountsRoot.First().LastBlockSyncedHeight;
 

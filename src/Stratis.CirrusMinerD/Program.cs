@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
@@ -22,6 +20,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusMinerD
@@ -30,13 +29,6 @@ namespace Stratis.CirrusMinerD
     {
         private const string MainchainArgument = "-mainchain";
         private const string SidechainArgument = "-sidechain";
-
-        private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
-        {
-            { NetworkType.Mainnet, Networks.Stratis.Mainnet },
-            { NetworkType.Testnet, Networks.Stratis.Testnet },
-            { NetworkType.Regtest, Networks.Stratis.Regtest }
-        };
 
         public static void Main(string[] args)
         {
@@ -55,7 +47,10 @@ namespace Stratis.CirrusMinerD
                     throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
                 }
 
-                IFullNode node = isMainchainNode ? GetStratisNode(args) : GetCirrusMiningNode(args);
+                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
+                Console.Title = isMainchainNode ? "Strax Full Node" : "Cirrus Full Node";
+
+                IFullNode node = isMainchainNode ? GetStraxNode(args) : GetCirrusMiningNode(args);
 
                 if (node != null)
                     await node.RunAsync();
@@ -76,10 +71,12 @@ namespace Stratis.CirrusMinerD
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
-                .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractCollateralPoAMining()
-                .CheckForPoAMembersCollateral()
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .AddPoACollateralMiningCapability()
+                .CheckCollateralCommitment()
+                .AddDynamicMemberhip()
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -91,6 +88,7 @@ namespace Stratis.CirrusMinerD
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .Build();
 
             return node;
@@ -99,11 +97,11 @@ namespace Stratis.CirrusMinerD
         /// <summary>
         /// Returns a standard Stratis node. Just like StratisD.
         /// </summary>
-        private static IFullNode GetStratisNode(string[] args)
+        private static IFullNode GetStraxNode(string[] args)
         {
             // TODO: Hardcode -addressindex for better user experience
 
-            var nodeSettings = new NodeSettings(networksSelector: Networks.Stratis, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
+            var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
             {
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
@@ -118,7 +116,8 @@ namespace Stratis.CirrusMinerD
                 .AddRPC()
                 .UsePosConsensus()
                 .UseWallet()
-                .AddPowPosMining()
+                .AddSQLiteWalletRepository()
+                .AddPowPosMining(true)
                 .Build();
 
             return node;

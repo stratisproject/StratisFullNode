@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Newtonsoft.Json;
@@ -34,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
             this.posMinting = new Mock<IPosMinting>();
             this.walletManager = new Mock<IWalletManager>();
             this.timeSyncBehaviorState = new Mock<ITimeSyncBehaviorState>();
-            this.fullNode.Setup(i => i.Network).Returns(KnownNetworks.StratisTest);
+            this.fullNode.Setup(i => i.Network).Returns(KnownNetworks.StraxTest);
 
             this.controller = new StakingController(this.fullNode.Object, this.LoggerFactory.Object, this.walletManager.Object, this.posMinting.Object);
         }
@@ -180,7 +182,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
             IActionResult result = this.controller.StartStaking(new StartStakingRequest() { Name = "myWallet", Password = "password1" });
 
             Assert.IsType<OkResult>(result);
-            this.posMinting.Verify(p => p.Stake(It.Is<WalletSecret>(s => s.WalletName == "myWallet" && s.WalletPassword == "password1")), Times.Exactly(1));
+            this.posMinting.Verify(p => p.Stake(It.Is<List<WalletSecret>>(s => s.First().WalletName == "myWallet" && s.First().WalletPassword == "password1")), Times.Exactly(1));
         }
 
         /// <summary>
@@ -211,7 +213,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests.Controllers
             Assert.Equal(400, error.Status);
             Assert.Contains("Staking cannot start", error.Message);
 
-            this.posMinting.Verify(pm => pm.Stake(It.IsAny<WalletSecret>()), Times.Never);
+            this.posMinting.Verify(pm => pm.Stake(It.IsAny<List<WalletSecret>>()), Times.Never);
         }
 
         [Fact]

@@ -8,13 +8,13 @@ using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules;
+using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.SmartContracts.Networks.Policies;
 
 namespace Stratis.Sidechains.Networks
 {
@@ -54,6 +54,8 @@ namespace Stratis.Sidechains.Networks
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -69,24 +71,42 @@ namespace Stratis.Sidechains.Networks
             this.Genesis = genesisBlock;
 
             this.FederationMnemonics = new[] {
-                   "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                   "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                   "exchange rent bronze pole post hurry oppose drama eternal voice client state"
-               }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
+                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
 
-            List<PubKey> federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
+            var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
             var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
-
             foreach (PubKey pubKey in federationPubKeys)
                 genesisFederationMembers.Add(new CollateralFederationMember(pubKey, true, new Money(0), null));
+
+            // Will replace the last multisig member.
+            var newFederationMemberMnemonics = new string[]
+            {
+                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
+            var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
+
+            // Mining keys!
+            this.StraxMiningMultisigMembers = newFederationPubKeys;
+
+            // Register only the new federation as we won't be doing anything with the old federation.
+            this.Federations = new Federations();
+
+            // Default transaction-signing keys!
+            // Use the new keys as the old keys should never be used by the new opcode.
+            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
-                maxStandardTxWeight: 100_000,
+                maxStandardTxWeight: 150_000,
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 genesisFederationMembers: genesisFederationMembers,
@@ -125,7 +145,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(20_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                powTargetSpacing: TimeSpan.FromMinutes(1),
+                targetSpacing: TimeSpan.FromSeconds(16),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,
@@ -163,10 +183,10 @@ namespace Stratis.Sidechains.Networks
             this.DNSSeeds = new List<DNSSeedData>();
             this.SeedNodes = new List<NetworkAddress>();
 
-            this.StandardScriptsRegistry = new SmartContractsStandardScriptsRegistry();
+            this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
             // 16 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 16 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Do we need Asserts for block hash
 
@@ -181,8 +201,7 @@ namespace Stratis.Sidechains.Networks
             consensus.ConsensusRules
                 .Register<HeaderTimeChecksPoARule>()
                 .Register<StratisHeaderVersionRule>()
-                .Register<PoAHeaderDifficultyRule>()
-                .Register<PoAHeaderSignatureRule>();
+                .Register<PoAHeaderDifficultyRule>();
             // ------------------------------------------------------
 
             // IIntegrityValidationConsensusRule
@@ -215,6 +234,7 @@ namespace Stratis.Sidechains.Networks
                 .Register<SetActivationDeploymentsFullValidationRule>()
 
                 // Rules that require the store to be loaded (coinview)
+                .Register<PoAHeaderSignatureRule>()
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>() // implements BIP30
 
@@ -229,7 +249,7 @@ namespace Stratis.Sidechains.Networks
             // ------------------------------------------------------
         }
 
-        private void RegisterMempoolRules(IConsensus consensus)
+        protected override void RegisterMempoolRules(IConsensus consensus)
         {
             consensus.MempoolRules = new List<Type>()
             {

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet
@@ -13,12 +14,11 @@ namespace Stratis.Bitcoin.Features.Wallet
     /// <summary>
     /// A handler that has various functionalities related to transaction operations.
     /// </summary>
-    /// <seealso cref="Stratis.Bitcoin.Features.Wallet.Interfaces.IWalletTransactionHandler" />
+    /// <seealso cref="IWalletTransactionHandler" />
     /// <remarks>
     /// This will uses the <see cref="IWalletFeePolicy" /> and the <see cref="TransactionBuilder" />.
     /// TODO: Move also the broadcast transaction to this class
     /// TODO: Implement lockUnspents
-    /// TODO: Implement subtractFeeFromOutputs
     /// </remarks>
     public class WalletTransactionHandler : IWalletTransactionHandler
     {
@@ -28,28 +28,26 @@ namespace Stratis.Bitcoin.Features.Wallet
         private static readonly Money PretendMaxFee = Money.Coins(1);
 
         private readonly ILogger logger;
-
         private readonly Network network;
-
+        private readonly IReserveUtxoService reserveUtxoService;
         protected readonly StandardTransactionPolicy TransactionPolicy;
-
-        private readonly IWalletManager walletManager;
-
         private readonly IWalletFeePolicy walletFeePolicy;
+        private readonly IWalletManager walletManager;
 
         public WalletTransactionHandler(
             ILoggerFactory loggerFactory,
             IWalletManager walletManager,
             IWalletFeePolicy walletFeePolicy,
             Network network,
-            StandardTransactionPolicy transactionPolicy)
+            StandardTransactionPolicy transactionPolicy,
+            IReserveUtxoService reservedUtxoService)
         {
             this.network = network;
             this.walletManager = walletManager;
             this.walletFeePolicy = walletFeePolicy;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-
             this.TransactionPolicy = transactionPolicy;
+            this.reserveUtxoService = reservedUtxoService;
         }
 
         /// <inheritdoc />
@@ -60,25 +58,36 @@ namespace Stratis.Bitcoin.Features.Wallet
             const int maxRetries = 5;
             int retryCount = 0;
 
-            TransactionPolicyError[] errors = null;
+            TransactionPolicyError[] errors = {};
             while (retryCount <= maxRetries)
             {
                 if (context.Shuffle)
                     context.TransactionBuilder.Shuffle();
 
                 Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
+                ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
+
+                // Here we reserve the UTXO OutPoint(s) so that they can't be selected again.
+                if (spentCoins.Any())
+                    this.reserveUtxoService.ReserveUtxos(spentCoins.Select(c => c.Outpoint));
+
                 if (context.Sign)
                 {
-                    ICoin[] coinsSpent = context.TransactionBuilder.FindSpentCoins(transaction);
                     // TODO: Improve this as we already have secrets when running a retry iteration.
-                    this.AddSecrets(context, coinsSpent);
+                    this.AddSecrets(context, spentCoins);
                     context.TransactionBuilder.SignTransactionInPlace(transaction);
+
+                    if (context.TransactionBuilder.Verify(transaction, out errors))
+                        return transaction;
+                }
+                else
+                {
+                    // If we aren't being asked to sign then it is not really meaningful to perform the Verify step.
+                    // TODO: Do we still need to check for FeeTooLowPolicyError in this case?
+                    return transaction;
                 }
 
-                if (context.TransactionBuilder.Verify(transaction, out errors))
-                    return transaction;
-
-                // Retry only if error is of type 'FeeTooLowPolicyError'
+                // Retry only if error is of type 'FeeTooLowPolicyError'.
                 if (!errors.Any(e => e is FeeTooLowPolicyError)) break;
 
                 retryCount++;
@@ -89,13 +98,14 @@ namespace Stratis.Bitcoin.Features.Wallet
             throw new WalletException($"Could not build the transaction. Details: {errorsMessage}");
         }
 
+        // TODO: This only seems to be used in a test, consider removing it?
         /// <inheritdoc />
         public void FundTransaction(TransactionBuildContext context, Transaction transaction)
         {
             if (context.Recipients.Any())
                 throw new WalletException("Adding outputs is not allowed.");
 
-            // Turn the txout set into a Recipient array
+            // Turn the txout set into a Recipient array.
             context.Recipients.AddRange(transaction.Outputs
                 .Select(s => new Recipient
                 {
@@ -183,6 +193,14 @@ namespace Stratis.Bitcoin.Features.Wallet
             catch (NotEnoughFundsException e)
             {
                 fee = (Money)e.Missing;
+
+                Money minTrxFee = new Money(this.network.MinTxFee, MoneyUnit.Satoshi);
+
+                // Make sure that the fee is at least the minimum transaction fee.
+                fee = Math.Max(fee, minTrxFee);
+
+                if (maxSpendableAmount < fee)
+                    return (Money.Zero, Money.Zero);
             }
 
             return (maxSpendableAmount - fee, fee);
@@ -194,6 +212,15 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.InitializeTransactionBuilder(context);
 
             return context.TransactionFee;
+        }
+
+        public int EstimateSize(TransactionBuildContext context)
+        {
+            this.InitializeTransactionBuilder(context);
+            
+            Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
+
+            return context.TransactionBuilder.EstimateSize(transaction, true);
         }
 
         /// <summary>
@@ -219,11 +246,20 @@ namespace Stratis.Bitcoin.Features.Wallet
                 context.TransactionBuilder.CoinSelector = new AllCoinsSelector();
             }
 
+            bool reCalculateFees = context.SubtractFeesFromRecipients && context.TransactionFee == null;
+
             this.AddRecipients(context);
             this.AddOpReturnOutput(context);
             this.AddCoins(context);
             this.FindChangeAddress(context);
             this.AddFee(context);
+
+            if (reCalculateFees)
+            {
+                context.TransactionBuilder.ClearSendBuilders();
+                this.AddRecipients(context);
+                this.AddCoins(context);
+            }
 
             if (context.Time.HasValue)
                 context.TransactionBuilder.SetTimeStamp(context.Time.Value);
@@ -239,41 +275,50 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (!context.Sign)
                 return;
 
-            Wallet wallet = this.walletManager.GetWalletByName(context.AccountReference.WalletName);
-            ExtKey seedExtKey = this.walletManager.GetExtKey(context.AccountReference, context.WalletPassword, context.CacheSecret);
+            Wallet wallet = this.walletManager.GetWallet(context.AccountReference.WalletName);
+            ExtKey seedExtKey = this.walletManager.GetExtKey(context.AccountReference, context.WalletPassword);
 
             var signingKeys = new HashSet<ISecret>();
-            var added = new HashSet<HdAddress>();
-            foreach (Coin coinSpent in coinsSpent)
+            Dictionary<OutPoint, UnspentOutputReference> outpointLookup = context.UnspentOutputs.ToDictionary(o => o.ToOutPoint(), o => o);
+            IEnumerable<string> uniqueHdPaths = coinsSpent.Select(s => s.Outpoint).Select(o => outpointLookup[o].Address.HdPath).Distinct();
+
+            foreach (string hdPath in uniqueHdPaths)
             {
-                //obtain the address relative to this coin (must be improved)
-                HdAddress address = context.UnspentOutputs.First(output => output.ToOutPoint() == coinSpent.Outpoint).Address;
-
-                if (added.Contains(address))
-                    continue;
-
-                ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(address.HdPath));
+                ExtKey addressExtKey = seedExtKey.Derive(new KeyPath(hdPath));
                 BitcoinExtKey addressPrivateKey = addressExtKey.GetWif(wallet.Network);
                 signingKeys.Add(addressPrivateKey);
-                added.Add(address);
             }
 
             context.TransactionBuilder.AddKeys(signingKeys.ToArray());
         }
 
         /// <summary>
-        /// Find the next available change address.
+        /// Find the next available change address, or set it to the provided value if applicable.
         /// </summary>
         /// <param name="context">The context associated with the current transaction being built.</param>
         protected void FindChangeAddress(TransactionBuildContext context)
         {
+            if (context.ChangeScript != null)
+            {
+                context.TransactionBuilder.SetChange(context.ChangeScript);
+                
+                return;
+            }
+
             if (context.ChangeAddress == null)
             {
                 // If no change address is supplied, get a new address to send the change to.
                 context.ChangeAddress = this.walletManager.GetUnusedChangeAddress(new WalletAccountReference(context.AccountReference.WalletName, context.AccountReference.AccountName));
             }
 
-            context.TransactionBuilder.SetChange(context.ChangeAddress.ScriptPubKey);
+            if (context.UseSegwitChangeAddress)
+            {
+                context.TransactionBuilder.SetChange(new BitcoinWitPubKeyAddress(context.ChangeAddress.Bech32Address, this.network).ScriptPubKey);
+            }
+            else
+            {
+                context.TransactionBuilder.SetChange(context.ChangeAddress.ScriptPubKey);
+            }
         }
 
         /// <summary>
@@ -292,7 +337,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             // Get total spendable balance in the account.
             long balance = context.UnspentOutputs.Sum(t => t.Transaction.Amount);
-            long totalToSend = context.Recipients.Sum(s => s.Amount);
+            long totalToSend = context.Recipients.Sum(s => s.Amount) + (context.OpReturnAmount ?? Money.Zero);
             if (balance < totalToSend)
                 throw new WalletException("Not enough funds.");
 
@@ -309,7 +354,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 Dictionary<OutPoint, UnspentOutputReference> availableHashList = context.UnspentOutputs.ToDictionary(item => item.ToOutPoint(), item => item);
 
                 if (!context.SelectedInputs.All(input => availableHashList.ContainsKey(input)))
-                    throw new WalletException("Not all the selected inputs were found on the wallet.");
+                    throw new WalletException("Not all the selected inputs were found in the wallet.");
 
                 if (!context.AllowOtherInputs)
                 {
@@ -372,11 +417,63 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (context.Recipients.Any(a => a.Amount == Money.Zero))
                 throw new WalletException("No amount specified.");
 
-            if (context.Recipients.Any(a => a.SubtractFeeFromAmount))
-                throw new NotImplementedException("Substracting the fee from the recipient is not supported yet.");
+            int totalSubtractingRecipients = context.Recipients.Count(r => r.SubtractFeeFromAmount);
 
-            foreach (Recipient recipient in context.Recipients)
-                context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
+            // If none of them need the fee subtracted then it's simply a matter of adding the individual recipients to the builder.
+            if (totalSubtractingRecipients == 0)
+            {
+                foreach (Recipient recipient in context.Recipients)
+                {
+                    context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
+                }
+
+                return;
+            }
+
+            // If the transaction fee has been explicitly specified, and we have any recipients that require a fee to be subtracted
+            // from the amount to be sent, then evenly distribute the chosen fee among all recipients. Any remaining fee should be
+            // subtracted from the first recipient.
+            if (context.TransactionFee != null)
+            {
+                Money fee = context.TransactionFee;
+                long recipientFee = fee.Satoshi / totalSubtractingRecipients;
+                long remainingFee = fee.Satoshi % totalSubtractingRecipients;
+
+                for (int i = 0; i < context.Recipients.Count; i++)
+                {
+                    Recipient recipient = context.Recipients[i];
+
+                    if (recipient.SubtractFeeFromAmount)
+                    {
+                        // First receiver pays the remainder not divisible by output count.
+                        long feeToSubtract = i == 0 ? remainingFee + recipientFee : recipientFee;
+                        long remainingAmount = recipient.Amount.Satoshi - feeToSubtract;
+                        if (remainingAmount <= 0)
+                            throw new WalletException($"Fee {feeToSubtract} is higher than amount {recipient.Amount.Satoshi} to send.");
+
+                        recipient.Amount = new Money(remainingAmount);
+                    }
+
+                    context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
+                }
+            }
+            else
+            {
+                // This is currently a limitation of the NBitcoin TransactionBuilder.
+                // The only alternative would possibly be to recompute the output sizes after the AddFee call.
+                if (totalSubtractingRecipients > 1)
+                    throw new WalletException($"Cannot subtract fee from more than 1 recipient if {nameof(context.TransactionFee)} is not set.");
+
+                // If the transaction fee has not been explicitly specified yet, then the builder needs to assign it later from the wallet fee policy.
+                // So we just need to indicate to the builder that the fees must be subtracted from the specified recipient.
+                foreach (Recipient recipient in context.Recipients)
+                {
+                    context.TransactionBuilder.Send(recipient.ScriptPubKey, recipient.Amount);
+
+                    if (recipient.SubtractFeeFromAmount)
+                        context.TransactionBuilder.SubtractFees();
+                }
+            }
         }
 
         /// <summary>
@@ -384,6 +481,14 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </summary>
         /// <param name="context">The context associated with the current transaction being built.</param>
         protected void AddFee(TransactionBuildContext context)
+        {
+            Money fee = this.CalculateFee(context);
+
+            context.TransactionBuilder.SendFees(fee);
+            context.TransactionFee = fee;
+        }
+
+        private Money CalculateFee(TransactionBuildContext context)
         {
             Money fee;
             Money minTrxFee = new Money(this.network.MinTxFee, MoneyUnit.Satoshi);
@@ -401,14 +506,13 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 if (context.TransactionFee < minTrxFee)
                 {
-                    throw new WalletException($"Not enough fees. The minimun fee is {minTrxFee}.");
+                    throw new WalletException($"Not enough fees. The minimum fee is {minTrxFee}.");
                 }
 
                 fee = context.TransactionFee;
             }
 
-            context.TransactionBuilder.SendFees(fee);
-            context.TransactionFee = fee;
+            return fee;
         }
 
         /// <summary>
@@ -442,7 +546,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.SelectedInputs = new List<OutPoint>();
             this.AllowOtherInputs = false;
             this.Sign = true;
-            this.CacheSecret = true;
         }
 
         /// <summary>
@@ -482,10 +585,16 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// The change address, where any remaining funds will be sent to.
         /// </summary>
         /// <remarks>
-        /// A Bitcoin has to spend the entire UTXO, if total value is greater then the send target
-        /// the rest of the coins go in to a change address that is under the senders control.
+        /// A transaction has to spend the entire UTXO provided as an input, if total value of the inputs is greater then the send target,
+        /// the rest of the coins go in to a change output with an address that is typically under the sender's control.
         /// </remarks>
         public HdAddress ChangeAddress { get; set; }
+
+        // TODO: Investigate whether ChangeAddress actually needs to be an HdAddress at all
+        /// <summary>
+        /// If specified, this takes precedence over the ChangeAddress as it does not require the address to actually be present in the wallet account.
+        /// </summary>
+        public Script ChangeScript { get; set; }
 
         /// <summary>
         /// The total fee on the transaction.
@@ -540,13 +649,22 @@ namespace Stratis.Bitcoin.Features.Wallet
         public bool Sign { get; set; }
 
         /// <summary>
-        /// Whether the secret should be cached for 5 mins after it is used or not.
-        /// </summary>
-        public bool CacheSecret { get; set; }
-
-        /// <summary>
         /// The timestamp to set on the transaction.
         /// </summary>
         public uint? Time { get; set; }
+
+        /// <summary>
+        /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool UseSegwitChangeAddress { get; set; }
+
+        /// <summary>
+        /// Indicates whether fee should be deducted from <see cref="Recipients"/> amount(s) or
+        /// added to the transaction.
+        /// </summary>
+        public bool SubtractFeesFromRecipients
+        {
+            get { return this.Recipients?.Any(r => r.SubtractFeeFromAmount) ?? false; }
+        }
     }
 }

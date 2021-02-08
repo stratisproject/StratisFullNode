@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,7 @@ using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -65,6 +67,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         public string WalletName => this.builderWalletName;
         public string WalletPassword => this.builderWalletPassword;
 
+        private bool addRewardClaimer;
         private bool builderAlwaysFlushBlocks;
         private bool builderEnablePeerDiscovery;
         private bool builderNoValidation;
@@ -100,8 +103,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             this.ConfigParameters.SetDefaultValueIfUndefined("rpcport", randomFoundPorts[1].ToString());
             this.ConfigParameters.SetDefaultValueIfUndefined("apiport", randomFoundPorts[2].ToString());
 
-            this.loggerFactory = new ExtendedLoggerFactory();
-            this.loggerFactory.AddConsoleWithFilters();
+            this.loggerFactory = ExtendedLoggerFactory.Create();
 
             CreateConfigFile(this.ConfigParameters);
         }
@@ -122,6 +124,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         public CoreNode NoValidation()
         {
             this.builderNoValidation = true;
+            return this;
+        }
+
+        public CoreNode AddRewardClaimer()
+        {
+            this.addRewardClaimer = true;
             return this;
         }
 
@@ -224,12 +232,24 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             // Extract the zipped blockchain data to the node's DataFolder.
             ZipFile.ExtractToDirectory(Path.GetFullPath(readyDataName), this.DataFolder, true);
 
+            // Import whole wallets to DB.
+            this.startActions.Add(() =>
+            {
+                var walletManager = ((WalletManager)this.FullNode?.NodeService<IWalletManager>(true));
+                if (walletManager != null)
+                    walletManager.ExcludeTransactionsFromWalletImports = false;
+            });
+
             return this;
         }
 
         public RPCClient CreateRPCClient()
         {
-            return new RPCClient(this.GetRPCAuth(), new Uri("http://127.0.0.1:" + this.RpcPort + "/"), this.FullNode?.Network ?? KnownNetworks.RegTest);
+            Network network;
+
+            network = this.FullNode?.Network ?? KnownNetworks.RegTest;
+
+            return new RPCClient(this.GetRPCAuth(), new Uri("http://127.0.0.1:" + this.RpcPort + "/"), network);
         }
 
         public INetworkPeer CreateNetworkPeerClient()
@@ -273,15 +293,19 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         private IAsyncProvider GetOrCreateAsyncProvider()
         {
             if (this.runner.FullNode == null)
-                return new AsyncProvider(this.loggerFactory, new Signals.Signals(this.loggerFactory, null), new NodeLifetime());
+                return new AsyncProvider(this.loggerFactory, new Signals.Signals(this.loggerFactory, null));
             else
                 return this.runner.FullNode.NodeService<IAsyncProvider>();
         }
+
+        List<Action> startActions = new List<Action>();
+        List<Action> runActions = new List<Action>();
 
         public CoreNode Start(Action startAction = null)
         {
             lock (this.lockObject)
             {
+                this.runner.AddRewardClaimer = this.addRewardClaimer;
                 this.runner.AlwaysFlushBlocks = this.builderAlwaysFlushBlocks;
                 this.runner.EnablePeerDiscovery = this.builderEnablePeerDiscovery;
                 this.runner.OverrideDateTimeProvider = this.builderOverrideDateTimeProvider;
@@ -290,17 +314,24 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
                     this.DisableValidation();
 
                 this.runner.BuildNode();
+
                 startAction?.Invoke();
+                foreach (Action action in this.startActions)
+                    action.Invoke();
+
                 this.runner.Start();
                 this.State = CoreNodeState.Starting;
             }
 
-            if ((this.runner is BitcoinCoreRunner) || (this.runner is StratisXRunner))
+            if (this.runner is BitcoinCoreRunner)
                 WaitForExternalNodeStartup();
             else
                 StartStratisRunner();
 
             this.State = CoreNodeState.Running;
+
+            foreach (Action runAction in this.runActions)
+                runAction.Invoke();
 
             return this;
         }
@@ -315,29 +346,60 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             configParameters.SetDefaultValueIfUndefined("server", "1");
             configParameters.SetDefaultValueIfUndefined("txindex", "1");
 
+            if (this.runner is BitcoinCoreRunner)
+            {
+                // TODO: Migrate to using `generatetoaddress` RPC for newer Core versions
+                configParameters.SetDefaultValueIfUndefined("deprecatedrpc", "generate");
+            }
+
             if (!this.CookieAuth)
             {
                 configParameters.SetDefaultValueIfUndefined("rpcuser", this.creds.UserName);
                 configParameters.SetDefaultValueIfUndefined("rpcpassword", this.creds.Password);
             }
 
-            // The debug log is disabled in stratisX when printtoconsole is enabled.
-            // While further integration tests are being developed it makes sense
-            // to always have the debug logs available, as there is minimal other
-            // insight into the stratisd process while it is running.
-            if (this.runner is StratisXRunner)
-            {
-                configParameters.SetDefaultValueIfUndefined("printtoconsole", "0");
-                configParameters.SetDefaultValueIfUndefined("debug", "1");
-            }
-            else
-                configParameters.SetDefaultValueIfUndefined("printtoconsole", "1");
+            configParameters.SetDefaultValueIfUndefined("printtoconsole", "1");
 
             configParameters.SetDefaultValueIfUndefined("keypool", "10");
             configParameters.SetDefaultValueIfUndefined("agentprefix", "node" + this.ProtocolPort);
             configParameters.Import(this.ConfigParameters);
 
-            File.WriteAllText(this.Config, configParameters.ToString());
+            // Need special handling for config files used by newer versions of Bitcoin Core.
+            // These have specialised sections for [regtest], [test] and [main] in which certain options
+            // only have an effect when they appear in their respective section.
+            var builder = new StringBuilder();
+
+            // Scan for network setting. These need to be at the top of the config file.
+            bool testnet = configParameters.Any(a => a.Key.Equals("testnet") && a.Value.Equals("1"));
+            bool regtest = configParameters.Any(a => a.Key.Equals("regtest") && a.Value.Equals("1"));
+            bool mainnet = !testnet && !regtest;
+
+            if (testnet)
+            {
+                builder.AppendLine("testnet=1");
+                if (this.runner.UseNewConfigStyle) builder.AppendLine("[test]");
+            }
+
+            if (regtest)
+            {
+                builder.AppendLine("regtest=1");
+                if (this.runner.UseNewConfigStyle) builder.AppendLine("[regtest]");
+            }
+
+            if (mainnet)
+            {
+                // Mainnet is implied by the absence of both testnet and regtest. But it should still get its own config section.
+                if (this.runner.UseNewConfigStyle) builder.AppendLine("[main]");
+            }
+
+            foreach (KeyValuePair<string, string> kv in configParameters)
+            {
+                if (kv.Key.Equals("testnet") || kv.Key.Equals("regtest")) continue;
+
+                builder.AppendLine(kv.Key + "=" + kv.Value);
+            }
+
+            File.WriteAllText(this.Config, builder.ToString());
         }
 
         public void Restart()
@@ -388,7 +450,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
 
             if (this.builderWithWallet)
             {
-                this.Mnemonic = this.FullNode.WalletManager().CreateWallet(
+                (_, this.Mnemonic) = this.FullNode.WalletManager().CreateWallet(
                     this.builderWalletPassword,
                     this.builderWalletName,
                     this.builderWalletPassphrase,

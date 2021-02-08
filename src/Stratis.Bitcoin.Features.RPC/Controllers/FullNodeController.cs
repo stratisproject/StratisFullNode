@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
 using Stratis.Bitcoin.Features.RPC.ModelBinders;
@@ -45,8 +46,12 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
         /// <summary>An interface implementation used to retrieve the network difficulty target.</summary>
         private readonly INetworkDifficulty networkDifficulty;
 
+        private readonly IConsensusManager consensusManager;
+
         /// <summary>An interface implementation for the blockstore.</summary>
         private readonly IBlockStore blockStore;
+
+        private readonly StoreSettings storeSettings;
 
         /// <summary>A interface implementation for the initial block download state.</summary>
         private readonly IInitialBlockDownloadState ibdState;
@@ -67,6 +72,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             Connection.IConnectionManager connectionManager = null,
             IConsensusManager consensusManager = null,
             IBlockStore blockStore = null,
+            StoreSettings storeSettings = null,
             IInitialBlockDownloadState ibdState = null,
             IStakeChain stakeChain = null)
             : base(
@@ -83,7 +89,9 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             this.pooledGetUnspentTransaction = pooledGetUnspentTransaction;
             this.getUnspentTransaction = getUnspentTransaction;
             this.networkDifficulty = networkDifficulty;
+            this.consensusManager = consensusManager;
             this.blockStore = blockStore;
+            this.storeSettings = storeSettings;
             this.ibdState = ibdState;
             this.stakeChain = stakeChain;
         }
@@ -221,18 +229,84 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
             if (!uint256.TryParse(txid, out trxid))
                 throw new ArgumentException(nameof(txid));
 
-            UnspentOutputs unspentOutputs = null;
+            UnspentOutput unspentOutput = null;
+            var outPoint = new OutPoint(trxid, vout);
 
             if (includeMemPool && this.pooledGetUnspentTransaction != null)
-                unspentOutputs = await this.pooledGetUnspentTransaction.GetUnspentTransactionAsync(trxid).ConfigureAwait(false);
+                unspentOutput = await this.pooledGetUnspentTransaction.GetUnspentTransactionAsync(outPoint).ConfigureAwait(false);
 
             if (!includeMemPool && this.getUnspentTransaction != null)
-                unspentOutputs = await this.getUnspentTransaction.GetUnspentTransactionAsync(trxid).ConfigureAwait(false);
+                unspentOutput = await this.getUnspentTransaction.GetUnspentTransactionAsync(outPoint).ConfigureAwait(false);
 
-            if (unspentOutputs != null)
-                return new GetTxOutModel(unspentOutputs, vout, this.Network, this.ChainIndexer.Tip);
+            if (unspentOutput != null)
+                return new GetTxOutModel(unspentOutput, this.Network, this.ChainIndexer.Tip);
 
             return null;
+        }
+
+        /// <summary>
+        /// This returns a merkle proof that the specified transactions exist in a given block, which can optionally be specified (if known)
+        /// for more efficient lookup.
+        /// In order for this to work without specifying the block hash, the -txindex command line option needs to be enabled.
+        /// </summary>
+        /// <param name="txids">The txids to filter</param>
+        /// <param name="blockhash">If specified, looks for txid in the block with this hash</param>
+        /// <returns>The hex-encoded merkle proof.</returns>
+        [ActionName("gettxoutproof")]
+        [ActionDescription("Checks if transactions are within block. Returns a merkle proof of transaction inclusion.")]
+        public async Task<MerkleBlock> GetTxOutProofAsync(string[] txids, string blockhash = "")
+        {
+            List<uint256> transactionIds = txids.Select(txString => uint256.Parse(txString)).ToList();
+
+            ChainedHeaderBlock block = null;
+
+            if (!string.IsNullOrEmpty(blockhash))
+            {
+                // We presume that all the transactions are supposed to be contained in the same specified block, so we only retrieve it once.
+                uint256 hashBlock = uint256.Parse(blockhash);
+
+                block = this.consensusManager?.GetBlockData(hashBlock);
+            }
+            else
+            {
+                if (!(this.storeSettings?.TxIndex ?? false))
+                {
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Cannot find block containing specified transactions if hash is not specified and -txindex is disabled");
+                }
+
+                // Loop through txids and try to find which block they're in. Exit loop once a block is found, as they are supposed to all be in the same block.
+                foreach (uint256 transactionId in transactionIds)
+                {
+                    ChainedHeader chainedHeader = this.GetTransactionBlock(transactionId);
+
+                    if (chainedHeader?.BlockDataAvailability != null && chainedHeader.BlockDataAvailability == BlockDataAvailabilityState.BlockAvailable)
+                    {
+                        block = this.consensusManager?.GetBlockData(chainedHeader.HashBlock);
+                        break;
+                    }
+                }
+            }
+
+            if (block == null)
+            {
+                throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Block not found");
+            }
+
+            // Need to be able to lookup the transactions within the block efficiently.
+            HashSet<uint256> transactionMap = block.Block.Transactions.Select(t => t.GetHash()).ToHashSet();
+
+            // Loop through txids and verify that every transaction is in the block.
+            foreach (uint256 transactionId in transactionIds)
+            {
+                if (!transactionMap.Contains(transactionId))
+                {
+                    throw new RPCServerException(RPCErrorCode.RPC_INVALID_PARAMETER, "Not all transactions found in specified or retrieved block");
+                }
+            }
+
+            var result = new MerkleBlock(block.Block, transactionIds.ToArray());
+
+            return result;
         }
 
         /// <summary>
@@ -403,7 +477,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
                 var posBlock = block as PosBlock;
 
                 blockModel.PosBlockSignature = posBlock.BlockSignature.ToHex(this.Network);
-                blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockProof()).ToUInt256().ToString();
+                blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockTarget()).ToUInt256().ToString();
                 blockModel.PosChainTrust = chainedHeader.ChainWork.ToString(); // this should be similar to ChainWork
 
                 if (this.stakeChain != null)
@@ -473,12 +547,12 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
 
             foreach (var consensusBuriedDeployment in Enum.GetValues(typeof(BuriedDeployments)))
             {
-                bool active = this.ChainIndexer.Height >= this.Network.Consensus.BuriedDeployments[(BuriedDeployments) consensusBuriedDeployment];
+                bool active = this.ChainIndexer.Height >= this.Network.Consensus.BuriedDeployments[(BuriedDeployments)consensusBuriedDeployment];
                 blockchainInfo.SoftForks.Add(new SoftForks
                 {
                     Id = consensusBuriedDeployment.ToString().ToLower(),
                     Version = (int)consensusBuriedDeployment + 2, // hack to get the deployment number similar to bitcoin core without changing the enums
-                    Status = new SoftForksStatus {Status = active}
+                    Status = new SoftForksStatus { Status = active }
                 });
             }
 
@@ -499,7 +573,7 @@ namespace Stratis.Bitcoin.Features.RPC.Controllers
                 if (metric.TimeTimeOut?.Ticks > 0)
                     blockchainInfo.SoftForksBip9.Add(metric.DeploymentName, this.CreateSoftForksBip9(metric, thresholdStates[metric.DeploymentIndex]));
             }
-            
+
             // TODO: Implement blockchainInfo.warnings
             return blockchainInfo;
         }

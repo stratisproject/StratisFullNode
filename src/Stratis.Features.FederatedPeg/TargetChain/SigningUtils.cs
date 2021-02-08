@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
 {
@@ -25,7 +21,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Remove the script from the end.
             scriptSig = new Script(scriptSig.ToOps().SkipLast(1));
 
-            TransactionSignature[] result = PayToMultiSigTemplate.Instance.ExtractScriptSigParameters(network, scriptSig);
+            TransactionSignature[] result = PayToFederationTemplate.Instance.ExtractScriptSigParameters(network, scriptSig);
 
             return result?.Count(s => s != null) ?? 0;
         }
@@ -54,14 +50,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>True</c> if identical and <c>false</c> otherwise.</returns>
         public static bool TemplatesMatch(Network network, Transaction partialTransaction1, Transaction partialTransaction2)
         {
-            if (network.Consensus.IsProofOfStake)
-            {
-                if (partialTransaction1.Time != partialTransaction2.Time)
-                {
-                    return false;
-                }
-            }
-
             if ((partialTransaction1.Inputs.Count != partialTransaction2.Inputs.Count) ||
                 (partialTransaction1.Outputs.Count != partialTransaction2.Outputs.Count))
             {

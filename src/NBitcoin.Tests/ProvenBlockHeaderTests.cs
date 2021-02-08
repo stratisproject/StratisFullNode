@@ -9,7 +9,7 @@ namespace NBitcoin.Tests
 {
     public class ProvenBlockHeaderTests : TestBase
     {
-        public ProvenBlockHeaderTests() : base(KnownNetworks.StratisTest)
+        public ProvenBlockHeaderTests() : base(KnownNetworks.StraxTest)
         {
         }
 

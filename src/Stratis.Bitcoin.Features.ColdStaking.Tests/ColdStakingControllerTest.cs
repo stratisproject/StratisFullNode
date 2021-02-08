@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -28,10 +27,13 @@ using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Features.SQLiteWalletRepository;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.ColdStaking.Tests
@@ -48,10 +50,13 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private const string walletPassphrase = "passphrase";
         private const string walletMnemonic1 = "close vanish burden journey attract open soul romance beach surprise home produce";
         private const string walletMnemonic2 = "wish happy anchor lava path reject cinnamon absurd energy mammal cliff version";
-        private const string coldWalletAddress1 = "SNiAnXM2WmbMhUij9cbit62sR8U9FjFJr3";
-        private const string hotWalletAddress1 = "SaVUwmJSvRiofghrePxrBQGoke1pLfmfXN";
-        private const string coldWalletAddress2 = "Sagbh9LuzNAV7y2FHyUQJcgmjcuogSssef";
-        private const string hotWalletAddress2 = "SVoMim67CMF1St6j6toAWnnQ2mCvb8V4mT";
+
+        private const string coldWalletAddress1 = "XSdnjExcZSTNW3RsYBUGm8RmprStfohT4k";
+        private const string hotWalletAddress1 = "XBi2GPJuP77KUVAsNddyJehjt2ZwbgGkE6";
+        private const string coldWalletAddress2 = "XG7qNGZKXu5wZ7B1H5UN4nYBeUwXzGD5LB";
+        private const string hotWalletAddress2 = "XBr725uHFeRWFcZzYFyPsDh9go5ViKZn7o";
+        private const string hotWalletSegwitAddress1 = "strax1qq0hrkucp54wm2xksh38gfqwrgk0k99j8q57zsh";
+        private const string coldWalletSegwitAddress2 = "strax1qx38ea6az68v8szduwnlkwk7n7r29wl7hakf90q";
 
         private ColdStakingManager coldStakingManager;
         private ColdStakingController coldStakingController;
@@ -64,16 +69,19 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private ConsensusSettings consensusSettings;
         private MempoolSettings mempoolSettings;
         private Mock<ICoinView> coinView;
-        private Dictionary<uint256, UnspentOutputs> unspentOutputs;
+        private Dictionary<OutPoint, UnspentOutput> unspentOutputs;
         private TxMempool txMemPool;
         private Mock<IStakeChain> stakeChain;
         private Mock<IStakeValidator> stakeValidator;
         private MempoolManager mempoolManager;
 
-        public ColdStakingControllerTest() : base(KnownNetworks.StratisMain)
+        public ColdStakingControllerTest() : base(KnownNetworks.StraxMain)
         {
             // Register the cold staking script template.
             this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(ColdStakingScriptTemplate.Instance);
+            var registry = (StraxStandardScriptsRegistry)this.Network.StandardScriptsRegistry;
+            registry.GetScriptTemplates.Remove(registry.GetScriptTemplates.OfType<TxNullDataTemplate>().Single()); // remove the default standard script
+            this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(TxNullDataTemplate.Instance);
         }
 
         /// <summary>
@@ -109,26 +117,26 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// </summary>
         private void MockCoinView()
         {
-            this.unspentOutputs = new Dictionary<uint256, UnspentOutputs>();
+            this.unspentOutputs = new Dictionary<OutPoint, UnspentOutput>();
             this.coinView = new Mock<ICoinView>();
 
             // Mock the coinviews "FetchCoinsAsync" method. We will use the "unspentOutputs" dictionary to track spendable outputs.
-            this.coinView.Setup(d => d.FetchCoins(It.IsAny<uint256[]>(), It.IsAny<CancellationToken>()))
-                .Returns((uint256[] txIds, CancellationToken cancel) =>
+            this.coinView.Setup(d => d.FetchCoins(It.IsAny<OutPoint[]>()))
+                .Returns((OutPoint[] txIds) =>
                 {
-                    var result = new UnspentOutputs[txIds.Length];
+                    var result = new FetchCoinsResponse();
 
                     for (int i = 0; i < txIds.Length; i++)
-                        result[i] = this.unspentOutputs.TryGetValue(txIds[i], out UnspentOutputs unspent) ? unspent : null;
+                        result.UnspentOutputs[txIds[i]] = this.unspentOutputs.TryGetValue(txIds[i], out UnspentOutput unspent) ? unspent : null;
 
-                    return new FetchCoinsResponse(result, this.chainIndexer.Tip.HashBlock);
+                    return result;
                 });
 
             // Mock the coinviews "GetTipHashAsync" method.
-            this.coinView.Setup(d => d.GetTipHash(It.IsAny<CancellationToken>())).Returns(() =>
-                {
-                    return this.chainIndexer.Tip.HashBlock;
-                });
+            this.coinView.Setup(d => d.GetTipHash()).Returns(() =>
+            {
+                return new HashHeightPair(this.chainIndexer.Tip);
+            });
         }
 
         /// <summary>
@@ -169,14 +177,14 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             var mempoolRules = new List<MempoolRule>
             {
                 new CheckConflictsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
-                new CheckCoinViewMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
+                new StraxCoinViewMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new CreateMempoolEntryMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, consensusRuleEngine, this.loggerFactory),
                 new CheckSigOpsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
-                new CheckFeeMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
+                new StraxTransactionFeeMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new CheckRateLimitMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new CheckAncestorsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new CheckReplacementMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
-                new CheckAllInputsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, consensusRuleEngine, this.loggerFactory),
+                new CheckAllInputsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, consensusRuleEngine, this.nodeDeployments, this.loggerFactory),
                 new CheckTxOutDustRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer,  this.loggerFactory)
             };
 
@@ -192,7 +200,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal(this.Network.Consensus.MempoolRules.Count, mempoolRules.Count);
 
             var mempoolValidator = new MempoolValidator(this.txMemPool, mempoolLock, this.dateTimeProvider, this.mempoolSettings, this.chainIndexer,
-                this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new NodeDeployments(this.Network, this.chainIndexer));
+                this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new Signals.Signals(this.loggerFactory, null), this.nodeDeployments);
 
             // Create mempool manager.
             var mempoolPersistence = new Mock<IMempoolPersistence>();
@@ -207,21 +215,33 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private void Initialize([System.Runtime.CompilerServices.CallerMemberName] string callingMethod = "")
         {
             DataFolder dataFolder = CreateDataFolder(this, callingMethod);
-            this.nodeSettings = new NodeSettings(this.Network, ProtocolVersion.ALT_PROTOCOL_VERSION);
+            string dataDir = dataFolder.RootPath;
+
+            this.nodeSettings = new NodeSettings(this.Network, ProtocolVersion.ALT_PROTOCOL_VERSION, args: new[] { $"-dataDir={dataDir}" });
             this.dateTimeProvider = DateTimeProvider.Default;
             var walletSettings = new WalletSettings(this.nodeSettings);
             this.loggerFactory = this.nodeSettings.LoggerFactory;
 
-            this.coldStakingManager = new ColdStakingManager(this.Network, new ChainIndexer(this.Network), walletSettings, this.nodeSettings.DataFolder,
-                new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), new ScriptAddressReader(),
-                this.loggerFactory, DateTimeProvider.Default);
+            var scriptDestinationReader = new ColdStakingDestinationReader(new ScriptAddressReader());
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager,
-                new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network));
+            IWalletRepository walletRepository = new SQLiteWalletRepository(this.loggerFactory, this.nodeSettings.DataFolder, this.Network, DateTimeProvider.Default, scriptDestinationReader)
+            {
+                TestMode = true
+            };
+
+            this.coldStakingManager = new ColdStakingManager(this.Network, new ChainIndexer(this.Network), walletSettings, this.nodeSettings.DataFolder,
+                new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), scriptDestinationReader,
+                this.loggerFactory, DateTimeProvider.Default, walletRepository);
+
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
+
+            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
 
             this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler);
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, new Mock<ISignals>().Object);
+
+            this.coldStakingManager.Start();
         }
 
         /// <summary>
@@ -246,6 +266,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
                 Index = 0,
                 IsCoinBase = false,
                 IsCoinStake = false,
+                IsColdCoinStake = false,
                 IsPropagated = true,
                 BlockHash = this.Network.GenesisHash,
                 ScriptPubKey = address.ScriptPubKey
@@ -266,13 +287,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             this.coldStakingManager.CreateWallet(walletPassword, walletName1, walletPassphrase, new Mnemonic(walletMnemonic1));
             this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
 
-            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, true, walletPassword);
-            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, false, walletPassword);
-            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, true, walletPassword);
-            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, false, walletPassword);
-
-            var wallet1 = this.coldStakingManager.GetWalletByName(walletName1);
-            var wallet2 = this.coldStakingManager.GetWalletByName(walletName2);
+            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, true, walletPassword, null);
+            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, false, walletPassword, null);
+            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, true, walletPassword, null);
+            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, false, walletPassword, null);
 
             HdAddress coldAddress1 = this.coldStakingManager.GetFirstUnusedColdStakingAddress(walletName1, true);
             HdAddress hotAddress1 = this.coldStakingManager.GetFirstUnusedColdStakingAddress(walletName1, false);
@@ -283,6 +301,22 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal(hotWalletAddress1, hotAddress1.Address);
             Assert.Equal(coldWalletAddress2, coldAddress2.Address);
             Assert.Equal(hotWalletAddress2, hotAddress2.Address);
+
+            PubKey ExtractPubKey(HdAddress address)
+            {
+                return PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(address.Pubkey);
+            }
+
+            string Bech32Address(HdAddress address)
+            {
+                var witScript = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(ExtractPubKey(address));
+                var addressStr = witScript.GetDestinationAddress(KnownNetworks.StraxMain).ToString();
+                Assert.Equal(address.Bech32Address, addressStr);
+                return addressStr;
+            }
+
+            Assert.Equal(hotWalletSegwitAddress1, Bech32Address(hotAddress1));
+            Assert.Equal(coldWalletSegwitAddress2, Bech32Address(coldAddress2));
         }
 
         /// <summary>
@@ -339,8 +373,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             this.coldStakingManager.CreateWallet(walletPassword, walletName1, walletPassphrase, new Mnemonic(walletMnemonic1));
 
             // Create existing accounts.
-            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, true, walletPassword);
-            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, false, walletPassword);
+            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, true, walletPassword, null);
+            this.coldStakingManager.GetOrCreateColdStakingAccount(walletName1, false, walletPassword, null);
 
             // Try to get cold wallet address on existing account without supplying the wallet password.
             IActionResult result1 = this.coldStakingController.GetColdStakingAddress(new GetColdStakingAddressRequest
@@ -395,7 +429,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             ErrorModel error = errorResponse.Errors[0];
             Assert.Equal((int)HttpStatusCode.BadRequest, error.Status);
             Assert.StartsWith($"{nameof(Stratis)}.{nameof(Bitcoin)}.{nameof(Features)}.{nameof(Wallet)}.{nameof(WalletException)}", error.Description);
-            Assert.StartsWith("You can't use this wallet as both hot wallet and cold wallet.", error.Message);
+            Assert.StartsWith("You can't use this wallet as both the hot wallet and cold wallet.", error.Message);
         }
 
         /// <summary>
@@ -500,7 +534,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             this.coldStakingManager.CreateWallet(walletPassword, walletName1, walletPassphrase, new Mnemonic(walletMnemonic1));
 
-            Wallet.Wallet wallet1 = this.coldStakingManager.GetWalletByName(walletName1);
+            Wallet.Wallet wallet1 = this.coldStakingManager.GetWallet(walletName1);
 
             Transaction prevTran = this.AddSpendableTransactionToWallet(wallet1);
 
@@ -523,13 +557,60 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
             Assert.Equal(2, transaction.Outputs.Count);
             Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
-            Assert.Equal("OP_DUP OP_HASH160 970e19fc2f6565b0b1c65fd88ef1512cb3da4d7b OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 7655ed76b27b3d4efe2458d9999501c705bcfe3e OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
             Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
-            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 90c582cb91d6b6d777c31c891d4943fed4edac3a OP_ELSE 92dfb829d31cefe6a0731f3432dea41596a278d9 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
             Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
 
-            // Record the spendable outputs.
-            this.unspentOutputs[prevTran.GetHash()] = new UnspentOutputs(1, prevTran);
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
+
+            // Verify that the transaction would be accepted to the memory pool.
+            var state = new MempoolValidationState(true);
+            Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
+        }
+
+        /// <summary>
+        /// Confirms that cold staking setup with the hot wallet will succeed if no issues (as per above test cases) are encountered.
+        /// </summary>
+        [Fact]
+        public void SetupColdStakingWithHotWalletSegwitSucceeds()
+        {
+            this.Initialize();
+            this.CreateMempoolManager();
+
+            this.coldStakingManager.CreateWallet(walletPassword, walletName1, walletPassphrase, new Mnemonic(walletMnemonic1));
+
+            Wallet.Wallet wallet1 = this.coldStakingManager.GetWallet(walletName1);
+
+            Transaction prevTran = this.AddSpendableTransactionToWallet(wallet1);
+
+            IActionResult result = this.coldStakingController.SetupColdStaking(new SetupColdStakingRequest
+            {
+                HotWalletAddress = hotWalletSegwitAddress1,
+                ColdWalletAddress = coldWalletSegwitAddress2,
+                WalletName = walletName1,
+                WalletAccount = walletAccount,
+                WalletPassword = walletPassword,
+                Amount = "100",
+                Fees = "0.01"
+            });
+
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var response = Assert.IsType<SetupColdStakingResponse>(jsonResult.Value);
+            var transaction = Assert.IsType<PosTransaction>(this.Network.CreateTransaction(response.TransactionHex));
+            Assert.Single(transaction.Inputs);
+            Assert.Equal(prevTran.GetHash(), transaction.Inputs[0].PrevOut.Hash);
+            Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
+            Assert.Equal(2, transaction.Outputs.Count);
+            Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
+            Assert.Equal("OP_DUP OP_HASH160 7655ed76b27b3d4efe2458d9999501c705bcfe3e OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
+
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
 
             // Verify that the transaction would be accepted to the memory pool.
             var state = new MempoolValidationState(true);
@@ -547,7 +628,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
 
-            Wallet.Wallet wallet2 = this.coldStakingManager.GetWalletByName(walletName2);
+            Wallet.Wallet wallet2 = this.coldStakingManager.GetWallet(walletName2);
 
             Transaction prevTran = this.AddSpendableTransactionToWallet(wallet2);
 
@@ -571,13 +652,108 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
             Assert.Equal(2, transaction.Outputs.Count);
             Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
-            Assert.Equal("OP_DUP OP_HASH160 3d36028dc0fd3d3e433c801d9ebfff05ea663816 OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 92189d7328a0981693f0af855a43b7b14e95f478 OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
             Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
-            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 90c582cb91d6b6d777c31c891d4943fed4edac3a OP_ELSE 92dfb829d31cefe6a0731f3432dea41596a278d9 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
             Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
 
-            // Record the spendable outputs.
-            this.unspentOutputs[prevTran.GetHash()] = new UnspentOutputs(1, prevTran);
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
+
+            // Verify that the transaction would be accepted to the memory pool.
+            var state = new MempoolValidationState(true);
+            Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
+        }
+
+        [Fact]
+        public void SetupScriptColdStakingWithColdWalletSegwitSucceeds()
+        {
+            this.Initialize();
+            this.CreateMempoolManager();
+
+            this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
+
+            Wallet.Wallet wallet2 = this.coldStakingManager.GetWallet(walletName2);
+
+            Transaction prevTran = this.AddSpendableTransactionToWallet(wallet2);
+
+            // Create the cold staking setup transaction.
+            IActionResult result = this.coldStakingController.SetupColdStaking(new SetupColdStakingRequest
+            {
+                HotWalletAddress = hotWalletSegwitAddress1,
+                ColdWalletAddress = coldWalletSegwitAddress2,
+                WalletName = walletName2,
+                WalletAccount = walletAccount,
+                WalletPassword = walletPassword,
+                Amount = "100",
+                Fees = "0.01",
+                // TODO: Check if we should support the OP_RETURN tagging functionality for script hash addresses
+                //PayToScript = true
+            });
+
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var response = Assert.IsType<SetupColdStakingResponse>(jsonResult.Value);
+            var transaction = Assert.IsType<PosTransaction>(this.Network.CreateTransaction(response.TransactionHex));
+            Assert.Single(transaction.Inputs);
+            Assert.Equal(prevTran.GetHash(), transaction.Inputs[0].PrevOut.Hash);
+            Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
+            Assert.Equal(2, transaction.Outputs.Count);
+            Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
+            Assert.Equal("OP_DUP OP_HASH160 92189d7328a0981693f0af855a43b7b14e95f478 OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
+
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
+
+            // Verify that the transaction would be accepted to the memory pool.
+            var state = new MempoolValidationState(true);
+            Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
+        }
+
+        /// <summary>
+        /// Confirms that cold staking setup with the cold wallet and segwit address will succeed if no issues (as per above test cases) are encountered.
+        /// </summary>
+        [Fact]
+        public void SetupColdStakingWithColdWalletSegwitSucceeds()
+        {
+            this.Initialize();
+            this.CreateMempoolManager();
+
+            this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
+
+            Wallet.Wallet wallet2 = this.coldStakingManager.GetWallet(walletName2);
+
+            Transaction prevTran = this.AddSpendableTransactionToWallet(wallet2);
+
+            // Create the cold staking setup transaction.
+            IActionResult result = this.coldStakingController.SetupColdStaking(new SetupColdStakingRequest
+            {
+                HotWalletAddress = hotWalletSegwitAddress1,
+                ColdWalletAddress = coldWalletSegwitAddress2,
+                WalletName = walletName2,
+                WalletAccount = walletAccount,
+                WalletPassword = walletPassword,
+                Amount = "100",
+                Fees = "0.01"
+            });
+
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var response = Assert.IsType<SetupColdStakingResponse>(jsonResult.Value);
+            var transaction = Assert.IsType<PosTransaction>(this.Network.CreateTransaction(response.TransactionHex));
+            Assert.Single(transaction.Inputs);
+            Assert.Equal(prevTran.GetHash(), transaction.Inputs[0].PrevOut.Hash);
+            Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
+            Assert.Equal(2, transaction.Outputs.Count);
+            Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
+            Assert.Equal("OP_DUP OP_HASH160 92189d7328a0981693f0af855a43b7b14e95f478 OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[1].ScriptPubKey.ToString());
+            Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
+
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
 
             // Verify that the transaction would be accepted to the memory pool.
             var state = new MempoolValidationState(true);
@@ -634,14 +810,16 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         /// </summary>
         /// <param name="wallet">Wallet to add the transaction to.</param>
         /// <returns>The spendable transaction that was added to the wallet.</returns>
-        private Transaction AddSpendableColdstakingTransactionToWallet(Wallet.Wallet wallet)
+        private Transaction AddSpendableColdstakingTransactionToWallet(Wallet.Wallet wallet, bool script = false)
         {
             // Get first unused cold staking address.
-            this.coldStakingManager.GetOrCreateColdStakingAccount(wallet.Name, true, walletPassword);
+            HdAccount account = this.coldStakingManager.GetOrCreateColdStakingAccount(wallet.Name, true, walletPassword, null);
             HdAddress address = this.coldStakingManager.GetFirstUnusedColdStakingAddress(wallet.Name, true);
 
             TxDestination hotPubKey = BitcoinAddress.Create(hotWalletAddress1, wallet.Network).ScriptPubKey.GetDestination(wallet.Network);
-            TxDestination coldPubKey = BitcoinAddress.Create(coldWalletAddress2, wallet.Network).ScriptPubKey.GetDestination(wallet.Network);
+            // We can't use the hardcoded cold wallet address here, because we don't know for sure that this is the first account added to the wallet.
+            // If it is not, the derived addresses will be using a different index and will therefore all be different.
+            TxDestination coldPubKey = BitcoinAddress.Create(account.ExternalAddresses.First().Address, wallet.Network).ScriptPubKey.GetDestination(wallet.Network);
 
             var scriptPubKey = new Script(OpcodeType.OP_DUP, OpcodeType.OP_HASH160, OpcodeType.OP_ROT, OpcodeType.OP_IF,
                 OpcodeType.OP_CHECKCOLDSTAKEVERIFY, Op.GetPushOp(hotPubKey.ToBytes()), OpcodeType.OP_ELSE, Op.GetPushOp(coldPubKey.ToBytes()),
@@ -649,7 +827,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             var transaction = this.Network.CreateTransaction();
 
-            transaction.Outputs.Add(new TxOut(Money.Coins(101), scriptPubKey));
+            transaction.Outputs.Add(new TxOut(Money.Coins(101), script ? scriptPubKey.WitHash.ScriptPubKey : scriptPubKey));
+
+            //if (script)
+            //    address.RedeemScript = scriptPubKey;
 
             address.Transactions.Add(new TransactionData()
             {
@@ -660,9 +841,50 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
                 Index = 0,
                 IsCoinBase = false,
                 IsCoinStake = false,
+                IsColdCoinStake = true,
                 IsPropagated = true,
                 BlockHash = this.Network.GenesisHash,
-                ScriptPubKey = scriptPubKey
+                ScriptPubKey = script ? scriptPubKey.WitHash.ScriptPubKey : scriptPubKey,
+            });
+
+            return transaction;
+        }
+
+        /// <summary>
+        /// Adds a spendable cold staking transaction to a normal account, as oppose to dedicated special account.
+        /// </summary>
+        /// <param name="wallet">Wallet to add the transaction to.</param>
+        /// <returns>The spendable transaction that was added to the wallet.</returns>
+        private Transaction AddSpendableColdstakingTransactionToNormalWallet(Wallet.Wallet wallet, bool script = false)
+        {
+            // This will always be added to the secondary address.
+            HdAddress address = wallet.GetAllAddresses().ToArray()[1];
+
+            var transaction = this.Network.CreateTransaction();
+
+            // Use the normal wallet address here.
+            TxDestination hotPubKey = BitcoinAddress.Create(address.Address, wallet.Network).ScriptPubKey.GetDestination(wallet.Network);
+            TxDestination coldPubKey = BitcoinAddress.Create(coldWalletAddress2, wallet.Network).ScriptPubKey.GetDestination(wallet.Network);
+
+            var scriptPubKey = new Script(OpcodeType.OP_DUP, OpcodeType.OP_HASH160, OpcodeType.OP_ROT, OpcodeType.OP_IF,
+                OpcodeType.OP_CHECKCOLDSTAKEVERIFY, Op.GetPushOp(hotPubKey.ToBytes()), OpcodeType.OP_ELSE, Op.GetPushOp(coldPubKey.ToBytes()),
+                OpcodeType.OP_ENDIF, OpcodeType.OP_EQUALVERIFY, OpcodeType.OP_CHECKSIG);
+
+            transaction.Outputs.Add(new TxOut(Money.Coins(202), script ? scriptPubKey.WitHash.ScriptPubKey : scriptPubKey));
+
+            address.Transactions.Add(new TransactionData()
+            {
+                Hex = transaction.ToHex(this.Network),
+                Amount = transaction.Outputs[0].Value,
+                Id = transaction.GetHash(),
+                BlockHeight = 0,
+                Index = 0,
+                IsCoinBase = false,
+                IsCoinStake = false,
+                IsColdCoinStake = true,
+                IsPropagated = true,
+                BlockHash = this.Network.GenesisHash,
+                ScriptPubKey = script ? scriptPubKey.WitHash.ScriptPubKey : scriptPubKey,
             });
 
             return transaction;
@@ -679,7 +901,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
 
-            var wallet2 = this.coldStakingManager.GetWalletByName(walletName2);
+            var wallet2 = this.coldStakingManager.GetWallet(walletName2);
 
             Transaction prevTran = this.AddSpendableColdstakingTransactionToWallet(wallet2);
 
@@ -702,13 +924,112 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
             Assert.Equal(2, transaction.Outputs.Count);
             Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
-            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 90c582cb91d6b6d777c31c891d4943fed4edac3a OP_ELSE 92dfb829d31cefe6a0731f3432dea41596a278d9 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
             Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
             Assert.Equal(receivingAddress.ScriptPubKey, transaction.Outputs[1].ScriptPubKey);
             Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
 
             // Record the spendable outputs.
-            this.unspentOutputs[prevTran.GetHash()] = new UnspentOutputs(1, prevTran);
+            this.unspentOutputs[new OutPoint(prevTran, 0)] = new UnspentOutput(new OutPoint(prevTran, 0), new Coins(1, prevTran.Outputs[0], false, false));
+
+            // Verify that the transaction would be accepted to the memory pool.
+            var state = new MempoolValidationState(true);
+            Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
+        }
+
+        public void ColdStakingScriptWithdrawalToSegwitWithColdWalletSucceeds()
+        {
+            this.Initialize();
+            this.CreateMempoolManager();
+
+            this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
+
+            var wallet2 = this.coldStakingManager.GetWallet(walletName2);
+
+            // TODO: Implement the script flag here
+            Transaction prevTran = this.AddSpendableColdstakingTransactionToWallet(wallet2, true);
+
+            BitcoinWitPubKeyAddress receivingAddress = new Key().PubKey.GetSegwitAddress(this.Network);
+
+            IActionResult result = this.coldStakingController.ColdStakingWithdrawal(new ColdStakingWithdrawalRequest
+            {
+                ReceivingAddress = receivingAddress.ToString(),
+                WalletName = walletName2,
+                WalletPassword = walletPassword,
+                Amount = "100",
+                Fees = "0.01"
+            });
+
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var response = Assert.IsType<ColdStakingWithdrawalResponse>(jsonResult.Value);
+            var transaction = Assert.IsType<PosTransaction>(this.Network.CreateTransaction(response.TransactionHex));
+            Assert.Single(transaction.Inputs);
+            Assert.Equal(prevTran.GetHash(), transaction.Inputs[0].PrevOut.Hash);
+            Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
+            Assert.Equal(2, transaction.Outputs.Count);
+            Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
+            Assert.Equal("0 344874146cfe398540d00bf978e747781f29a77ff586049ad23d2fe6df4f458b", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
+            Assert.Equal(receivingAddress.ScriptPubKey, transaction.Outputs[1].ScriptPubKey);
+            Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
+
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
+
+            // Activate segwit
+            BIP9DeploymentsParameters current = this.Network.Consensus.BIP9Deployments[Stratis.Bitcoin.Networks.Deployments.StratisBIP9Deployments.Segwit];
+            this.Network.Consensus.BIP9Deployments[Stratis.Bitcoin.Networks.Deployments.StratisBIP9Deployments.Segwit] =
+                new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, BIP9DeploymentsParameters.AlwaysActive, BIP9DeploymentsParameters.AlwaysActive);
+
+            // Verify that the transaction would be accepted to the memory pool.
+            var state = new MempoolValidationState(true);
+            Assert.True(this.mempoolManager.Validator.AcceptToMemoryPool(state, transaction).GetAwaiter().GetResult(), "Transaction failed mempool validation.");
+
+            // Revert back changes
+            this.Network.Consensus.BIP9Deployments[Stratis.Bitcoin.Networks.Deployments.StratisBIP9Deployments.Segwit] = current;
+        }
+
+        /// <summary>
+        /// Confirms that cold staking setup with the cold wallet will succeed if no issues (as per above test cases) are encountered.
+        /// </summary>
+        [Fact]
+        public void ColdStakingWithdrawalToSegwitWithColdWalletSucceeds()
+        {
+            this.Initialize();
+            this.CreateMempoolManager();
+
+            this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
+
+            var wallet2 = this.coldStakingManager.GetWallet(walletName2);
+
+            Transaction prevTran = this.AddSpendableColdstakingTransactionToWallet(wallet2);
+
+            BitcoinWitPubKeyAddress receivingAddress = new Key().PubKey.GetSegwitAddress(this.Network);
+
+            IActionResult result = this.coldStakingController.ColdStakingWithdrawal(new ColdStakingWithdrawalRequest
+            {
+                ReceivingAddress = receivingAddress.ToString(),
+                WalletName = walletName2,
+                WalletPassword = walletPassword,
+                Amount = "100",
+                Fees = "0.01"
+            });
+
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var response = Assert.IsType<ColdStakingWithdrawalResponse>(jsonResult.Value);
+            var transaction = Assert.IsType<PosTransaction>(this.Network.CreateTransaction(response.TransactionHex));
+            Assert.Single(transaction.Inputs);
+            Assert.Equal(prevTran.GetHash(), transaction.Inputs[0].PrevOut.Hash);
+            Assert.Equal((uint)0, transaction.Inputs[0].PrevOut.N);
+            Assert.Equal(2, transaction.Outputs.Count);
+            Assert.Equal(Money.Coins(0.99m), transaction.Outputs[0].Value);
+            Assert.Equal("OP_DUP OP_HASH160 OP_ROT OP_IF OP_CHECKCOLDSTAKEVERIFY 03ee3b7301a55db51ad0bc4e8481c3459f629647 OP_ELSE 344f9eeba2d1d87809bc74ff675bd3f0d4577fd7 OP_ENDIF OP_EQUALVERIFY OP_CHECKSIG", transaction.Outputs[0].ScriptPubKey.ToString());
+            Assert.Equal(Money.Coins(100), transaction.Outputs[1].Value);
+            Assert.Equal(receivingAddress.ScriptPubKey, transaction.Outputs[1].ScriptPubKey);
+            Assert.False(transaction.IsCoinBase || transaction.IsCoinStake || transaction.IsColdCoinStake);
+
+            // Record the spendable outputs of the referenced transaction so that the mock coinview can return them.
+            this.unspentOutputs[transaction.Inputs.First().PrevOut] = new UnspentOutput(transaction.Inputs.First().PrevOut, new Coins(1, prevTran.Outputs.First(), false));
 
             // Verify that the transaction would be accepted to the memory pool.
             var state = new MempoolValidationState(true);
@@ -730,11 +1051,11 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
 
-            var wallet2 = this.coldStakingManager.GetWalletByName(walletName2);
+            var wallet2 = this.coldStakingManager.GetWallet(walletName2);
 
             Transaction prevTran = this.AddSpendableColdstakingTransactionToWallet(wallet2);
 
-            HdAddress receivingAddress = this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, true, walletPassword).ExternalAddresses.First();
+            HdAddress receivingAddress = this.coldStakingManager.GetOrCreateColdStakingAccount(walletName2, true, walletPassword, null).ExternalAddresses.First();
 
             IActionResult result = this.coldStakingController.ColdStakingWithdrawal(new ColdStakingWithdrawalRequest
             {
@@ -767,7 +1088,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
 
             this.coldStakingManager.CreateWallet(walletPassword, walletName2, walletPassphrase, new Mnemonic(walletMnemonic2));
 
-            var wallet2 = this.coldStakingManager.GetWalletByName(walletName2);
+            var wallet2 = this.coldStakingManager.GetWallet(walletName2);
 
             BitcoinPubKeyAddress receivingAddress = new Key().PubKey.GetAddress(this.Network);
 
@@ -788,6 +1109,61 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             Assert.Equal((int)HttpStatusCode.BadRequest, error.Status);
             Assert.StartsWith($"{nameof(Stratis)}.{nameof(Bitcoin)}.{nameof(Features)}.{nameof(Wallet)}.{nameof(WalletException)}", error.Description);
             Assert.StartsWith("The cold wallet account does not exist.", error.Message);
+        }
+
+        [Fact]
+        public void VerifyThatColdStakeTransactionCanBeFiltered()
+        {
+            this.Initialize();
+            this.CreateMempoolManager();
+
+            this.coldStakingManager.CreateWallet(walletPassword, walletName1, walletPassphrase, new Mnemonic(walletMnemonic1));
+
+            Wallet.Wallet wallet1 = this.coldStakingManager.GetWallet(walletName1);
+
+            // This will add a normal account to our wallet.
+            Transaction trx1 = this.AddSpendableTransactionToWallet(wallet1);
+
+            // This will add a secondary account to our wallet.
+            Transaction trx2 = this.AddSpendableColdstakingTransactionToWallet(wallet1);
+
+            // This will add a cold staking transaction to the secondary normal account address. This simulates activation of cold staking onto any normal address.
+            Transaction trx3 = this.AddSpendableColdstakingTransactionToNormalWallet(wallet1);
+
+            var accounts = wallet1.GetAccounts(Wallet.Wallet.AllAccounts).ToArray();
+
+            // We should have 2 accounts in our wallet.
+            Assert.Equal(2, accounts.Length);
+
+            // But not if we use default or specify to only return normal accounts.
+            Assert.Single(wallet1.GetAccounts().ToArray()); // Defaults to NormalAccounts
+            Assert.Single(wallet1.GetAccounts(Wallet.Wallet.NormalAccounts).ToArray());
+
+            // Verify that we actually have a cold staking activation UTXO in the wallet of 202 coins.
+            // This should normally not be returned by the GetAllTransactions, and should never be included in balance calculations.
+            Assert.True(accounts[0].ExternalAddresses.ToArray()[1].Transactions.ToArray()[0].IsColdCoinStake);
+            Assert.Equal(new Money(202, MoneyUnit.BTC), accounts[0].ExternalAddresses.ToArray()[1].Transactions.ToArray()[0].Amount);
+
+            Assert.Single(wallet1.GetAllTransactions().ToArray()); // Default to NormalAccounts, should filter out cold staking (trx3) from normal wallet.
+            Assert.Single(wallet1.GetAllTransactions(accountFilter: Wallet.Wallet.NormalAccounts).ToArray());
+            Assert.Single(wallet1.GetAllSpendableTransactions(5, 0, Wallet.Wallet.NormalAccounts).ToArray()); // Default to NormalAccounts
+            Assert.Equal(2, wallet1.GetAllTransactions(accountFilter: Wallet.Wallet.AllAccounts).ToArray().Length);
+            Assert.Equal(2, wallet1.GetAllSpendableTransactions(5, 0, Wallet.Wallet.AllAccounts).ToArray().Length); // Specified AllAccounts, should include cold-staking transaction.
+
+            // Verify balance on normal account
+            var balance1 = accounts[0].GetBalances(true);
+            var balance2 = accounts[0].GetBalances(false);
+
+            Assert.Equal(new Money(101, MoneyUnit.BTC), balance1.ConfirmedAmount);
+            Assert.Equal(new Money(303, MoneyUnit.BTC), balance2.ConfirmedAmount);
+
+            // Verify balance on special account.
+            var balance3 = accounts[1].GetBalances(true);
+            var balance4 = accounts[1].GetBalances(false);
+
+            // The only transaction that exists in the cold staking account is itself a cold staking utxo. So if we exclude it we expect zero.
+            Assert.Equal(new Money(0, MoneyUnit.BTC), balance3.ConfirmedAmount);
+            Assert.Equal(new Money(101, MoneyUnit.BTC), balance4.ConfirmedAmount);
         }
     }
 }

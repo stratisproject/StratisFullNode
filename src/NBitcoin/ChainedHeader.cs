@@ -75,19 +75,35 @@ namespace NBitcoin
         public int Height { get; private set; }
 
         /// <summary>Block header for this entry.</summary>
-        public BlockHeader Header { get; private set; }
+        public BlockHeader Header
+        {
+            get { return this.ChainStore.GetHeader(this, this.HashBlock); }
+        }
 
-        /// <summary>Integer representation of the <see cref="ChainWork"/>.</summary>
-        private BigInteger chainWork;
+        /// <summary>
+        /// Represents a proof of stake network proven block header.
+        /// </summary>
+        /// <remarks>
+        /// This is used only on POS networks, and should be short lived,
+        /// after consensus the header should be set to null and loaded from the proven header store.
+        /// </remarks>
+        public ProvenBlockHeader ProvenBlockHeader { get; set; }
+
+        public byte[] ChainWorkBytes { get; private set; }
 
         /// <summary>Total amount of work in the chain up to and including this block.</summary>
-        public uint256 ChainWork { get { return Target.ToUInt256(this.chainWork); } }
+        public uint256 ChainWork
+        {
+            get { return Target.ToUInt256(this.ChainWorkBytes); }
+        }
 
         /// <inheritdoc cref="BlockDataAvailabilityState" />
         public BlockDataAvailabilityState BlockDataAvailability { get; set; }
 
         /// <inheritdoc cref="ValidationState" />
         public ValidationState BlockValidationState { get; set; }
+
+        public IChainStore ChainStore { get; private set; }
 
         /// <summary>
         /// An indicator that the current instance of <see cref="ChainedHeader"/> has been disconnected from the previous instance.
@@ -112,6 +128,58 @@ namespace NBitcoin
         public List<ChainedHeader> Next { get; private set; }
 
         /// <summary>
+        /// Set a different header store to the default <see cref="ChainStore"/>, this can be done only on the genesis header (height 0).
+        /// </summary>
+        /// <param name="chainStore">The chain store to set.</param>
+        public void SetChainStore(IChainStore chainStore)
+        {
+            if (this.Height != 0)
+            {
+                throw new ArgumentException("IBlockHeaderStore can only be set on the genesis header.");
+            }
+
+            if (this.ChainStore != null)
+                chainStore.PutHeader(this.ChainStore.GetHeader(this, this.HashBlock));
+
+            this.ChainStore = chainStore;
+        }
+
+        public ChainedHeader(uint256 headerHash, byte[] chainWork, ChainedHeader previous)
+        {
+            this.HashBlock = headerHash ?? throw new ArgumentNullException(nameof(headerHash));
+            this.Next = new List<ChainedHeader>(1);
+
+            if (previous != null)
+                this.Height = previous.Height + 1;
+
+            this.Previous = previous;
+
+            if (previous == null)
+            {
+                if (this.Height != 0)
+                    throw new ArgumentException("Only the genesis block can have no previous block");
+            }
+            else
+            {
+                // Calculates the location of the skip block for this block.
+                this.Skip = this.Previous.GetAncestor(this.GetSkipHeight(this.Height));
+
+                if (this.Previous.ChainStore == null)
+                    throw new ArgumentException("ChainedHeader.Previous.ChainStore was not found");
+
+                this.ChainStore = this.Previous.ChainStore;
+            }
+
+            if (this.Height == 0)
+            {
+                this.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
+                this.BlockValidationState = ValidationState.FullyValidated;
+            }
+
+            this.ChainWorkBytes = chainWork;
+        }
+
+        /// <summary>
         /// Constructs a chained block.
         /// </summary>
         /// <param name="header">Header for the block.</param>
@@ -121,12 +189,6 @@ namespace NBitcoin
         {
             if (previous != null)
                 this.Height = previous.Height + 1;
-
-            if (this.Height == 0)
-            {
-                this.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
-                this.BlockValidationState = ValidationState.FullyValidated;
-            }
 
             this.Previous = previous;
 
@@ -144,7 +206,24 @@ namespace NBitcoin
                 this.Skip = this.Previous.GetAncestor(this.GetSkipHeight(this.Height));
             }
 
+            if (this.Height == 0)
+            {
+                this.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
+                this.BlockValidationState = ValidationState.FullyValidated;
+
+                this.ChainStore = new ChainStore();
+                this.ChainStore.PutHeader(header);
+            }
+            else
+            {
+                this.ChainStore = this.Previous.ChainStore;
+                this.ChainStore.PutHeader(header);
+            }
+
             this.CalculateChainWork();
+
+            if (header is ProvenBlockHeader)
+                this.ProvenBlockHeader = (ProvenBlockHeader)header;
         }
 
         /// <summary>
@@ -156,13 +235,20 @@ namespace NBitcoin
         public ChainedHeader(BlockHeader header, uint256 headerHash, int height) : this(header, headerHash)
         {
             this.Height = height;
-            this.CalculateChainWork();
 
             if (height == 0)
             {
                 this.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
                 this.BlockValidationState = ValidationState.FullyValidated;
             }
+
+            this.ChainStore = this.Previous?.ChainStore ?? new ChainStore();
+            this.ChainStore.PutHeader(header);
+
+            this.CalculateChainWork();
+
+            if (header is ProvenBlockHeader)
+                this.ProvenBlockHeader = (ProvenBlockHeader)header;
         }
 
         /// <summary>
@@ -172,7 +258,8 @@ namespace NBitcoin
         /// <param name="headerHash">The hash of the block's header.</param>
         private ChainedHeader(BlockHeader header, uint256 headerHash)
         {
-            this.Header = header ?? throw new ArgumentNullException(nameof(header));
+            if (header == null) throw new ArgumentNullException(nameof(header));
+
             this.HashBlock = headerHash ?? throw new ArgumentNullException(nameof(headerHash));
             this.Next = new List<ChainedHeader>(1);
         }
@@ -182,14 +269,16 @@ namespace NBitcoin
         /// </summary>
         private void CalculateChainWork()
         {
-            this.chainWork = (this.Previous == null ? BigInteger.Zero : this.Previous.chainWork).Add(this.GetBlockProof());
+            BigInteger previousWork = this.Previous == null ? BigInteger.Zero : new BigInteger(this.Previous.ChainWorkBytes);
+            this.ChainWorkBytes = previousWork.Add(this.GetBlockTarget()).ToByteArray();
         }
 
         /// <summary>Calculates the amount of work that this block contributes to the total chain work.</summary>
         /// <returns>Amount of work.</returns>
-        public BigInteger GetBlockProof()
+        public BigInteger GetBlockTarget()
         {
             BigInteger target = this.Header.Bits.ToBigInteger();
+
             if ((target.CompareTo(BigInteger.Zero) <= 0) || (target.CompareTo(Pow256) >= 0))
                 return BigInteger.Zero;
 
@@ -219,8 +308,11 @@ namespace NBitcoin
                     nStep *= 2;
             }
 
-            var locators = new BlockLocator();
-            locators.Blocks = blockHashes;
+            var locators = new BlockLocator
+            {
+                Blocks = blockHashes
+            };
+
             return locators;
         }
 
@@ -275,7 +367,7 @@ namespace NBitcoin
         /// <inheritdoc />
         public override string ToString()
         {
-            return this.Height + "-" + this.HashBlock + "-" + this.BlockValidationState + (this.Header is ProvenBlockHeader ? " - PH"  : string.Empty);
+            return this.Height + "-" + this.HashBlock + "-" + this.BlockValidationState + (this.ProvenBlockHeader != null ? " - PH" : string.Empty);
         }
 
         /// <summary>
@@ -398,7 +490,7 @@ namespace NBitcoin
                     // Special difficulty rule for testnet:
                     // If the new block's timestamp is more than 2* 10 minutes
                     // then allow mining of a min-difficulty block.
-                    if (this.Header.BlockTime > (lastBlock.Header.BlockTime + TimeSpan.FromTicks(consensus.PowTargetSpacing.Ticks * 2)))
+                    if (this.Header.BlockTime > (lastBlock.Header.BlockTime + TimeSpan.FromTicks(consensus.TargetSpacing.Ticks * 2)))
                         return proofOfWorkLimit;
 
                     // Return the last non-special-min-difficulty-rules-block.
@@ -447,7 +539,7 @@ namespace NBitcoin
         /// <returns>The difficulty adjustment interval in blocks.</returns>
         private long GetDifficultyAdjustmentInterval(IConsensus consensus)
         {
-            return (long)consensus.PowTargetTimespan.TotalSeconds / (long)consensus.PowTargetSpacing.TotalSeconds;
+            return (long)consensus.PowTargetTimespan.TotalSeconds / (long)consensus.TargetSpacing.TotalSeconds;
         }
 
         /// <summary>
@@ -659,9 +751,9 @@ namespace NBitcoin
         /// </summary>
         /// <param name="newHeader">The new header to set.</param>
         /// <remarks>Use this method very carefully because it could cause race conditions if used at the wrong moment.</remarks>
-        public void SetHeader(BlockHeader newHeader)
+        public void SetHeader(ProvenBlockHeader newHeader)
         {
-            this.Header = newHeader;
+            this.ProvenBlockHeader = newHeader;
         }
     }
 }

@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
             Assert.Equal(2, this.puller.PullerBehaviorsByPeerId.Count);
 
             VersionPayload version = new NetworkPeerConnectionParameters().CreateVersion(new IPEndPoint(1, 1), new IPEndPoint(1, 1),
-                KnownNetworks.StratisMain, new DateTimeProvider().GetTimeOffset());
+                KnownNetworks.StraxMain, new DateTimeProvider().GetTimeOffset());
 
             version.Services = NetworkPeerServices.Network | NetworkPeerServices.NODE_WITNESS;
 

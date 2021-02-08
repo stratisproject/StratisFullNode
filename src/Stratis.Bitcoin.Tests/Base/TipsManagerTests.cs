@@ -18,7 +18,7 @@ namespace Stratis.Bitcoin.Tests.Base
 
         private readonly List<ChainedHeader> mainChainHeaders;
 
-        public TipsManagerTests() : base(KnownNetworks.StratisMain)
+        public TipsManagerTests() : base(KnownNetworks.StraxMain)
         {
             this.loggerFactory = new LoggerFactory();
             string dir = CreateTestDir(this);

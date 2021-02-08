@@ -2,13 +2,14 @@
 using FluentAssertions;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
     public class TransactionsHelper
     {
-        private static Random random = new Random();
+        private static readonly Random random = new Random();
 
         public static Transaction BuildNewTransactionFromExistingTransaction(Transaction inputTransaction, int index = 0)
         {
@@ -20,6 +21,29 @@ namespace Stratis.Bitcoin.Tests.Common
             Script outScript = (new Key()).ScriptPubKey;
             transaction.Outputs.Add(new TxOut(outValue, outScript));
             return transaction;
+        }
+
+        public static Transaction CreateCoinbase(Network network, int height)
+        {
+            Transaction coinbase = network.CreateTransaction();
+            coinbase.AddInput(TxIn.CreateCoinbase(height));
+            coinbase.AddOutput(new TxOut(Money.Zero, new Script()));
+            return coinbase;
+        }
+
+        public static Transaction CreateCoinStakeTransaction(Network network, Key key, int height, uint256 prevout)
+        {
+            Transaction coinStake = network.CreateTransaction();
+            coinStake.AddInput(new TxIn(new OutPoint(prevout, 1)));
+            coinStake.AddOutput(new TxOut(0, new Script()));
+            coinStake.AddOutput(new TxOut(network.Consensus.ProofOfStakeReward, key.ScriptPubKey));
+            return coinStake;
+        }
+
+        public static void CreateCirrusRewardOutput(Transaction coinstakeTransaction, Network network)
+        {
+            var cirrusRewardOutput = new TxOut(network.Consensus.ProofOfStakeReward / 2, StraxCoinstakeRule.CirrusRewardScript);
+            coinstakeTransaction.Outputs.Add(cirrusRewardOutput);
         }
 
         /// <summary>Creates invalid PoW block with coinbase transaction.</summary>

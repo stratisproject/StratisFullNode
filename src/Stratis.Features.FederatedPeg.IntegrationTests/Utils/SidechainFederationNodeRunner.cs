@@ -16,12 +16,13 @@ using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 {
     public class SidechainFederationNodeRunner : NodeRunner
     {
-        private bool testingFederation;
+        private readonly bool testingFederation;
 
         private readonly IDateTimeProvider timeProvider;
 
@@ -43,13 +44,15 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
         {
             var settings = new NodeSettings(this.Network, args: new string[] { "-conf=poa.conf", "-datadir=" + this.DataFolder });
 
-            var builder = new FullNodeBuilder()
+            IFullNodeBuilder builder = new FullNodeBuilder()
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(this.counterChainNetwork)
-                .UseFederatedPegPoAMining()
+                .AddPoAFeature()
+                .UsePoAConsensus()
                 .AddFederatedPeg()
-                .CheckForPoAMembersCollateral()
+                .AddPoACollateralMiningCapability()
+                .CheckCollateralCommitment()
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -61,6 +64,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .MockIBD()
                 .ReplaceTimeProvider(this.timeProvider)
                 .AddFastMiningCapability();
@@ -70,7 +74,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 builder.UseTestFedPegBlockDefinition();
             }
 
-            this.FullNode = (FullNode) builder.Build();
+            this.FullNode = (FullNode)builder.Build();
         }
     }
 }

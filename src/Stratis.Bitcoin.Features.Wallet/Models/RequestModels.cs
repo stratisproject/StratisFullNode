@@ -155,6 +155,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public DateTime CreationDate { get; set; }
     }
 
+    public class WalletTransactionCountRequest : RequestModel
+    {
+        /// <summary>
+        /// The name of the wallet to query transaction count for.
+        /// </summary>
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// Optional. The name of the account to query transaction count for. If no account name is specified,
+        /// the default account is used.
+        /// </summary>
+        public string AccountName { get; set; }
+    }
+
     /// <summary>
     /// A class containing the necessary parameters for a wallet history request.
     /// </summary>
@@ -198,6 +213,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public int? Take { get; set; }
 
         /// <summary>
+        /// Optional, Previous OutputTxTime, used for pagination
+        /// </summary>
+        public int? PrevOutputTxTime { get; set; }
+
+        /// <summary>
+        /// Optional, Previous PrevOutputIndex, used for pagination
+        /// </summary>
+        public int? PrevOutputIndex { get; set; }
+
+        /// <summary>
         /// An optional string that can be used to match different data in the transaction records.
         /// It is possible to match on the following: the transaction ID, the address at which funds where received,
         /// and the address to which funds where sent.
@@ -227,6 +252,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// then the balance for the entire wallet (all accounts) is retrieved.
         /// </summary>         
         public string AccountName { get; set; }
+
+        /// <summary>
+        /// For Cirrus we need to get Balances By Address
+        /// </summary>
+        public bool IncludeBalanceByAddress { get; set; }
     }
 
     /// <summary>
@@ -272,14 +302,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// <seealso cref="Stratis.Bitcoin.Features.Wallet.Models.RequestModel" />
     public class ReceivedByAddressRequest : RequestModel
     {
-
         [Required(ErrorMessage = "An address is required.")]
         public string Address { get; set; }
     }
 
     public class WalletName : RequestModel
     {
-
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string Name { get; set; }
     }
@@ -316,7 +344,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// recipient will receive in STRAT (or a sidechain coin). If the transaction was realized,
         /// both the values would be used to create the UTXOs for the transaction recipients.
         /// </summary> 
-        [Required(ErrorMessage = "A list of recipients is required.")]
         [MinLength(1)]
         public List<RecipientModel> Recipients { get; set; }
 
@@ -379,10 +406,22 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     {
         /// <summary>
         /// The destination address.
+        /// If both an address and script are specified then the address takes precedence for where funds will ultimately be sent.
         /// </summary>
-        [Required(ErrorMessage = "A destination address is required.")]
         [IsBitcoinAddress()]
         public string DestinationAddress { get; set; }
+
+        /// <summary>
+        /// More specialised use cases may require a recipient to be specified by scriptPubKey rather than by a user-friendly address.
+        /// The script should be in hex format.
+        /// </summary>
+        public string DestinationScript { get; set; }
+
+        /// <summary>
+        /// An indicator whether the transaction fee should be subtracted from the current recipient.
+        /// </summary>
+        /// <remarks>Only one recipient in a transaction can have this flag set.</remarks>
+        public bool SubtractFeeFromAmount { get; set; }
 
         /// <summary>
         /// The amount that will be sent.
@@ -408,6 +447,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [Required(ErrorMessage = "A password is required.")]
         public string Password { get; set; }
+
+        /// <summary>
+        /// Whether to send the change to a P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool SegwitChangeAddress { get; set; }
 
         /// <inheritdoc />
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -435,11 +479,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// </summary>
     public class SendTransactionRequest : RequestModel
     {
-
         public SendTransactionRequest()
         {
         }
-
 
         public SendTransactionRequest(string transactionHex)
         {
@@ -525,6 +567,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         }
     }
 
+    public class RemoveWalletModel : RequestModel
+    {
+        /// <summary>
+        /// The name of the wallet to remove.
+        /// </summary>
+        [Required(ErrorMessage = "The name of the wallet is required.")]
+        public string WalletName { get; set; }
+    }
+
     /// <summary>
     /// A class containing the necessary parameters for a list accounts request.  
     /// </summary>
@@ -557,10 +608,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// The name of the account for which to get the address.
         /// </summary>
         public string AccountName { get; set; }
+
+        /// <summary>
+        /// Whether to return the P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool Segwit { get; set; }
     }
 
     /// <summary>
-    /// A class containing the necessary parameters for an unused addresses request.  
+    /// A class containing the necessary parameters for an unused addresses request.
     /// </summary>
     public class GetUnusedAddressesModel : RequestModel
     {
@@ -585,6 +641,44 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [Required]
         public string Count { get; set; }
+
+        /// <summary>
+        /// Whether to return the P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool Segwit { get; set; }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for new addresses request.
+    /// </summary>
+    public class GetNewAddressesModel : RequestModel
+    {
+        public GetNewAddressesModel()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
+        /// <summary>
+        /// The name of the wallet from which to get the addresses.
+        /// </summary>
+        [Required]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The name of the account for which to get the addresses.
+        /// </summary>
+        public string AccountName { get; set; }
+
+        /// <summary>
+        /// The number of new addresses to create and return.
+        /// </summary>
+        [Required]
+        public string Count { get; set; }
+
+        /// <summary>
+        /// Whether to return the P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool Segwit { get; set; }
     }
 
     /// <summary>
@@ -607,6 +701,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// The name of the account for which to get the addresses.
         /// </summary>
         public string AccountName { get; set; }
+
+        /// <summary>
+        /// Whether to return the P2WPKH (segwit bech32) addresses, or a regular P2PKH address
+        /// </summary>
+        public bool Segwit { get; set; }
     }
 
     /// <summary>
@@ -627,8 +726,32 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         /// <summary>
         /// The name of the account for which to get the extended public key.
-        /// <summary>
+        /// </summary>
         public string AccountName { get; set; }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for a private key retrieval request.  
+    /// </summary>
+    public class RetrievePrivateKeyModel : RequestModel
+    {
+        /// <summary>
+        /// The password for the wallet.
+        /// </summary>
+        [Required]
+        public string Password { get; set; }
+
+        /// <summary>
+        /// The name of the wallet from which to get the private key.
+        /// </summary>
+        [Required]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The address to retrieve the private key for.
+        /// </summary>
+        [Required]
+        public string Address { get; set; }
     }
 
     /// <summary>
@@ -652,13 +775,23 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// <summary>
     /// A class containing the necessary parameters for a wallet resynchronization request.
     /// </summary>
-    public class WalletSyncFromDateRequest : RequestModel
+    public class WalletSyncRequest : RequestModel
     {
         /// <summary>
         /// The date and time from which to resync the wallet.
         /// </summary>
         [JsonConverter(typeof(IsoDateTimeConverter))]
         public DateTime Date { get; set; }
+
+        /// <summary>
+        /// Sync from start of wallet creation.
+        /// </summary>
+        public bool All { get; set; }
+
+        /// <summary>
+        /// The WalletName to Sync
+        /// </summary>
+        public string WalletName { get; set; }
     }
 
     /// <summary>
@@ -694,7 +827,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         public bool Verbose { get; set; }
     }
-    
+
     /// <summary>
     /// A class containing the necessary parameters to perform an add address book entry request.
     /// </summary>
@@ -846,6 +979,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string Message { get; set; }
     }
 
+
+    /// <summary>
+    /// Object to get a public key.
+    /// </summary>
+    public class PubKeyRequest : RequestModel
+    {
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        [Required(ErrorMessage = "An address is required.")]
+        public string ExternalAddress { get; set; }
+    }
+
     /// <summary>
     /// Object to verify a signed message.
     /// </summary>
@@ -859,5 +1005,60 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
         [Required(ErrorMessage = "A message is required.")]
         public string Message { get; set; }
+    }
+
+    public class SweepRequest : RequestModel
+    {
+        [Required(ErrorMessage = "One or more private keys is required.")]
+        public List<string> PrivateKeys { get; set; }
+
+        [Required(ErrorMessage = "A destination address is required.")]
+        public string DestinationAddress { get; set; }
+
+        public bool Broadcast { get; set; }
+    }
+
+    public sealed class ConsolidationRequest : RequestModel
+    {
+        public ConsolidationRequest()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
+        [Required(ErrorMessage = "The name of the wallet is missing.")]
+        public string WalletName { get; set; }
+
+        /// <summary>
+        /// The account from which UTXOs should be consolidated.
+        /// If this is not set the default account of the selected wallet will be used.
+        /// </summary>
+        public string AccountName { get; set; }
+
+        [Required(ErrorMessage = "A password is required.")]
+        public string WalletPassword { get; set; }
+
+        /// <summary>
+        /// If this is set, only UTXOs within this wallet address will be consolidated.
+        /// If it is not set, all the UTXOs within the selected account will be consolidated.
+        /// </summary>
+        public string SingleAddress { get; set; }
+
+        /// <summary>
+        /// Which address the UTXOs should be sent to. It does not have to be within the wallet.
+        /// If it is not provided the UTXOs will be consolidated to an unused address within the specified wallet.
+        /// </summary>
+        public string DestinationAddress { get; set; }
+
+        /// <summary>
+        /// If provided, UTXOs that are larger in value will not be consolidated.
+        /// Dust UTXOs will not be consolidated regardless of their value, so there is an implicit lower bound as well.
+        /// </summary>
+        [MoneyFormat(isRequired: false, ErrorMessage = "The amount is not in the correct format.")]
+        public string UtxoValueThreshold { get; set; }
+
+        /// <summary>
+        /// For convenience, whether the built consolidated transaction should be automatically broadcast.
+        /// </summary>
+        public bool Broadcast { get; set; }
     }
 }

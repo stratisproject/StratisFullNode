@@ -33,10 +33,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
                 Value = 100_000_000
             };
 
-            var coins = new UnspentOutputs(new uint(), transaction)
-            {
-                Outputs = new TxOut[] { fakeTxOut }
-            };
+            var coins = new UnspentOutput(new OutPoint(uint256.Zero, 0), new Coins(0, fakeTxOut, false));
 
             var unspentOutputs = new UnspentOutputSet();
             unspentOutputs.SetCoins(new[] { coins });

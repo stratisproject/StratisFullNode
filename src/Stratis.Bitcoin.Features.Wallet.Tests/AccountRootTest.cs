@@ -7,7 +7,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void GetFirstUnusedAccountWithoutAccountsReturnsNull()
         {
-            AccountRoot accountRoot = CreateAccountRoot(CoinType.Stratis);
+            AccountRoot accountRoot = CreateAccountRoot(CoinType.Strax);
 
             HdAccount result = accountRoot.GetFirstUnusedAccount();
 
@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void GetFirstUnusedAccountReturnsAccountWithLowerIndexHavingNoAddresses()
         {
-            AccountRoot accountRoot = CreateAccountRoot(CoinType.Stratis);
+            AccountRoot accountRoot = CreateAccountRoot(CoinType.Strax);
             HdAccount unused = CreateAccount("unused1");
             unused.Index = 2;
             accountRoot.Accounts.Add(unused);
@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             accountRoot.Accounts.Add(used);
 
             HdAccount used2 = CreateAccount("used2");
-            used2.InternalAddresses.Add(CreateAddress());
+            used2.InternalAddresses.Add(CreateAddress(true));
             used2.Index = 4;
             accountRoot.Accounts.Add(used2);
 
@@ -46,7 +46,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void GetAccountByNameWithMatchingNameReturnsAccount()
         {
-            AccountRoot accountRoot = CreateAccountRootWithHdAccountHavingAddresses("Test", CoinType.Stratis);
+            AccountRoot accountRoot = CreateAccountRootWithHdAccountHavingAddresses("Test", CoinType.Strax);
 
             HdAccount result = accountRoot.GetAccountByName("Test");
 
@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public void GetAccountByNameWithNonMatchingNameReturnsNull()
         {
-            AccountRoot accountRoot = CreateAccountRootWithHdAccountHavingAddresses("Test", CoinType.Stratis);
+            AccountRoot accountRoot = CreateAccountRootWithHdAccountHavingAddresses("Test", CoinType.Strax);
 
             Assert.Null(accountRoot.GetAccountByName("test"));
         }

@@ -40,23 +40,27 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public void AddAll(int? walletId = null, int? accountIndex = null)
+        public void AddSpendableTransactions(int? walletId = null, int? accountIndex = null, int? fromBlock = null)
         {
             Guard.Assert((walletId ?? this.walletId) == (this.walletId ?? walletId));
 
             walletId = this.walletId ?? walletId;
 
+            string strWalletId = DBParameter.Create(walletId);
+            string strAccountIndex = DBParameter.Create(accountIndex);
+
             List<HDTransactionData> spendableTransactions = this.conn.Query<HDTransactionData>($@"
                 SELECT  *
-                FROM    HDTransactionData
+                FROM    HDTransactionData{((fromBlock == null) ? $@"
                 WHERE   SpendBlockHash IS NULL
-                AND     SpendBlockHeight IS NULL {
+                AND     SpendBlockHeight IS NULL" : $@"
+                WHERE   SpendBlockHeight > {fromBlock} ")}{
                 // Restrict to wallet if provided.
                 ((walletId != null) ? $@"
-                AND      WalletId = {walletId}" : "")}{
+                AND      WalletId = {strWalletId}" : "")}{
                 // Restrict to account if provided.
                 ((accountIndex != null) ? $@"
-                AND     AccountIndex = {accountIndex}" : "")}");
+                AND     AccountIndex = {strAccountIndex}" : "")}");
 
             foreach (HDTransactionData transactionData in spendableTransactions)
                 this.Add(new OutPoint(uint256.Parse(transactionData.OutputTxId), transactionData.OutputIndex));
@@ -69,6 +73,8 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         private bool Exists(OutPoint outPoint, out HashSet<AddressIdentifier> addresses)
         {
+            string strWalletId = DBParameter.Create(this.walletId);
+
             addresses = new HashSet<AddressIdentifier>(
                 this.conn.Query<AddressIdentifier>($@"
                 SELECT  WalletId
@@ -82,7 +88,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                 // Restrict to wallet if provided.
                 // "BETWEEN" boosts performance from half a seconds to 2ms.
                 ((this.walletId != null) ? $@"
-                AND     WalletId BETWEEN {this.walletId} AND {this.walletId}" : "")}",
+                AND     WalletId BETWEEN {strWalletId} AND {strWalletId}" : $@"
+                AND     WalletId IN (SELECT WalletId FROM HDWallet)")}",
                 outPoint.Hash.ToString(),
                 outPoint.N));
 

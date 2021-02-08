@@ -1,4 +1,5 @@
-﻿using Stratis.Bitcoin.Builder;
+﻿using NBitcoin;
+using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
@@ -23,9 +24,9 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         /// </summary>
         /// <param name="dir">Data directory that the node should use.</param>
         /// <returns>Interface to the newly built node.</returns>
-        public IFullNode BuildServicedNode(string dir)
+        public IFullNode BuildServicedNode(string dir, Network network = null)
         {
-            var nodeSettings = new NodeSettings(this.Network, args: new string[] { $"-datadir={dir}" });
+            var nodeSettings = new NodeSettings(network ?? this.Network, args: new string[] { $"-datadir={dir}" });
             var fullNodeBuilder = new FullNodeBuilder(nodeSettings);
             IFullNode fullNode = fullNodeBuilder
                 .UseBlockStore()

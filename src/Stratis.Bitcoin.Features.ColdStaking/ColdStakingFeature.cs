@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
@@ -11,12 +12,15 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.ColdStaking
@@ -111,11 +115,12 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             this.nodeSettings = nodeSettings;
             this.walletSettings = walletSettings;
 
-            nodeStats.RemoveStats(StatsType.Component, typeof(WalletFeature).Name);
-            nodeStats.RemoveStats(StatsType.Inline, typeof(WalletFeature).Name);
+            // The wallet feature displays these.
+            //nodeStats.RemoveStats(StatsType.Component, typeof(WalletFeature).Name);
+            //nodeStats.RemoveStats(StatsType.Inline, typeof(WalletFeature).Name);
 
-            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
-            nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
+            //nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+            //nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
         }
 
         /// <summary>
@@ -139,7 +144,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
         private void AddInlineStats(StringBuilder benchLogs)
         {
-            var walletManager = this.coldStakingManager;
+            ColdStakingManager walletManager = this.coldStakingManager;
 
             if (walletManager != null)
             {
@@ -243,6 +248,12 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 {
                     services.RemoveSingleton<IWalletManager>();
                     services.AddSingleton<IWalletManager, ColdStakingManager>();
+
+                    services.RemoveSingleton<IWalletService>();
+                    services.AddSingleton<IWalletService, ColdStakingWalletService>();
+
+                    services.AddSingleton<ScriptAddressReader>();
+                    services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(ColdStakingDestinationReader), ServiceLifetime.Singleton));
                 });
             });
 

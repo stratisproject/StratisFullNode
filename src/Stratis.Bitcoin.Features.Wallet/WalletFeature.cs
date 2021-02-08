@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -30,14 +32,12 @@ namespace Stratis.Bitcoin.Features.Wallet
     /// <summary>
     /// Wallet feature for the full node.
     /// </summary>
-    /// <seealso cref="Stratis.Bitcoin.Builder.Feature.FullNodeFeature" />
+    /// <seealso cref="FullNodeFeature" />
     public class WalletFeature : BaseWalletFeature
     {
         private readonly IWalletSyncManager walletSyncManager;
 
         private readonly IWalletManager walletManager;
-
-        private readonly Signals.ISignals signals;
 
         private readonly IConnectionManager connectionManager;
 
@@ -45,30 +45,31 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private readonly BroadcasterBehavior broadcasterBehavior;
 
+        private readonly IWalletRepository walletRepository;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="WalletFeature"/> class.
         /// </summary>
         /// <param name="walletSyncManager">The synchronization manager for the wallet, tasked with keeping the wallet synced with the network.</param>
         /// <param name="walletManager">The wallet manager.</param>
         /// <param name="addressBookManager">The address book manager.</param>
-        /// <param name="signals">The signals responsible for receiving blocks and transactions from the network.</param>
         /// <param name="connectionManager">The connection manager.</param>
         /// <param name="broadcasterBehavior">The broadcaster behavior.</param>
         public WalletFeature(
             IWalletSyncManager walletSyncManager,
             IWalletManager walletManager,
             IAddressBookManager addressBookManager,
-            Signals.ISignals signals,
             IConnectionManager connectionManager,
             BroadcasterBehavior broadcasterBehavior,
-            INodeStats nodeStats)
+            INodeStats nodeStats,
+            IWalletRepository walletRepository)
         {
             this.walletSyncManager = walletSyncManager;
             this.walletManager = walletManager;
             this.addressBookManager = addressBookManager;
-            this.signals = signals;
             this.connectionManager = connectionManager;
             this.broadcasterBehavior = broadcasterBehavior;
+            this.walletRepository = walletRepository;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 800);
@@ -95,35 +96,35 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private void AddInlineStats(StringBuilder log)
         {
-            var walletManager = this.walletManager as WalletManager;
-
-            if (walletManager != null)
-            {
-                HashHeightPair hashHeightPair = walletManager.LastReceivedBlockInfo();
-
-                log.AppendLine("Wallet.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) +
-                                        (walletManager.ContainsWallets ? hashHeightPair.Height.ToString().PadRight(8) : "No Wallet".PadRight(8)) +
-                                        (walletManager.ContainsWallets ? (" Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + hashHeightPair.Hash) : string.Empty));
-            }
+            log.AppendLine("Wallet.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) +
+                (this.walletManager.ContainsWallets ? this.walletManager.WalletTipHeight.ToString().PadRight(8) : "No Wallet".PadRight(8)) +
+                (this.walletManager.ContainsWallets ? (" Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.walletManager.WalletTipHash) : string.Empty));
         }
 
         private void AddComponentStats(StringBuilder log)
         {
-            IEnumerable<string> walletNames = this.walletManager.GetWalletsNames();
+            List<string> walletNamesSQL = this.walletRepository.GetWalletNames();
+            List<string> watchOnlyWalletNames = this.walletManager.GetWatchOnlyWalletsNames().ToList();
 
-            if (walletNames.Any())
+            if (walletNamesSQL.Any())
             {
                 log.AppendLine();
                 log.AppendLine("======Wallets======");
 
-                foreach (string walletName in walletNames)
+                var walletManager = (WalletManager)this.walletManager;
+
+                foreach (string walletName in walletNamesSQL)
                 {
-                    foreach (HdAccount account in this.walletManager.GetAccounts(walletName))
+                    string watchOnly = (watchOnlyWalletNames.Contains(walletName)) ? "(W) " : "";
+
+                    foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
                     {
-                        AccountBalance accountBalance = this.walletManager.GetBalances(walletName, account.Name).Single();
-                        log.AppendLine(($"{walletName}/{account.Name}" + ",").PadRight(LoggingConfiguration.ColumnLength + 10)
-                                                  + (" Confirmed balance: " + accountBalance.AmountConfirmed.ToString()).PadRight(LoggingConfiguration.ColumnLength + 20)
-                                                  + " Unconfirmed balance: " + accountBalance.AmountUnconfirmed.ToString());
+                        log.AppendLine(
+                            ($"{watchOnly}{walletName}/{accountBalance.Account.Name}" + ",").PadRight(
+                                LoggingConfiguration.ColumnLength + 10)
+                            + (" Confirmed balance: " + accountBalance.AmountConfirmed.ToString()).PadRight(
+                                LoggingConfiguration.ColumnLength + 20)
+                            + " Unconfirmed balance: " + accountBalance.AmountUnconfirmed.ToString());
                     }
                 }
             }
@@ -144,8 +145,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <inheritdoc />
         public override void Dispose()
         {
-            this.walletManager.Stop();
             this.walletSyncManager.Stop();
+            this.walletManager.Stop();
         }
     }
 
@@ -166,18 +167,20 @@ namespace Stratis.Bitcoin.Features.Wallet
                 .DependOn<BlockStoreFeature>()
                 .DependOn<RPCFeature>()
                 .FeatureServices(services =>
-                    {
-                        services.AddSingleton<IWalletSyncManager, WalletSyncManager>();
-                        services.AddSingleton<IWalletTransactionHandler, WalletTransactionHandler>();
-                        services.AddSingleton<IWalletManager, WalletManager>();
-                        services.AddSingleton<IWalletFeePolicy, WalletFeePolicy>();
-                        services.AddSingleton<IBroadcasterManager, FullNodeBroadcasterManager>();
-                        services.AddSingleton<BroadcasterBehavior>();
-                        services.AddSingleton<WalletSettings>();
-                        services.AddSingleton<IScriptAddressReader>(new ScriptAddressReader());
-                        services.AddSingleton<StandardTransactionPolicy>();
-                        services.AddSingleton<IAddressBookManager, AddressBookManager>();
-                    });
+                {
+                    services.AddSingleton<IWalletService, WalletService>();
+                    services.AddSingleton<IWalletSyncManager, WalletSyncManager>();
+                    services.AddSingleton<IWalletTransactionHandler, WalletTransactionHandler>();
+                    services.AddSingleton<IWalletManager, WalletManager>();
+                    services.AddSingleton<IWalletFeePolicy, WalletFeePolicy>();
+                    services.AddSingleton<IBroadcasterManager, FullNodeBroadcasterManager>();
+                    services.AddSingleton<BroadcasterBehavior>();
+                    services.AddSingleton<WalletSettings>();
+                    services.AddSingleton<IScriptAddressReader>(new ScriptAddressReader());
+                    services.AddSingleton<StandardTransactionPolicy>();
+                    services.AddSingleton<IAddressBookManager, AddressBookManager>();
+                    services.AddSingleton<IReserveUtxoService, ReserveUtxoService>();
+                });
             });
 
             return fullNodeBuilder;

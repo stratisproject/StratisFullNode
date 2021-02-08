@@ -14,8 +14,12 @@ using Stratis.Bitcoin.Features.SignalR.Events;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.Diagnostic;
+using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusD
@@ -31,8 +35,9 @@ namespace Stratis.CirrusD
         {
             try
             {
-                var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector,
-                    protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
+                // set the console window title to identify this as a Cirrus full node (for clarity when running Strax and Cirrus on the same machine)
+                Console.Title = "Cirrus Full Node";
+                var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
                 };
@@ -59,9 +64,16 @@ namespace Stratis.CirrusD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining()
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .CheckCollateralCommitment()
+
+                // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
+                // Perhaps we can introduce a block height check rather?
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .UseApi()
                 .AddRPC()
                 .UseDiagnosticFeature();
@@ -78,7 +90,7 @@ namespace Stratis.CirrusD
 
                     options.ClientEventBroadcasters = new[]
                     {
-                        (Broadcaster: typeof(WalletInfoBroadcaster),
+                        (Broadcaster: typeof(CirrusWalletInfoBroadcaster),
                             ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
                             {
                                 BroadcastFrequencySeconds = 5

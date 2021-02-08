@@ -79,6 +79,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             this.prunedBlockRepository = prunedBlockRepository;
             this.addressIndexer = addressIndexer;
 
+            addressIndexer.InitializingFeature = this;
+
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 900);
         }
 
@@ -145,12 +147,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
             // TODO: Add NetworkLimited which is what BTC uses for pruned nodes.
             this.connectionManager.Parameters.Services = (this.storeSettings.PruningEnabled ? NetworkPeerServices.Nothing : NetworkPeerServices.Network);
 
-            // Temporary measure to support asking witness data on BTC.
-            // At some point NetworkPeerServices will move to the Network class,
-            // Then this values should be taken from there.
-            if (!this.network.Consensus.IsProofOfStake)
-                this.connectionManager.Parameters.Services |= NetworkPeerServices.NODE_WITNESS;
-
             this.blockStoreSignaled.Initialize();
 
             this.addressIndexer.Initialize();
@@ -202,6 +198,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
                         services.AddSingleton<StoreSettings>();
                         services.AddSingleton<IBlockStoreQueueFlushCondition, BlockStoreQueueFlushCondition>();
                         services.AddSingleton<IAddressIndexer, AddressIndexer>();
+                        services.AddSingleton<IUtxoIndexer, UtxoIndexer>();
                     });
             });
 

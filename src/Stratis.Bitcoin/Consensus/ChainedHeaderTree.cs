@@ -44,9 +44,6 @@ namespace Stratis.Bitcoin.Consensus
         /// <summary>Total amount of unconsumed blocks.</summary>
         long UnconsumedBlocksCount { get; }
 
-        /// <summary>Total size of ChainedHeaders data in bytes.</summary>
-        long ChainedBlocksDataBytes { get; }
-
         /// <summary>
         /// Initialize the tree with consensus tip.
         /// </summary>
@@ -174,15 +171,14 @@ namespace Stratis.Bitcoin.Consensus
         private readonly ConsensusSettings consensusSettings;
         private readonly IFinalizedBlockInfoRepository finalizedBlockInfo;
         private readonly IInvalidBlockHashStore invalidHashesStore;
+        private readonly IChainWorkComparer chainWorkComparer;
+        private readonly object lockObject;
 
         /// <inheritdoc />
         public long UnconsumedBlocksDataBytes { get; private set; }
 
         /// <inheritdoc />
         public long UnconsumedBlocksCount { get; private set; }
-
-        /// <inheritdoc />
-        public long ChainedBlocksDataBytes { get; private set; }
 
         /// <summary>A special peer identifier that represents our local node.</summary>
         internal const int LocalPeerId = -1;
@@ -223,7 +219,8 @@ namespace Stratis.Bitcoin.Consensus
             IChainState chainState,
             IFinalizedBlockInfoRepository finalizedBlockInfo,
             ConsensusSettings consensusSettings,
-            IInvalidBlockHashStore invalidHashesStore)
+            IInvalidBlockHashStore invalidHashesStore,
+            IChainWorkComparer chainWorkComparer)
         {
             this.network = network;
             this.headerValidator = headerValidator;
@@ -232,7 +229,9 @@ namespace Stratis.Bitcoin.Consensus
             this.finalizedBlockInfo = finalizedBlockInfo;
             this.consensusSettings = consensusSettings;
             this.invalidHashesStore = invalidHashesStore;
+            this.chainWorkComparer = chainWorkComparer;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.lockObject = new object();
 
             this.peerTipsByPeerId = new Dictionary<int, uint256>();
             this.peerIdsByTipHash = new Dictionary<uint256, HashSet<int>>();
@@ -250,7 +249,6 @@ namespace Stratis.Bitcoin.Consensus
             {
                 current.Previous.Next.Add(current);
                 this.chainedHeadersByHash.Add(current.HashBlock, current);
-                this.ChainedBlocksDataBytes += current.Header.HeaderSize;
 
                 // TODO when pruned node is implemented it should be header only for pruned blocks
                 current.BlockDataAvailability = BlockDataAvailabilityState.BlockAvailable;
@@ -261,7 +259,6 @@ namespace Stratis.Bitcoin.Consensus
 
             // Add the genesis block.
             this.chainedHeadersByHash.Add(current.HashBlock, current);
-            this.ChainedBlocksDataBytes += current.Header.HeaderSize;
 
             if (current.HashBlock != this.network.GenesisHash)
             {
@@ -393,7 +390,7 @@ namespace Stratis.Bitcoin.Consensus
 
             chainedHeader.BlockValidationState = ValidationState.PartiallyValidated;
 
-            if (chainedHeader.ChainWork > this.GetConsensusTip().ChainWork)
+            if (this.chainWorkComparer.Compare(chainedHeader, this.GetConsensusTip()) > 0)
             {
                 // A better tip that was partially validated is found. Set our node's claim on the tip to avoid that chain removal in
                 // case all the peers that were claiming a better chain are disconnected before we switch consensus tip of our node.
@@ -429,10 +426,14 @@ namespace Stratis.Bitcoin.Consensus
         private void ClaimPeerTip(int networkPeerId, uint256 tipHash)
         {
             HashSet<int> peersClaimingThisHeader;
-            if (!this.peerIdsByTipHash.TryGetValue(tipHash, out peersClaimingThisHeader))
+
+            lock (this.lockObject)
             {
-                peersClaimingThisHeader = new HashSet<int>();
-                this.peerIdsByTipHash.Add(tipHash, peersClaimingThisHeader);
+                if (!this.peerIdsByTipHash.TryGetValue(tipHash, out peersClaimingThisHeader))
+                {
+                    peersClaimingThisHeader = new HashSet<int>();
+                    this.peerIdsByTipHash.Add(tipHash, peersClaimingThisHeader);
+                }
             }
 
             peersClaimingThisHeader.Add(networkPeerId);
@@ -497,20 +498,23 @@ namespace Stratis.Bitcoin.Consensus
             // Find peers with chains that now violate max reorg.
             if (maxReorgLength != 0)
             {
-                foreach (KeyValuePair<int, uint256> peerIdToTipHash in this.peerTipsByPeerId)
+                lock (this.lockObject)
                 {
-                    ChainedHeader peerTip = this.chainedHeadersByHash[peerIdToTipHash.Value];
-                    int peerId = peerIdToTipHash.Key;
-
-                    ChainedHeader fork = this.FindForkIfChainedHeadersNotOnSameChain(peerTip, consensusTip);
-
-                    int finalizedHeight = this.finalizedBlockInfo.GetFinalizedBlockInfo().Height;
-
-                    // Do nothing in case peer's tip is on our consensus chain.
-                    if ((fork != null) && (fork.Height < finalizedHeight))
+                    foreach (KeyValuePair<int, uint256> peerIdToTipHash in this.peerTipsByPeerId)
                     {
-                        peerIdsToResync.Add(peerId);
-                        this.logger.LogDebug("Peer with Id {0} claims a chain that violates max reorg, its tip is '{1}' and the last finalized block height is {2}.", peerId, peerTip, finalizedHeight);
+                        ChainedHeader peerTip = this.chainedHeadersByHash[peerIdToTipHash.Value];
+                        int peerId = peerIdToTipHash.Key;
+
+                        ChainedHeader fork = this.FindForkIfChainedHeadersNotOnSameChain(peerTip, consensusTip);
+
+                        int finalizedHeight = this.finalizedBlockInfo.GetFinalizedBlockInfo().Height;
+
+                        // Do nothing in case peer's tip is on our consensus chain.
+                        if ((fork != null) && (fork.Height < finalizedHeight))
+                        {
+                            peerIdsToResync.Add(peerId);
+                            this.logger.LogDebug("Peer with Id {0} claims a chain that violates max reorg, its tip is '{1}' and the last finalized block height is {2}.", peerId, peerTip, finalizedHeight);
+                        }
                     }
                 }
             }
@@ -577,22 +581,25 @@ namespace Stratis.Bitcoin.Consensus
                 foreach (ChainedHeader nextHeader in header.Next)
                     headersToProcess.Push(nextHeader);
 
-                if (this.peerIdsByTipHash.TryGetValue(header.HashBlock, out HashSet<int> peers))
+                lock (this.lockObject)
                 {
-                    foreach (int peerId in peers)
+                    if (this.peerIdsByTipHash.TryGetValue(header.HashBlock, out HashSet<int> peers))
                     {
-                        // There was a partially validated chain that was better than our consensus tip, we've started full validation
-                        // and found out that a block on this chain is invalid. At this point we have a marker with LocalPeerId on the new chain
-                        // but our consensus tip inside peerTipsByPeerId has not been changed yet, therefore we want to prevent removing
-                        // the consensus tip from the structure.
-                        if (peerId != LocalPeerId)
+                        foreach (int peerId in peers)
                         {
-                            this.peerTipsByPeerId.Remove(peerId);
-                            peersToBan.Add(peerId);
+                            // There was a partially validated chain that was better than our consensus tip, we've started full validation
+                            // and found out that a block on this chain is invalid. At this point we have a marker with LocalPeerId on the new chain
+                            // but our consensus tip inside peerTipsByPeerId has not been changed yet, therefore we want to prevent removing
+                            // the consensus tip from the structure.
+                            if (peerId != LocalPeerId)
+                            {
+                                this.peerTipsByPeerId.Remove(peerId);
+                                peersToBan.Add(peerId);
+                            }
                         }
-                    }
 
-                    this.peerIdsByTipHash.Remove(header.HashBlock);
+                        this.peerIdsByTipHash.Remove(header.HashBlock);
+                    }
                 }
 
                 this.DisconnectChainHeader(header);
@@ -605,7 +612,6 @@ namespace Stratis.Bitcoin.Consensus
         {
             header.Previous.Next.Remove(header);
             this.chainedHeadersByHash.Remove(header.HashBlock);
-            this.ChainedBlocksDataBytes -= header.Header.HeaderSize;
 
             if (header.Block != null)
             {
@@ -742,7 +748,7 @@ namespace Stratis.Bitcoin.Consensus
                 }
             }
 
-            if (latestNewHeader.ChainWork > this.GetConsensusTip().ChainWork)
+            if (this.chainWorkComparer.Compare(latestNewHeader, this.GetConsensusTip()) > 0)
             {
                 this.logger.LogDebug("Chained header '{0}' is the tip of a chain with more work than our current consensus tip.", latestNewHeader);
 
@@ -812,7 +818,7 @@ namespace Stratis.Bitcoin.Consensus
             ChainedHeader bestTip = this.GetConsensusTip();
             var connectNewHeadersResult = new ConnectNewHeadersResult() { Consumed = latestNewHeader };
 
-            if (latestNewHeader.ChainWork > bestTip.ChainWork)
+            if (this.chainWorkComparer.Compare(latestNewHeader, bestTip) > 0)
             {
                 this.logger.LogDebug("Chained header '{0}' is the tip of a chain with more work than our current consensus tip.", latestNewHeader);
 
@@ -917,25 +923,28 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="chainedHeader">The header where we start walking back the chain from.</param>
         private void RemovePeerClaim(int networkPeerId, ChainedHeader chainedHeader)
         {
-            // Collection of peer IDs that claim this chained header as their tip.
-            HashSet<int> peerIds;
-            if (!this.peerIdsByTipHash.TryGetValue(chainedHeader.HashBlock, out peerIds))
+            lock (this.lockObject)
             {
-                this.logger.LogTrace("(-)[PEER_TIP_NOT_FOUND]");
-                throw new ConsensusException("PEER_TIP_NOT_FOUND");
+                // Collection of peer IDs that claim this chained header as their tip.
+                HashSet<int> peerIds;
+                if (!this.peerIdsByTipHash.TryGetValue(chainedHeader.HashBlock, out peerIds))
+                {
+                    this.logger.LogTrace("(-)[PEER_TIP_NOT_FOUND]");
+                    throw new ConsensusException("PEER_TIP_NOT_FOUND");
+                }
+
+                this.logger.LogDebug("Tip claim of peer ID {0} removed from chained header '{1}'.", networkPeerId, chainedHeader);
+                peerIds.Remove(networkPeerId); // TODO: do we need to throw in this case
+
+                if (peerIds.Count == 0)
+                {
+                    this.logger.LogDebug("Header '{0}' is not the tip of any peer.", chainedHeader);
+                    this.peerIdsByTipHash.Remove(chainedHeader.HashBlock);
+                    this.RemoveUnclaimedBranch(chainedHeader);
+                }
+
+                this.peerTipsByPeerId.Remove(networkPeerId);
             }
-
-            this.logger.LogDebug("Tip claim of peer ID {0} removed from chained header '{1}'.", networkPeerId, chainedHeader);
-            peerIds.Remove(networkPeerId); // TODO: do we need to throw in this case
-
-            if (peerIds.Count == 0)
-            {
-                this.logger.LogDebug("Header '{0}' is not the tip of any peer.", chainedHeader);
-                this.peerIdsByTipHash.Remove(chainedHeader.HashBlock);
-                this.RemoveUnclaimedBranch(chainedHeader);
-            }
-
-            this.peerTipsByPeerId.Remove(networkPeerId);
         }
 
         /// <summary>Set a new header as a tip for this peer and remove the old tip.</summary>
@@ -944,31 +953,34 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="newTip">The new tip to set.</param>
         private void AddOrReplacePeerTip(int networkPeerId, uint256 newTip)
         {
-            uint256 oldTipHash = this.peerTipsByPeerId.TryGet(networkPeerId);
-
-            if (oldTipHash == newTip)
+            lock (this.lockObject)
             {
-                this.logger.LogTrace("(-)[ALREADY_CLAIMED]");
-                return;
-            }
+                uint256 oldTipHash = this.peerTipsByPeerId.TryGet(networkPeerId);
 
-            this.ClaimPeerTip(networkPeerId, newTip);
-
-            if (oldTipHash != null)
-            {
-                ChainedHeader oldTip = this.chainedHeadersByHash.TryGet(oldTipHash);
-
-                if (oldTip == null)
+                if (oldTipHash == newTip)
                 {
-                    // Sanity check. That should never happen.
-                    this.logger.LogTrace("(-)[OLD_TIP_NULL]");
-                    throw new Exception("Old tip is null!");
+                    this.logger.LogTrace("(-)[ALREADY_CLAIMED]");
+                    return;
                 }
 
-                this.RemovePeerClaim(networkPeerId, oldTip);
-            }
+                this.ClaimPeerTip(networkPeerId, newTip);
 
-            this.peerTipsByPeerId.Add(networkPeerId, newTip);
+                if (oldTipHash != null)
+                {
+                    ChainedHeader oldTip = this.chainedHeadersByHash.TryGet(oldTipHash);
+
+                    if (oldTip == null)
+                    {
+                        // Sanity check. That should never happen.
+                        this.logger.LogTrace("(-)[OLD_TIP_NULL]");
+                        throw new Exception("Old tip is null!");
+                    }
+
+                    this.RemovePeerClaim(networkPeerId, oldTip);
+                }
+
+                this.peerTipsByPeerId.Add(networkPeerId, newTip);
+            }
         }
 
         /// <inheritdoc />
@@ -1103,7 +1115,6 @@ namespace Stratis.Bitcoin.Consensus
 
             previousChainedHeader.Next.Add(newChainedHeader);
             this.chainedHeadersByHash.Add(newChainedHeader.HashBlock, newChainedHeader);
-            this.ChainedBlocksDataBytes += newChainedHeader.Header.HeaderSize;
 
             return newChainedHeader;
         }
@@ -1191,20 +1202,23 @@ namespace Stratis.Bitcoin.Consensus
         /// <inheritdoc />
         public ChainedHeader GetBestPeerTip()
         {
-            ChainedHeader bestTip = null;
-
-            foreach (KeyValuePair<int, uint256> idTipHashPair in this.peerTipsByPeerId)
+            lock (this.lockObject)
             {
-                if (idTipHashPair.Key == LocalPeerId)
-                    continue;
+                ChainedHeader bestTip = null;
 
-                ChainedHeader tip = this.chainedHeadersByHash[idTipHashPair.Value];
+                foreach (KeyValuePair<int, uint256> idTipHashPair in this.peerTipsByPeerId)
+                {
+                    if (idTipHashPair.Key == LocalPeerId)
+                        continue;
 
-                if ((bestTip == null) || (tip.ChainWork > bestTip.ChainWork))
-                    bestTip = tip;
+                    ChainedHeader tip = this.chainedHeadersByHash[idTipHashPair.Value];
+
+                    if ((bestTip == null) || this.chainWorkComparer.Compare(tip, bestTip) > 0)
+                        bestTip = tip;
+                }
+
+                return bestTip;
             }
-
-            return bestTip;
         }
 
         /// <inheritdoc />

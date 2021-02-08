@@ -64,7 +64,7 @@ public class TestLoader
 
             var references = new List<MetadataReference>
             {
-                MetadataReference.CreateFromFile(Path.Combine(basePath, "Packages", "netcoreapp2.1", "System.Runtime.dll")),
+                MetadataReference.CreateFromFile(Path.Combine(basePath, "Packages", "netcoreapp3.1", "System.Runtime.dll")),
             };
 
             // Stratis.SmartContracts.SmartContract with the constructor removed
@@ -73,12 +73,12 @@ public class TestLoader
             // Version 2.0.0-TEST adds string TestMethod() to Stratis.SmartContracts.SmartContract
             // and GetString() to Stratis.SmartContracts.ISmartContractState
             var version2DllPath = Path.Combine(basePath, "Packages", "4.0.0-TEST", "Stratis.SmartContracts.dll");
-            
+
             references.Add(MetadataReference.CreateFromFile(version1DllPath));
 
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source);
 
-            CSharpCompilation compilation = CSharpCompilation.Create(
+            var compilation = CSharpCompilation.Create(
                 "smartContract",
                 new[] { syntaxTree },
                 references,
@@ -91,7 +91,7 @@ public class TestLoader
             using (var dllStream = new MemoryStream())
             {
                 EmitResult emitResult = compilation.Emit(dllStream);
-                
+
                 Assert.True(emitResult.Success);
 
                 version1CompiledContract = dllStream.ToArray();
@@ -99,7 +99,7 @@ public class TestLoader
 
             SyntaxTree syntaxTreeLoader = CSharpSyntaxTree.ParseText(loader);
 
-            CSharpCompilation loaderCompilation = CSharpCompilation.Create(
+            var loaderCompilation = CSharpCompilation.Create(
                 "loader",
                 new[] { syntaxTreeLoader },
                 references,
@@ -109,12 +109,12 @@ public class TestLoader
 
             var alc = new TestAssemblyLoadContext();
 
-            var version2Assembly = alc.LoadFromAssemblyPath(version2DllPath);
+            Assembly version2Assembly = alc.LoadFromAssemblyPath(version2DllPath);
 
             Assert.Equal(Version.Parse("4.0.0.0"), version2Assembly.GetName().Version);
-            
+
             Assembly loaderAssembly;
-            
+
             using (var dllStream = new MemoryStream())
             {
                 EmitResult emitResult = loaderCompilation.Emit(dllStream);
@@ -125,15 +125,15 @@ public class TestLoader
                 loaderAssembly = alc.LoadFromStream(dllStream);
             }
 
-            var version1ContractMemoryStream = new MemoryStream(version1CompiledContract);     
-            var version1ContractAssembly = alc.LoadFromStream(version1ContractMemoryStream);
+            var version1ContractMemoryStream = new MemoryStream(version1CompiledContract);
+            Assembly version1ContractAssembly = alc.LoadFromStream(version1ContractMemoryStream);
             version1ContractMemoryStream.Dispose();
 
-            var loaderType = loaderAssembly.ExportedTypes.First(t => t.Name == "TestLoader");
+            Type loaderType = loaderAssembly.ExportedTypes.First(t => t.Name == "TestLoader");
 
-            var loaderMethod = loaderType.GetMethod("Load");
+            MethodInfo loaderMethod = loaderType.GetMethod("Load");
 
-            var version2MethodInvocationResult = (bool) loaderMethod.Invoke(null, new [] { version1ContractAssembly });
+            var version2MethodInvocationResult = (bool)loaderMethod.Invoke(null, new[] { version1ContractAssembly });
 
             // If this condition is not null, we have a v1 contract referencing a v2 assembly and a successful
             // invocation of a method that only exists on v2

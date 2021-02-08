@@ -15,8 +15,10 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -282,10 +284,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             NodeSettings nodeSettings = NodeSettings.Default(settings.Network);
             ILoggerFactory loggerFactory = nodeSettings.LoggerFactory;
             var consensusSettings = new ConsensusSettings(nodeSettings);
-            txMemPool = new TxMempool(dateTimeProvider, new BlockPolicyEstimator(new MempoolSettings(nodeSettings), loggerFactory, nodeSettings), loggerFactory, nodeSettings);
+            txMemPool = new TxMempool(dateTimeProvider, new BlockPolicyEstimator(mempoolSettings, loggerFactory, nodeSettings), loggerFactory, nodeSettings);
             var mempoolLock = new MempoolSchedulerLock();
-            var coins = new InMemoryCoinView(settings.Network.GenesisHash);
+            var coins = new InMemoryCoinView(new HashHeightPair(settings.Network.GenesisHash, 0));
             var chain = new ChainIndexer(settings.Network);
+            var deployments = new NodeDeployments(this.network, chain);
             var chainState = new ChainState();
             var mempoolPersistence = new MempoolPersistence(settings, loggerFactory);
             this.network.Consensus.Options = new PosConsensusOptions();
@@ -293,12 +296,20 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var consensusRulesContainer = new ConsensusRulesContainer();
             foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)
                 consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
-            foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
-                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
+            foreach (var ruleType in network.Consensus.ConsensusRules.FullValidationRules)
+            {
+                FullValidationConsensusRule rule = null;
+                if (ruleType == typeof(FlushCoinviewRule))
+                    rule = new FlushCoinviewRule(new Mock<IInitialBlockDownloadState>().Object);
+                else
+                    rule = Activator.CreateInstance(ruleType) as FullValidationConsensusRule;
 
-            var asyncProvider = new AsyncProvider(nodeSettings.LoggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+                consensusRulesContainer.FullValidationRules.Add(rule);
+            }
 
-            ConsensusRuleEngine consensusRules = new PowConsensusRuleEngine(this.network, loggerFactory, dateTimeProvider, chain, new NodeDeployments(this.network, chain),
+            var asyncProvider = new AsyncProvider(nodeSettings.LoggerFactory, new Mock<ISignals>().Object);
+
+            ConsensusRuleEngine consensusRules = new PowConsensusRuleEngine(this.network, loggerFactory, dateTimeProvider, chain, deployments,
                 consensusSettings, new Checkpoints(), coins, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, loggerFactory), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
             // The mempool rule constructors aren't parameterless, so we have to manually inject the dependencies for every rule
@@ -312,7 +323,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 new CheckRateLimitMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
                 new CheckAncestorsMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
                 new CheckReplacementMempoolRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
-                new CheckAllInputsMempoolRule(this.network, txMemPool, mempoolSettings, chain, consensusRules, loggerFactory),
+                new CheckAllInputsMempoolRule(this.network, txMemPool, mempoolSettings, chain, consensusRules, deployments, loggerFactory),
                 new CheckTxOutDustRule(this.network, txMemPool, mempoolSettings, chain, loggerFactory),
             };
 
@@ -325,7 +336,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 }
             }
 
-            var mempoolValidator = new MempoolValidator(txMemPool, mempoolLock, dateTimeProvider, mempoolSettings, chain, coins, loggerFactory, settings, consensusRules, mempoolRules, new NodeDeployments(this.network, chain));
+            var nodeDeployments = new NodeDeployments(this.network, chain);
+
+            var mempoolValidator = new MempoolValidator(txMemPool, mempoolLock, dateTimeProvider, mempoolSettings, chain, coins, loggerFactory, settings, consensusRules, mempoolRules, new Signals.Signals(loggerFactory, null), nodeDeployments);
             return new MempoolManager(mempoolLock, txMemPool, mempoolValidator, dateTimeProvider, mempoolSettings, mempoolPersistence, coins, loggerFactory, settings.Network);
         }
     }

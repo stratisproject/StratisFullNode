@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Utilities
         /// <summary>
         /// Initializes the DBreeze serializer.
         /// </summary>
-        public DBreezeTest() : base(KnownNetworks.StratisRegTest)
+        public DBreezeTest() : base(KnownNetworks.StraxRegTest)
         {
             this.dbreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
         }
@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Tests.Utilities
         [Fact]
         public void SerializerWithBitcoinSerializableReturnsAsBytes()
         {
-            Block block = KnownNetworks.StratisRegTest.Consensus.ConsensusFactory.CreateBlock();
+            Block block = KnownNetworks.StraxRegTest.Consensus.ConsensusFactory.CreateBlock();
 
             byte[] result = this.dbreezeSerializer.Serialize(block);
 
@@ -63,32 +63,26 @@ namespace Stratis.Bitcoin.Tests.Utilities
         [Fact]
         public void DeserializerWithCoinsDeserializesObject()
         {
-            Network network = KnownNetworks.StratisRegTest;
+            Network network = KnownNetworks.StraxRegTest;
             Block genesis = network.GetGenesis();
-            var coins = new Coins(genesis.Transactions[0], 0);
+            var coins = new Bitcoin.Utilities.Coins(0, genesis.Transactions[0].Outputs.First(), true);
 
-            var result = (Coins)this.dbreezeSerializer.Deserialize(coins.ToBytes(KnownNetworks.StratisRegTest.Consensus.ConsensusFactory), typeof(Coins));
+            var result = (Bitcoin.Utilities.Coins)this.dbreezeSerializer.Deserialize(coins.ToBytes(KnownNetworks.StraxRegTest.Consensus.ConsensusFactory), typeof(Bitcoin.Utilities.Coins));
 
-            Assert.Equal(coins.CoinBase, result.CoinBase);
+            Assert.Equal(coins.IsCoinbase, result.IsCoinbase);
             Assert.Equal(coins.Height, result.Height);
-            Assert.Equal(coins.IsEmpty, result.IsEmpty);
-            Assert.Equal(coins.IsPruned, result.IsPruned);
-            Assert.Equal(coins.Outputs.Count, result.Outputs.Count);
-            Assert.Equal(coins.Outputs[0].ScriptPubKey.Hash, result.Outputs[0].ScriptPubKey.Hash);
-            Assert.Equal(coins.Outputs[0].Value, result.Outputs[0].Value);
-            Assert.Equal(coins.UnspentCount, result.UnspentCount);
-            Assert.Equal(coins.Value, result.Value);
-            Assert.Equal(coins.Version, result.Version);
+            Assert.Equal(coins.TxOut.ScriptPubKey.Hash, result.TxOut.ScriptPubKey.Hash);
+            Assert.Equal(coins.TxOut.Value, result.TxOut.Value);
         }
 
         [Fact]
         public void DeserializerWithBlockHeaderDeserializesObject()
         {
-            Network network = KnownNetworks.StratisRegTest;
+            Network network = KnownNetworks.StraxRegTest;
             Block genesis = network.GetGenesis();
             BlockHeader blockHeader = genesis.Header;
 
-            var result = (BlockHeader)this.dbreezeSerializer.Deserialize(blockHeader.ToBytes(KnownNetworks.StratisRegTest.Consensus.ConsensusFactory), typeof(BlockHeader));
+            var result = (BlockHeader)this.dbreezeSerializer.Deserialize(blockHeader.ToBytes(KnownNetworks.StraxRegTest.Consensus.ConsensusFactory), typeof(BlockHeader));
 
             Assert.Equal(blockHeader.GetHash(), result.GetHash());
         }
@@ -96,13 +90,13 @@ namespace Stratis.Bitcoin.Tests.Utilities
         [Fact]
         public void DeserializerWithRewindDataDeserializesObject()
         {
-            Network network = KnownNetworks.StratisRegTest;
+            Network network = KnownNetworks.StraxRegTest;
             Block genesis = network.GetGenesis();
-            var rewindData = new RewindData(genesis.GetHash());
+            var rewindData = new RewindData(new HashHeightPair(genesis.GetHash(), 0));
 
             var result = (RewindData)this.dbreezeSerializer.Deserialize(rewindData.ToBytes(), typeof(RewindData));
 
-            Assert.Equal(genesis.GetHash(), result.PreviousBlockHash);
+            Assert.Equal(genesis.GetHash(), result.PreviousBlockHash.Hash);
         }
 
         [Fact]
@@ -118,10 +112,10 @@ namespace Stratis.Bitcoin.Tests.Utilities
         [Fact]
         public void DeserializerWithBlockDeserializesObject()
         {
-            Network network = KnownNetworks.StratisRegTest;
+            Network network = KnownNetworks.StraxRegTest;
             Block block = network.GetGenesis();
 
-            var result = (Block)this.dbreezeSerializer.Deserialize(block.ToBytes(KnownNetworks.StratisRegTest.Consensus.ConsensusFactory), typeof(Block));
+            var result = (Block)this.dbreezeSerializer.Deserialize(block.ToBytes(KnownNetworks.StraxRegTest.Consensus.ConsensusFactory), typeof(Block));
 
             Assert.Equal(block.GetHash(), result.GetHash());
         }

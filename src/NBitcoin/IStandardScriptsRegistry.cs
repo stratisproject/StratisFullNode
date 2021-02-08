@@ -1,4 +1,6 @@
-﻿using NBitcoin.BitcoinCore;
+﻿using System;
+using System.Collections.Generic;
+using NBitcoin.BitcoinCore;
 
 namespace NBitcoin
 {
@@ -6,7 +8,7 @@ namespace NBitcoin
     {
         void RegisterStandardScriptTemplate(ScriptTemplate scriptTemplate);
 
-        bool IsStandardTransaction(Transaction tx, Network network);
+        bool IsStandardTransaction(Transaction tx, Network network, int blockHeight = -1, uint256 blockHash = null);
 
         bool AreOutputsStandard(Network network, Transaction tx);
 
@@ -14,6 +16,12 @@ namespace NBitcoin
 
         bool IsStandardScriptPubKey(Network network, Script scriptPubKey);
 
+        bool IsStandardScriptSig(Network network, Script scriptSig, Script scriptPubKey = null);
+
         bool AreInputsStandard(Network network, Transaction tx, CoinsView coinsView);
+
+        List<ScriptTemplate> GetScriptTemplates { get; }
+
+        ScriptTemplate this[Type key] { get; }
     }
 }

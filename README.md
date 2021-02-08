@@ -1,11 +1,9 @@
-| Windows | MacOs | Ubuntu64
-| :---- | :------ | :---- |
-| [![Build Status](https://dev.azure.com/StratisProject/StratisBitcoinFullNode/_apis/build/status/HostedWindowsContainer-CI)](https://dev.azure.com/StratisProject/StratisBitcoinFullNode/_build/latest?definitionId=4) | [![Build Status](https://dev.azure.com/StratisProject/StratisBitcoinFullNode/_apis/build/status/HostedmacOS-CI)](https://dev.azure.com/StratisProject/StratisBitcoinFullNode/_build/latest?definitionId=6) | [![Build Status](https://dev.azure.com/StratisProject/StratisBitcoinFullNode/_apis/build/status/HostedUbuntu1604-CI)](https://dev.azure.com/StratisProject/StratisBitcoinFullNode/_build/latest?definitionId=5)
+| CirrusMain Nightly | 
+| :---- | 
+| [![Build status](https://dev.azure.com/stratisproject/StratisFullNode/_apis/build/status/CirrusMain%20IBD)](https://dev.azure.com/stratisproject/StratisFullNode/_build/latest?definitionId=67)
 
-Stratis Bitcoin
+Stratis (STRAX) Full Node 
 ===============
-
-https://stratisplatform.com
 
 Bitcoin Implementation in C#
 ----------------------------
@@ -64,28 +62,18 @@ The master branch is actively developed and regularly committed to, and it can b
 To compile a stable (production) release use any of the release tags form version 3.0.x.x and upwards.  
 
 ```
-git clone https://github.com/stratisproject/StratisBitcoinFullNode.git  
-cd StratisBitcoinFullNode\src
+git clone https://github.com/stratisproject/StratisFullNode.git  
+cd StratisFullNode\src
 
 dotnet build
 
 ```
 
-To run on the Bitcoin network:
+To run on the StraxTest network:
 ```
-cd Stratis.BitcoinD
-dotnet run
+cd Stratis.StraxD
+dotnet run -testnet
 ```  
-
-To run on the Stratis network:
-```
-cd Stratis.StratisD
-dotnet run
-```  
-
-Getting Started Guide
------------
-More details on getting started are available [here](https://github.com/stratisproject/StratisBitcoinFullNode/blob/master/Documentation/getting-started.md)
 
 Development
 -----------
@@ -94,7 +82,6 @@ Up for some blockchain development?
 Check this guides for more info:
 * [Contributing Guide](Documentation/contributing.md)
 * [Coding Style](Documentation/coding-style.md)
-* [Wiki Page](https://stratisplatform.atlassian.net/wiki/spaces/WIKI/overview)
 
 There is a lot to do and we welcome contributers developers and testers who want to get some Blockchain experience.
 You can find tasks at the issues/projects or visit the dev_general channel on [discord](https://discord.gg/9tDyfZs).

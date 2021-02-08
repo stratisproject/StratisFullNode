@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.P2P.Peer;
@@ -49,6 +50,11 @@ namespace Stratis.Bitcoin.Consensus
         void PeerDisconnected(int peerId);
 
         /// <summary>
+        /// Gets the Header Tip
+        /// </summary>
+        int? HeaderTip { get; }
+
+        /// <summary>
         /// Provides block data for the given block hashes.
         /// </summary>
         /// <remarks>
@@ -67,14 +73,21 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="blockHashes">The block hashes.</param>
         ChainedHeaderBlock[] GetBlockData(List<uint256> blockHashes);
 
+        /// <summary>Retrieves block data in batches after the passed <paramref name="previousBlock"/>. It is up to the caller to decide when to stop reading blocks.</summary>
+        /// <param name="previousBlock">The block preceding the blocks to retrieve. Pass <c>null</c> to retrieve blocks from genesis.</param>
+        /// <param name="batchSize">The internal batch size to use when reading blocks. Larger values lead to greater efficiency but consume more memory.</param>
+        /// <param name="cancellationTokenSource">A cancellation token source for cancellation.</param>
+        IEnumerable<ChainedHeaderBlock> GetBlocksAfterBlock(ChainedHeader previousBlock, int batchSize, CancellationTokenSource cancellationTokenSource);
+
         /// <summary>
         /// A new block was mined by the node and is attempted to connect to tip.
         /// </summary>
         /// <param name="block">Block that was mined.</param>
+        /// <param name="assumeValid">Assume the block is allready valid and skip validations.</param>
         /// <exception cref="ConsensusErrorException">Thrown if header validation failed.</exception>
         /// <exception cref="ConsensusException">Thrown if partial or full validation failed or if full validation wasn't required.</exception>
         /// <returns><see cref="ChainedHeader"/> of a block that was mined.</returns>
-        Task<ChainedHeader> BlockMinedAsync(Block block);
+        Task<ChainedHeader> BlockMinedAsync(Block block, bool assumeValid = false);
     }
 
     /// <summary>

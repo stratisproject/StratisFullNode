@@ -63,14 +63,18 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
 
         public static DBCommand CmdUploadPrevOut(this DBConnection conn)
         {
+            // UPSERTs TransactionDatas. If they already exist (i.e. as mempool transactions), they will be
+            // "confirmed" into a block, otherwise they will be created and inserted.
+
             return conn.CreateCommand($@"
-                REPLACE INTO HDTransactionData
+                INSERT INTO HDTransactionData
                 SELECT A.WalletID
                 ,      A.AccountIndex
                 ,      A.AddressType
                 ,      A.AddressIndex
                 ,      T.RedeemScript
                 ,      T.ScriptPubKey
+                ,      T.Address
                 ,      T.Value
                 ,      T.OutputBlockHeight
                 ,      T.OutputBlockHash
@@ -99,7 +103,10 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
                        ON     TD.OutputTxId = T.OutputTxId
                        AND    TD.OutputIndex = T.OutputIndex
                        AND    TD.ScriptPubKey = T.ScriptPubKey
-                       AND    (TD.OutputBlockHash IS NOT NULL OR TD.OutputBlockHeight IS NOT NULL))");
+                       AND    (TD.OutputBlockHash IS NOT NULL OR TD.OutputBlockHeight IS NOT NULL))
+                ON CONFLICT(WalletId, AccountIndex, AddressType, AddressIndex, OutputTxId, OutputIndex) DO UPDATE SET 
+                       OutputBlockHeight = excluded.OutputBlockHeight,
+                       OutputBlockHash = excluded.OutputBlockHash");
         }
 
         public static DBCommand CmdReplacePayments(this DBConnection conn)
@@ -117,8 +124,8 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
                 ,       O.IsChange SpendIsChange
                 FROM    temp.TempPrevOut T
                 JOIN    temp.TempOutput O
-                ON      O.OutputTxTime = T.SpendTxTime
-                AND     O.OutputTxId = T.SpendTxId
+                ON      O.OutputTxId = T.SpendTxId
+                AND     O.ScriptPubKey IS NULL
                 JOIN    HDTransactionData TD
                 ON      TD.OutputTxId = T.OutputTxId
                 AND     TD.OutputIndex = T.OutputIndex
@@ -142,6 +149,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
                 ,      TD.AddressIndex
                 ,      TD.RedeemScript
                 ,      TD.ScriptPubKey
+                ,      TD.Address
                 ,      TD.Value
                 ,      TD.OutputBlockHeight
                 ,      TD.OutputBlockHash
@@ -171,6 +179,8 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
 
         public static DBCommand CmdUpdateOverlaps(this DBConnection conn)
         {
+            // Gets conflicting transactions, while leaving the transactions themselves.
+
             return conn.CreateCommand($@"
                 SELECT TD.*
                 FROM   temp.TempPrevOut T
@@ -179,6 +189,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Commands
                 AND    TD.OutputIndex = T.OutputIndex
                 AND    TD.ScriptPubKey = T.ScriptPubKey
                 AND    TD.SpendTxId IS NOT NULL
+                AND    TD.SpendTxId != T.SpendTxId
                 AND    TD.WalletId IN (
                        SELECT   WalletId
                        FROM     HDWallet

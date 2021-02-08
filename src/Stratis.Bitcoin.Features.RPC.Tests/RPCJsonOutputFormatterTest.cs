@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -47,7 +46,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
             var formatter = new RPCJsonOutputFormatter(this.settings);
             Task task = formatter.WriteResponseBodyAsync(context, Encoding.UTF8);
             task.Wait();
-            
+
             using (var reader = new StreamReader(bodyStream))
             {
                 bodyStream.Position = 0;
@@ -60,10 +59,9 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
         private static DefaultHttpContext SetupDefaultContextWithResponseBodyStream(Stream bodyStream)
         {
             var defaultContext = new DefaultHttpContext();
-            var response = new HttpResponseFeature();
-            response.Body = bodyStream;
+            var response = new StreamResponseBodyFeature(bodyStream);
             var featureCollection = new FeatureCollection();
-            featureCollection.Set<IHttpResponseFeature>(response);
+            featureCollection.Set<IHttpResponseBodyFeature>(response);
             defaultContext.Initialize(featureCollection);
             return defaultContext;
         }

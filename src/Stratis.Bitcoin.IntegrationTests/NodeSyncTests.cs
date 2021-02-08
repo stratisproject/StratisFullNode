@@ -14,15 +14,13 @@ namespace Stratis.Bitcoin.IntegrationTests
     public class NodeSyncTests
     {
         private readonly Network powNetwork;
-        private readonly Network posNetwork;
 
         public NodeSyncTests()
         {
             this.powNetwork = new BitcoinRegTest();
-            this.posNetwork = new StratisRegTest();
         }
 
-        public class StratisRegTestMaxReorg : StratisRegTest
+        public class StratisRegTestMaxReorg : StraxRegTest
         {
             public StratisRegTestMaxReorg()
             {
@@ -95,8 +93,11 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
         }
 
+        /// <summary>
+        /// Pos_Given_NodesAreSynced_When_ABigReorgHappens_Then_TheReorgIsIgnored
+        /// </summary>
         [Fact]
-        public void Pos_Given_NodesAreSynced_When_ABigReorgHappens_Then_TheReorgIsIgnored()
+        public void ReorgAboveMaxIsIgnored()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {

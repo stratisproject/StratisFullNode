@@ -30,6 +30,14 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public PoAConsensusOptions ConsensusOptions => this.Consensus.Options as PoAConsensusOptions;
 
+        /// <summary>
+        /// This is the height at which collateral commitment height data was committed to blocks.
+        /// </summary>
+        public int CollateralCommitmentActivationHeight { get; set; }
+
+        /// <summary> The mining keys of the new multisig members to become active with the first Strax-era Cirrus collateral block mined.</summary>
+        public IList<PubKey> StraxMiningMultisigMembers { get; protected set; }
+
         public PoANetwork()
         {
             // The message start string is designed to be unlikely to occur in normal data.
@@ -59,7 +67,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.CoinTicker = "POA";
 
-            var consensusFactory = new PoAConsensusFactory();
+            PoAConsensusFactory consensusFactory = this.GetConsensusFactory();
 
             // Create the genesis block.
             this.GenesisTime = 1513622125;
@@ -124,7 +132,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 premineReward: Money.Coins(100_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                powTargetSpacing: TimeSpan.FromSeconds(60),
+                targetSpacing: TimeSpan.FromSeconds(60),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,
@@ -183,14 +191,18 @@ namespace Stratis.Bitcoin.Features.PoA
             this.RegisterMempoolRules(this.Consensus);
         }
 
+        protected virtual PoAConsensusFactory GetConsensusFactory()
+        {
+            return new PoAConsensusFactory();
+        }
+
         protected virtual void RegisterRules(IConsensus consensus)
         {
             // IHeaderValidationConsensusRule
             consensus.ConsensusRules
                 .Register<HeaderTimeChecksPoARule>()
                 .Register<StratisHeaderVersionRule>()
-                .Register<PoAHeaderDifficultyRule>()
-                .Register<PoAHeaderSignatureRule>();
+                .Register<PoAHeaderDifficultyRule>();
             // ------------------------------------------------------
 
             // IIntegrityValidationConsensusRule
@@ -221,6 +233,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 .Register<SetActivationDeploymentsFullValidationRule>()
 
                 // Rules that require the store to be loaded (coinview)
+                .Register<PoAHeaderSignatureRule>()
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>() // implements BIP30
 
@@ -252,7 +265,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             Transaction txNew = consensusFactory.CreateTransaction();
             txNew.Version = 1;
-            txNew.Time = nTime;
+            // TODO: Removing the time field will affect the genesis block hash of the Cirrus networks. Need to make a call about only developing Cirrus via the SBFN project that still has nTime
             txNew.AddInput(new TxIn()
             {
                 ScriptSig = new Script(Op.GetPushOp(0), new Op()

@@ -14,7 +14,7 @@ namespace NBitcoin.Tests
 
         public Pos_hash_tests()
         {
-            this.stratisMain = KnownNetworks.StratisMain;
+            this.stratisMain = KnownNetworks.StraxMain;
         }
 
         [Fact]
@@ -133,7 +133,7 @@ namespace NBitcoin.Tests
         [Trait("UnitTest", "UnitTest")]
         public void hash256()
         {
-            Assert.Equal(uint256.Parse("0x0000066e91e46e5a264d42c89e1204963b2ee6be230b443e9159020539d972af"), this.stratisMain.GetGenesis().GetHash());
+            Assert.Equal(uint256.Parse("0xebe158d09325c470276619ebc5f7f87c98c0ed4b211c46a17a6457655811d082"), this.stratisMain.GetGenesis().GetHash());
         }
 
         [Fact]

@@ -12,6 +12,7 @@ using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.BitcoinD
 {
@@ -31,6 +32,7 @@ namespace Stratis.BitcoinD
                     .AddMining()
                     .AddRPC()
                     .UseWallet()
+                    .AddSQLiteWalletRepository()
                     .UseApi()
                     .Build();
 

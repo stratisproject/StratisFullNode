@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +40,6 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         private const string WalletAccountName = "account 0";
         private const string WalletPassword = "password";
         private const string WalletPassphrase = "wallet_passphrase";
-        private const string StratisRegTest = "StratisRegTest";
 
         // BlockStore
         private const string BlockUri = "api/blockstore/block";
@@ -116,7 +116,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             this.posNodeBuilder = NodeBuilder.Create(Path.Combine(this.GetType().Name, this.CurrentTest.DisplayName));
 
             this.powNetwork = new BitcoinRegTestOverrideCoinbaseMaturity(1);
-            this.posNetwork = new StratisRegTest();
+            this.posNetwork = new StraxRegTest();
         }
 
         protected override void AfterTest()
@@ -186,9 +186,9 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             TestHelper.MineBlocks(this.firstStratisPowApiNode, this.maturity);
         }
 
-        private void a_real_transaction()
+        private async Task a_real_transaction()
         {
-            this.SendTransaction(this.BuildTransaction());
+            await this.SendTransaction(await this.BuildTransaction());
         }
 
         private void the_block_with_the_transaction_is_mined()
@@ -201,7 +201,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             var stakingRequest = new StartStakingRequest() { Name = WalletName, Password = WalletPassword };
 
             // With these tests we still need to create the wallets outside of the builder
-            this.stratisPosApiNode.Mnemonic = this.stratisPosApiNode.FullNode.WalletManager().CreateWallet(WalletPassword, WalletName, WalletPassphrase);
+            (_, this.stratisPosApiNode.Mnemonic) = this.stratisPosApiNode.FullNode.WalletManager().CreateWallet(WalletPassword, WalletName, WalletPassphrase);
 
             var httpRequestContent = new StringContent(stakingRequest.ToString(), Encoding.UTF8, JsonContentType);
             this.response = this.httpClient.PostAsync($"{this.apiUri}{StartStakingUri}", httpRequestContent).GetAwaiter().GetResult();
@@ -223,7 +223,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
 
         private void calling_recover_via_extpubkey_for_account_0()
         {
-            this.RecoverViaExtPubKey(WalletName, "xpub6DGguHV1FQFPvZ5Xu7VfeENyiySv4R2bdd6VtvwxWGVTVNnHUmphMNgTRkLe8j2JdAv332ogZcyhqSuz1yUPnN4trJ49cFQXmEhwNQHUqk1", 0);
+            this.RecoverViaExtPubKey(WalletName, "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex", 0);
         }
 
         private void attempting_to_add_an_account()
@@ -240,13 +240,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
 
         private void an_extpubkey_only_wallet_with_account_0()
         {
-            this.RecoverViaExtPubKey(WalletName, "xpub6DGguHV1FQFPvZ5Xu7VfeENyiySv4R2bdd6VtvwxWGVTVNnHUmphMNgTRkLe8j2JdAv332ogZcyhqSuz1yUPnN4trJ49cFQXmEhwNQHUqk1", 0);
-        }
-
-        private void calling_recover_via_extpubkey_for_account_1()
-        {
-            //NOTE: use legacy stratis xpub key format for this one to ensure that works too.
-            this.RecoverViaExtPubKey("Secondary_Wallet", "xq5hcJV8uJDLaNytrg6FphHY1vdqxP1rCPhAmp4xZwpxzYyYEscYEujAmNR5NrPfy9vzQ6BajEqtFezcyRe4zcGHH3dR6BKaKov43JHd8UYhBVy", 1);
+            this.RecoverViaExtPubKey(WalletName, "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex", 0);
         }
 
         private void RecoverViaExtPubKey(string walletName, string extPubKey, int accountIndex)
@@ -283,13 +277,15 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             this.send_api_get_request($"{BalanceUri}?walletname={walletName}&AccountName=account {accountIndex}");
 
-            this.responseText.Should().StartWith("{\"balances\":[{\"accountName\":\"account " + accountIndex + "\",\"accountHdPath\":\"m/44'/105'/" + accountIndex + "'\",\"coinType\":105,\"amountConfirmed\":0,\"amountUnconfirmed\":0,\"spendableAmount\":0,\"addresses\":");
+            this.responseText.Should().StartWith("{\"balances\":[{\"accountName\":\"account " + accountIndex + $"\",\"accountHdPath\":\"m/44'/{this.posNetwork.Consensus.CoinType}'/" + accountIndex + $"'\",\"coinType\":{this.posNetwork.Consensus.CoinType},\"amountConfirmed\":0,\"amountUnconfirmed\":0,\"spendableAmount\":0,\"addresses\":");
         }
 
         private void calling_general_info()
         {
             // With these tests we still need to create the wallets outside of the builder
             this.stratisPosApiNode.FullNode.WalletManager().CreateWallet(WalletPassword, WalletName, WalletPassphrase);
+            this.stratisPosApiNode.FullNode.WalletManager().SaveWallet(WalletName);
+
             this.send_api_get_request($"{GeneralInfoUri}?name={WalletName}");
         }
 
@@ -423,34 +419,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             var commands = JsonDataSerializer.Instance.Deserialize<List<RpcCommandModel>>(this.responseText);
 
-            commands.Count.Should().Be(31);
-            commands.Should().Contain(x => x.Command == "stop");
-            commands.Should().Contain(x => x.Command == "getrawtransaction <txid> [<verbose>] [<blockhash>]");
-            commands.Should().Contain(x => x.Command == "gettxout <txid> <vout> [<includemempool>]");
-            commands.Should().Contain(x => x.Command == "getblockcount");
-            commands.Should().Contain(x => x.Command == "getinfo");
-            commands.Should().Contain(x => x.Command == "getblockheader <hash> [<isjsonformat>]");
-            commands.Should().Contain(x => x.Command == "validateaddress <address>");
-            commands.Should().Contain(x => x.Command == "addnode <endpointstr> <command>");
-            commands.Should().Contain(x => x.Command == "getpeerinfo");
-            commands.Should().Contain(x => x.Command == "getbestblockhash");
-            commands.Should().Contain(x => x.Command == "getblockhash <height>");
-            commands.Should().Contain(x => x.Command == "getrawmempool");
-            commands.Should().Contain(x => x.Command == "generate <blockcount>");
-            commands.Should().Contain(x => x.Command == "startstaking <walletname> <walletpassword>");
-            commands.Should().Contain(x => x.Command == "getstakinginfo [<isjsonformat>]");
-            commands.Should().Contain(x => x.Command == "sendtoaddress <address> <amount> <commenttx> <commentdest>");
-            commands.Should().Contain(x => x.Command == "getnewaddress <account> <addresstype>");
-            commands.Should().Contain(x => x.Command == "sendrawtransaction <hex>");
-            commands.Should().Contain(x => x.Command == "decoderawtransaction <hex>");
-            commands.Should().Contain(x => x.Command == "getblock <blockhash> [<verbosity>]");
-            commands.Should().Contain(x => x.Command == "walletlock");
-            commands.Should().Contain(x => x.Command == "walletpassphrase <passphrase> <timeout>");
-            commands.Should().Contain(x => x.Command == "listunspent [<minconfirmations>] [<maxconfirmations>] [<addressesjson>]");
-            commands.Should().Contain(x => x.Command == "sendmany <fromaccount> <addressesjson> [<minconf>] [<comment>] [<subtractfeefromjson>] [<isreplaceable>] [<conftarget>] [<estimatemode>]");
-            commands.Should().Contain(x => x.Command == "getblockchaininfo");
-            commands.Should().Contain(x => x.Command == "getnetworkinfo");
-            commands.Should().Contain(x => x.Command == "listaddressgroupings");
+            commands.Count.Should().Be(37);
         }
 
         private void status_information_is_returned()
@@ -482,8 +451,8 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         private void general_information_about_the_wallet_and_node_is_returned()
         {
             var generalInfoResponse = JsonDataSerializer.Instance.Deserialize<WalletGeneralInfoModel>(this.responseText);
-            generalInfoResponse.WalletFilePath.Should().ContainAll(StratisRegTest, $"{WalletName}.wallet.json");
-            generalInfoResponse.Network.Name.Should().Be(StratisRegTest);
+            generalInfoResponse.WalletName.Should().Be(WalletName);
+            generalInfoResponse.Network.Name.Should().Be("StraxRegTest");
             generalInfoResponse.ChainTip.Should().Be(0);
             generalInfoResponse.IsChainSynced.Should().BeFalse();
             generalInfoResponse.ConnectedNodes.Should().Be(0);
@@ -559,27 +528,34 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             }
         }
 
-        private void SendTransaction(IActionResult transactionResult)
+        private async Task SendTransaction(IActionResult transactionResult)
         {
             var walletTransactionModel = (WalletBuildTransactionModel)(transactionResult as JsonResult)?.Value;
             this.transaction = this.firstStratisPowApiNode.FullNode.Network.CreateTransaction(walletTransactionModel.Hex);
-            this.firstStratisPowApiNode.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex));
+            await this.firstStratisPowApiNode.FullNode.NodeController<WalletController>()
+                .SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex));
         }
 
-        private IActionResult BuildTransaction()
+        private async Task<IActionResult> BuildTransaction()
         {
-            IActionResult transactionResult = this.firstStratisPowApiNode.FullNode.NodeController<WalletController>()
+            IActionResult transactionResult = await this.firstStratisPowApiNode.FullNode
+                .NodeController<WalletController>()
                 .BuildTransaction(new BuildTransactionRequest
                 {
                     AccountName = WalletAccountName,
                     AllowUnconfirmed = true,
                     ShuffleOutputs = false,
-                    Recipients = new List<RecipientModel> { new RecipientModel { DestinationAddress = this.receiverAddress.Address, Amount = this.transferAmount.ToString() } },
+                    Recipients = new List<RecipientModel>
+                    {
+                        new RecipientModel
+                            {DestinationAddress = this.receiverAddress.Address, Amount = this.transferAmount.ToString()}
+                    },
                     FeeType = FeeType.Medium.ToString("D"),
                     Password = WalletPassword,
                     WalletName = WalletName,
                     FeeAmount = Money.Satoshis(82275).ToString() // Minimum fee
                 });
+
             return transactionResult;
         }
     }

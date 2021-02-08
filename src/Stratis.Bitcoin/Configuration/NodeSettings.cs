@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Networks;
 using NBitcoin.Protocol;
-using NLog.Extensions.Logging;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -45,7 +44,7 @@ namespace Stratis.Bitcoin.Configuration
         public ILogger Logger { get; private set; }
 
         /// <summary>The settings of the Full Node's logger.</summary>
-        public LogSettings Log { get; private set; }
+        public LogSettings LogSettings { get; private set; }
 
         /// <summary>A list of paths to folders which Full Node components use to store data. These folders are found
         /// in the <see cref="DataDir"/>.
@@ -108,7 +107,7 @@ namespace Stratis.Bitcoin.Configuration
         /// is met. For this reason, the minimum relay transaction fee is usually lower than the minimum fee.
         /// </summary>
         public FeeRate MinRelayTxFeeRate { get; private set; }
-        
+
         /// <summary>
         /// If true then the node will add and start the SignalR feature.
         /// </summary>
@@ -132,14 +131,11 @@ namespace Stratis.Bitcoin.Configuration
         ///   name would be determined. In this case we first need to determine the network.
         /// </remarks>
         public NodeSettings(Network network = null, ProtocolVersion protocolVersion = SupportedProtocolVersion,
-            string agent = "StratisNode", string[] args = null, NetworksSelector networksSelector = null)
+            string agent = "StratisFullNode", string[] args = null, NetworksSelector networksSelector = null)
         {
             // Create the default logger factory and logger.
-            var loggerFactory = new ExtendedLoggerFactory();
-            this.LoggerFactory = loggerFactory;
-            this.LoggerFactory.AddConsoleWithFilters();
-            this.LoggerFactory.AddNLog();
-            this.Logger = this.LoggerFactory.CreateLogger(typeof(NodeSettings).FullName);
+            var loggerFactory = ExtendedLoggerFactory.Create();
+            this.Logger = loggerFactory.CreateLogger(typeof(NodeSettings).FullName);
 
             // Record arguments.
             this.Network = network;
@@ -219,7 +215,10 @@ namespace Stratis.Bitcoin.Configuration
             this.DataFolder = new DataFolder(this.DataDir);
 
             // Attempt to load NLog configuration from the DataFolder.
-            loggerFactory.LoadNLogConfiguration(this.DataFolder);
+            this.LogSettings = new LogSettings();
+            this.LogSettings.Load(this.ConfigReader);
+            this.LoggerFactory = ExtendedLoggerFactory.Create(this.LogSettings, this.DataFolder);
+            this.Logger = this.LoggerFactory.CreateLogger(typeof(NodeSettings).FullName);
 
             // Get the configuration file name for the network if it was not specified on the command line.
             if (this.ConfigurationFile == null)
@@ -231,13 +230,10 @@ namespace Stratis.Bitcoin.Configuration
                     this.ReadConfigurationFile();
             }
 
-            this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR",  false, this.Logger);
+            this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR", false, this.Logger);
 
             // Create the custom logger factory.
-            this.Log = new LogSettings();
-            this.Log.Load(this.ConfigReader);
-            this.LoggerFactory.AddFilters(this.Log, this.DataFolder);
-            this.LoggerFactory.ConfigureConsoleFilters(this.LoggerFactory.GetConsoleSettings(), this.Log);
+            this.LoggerFactory.AddFilters(this.LogSettings, this.DataFolder);
 
             // Load the configuration.
             this.LoadConfiguration();

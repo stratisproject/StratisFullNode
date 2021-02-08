@@ -837,12 +837,6 @@ namespace NBitcoin
                                 case OpcodeType.OP_NOP6:
                                 case OpcodeType.OP_NOP7:
                                 case OpcodeType.OP_NOP8:
-                                case OpcodeType.OP_NOP9:
-                                    if((this.ScriptVerify & ScriptVerify.DiscourageUpgradableNops) != 0)
-                                    {
-                                        return SetError(ScriptError.DiscourageUpgradableNops);
-                                    }
-                                    break;
 
                                 // OP_NOP10 has been redefined as OP_CHECKCOLDSTAKEVERIFY.
                                 case OpcodeType.OP_CHECKCOLDSTAKEVERIFY:
@@ -1389,6 +1383,59 @@ namespace NBitcoin
                                         }
                                         break;
                                     }
+
+                                // Reads the federation id from the stack and then pushes the federation public keys 
+                                // to the stack. Typically preceeds an OP_CHECKMULTISIG operation.
+                                case OpcodeType.OP_FEDERATION:
+                                    {
+                                        if (this.Network.Federations == null)
+                                        {
+                                            // not enabled; treat as a NOP9.
+                                            if ((this.ScriptVerify & ScriptVerify.DiscourageUpgradableNops) != 0)
+                                            {
+                                                return SetError(ScriptError.DiscourageUpgradableNops);
+                                            }
+
+                                            break;
+                                        }
+
+                                        int i = 1;
+                                        if (this._stack.Count < i)
+                                            return SetError(ScriptError.InvalidStackOperation);
+
+                                        // Get the federation identifier.
+                                        byte[] federationId = this._stack.Top(-1);
+
+                                        // Get the federation details.
+                                        PubKey[] members;
+                                        int sigsReq;
+                                        try
+                                        {
+                                            if (s is ScriptAtHeight sah)
+                                                (members, sigsReq) = this.Network.Federations.GetFederationAtHeight(federationId, (ulong)sah.BlockHeight, sah.BlockHash).GetFederationDetails();
+                                            else
+                                                (members, sigsReq) = this.Network.Federations.GetFederation(federationId).GetFederationDetails();
+                                        }
+                                        catch (Exception)
+                                        {
+                                            return SetError(ScriptError.UnknownError);
+                                        }
+
+                                        this._stack.Pop();
+
+                                        // First push the signature requirement.
+                                        this._stack.Push(new CScriptNum(sigsReq).getvch());
+
+                                        // Push the public keys to the stack for this opcode.
+                                        foreach (PubKey pubKey in members)
+                                            this._stack.Push(pubKey.ToBytes());
+
+                                        // Push the number of public keys to the stack.
+                                        this._stack.Push(new CScriptNum(members.Length).getvch());
+
+                                        break;
+                                    }
+
                                 case OpcodeType.OP_CHECKMULTISIG:
                                 case OpcodeType.OP_CHECKMULTISIGVERIFY:
                                     {

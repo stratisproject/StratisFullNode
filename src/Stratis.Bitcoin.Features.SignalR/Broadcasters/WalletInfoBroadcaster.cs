@@ -1,16 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.SignalR.Events;
-using Stratis.Bitcoin.Features.Wallet;
-using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SignalR.Broadcasters
 {
@@ -19,96 +16,97 @@ namespace Stratis.Bitcoin.Features.SignalR.Broadcasters
     /// </summary>
     public class WalletInfoBroadcaster : ClientBroadcasterBase
     {
-        private readonly IWalletManager walletManager;
-        private readonly IConnectionManager connectionManager;
-        private readonly ChainIndexer chainIndexer;
+        private readonly IWalletService walletService;
+        private readonly bool includeAddressBalances;
+        private string currentWalletName;
+        private string currentAddress;
+        private string currentAccount;
 
         public WalletInfoBroadcaster(
             ILoggerFactory loggerFactory,
-            IWalletManager walletManager,
-            IConnectionManager connectionManager,
+            IWalletService walletService,
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
-            ChainIndexer chainIndexer,
-            EventsHub eventsHub)
+            EventsHub eventsHub, bool includeAddressBalances = false)
             : base(eventsHub, loggerFactory, nodeLifetime, asyncProvider)
         {
-            this.walletManager = walletManager;
-            this.connectionManager = connectionManager;
-            this.chainIndexer = chainIndexer;
+            this.walletService = walletService;
+            this.includeAddressBalances = includeAddressBalances;
         }
 
-        protected override IEnumerable<IClientEvent> GetMessages()
+        protected override async Task<IEnumerable<IClientEvent>> GetMessages(CancellationToken cancellationToken)
         {
-            foreach (string walletName in this.walletManager.GetWalletsNames())
+            var clientEvents = new List<WalletGeneralInfoClientEvent>();
+
+            // If no wallet name is specified iterate over all the wallets. This is to
+            // ensure backward compatibility with the older Core wallet.
+            if (string.IsNullOrEmpty(this.currentWalletName))
             {
-                WalletGeneralInfoClientEvent clientEvent = null;
-                try
+                foreach (string walletName in await this.walletService.GetWalletNames(cancellationToken))
                 {
-                    Wallet.Wallet wallet = this.walletManager.GetWallet(walletName);
-                    IEnumerable<AccountBalance> balances = this.walletManager.GetBalances(walletName);
-                    IList<AccountBalanceModel> accountBalanceModels = new List<AccountBalanceModel>();
-                    foreach (var balance in balances)
-                    {
-                        HdAccount account = balance.Account;
-
-                        var accountBalanceModel = new AccountBalanceModel
-                        {
-                            CoinType = (CoinType) wallet.Network.Consensus.CoinType,
-                            Name = account.Name,
-                            HdPath = account.HdPath,
-                            AmountConfirmed = balance.AmountConfirmed,
-                            AmountUnconfirmed = balance.AmountUnconfirmed,
-                            SpendableAmount = balance.SpendableAmount,
-                            Addresses = account.GetCombinedAddresses().Select(address =>
-                            {
-                                (Money confirmedAmount, Money unConfirmedAmount) = address.GetBalances();
-                                return new AddressModel
-                                {
-                                    Address = address.Address,
-                                    IsUsed = address.Transactions.Any(),
-                                    IsChange = address.IsChangeAddress(),
-                                    AmountConfirmed = confirmedAmount,
-                                    AmountUnconfirmed = unConfirmedAmount
-                                };
-                            })
-                        };
-
-                        accountBalanceModels.Add(accountBalanceModel);
-                    }
-
-                    clientEvent = new WalletGeneralInfoClientEvent
-                    {
-                        WalletName = walletName,
-                        Network = wallet.Network,
-                        CreationTime = wallet.CreationTime,
-                        LastBlockSyncedHeight = wallet.AccountsRoot.Single().LastBlockSyncedHeight,
-                        ConnectedNodes = this.connectionManager.ConnectedPeers.Count(),
-                        ChainTip = this.chainIndexer.Tip.Height,
-                        IsChainSynced = this.chainIndexer.IsDownloaded(),
-                        IsDecrypted = true,
-                        AccountsBalances = accountBalanceModels
-                    };
-
-                    // Get the wallet's file path.
-                    (string folder, IEnumerable<string> fileNameCollection) = this.walletManager.GetWalletsFiles();
-                    string searchFile =
-                        Path.ChangeExtension(walletName, this.walletManager.GetWalletFileExtension());
-                    string fileName = fileNameCollection.FirstOrDefault(i => i.Equals(searchFile));
-                    if (!string.IsNullOrEmpty(folder) && !string.IsNullOrEmpty(fileName))
-                    {
-                        clientEvent.WalletFilePath = Path.Combine(folder, fileName);
-                    }
+                    clientEvents.Add(await this.GetWalletInformationAsync(walletName, cancellationToken));
                 }
-                catch (Exception e)
+            }
+            // Else only ask for the specified wallet.
+            else
+                clientEvents.Add(await this.GetWalletInformationAsync(this.currentWalletName, cancellationToken));
+
+            return clientEvents;
+        }
+
+        private async Task<WalletGeneralInfoClientEvent> GetWalletInformationAsync(string walletName, CancellationToken cancellationToken)
+        {
+            WalletGeneralInfoClientEvent clientEvent = null;
+
+            try
+            {
+                Task<WalletGeneralInfoModel> generalInfo = this.walletService.GetWalletGeneralInfo(walletName, cancellationToken);
+                Task<WalletBalanceModel> balances = this.walletService.GetBalance(walletName, null, this.includeAddressBalances, cancellationToken);
+
+                await Task.WhenAll(generalInfo, balances);
+
+                clientEvent = new WalletGeneralInfoClientEvent(generalInfo.Result)
                 {
-                    this.logger.LogError(e, "Exception occurred: {0}");
+                    AccountsBalances = balances.Result.AccountsBalances
+                };
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError(e, "Exception occurred: {0}");
+            }
+
+            return clientEvent;
+        }
+
+        protected override void OnInitialise()
+        {
+            base.OnInitialise();
+
+            this.eventsHub.SubscribeToIncomingSignalRMessages(this.GetType().Name, (messageArgs) =>
+            {
+                if (messageArgs.Args.ContainsKey("currentWallet"))
+                {
+                    this.currentWalletName = messageArgs.Args["currentWallet"];
                 }
 
-                if (null != clientEvent)
+                if (messageArgs.Args.ContainsKey("currentAccount"))
                 {
-                    yield return clientEvent;
+                    this.currentAccount = messageArgs.Args["currentAccount"];
                 }
+
+                if (messageArgs.Args.ContainsKey("currentAddress"))
+                {
+                    this.currentAddress = messageArgs.Args["currentAddress"];
+                }
+            });
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing)
+            {
+                this.eventsHub.UnSubscribeToIncomingSignalRMessages(this.GetType().Name);
             }
         }
     }

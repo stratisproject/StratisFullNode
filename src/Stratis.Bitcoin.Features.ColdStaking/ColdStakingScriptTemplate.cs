@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
 using static NBitcoin.OpcodeType;
 
@@ -186,8 +187,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
             Guard.Assert(!needMoreCheck);
 
-            hotPubKeyHash = new KeyId(scriptPubKey.ToBytes(true).SafeSubarray(6, 20));
-            coldPubKeyHash = new KeyId(scriptPubKey.ToBytes(true).SafeSubarray(28, 20));
+            hotPubKeyHash = new AccountRestrictedKeyId(scriptPubKey.ToBytes(true).SafeSubarray(6, 20), ColdStakingManager.HotWalletAccountIndex);
+            coldPubKeyHash = new AccountRestrictedKeyId(scriptPubKey.ToBytes(true).SafeSubarray(28, 20), ColdStakingManager.ColdWalletAccountIndex);
 
             return true;
         }

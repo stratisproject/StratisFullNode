@@ -77,7 +77,8 @@ namespace Stratis.Bitcoin.Networks
                 maxStandardVersion: 2,
                 maxStandardTxWeight: 100_000,
                 maxBlockSigopsCost: 20_000,
-                maxStandardTxSigopsCost: 20_000 / 5
+                maxStandardTxSigopsCost: 20_000 / 5,
+                witnessScaleFactor: 4
             );
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -89,7 +90,22 @@ namespace Stratis.Bitcoin.Networks
 
             var bip9Deployments = new StratisBIP9Deployments()
             {
-                [StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2,
+                [StratisBIP9Deployments.TestDummy] = new BIP9DeploymentsParameters("TestDummy", 28,
+                    new DateTime(2019, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2020, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultMainnetThreshold),
+
+                [StratisBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0,
+                    new DateTime(2019, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2020, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultMainnetThreshold),
+
+                [StratisBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1,
+                    new DateTime(2019, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    new DateTime(2020, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                    BIP9DeploymentsParameters.DefaultMainnetThreshold),
+
+                [StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, 
                     new DateTime(2019, 12, 2, 0, 0, 0, DateTimeKind.Utc),
                     new DateTime(2020, 12, 2, 0, 0, 0, DateTimeKind.Utc),
                     BIP9DeploymentsParameters.DefaultMainnetThreshold)
@@ -116,7 +132,7 @@ namespace Stratis.Bitcoin.Networks
                 premineReward: Money.Coins(98000000),
                 proofOfWorkReward: Money.Coins(4),
                 powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                powTargetSpacing: TimeSpan.FromSeconds(10 * 60),
+                targetSpacing: TimeSpan.FromSeconds(64),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: false,
@@ -128,6 +144,8 @@ namespace Stratis.Bitcoin.Networks
                 proofOfStakeLimitV2: new BigInteger(uint256.Parse("000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffff").ToBytes(false)),
                 proofOfStakeReward: Money.COIN
             );
+
+            this.Consensus.PosEmptyCoinbase = true;
 
             this.Base58Prefixes = new byte[12][];
             this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (63) };
@@ -181,12 +199,9 @@ namespace Stratis.Bitcoin.Networks
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];
-            // Bech32 is currently unsupported on Stratis - once supported uncomment lines below
-            //var encoder = new Bech32Encoder("bc");
-            //this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
-            //this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
-            this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = null;
-            this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = null;
+            var encoder = new Bech32Encoder("strat");
+            this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
+            this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
 
             this.DNSSeeds = new List<DNSSeedData>
             {
@@ -205,8 +220,7 @@ namespace Stratis.Bitcoin.Networks
 
             this.StandardScriptsRegistry = new StratisStandardScriptsRegistry();
 
-            // 64 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * 64 / 2);
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
             Assert(this.Consensus.HashGenesisBlock == uint256.Parse("0x0000066e91e46e5a264d42c89e1204963b2ee6be230b443e9159020539d972af"));
             Assert(this.Genesis.Header.HashMerkleRoot == uint256.Parse("0x65a26bc20b0351aebf05829daefa8f7db2f800623439f3c114257c91447f1518"));
 
@@ -285,7 +299,8 @@ namespace Stratis.Bitcoin.Networks
 
             Transaction txNew = consensusFactory.CreateTransaction();
             txNew.Version = 1;
-            txNew.Time = nTime;
+            // TODO: Need to remove the Stratis* networks from the solution (they will remain in SBFN)
+            //txNew.Time = nTime;
             txNew.AddInput(new TxIn()
             {
                 ScriptSig = new Script(Op.GetPushOp(0), new Op()

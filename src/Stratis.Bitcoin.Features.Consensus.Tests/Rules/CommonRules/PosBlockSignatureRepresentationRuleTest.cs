@@ -19,10 +19,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void Run_IsCanonicalBlockSignature_DoesNotThrowException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),
@@ -48,10 +48,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         [Fact]
         public void Run_IsNotCanonicalBlockSignature_ThrowsBadBlockSignatureConsensusErrorException()
         {
-            Block block = KnownNetworks.StratisMain.Consensus.ConsensusFactory.CreateBlock();
-            block.Transactions.Add(KnownNetworks.StratisMain.CreateTransaction());
+            Block block = KnownNetworks.StraxMain.Consensus.ConsensusFactory.CreateBlock();
+            block.Transactions.Add(KnownNetworks.StraxMain.CreateTransaction());
 
-            Transaction transaction = KnownNetworks.StratisMain.CreateTransaction();
+            Transaction transaction = KnownNetworks.StraxMain.CreateTransaction();
             transaction.Inputs.Add(new TxIn()
             {
                 PrevOut = new OutPoint(new uint256(15), 1),

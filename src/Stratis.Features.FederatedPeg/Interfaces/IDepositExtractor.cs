@@ -2,6 +2,7 @@
 using NBitcoin;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Features.FederatedPeg.Models;
+using Stratis.Features.FederatedPeg.SourceChain;
 
 namespace Stratis.Features.FederatedPeg.Interfaces
 {
@@ -17,8 +18,9 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         /// <param name="block">The block containing the transactions.</param>
         /// <param name="blockHeight">The height of the block containing the transactions.</param>
+        /// <param name="depositRetrievalTypes">The types of retrieval to perform. The type will determine the value of the deposit to be processed.</param>
         /// <returns>The extracted deposit (if any), otherwise returns an empty list.</returns>
-        IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight);
+        IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType[] depositRetrievalTypes);
 
         /// <summary>
         /// Extracts a deposit from a transaction (if any).
@@ -28,14 +30,5 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="blockHash">The block hash of the block containing the transaction.</param>
         /// <returns>The extracted deposit (if any), otherwise <c>null</c>.</returns>
         IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash);
-
-        /// <summary>
-        /// Gets deposits from the newly matured block.
-        /// </summary>
-        /// <param name="newlyMaturedBlock">The newly matured block.</param>
-        /// <returns>The matured deposits.</returns>
-        MaturedBlockDepositsModel ExtractBlockDeposits(ChainedHeaderBlock newlyMaturedBlock);
-
-        uint MinimumDepositConfirmations { get; }
     }
 }

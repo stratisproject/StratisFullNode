@@ -16,6 +16,7 @@ using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 {
@@ -43,9 +44,10 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(this.counterChainNetwork)
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractCollateralPoAMining()
-                .CheckForPoAMembersCollateral()
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .AddPoACollateralMiningCapability()
+                .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -57,6 +59,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .MockIBD()
                 .ReplaceTimeProvider(this.timeProvider)
                 .AddFastMiningCapability();

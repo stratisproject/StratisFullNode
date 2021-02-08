@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.MemoryPool
@@ -28,8 +29,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>The fee delta.</summary>
         public long FeeDelta { get; set; }
     }
-
-;
 
     /// <summary>
     /// Memory pool of pending transactions.
@@ -175,6 +174,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>Instance logger for the memory pool.</summary>
         private readonly ILogger logger;
 
+        private readonly ISignals signals;
+
         /// <summary>
         /// Constructs a new TxMempool object.
         /// </summary>
@@ -182,7 +183,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <param name="blockPolicyEstimator">The block policy estimator object.</param>
         /// <param name="loggerFactory">Factory for creating instance logger.</param>
         /// <param name="nodeSettings">Full node settings.</param>
-        public TxMempool(IDateTimeProvider dateTimeProvider, BlockPolicyEstimator blockPolicyEstimator, ILoggerFactory loggerFactory, NodeSettings nodeSettings)
+        public TxMempool(IDateTimeProvider dateTimeProvider, BlockPolicyEstimator blockPolicyEstimator, ILoggerFactory loggerFactory, NodeSettings nodeSettings, ISignals signals = null)
         {
             this.MapTx = new IndexedTransactionSet();
             this.mapLinks = new TxlinksMap();
@@ -190,6 +191,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.mapDeltas = new Dictionary<uint256, DeltaPair>();
             this.vTxHashes = new Dictionary<TxMempoolEntry, uint256>(); // All tx witness hashes/entries in mapTx, in random order.
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.signals = signals;
             this.TimeProvider = dateTimeProvider;
             this.InnerClear(); //lock free clear
 
@@ -314,7 +316,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             string dummy;
             this.CalculateMemPoolAncestors(entry, setAncestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, out dummy);
             bool returnVal = this.AddUnchecked(hash, entry, setAncestors, validFeeEstimate);
-            
+
             return returnVal;
         }
 
@@ -374,6 +376,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
             this.vTxHashes.Add(entry, tx.GetWitHash());
             //entry.vTxHashesIdx = vTxHashes.size() - 1;
+
+            if (this.signals != null)
+            {
+                this.signals.Publish(new TransactionAddedToMemoryPool(entry.Transaction));
+            }
 
             return true;
         }
@@ -448,7 +455,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             Guard.Assert(this.MapTx.ContainsKey(entry.TransactionHash));
             TxLinks it = this.mapLinks.TryGet(entry);
             Guard.Assert(it != null);
-            
+
             return it.Children;
         }
 
@@ -579,7 +586,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
                     }
                 }
             }
-            
+
             return true;
         }
 
@@ -593,7 +600,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
                     return false;
                 }
             }
-            
+
             return true;
         }
 
@@ -644,13 +651,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         }
 
         /// <inheritdoc />
-        public void RemoveStaged(SetEntries stage, bool updateDescendants)
+        public void RemoveStaged(SetEntries stage, bool updateDescendants, bool removedForBlock = false)
         {
             //AssertLockHeld(cs);
             this.UpdateForRemoveFromMempool(stage, updateDescendants);
             foreach (TxMempoolEntry it in stage)
             {
-                this.RemoveUnchecked(it);
+                this.RemoveUnchecked(it, removedForBlock);
             }
         }
 
@@ -671,7 +678,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
                 this.CalculateDescendants(removeit, stage);
             }
             this.RemoveStaged(stage, false);
-            
+
             return stage.Count;
         }
 
@@ -679,7 +686,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// Removes entry from memory pool.
         /// </summary>
         /// <param name="entry">Entry to remove.</param>
-        private void RemoveUnchecked(TxMempoolEntry entry)
+        private void RemoveUnchecked(TxMempoolEntry entry, bool removedForBlock)
         {
             uint256 hash = entry.TransactionHash;
             foreach (TxIn txin in entry.Transaction.Inputs)
@@ -707,6 +714,11 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.MapTx.Remove(entry);
             this.nTransactionsUpdated++;
             this.MinerPolicyEstimator.RemoveTx(hash);
+
+            if (this.signals != null)
+            {
+                this.signals.Publish(new TransactionRemovedFromMemoryPool(entry.Transaction, removedForBlock));
+            }
         }
 
         /// <inheritdoc />
@@ -840,7 +852,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
                 {
                     var stage = new SetEntries();
                     stage.Add(entry);
-                    this.RemoveStaged(stage, true);
+                    this.RemoveStaged(stage, true, true);
                 }
 
                 this.RemoveConflicts(tx);
@@ -878,7 +890,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// </summary>
         /// <param name="hash">Transaction hash.</param>
         private void ClearPrioritisation(uint256 hash)
-        { 
+        {
             //LOCK(cs);
             this.mapDeltas.Remove(hash);
         }

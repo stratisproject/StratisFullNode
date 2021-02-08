@@ -18,7 +18,7 @@ namespace Stratis.Bitcoin.Tests.P2P
 
         public PeerAddressManagerTests()
         {
-            this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(new StratisRegTest()));
+            this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(new StraxRegTest()));
         }
 
         [Fact]

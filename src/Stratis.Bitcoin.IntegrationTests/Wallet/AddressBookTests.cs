@@ -22,21 +22,23 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public AddressBookTests()
         {
-            this.network = new StratisRegTest();
+            this.network = new StraxRegTest();
         }
 
         [Fact]
-        public async Task AddAnAddressBookEntry()
+        public async Task AddAnAddressBookEntryAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).Start();
 
+                string address1 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+
                 // Act.
                 AddressBookEntryModel newEntry = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label1", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Assert.
@@ -47,41 +49,44 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 addressBook.Addresses.Should().ContainSingle();
                 addressBook.Addresses.Single().Label.Should().Be("label1");
-                addressBook.Addresses.Single().Address.Should().Be("TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu");
+                addressBook.Addresses.Single().Address.Should().Be(address1);
             }
         }
 
         [Fact]
-        public async Task AddAnAddressBookEntryWhenAnEntryAlreadyExists()
+        public async Task AddAnAddressBookEntryWhenAnEntryAlreadyExistsAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).Start();
 
+                string address1 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address2 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+
                 // Add a first address.
                 AddressBookEntryModel newEntry = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label1", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
-                
+
                 // Act.
                 // Add an entry with the same address and label already exist.
                 Func<Task> firstAttempt = async () => await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label1", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Add an entry with the same address only already exist.
                 Func<Task> secondAttempt = async () => await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label2", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label2", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Add an entry with the same label already exist.
                 Func<Task> thirdAttempt = async () => await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TWMxjBk5bVdv8dhDJ645Z5RoxfrbRUJewa" })
+                    .PostJsonAsync(new { label = "label1", address = address2 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Assert.
@@ -91,7 +96,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 List<ErrorModel> errors = errorResponse.Errors;
                 response.StatusCode.Should().Be(HttpStatusCode.Conflict);
                 errors.Should().ContainSingle();
-                errors.First().Message.Should().Be($"An entry with label 'label1' or address 'TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu' already exist in the address book.");
+                errors.First().Message.Should().Be($"An entry with label 'label1' or address '{address1}' already exist in the address book.");
 
                 exception = secondAttempt.Should().Throw<FlurlHttpException>().Which;
                 response = exception.Call.Response;
@@ -99,7 +104,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 errors = errorResponse.Errors;
                 response.StatusCode.Should().Be(HttpStatusCode.Conflict);
                 errors.Should().ContainSingle();
-                errors.First().Message.Should().Be($"An entry with label 'label2' or address 'TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu' already exist in the address book.");
+                errors.First().Message.Should().Be($"An entry with label 'label2' or address '{address1}' already exist in the address book.");
 
                 exception = thirdAttempt.Should().Throw<FlurlHttpException>().Which;
                 response = exception.Call.Response;
@@ -107,12 +112,12 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 errors = errorResponse.Errors;
                 response.StatusCode.Should().Be(HttpStatusCode.Conflict);
                 errors.Should().ContainSingle();
-                errors.First().Message.Should().Be($"An entry with label 'label1' or address 'TWMxjBk5bVdv8dhDJ645Z5RoxfrbRUJewa' already exist in the address book.");
+                errors.First().Message.Should().Be($"An entry with label 'label1' or address '{address2}' already exist in the address book.");
             }
         }
 
         [Fact]
-        public async Task RemoveAnAddressBookEntryWhenNoSuchEntryExists()
+        public async Task RemoveAnAddressBookEntryWhenNoSuchEntryExistsAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -139,17 +144,19 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         }
 
         [Fact]
-        public async Task RemoveAnAddressBookEntryWhenAnEntryExists()
+        public async Task RemoveAnAddressBookEntryWhenAnEntryExistsAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).Start();
 
+                string address1 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+
                 // Add a first address.
                 AddressBookEntryModel newEntry = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label1", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Check the address is in the address book.
@@ -179,85 +186,97 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         }
 
         [Fact]
-        public async Task GetAnAddressBook()
+        public async Task GetAnAddressBookAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).Start();
 
+                string address1 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address2 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address3 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address4 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address5 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+
                 // Add a few addresses.
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label1", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label2", address = "TWMxjBk5bVdv8dhDJ645Z5RoxfrbRUJewa" })
+                    .PostJsonAsync(new { label = "label2", address = address2 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label3", address = "TC52WGLwE1KE1bXvD6f4MC7i5QtxNUGiUb" })
+                    .PostJsonAsync(new { label = "label3", address = address3 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label4", address = "TDfosbE6ChGKdH9cVpfgbKzbvFJGLs1zgq" })
+                    .PostJsonAsync(new { label = "label4", address = address4 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label5", address = "TM9i96uQDFDancRp5bUR5ea16CMWLkCYhK" })
+                    .PostJsonAsync(new { label = "label5", address = address5 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Act.
                 AddressBookModel addressBook = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook")
                     .GetJsonAsync<AddressBookModel>();
-                
+
                 // Assert.
                 addressBook.Addresses.Should().HaveCount(5);
                 addressBook.Addresses.First().Label.Should().Be("label1");
-                addressBook.Addresses.First().Address.Should().Be("TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu");
+                addressBook.Addresses.First().Address.Should().Be(address1);
                 addressBook.Addresses.Last().Label.Should().Be("label5");
-                addressBook.Addresses.Last().Address.Should().Be("TM9i96uQDFDancRp5bUR5ea16CMWLkCYhK");
+                addressBook.Addresses.Last().Address.Should().Be(address5);
             }
         }
 
         [Fact]
-        public async Task GetAnAddressBookWithPagination()
+        public async Task GetAnAddressBookWithPaginationAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).Start();
 
+                string address1 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address2 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address3 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address4 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+                string address5 = new Key().PubKey.Hash.GetAddress(this.network).ToString();
+
                 // Add a few addresses.
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label1", address = "TQNyrEPc4qHxWN96dBAjncBeB2ghJPqYVu" })
+                    .PostJsonAsync(new { label = "label1", address = address1 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label2", address = "TWMxjBk5bVdv8dhDJ645Z5RoxfrbRUJewa" })
+                    .PostJsonAsync(new { label = "label2", address = address2 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label3", address = "TC52WGLwE1KE1bXvD6f4MC7i5QtxNUGiUb" })
+                    .PostJsonAsync(new { label = "label3", address = address3 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label4", address = "TDfosbE6ChGKdH9cVpfgbKzbvFJGLs1zgq" })
+                    .PostJsonAsync(new { label = "label4", address = address4 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("addressbook/address")
-                    .PostJsonAsync(new { label = "label5", address = "TM9i96uQDFDancRp5bUR5ea16CMWLkCYhK" })
+                    .PostJsonAsync(new { label = "label5", address = address5 })
                     .ReceiveJson<AddressBookEntryModel>();
 
                 // Act.
@@ -278,9 +297,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Assert.
                 queryResult.Addresses.Should().HaveCount(3);
                 queryResult.Addresses.First().Label.Should().Be("label3");
-                queryResult.Addresses.First().Address.Should().Be("TC52WGLwE1KE1bXvD6f4MC7i5QtxNUGiUb");
+                queryResult.Addresses.First().Address.Should().Be(address3);
                 queryResult.Addresses.Last().Label.Should().Be("label5");
-                queryResult.Addresses.Last().Address.Should().Be("TM9i96uQDFDancRp5bUR5ea16CMWLkCYhK");
+                queryResult.Addresses.Last().Address.Should().Be(address5);
 
                 // Act.
                 queryResult = await $"http://localhost:{node.ApiPort}/api"
@@ -291,10 +310,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Assert.
                 queryResult.Addresses.Should().HaveCount(3);
                 queryResult.Addresses.First().Label.Should().Be("label3");
-                queryResult.Addresses.First().Address.Should().Be("TC52WGLwE1KE1bXvD6f4MC7i5QtxNUGiUb");
+                queryResult.Addresses.First().Address.Should().Be(address3);
                 queryResult.Addresses.Last().Label.Should().Be("label5");
-                queryResult.Addresses.Last().Address.Should().Be("TM9i96uQDFDancRp5bUR5ea16CMWLkCYhK");
-
+                queryResult.Addresses.Last().Address.Should().Be(address5);
             }
         }
     }

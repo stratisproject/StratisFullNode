@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -17,14 +18,13 @@ namespace Stratis.Bitcoin.Tests.P2P
 {
     public sealed class PeerSelectorTests : LogsTestBase
     {
-        private readonly ExtendedLoggerFactory extendedLoggerFactory;
+        private readonly ILoggerFactory extendedLoggerFactory;
         private readonly ConnectionManagerSettings connectionManagerSettings;
 
         public PeerSelectorTests()
         {
-            this.extendedLoggerFactory = new ExtendedLoggerFactory();
-            this.extendedLoggerFactory.AddConsoleWithFilters();
-            this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(new StratisRegTest()));
+            this.extendedLoggerFactory = ExtendedLoggerFactory.Create();
+            this.connectionManagerSettings = new ConnectionManagerSettings(NodeSettings.Default(new StraxRegTest()));
         }
 
         /// <summary>

@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 {
                     if (!tx.IsCoinBase && !view.HaveInputs(tx))
                     {
-                        this.Logger.LogDebug("Transaction '{0}' has not inputs", tx.GetHash());
+                        this.Logger.LogDebug("Transaction '{0}' has no inputs", tx.GetHash());
                         this.Logger.LogTrace("(-)[BAD_TX_NO_INPUT]");
                         ConsensusErrors.BadTransactionMissingInput.Throw();
                     }
@@ -85,10 +85,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                         {
                             TxIn input = tx.Inputs[inputIndex];
 
+                            TxOut prevOut = view.GetOutputFor(input);
+
+                            // If there are any consensus-specific requirements to inhibit spends from or to particular scripts, they get enforced here.
+                            this.AllowSpend(prevOut, tx);
+
                             inputsToCheck.Add((
                                 tx: tx,
                                 inputIndexCopy: inputIndex,
-                                txOut: view.GetOutputFor(input),
+                                txOut: prevOut,
                                 txData,
                                 input: input,
                                 flags
@@ -129,6 +134,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 }
             }
             else this.Logger.LogDebug("BIP68, SigOp cost, and block reward validation skipped for block at height {0}.", index.Height);
+        }
+
+        /// <summary>
+        /// Any non-signature checks that prevent the spending of a given UTXO.
+        /// </summary>
+        /// <param name="prevOut">The input being checked for validity.</param>
+        /// <param name="spendingTx">The transaction that attempts to spend the given input.</param>
+        protected virtual void AllowSpend(TxOut prevOut, Transaction spendingTx)
+        {
         }
 
         protected abstract Money GetTransactionFee(UnspentOutputSet view, Transaction tx);
@@ -174,7 +188,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             ChainedHeader index = context.ValidationContext.ChainedHeaderToValidate;
             UnspentOutputSet view = (context as UtxoRuleContext).UnspentOutputSet;
 
-            view.Update(transaction, index.Height);
+            view.Update(this.Parent.Network, transaction, index.Height);
         }
 
         /// <summary>
@@ -201,14 +215,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <param name="coins">UTXOs to check the maturity of.</param>
         /// <param name="spendHeight">Height at which coins are attempted to be spent.</param>
         /// <exception cref="ConsensusErrors.BadTransactionPrematureCoinbaseSpending">Thrown if transaction tries to spend coins that are not mature.</exception>
-        public void CheckCoinbaseMaturity(UnspentOutputs coins, int spendHeight)
+        public void CheckCoinbaseMaturity(UnspentOutput coins, int spendHeight)
         {
             // If prev is coinbase, check that it's matured
-            if (coins.IsCoinbase)
+            if (coins.Coins.IsCoinbase)
             {
-                if ((spendHeight - coins.Height) < this.Consensus.CoinbaseMaturity)
+                if ((spendHeight - coins.Coins.Height) < this.Consensus.CoinbaseMaturity)
                 {
-                    this.Logger.LogDebug("Coinbase transaction height {0} spent at height {1}, but maturity is set to {2}.", coins.Height, spendHeight, this.Consensus.CoinbaseMaturity);
+                    this.Logger.LogDebug("Coinbase transaction height {0} spent at height {1}, but maturity is set to {2}.", coins.Coins.Height, spendHeight, this.Consensus.CoinbaseMaturity);
                     this.Logger.LogTrace("(-)[COINBASE_PREMATURE_SPENDING]");
                     ConsensusErrors.BadTransactionPrematureCoinbaseSpending.Throw();
                 }
@@ -218,17 +232,17 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <summary>
         /// Network specific logic that checks the maturity of UTXO sets.
         /// <para>
-        /// Refer to <see cref="CheckMaturity(UnspentOutputs, int)"/>.
+        /// Refer to <see cref="CheckMaturity(UnspentOutput, int)"/>.
         /// </para>
         /// </summary>
-        public abstract void CheckMaturity(UnspentOutputs coins, int spendHeight);
+        public abstract void CheckMaturity(UnspentOutput coins, int spendHeight);
 
         /// <summary>
         /// Contains checks that need to be performed on each input once UTXO data is available.
         /// </summary>
         /// <param name="transaction">The transaction that is having its input examined.</param>
         /// <param name="coins">The unspent output consumed by the input being examined.</param>
-        protected virtual void CheckInputValidity(Transaction transaction, UnspentOutputs coins)
+        protected virtual void CheckInputValidity(Transaction transaction, UnspentOutput coins)
         {
         }
 
@@ -253,15 +267,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             for (int i = 0; i < transaction.Inputs.Count; i++)
             {
                 OutPoint prevout = transaction.Inputs[i].PrevOut;
-                UnspentOutputs coins = inputs.AccessCoins(prevout.Hash);
+                UnspentOutput coins = inputs.AccessCoins(prevout);
 
                 this.CheckMaturity(coins, spendHeight);
 
                 this.CheckInputValidity(transaction, coins);
 
                 // Check for negative or overflow input values.
-                valueIn += coins.TryGetOutput(prevout.N).Value;
-                if (!this.MoneyRange(coins.TryGetOutput(prevout.N).Value) || !this.MoneyRange(valueIn))
+                valueIn += coins.Coins.TxOut.Value;
+                if (!this.MoneyRange(coins.Coins.TxOut.Value) || !this.MoneyRange(valueIn))
                 {
                     this.Logger.LogTrace("(-)[BAD_TX_INPUT_VALUE]");
                     ConsensusErrors.BadTransactionInputValueOutOfRange.Throw();

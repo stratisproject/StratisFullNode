@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
@@ -10,7 +10,6 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Networks;
 using Stratis.Sidechains.Networks;
-using Xunit.Sdk;
 
 namespace FederationSetup
 {
@@ -79,30 +78,30 @@ namespace FederationSetup
             switch (command)
             {
                 case SwitchExit:
-                {
-                   Environment.Exit(0);
-                   break;
-                }
+                    {
+                        Environment.Exit(0);
+                        break;
+                    }
                 case SwitchMenu:
-                {
-                    HandleSwitchMenuCommand(args);
-                    break;
-                }
+                    {
+                        HandleSwitchMenuCommand(args);
+                        break;
+                    }
                 case SwitchMineGenesisBlock:
-                {
-                    HandleSwitchMineGenesisBlockCommand(userInput);
-                    break;
-                }
+                    {
+                        HandleSwitchMineGenesisBlockCommand(userInput);
+                        break;
+                    }
                 case SwitchGenerateFedPublicPrivateKeys:
-                {
-                    HandleSwitchGenerateFedPublicPrivateKeysCommand(args);
-                    break;
-                }
+                    {
+                        HandleSwitchGenerateFedPublicPrivateKeysCommand(args);
+                        break;
+                    }
                 case SwitchGenerateMultiSigAddresses:
-                {
-                    HandleSwitchGenerateMultiSigAddressesCommand(args);
-                    break;
-                }
+                    {
+                        HandleSwitchGenerateMultiSigAddressesCommand(args);
+                        break;
+                    }
             }
         }
 
@@ -152,17 +151,17 @@ namespace FederationSetup
             isMultisig = Array.Find(args, element =>
                 element.StartsWith("-ismultisig=", StringComparison.Ordinal));
 
-            if (String.IsNullOrEmpty(passphrase))
+            if (string.IsNullOrEmpty(passphrase))
                 throw new ArgumentException("The -passphrase=\"<passphrase>\" argument is missing.");
 
             passphrase = passphrase.Replace("-passphrase=", string.Empty);
 
             //ToDo wont allow for datadir with equal sign
-            dataDirPath = String.IsNullOrEmpty(dataDirPath)
+            dataDirPath = string.IsNullOrEmpty(dataDirPath)
                 ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-                : dataDirPath.Replace("-datadir=", String.Empty);
+                : dataDirPath.Replace("-datadir=", string.Empty);
 
-            if (String.IsNullOrEmpty(isMultisig) || isMultisig.Replace("-ismultisig=", String.Empty) == "true")
+            if (string.IsNullOrEmpty(isMultisig) || isMultisig.Replace("-ismultisig=", string.Empty) == "true")
             {
                 GeneratePublicPrivateKeys(passphrase, dataDirPath);
             }
@@ -174,29 +173,37 @@ namespace FederationSetup
             FederationSetup.OutputSuccess();
         }
 
-        private static void HandleSwitchGenerateMultiSigAddressesCommand(string[] args)
+        private static void ConfirmArguments(TextFileConfiguration config, params string[] args)
         {
-            if (args.Length != 4)
-                throw new ArgumentException("Please enter the exact number of argument required.");
+            var missing = new Dictionary<string, string>();
 
-            ConfigReader = new TextFileConfiguration(args);
+            foreach (string arg in args)
+            {
+                if (config.GetOrDefault<string>(arg, null) == null)
+                {
+                    Console.Write(arg + ": ");
+                    missing[arg] = Console.ReadLine();
+                }
+            }
 
-            int quorum = GetQuorumFromArguments();
-            string[] federatedPublicKeys = GetFederatedPublicKeysFromArguments();
+            new TextFileConfiguration(missing.Select(d => $"{d.Key}={d.Value}").ToArray()).MergeInto(config);
 
-            if (quorum > federatedPublicKeys.Length)
-                throw new ArgumentException("Quorum has to be smaller than the number of members within the federation.");
-
-            if (quorum < federatedPublicKeys.Length / 2)
-                throw new ArgumentException("Quorum has to be greater than half of the members within the federation.");
-
-            (Network mainChain, Network sideChain) = GetMainAndSideChainNetworksFromArguments();
-
-            Console.WriteLine($"Creating multisig addresses for {mainChain.Name} and {sideChain.Name}.");
-            Console.WriteLine(new MultisigAddressCreator().CreateMultisigAddresses(mainChain, sideChain, federatedPublicKeys.Select(f => new PubKey(f)).ToArray(), quorum));
+            Console.WriteLine();
         }
 
-        private static void GeneratePublicPrivateKeys(string passphrase, String keyPath, bool isMultiSigOutput = true)
+        private static void HandleSwitchGenerateMultiSigAddressesCommand(string[] args)
+        {
+            ConfigReader = new TextFileConfiguration(args);
+
+            ConfirmArguments(ConfigReader, "network");
+
+            (_, Network sideChain, Network targetMainChain) = GetMainAndSideChainNetworksFromArguments();
+
+            Console.WriteLine($"Creating multisig addresses for {targetMainChain.Name} and {sideChain.Name}.");
+            Console.WriteLine(new MultisigAddressCreator().CreateMultisigAddresses(targetMainChain, sideChain));
+        }
+
+        private static void GeneratePublicPrivateKeys(string passphrase, string keyPath, bool isMultiSigOutput = true)
         {
             // Generate keys for signing.
             var mnemonicForSigningKey = new Mnemonic(Wordlist.English, WordCount.Twelve);
@@ -242,71 +249,37 @@ namespace FederationSetup
             Console.WriteLine(Environment.NewLine);
         }
 
-        private static int GetQuorumFromArguments()
-        {
-            int quorum = ConfigReader.GetOrDefault("quorum", 0);
-
-            if (quorum == 0)
-                throw new ArgumentException("Please specify a quorum.");
-
-            if (quorum < 0)
-                throw new ArgumentException("Please specify a positive number for the quorum.");
-
-            return quorum;
-        }
-
-        private static string[] GetFederatedPublicKeysFromArguments()
-        {
-            string[] pubKeys = null;
-
-            int federatedPublicKeyCount = 0;
-
-            if (ConfigReader.GetAll("fedpubkeys").FirstOrDefault() != null)
-            {
-                pubKeys = ConfigReader.GetAll("fedpubkeys").FirstOrDefault().Split(',');
-                federatedPublicKeyCount = pubKeys.Count();
-            }
-
-            if (federatedPublicKeyCount == 0)
-                throw new ArgumentException("No federation member public keys specified.");
-
-            if (federatedPublicKeyCount % 2 == 0)
-                throw new ArgumentException("The federation must have an odd number of members.");
-
-            if (federatedPublicKeyCount > 15)
-                throw new ArgumentException("The federation can only have up to fifteen members.");
-
-            return pubKeys;
-        }
-
-        private static (Network mainChain, Network sideChain) GetMainAndSideChainNetworksFromArguments()
+        private static (Network mainChain, Network sideChain, Network targetMainChain) GetMainAndSideChainNetworksFromArguments()
         {
             string network = ConfigReader.GetOrDefault("network", (string)null);
 
             if (string.IsNullOrEmpty(network))
                 throw new ArgumentException("Please specify a network.");
 
-            Network mainchainNetwork, sideChainNetwork;
+            Network mainchainNetwork, sideChainNetwork, targetMainchainNetwork;
             switch (network)
             {
                 case "mainnet":
-                    mainchainNetwork = Networks.Stratis.Mainnet();
+                    mainchainNetwork = null;
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Mainnet();
+                    targetMainchainNetwork = Networks.Strax.Mainnet();
                     break;
                 case "testnet":
-                    mainchainNetwork = Networks.Stratis.Testnet();
+                    mainchainNetwork = null;
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Testnet();
+                    targetMainchainNetwork = Networks.Strax.Testnet();
                     break;
                 case "regtest":
-                    mainchainNetwork = Networks.Stratis.Regtest();
+                    mainchainNetwork = null;
                     sideChainNetwork = CirrusNetwork.NetworksSelector.Regtest();
+                    targetMainchainNetwork = Networks.Strax.Regtest();
                     break;
                 default:
                     throw new ArgumentException("Please specify a network such as: mainnet, testnet or regtest.");
 
             }
 
-            return (mainchainNetwork, sideChainNetwork);
+            return (mainchainNetwork, sideChainNetwork, targetMainchainNetwork);
         }
     }
 }

@@ -59,6 +59,8 @@ namespace Stratis.Bitcoin.Features.RPC
             builder.AppendLine("#rpcbind=127.0.0.1");
             builder.AppendLine("#Ip address allowed to connect to RPC (default all: 0.0.0.0 and ::)");
             builder.AppendLine("#rpcallowip=127.0.0.1");
+            builder.AppendLine("#Adjust RPC Content Type (default: application/json; charset=utf-8)");
+            builder.AppendLine("#rpccontenttype=application/json; charset=utf-8");
         }
 
         public override Task InitializeAsync()
@@ -68,7 +70,7 @@ namespace Stratis.Bitcoin.Features.RPC
                 // TODO: The web host wants to create IServiceProvider, so build (but not start)
                 // earlier, if you want to use dependency injection elsewhere
                 this.fullNode.RPCHost = new WebHostBuilder()
-                .UseKestrel()
+                .UseKestrel(o => o.AllowSynchronousIO = true)
                 .ForFullNode(this.fullNode)
                 .UseUrls(this.rpcSettings.GetUrls())
                 .UseIISIntegration()
@@ -110,7 +112,7 @@ namespace Stratis.Bitcoin.Features.RPC
             {
                 this.logger.LogInformation("RPC Server is off based on configuration.");
             }
-            
+
             return Task.CompletedTask;
         }
     }

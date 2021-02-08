@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
             {
                 FeeRate = new FeeRate(Money.Satoshis(50), 1),
                 IncludeWatching = true,
-                ChangeAddress = change,
+                ChangeAddress = change.ToString(),
             });
             TestFundRawTransactionResult(tx, result);
             Assert.True(result1.Fee < result.Fee);

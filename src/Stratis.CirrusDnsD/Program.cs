@@ -13,6 +13,8 @@ using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral;
+using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusDnsD
@@ -45,12 +47,12 @@ namespace Stratis.CirrusDnsD
                 if (dnsSettings.DnsFullNode)
                 {
                     // Build the Dns full node.
-                    node = GetFederatedPegFullNode(nodeSettings);
+                    node = GetSideChainFullNode(nodeSettings);
                 }
                 else
                 {
                     // Build the Dns node.
-                    node = GetFederatedPegDnsNode(nodeSettings);
+                    node = GetDnsNode(nodeSettings);
                 }
 
                 // Run node.
@@ -63,7 +65,7 @@ namespace Stratis.CirrusDnsD
             }
         }
 
-        private static IFullNode GetFederatedPegFullNode(NodeSettings nodeSettings)
+        private static IFullNode GetSideChainFullNode(NodeSettings nodeSettings)
         {
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
@@ -74,9 +76,11 @@ namespace Stratis.CirrusDnsD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
-                .UseSmartContractPoAConsensus()
-                .UseSmartContractPoAMining()
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .CheckCollateralCommitment()
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .UseApi()
                 .AddRPC()
                 .UseDns()
@@ -85,11 +89,12 @@ namespace Stratis.CirrusDnsD
             return node;
         }
 
-        private static IFullNode GetFederatedPegDnsNode(NodeSettings nodeSettings)
+        private static IFullNode GetDnsNode(NodeSettings nodeSettings)
         {
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
-                .UseSmartContractPoAConsensus()
+                .AddPoAFeature()
+                .UsePoAConsensus()
                 .UseApi()
                 .AddRPC()
                 .UseDns()

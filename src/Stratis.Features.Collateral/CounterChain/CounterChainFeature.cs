@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral.CounterChain
 {

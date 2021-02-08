@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.DataEncoders;
+using NBitcoin.Protocol;
 using Newtonsoft.Json.Linq;
 
 namespace Stratis.Bitcoin.Features.RPC
@@ -26,7 +27,7 @@ namespace Stratis.Bitcoin.Features.RPC
         wallet             getrawchangeaddress
         wallet             getreceivedbyaccount
         wallet             getreceivedbyaddress         Yes
-        wallet             gettransaction
+        wallet             gettransaction               Yes
         wallet             getunconfirmedbalance
         wallet             getwalletinfo
         wallet             importprivkey                Yes
@@ -135,9 +136,9 @@ namespace Stratis.Bitcoin.Features.RPC
             return response.Result.Select(t => this.Network.Parse<BitcoinAddress>((string)t));
         }
 
-        public FundRawTransactionResponse FundRawTransaction(Transaction transaction, FundRawTransactionOptions options = null)
+        public FundRawTransactionResponse FundRawTransaction(Transaction transaction, FundRawTransactionOptions options = null, bool? isWitness = null)
         {
-            return FundRawTransactionAsync(transaction, options).GetAwaiter().GetResult();
+            return FundRawTransactionAsync(transaction, options, isWitness).GetAwaiter().GetResult();
         }
 
         public Money GetBalance(int minConf, bool includeWatchOnly)
@@ -162,7 +163,7 @@ namespace Stratis.Bitcoin.Features.RPC
             return Money.Coins(data.Result.Value<decimal>());
         }
 
-        public async Task<FundRawTransactionResponse> FundRawTransactionAsync(Transaction transaction, FundRawTransactionOptions options = null)
+        public async Task<FundRawTransactionResponse> FundRawTransactionAsync(Transaction transaction, FundRawTransactionOptions options = null, bool? isWitness = null)
         {
             if (transaction == null)
                 throw new ArgumentNullException("transaction");
@@ -177,6 +178,9 @@ namespace Stratis.Bitcoin.Features.RPC
 
                 if (options.ChangePosition != null)
                     jOptions.Add(new JProperty("changePosition", options.ChangePosition.Value));
+
+                if (options.ChangeType != null)
+                    jOptions.Add(new JProperty("change_type", options.ChangeType));
 
                 jOptions.Add(new JProperty("includeWatching", options.IncludeWatching));
                 jOptions.Add(new JProperty("lockUnspents", options.LockUnspents));
@@ -197,7 +201,10 @@ namespace Stratis.Bitcoin.Features.RPC
                     jOptions.Add(new JProperty("subtractFeeFromOutputs", array));
                 }
 
-                response = await SendCommandAsync("fundrawtransaction", ToHex(transaction), jOptions).ConfigureAwait(false);
+                if (isWitness.HasValue)
+                    response = await SendCommandAsync("fundrawtransaction", ToHex(transaction), jOptions, isWitness.Value).ConfigureAwait(false);
+                else
+                    response = await SendCommandAsync("fundrawtransaction", ToHex(transaction), jOptions).ConfigureAwait(false);
             }
             else
             {
@@ -213,15 +220,15 @@ namespace Stratis.Bitcoin.Features.RPC
             };
         }
 
-        // NBitcoin internally put a bit in the version number to make difference between transaction without input and transaction with witness.
+        // NBitcoin internally puts a bit in the version number to differentiate between transactions without inputs and transactions with witness data.
         private string ToHex(Transaction tx)
         {
-            // if there is inputs, then it can't be confusing
+            // If there are inputs in the transaction, then it is definitely not ambiguous
             if (tx.Inputs.Any())
                 return tx.ToHex();
 
-            // if there is, do this ACK so that NBitcoin does not change the version number
-            return Encoders.Hex.EncodeData(tx.ToBytes(version: NBitcoin.Protocol.ProtocolVersion.WITNESS_VERSION - 1));
+            // If there are no inputs, do this hack so that NBitcoin does not change the version number when serialising the transaction
+            return tx.ToHex(ProtocolVersion.WITNESS_VERSION - 1);
         }
 
         // getreceivedbyaddress
@@ -254,6 +261,34 @@ namespace Stratis.Bitcoin.Features.RPC
         {
             RPCResponse response = SendCommand(RPCOperations.getreceivedbyaddress, address.ToString(), confirmations);
             return Money.Coins(response.Result.Value<decimal>());
+        }
+
+        public void ImportPubKey(string pubkey, bool rescan = true)
+        {
+            SendCommand(RPCOperations.importpubkey, pubkey, "", rescan);
+        }
+
+        public Transaction GetTransaction(uint256 txid, bool include_watchonly = false, bool throwIfNotFound = true)
+        {
+            return GetTransactionAsync(txid, include_watchonly, throwIfNotFound).GetAwaiter().GetResult();
+        }
+
+        public async Task<Transaction> GetTransactionAsync(uint256 txid, bool include_watchonly = false, bool throwIfNotFound = true)
+        {
+            RPCResponse response = await SendCommandAsync(new RPCRequest(RPCOperations.gettransaction, new[] { txid.ToString(), include_watchonly.ToString() }), throwIfNotFound).ConfigureAwait(false);
+
+            if (throwIfNotFound)
+                response.ThrowIfError();
+
+            if (response.Error != null && response.Error.Code == RPCErrorCode.RPC_INVALID_ADDRESS_OR_KEY)
+                return null;
+
+            response.ThrowIfError();
+
+            // TODO: Return a GetTransactionModel instead
+            Transaction tx = this.network.CreateTransaction();
+            tx.ReadWrite(Encoders.Hex.DecodeData(response.Result["hex"].ToString()), this.network.Consensus.ConsensusFactory);
+            return tx;
         }
 
         // importprivkey

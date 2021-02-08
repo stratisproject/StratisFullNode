@@ -12,7 +12,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
     /// <summary>
     /// Proof of stake override for the coinview rules - BIP68, MaxSigOps and BlockReward checks.
     /// </summary>
-    public sealed class PosCoinviewRule : CoinViewRule
+    /// <remarks>Be aware that changing anything here may change it for <see cref="StraxCoinviewRule"/> as well.</remarks>
+    public class PosCoinviewRule : CoinViewRule
     {
         /// <summary>Provides functionality for checking validity of PoS blocks.</summary>
         private IStakeValidator stakeValidator;
@@ -96,27 +97,19 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         }
 
         /// <inheritdoc />
-        public override void CheckMaturity(UnspentOutputs coins, int spendHeight)
+        public override void CheckMaturity(UnspentOutput coins, int spendHeight)
         {
             base.CheckCoinbaseMaturity(coins, spendHeight);
 
-            if (coins.IsCoinstake)
+            if (coins.Coins.IsCoinstake)
             {
-                if ((spendHeight - coins.Height) < this.consensus.CoinbaseMaturity)
+                if ((spendHeight - coins.Coins.Height) < this.consensus.CoinbaseMaturity)
                 {
-                    this.Logger.LogDebug("Coinstake transaction height {0} spent at height {1}, but maturity is set to {2}.", coins.Height, spendHeight, this.consensus.CoinbaseMaturity);
+                    this.Logger.LogDebug("Coinstake transaction height {0} spent at height {1}, but maturity is set to {2}.", coins.Coins.Height, spendHeight, this.consensus.CoinbaseMaturity);
                     this.Logger.LogTrace("(-)[COINSTAKE_PREMATURE_SPENDING]");
                     ConsensusErrors.BadTransactionPrematureCoinstakeSpending.Throw();
                 }
             }
-        }
-
-        /// <inheritdoc />
-        protected override void CheckInputValidity(Transaction transaction, UnspentOutputs coins)
-        {
-            // Transaction timestamp earlier than input transaction - main.cpp, CTransaction::ConnectInputs
-            if (coins.Time > transaction.Time)
-                ConsensusErrors.BadTransactionEarlyTimestamp.Throw();
         }
 
         /// <summary>

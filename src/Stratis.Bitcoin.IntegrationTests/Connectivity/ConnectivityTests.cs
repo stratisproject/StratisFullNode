@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Connectivity
 
         public ConnectivityTests()
         {
-            this.posNetwork = new StratisRegTest();
+            this.posNetwork = new StraxRegTest();
             this.powNetwork = new BitcoinRegTest();
         }
 

@@ -1,12 +1,12 @@
 # Stratis Docker Images
 
-Here we have some basic Docker images for testing Stratis.BitcoinD and Stratis.StratisD. The images build from the full node master on GitHub. After installing Docker, you can build and run the container with the following. 
+Here we have some basic Docker images for StraxD. The images build from the full node master on GitHub. After installing Docker, you can build and run the container with the following. 
 
 # Build the Docker container 
 
 ```
-cd Stratis.StratisD
-docker build . 
+cd Stratis.StraxD
+docker build -t stratisfullnode/straxmain . 
 ```
 
 # Run the Docker container
@@ -21,17 +21,12 @@ You can optionally use volumes external to the Docker container so that the bloc
 ## Create the volume:
 
 ```
- docker volume create stratisbitcoin
+ docker volume create stratisfullnode
 ```
 
 ### Run StratisD with a volume:
 ```
-docker run --mount source=stratisbitcoin,target=/root/.stratisnode -it <containerId>
-```
-
-### Run BitcoinD with a volume:
-```
-docker run --mount source=stratisbitcoin,target=/root/.stratisbitcoin -it <containerId>
+docker run --mount source=stratisfullnode,target=/root/.stratisnode -it <containerId>
 ```
 
 ## Optionally forward ports from your localhost to the docker image
@@ -39,7 +34,7 @@ docker run --mount source=stratisbitcoin,target=/root/.stratisbitcoin -it <conta
 When running the image, add a `-p <containerPort>:<localPort>` to formward the ports:
 
 ```
-docker run -p 37220:37220 -it <containerId>
+docker run -p 17105:17105 -it <containerId>
 ```
 
 ## Force rebuild of docker images from master
@@ -54,7 +49,7 @@ Modify the Dockerfile to put the conf file in the right location and remove the 
 ``` 
 ---
 
-COPY bitcoin.conf.docker /root/.stratisnode/bitcoin/Main/bitcoin.conf
+COPY strax.conf.docker /root/.stratisnode/strax/StraxMain/strax.conf
 
 --- 
 

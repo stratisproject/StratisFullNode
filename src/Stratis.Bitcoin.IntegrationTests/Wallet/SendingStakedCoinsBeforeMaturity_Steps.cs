@@ -21,8 +21,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         private const decimal OneMillion = 1_000_000;
         private CoreNode receiverNode;
         private const string WalletName = "mywallet";
-        private const string WalletPassword = "123456";
-        private const string WalletPassphrase = "passphrase";
         private const string WalletAccountName = "account 0";
 
         public SendingStakedCoinsBeforeMaturity(ITestOutputHelper outputHelper)
@@ -44,7 +42,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             this.proofOfStakeSteps.PremineNodeWithWallet("ssc-pmnode");
             this.proofOfStakeSteps.MineGenesisAndPremineBlocks();
 
-            this.receiverNode = this.proofOfStakeSteps.nodeBuilder.CreateStratisPosNode(new StratisRegTest(), "ssc-receiver").WithWallet().Start();
+            this.receiverNode = this.proofOfStakeSteps.nodeBuilder.CreateStratisPosNode(new StraxRegTest(), "ssc-receiver").WithWallet().Start();
 
             TestHelper.ConnectAndSync(this.proofOfStakeSteps.PremineNodeWithCoins, this.receiverNode);
         }
@@ -74,7 +72,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             if (walletTransactionModel == null)
                 return null;
 
-            return this.proofOfStakeSteps.PremineNodeWithCoins.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex));
+            return this.proofOfStakeSteps.PremineNodeWithCoins.FullNode.NodeController<WalletController>()
+                .SendTransaction(new SendTransactionRequest(walletTransactionModel.Hex)).GetAwaiter().GetResult();
         }
 
         private IActionResult BuildTransaction()
@@ -89,7 +88,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     Password = this.proofOfStakeSteps.PremineWalletPassword,
                     WalletName = this.proofOfStakeSteps.PremineWallet,
                     FeeAmount = Money.Satoshis(20000).ToString()
-                });
+                }).GetAwaiter().GetResult();
 
             return transactionResult;
         }
@@ -109,7 +108,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         private WalletHistoryModel GetWalletHistory(CoreNode node, string walletName)
         {
-            var walletHistory = node.FullNode.NodeController<WalletController>().GetHistory(new WalletHistoryRequest { WalletName = walletName }) as JsonResult;
+            var walletHistory = node.FullNode.NodeController<WalletController>().GetHistory(new WalletHistoryRequest { WalletName = walletName }).GetAwaiter().GetResult() as JsonResult;
             return walletHistory?.Value as WalletHistoryModel;
         }
 

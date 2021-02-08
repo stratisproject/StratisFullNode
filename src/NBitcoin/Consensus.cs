@@ -48,7 +48,7 @@ namespace NBitcoin
 
         public TimeSpan PowTargetTimespan { get; }
 
-        public TimeSpan PowTargetSpacing { get; }
+        public TimeSpan TargetSpacing { get; }
 
         public bool PowAllowMinDifficultyBlocks { get; }
 
@@ -77,6 +77,9 @@ namespace NBitcoin
 
         /// <inheritdoc />
         public bool IsProofOfStake { get; }
+
+        /// <inheritdoc />
+        public bool PosEmptyCoinbase { get; set; }
 
         /// <inheritdoc />
         public uint256 DefaultAssumeValid { get; }
@@ -111,7 +114,7 @@ namespace NBitcoin
             Money premineReward,
             Money proofOfWorkReward,
             TimeSpan powTargetTimespan,
-            TimeSpan powTargetSpacing,
+            TimeSpan targetSpacing,
             bool powAllowMinDifficultyBlocks,
             bool posNoRetargeting,
             bool powNoRetargeting,
@@ -140,7 +143,7 @@ namespace NBitcoin
             this.BIP34Hash = bip34Hash;
             this.PowLimit = powLimit;
             this.PowTargetTimespan = powTargetTimespan;
-            this.PowTargetSpacing = powTargetSpacing;
+            this.TargetSpacing = targetSpacing;
             this.PowAllowMinDifficultyBlocks = powAllowMinDifficultyBlocks;
             this.PosNoRetargeting = posNoRetargeting;
             this.PowNoRetargeting = powNoRetargeting;

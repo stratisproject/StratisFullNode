@@ -29,7 +29,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
             WriteConfigurationToFile(confFile, configLines);
 
-            var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
             var rpcSettings = new RpcSettings(nodeSettings);
 
@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
             Assert.NotEmpty(rpcSettings.AllowIp);
             Assert.Equal("0.0.0.0", rpcSettings.AllowIp[0].ToString());
         }
-        
+
         [Fact]
         public void Load_DefaultConfiguration_UsesDefaultNodeSettings()
         {
@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
             var configLines = new List<string>() { "" };
             WriteConfigurationToFile(confFile, configLines);
 
-            var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
             var rpcSettings = new RpcSettings(nodeSettings);
 
@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
                 WriteConfigurationToFile(confFile, configLines);
 
-                var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+                var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
                 var rpcSettings = new RpcSettings(nodeSettings);
             });
@@ -102,7 +102,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
                 WriteConfigurationToFile(confFile, configLines);
 
-                var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+                var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
                 var rpcSettings = new RpcSettings(nodeSettings);
             });
@@ -126,7 +126,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
                 WriteConfigurationToFile(confFile, configLines);
 
-                var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+                var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
                 var rpcSettings = new RpcSettings(nodeSettings);
             });
@@ -150,7 +150,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
                 WriteConfigurationToFile(confFile, configLines);
 
-                var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+                var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
                 var rpcSettings = new RpcSettings(nodeSettings);
             });
@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
             WriteConfigurationToFile(confFile, configLines);
 
-            var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
             var rpcSettings = new RpcSettings(nodeSettings);
             string[] urls = rpcSettings.GetUrls();
@@ -194,12 +194,89 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
             WriteConfigurationToFile(confFile, configLines);
 
-            var nodeSettings = new NodeSettings(this.Network, args:new string[] { "-conf=" + confFile });
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
 
             var rpcSettings = new RpcSettings(new NodeSettings(this.Network));
             string[] urls = rpcSettings.GetUrls();
 
             Assert.Empty(urls);
+        }
+
+        [Fact]
+        public void GetUrls_NoBindsConfigured_AllowIp_Configured_Returns_DefaultBindings()
+        {
+            string dir = CreateTestDir(this);
+            string confFile = Path.Combine(dir, "bitcoin.conf");
+            var configLines = new List<string>()
+            {
+                "server=true",
+                "rpcuser=testuser",
+                "rpcpassword=testpassword",
+                "rpcallowip=0.0.0.0"
+            };
+
+            WriteConfigurationToFile(confFile, configLines);
+
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
+
+            var rpcSettings = new RpcSettings(nodeSettings);
+            string[] urls = rpcSettings.GetUrls();
+
+            Assert.Equal("http://[::]:18332/", urls[0]);
+            Assert.Equal("http://0.0.0.0:18332/", urls[1]);
+        }
+
+        [Fact]
+        public void GetUrls_NoBindsConfigured_NoUserPassword_AllowIp_Configured_Returns_DefaultBindings()
+        {
+            string dir = CreateTestDir(this);
+            string confFile = Path.Combine(dir, "bitcoin.conf");
+            var configLines = new List<string>()
+            {
+                "server=true",
+                "rpcallowip=0.0.0.0"
+            };
+
+            WriteConfigurationToFile(confFile, configLines);
+
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
+
+            var rpcSettings = new RpcSettings(nodeSettings);
+            string[] urls = rpcSettings.GetUrls();
+
+            Assert.Equal("http://[::]:18332/", urls[0]);
+            Assert.Equal("http://0.0.0.0:18332/", urls[1]);
+        }
+        
+        [Fact]
+        public void Load_ValidNodeSettings_UpdatesRpcSettingsFromNodeSettings_Empty_Username_And_Password()
+        {
+            string dir = CreateTestDir(this);
+            string confFile = Path.Combine(dir, "bitcoin.conf");
+            var configLines = new List<string>()
+            {
+                "server=true",
+                "rpcport=1378",
+                "rpcallowip=0.0.0.0",
+                "rpcbind=127.0.0.1"
+            };
+
+            WriteConfigurationToFile(confFile, configLines);
+
+            var nodeSettings = new NodeSettings(this.Network, args: new string[] { "-conf=" + confFile });
+
+            var rpcSettings = new RpcSettings(nodeSettings);
+
+            Assert.True(rpcSettings.Server);
+            Assert.Equal(1378, rpcSettings.RPCPort);
+            Assert.Equal(null, rpcSettings.RpcUser);
+            Assert.Equal(null, rpcSettings.RpcPassword);
+            Assert.NotEmpty(rpcSettings.Bind);
+            Assert.Equal("127.0.0.1:1378", rpcSettings.Bind[0].ToString());
+            Assert.NotEmpty(rpcSettings.DefaultBindings);
+            Assert.Equal("127.0.0.1:1378", rpcSettings.DefaultBindings[0].ToString());
+            Assert.NotEmpty(rpcSettings.AllowIp);
+            Assert.Equal("0.0.0.0", rpcSettings.AllowIp[0].ToString());
         }
 
         private static void WriteConfigurationToFile(string confFile, List<string> configurationFileLines)

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SQLiteWalletRepository.External;
@@ -63,18 +64,22 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             walletId = this.walletId ?? walletId;
 
+            string strWalletId = DBParameter.Create(walletId);
+            string strAccountIndex = DBParameter.Create(accountIndex);
+            string strAddressType = DBParameter.Create(addressType);
+
             List<HDAddress> addresses = this.conn.Query<HDAddress>($@"
                 SELECT  *
                 FROM    HDAddress {
                 // Restrict to wallet if provided.
                 ((walletId != null) ? $@"
-                WHERE   WalletId = {walletId}" : "")} {
+                WHERE   WalletId = {strWalletId}" : "")} {
                 // Restrict to account if provided.
                 ((accountIndex != null) ? $@"
-                AND     AccountIndex = {accountIndex}" : "")} {
+                AND     AccountIndex = {strAccountIndex}" : "")} {
                 // Restrict to account if provided.
                 ((addressType != null) ? $@"
-                AND     AddressType = {addressType}" : "")}");
+                AND     AddressType = {strAddressType}" : "")}");
 
             foreach (HDAddress address in addresses)
             {
@@ -89,7 +94,8 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         private bool Exists(Script scriptPubKey, out AddressIdentifier address)
         {
-            string hex = scriptPubKey.ToHex();
+            string strWalletId = DBParameter.Create(this.walletId);
+            string strHex = DBParameter.Create(scriptPubKey.ToHex());
 
             address = this.conn.FindWithQuery<AddressIdentifier>($@"
                         SELECT  WalletId
@@ -97,12 +103,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                         ,       AddressType
                         ,       AddressIndex
                         ,       ScriptPubKey
+                        ,       PubKey PubKeyScript
                         FROM    HDAddress
-                        WHERE   ScriptPubKey = '{hex}' {
+                        WHERE   ScriptPubKey = {strHex} {
                     // Restrict to wallet if provided.
                     // "BETWEEN" boosts performance from half a seconds to 2ms.
                     ((this.walletId != null) ? $@"
-                        AND     WalletId BETWEEN {this.walletId} AND {this.walletId}" : "")};");
+                        AND     WalletId BETWEEN {strWalletId} AND {strWalletId}" : "")};");
 
             return address != null;
         }

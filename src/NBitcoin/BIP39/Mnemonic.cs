@@ -26,9 +26,11 @@ namespace NBitcoin
             if(wordlist == null)
                 wordlist = Wordlist.AutoDetect(mnemonic) ?? Wordlist.English;
 
-            string[] words = mnemonic.Split(new char[] { ' ', '　' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] words = mnemonic.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            _Mnemonic = string.Join(wordlist.Space.ToString(), words);
+
             //if the sentence is not at least 12 characters or cleanly divisible by 3, it is bad!
-            if(!CorrectWordCount(words.Length))
+            if (!CorrectWordCount(words.Length))
             {
                 throw new FormatException("Word count should be equals to 12,15,18,21 or 24");
             }
@@ -69,6 +71,33 @@ namespace NBitcoin
             : this(wordList, GenerateEntropy(wordCount))
         {
 
+        }
+        
+        public Mnemonic(string language, WordCount wordCount)
+            : this(Mnemonic.GetWordListForLanguage(language), GenerateEntropy(wordCount))
+        {
+        }
+
+        private static Wordlist GetWordListForLanguage(string language)
+        {
+            switch (language.ToLowerInvariant())
+            {
+                case "english":
+                   return Wordlist.English;
+                case "french":
+                    return Wordlist.French;
+                case "spanish":
+                    return Wordlist.Spanish;
+                case "japanese":
+                    return Wordlist.Japanese;
+                case "chinesetraditional":
+                    return Wordlist.ChineseTraditional;
+                case "chinesesimplified":
+                    return Wordlist.ChineseSimplified;
+                default:
+                    throw new FormatException(
+                        $"Invalid language '{language}'. Choices are: English, French, Spanish, Japanese, ChineseSimplified and ChineseTraditional.");
+            }
         }
 
         private static byte[] GenerateEntropy(WordCount wordCount)

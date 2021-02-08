@@ -22,10 +22,11 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         void Stop();
 
-        /// <summary>
-        /// The last processed block.
-        /// </summary>
+        /// <summary> The last processed block's hash.</summary>
         uint256 WalletTipHash { get; set; }
+
+        /// <summary> The last processed block's height.</summary>
+        int WalletTipHeight { get; set; }
 
         /// <summary>
         /// Lists all spendable transactions from all accounts in the wallet.
@@ -53,6 +54,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
 
         /// <summary>
         /// Processes a transaction received from the network.
+        /// <para>The caller should be responsible for saving the wallet if it has been updated.</para>
         /// </summary>
         /// <param name="transaction">The transaction.</param>
         /// <param name="blockHeight">The height of the block this transaction came from. Null if it was not a transaction included in a block.</param>
@@ -68,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <param name="transaction">The transaction to check.</param>
         /// <param name="checkSignature">Indicates whether to check the signature.</param>
         /// <returns><c>True</c> if all's well and <c>false</c> otherwise.</returns>
-        bool ValidateTransaction(Transaction transaction, bool checkSignature = false);
+        ValidateTransactionResult ValidateTransaction(Transaction transaction, bool checkSignature = false);
 
         /// <summary>
         /// Verifies that a transaction's inputs aren't being consumed by any other transactions.
@@ -86,13 +88,12 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>
         /// Gets some general information about a wallet.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The federation wallet instance.</returns>
         FederationWallet GetWallet();
 
         /// <summary>
         /// Updates the wallet with the height of the last block synced.
         /// </summary>
-        /// <param name="wallet">The wallet to update.</param>
         /// <param name="chainedBlock">The height of the last block synced.</param>
         void UpdateLastBlockSyncedHeight(ChainedHeader chainedBlock);
 

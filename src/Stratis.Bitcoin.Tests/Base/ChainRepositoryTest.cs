@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using DBreeze;
-using DBreeze.DataTypes;
+using System.Linq;
+using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -15,48 +17,55 @@ namespace Stratis.Bitcoin.Tests.Base
     {
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public ChainRepositoryTest() : base(KnownNetworks.StratisRegTest)
+        public ChainRepositoryTest() : base(KnownNetworks.StraxRegTest)
         {
             this.dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
         }
 
         [Fact]
-        public void SaveWritesChainToDisk()
+        public void SaveChainToDisk()
         {
             string dir = CreateTestDir(this);
-            var chain = new ChainIndexer(KnownNetworks.StratisRegTest);
+            var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             this.AppendBlock(chain);
 
-            using (var repo = new ChainRepository(dir, new LoggerFactory(), this.dBreezeSerializer))
+            using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
                 repo.SaveAsync(chain).GetAwaiter().GetResult();
             }
 
-            using (var engine = new DBreezeEngine(dir))
+            using (var engine = new DB(new Options { CreateIfMissing = true }, new DataFolder(dir).ChainPath))
             {
                 ChainedHeader tip = null;
-                foreach (Row<int, byte[]> row in engine.GetTransaction().SelectForward<int, byte[]>("Chain"))
+                var itr = engine.GetEnumerator();
+                while (itr.MoveNext())
                 {
-                    var blockHeader = this.dBreezeSerializer.Deserialize<BlockHeader>(row.Value);
+                    if (itr.Current.Key[0] == 1)
+                    {
+                        var data = new ChainRepository.ChainRepositoryData();
+                        data.FromBytes(itr.Current.Value.ToArray(), this.Network.Consensus.ConsensusFactory);
 
-                    if (tip != null && blockHeader.HashPrevBlock != tip.HashBlock)
-                        break;
-                    tip = new ChainedHeader(blockHeader, blockHeader.GetHash(), tip);
+                        tip = new ChainedHeader(data.Hash, data.Work, tip);
+
+                        if (tip.Height == 0)
+                            tip.SetChainStore(new ChainStore());
+                    }
                 }
+
                 Assert.Equal(tip, chain.Tip);
             }
         }
 
         [Fact]
-        public void GetChainReturnsConcurrentChainFromDisk()
+        public void LoadChainFromDisk()
         {
             string dir = CreateTestDir(this);
-            var chain = new ChainIndexer(KnownNetworks.StratisRegTest);
+            var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             ChainedHeader tip = this.AppendBlock(chain);
 
-            using (var engine = new DBreezeEngine(dir))
+            using (var engine = new DB(new Options { CreateIfMissing = true }, new DataFolder(dir).ChainPath))
             {
-                using (DBreeze.Transactions.Transaction transaction = engine.GetTransaction())
+                using (var batch = new WriteBatch())
                 {
                     ChainedHeader toSave = tip;
                     var blocks = new List<ChainedHeader>();
@@ -68,15 +77,19 @@ namespace Stratis.Bitcoin.Tests.Base
 
                     foreach (ChainedHeader block in blocks)
                     {
-                        transaction.Insert("Chain", block.Height, this.dBreezeSerializer.Serialize(block.Header));
+                        batch.Put(1, BitConverter.GetBytes(block.Height),
+                            new ChainRepository.ChainRepositoryData()
+                                    { Hash = block.HashBlock, Work = block.ChainWorkBytes }
+                                .ToBytes(this.Network.Consensus.ConsensusFactory));
                     }
 
-                    transaction.Commit();
+                    engine.Write(batch);
                 }
             }
-            using (var repo = new ChainRepository(dir, new LoggerFactory(), this.dBreezeSerializer))
+
+            using (var repo = new ChainRepository(new LoggerFactory(), new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain), chain.Network))
             {
-                var testChain = new ChainIndexer(KnownNetworks.StratisRegTest);
+                var testChain = new ChainIndexer(KnownNetworks.StraxRegTest);
                 testChain.SetTip(repo.LoadAsync(testChain.Genesis).GetAwaiter().GetResult());
                 Assert.Equal(tip, testChain.Tip);
             }

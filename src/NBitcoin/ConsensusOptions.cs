@@ -99,7 +99,8 @@ namespace NBitcoin
             int maxStandardVersion,
             int maxStandardTxWeight,
             int maxBlockSigopsCost,
-            int maxStandardTxSigopsCost)
+            int maxStandardTxSigopsCost,
+            int witnessScaleFactor)
         {
             this.MaxBlockBaseSize = maxBlockBaseSize;
 
@@ -107,7 +108,7 @@ namespace NBitcoin
             // will result in all checks comparing size in bytes.
             this.MaxBlockWeight = maxBlockBaseSize;
             this.MaxBlockSerializedSize = maxBlockBaseSize;
-            this.WitnessScaleFactor = 1;
+            this.WitnessScaleFactor = witnessScaleFactor;
 
             this.MaxStandardVersion = maxStandardVersion;
             this.MaxStandardTxWeight = maxStandardTxWeight;
@@ -124,12 +125,6 @@ namespace NBitcoin
     /// </summary>
     public class PosConsensusOptions : ConsensusOptions
     {
-        /// <summary>Coinstake minimal confirmations softfork activation height for mainnet.</summary>
-        public const int CoinstakeMinConfirmationActivationHeightMainnet = 1005000;
-
-        /// <summary>Coinstake minimal confirmations softfork activation height for testnet.</summary>
-        public const int CoinstakeMinConfirmationActivationHeightTestnet = 436000;
-
         /// <summary>A mask for coinstake transaction's timestamp and header's timestamp.</summary>
         /// <remarks>Used to decrease granularity of timestamp. Supposed to be 2^n-1.</remarks>
         public const uint StakeTimestampMask = 0x0000000F;
@@ -179,8 +174,9 @@ namespace NBitcoin
             int maxStandardVersion,
             int maxStandardTxWeight,
             int maxBlockSigopsCost,
-            int maxStandardTxSigopsCost
-            ) : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost)
+            int maxStandardTxSigopsCost,
+            int witnessScaleFactor
+            ) : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor)
         {
         }
 
@@ -191,10 +187,10 @@ namespace NBitcoin
         /// <param name="network">The network.</param>
         public virtual int GetStakeMinConfirmations(int height, Network network)
         {
-            if (network.NetworkType == NetworkType.Testnet || network.NetworkType == NetworkType.Regtest)
-                return height < CoinstakeMinConfirmationActivationHeightTestnet ? 10 : 20;
+            if (network.NetworkType == NetworkType.Regtest)
+                return 20;
 
-            return height < CoinstakeMinConfirmationActivationHeightMainnet ? 50 : 500;
+            return 500;
         }
     }
 }

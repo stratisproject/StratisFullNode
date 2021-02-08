@@ -61,6 +61,46 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         int CounterChainDepositStartBlock { get; }
 
+        /// <summary> The maximum amount of partial transactions that can be processed in the <see cref="ICrossChainTransferStore"/>.</summary>
+        int MaximumPartialTransactionThreshold { get; }
+
+        /// <summary>
+        /// Similar to <see cref="MinimumConfirmationsNormalDeposits"/> and <see cref="MinimumConfirmationsLargeDeposits"/> but this settings allows us to specify 
+        /// how mature small deposits needs to be in order to be considered for a cross chain transfer.
+        /// <para>
+        /// Transactions less than or equal to an amont of <see cref="SmallDepositThresholdAmount"/> will be processed.
+        /// </para>
+        /// </summary>
+        int MinimumConfirmationsSmallDeposits { get; }
+
+        /// <summary>
+        /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
+        /// <para>
+        /// Transactions with a value of more than <see cref="NormalDepositThresholdAmount"/> and less than or equal to an amont of <see cref="LargeDepositThresholdAmount"/> will be processed.
+        /// </para>
+        /// </summary>
+        int MinimumConfirmationsNormalDeposits { get; }
+
+        /// <summary>
+        /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
+        /// <para>
+        /// Transactions with a value of more than <see cref="NormalDepositThresholdAmount"/> will be processed.
+        /// </para>
+        /// </summary>
+        int MinimumConfirmationsLargeDeposits { get; }
+
+        int MinimumConfirmationsDistributionDeposits { get; }
+
+        /// <summary>
+        /// Deposits under or equal to this value will be processed after <see cref="MinimumConfirmationsSmallDeposits"/> blocks on the counter-chain.
+        /// </summary>
+        Money SmallDepositThresholdAmount { get; }
+
+        /// <summary>
+        /// Deposits under or equal to this value will be processed after <see cref="MinimumConfirmationsNormalDeposits"/> blocks on the counter-chain.
+        /// </summary>
+        Money NormalDepositThresholdAmount { get; }
+
         /// <summary>
         /// Address for the MultiSig script.
         /// </summary>
@@ -70,10 +110,5 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// Pay2Multisig redeem script.
         /// </summary>
         Script MultiSigRedeemScript { get; }
-
-        /// <summary>
-        /// The amount of blocks under which multisig deposit transactions need to be buried before the cross chains transfer actually trigger.
-        /// </summary>
-        uint MinimumDepositConfirmations { get; }
     }
 }

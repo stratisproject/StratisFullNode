@@ -68,9 +68,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         private void AndSomeUnspentOutputs()
         {
             this.coinView = new UnspentOutputSet();
-            this.coinView.SetCoins(new UnspentOutputs[0]);
+            this.coinView.SetCoins(new UnspentOutput[0]);
             (this.ruleContext as UtxoRuleContext).UnspentOutputSet = this.coinView;
-            this.coinView.Update(this.transactionWithCoinbaseFromPreviousBlock, 0);
+            this.coinView.Update(this.network, this.transactionWithCoinbaseFromPreviousBlock, 0);
         }
 
         private void AndARuleContext()
@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext = new PowRuleContext { };
             this.ruleContext.ValidationContext = new ValidationContext();
             BlockHeader blockHeader = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
-            this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(blockHeader, new uint256("bcd7d5de8d3bcc7b15e7c8e5fe77c0227cdfa6c682ca13dcf4910616f10fdd06"), HeightOfBlockchain);
+            this.ruleContext.ValidationContext.ChainedHeaderToValidate = new ChainedHeader(blockHeader, blockHeader.GetHash(), HeightOfBlockchain);
 
             Block block = this.network.CreateBlock();
             block.Transactions = new List<Transaction>();
@@ -92,8 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
                 this.logger = new Mock<ILogger>();
                 rule.Logger = this.logger.Object;
 
-                var loggerFactory = new ExtendedLoggerFactory();
-                loggerFactory.AddConsoleWithFilters();
+                var loggerFactory = ExtendedLoggerFactory.Create();
 
                 var dateTimeProvider = new DateTimeProvider();
 
@@ -106,7 +105,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
                     new ConsensusSettings(NodeSettings.Default(KnownNetworks.RegTest)), new Mock<ICheckpoints>().Object, new Mock<ICoinView>().Object, new Mock<IChainState>().Object,
                     new InvalidBlockHashStore(dateTimeProvider),
                     new NodeStats(dateTimeProvider, loggerFactory),
-                    new AsyncProvider(loggerFactory, new Mock<ISignals>().Object, new Mock<NodeLifetime>().Object),
+                    new AsyncProvider(loggerFactory, new Mock<ISignals>().Object),
                     new ConsensusRulesContainer());
 
                 rule.Initialize();

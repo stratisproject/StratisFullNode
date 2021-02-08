@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
         }
 
         /// <inheritdoc/>
-        public override void CheckMaturity(UnspentOutputs coins, int spendHeight)
+        public override void CheckMaturity(UnspentOutput coins, int spendHeight)
         {
             base.CheckCoinbaseMaturity(coins, spendHeight);
         }

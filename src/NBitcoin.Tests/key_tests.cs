@@ -300,5 +300,31 @@ namespace NBitcoin.Tests
             const String expected = "5Kb8kLf9zgWQnogidDA76MzPL6TsZZY36hWXMssSzNydYXYB9KF";
             Assert.True(wifKey.ToString() == expected);
         }
+
+        [Fact]
+        [Trait("Core", "Core")]
+        public void can_always_recover_pubkey_from_signature_when_stopping_at_null()
+        {
+            var rand = new Random();
+            for (int i = 0; i < 1000; i++)
+            {
+                var key = new Key();
+                PosBlock block = new PosBlock(new BlockHeader() { Time = (uint)rand.Next() });
+                ECDSASignature signature = key.Sign(block.GetHash());
+                block.BlockSignature = new BlockSignature { Signature = signature.ToDER() };
+                Assert.True(key.PubKey.Verify(block.GetHash(), new ECDSASignature(block.BlockSignature.Signature)));
+                signature = ECDSASignature.FromDER(block.BlockSignature.Signature);
+                bool match = false;
+                for (int recId = 0; !match; recId++)
+                {
+                    PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, block.GetHash(), true);
+                    if (pubKeyForSig == null)
+                        break;
+
+                    match = pubKeyForSig == key.PubKey;
+                }
+                Assert.True(match);
+            }
+        }
     }
 }

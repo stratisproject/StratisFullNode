@@ -228,6 +228,8 @@ namespace NBitcoin
                     return "OP_CHECKSIG";
                 case OpcodeType.OP_CHECKSIGVERIFY:
                     return "OP_CHECKSIGVERIFY";
+                case OpcodeType.OP_FEDERATION:
+                    return "OP_FEDERATION";
                 case OpcodeType.OP_CHECKMULTISIG:
                     return "OP_CHECKMULTISIG";
                 case OpcodeType.OP_CHECKMULTISIGVERIFY:
@@ -252,8 +254,6 @@ namespace NBitcoin
                     return "OP_NOP7";
                 case OpcodeType.OP_NOP8:
                     return "OP_NOP8";
-                case OpcodeType.OP_NOP9:
-                    return "OP_NOP9";
 
                 default:
                     return Enum.GetName(typeof(OpcodeType), opcode);
@@ -282,6 +282,8 @@ namespace NBitcoin
             _OpcodeByName.AddOrReplace("OP_NOP2", OpcodeType.OP_CHECKLOCKTIMEVERIFY);
             _OpcodeByName.AddOrReplace("OP_CHECKSEQUENCEVERIFY", OpcodeType.OP_CHECKSEQUENCEVERIFY);
             _OpcodeByName.AddOrReplace("OP_NOP3", OpcodeType.OP_CHECKSEQUENCEVERIFY);
+            _OpcodeByName.AddOrReplace("OP_FEDERATION", OpcodeType.OP_FEDERATION);
+            _OpcodeByName.AddOrReplace("OP_NOP9", OpcodeType.OP_FEDERATION);
             _OpcodeByName.AddOrReplace("OP_CHECKCOLDSTAKEVERIFY", OpcodeType.OP_CHECKCOLDSTAKEVERIFY);
             _OpcodeByName.AddOrReplace("OP_NOP10", OpcodeType.OP_CHECKCOLDSTAKEVERIFY);
 

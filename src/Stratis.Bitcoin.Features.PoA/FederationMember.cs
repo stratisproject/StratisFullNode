@@ -1,4 +1,5 @@
-﻿using NBitcoin;
+﻿using System.Linq;
+using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA
@@ -6,7 +7,7 @@ namespace Stratis.Bitcoin.Features.PoA
     /// <summary>Interface that contains data that defines a federation member.</summary>
     public interface IFederationMember
     {
-        /// <summary>Public key of a federation member.</summary>
+        /// <summary>Public key of a federation member used for mining.</summary>
         PubKey PubKey { get; }
     }
 
@@ -65,7 +66,10 @@ namespace Stratis.Bitcoin.Features.PoA
     /// <summary>Class that contains data that defines a federation member on federated peg sidechain.</summary>
     public class CollateralFederationMember : FederationMember
     {
-        public CollateralFederationMember(PubKey pubKey, bool isMultiSigMember, Money collateralAmount, string collateralMainchainAddress) : base(pubKey)
+        public const decimal MinerCollateralAmount = 100_000m;
+        public const decimal MultisigMinerCollateralAmount = 100_000m;
+
+        public CollateralFederationMember(PubKey miningPubKey, bool isMultiSigMember, Money collateralAmount, string collateralMainchainAddress) : base(miningPubKey)
         {
             this.IsMultisigMember = isMultiSigMember;
             this.CollateralAmount = collateralAmount;
@@ -80,6 +84,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Mainchain address that should have the collateral.</summary>
         public string CollateralMainchainAddress { get; set; }
+
+        public static decimal GetCollateralAmountForPubKey(PoANetwork network, PubKey pubKey)
+        {
+            return network.StraxMiningMultisigMembers.Any(m => m == pubKey) ? MultisigMinerCollateralAmount : MinerCollateralAmount;
+        }
 
         /// <inheritdoc />
         public override bool Equals(object obj)
@@ -116,7 +125,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public override string ToString()
         {
-            return base.ToString() + $",{nameof(this.CollateralAmount)}:{this.CollateralAmount},{nameof(this.CollateralMainchainAddress)}:{this.CollateralMainchainAddress ?? "null"}";
+            return base.ToString() + $",{nameof(this.CollateralAmount)}:{this.CollateralAmount},{nameof(this.CollateralMainchainAddress)}:{this.CollateralMainchainAddress ?? "null"}{(this.IsMultisigMember ? " (Multisig)" : "")}";
         }
     }
 }

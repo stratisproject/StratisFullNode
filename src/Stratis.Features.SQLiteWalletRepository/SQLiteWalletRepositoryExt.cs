@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Wallet;
@@ -15,6 +13,7 @@ namespace Stratis.Features.SQLiteWalletRepository
     {
         internal static string ToHdPath(this SQLiteWalletRepository repo, int accountIndex)
         {
+            // TODO: Support wallets for other derivation standards e.g. BIP84 for P2WPKH addresses
             return $"m/44'/{repo.Network.Consensus.CoinType}'/{accountIndex}'";
         }
 
@@ -25,38 +24,52 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         internal static HdAccount ToHdAccount(this SQLiteWalletRepository repo, HDAccount account)
         {
-            return new HdAccount()
+            var res = new HdAccount
             {
                 Name = account.AccountName,
                 CreationTime = DateTimeOffset.FromUnixTimeSeconds(account.CreationTime),
                 ExtendedPubKey = account.ExtPubKey,
                 Index = account.AccountIndex,
-                HdPath = repo.ToHdPath(account.AccountIndex)
+                HdPath = repo.ToHdPath(account.AccountIndex),
             };
+
+            res.ExternalAddresses = new AddressCollection(res, 0);
+            res.InternalAddresses = new AddressCollection(res, 1);
+
+            return res;
         }
 
-        internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address)
+        internal static HdAddress ToHdAddress(this SQLiteWalletRepository repo, HDAddress address, Network network)
         {
-            var pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
-            var scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
+            Script pubKeyScript = (address.PubKey == null) ? null : new Script(Encoders.Hex.DecodeData(address.PubKey)); // P2PK
+            Script scriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey));
 
-            var res = new HdAddress()
+            var res = new HdAddress(null)
             {
-                Address = repo.ScriptAddressReader.GetAddressFromScriptPubKey(repo.Network, scriptPubKey),
+                Address = address.Address,
                 Index = address.AddressIndex,
+                AddressType = address.AddressType,
                 HdPath = repo.ToHdPath(address.AccountIndex, address.AddressType, address.AddressIndex),
-                ScriptPubKey = new Script(Encoders.Hex.DecodeData(address.ScriptPubKey)),
-                Pubkey = pubKeyScript
+                ScriptPubKey = scriptPubKey,
+                Pubkey = pubKeyScript,
+                Bech32Address = address.Bech32Address
             };
 
             return res;
         }
 
-        internal static TransactionData ToTransactionData(this SQLiteWalletRepository repo, HDTransactionData transactionData, IEnumerable<HDPayment> payments)
+        internal static TransactionData ToTransactionData(this SQLiteWalletRepository repo, HDTransactionData transactionData, TransactionCollection transactionCollection)
         {
-            TransactionData txData = new TransactionData()
+            // We need to examine the entire scriptPubKey of the transaction output in question in order to determine if it is a coldstaking output.
+            var scriptPubKey = new Script(Encoders.Hex.DecodeData(transactionData.RedeemScript));
+
+            bool isColdStaking = scriptPubKey.IsScriptType(ScriptType.ColdStaking);
+
+            // TODO: Need to make a central determination of whether a UTXO is Segwit or not (i.e. it pays to a P2WPKH scriptPubKey)
+
+            var res = new TransactionData()
             {
-                Amount = new Money(transactionData.Value, MoneyUnit.BTC),
+                Amount = new Money(transactionData.Value),
                 BlockHash = (transactionData.OutputBlockHash == null) ? null : uint256.Parse(transactionData.OutputBlockHash),
                 BlockHeight = transactionData.OutputBlockHeight,
                 CreationTime = DateTimeOffset.FromUnixTimeSeconds(transactionData.OutputTxTime),
@@ -65,43 +78,26 @@ namespace Stratis.Features.SQLiteWalletRepository
                 // These two are always updated and used in tandem so we update them from a single source value.
                 IsCoinBase = transactionData.OutputTxIsCoinBase == 1 && transactionData.OutputIndex == 0,
                 IsCoinStake = transactionData.OutputTxIsCoinBase == 1 && transactionData.OutputIndex != 0,
+                IsColdCoinStake = isColdStaking,
                 // IsPropagated  // Not used currently.
                 ScriptPubKey = new Script(Encoders.Hex.DecodeData(transactionData.RedeemScript)),
+                AddressScriptPubKey = new Script(Encoders.Hex.DecodeData(transactionData.ScriptPubKey)),
                 SpendingDetails = (transactionData.SpendTxId == null) ? null : new SpendingDetails()
                 {
                     BlockHeight = transactionData.SpendBlockHeight,
+                    BlockHash = string.IsNullOrEmpty(transactionData.SpendBlockHash) ? null : uint256.Parse(transactionData.SpendBlockHash),
                     // BlockIndex // Not used currently.
                     CreationTime = DateTimeOffset.FromUnixTimeSeconds((long)transactionData.SpendTxTime),
                     IsCoinStake = transactionData.SpendTxIsCoinBase == 1,
-                    TransactionId = uint256.Parse(transactionData.SpendTxId),
-                    Payments = payments.Select(p => new PaymentDetails()
-                    {
-                        Amount = new Money((decimal)p.SpendValue, MoneyUnit.BTC),
-                        DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
-                        OutputIndex = p.SpendIndex
-                    }).ToList()
-                }
+                    TransactionId = uint256.Parse(transactionData.SpendTxId)
+                },
+                TransactionCollection = transactionCollection
             };
 
-            if (txData.SpendingDetails == null || repo.ScriptAddressReader == null)
-                return txData;
+            if (res.SpendingDetails != null)
+                res.SpendingDetails.TransactionData = res;
 
-            try
-            {
-                IEnumerable<PaymentDetails> allDetails = txData.SpendingDetails.Payments;
-                var lookup = allDetails.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
-                foreach (Script script in lookup.Keys.ToList())
-                    lookup[script] = repo.ScriptAddressReader.GetAddressFromScriptPubKey(repo.Network, script);
-
-                foreach (PaymentDetails paymentDetails in allDetails)
-                    paymentDetails.DestinationAddress = lookup[paymentDetails.DestinationScriptPubKey];
-            }
-            catch (Exception err)
-            {
-                throw;
-            }
-
-            return txData;
+            return res;
         }
     }
 }

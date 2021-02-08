@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA
@@ -13,10 +12,6 @@ namespace Stratis.Bitcoin.Features.PoA
     /// </summary>
     public interface ISlotsManager
     {
-        /// <summary>Gets the federation member for specified timestamp.</summary>
-        /// <param name="headerUnixTimestamp">Timestamp of a header.</param>
-        /// <exception cref="ConsensusErrorException">In case timestamp is invalid.</exception>
-        IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, List<IFederationMember> federationMembers = null);
 
         /// <summary>Gets next timestamp at which current node can produce a block.</summary>
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
@@ -25,7 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Determines whether timestamp is valid according to the network rules.</summary>
         bool IsValidTimestamp(uint headerUnixTimestamp);
 
-        uint GetRoundLengthSeconds(int federationMembersCount);
+        uint GetRoundLengthSeconds(int? federationMembersCount = null);
     }
 
     public class SlotsManager : ISlotsManager
@@ -45,26 +40,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.chainIndexer = chainIndexer;
             this.consensusOptions = (network as PoANetwork).ConsensusOptions;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-        }
-
-        /// <inheritdoc />
-        public IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, List<IFederationMember> federationMembers = null)
-        {
-            if (!this.IsValidTimestamp(headerUnixTimestamp))
-                PoAConsensusErrors.InvalidHeaderTimestamp.Throw();
-
-            if (federationMembers == null)
-                federationMembers = this.federationManager.GetFederationMembers();
-
-            uint roundTime = this.GetRoundLengthSeconds(federationMembers.Count);
-
-            // Time when current round started.
-            uint roundStartTimestamp = (headerUnixTimestamp / roundTime) * roundTime;
-
-            // Slot number in current round.
-            int currentSlotNumber = (int)((headerUnixTimestamp - roundStartTimestamp) / this.consensusOptions.TargetSpacingSeconds);
-
-            return federationMembers[currentSlotNumber];
         }
 
         /// <inheritdoc />
@@ -104,8 +79,10 @@ namespace Stratis.Bitcoin.Features.PoA
             return (headerUnixTimestamp % this.consensusOptions.TargetSpacingSeconds) == 0;
         }
 
-        public uint GetRoundLengthSeconds(int federationMembersCount)
+        public uint GetRoundLengthSeconds(int? federationMembersCount = null)
         {
+            federationMembersCount = federationMembersCount ?? this.federationManager.GetFederationMembers().Count;
+
             uint roundLength = (uint)(federationMembersCount * this.consensusOptions.TargetSpacingSeconds);
 
             return roundLength;

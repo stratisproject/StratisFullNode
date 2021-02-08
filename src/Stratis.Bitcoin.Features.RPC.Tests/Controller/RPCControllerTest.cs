@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -54,7 +53,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests.Controller
 
             this.rpcClient = new Mock<IRPCClient>();
             this.rpcSettings.Bind.Add(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 0));
-            this.rpcClientFactory.Setup(r => r.Create(It.IsAny<RpcSettings>(), It.Is<Uri>(u => u.ToString() == "http://127.0.0.1:0/"), It.IsAny<Network>()))
+            this.rpcClientFactory.Setup(r => r.Create(It.IsAny<RpcSettings>(), It.Is<Uri>(u => u.ToString().StartsWith("http://127.0.0.1")), It.IsAny<Network>()))
                 .Returns(this.rpcClient.Object);
 
             this.fullNode.Setup(f => f.RPCHost)

@@ -2,7 +2,6 @@
 using System.IO;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Xunit;
 
@@ -23,8 +23,10 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
         private DefaultHttpContext httpContext;
         private RPCMiddleware middleware;
         private HttpResponseFeature response;
+        private StreamResponseBodyFeature responseBody;
         private FeatureCollection featureCollection;
         private HttpRequestFeature request;
+        private RpcSettings rpcSettings;
 
         public RPCMiddlewareTest()
         {
@@ -33,19 +35,24 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
 
             this.httpContext = new DefaultHttpContext();
             this.response = new HttpResponseFeature();
+            this.responseBody = new StreamResponseBodyFeature(new MemoryStream());
             this.request = new HttpRequestFeature();
-            this.response.Body = new MemoryStream();
             this.featureCollection = new FeatureCollection();
 
             this.httpContextFactory = new Mock<IHttpContextFactory>();
-            this.httpContextFactory.Setup(f => f.Create(It.IsAny<FeatureCollection>())).Returns((FeatureCollection f) => {
+            this.httpContextFactory.Setup(f => f.Create(It.IsAny<FeatureCollection>())).Returns((FeatureCollection f) =>
+            {
                 DefaultHttpContext newHttpContext = new DefaultHttpContext();
                 newHttpContext.Initialize(f);
 
                 return newHttpContext;
             });
 
-            this.middleware = new RPCMiddleware(this.delegateContext.Object, this.authorization.Object, this.LoggerFactory.Object, this.httpContextFactory.Object, new DataFolder(string.Empty));
+            var nodeSettings = new NodeSettings(new StraxRegTest());
+
+            this.rpcSettings = new RpcSettings(nodeSettings);
+
+            this.middleware = new RPCMiddleware(this.delegateContext.Object, this.authorization.Object, this.LoggerFactory.Object, this.httpContextFactory.Object, new DataFolder(string.Empty), this.rpcSettings);
         }
 
         [Fact]
@@ -274,6 +281,7 @@ namespace Stratis.Bitcoin.Features.RPC.Tests
         {
             this.featureCollection.Set<IHttpRequestFeature>(this.request);
             this.featureCollection.Set<IHttpResponseFeature>(this.response);
+            this.featureCollection.Set<IHttpResponseBodyFeature>(this.responseBody);
             this.httpContext.Initialize(this.featureCollection);
         }
     }

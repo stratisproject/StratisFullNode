@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,7 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Models;
+using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -20,7 +22,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         public const string GetVerboseAddressesBalances = "getverboseaddressesbalances";
         public const string GetAddressIndexerTip = "addressindexertip";
         public const string GetBlock = "block";
-        public const string GetBlockCount = "GetBlockCount";
+        public const string GetBlockCount = "getblockcount";
+        public const string GetUtxoSet = "getutxoset";
+        public const string GetLastBalanceDecreaseTransaction = "getlastbalanceupdatetransaction";
     }
 
     /// <summary>Controller providing operations on a blockstore.</summary>
@@ -29,6 +33,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
     public class BlockStoreController : Controller
     {
         private readonly IAddressIndexer addressIndexer;
+
+        private readonly IUtxoIndexer utxoIndexer;
 
         /// <summary>Provides access to the block store on disk.</summary>
         private readonly IBlockStore blockStore;
@@ -45,24 +51,31 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
         /// <summary>Current network for the active controller instance.</summary>
         private readonly Network network;
 
+        private readonly IStakeChain stakeChain;
+
         public BlockStoreController(
             Network network,
             ILoggerFactory loggerFactory,
             IBlockStore blockStore,
             IChainState chainState,
             ChainIndexer chainIndexer,
-            IAddressIndexer addressIndexer)
+            IAddressIndexer addressIndexer,
+            IUtxoIndexer utxoIndexer,
+            IStakeChain stakeChain = null)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(chainState, nameof(chainState));
             Guard.NotNull(addressIndexer, nameof(addressIndexer));
+            Guard.NotNull(utxoIndexer, nameof(utxoIndexer));
 
             this.addressIndexer = addressIndexer;
             this.network = network;
             this.blockStore = blockStore;
             this.chainState = chainState;
             this.chainIndexer = chainIndexer;
+            this.utxoIndexer = utxoIndexer;
+            this.stakeChain = stakeChain;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
@@ -134,10 +147,19 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                 if (this.network.Consensus.IsProofOfStake)
                 {
                     var posBlock = block as PosBlock;
-
+                    
                     blockModel.PosBlockSignature = posBlock.BlockSignature.ToHex(this.network);
-                    blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockProof()).ToUInt256().ToString();
+                    blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockTarget()).ToUInt256().ToString();
                     blockModel.PosChainTrust = chainedHeader.ChainWork.ToString(); // this should be similar to ChainWork
+
+                    if (this.stakeChain != null)
+                    {
+                        BlockStake blockStake = this.stakeChain.Get(blockId);
+
+                        blockModel.PosModifierv2 = blockStake?.StakeModifierV2.ToString();
+                        blockModel.PosFlags = blockStake?.Flags == BlockFlag.BLOCK_PROOF_OF_STAKE ? "proof-of-stake" : "proof-of-work";
+                        blockModel.PosHashProof = blockStake?.HashProof.ToString();
+                    }
                 }
 
                 return this.Json(blockModel);
@@ -223,6 +245,59 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
                 this.logger.LogDebug("Asking data for {0} addresses.", addressesArray.Length);
 
                 VerboseAddressBalancesResult result = this.addressIndexer.GetAddressIndexerState(addressesArray);
+
+                return this.Json(result);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>Returns every UTXO as of a given block height. This may take some time for large chains.</summary>
+        /// <param name="atBlockHeight">Only process blocks up to this height for the purposes of constructing the UTXO set.</param>
+        /// <returns>A result object containing the UTXOs.</returns>
+        /// <response code="200">Returns the UTXO set.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(BlockStoreRouteEndPoint.GetUtxoSet)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetUtxoSet(int atBlockHeight)
+        {
+            try
+            {
+                ReconstructedCoinviewContext coinView = this.utxoIndexer.GetCoinviewAtHeight(atBlockHeight);
+
+                var outputs = new List<UtxoModel>();
+
+                foreach (OutPoint outPoint in coinView.UnspentOutputs)
+                {
+                    TxOut txOut = coinView.Transactions[outPoint.Hash].Outputs[outPoint.N];
+                    var utxo = new UtxoModel() { TxId = outPoint.Hash, Index = outPoint.N, ScriptPubKey = txOut.ScriptPubKey, Value = txOut.Value };
+
+                    outputs.Add(utxo);
+                }
+
+                return this.Json(outputs);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route(BlockStoreRouteEndPoint.GetLastBalanceDecreaseTransaction)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetLastBalanceUpdateTransaction(string address)
+        {
+            try
+            {
+                LastBalanceDecreaseTransactionModel result = this.addressIndexer.GetLastBalanceDecreaseTransaction(address);
 
                 return this.Json(result);
             }

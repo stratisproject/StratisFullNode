@@ -289,6 +289,7 @@ namespace Stratis.Bitcoin.Controllers.Models
                 destinations = script.GetDestinationPublicKeys(network).Select(p => p.Hash).ToList<TxDestination>();
             }
 
+            // TODO: We do not want to put the cold staking addresses into the 'addresses' element due to the high potential for confusion. Maybe introduce an additional element?
             if (destinations.Count == 1)
             {
                 this.ReqSigs = 1;
@@ -296,9 +297,13 @@ namespace Stratis.Bitcoin.Controllers.Models
             }
             else if (destinations.Count > 1)
             {
-                PayToMultiSigTemplateParameters multi = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(script);
-                this.ReqSigs = multi.SignatureCount;
-                this.Addresses = multi.PubKeys.Select(m => m.GetAddress(network).ToString()).ToList();
+                PayToMultiSigTemplateParameters multi = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(script) ??
+                    PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(script, network);
+                if (multi != null)
+                {
+                    this.ReqSigs = multi.SignatureCount;
+                    this.Addresses = multi.PubKeys.Select(m => m.GetAddress(network).ToString()).ToList();
+                }
             }
         }
 
@@ -318,7 +323,7 @@ namespace Stratis.Bitcoin.Controllers.Models
         /// A method that returns a script type description.
         /// </summary>
         /// <param name="template">A <see cref="ScriptTemplate"/> used for the script.</param>
-        /// <returns>A string describin the script type.</returns>
+        /// <returns>A string describing the script type.</returns>
         protected string GetScriptType(ScriptTemplate template)
         {
             if (template == null)
@@ -339,6 +344,9 @@ namespace Stratis.Bitcoin.Controllers.Models
 
                 case TxOutType.TX_NULL_DATA:
                     return "nulldata";
+
+                case TxOutType.TX_COLDSTAKE:
+                    return "coldstaking";
             }
 
             return "nonstandard";

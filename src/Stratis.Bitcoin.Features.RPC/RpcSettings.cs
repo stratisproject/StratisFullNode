@@ -40,6 +40,9 @@ namespace Stratis.Bitcoin.Features.RPC
         /// <summary>List of IP addresses that are allowed to connect to RPC interfaces.</summary>
         public List<IPAddressBlock> AllowIp { get; set; }
 
+        /// <summary>You can adjust the RPC Content Type.</summary>
+        public string RPCContentType { get; set; }
+
         /// <summary>
         /// Initializes an instance of the object from the node configuration.
         /// </summary>
@@ -71,6 +74,7 @@ namespace Stratis.Bitcoin.Features.RPC
 
             this.Server = config.GetOrDefault<bool>("server", false, this.logger);
             this.RPCPort = config.GetOrDefault<int>("rpcport", nodeSettings.Network.DefaultRPCPort, this.logger);
+            this.RPCContentType = config.GetOrDefault("rpccontenttype", "application/json; charset=utf-8", this.logger);
 
             if (this.Server)
             {
@@ -100,6 +104,26 @@ namespace Stratis.Bitcoin.Features.RPC
                 {
                     throw new ConfigurationException("Invalid rpcbind value");
                 }
+
+                // If the "Bind" list has not been specified via callback.
+                if (this.Bind.Count == 0)
+                    this.Bind = this.DefaultBindings;
+
+                if (this.AllowIp.Count == 0)
+                {
+                    if (this.Bind.Count > 0)
+                        this.logger.LogWarning("WARNING: RPC bind selection (-rpcbind) was ignored because allowed ip's (-rpcallowip) were not specified, refusing to allow everyone to connect");
+
+                    this.Bind.Clear();
+                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("::1"), this.RPCPort));
+                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("127.0.0.1"), this.RPCPort));
+                }
+
+                if (this.Bind.Count == 0)
+                {
+                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("::"), this.RPCPort));
+                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("0.0.0.0"), this.RPCPort));
+                }
             }
         }
 
@@ -115,33 +139,6 @@ namespace Stratis.Bitcoin.Features.RPC
                 throw new ConfigurationException("rpcpassword should be provided");
             if (this.RpcUser == null && this.RpcPassword != null)
                 throw new ConfigurationException("rpcuser should be provided");
-
-            // We can now safely assume that server was set to true in the config or that the
-            // "AddRpc" callback provided a user and password implying that the Rpc feature will be used.
-            if (this.RpcPassword != null && this.RpcUser != null)
-            {
-                // this.Server = true;
-
-                // If the "Bind" list has not been specified via callback..
-                if (this.Bind.Count == 0)
-                    this.Bind = this.DefaultBindings;
-
-                if (this.AllowIp.Count == 0)
-                {
-                    if (this.Bind.Count > 0)
-                        logger.LogWarning("WARNING: RPC bind selection (-rpcbind) was ignored because allowed ip's (-rpcallowip) were not specified, refusing to allow everyone to connect");
-
-                    this.Bind.Clear();
-                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("::1"), this.RPCPort));
-                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("127.0.0.1"), this.RPCPort));
-                }
-
-                if (this.Bind.Count == 0)
-                {
-                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("::"), this.RPCPort));
-                    this.Bind.Add(new IPEndPoint(IPAddress.Parse("0.0.0.0"), this.RPCPort));
-                }
-            }
         }
 
         /// <summary> Prints the help information on how to configure the rpc settings to the logger.</summary>

@@ -85,8 +85,8 @@ namespace Stratis.Bitcoin.Features.RPC
         blockchain         getdifficulty
         blockchain         getmempoolinfo
         blockchain         getrawmempool                Yes
-        blockchain         gettxout                    Yes
-        blockchain         gettxoutproof
+        blockchain         gettxout                     Yes
+        blockchain         gettxoutproof                Yes
         blockchain         verifytxoutproof
         blockchain         gettxoutsetinfo
         blockchain         verifychain
@@ -105,12 +105,12 @@ namespace Stratis.Bitcoin.Features.RPC
 
         ------------------ Raw transactions
         rawtransactions    createrawtransaction
-        rawtransactions    decoderawtransaction
+        rawtransactions    decoderawtransaction         Yes
         rawtransactions    decodescript
-        rawtransactions    getrawtransaction
-        rawtransactions    sendrawtransaction
-        rawtransactions    signrawtransaction
-        rawtransactions    fundrawtransaction
+        rawtransactions    getrawtransaction            Yes
+        rawtransactions    sendrawtransaction           Yes
+        rawtransactions    signrawtransaction           Yes
+        rawtransactions    fundrawtransaction           Yes
 
         ------------------ Utility functions
         util               createmultisig
@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.RPC
         wallet             getaccount
         wallet             getaddressesbyaccount
         wallet             getbalance
-        wallet             getnewaddress
+        wallet             getnewaddress                Yes
         wallet             getrawchangeaddress
         wallet             getreceivedbyaccount
         wallet             getreceivedbyaddress
@@ -856,7 +856,7 @@ namespace Stratis.Bitcoin.Features.RPC
 
                 result[i++] = new PeerInfo
                 {
-                    Id = (int)peer["id"],
+                    Id = peer["id"] != null ? (int)peer["id"] : -1,
                     Address = Utils.ParseIpEndpoint((string)peer["addr"], this.Network.DefaultPort),
                     LocalAddress = Utils.ParseIpEndpoint(localAddr, this.Network.DefaultPort),
                     Services = ulong.Parse((string)peer["services"]),
@@ -873,11 +873,11 @@ namespace Stratis.Bitcoin.Features.RPC
                     SubVersion = (string)peer["subver"],
                     Inbound = (bool)peer["inbound"],
                     StartingHeight = (int)peer["startingheight"],
-                    SynchronizedBlocks = (int)peer["synced_blocks"],
-                    SynchronizedHeaders = (int)peer["synced_headers"],
-                    IsWhiteListed = (bool)peer["whitelisted"],
+                    SynchronizedBlocks = peer["synced_blocks"] != null ? (int)peer["synced_blocks"] : -1,
+                    SynchronizedHeaders = peer["synced_headers"] != null ? (int)peer["synced_headers"] : -1,
+                    IsWhiteListed = peer["whitelisted"] != null ? (bool)peer["whitelisted"] : false,
                     BanScore = peer["banscore"] == null ? 0 : (int)peer["banscore"],
-                    Inflight = peer["inflight"].Select(x => uint.Parse((string)x)).ToArray()
+                    Inflight = peer["inflight"] != null ? peer["inflight"].Select(x => uint.Parse((string)x)).ToArray() : new uint[] { }
                 };
             }
 
@@ -1049,12 +1049,16 @@ namespace Stratis.Bitcoin.Features.RPC
         }
 
         /// <summary>
-        /// Get the a whole block
+        /// Get a whole block, given its hash.
         /// </summary>
-        /// <param name="blockId"></param>
-        /// <returns></returns>
+        /// <param name="blockId">The hash of the block to be retrieved.</param>
+        /// <remarks>This method is not compatible with stratisX, which always returns a JSON object no matter what parameters are passed to the second argument.</remarks>
+        /// <returns>The requested block.</returns>
         public async Task<Block> GetBlockAsync(uint256 blockId)
         {
+            // TODO: Add verbosity parameter down the call chain
+            // bitcoind implements this RPC with slightly more flexibility, it accepts both an int or a bool for the verbosity.
+            // stratisd, however, only accepts a bool. And it unconditionally returns a JSON object, which is not useable for parsing back into a block.
             RPCResponse resp = await SendCommandAsync(RPCOperations.getblock, blockId.ToString(), 0).ConfigureAwait(false);
             return Block.Load(Encoders.Hex.DecodeData(resp.Result.ToString()), this.Network.Consensus.ConsensusFactory);
         }

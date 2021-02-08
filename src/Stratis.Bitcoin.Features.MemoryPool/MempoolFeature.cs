@@ -76,7 +76,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         {
             if (this.mempoolManager != null)
             {
-                log.AppendLine();
                 log.AppendLine("=======Mempool=======");
                 log.AppendLine(this.mempoolManager.PerformanceCounter.ToString());
             }
@@ -142,7 +141,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// Include the memory pool feature and related services in the full node.
         /// </summary>
         /// <param name="fullNodeBuilder">Full node builder.</param>
-        /// <param name="injectRules">Whether or not to inject the mempool rules now, or defer it to another feature.</param>
         /// <returns>Full node builder.</returns>
         public static IFullNodeBuilder UseMempool(this IFullNodeBuilder fullNodeBuilder)
         {

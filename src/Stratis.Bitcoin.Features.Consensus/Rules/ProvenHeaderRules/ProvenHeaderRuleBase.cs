@@ -43,16 +43,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
             return height > this.LastCheckpointHeight;
         }
 
-        /// <summary>
-        /// Determines whether header is a proven header.
-        /// </summary>
-        /// <param name="header">The block header.</param>
-        /// <returns><c>true</c> if header is a <see cref="ProvenBlockHeader"/>.</returns>
-        public bool IsProvenHeader(BlockHeader header)
-        {
-            return header is ProvenBlockHeader;
-        }
-
         /// <inheritdoc/>
         public override void Run(RuleContext context)
         {
@@ -72,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
                 return;
             }
 
-            if (!this.IsProvenHeader(chainedHeader.Header))
+            if (chainedHeader.ProvenBlockHeader == null)
             {
                 // We skip validation if the header is a regular header
                 // This is to allow white-listed peers to sync using regular headers.
@@ -80,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
                 return;
             }
 
-            this.ProcessRule((PosRuleContext)context, chainedHeader, (ProvenBlockHeader)chainedHeader.Header);
+            this.ProcessRule((PosRuleContext)context, chainedHeader, chainedHeader.ProvenBlockHeader);
         }
 
         /// <summary>

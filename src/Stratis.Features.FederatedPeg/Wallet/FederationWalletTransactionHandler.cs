@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
+using NLog;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -64,13 +64,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
         private readonly IFederatedPegSettings settings;
 
         public FederationWalletTransactionHandler(
-            ILoggerFactory loggerFactory,
             IFederationWalletManager walletManager,
             IWalletFeePolicy walletFeePolicy,
             Network network,
             IFederatedPegSettings settings)
         {
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(walletManager, nameof(walletManager));
             Guard.NotNull(walletFeePolicy, nameof(walletFeePolicy));
             Guard.NotNull(network, nameof(network));
@@ -81,7 +79,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             this.network = network;
             this.settings = settings;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.privateKeyCache = new MemoryCache(new MemoryCacheOptions() { ExpirationScanFrequency = new TimeSpan(0, 1, 0) });
         }
 
@@ -105,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (!transactionBuilder.Verify(transaction, out TransactionPolicyError[] errors))
                 {
                     string errorsMessage = string.Join(" - ", errors.Select(s => s.ToString()));
-                    this.logger.LogError($"Build transaction failed: {errorsMessage}");
+                    this.logger.Error($"Build transaction failed: {errorsMessage}");
                     throw new WalletException($"Could not build the transaction. Details: {errorsMessage}");
                 }
             }

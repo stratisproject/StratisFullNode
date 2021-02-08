@@ -19,6 +19,7 @@ using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.SQLiteWalletRepository;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
@@ -44,7 +45,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public void PremineNodeWithWallet(string testId)
         {
-            this.PremineNodeWithCoins = this.nodeBuilder.CreateStratisPosNode(new StratisRegTest(), testId).WithWallet().Start();
+            this.PremineNodeWithCoins = this.nodeBuilder.CreateStratisPosNode(new StraxRegTest(), testId).WithWallet().Start();
         }
 
         public void PremineNodeWithWalletWithOverrides()
@@ -56,13 +57,14 @@ namespace Stratis.Bitcoin.IntegrationTests
                 .UsePosConsensus()
                 .UseMempool()
                 .UseWallet()
-                .AddPowPosMining()
+                .AddSQLiteWalletRepository()
+                .AddPowPosMining(false)
                 .AddRPC()
                 .MockIBD()
                 .UseTestChainedHeaderTree()
                 .OverrideDateTimeProviderFor<MiningFeature>());
 
-            this.PremineNodeWithCoins = this.nodeBuilder.CreateCustomNode(callback, new StratisRegTest(), ProtocolVersion.PROTOCOL_VERSION, agent: "mint-pmnode", configParameters: configParameters);
+            this.PremineNodeWithCoins = this.nodeBuilder.CreateCustomNode(callback, new StraxRegTest(), ProtocolVersion.PROTOCOL_VERSION, agent: "mint-pmnode", configParameters: configParameters);
             this.PremineNodeWithCoins.WithWallet().Start();
         }
 
@@ -100,7 +102,13 @@ namespace Stratis.Bitcoin.IntegrationTests
             }
 
             var minter = this.PremineNodeWithCoins.FullNode.NodeService<IPosMinting>();
-            minter.Stake(new WalletSecret() { WalletName = PremineWallet, WalletPassword = PremineWalletPassword });
+            minter.Stake(new List<WalletSecret>()
+            {
+                new WalletSecret()
+                {
+                    WalletName = this.PremineWallet, WalletPassword = this.PremineWalletPassword
+                }
+            });
         }
 
         public void PremineNodeWalletHasEarnedCoinsThroughStaking()

@@ -105,16 +105,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public void AddFederationMember(byte[] federationMemberBytes)
         {
             IFederationMember federationMember = this.consensusFactory.DeserializeFederationMember(federationMemberBytes);
-
-            this.logger.LogInformation("Adding new fed member: '{0}'.", federationMember);
             this.federationManager.AddFederationMember(federationMember);
         }
 
         public void RemoveFederationMember(byte[] federationMemberBytes)
         {
             IFederationMember federationMember = this.consensusFactory.DeserializeFederationMember(federationMemberBytes);
-
-            this.logger.LogInformation("Kicking fed member: '{0}'.", federationMember);
             this.federationManager.RemoveFederationMember(federationMember);
         }
 

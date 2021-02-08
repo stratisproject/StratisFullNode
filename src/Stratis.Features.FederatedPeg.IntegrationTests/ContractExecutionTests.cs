@@ -32,7 +32,6 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
     {
         private const string WalletName = "mywallet";
         private const string WalletPassword = "password";
-        private const string WalletPassphrase = "passphrase";
         private const string WalletAccount = "account 0";
 
         private (Script payToMultiSig, BitcoinAddress sidechainMultisigAddress, BitcoinAddress mainchainMultisigAddress) scriptAndAddresses;

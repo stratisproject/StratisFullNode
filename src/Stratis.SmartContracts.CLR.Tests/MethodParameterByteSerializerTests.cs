@@ -11,7 +11,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 {
     public class MethodParameterByteSerializerTests
     {
-        public static Network Network = new SmartContractPosRegTest();
+        public static Network Network = new SmartContractsPoARegTest();
         public IMethodParameterSerializer Serializer = new MethodParameterByteSerializer(new ContractPrimitiveSerializer(Network));
 
         [Theory]
@@ -47,7 +47,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             var serializedBytes = this.Serializer.Serialize(parameters);
             var s = stringSerializer.Serialize(parameters);
             var serializedString = Encoding.UTF8.GetBytes(s);
-            
+
             Assert.True(serializedBytes.Length <= serializedString.Length);
         }
 

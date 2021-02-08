@@ -33,7 +33,19 @@ namespace Stratis.Features.FederatedPeg.Models
         [JsonProperty(PropertyName = "multisigRedeemScript")]
         public string MultiSigRedeemScript { get; set; }
 
-        [JsonProperty(PropertyName = "minDepositConfirmations")]
-        public uint MinimumDepositConfirmations { get; set; }
+        [JsonProperty(PropertyName = "multisigRedeemScriptPaymentScript")]
+        public string MultiSigRedeemScriptPaymentScript { get; set; }
+
+        [JsonProperty(PropertyName = "minconfsmalldeposits")]
+        public uint MinimumDepositConfirmationsSmallDeposits { get; set; }
+
+        [JsonProperty(PropertyName = "minconfnormaldeposits")]
+        public uint MinimumDepositConfirmationsNormalDeposits { get; set; }
+
+        [JsonProperty(PropertyName = "minconflargedeposits")]
+        public uint MinimumDepositConfirmationsLargeDeposits { get; set; }
+
+        [JsonProperty(PropertyName = "minconfdistributiondeposits")]
+        public uint MinimumDepositConfirmationsDistributionDeposits { get; set; }
     }
 }

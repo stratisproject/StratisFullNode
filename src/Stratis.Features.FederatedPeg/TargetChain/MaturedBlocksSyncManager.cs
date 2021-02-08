@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin;
+using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
@@ -21,115 +20,92 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     public interface IMaturedBlocksSyncManager : IDisposable
     {
         /// <summary>Starts requesting blocks from another chain.</summary>
-        void Start();
+        Task StartAsync();
     }
 
     /// <inheritdoc cref="IMaturedBlocksSyncManager"/>
     public class MaturedBlocksSyncManager : IMaturedBlocksSyncManager
     {
-        private readonly ICrossChainTransferStore store;
-
-        private readonly IFederationGatewayClient federationGatewayClient;
         private readonly IAsyncProvider asyncProvider;
-
+        private readonly ICrossChainTransferStore crossChainTransferStore;
+        private readonly IFederationGatewayClient federationGatewayClient;
         private readonly ILogger logger;
+        private readonly INodeLifetime nodeLifetime;
 
-        private readonly CancellationTokenSource cancellation;
-
-        private Task blockRequestingTask;
-
-        /// <summary>The maximum amount of blocks to request at a time from alt chain.</summary>
-        private const int MaxBlocksToRequest = 1000;
-
-        /// <summary>The maximum amount of deposits to request at a time from alt chain.</summary>
-        private const int MaxDepositsToRequest = 100;
+        private IAsyncLoop requestDepositsTask;
 
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
-        private const int RefreshDelayMs = 10_000;
+        private const int RefreshDelaySeconds = 10;
 
         /// <summary>Delay between initialization and first request to other node.</summary>
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
-        private const int InitializationDelayMs = 10_000;
+        private const int InitializationDelaySeconds = 10;
 
-        public MaturedBlocksSyncManager(ICrossChainTransferStore store, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider)
+        public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, INodeLifetime nodeLifetime)
         {
-            this.store = store;
-            this.federationGatewayClient = federationGatewayClient;
             this.asyncProvider = asyncProvider;
+            this.crossChainTransferStore = crossChainTransferStore;
+            this.federationGatewayClient = federationGatewayClient;
+            this.nodeLifetime = nodeLifetime;
 
-            this.cancellation = new CancellationTokenSource();
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
-        public void Start()
+        public async Task StartAsync()
         {
-            this.blockRequestingTask = this.RequestMaturedBlocksContinouslyAsync();
-            this.asyncProvider.RegisterTask($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.blockRequestingTask)}", this.blockRequestingTask);
-        }
+            // Initialization delay; give the counter chain node some time to start it's API service.
+            await Task.Delay(TimeSpan.FromSeconds(InitializationDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
-        /// <summary>Continuously requests matured blocks from another chain.</summary>
-        private async Task RequestMaturedBlocksContinouslyAsync()
-        {
-            try
+            this.requestDepositsTask = this.asyncProvider.CreateAndRunAsyncLoop($"{nameof(MaturedBlocksSyncManager)}.{nameof(this.requestDepositsTask)}", async token =>
             {
-                // Initialization delay.
-                // Give other node some time to start API service.
-                await Task.Delay(InitializationDelayMs, this.cancellation.Token).ConfigureAwait(false);
-
-                while (!this.cancellation.IsCancellationRequested)
+                bool delayRequired = await this.SyncDepositsAsync().ConfigureAwait(false);
+                if (delayRequired)
                 {
-                    bool delayRequired = await this.SyncBatchOfBlocksAsync(this.cancellation.Token).ConfigureAwait(false);
-
-                    if (delayRequired)
-                    {
-                        // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
-                        // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
-                        // or alt chain node might be started.
-                        await Task.Delay(RefreshDelayMs, this.cancellation.Token).ConfigureAwait(false);
-                    }
+                    // Since we are synced or had a problem syncing there is no need to ask for more blocks right away.
+                    // Therefore awaiting for a delay during which new block might be accepted on the alternative chain
+                    // or alt chain node might be started.
+                    await Task.Delay(TimeSpan.FromSeconds(RefreshDelaySeconds), this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                this.logger.LogTrace("(-)[CANCELLED]");
-            }
+            },
+            this.nodeLifetime.ApplicationStopping,
+            repeatEvery: TimeSpan.FromSeconds(RefreshDelaySeconds));
         }
 
         /// <summary>Asks for blocks from another gateway node and then processes them.</summary>
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
-        /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
-        protected async Task<bool> SyncBatchOfBlocksAsync(CancellationToken cancellationToken = default(CancellationToken))
+        protected async Task<bool> SyncDepositsAsync()
         {
-            int blocksToRequest = 1;
+            SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
-            // TODO why are we asking for max of 1 block and if it's not suspended then 1000? investigate this logic in maturedBlocksProvider
-            if (!this.store.HasSuspended())
-                blocksToRequest = MaxBlocksToRequest;
-
-            // API method that provides blocks should't give us blocks that are not mature!
-            var model = new MaturedBlockRequestModel(this.store.NextMatureDepositHeight, blocksToRequest, MaxDepositsToRequest);
-
-            this.logger.LogDebug("Request model created: {0}:{1}, {2}:{3}.", nameof(model.BlockHeight), model.BlockHeight, nameof(model.MaxBlocksToSend), model.MaxBlocksToSend);
-
-            // Ask for blocks.
-            SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(model, cancellationToken).ConfigureAwait(false);
-
-            if (matureBlockDepositsResult == null)
+            if (model == null)
             {
-                this.logger.LogDebug("Failed to fetch matured block deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
-                this.logger.LogTrace("(-)[COUNTERCHAIN_NODE_NO_RESPONSE]:true");
+                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
                 return true;
             }
 
-            if (matureBlockDepositsResult.Value == null)
+            if (model.Value == null)
             {
-                this.logger.LogDebug("Failed to fetch matured block deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, matureBlockDepositsResult.Message ?? "none");
-                this.logger.LogTrace("(-)[COUNTERCHAIN_NODE_SENT_NO_DEPOSITS]:true");
+                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, model.Message ?? "none");
                 return true;
             }
 
-            bool delayRequired = true;
+            return await ProcessMatureBlockDepositsAsync(model);
+        }
+
+        private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult)
+        {
+            // "Value"'s count will be 0 if we are using NewtonSoft's serializer, null if using .Net Core 3's serializer.
+            if (matureBlockDepositsResult.Value.Count == 0)
+            {
+                this.logger.Debug("Considering ourselves fully synced since no blocks were received.");
+
+                // If we've received nothing we assume we are at the tip and should flush.
+                // Same mechanic as with syncing headers protocol.
+                await this.crossChainTransferStore.SaveCurrentTipAsync().ConfigureAwait(false);
+
+                return true;
+            }
 
             // Log what we've received.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDepositsResult.Value)
@@ -139,37 +115,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.LogDebug("New deposit received BlockNumber={0}, TargetAddress='{1}', depositId='{2}', Amount='{3}'.", deposit.BlockNumber, deposit.TargetAddress, deposit.Id, deposit.Amount);
+                    this.logger.Trace(deposit.ToString());
                 }
             }
 
-            if (matureBlockDepositsResult.Value.Count > 0)
-            {
-                RecordLatestMatureDepositsResult result = await this.store.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
-
-                // If we received a portion of blocks we can ask for new portion without any delay.
-                if (result.MatureDepositRecorded)
-                    delayRequired = false;
-            }
-            else
-            {
-                this.logger.LogDebug("Considering ourselves fully synced since no blocks were received.");
-
-                // If we've received nothing we assume we are at the tip and should flush.
-                // Same mechanic as with syncing headers protocol.
-                await this.store.SaveCurrentTipAsync().ConfigureAwait(false);
-            }
-
-
-            return delayRequired;
-
+            // If we received a portion of blocks we can ask for new portion without any delay.
+            RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
+            return !result.MatureDepositRecorded;
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
-            this.cancellation.Cancel();
-            this.blockRequestingTask?.GetAwaiter().GetResult();
+            this.requestDepositsTask?.Dispose();
         }
     }
 }

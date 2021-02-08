@@ -71,6 +71,8 @@
 
         public static ConsensusError BadCoinstakeAmount => new ConsensusError("bad-cs-amount", "coinstake pays too much");
 
+        public static ConsensusError BadCirrusRewardAmount => new ConsensusError("bad-cirrus-reward", "cirrus reward percentage too small");
+
         public static ConsensusError BadTransactionPrematureCoinbaseSpending => new ConsensusError("bad-txns-premature-spend-of-coinbase", "tried to spend coinbase before maturity");
 
         public static ConsensusError BadTransactionPrematureCoinstakeSpending => new ConsensusError("bad-txns-premature-spend-of-coinstake", "tried to spend coinstake before maturity");

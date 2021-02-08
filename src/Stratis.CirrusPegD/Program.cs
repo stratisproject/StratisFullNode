@@ -23,6 +23,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg;
+using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusPegD
@@ -37,13 +38,6 @@ namespace Stratis.CirrusPegD
             { NetworkType.Mainnet, CirrusNetwork.NetworksSelector.Mainnet },
             { NetworkType.Testnet, CirrusNetwork.NetworksSelector.Testnet },
             { NetworkType.Regtest, CirrusNetwork.NetworksSelector.Regtest }
-        };
-
-        private static readonly Dictionary<NetworkType, Func<Network>> MainChainNetworks = new Dictionary<NetworkType, Func<Network>>
-        {
-            { NetworkType.Mainnet, Networks.Stratis.Mainnet },
-            { NetworkType.Testnet, Networks.Stratis.Testnet },
-            { NetworkType.Regtest, Networks.Stratis.Regtest }
         };
 
         private static void Main(string[] args)
@@ -63,6 +57,9 @@ namespace Stratis.CirrusPegD
                     throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
                 }
 
+                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
+                Console.Title = isMainchainNode ? "Strax Full Node" : "Cirrus Full Node";
+
                 IFullNode node = isMainchainNode ? GetMainchainFullNode(args) : GetSidechainFullNode(args);
 
                 if (node != null)
@@ -78,22 +75,18 @@ namespace Stratis.CirrusPegD
         {
             // TODO: Hardcode -addressindex
 
-            var nodeSettings = new NodeSettings(networksSelector: Networks.Stratis, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
+            var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
             {
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
             NetworkType networkType = nodeSettings.Network.NetworkType;
 
-            var fedPegOptions = new FederatedPegOptions(
-                walletSyncFromHeight: new int[] { FederatedPegSettings.StratisMainDepositStartBlock, 1, 1 }[(int)networkType]
-            );
-
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
                 .SetCounterChainNetwork(SidechainNetworks[nodeSettings.Network.NetworkType]())
-                .AddFederatedPeg(fedPegOptions)
+                .AddFederatedPeg(isMainChain: true)
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -101,7 +94,8 @@ namespace Stratis.CirrusPegD
                 .AddRPC()
                 .UsePosConsensus()
                 .UseWallet()
-                .AddPowPosMining()
+                .AddSQLiteWalletRepository()
+                .AddPowPosMining(true)
                 .Build();
 
             return node;
@@ -114,17 +108,16 @@ namespace Stratis.CirrusPegD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
-            var fedPegOptions = new FederatedPegOptions(
-                walletSyncFromHeight: new int[] { 1, 1, 1 }[(int)nodeSettings.Network.NetworkType]
-            );
-
             IFullNode node = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseBlockStore()
-                .SetCounterChainNetwork(MainChainNetworks[nodeSettings.Network.NetworkType]())
-                .UseFederatedPegPoAMining()
-                .AddFederatedPeg(fedPegOptions)
-                .CheckForPoAMembersCollateral()
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+                .AddPoAFeature()
+                .UsePoAConsensus()
+                .AddFederatedPeg()
+                .AddPoACollateralMiningCapability()
+                .CheckCollateralCommitment()
+                .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
@@ -136,6 +129,7 @@ namespace Stratis.CirrusPegD
                     options.UsePoAWhitelistedContracts();
                 })
                 .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
                 .Build();
 
             return node;

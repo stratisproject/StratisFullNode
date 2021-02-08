@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
             /// <inheritdoc />
             public bool InitializeBeforeBase { get; set; }
 
-            public string State { get; set; }
+            public FeatureInitializationState State { get; set; }
 
             public void LoadConfiguration()
             {
@@ -48,6 +48,16 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
             {
                 throw new NotImplementedException();
             }
+
+            public void WaitInitialized()
+            {
+            }
+
+            public bool IsEnabled()
+            {
+                return true;
+            }
+
         }
 
         /// <inheritdoc />
@@ -74,7 +84,7 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
         [Fact]
         public void DependencyCheckWithValidDependencies()
         {
-            IFullNodeBuilder builder = new FullNodeBuilder().UseNodeSettings(NodeSettings.Default(KnownNetworks.StratisRegTest));
+            IFullNodeBuilder builder = new FullNodeBuilder().UseNodeSettings(NodeSettings.Default(KnownNetworks.StraxRegTest));
 
             builder.ConfigureFeature(features =>
             {
@@ -98,7 +108,7 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
         [Fact]
         public void DependencyCheckWithInvalidDependenciesThrowsException()
         {
-            IFullNodeBuilder builder = new FullNodeBuilder().UseNodeSettings(NodeSettings.Default(KnownNetworks.StratisRegTest));
+            IFullNodeBuilder builder = new FullNodeBuilder().UseNodeSettings(NodeSettings.Default(KnownNetworks.StraxRegTest));
             builder.ConfigureFeature(features =>
             {
                 features

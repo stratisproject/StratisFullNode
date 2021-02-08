@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.AsyncWork;
@@ -12,10 +13,12 @@ using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
+using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
@@ -27,8 +30,12 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Wallet;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.P2P;
+using Stratis.Bitcoin.P2P.Peer;
+using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -48,7 +55,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public static PowBlockDefinition AssemblerForTest(TestContext testContext)
         {
-            return new PowBlockDefinition(testContext.consensus, testContext.DateTimeProvider, new LoggerFactory(), testContext.mempool, testContext.mempoolLock, new MinerSettings(NodeSettings.Default(testContext.network)), testContext.network, testContext.ConsensusRules);
+            return new PowBlockDefinition(testContext.consensus, testContext.DateTimeProvider, new LoggerFactory(), testContext.mempool, testContext.mempoolLock, new MinerSettings(NodeSettings.Default(testContext.network)), testContext.network, testContext.ConsensusRules, new NodeDeployments(testContext.network, testContext.ChainIndexer));
         }
 
         public class Blockinfo
@@ -92,7 +99,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         public bool TestSequenceLocks(TestContext testContext, ChainedHeader chainedHeader, Transaction tx, Transaction.LockTimeFlags flags, LockPoints uselock = null)
         {
             var context = new MempoolValidationContext(tx, new MempoolValidationState(false));
-            context.View = new MempoolCoinView(testContext.cachedCoinView, testContext.mempool, testContext.mempoolLock, null);
+            context.View = new MempoolCoinView(this.network, testContext.cachedCoinView, testContext.mempool, testContext.mempoolLock, null);
             testContext.mempoolLock.ReadAsync(() => context.View.LoadViewLocked(tx)).GetAwaiter().GetResult();
             return CreateMempoolEntryMempoolRule.CheckSequenceLocks(testContext.network, chainedHeader, context, flags, uselock, false);
         }
@@ -142,20 +149,29 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 IDateTimeProvider dateTimeProvider = DateTimeProvider.Default;
 
-                var loggerFactory = new ExtendedLoggerFactory();
-                loggerFactory.AddConsoleWithFilters();
-
-                var inMemoryCoinView = new InMemoryCoinView(this.ChainIndexer.Tip.HashBlock);
-                var nodeStats = new NodeStats(dateTimeProvider, loggerFactory);
+                var loggerFactory = ExtendedLoggerFactory.Create();
 
                 var nodeSettings = new NodeSettings(this.network, args: new string[] { "-checkpoints" });
                 var consensusSettings = new ConsensusSettings(nodeSettings);
 
-                this.cachedCoinView = new CachedCoinView(inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings);
+                var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(this.ChainIndexer.Tip));
+                var nodeStats = new NodeStats(dateTimeProvider, loggerFactory);
+                this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings);
 
                 var signals = new Signals.Signals(loggerFactory, null);
-                var asyncProvider = new AsyncProvider(loggerFactory, signals, new NodeLifetime());
+                var asyncProvider = new AsyncProvider(loggerFactory, signals);
 
+                var connectionSettings = new ConnectionManagerSettings(nodeSettings);
+                var peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, nodeSettings.DataFolder, loggerFactory, new SelfEndpointTracker(loggerFactory, connectionSettings));
+                var networkPeerFactory = new NetworkPeerFactory(this.network, dateTimeProvider, loggerFactory, new PayloadProvider().DiscoverPayloads(), new SelfEndpointTracker(loggerFactory, connectionSettings), new Mock<IInitialBlockDownloadState>().Object, new ConnectionManagerSettings(nodeSettings), asyncProvider, peerAddressManager);
+
+                var peerDiscovery = new PeerDiscovery(asyncProvider, loggerFactory, this.network, networkPeerFactory, new NodeLifetime(), nodeSettings, peerAddressManager);
+                var selfEndpointTracker = new SelfEndpointTracker(loggerFactory, connectionSettings);
+                var connectionManager = new ConnectionManager(dateTimeProvider, loggerFactory, this.network, networkPeerFactory,
+                    nodeSettings, new NodeLifetime(), new NetworkPeerConnectionParameters(), peerAddressManager, new IPeerConnector[] { },
+                    peerDiscovery, selfEndpointTracker, connectionSettings, new VersionProvider(), new Mock<INodeStats>().Object, asyncProvider, new PayloadProvider());
+
+                var peerBanning = new PeerBanning(connectionManager, loggerFactory, dateTimeProvider, peerAddressManager);
                 var deployments = new NodeDeployments(this.network, this.ChainIndexer);
 
                 var genesis = this.network.GetGenesis();
@@ -168,8 +184,17 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var consensusRulesContainer = new ConsensusRulesContainer();
                 foreach (var ruleType in this.network.Consensus.ConsensusRules.HeaderValidationRules)
                     consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
-                foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
-                    consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
+
+                foreach (var ruleType in network.Consensus.ConsensusRules.FullValidationRules)
+                {
+                    FullValidationConsensusRule rule = null;
+                    if (ruleType == typeof(FlushCoinviewRule))
+                        rule = new FlushCoinviewRule(new Mock<IInitialBlockDownloadState>().Object);
+                    else
+                        rule = Activator.CreateInstance(ruleType) as FullValidationConsensusRule;
+
+                    consensusRulesContainer.FullValidationRules.Add(rule);
+                }
 
                 this.ConsensusRules = new PowConsensusRuleEngine(this.network, loggerFactory, dateTimeProvider, this.ChainIndexer, deployments, consensusSettings,
                     new Checkpoints(), this.cachedCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), nodeStats, asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
@@ -837,44 +862,6 @@ namespace Stratis.Bitcoin.IntegrationTests
             //    chainActive.Tip().Height--;
             //    SetMockTime(0);
             //    mempool.clear();
-        }
-
-        [Fact]
-        public void Miner_PosNetwork_CreatePowTransaction_AheadOfFutureDrift_ShouldNotBeIncludedInBlock()
-        {
-            var network = KnownNetworks.StratisRegTest;
-
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                CoreNode stratisMiner = builder.CreateStratisPosNode(network).WithWallet().Start();
-
-                int maturity = (int)network.Consensus.CoinbaseMaturity;
-                TestHelper.MineBlocks(stratisMiner, maturity + 5);
-
-                // Send coins to the receiver
-                var context = WalletTests.CreateContext(network, new WalletAccountReference(WalletName, Account), Password, new Key().PubKey.GetAddress(network).ScriptPubKey, Money.COIN * 100, FeeType.Medium, 1);
-
-                Transaction trx = stratisMiner.FullNode.WalletTransactionHandler().BuildTransaction(context);
-
-                // This should make the mempool reject a POS trx.
-                trx.Time = Utils.DateTimeToUnixTime(Utils.UnixTimeToDateTime(trx.Time).AddMinutes(5));
-
-                // Sign trx again after changing the time property.
-                trx = context.TransactionBuilder.SignTransaction(trx);
-
-                var broadcaster = stratisMiner.FullNode.NodeService<IBroadcasterManager>();
-
-                broadcaster.BroadcastTransactionAsync(trx).GetAwaiter().GetResult();
-                var entry = broadcaster.GetTransaction(trx.GetHash());
-
-                Assert.Equal(TransactionBroadcastState.ToBroadcast, entry.TransactionBroadcastState);
-
-                Assert.NotNull(stratisMiner.FullNode.MempoolManager().GetTransaction(trx.GetHash()).Result);
-
-                TestHelper.MineBlocks(stratisMiner, 1);
-
-                Assert.NotNull(stratisMiner.FullNode.MempoolManager().GetTransaction(trx.GetHash()).Result);
-            }
         }
     }
 }

@@ -11,6 +11,7 @@ using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
 using Stratis.Bitcoin.IntegrationTests.Wallet;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
@@ -20,7 +21,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
     {
         private const string Password = "password";
         private const string WalletName = "mywallet";
-        private const string Passphrase = "passphrase";
         private const string Account = "account 0";
 
         private readonly Network network;
@@ -350,49 +350,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         }
 
         [Fact]
-        public void Mempool_SendPosTransaction_AheadOfFutureDrift_ShouldRejectByMempool()
-        {
-            var network = new StratisRegTest();
-
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
-
-                TestHelper.MineBlocks(stratisSender, 5);
-
-                // Send coins to the receiver
-                var context = WalletTests.CreateContext(network, new WalletAccountReference(WalletName, Account), Password, new Key().PubKey.GetAddress(network).ScriptPubKey, Money.COIN * 100, FeeType.Medium, 1);
-
-                Transaction trx = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(context);
-
-                // This should make the mempool reject a POS trx.
-                trx.Time = Utils.DateTimeToUnixTime(Utils.UnixTimeToDateTime(trx.Time).AddMinutes(5));
-
-                // Sign trx again after changing the time property.
-                trx = context.TransactionBuilder.SignTransaction(trx);
-
-                // Enable standard policy relay.
-                stratisSender.FullNode.NodeService<MempoolSettings>().RequireStandard = true;
-
-                var broadcaster = stratisSender.FullNode.NodeService<IBroadcasterManager>();
-
-                broadcaster.BroadcastTransactionAsync(trx).GetAwaiter().GetResult();
-                var entry = broadcaster.GetTransaction(trx.GetHash());
-
-                Assert.Equal("time-too-new", entry.ErrorMessage);
-            }
-        }
-
-        [Fact]
         public void Mempool_SendPosTransaction_WithElapsedLockTime_ShouldBeAcceptedByMempool()
         {
             // See CheckFinalTransaction_WithElapsedLockTime_ReturnsTrueAsync for the 'unit test' version
 
-            var network = new StratisRegTest();
+            var network = new StraxRegTest();
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -426,11 +392,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         {
             // See AcceptToMemoryPool_TxFinalCannotMine_ReturnsFalseAsync for the 'unit test' version
 
-            var network = new StratisRegTest();
+            var network = new StraxRegTest();
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -463,11 +429,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         [Fact]
         public void Mempool_SendOversizeTransaction_ShouldRejectByMempool()
         {
-            var network = new StratisRegTest();
+            var network = new StraxRegTest();
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -495,49 +461,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
             }
         }
 
-        [Fact]
-        public void Mempool_SendTransactionWithEarlyTimestamp_ShouldRejectByMempool()
-        {
-            var network = new StratisRegTest();
-
-            using (NodeBuilder builder = NodeBuilder.Create(this))
-            {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
-
-                TestHelper.MineBlocks(stratisSender, 5);
-
-                // Send coins to the receiver
-                var context = WalletTests.CreateContext(network, new WalletAccountReference(WalletName, Account), Password, new Key().PubKey.GetAddress(network).ScriptPubKey, Money.COIN * 100, FeeType.Medium, 1);
-
-                Transaction trx = stratisSender.FullNode.WalletTransactionHandler().BuildTransaction(context);
-
-                // Use timestamp value that is definitely earlier than the input's timestamp
-                trx.Time = 1;
-
-                // Sign trx again after mutating timestamp
-                trx = context.TransactionBuilder.SignTransaction(trx);
-
-                // Enable standard policy relay.
-                stratisSender.FullNode.NodeService<MempoolSettings>().RequireStandard = true;
-
-                var broadcaster = stratisSender.FullNode.NodeService<IBroadcasterManager>();
-
-                broadcaster.BroadcastTransactionAsync(trx).GetAwaiter().GetResult();
-                var entry = broadcaster.GetTransaction(trx.GetHash());
-
-                Assert.Equal("timestamp earlier than input", entry.ErrorMessage);
-            }
-        }
-
         // TODO: There is no need for this to be a full integration test, there just needs to be a PoS version of the test chain used in the validator unit tests
         [Fact]
         public void Mempool_SendTransactionWithLargeOpReturn_ShouldRejectByMempool()
         {
-            var network = new StratisRegTest();
+            var network = new StraxRegTest();
 
-            using (NodeBuilder builder = NodeBuilder.Create(this))
+            using (var builder = NodeBuilder.Create(this))
             {
-                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                CoreNode stratisSender = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
 
                 TestHelper.MineBlocks(stratisSender, 5);
 
@@ -551,10 +483,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
                 {
                     if (output.ScriptPubKey.IsUnspendable)
                     {
-                        int[] data =
+                        var data = new int[StraxStandardScriptsRegistry.MaxOpReturnRelay + 1];
+                        for (int i = 0; i < StraxStandardScriptsRegistry.MaxOpReturnRelay + 1; i++)
                         {
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-                        };
+                            data[i] = 0;
+                        }
                         var ops = new Op[data.Length + 1];
                         ops[0] = OpcodeType.OP_RETURN;
                         for (int i = 0; i < data.Length; i++)

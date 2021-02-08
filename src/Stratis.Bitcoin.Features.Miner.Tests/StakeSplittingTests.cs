@@ -52,21 +52,21 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         }
 
         [Fact]
-        public void Given_A_Wallet_With_Big_And_Small_Coins_Then_Coins_Below_Target_Should_Get_Split()
+        public void Given_A_Wallet_With_Big_And_Small_Coins_Then_Coins_Below_Target_Should_Not_Get_Split()
         {
-            // Aiming for target value around 4700.
-            var amounts = new[] { 2000, 10 }
-                .Concat(Enumerable.Repeat(100_000, 3))
+            // Aiming for target value around 2000 (presuming 500 coinstake age requirement).
+            var amounts = new[] { 1500, 10 }
+                .Concat(Enumerable.Repeat(1_000_000, 3))
                 .Select(a => new Money(a, MoneyUnit.BTC))
                 .ToArray();
 
-            var shouldStakeSplitForThe2000Coin = this.posMinting.ShouldSplitStake(
+            var shouldStakeSplitForThe1500Coin = this.posMinting.ShouldSplitStake(
                  stakedUtxosCount: amounts.Length, 
                  amountStaked: amounts.Sum(u => u.Satoshi),
                  coinValue: amounts.First(),
                  chainHeight: ChainHeight);
 
-            shouldStakeSplitForThe2000Coin.Should().BeFalse("coin is bigger than max value, but smaller than target value");
+            shouldStakeSplitForThe1500Coin.Should().BeFalse("coin is bigger than min value, but smaller than target value");
 
             var shouldStakeSplitForThe10Coin = this.posMinting.ShouldSplitStake(
                 stakedUtxosCount: amounts.Length,
@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 coinValue: amounts.Skip(1).First(),
                 chainHeight: ChainHeight);
 
-            shouldStakeSplitForThe10Coin.Should().BeFalse("because coin is below target average and max value");
+            shouldStakeSplitForThe10Coin.Should().BeFalse("because coin is below target average and min value");
         }
 
         [Fact]
@@ -138,7 +138,8 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 coinstakeContext: coinStakeContext,
                 coinstakeOutputValue: coinstakeInputValue,
                 utxosCount: amounts.Count,
-                amountStaked: amountStaked);
+                amountStaked: amountStaked,
+                reward: (long)reward);
             return (coinstakeInputValue, transaction);
         }
 
@@ -148,12 +149,11 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             var amounts = Enumerable.Repeat(100_000, 3)
                 .Select(a => new Money(a, MoneyUnit.BTC))
                 .ToList();
-            var chainHeight = ChainHeight;
 
             //only a rough calculation to prevent infinite loop later in the test
             var targetSplitCoinValue = amounts.Sum(u => u.Satoshi) / (500 + 1) * 3;
             var maxIterations = Math.Ceiling((Math.Log(amounts.Last().Satoshi, PosMinting.SplitFactor) 
-                                       - Math.Log(targetSplitCoinValue, PosMinting.SplitFactor))) + 1;
+                                       - Math.Log(targetSplitCoinValue, PosMinting.SplitFactor))) + 2;
 
             var iterations = 0;
             while (this.posMinting.ShouldSplitStake(
@@ -163,7 +163,6 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 chainHeight: ChainHeight) && iterations < maxIterations)
             {
                 iterations++;
-                chainHeight++;
 
                 var transaction = GetCoinstakeTransaction(amounts);
 
@@ -191,7 +190,8 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 coinstakeContext: coinStakeContext,
                 coinstakeOutputValue: coinstakeInputValue,
                 utxosCount: amounts.Count,
-                amountStaked: amounts.Sum(u => u.Satoshi));
+                amountStaked: amounts.Sum(u => u.Satoshi),
+                reward: (long)reward);
             return transaction;
         }
 

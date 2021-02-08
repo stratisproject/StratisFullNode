@@ -1,18 +1,22 @@
 ﻿using System;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
-using Stratis.Features.Collateral;
+using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.PoA.Collateral;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.Tests
 {
-    public class CollateralHeightCommitmentEncoderTests
+    public sealed class CollateralHeightCommitmentEncoderTests
     {
-        private CollateralHeightCommitmentEncoder encoder;
+        private readonly CollateralHeightCommitmentEncoder encoder;
 
-        private Random r;
+        private readonly Random r;
 
         public CollateralHeightCommitmentEncoderTests()
         {
+            ILogger logger = new Mock<ILogger>().Object;
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.r = new Random();
         }
@@ -24,17 +28,16 @@ namespace Stratis.Features.FederatedPeg.Tests
             {
                 int randomValue = this.r.Next();
 
-                byte[] encodedWithPrefix = this.encoder.EncodeWithPrefix(randomValue);
+                byte[] encodedWithPrefix = this.encoder.EncodeCommitmentHeight(randomValue);
 
-                var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedWithPrefix));
+                var votingOutputScript = new Script(OpcodeType.OP_RETURN, Op.GetPushOp(encodedWithPrefix), Op.GetPushOp(KnownNetworks.StraxMain.MagicBytes));
                 var tx = new Transaction();
                 tx.AddOutput(Money.Zero, votingOutputScript);
 
-                byte[] rawData = this.encoder.ExtractRawCommitmentData(tx);
-
-                int decodedValue = this.encoder.Decode(rawData);
+                (int? decodedValue, uint? magic) = this.encoder.DecodeCommitmentHeight(tx);
 
                 Assert.Equal(randomValue, decodedValue);
+                Assert.Equal(KnownNetworks.StraxMain.Magic, magic);
             }
         }
     }

@@ -49,9 +49,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <summary>When checking the POS block signature this determines the maximum push data (public key) size following the OP_RETURN in the nonspendable output.</summary>
         private const int MaxPushDataSize = 40;
 
-        /// <summary>Expected (or target) block time in seconds.</summary>
-        public const uint TargetSpacingSeconds = 64;
-
+        // TODO: move this to IConsensus
         /// <summary>Time interval in minutes that is used in the retarget calculation.</summary>
         private const uint RetargetIntervalMinutes = 16;
 
@@ -105,7 +103,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <inheritdoc/>
         public Target CalculateRetarget(uint firstBlockTime, Target firstBlockTarget, uint secondBlockTime, BigInteger targetLimit)
         {
-            uint targetSpacing = TargetSpacingSeconds;
+            uint targetSpacing = (uint)this.network.Consensus.TargetSpacing.TotalSeconds;
             uint actualSpacing = firstBlockTime > secondBlockTime ? firstBlockTime - secondBlockTime : targetSpacing;
 
             if (actualSpacing > targetSpacing * 10)
@@ -169,7 +167,7 @@ namespace Stratis.Bitcoin.Features.Consensus
             }
 
             // This is used in tests to allow quickly mining blocks.
-            if (!proofOfStake && consensus.PowNoRetargeting) 
+            if (!proofOfStake && consensus.PowNoRetargeting)
             {
                 this.logger.LogTrace("(-)[NO_POW_RETARGET]:'{0}'", lastPowPosBlock.Header.Bits);
                 return lastPowPosBlock.Header.Bits;
@@ -202,7 +200,7 @@ namespace Stratis.Bitcoin.Features.Consensus
 
             TxIn txIn = transaction.Inputs[0];
 
-            UnspentOutputs prevUtxo = context.UnspentOutputSet.AccessCoins(txIn.PrevOut.Hash);
+            UnspentOutput prevUtxo = context.UnspentOutputSet.AccessCoins(txIn.PrevOut);
             if (prevUtxo == null)
             {
                 this.logger.LogTrace("(-)[PREV_UTXO_IS_NULL]");
@@ -223,7 +221,7 @@ namespace Stratis.Bitcoin.Features.Consensus
                 ConsensusErrors.InvalidStakeDepth.Throw();
             }
 
-            if (!this.CheckStakeKernelHash(context, headerBits, prevBlockStake.StakeModifierV2, prevUtxo, txIn.PrevOut, transaction.Time))
+            if (!this.CheckStakeKernelHash(context, headerBits, prevBlockStake.StakeModifierV2, prevUtxo, txIn.PrevOut, context.ValidationContext.ChainedHeaderToValidate.Header.Time))
             {
                 this.logger.LogTrace("(-)[INVALID_STAKE_HASH_TARGET]");
                 ConsensusErrors.StakeHashInvalidTarget.Throw();
@@ -256,21 +254,21 @@ namespace Stratis.Bitcoin.Features.Consensus
             Guard.NotNull(prevout, nameof(prevout));
             Guard.NotNull(prevChainedHeader, nameof(prevChainedHeader));
 
-            FetchCoinsResponse coins = this.coinView.FetchCoins(new[] { prevout.Hash });
-            if ((coins == null) || (coins.UnspentOutputs.Length != 1))
+            FetchCoinsResponse coins = this.coinView.FetchCoins(new[] { prevout });
+            if ((coins == null) || (coins.UnspentOutputs.Count != 1))
             {
                 this.logger.LogTrace("(-)[READ_PREV_TX_FAILED]");
                 ConsensusErrors.ReadTxPrevFailed.Throw();
             }
 
-            ChainedHeader prevBlock = this.chainIndexer.GetHeader(coins.BlockHash);
+            ChainedHeader prevBlock = this.chainIndexer.GetHeader(this.coinView.GetTipHash().Hash);
             if (prevBlock == null)
             {
                 this.logger.LogTrace("(-)[REORG]");
                 ConsensusErrors.ReadTxPrevFailed.Throw();
             }
 
-            UnspentOutputs prevUtxo = coins.UnspentOutputs[0];
+            UnspentOutput prevUtxo = coins.UnspentOutputs.Single().Value;
             if (prevUtxo == null)
             {
                 this.logger.LogTrace("(-)[PREV_UTXO_IS_NULL]");
@@ -294,18 +292,11 @@ namespace Stratis.Bitcoin.Features.Consensus
         }
 
         /// <inheritdoc/>
-        public bool CheckStakeKernelHash(PosRuleContext context, uint headerBits, uint256 prevStakeModifier, UnspentOutputs stakingCoins, OutPoint prevout, uint transactionTime)
+        public bool CheckStakeKernelHash(PosRuleContext context, uint headerBits, uint256 prevStakeModifier, UnspentOutput stakingCoins, OutPoint prevout, uint transactionTime)
         {
             Guard.NotNull(context, nameof(context));
             Guard.NotNull(prevout, nameof(prevout));
             Guard.NotNull(stakingCoins, nameof(stakingCoins));
-
-            if (transactionTime < stakingCoins.Time)
-            {
-                this.logger.LogDebug("Coinstake transaction timestamp {0} is lower than it's own UTXO timestamp {1}.", transactionTime, stakingCoins.Time);
-                this.logger.LogTrace("(-)[BAD_STAKE_TIME]");
-                ConsensusErrors.StakeTimeViolation.Throw();
-            }
 
             // Base target.
             BigInteger target = new Target(headerBits).ToBigInteger();
@@ -316,7 +307,7 @@ namespace Stratis.Bitcoin.Features.Consensus
             // the max weight should not exceed the max uint256 array size (array size = 32).
 
             // Weighted target.
-            long valueIn = stakingCoins.Outputs[prevout.N].Value.Satoshi;
+            long valueIn = stakingCoins.Coins.TxOut.Value.Satoshi;
             BigInteger weight = BigInteger.ValueOf(valueIn);
             BigInteger weightedTarget = target.Multiply(weight);
 
@@ -328,7 +319,6 @@ namespace Stratis.Bitcoin.Features.Consensus
             {
                 var serializer = new BitcoinStream(ms, true);
                 serializer.ReadWrite(prevStakeModifier);
-                serializer.ReadWrite(stakingCoins.Time);
                 serializer.ReadWrite(prevout.Hash);
                 serializer.ReadWrite(prevout.N);
                 serializer.ReadWrite(transactionTime);
@@ -350,7 +340,7 @@ namespace Stratis.Bitcoin.Features.Consensus
         }
 
         /// <inheritdoc/>
-        public bool VerifySignature(UnspentOutputs coin, Transaction txTo, int txToInN, ScriptVerify flagScriptVerify)
+        public bool VerifySignature(UnspentOutput coin, Transaction txTo, int txToInN, ScriptVerify flagScriptVerify)
         {
             Guard.NotNull(coin, nameof(coin));
             Guard.NotNull(txTo, nameof(txTo));
@@ -360,19 +350,20 @@ namespace Stratis.Bitcoin.Features.Consensus
 
             TxIn input = txTo.Inputs[txToInN];
 
-            if (input.PrevOut.N >= coin.Outputs.Length)
-            {
-                this.logger.LogTrace("(-)[OUTPUT_INCORRECT_LENGTH]");
-                return false;
-            }
+            //if (input.PrevOut.N >= coin.Outputs.Length)
+            //{
+            //    this.logger.LogTrace("(-)[OUTPUT_INCORRECT_LENGTH]");
+            //    return false;
+            //}
 
-            if (input.PrevOut.Hash != coin.TransactionId)
+            //if (input.PrevOut.Hash != coin.TransactionId)
+            if (input.PrevOut.Hash != coin.OutPoint.Hash)
             {
                 this.logger.LogTrace("(-)[INCORRECT_TX]");
                 return false;
             }
 
-            TxOut output = coin.Outputs[input.PrevOut.N];
+            TxOut output = coin.Coins.TxOut;//.Outputs[input.PrevOut.N];
 
             if (output == null)
             {
@@ -389,12 +380,12 @@ namespace Stratis.Bitcoin.Features.Consensus
         }
 
         /// <inheritdoc />
-        public bool IsConfirmedInNPrevBlocks(UnspentOutputs coins, ChainedHeader referenceChainedHeader, long targetDepth)
+        public bool IsConfirmedInNPrevBlocks(UnspentOutput coins, ChainedHeader referenceChainedHeader, long targetDepth)
         {
             Guard.NotNull(coins, nameof(coins));
             Guard.NotNull(referenceChainedHeader, nameof(referenceChainedHeader));
 
-            int actualDepth = referenceChainedHeader.Height - (int)coins.Height;
+            int actualDepth = referenceChainedHeader.Height - (int)coins.Coins.Height;
             bool res = actualDepth < targetDepth;
 
             return res;
@@ -488,4 +479,3 @@ namespace Stratis.Bitcoin.Features.Consensus
         }
     }
 }
-

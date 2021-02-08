@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AssemblyName>FodyNlogAdapter</AssemblyName>
-    <Version>3.0.6.0-beta</Version>
+    <Version>1.0.7.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
-    <PackageId>Stratis.FodyNlogAdapter</PackageId>
-    <Product>Stratis.FodyNlogAdapter</Product>
+    <PackageId>Stratis.Utils.FodyNlogAdapter</PackageId>
+    <Product>Stratis.Utils.FodyNlogAdapter</Product>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NLog" Version="5.0.0-beta09" />
+    <PackageReference Include="NLog" Version="4.7.3" />
   </ItemGroup>
 
 </Project>

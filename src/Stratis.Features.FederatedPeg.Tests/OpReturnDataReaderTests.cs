@@ -14,23 +14,18 @@ namespace Stratis.Features.FederatedPeg.Tests
     public class OpReturnDataReaderTests
     {
         private readonly ILoggerFactory loggerFactory;
-
         private readonly Network network;
-
         private readonly Network counterChainNetwork;
-
         private readonly OpReturnDataReader opReturnDataReader;
-
         private readonly AddressHelper addressHelper;
-
         private readonly TestTransactionBuilder transactionBuilder;
 
         public OpReturnDataReaderTests()
         {
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.network = CirrusNetwork.NetworksSelector.Regtest();
-            this.counterChainNetwork = Networks.Stratis.Regtest();
-            this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(this.counterChainNetwork));
+            this.counterChainNetwork = Networks.Strax.Regtest();
+            this.opReturnDataReader = new OpReturnDataReader(new CounterChainNetworkWrapper(this.counterChainNetwork));
 
             this.transactionBuilder = new TestTransactionBuilder();
             this.addressHelper = new AddressHelper(this.network, this.counterChainNetwork);

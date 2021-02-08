@@ -40,5 +40,17 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
             return node;
         }
+
+        public CoreNode CreatePoANodeWithCounterchain(PoANetwork network, Network counterChain, Key key)
+        {
+            string dataFolder = this.GetNextDataFolderName();
+            CoreNode node = this.CreateNode(new PoANodeRunnerWithCounterchain(dataFolder, network, counterChain, this.TimeProvider), "poa.conf");
+
+            var settings = new NodeSettings(network, args: new string[] { "-conf=poa.conf", "-datadir=" + dataFolder });
+            var tool = new KeyTool(settings.DataFolder);
+            tool.SavePrivateKey(key);
+
+            return node;
+        }
     }
 }

@@ -24,8 +24,6 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
         private readonly ISlotsManager slotsManager;
 
-        private readonly IConsensusManager consensusManager;
-
         public TestPoAMiner(
             IConsensusManager consensusManager,
             IDateTimeProvider dateTimeProvider,
@@ -43,14 +41,14 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             INodeStats nodeStats,
             VotingManager votingManager,
             PoAMinerSettings poAMinerSettings,
-            IAsyncProvider asyncProvider) : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
-                connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider)
+            IAsyncProvider asyncProvider,
+            IIdleFederationMembersKicker idleFederationMembersKicker) : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
+                connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker)
         {
             this.timeProvider = dateTimeProvider as EditableTimeProvider;
 
             this.cancellation = new CancellationTokenSource();
             this.slotsManager = slotsManager;
-            this.consensusManager = consensusManager;
         }
 
         public override void InitializeMining()

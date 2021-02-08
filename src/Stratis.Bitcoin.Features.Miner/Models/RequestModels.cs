@@ -1,5 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
+using Stratis.Bitcoin.Features.Miner.Staking;
 
 namespace Stratis.Bitcoin.Features.Miner.Models
 {
@@ -17,7 +19,7 @@ namespace Stratis.Bitcoin.Features.Miner.Models
             return JsonConvert.SerializeObject(this, Formatting.Indented);
         }
     }
-
+    
     /// <summary>
     /// Model for the "startstaking" request.
     /// </summary>
@@ -34,6 +36,18 @@ namespace Stratis.Bitcoin.Features.Miner.Models
         /// </summary>
         [Required(ErrorMessage = "The name of the wallet is missing.")]
         public string Name { get; set; }
+    }
+
+    /// <summary>
+    /// Model for the "startmultistaking" request.
+    /// </summary>
+    public class StartMultiStakingRequest : RequestModel
+    {
+        /// <summary>
+        /// The list of one or more wallet credentials to start staking with.
+        /// </summary>
+        [Required(ErrorMessage = "The list of wallet credentials is required.")]
+        public List<WalletSecret> WalletCredentials { get; set; }
     }
 
     /// <summary>

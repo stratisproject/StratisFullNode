@@ -6,24 +6,24 @@ using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Tests.Common;
+using Stratis.Bitcoin.Networks;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.BlockStore.Tests
 {
     public class BlockStoreBehaviorTest
     {
-        private BlockStoreBehavior behavior;
-        private Mock<IChainState> chainState;
-        private ChainIndexer chainIndexer;
+        private readonly BlockStoreBehavior behavior;
+        private readonly Mock<IChainState> chainState;
+        private readonly ChainIndexer chainIndexer;
         private readonly ILoggerFactory loggerFactory;
-        private Mock<IConsensusManager> consensusManager;
-        private Mock<IBlockStoreQueue> blockStore;
+        private readonly Mock<IConsensusManager> consensusManager;
+        private readonly Mock<IBlockStoreQueue> blockStore;
 
         public BlockStoreBehaviorTest()
         {
             this.loggerFactory = new LoggerFactory();
-            this.chainIndexer = new ChainIndexer(KnownNetworks.StratisMain);
+            this.chainIndexer = new ChainIndexer(new StraxMain());
             this.chainState = new Mock<IChainState>();
             this.consensusManager = new Mock<IConsensusManager>();
             this.blockStore = new Mock<IBlockStoreQueue>();

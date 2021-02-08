@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -39,6 +40,9 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <summary>The maximum amount of blocks that can be assigned to <see cref="IBlockPuller"/> at the same time.</summary>
         private const int MaxBlocksToAskFromPuller = 10000;
+
+        /// <summary>The maximum amount of blocks that the <see cref="IChainedHeaderTree.UnconsumedBlocksCount"/> can store.</summary>
+        private const int MaxUnconsumedBlocksCount = 10000;
 
         /// <summary>The minimum amount of slots that should be available to trigger asking block puller for blocks.</summary>
         private const int ConsumptionThresholdSlots = MaxBlocksToAskFromPuller / 10;
@@ -78,6 +82,9 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <inheritdoc />
         public ChainedHeader Tip { get; private set; }
+
+        /// <inheritdoc />
+        public int? HeaderTip => this.chainedHeaderTree.GetBestPeerTip()?.Height ?? this.Tip.Height;
 
         /// <inheritdoc />
         public IConsensusRuleEngine ConsensusRules { get; private set; }
@@ -198,7 +205,7 @@ namespace Stratis.Bitcoin.Consensus
             this.callbacksByBlocksRequestedHash = new Dictionary<uint256, DownloadedCallbacks>();
             this.peersByPeerId = new Dictionary<int, INetworkPeer>();
             this.toDownloadQueue = new Queue<BlockDownloadRequest>();
-            this.performanceCounter = new ConsensusManagerPerformanceCounter();
+            this.performanceCounter = new ConsensusManagerPerformanceCounter(this.chainIndexer);
             this.ibdState = ibdState;
 
             this.blockPuller = blockPuller;
@@ -227,13 +234,13 @@ namespace Stratis.Bitcoin.Consensus
             // We should consider creating a consensus store class that will internally contain
             // coinview and it will abstract the methods `RewindAsync()` `GetBlockHashAsync()`
 
-            uint256 consensusTipHash = this.ConsensusRules.GetBlockHash();
+            HashHeightPair consensusTipHash = this.ConsensusRules.GetBlockHash();
 
             ChainedHeader pendingTip;
 
             while (true)
             {
-                pendingTip = chainTip.FindAncestorOrSelf(consensusTipHash);
+                pendingTip = chainTip.FindAncestorOrSelf(consensusTipHash.Hash);
 
                 if ((pendingTip != null) && (this.chainState.BlockStoreTip.Height >= pendingTip.Height))
                     break;
@@ -291,7 +298,8 @@ namespace Stratis.Bitcoin.Consensus
                     return connectNewHeadersResult;
                 }
 
-                this.chainState.IsAtBestChainTip = this.IsConsensusConsideredToBeSyncedLocked();
+                this.chainState.IsAtBestChainTip = this.IsConsensusConsideredToBeSyncedLocked(out ChainedHeader bestPeerTip);
+                this.chainState.BestPeerTip = bestPeerTip;
 
                 this.blockPuller.NewPeerTipClaimed(peer, connectNewHeadersResult.Consumed);
             }
@@ -312,7 +320,7 @@ namespace Stratis.Bitcoin.Consensus
         }
 
         /// <inheritdoc />
-        public async Task<ChainedHeader> BlockMinedAsync(Block block)
+        public async Task<ChainedHeader> BlockMinedAsync(Block block, bool assumeValid = false)
         {
             Guard.NotNull(block, nameof(block));
 
@@ -332,6 +340,9 @@ namespace Stratis.Bitcoin.Consensus
 
                     // This might throw ConsensusErrorException but we don't wanna catch it because miner will catch it.
                     chainedHeader = this.chainedHeaderTree.CreateChainedHeaderOfMinedBlock(block);
+
+                    if (assumeValid)
+                        chainedHeader.IsAssumedValid = true;
                 }
 
                 validationContext = await this.partialValidator.ValidateAsync(chainedHeader, block).ConfigureAwait(false);
@@ -458,6 +469,8 @@ namespace Stratis.Bitcoin.Consensus
                     {
                         this.blockPuller.RequestPeerServices(validationContext.MissingServices.Value);
 
+                        this.DownloadBlocks(new[] { validationContext.ChainedHeaderToValidate });
+                        this.logger.LogWarning("Downloading block for '{0}' had missing services {1}, it will be enqueued again.", validationContext.ChainedHeaderToValidate, validationContext.MissingServices);
                         this.logger.LogTrace("(-)[MISSING_SERVICES]");
                         return;
                     }
@@ -758,7 +771,9 @@ namespace Stratis.Bitcoin.Consensus
 
             foreach (ChainedHeaderBlock blockToConnect in blocksToConnect)
             {
-                using (this.performanceCounter.MeasureBlockConnectionFV())
+                StopwatchDisposable dsb = (StopwatchDisposable)this.performanceCounter.MeasureBlockConnectionFV();
+
+                using (dsb)
                 {
                     connectBlockResult = await this.ConnectBlockAsync(blockToConnect).ConfigureAwait(false);
 
@@ -796,6 +811,11 @@ namespace Stratis.Bitcoin.Consensus
                 {
                     this.signals.Publish(new BlockConnected(blockToConnect));
                 }
+
+                // TODO: Validate block size display, seems incorrect
+                this.logger.LogDebug("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
+                    blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
+                    dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
             }
 
             // After successfully connecting all blocks set the tree tip and claim the branch.
@@ -912,7 +932,8 @@ namespace Stratis.Bitcoin.Consensus
             {
                 this.chainedHeaderTree.FullValidationSucceeded(blockToConnect.ChainedHeader);
 
-                this.chainState.IsAtBestChainTip = this.IsConsensusConsideredToBeSyncedLocked();
+                this.chainState.IsAtBestChainTip = this.IsConsensusConsideredToBeSyncedLocked(out ChainedHeader bestPeerTip);
+                this.chainState.BestPeerTip = bestPeerTip;
             }
 
             var result = new ConnectBlocksResult(true) { ConsensusTipChanged = true };
@@ -1286,6 +1307,43 @@ namespace Stratis.Bitcoin.Consensus
             return blockHashes.Select(h => chainedHeaderBlocks[h]).ToArray();
         }
 
+        /// <inheritdoc />
+        public IEnumerable<ChainedHeaderBlock> GetBlocksAfterBlock(ChainedHeader previousHeader, int batchSize, CancellationTokenSource cancellationTokenSource)
+        {
+            // If previous header is null, start from genesis.
+            int nextHeight = (previousHeader == null) ? 0 : previousHeader.Height + 1;
+
+            // If previous header is null, start from genesis.
+            for (int height = nextHeight; !cancellationTokenSource.IsCancellationRequested;)
+            {
+                // Add hashes in a batch.
+                var headerHashes = new List<uint256>();
+                for (int batchIndex = 0; batchIndex < batchSize; batchIndex++)
+                {
+                    ChainedHeader currentHeader = this.chainIndexer.GetHeader(height + batchIndex);
+                    if (currentHeader == null)
+                        break;
+
+                    if (currentHeader.Previous != previousHeader)
+                        break;
+
+                    headerHashes.Add(currentHeader.HashBlock);
+
+                    previousHeader = currentHeader;
+                }
+
+                if (headerHashes.Count == 0)
+                    yield break;
+
+                ChainedHeaderBlock[] blocks = this.GetBlockData(headerHashes);
+
+                for (int blockIndex = 0; blockIndex < blocks.Length && !cancellationTokenSource.IsCancellationRequested; height++, blockIndex++)
+                {
+                    yield return blocks[blockIndex];
+                }
+            }
+        }
+
         /// <summary>
         /// Processes items in the <see cref="toDownloadQueue"/> and ask the block puller for blocks to download.
         /// If the tree has too many unconsumed blocks we will not ask block puller for more until some blocks are consumed.
@@ -1310,6 +1368,14 @@ namespace Stratis.Bitcoin.Consensus
                     return;
                 }
 
+                // TODO: It has been observed that nodes could previously download several hundred thousand blocks, and consensus would advance while the block store lagged far behind.
+                // TODO: That would cause exceedingly long rewinds on the next startup if the node happened to shut down. Check if the addition of this condition properly mitigates that.
+                if (this.chainedHeaderTree.UnconsumedBlocksCount > MaxUnconsumedBlocksCount)
+                {
+                    this.logger.LogTrace("(-)[MAX_UNCONSUMED_BLOCKS_REACHED]");
+                    return;
+                }
+
                 long freeBytes = this.maxUnconsumedBlocksDataBytes - this.chainedHeaderTree.UnconsumedBlocksDataBytes - this.expectedBlockDataBytes;
                 this.logger.LogDebug("{0} bytes worth of blocks is available for download.", freeBytes);
 
@@ -1320,7 +1386,7 @@ namespace Stratis.Bitcoin.Consensus
                 }
 
                 // To fix issue https://github.com/stratisproject/StratisBitcoinFullNode/issues/2294#issue-364513736
-                // if there are no samples, assume the worst scenario (you are going to donwload full blocks).
+                // if there are no samples, assume the worst scenario (you are going to download full blocks).
                 long avgSize = (long)this.blockPuller.GetAverageBlockSizeBytes();
                 if (avgSize == 0)
                 {
@@ -1330,6 +1396,12 @@ namespace Stratis.Bitcoin.Consensus
                 int maxBlocksToAsk = Math.Min((int)(freeBytes / avgSize), freeSlots);
 
                 this.logger.LogDebug("With {0} average block size, we have {1} download slots available.", avgSize, maxBlocksToAsk);
+
+                if (maxBlocksToAsk <= 0)
+                {
+                    this.logger.LogTrace("(-)[NOT_ENOUGH_FREE_BYTES]");
+                    return;
+                }
 
                 BlockDownloadRequest request = this.toDownloadQueue.Peek();
 
@@ -1368,9 +1440,9 @@ namespace Stratis.Bitcoin.Consensus
         /// blocks from the best tip's height.
         /// </summary>
         /// <remarks>Should be locked by <see cref="peerLock"/>.</remarks>
-        private bool IsConsensusConsideredToBeSyncedLocked()
+        private bool IsConsensusConsideredToBeSyncedLocked(out ChainedHeader bestTip)
         {
-            ChainedHeader bestTip = this.chainedHeaderTree.GetBestPeerTip();
+            bestTip = this.chainedHeaderTree.GetBestPeerTip();
 
             if (bestTip == null)
             {
@@ -1432,8 +1504,6 @@ namespace Stratis.Bitcoin.Consensus
 
                 log.AppendLine($"Tip Age: { TimeSpan.FromSeconds(tipAge).ToString(@"dd\.hh\:mm\:ss") } (maximum is { TimeSpan.FromSeconds(maxTipAge).ToString(@"dd\.hh\:mm\:ss") })");
                 log.AppendLine($"In IBD Stage: { (this.isIbd ? "Yes" : "No") }");
-
-                log.AppendLine($"Chained header tree size: {this.chainedHeaderTree.ChainedBlocksDataBytes.BytesToMegaBytes()} MB");
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 

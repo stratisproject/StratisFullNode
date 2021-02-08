@@ -8,11 +8,14 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests.RPC
@@ -47,13 +50,58 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPowNode(new BitcoinRegTest()).WithWallet().Start();
+                CoreNode node = builder.CreateStratisPowNode(new BitcoinRegTest()).AlwaysFlushBlocks().WithWallet().Start();
 
                 RPCClient rpc = node.CreateRPCClient();
                 uint256 blockHash = rpc.Generate(1)[0];
                 Block block = rpc.GetBlock(blockHash);
+
+                TestBase.WaitLoop(() => TestHelper.IsNodeSynced(node));
+
                 RPCResponse walletTx = rpc.SendCommand(RPCOperations.gettransaction, block.Transactions[0].GetHash().ToString());
                 walletTx.ThrowIfError();
+            }
+        }
+
+        [Fact]
+        public void TestRpcImportPubkeyIsSuccessful()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateStratisPowNode(new BitcoinRegTest()).AlwaysFlushBlocks().WithWallet().Start();
+                CoreNode node2 = builder.CreateStratisPowNode(new BitcoinRegTest()).WithReadyBlockchainData(ReadyBlockchain.BitcoinRegTest10Miner).Start();
+
+                TestHelper.ConnectAndSync(node, node2);
+
+                UnspentOutputReference tx = node2.FullNode.WalletManager().GetUnspentTransactionsInWallet("mywallet", 0, Features.Wallet.Wallet.NormalAccounts).First();
+
+                RPCClient rpc = node.CreateRPCClient();
+
+                PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(tx.Address.Pubkey);
+
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true));
+
+                rpc.ImportPubKey(pubKey.ToHex());
+
+                TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight == node2.FullNode.WalletManager().WalletTipHeight);
+
+                TestBase.WaitLoop(() =>
+                {
+                    try
+                    {
+                        // Check if gettransaction can now find the transaction in the watch only account.
+                        RPCResponse walletTx = rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true);
+
+                        return walletTx != null;
+                    }
+                    catch (RPCException e)
+                    {
+                        return false;
+                    }
+                });
+
+                // Check that when include_watchonly is not set, the watched transaction cannot be located in the normal wallet accounts.
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), false));
             }
         }
 
@@ -378,8 +426,8 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                Network network = new StratisRegTest();
-                var node = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StratisRegTest10Miner).Start();
+                Network network = new StraxRegTest();
+                var node = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
                 RPCClient rpcClient = node.CreateRPCClient();
 
                 RPCCapabilities capabilities = await rpcClient.ScanRPCCapabilitiesAsync();
@@ -388,7 +436,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 capabilities.SupportGetNetworkInfo.Should().BeTrue();
                 capabilities.SupportScanUTXOSet.Should().BeFalse();
                 capabilities.SupportSignRawTransactionWith.Should().BeFalse();
-                capabilities.SupportSegwit.Should().BeFalse();
+                capabilities.SupportSegwit.Should().BeTrue();
                 capabilities.SupportGenerateToAddress.Should().BeTrue();
             }
         }

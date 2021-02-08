@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin.BouncyCastle.Math;
-using NBitcoin.Rules;
 
 namespace NBitcoin
 {
@@ -64,7 +63,8 @@ namespace NBitcoin
 
         TimeSpan PowTargetTimespan { get; }
 
-        TimeSpan PowTargetSpacing { get; }
+        /// <summary>Expected (or target) block time in seconds.</summary>
+        TimeSpan TargetSpacing { get; }
 
         bool PowAllowMinDifficultyBlocks { get; }
 
@@ -102,6 +102,16 @@ namespace NBitcoin
 
         /// <summary>PoW blocks are not accepted after block with height <see cref="Consensus.LastPOWBlock"/>.</summary>
         int LastPOWBlock { get; set; }
+
+        /// <summary>
+        /// This flag will restrict the coinbase in a POS network to be empty.
+        /// For legacy POS the coinbase is required to be empty.
+        /// </summary>
+        /// <remarks>
+        /// Some implementations will put extra data in the coinbase (for example the witness commitment)
+        /// To allow such data to be in the coinbase we use this flag, a POS network that already has that limitation will use the coinbase input instead.
+        /// </remarks>
+        bool PosEmptyCoinbase { get; set; }
 
         /// <summary>
         /// An indicator whether this is a Proof Of Stake network.

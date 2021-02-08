@@ -4,41 +4,28 @@ using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Utilities.Extensions;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests
 {
-    /// <summary>
-    /// Prevent network being matched by name and replaced with a different network
-    /// in the <see cref="Configuration.NodeSettings" /> constructor.
-    /// </summary>
-    public class StratisOverrideRegTest : StratisRegTest
-    {
-        public StratisOverrideRegTest() : base()
-        {
-            this.Name = Guid.NewGuid().ToString();
-        }
-    }
-
     public class ColdStakingTests
     {
         /// <summary>
         /// Tests that cold staking gets activated as expected.
         /// </summary>
         [Fact]
-        public void ColdStakingActivatedOnStratisNode()
+        public void ColdStakingActivatedOnStraxNode()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Create separate network parameters for this test.
-                var network = new StratisOverrideRegTest();
+                var network = new StraxOverrideRegTest();
 
                 // Set the date ranges such that ColdStaking will 'Start' immediately after the initial confirmation window.
                 // Also reduce the minimum number of 'votes' required within the confirmation window to reach 'LockedIn' state.
-                network.Consensus.BIP9Deployments[StratisBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
+                network.Consensus.BIP9Deployments[StraxBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
 
                 // Set a small confirmation window to reduce time taken by this test.
                 network.Consensus.MinerConfirmationWindow = 10;
@@ -61,10 +48,10 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 // Check that coldstaking states got updated as expected.
                 ThresholdConditionCache cache = (stratisNode.FullNode.NodeService<IConsensusRuleEngine>() as ConsensusRuleEngine).NodeDeployments.BIP9;
-                Assert.Equal(ThresholdState.Defined, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight - 1), StratisBIP9Deployments.ColdStaking));
-                Assert.Equal(ThresholdState.Started, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight), StratisBIP9Deployments.ColdStaking));
-                Assert.Equal(ThresholdState.LockedIn, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(lockedInHeight), StratisBIP9Deployments.ColdStaking));
-                Assert.Equal(ThresholdState.Active, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(activeHeight), StratisBIP9Deployments.ColdStaking));
+                Assert.Equal(ThresholdState.Defined, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight - 1), StraxBIP9Deployments.ColdStaking));
+                Assert.Equal(ThresholdState.Started, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(startedHeight), StraxBIP9Deployments.ColdStaking));
+                Assert.Equal(ThresholdState.LockedIn, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(lockedInHeight), StraxBIP9Deployments.ColdStaking));
+                Assert.Equal(ThresholdState.Active, cache.GetState(stratisNode.FullNode.ChainIndexer.GetHeader(activeHeight), StraxBIP9Deployments.ColdStaking));
 
                 // Verify that the block created before activation does not have the 'CheckColdStakeVerify' flag set.
                 var rulesEngine = stratisNode.FullNode.NodeService<IConsensusRuleEngine>();

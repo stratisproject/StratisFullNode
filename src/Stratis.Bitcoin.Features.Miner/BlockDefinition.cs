@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
@@ -39,6 +40,8 @@ namespace Stratis.Bitcoin.Features.Miner
 
         /// <summary>The current network.</summary>
         protected readonly Network Network;
+
+        private readonly NodeDeployments nodeDeployments;
 
         /// <summary>Assembler options specific to the assembler e.g. <see cref="BlockDefinitionOptions.BlockMaxSize"/>.</summary>
         protected BlockDefinitionOptions Options;
@@ -116,7 +119,8 @@ namespace Stratis.Bitcoin.Features.Miner
             ITxMempool mempool,
             MempoolSchedulerLock mempoolLock,
             MinerSettings minerSettings,
-            Network network)
+            Network network,
+            NodeDeployments nodeDeployments)
         {
             this.ConsensusManager = consensusManager;
             this.DateTimeProvider = dateTimeProvider;
@@ -124,6 +128,7 @@ namespace Stratis.Bitcoin.Features.Miner
             this.Mempool = mempool;
             this.MempoolLock = mempoolLock;
             this.Network = network;
+            this.nodeDeployments = nodeDeployments;
 
             this.Options = minerSettings.BlockDefinitionOptions;
             this.BlockMinFeeRate = this.Options.BlockMinFeeRate;
@@ -144,6 +149,13 @@ namespace Stratis.Bitcoin.Features.Miner
             this.block.Header.Version = headerVersionRule.ComputeBlockVersion(this.ChainTip);
         }
 
+        protected virtual bool IsWitnessEnabled(ChainedHeader chainedHeader)
+        {
+            DeploymentFlags flags = this.nodeDeployments.GetFlags(chainedHeader);
+
+            return flags.ScriptFlags.HasFlag(ScriptVerify.Witness);
+        }
+
         /// <summary>
         /// Create coinbase transaction.
         /// Set the coin base with zero money.
@@ -152,7 +164,6 @@ namespace Stratis.Bitcoin.Features.Miner
         protected virtual void CreateCoinbase()
         {
             this.coinbase = this.Network.CreateTransaction();
-            this.coinbase.Time = (uint)this.DateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
             this.coinbase.AddInput(TxIn.CreateCoinbase(this.ChainTip.Height + 1));
             this.coinbase.AddOutput(new TxOut(Money.Zero, this.scriptPubKey));
 
@@ -180,7 +191,6 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </summary>
         /// <param name="chainTip">Tip of the chain that this instance will work with without touching any shared chain resources.</param>
         /// <param name="scriptPubKey">Script that explains what conditions must be met to claim ownership of a coin.</param>
-        /// <returns>The contructed <see cref="Mining.BlockTemplate"/>.</returns>
         protected void OnBuild(ChainedHeader chainTip, Script scriptPubKey)
         {
             this.Configure();
@@ -193,25 +203,13 @@ namespace Stratis.Bitcoin.Features.Miner
             this.CreateCoinbase();
             this.ComputeBlockVersion();
 
-            // TODO: MineBlocksOnDemand
-            // -regtest only: allow overriding block.nVersion with
-            // -blockversion=N to test forking scenarios
-            //if (this.network. chainparams.MineBlocksOnDemand())
-            //    pblock->nVersion = GetArg("-blockversion", pblock->nVersion);
-
             this.MedianTimePast = Utils.DateTimeToUnixTime(this.ChainTip.GetMedianTimePast());
             this.LockTimeCutoff = MempoolValidator.StandardLocktimeVerifyFlags.HasFlag(Transaction.LockTimeFlags.MedianTimePast)
                 ? this.MedianTimePast
                 : this.block.Header.Time;
 
-            // TODO: Implement Witness Code
             // Decide whether to include witness transactions
-            // This is only needed in case the witness softfork activation is reverted
-            // (which would require a very deep reorganization) or when
-            // -promiscuousmempoolflags is used.
-            // TODO: replace this with a call to main to assess validity of a mempool
-            // transaction (which in most cases can be a no-op).
-            this.IncludeWitness = false; //IsWitnessEnabled(pindexPrev, chainparams.GetConsensus()) && fMineWitnessTx;
+            this.IncludeWitness = this.IsWitnessEnabled(chainTip);
 
             // Add transactions from the mempool
             this.AddTransactions(out int nPackagesSelected, out int nDescendantsUpdated);
@@ -220,9 +218,6 @@ namespace Stratis.Bitcoin.Features.Miner
             this.LastBlockSize = this.BlockSize;
             this.LastBlockWeight = this.BlockWeight;
 
-            // TODO: Implement Witness Code
-            // pblocktemplate->CoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
-
             var coinviewRule = this.ConsensusManager.ConsensusRules.GetRule<CoinViewRule>();
             this.coinbase.Outputs[0].Value = this.fees + coinviewRule.GetProofOfWorkReward(this.height);
             this.BlockTemplate.TotalFee = this.fees;
@@ -230,10 +225,36 @@ namespace Stratis.Bitcoin.Features.Miner
             // We need the fee details per transaction to be readily available in case we have to remove transactions from the block later.
             this.BlockTemplate.FeeDetails = this.inBlock.Select(i => new { i.TransactionHash, i.Fee }).ToDictionary(d => d.TransactionHash, d => d.Fee);
 
+            if (this.IncludeWitness)
+            {
+                this.AddOrUpdateCoinbaseCommitmentToBlock(this.block);
+            }
+
             int nSerializeSize = this.block.GetSerializedSize();
             this.logger.LogDebug("Serialized size is {0} bytes, block weight is {1}, number of txs is {2}, tx fees are {3}, number of sigops is {4}.", nSerializeSize, this.block.GetBlockWeight(this.Network.Consensus), this.BlockTx, this.fees, this.BlockSigOpsCost);
 
             this.UpdateHeaders();
+        }
+
+        /// <summary>
+        /// Adds the coinbase commitment to the coinbase transaction according to  https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki.
+        /// </summary>
+        /// <param name="block">The new block that is being mined.</param>
+        /// <seealso cref="https://github.com/bitcoin/bitcoin/blob/master/src/validation.cpp"/>
+        public void AddOrUpdateCoinbaseCommitmentToBlock(Block block)
+        {
+            WitnessCommitmentsRule.ClearWitnessCommitment(this.Network, block);
+            WitnessCommitmentsRule.CreateWitnessCommitment(this.Network, block);
+        }
+
+        public virtual void BlockModified(ChainedHeader chainTip, Block block)
+        {
+            if (this.IncludeWitness)
+            {
+                this.AddOrUpdateCoinbaseCommitmentToBlock(this.block);
+            }
+
+            block.UpdateMerkleRoot();
         }
 
         /// <summary>
@@ -308,9 +329,9 @@ namespace Stratis.Bitcoin.Features.Miner
             // and modifying them for their already included ancestors.
             this.UpdatePackagesForAdded(this.inBlock, mapModifiedTx);
 
-            List<TxMempoolEntry> ancestorScoreList = this.MempoolLock.ReadAsync(() => this.Mempool.MapTx.AncestorScore).ConfigureAwait(false).GetAwaiter().GetResult().ToList();
+            List<TxMempoolEntry> ancestorScoreList = this.MempoolLock.ReadAsync(() => this.Mempool.MapTx.AncestorScore.ToList()).ConfigureAwait(false).GetAwaiter().GetResult().ToList();
 
-            TxMempoolEntry iter;
+            TxMempoolEntry mempoolEntry;
 
             int nConsecutiveFailed = 0;
             while (ancestorScoreList.Any() || mapModifiedTx.Any())
@@ -344,39 +365,39 @@ namespace Stratis.Bitcoin.Features.Miner
                 if (mi == null)
                 {
                     modit = mapModifiedTx.Values.OrderBy(o => o, compare).First();
-                    iter = modit.MempoolEntry;
+                    mempoolEntry = modit.MempoolEntry;
                     fUsingModified = true;
                 }
                 else
                 {
                     // Try to compare the mapTx entry to the mapModifiedTx entry
-                    iter = mi;
+                    mempoolEntry = mi;
 
                     modit = mapModifiedTx.Values.OrderBy(o => o, compare).FirstOrDefault();
-                    if ((modit != null) && (compare.Compare(modit, new TxMemPoolModifiedEntry(iter)) < 0))
+                    if ((modit != null) && (compare.Compare(modit, new TxMemPoolModifiedEntry(mempoolEntry)) < 0))
                     {
                         // The best entry in mapModifiedTx has higher score
                         // than the one from mapTx..
                         // Switch which transaction (package) to consider.
 
-                        iter = modit.MempoolEntry;
+                        mempoolEntry = modit.MempoolEntry;
                         fUsingModified = true;
                     }
                     else
                     {
                         // Either no entry in mapModifiedTx, or it's worse than mapTx.
                         // Increment mi for the next loop iteration.
-                        ancestorScoreList.Remove(iter);
+                        ancestorScoreList.Remove(mempoolEntry);
                     }
                 }
 
                 // We skip mapTx entries that are inBlock, and mapModifiedTx shouldn't
                 // contain anything that is inBlock.
-                Guard.Assert(!this.inBlock.Contains(iter));
+                Guard.Assert(!this.inBlock.Contains(mempoolEntry));
 
-                long packageSize = iter.SizeWithAncestors;
-                Money packageFees = iter.ModFeesWithAncestors;
-                long packageSigOpsCost = iter.SigOpCostWithAncestors;
+                long packageSize = mempoolEntry.SizeWithAncestors;
+                Money packageFees = mempoolEntry.ModFeesWithAncestors;
+                long packageSigOpsCost = mempoolEntry.SigOpCostWithAncestors;
                 if (fUsingModified)
                 {
                     packageSize = modit.SizeWithAncestors;
@@ -384,13 +405,17 @@ namespace Stratis.Bitcoin.Features.Miner
                     packageSigOpsCost = modit.SigOpCostWithAncestors;
                 }
 
-                if (packageFees < this.BlockMinFeeRate.GetFee((int)packageSize))
+                // Don't check the package fees if this is a CirrusRewardScript transaction.
+                if (!mempoolEntry.Transaction.Outputs.Any(o => o.ScriptPubKey == StraxCoinstakeRule.CirrusTransactionTag(this.Network.CirrusRewardDummyAddress)))
                 {
-                    // Everything else we might consider has a lower fee rate
-                    return;
+                    if (packageFees < this.BlockMinFeeRate.GetFee((int)packageSize))
+                    {
+                        // Everything else we might consider has a lower fee rate
+                        return;
+                    }
                 }
 
-                if (!this.TestPackage(iter, packageSize, packageSigOpsCost))
+                if (!this.TestPackage(mempoolEntry, packageSize, packageSigOpsCost))
                 {
                     if (fUsingModified)
                     {
@@ -398,7 +423,7 @@ namespace Stratis.Bitcoin.Features.Miner
                         // we must erase failed entries so that we can consider the
                         // next best entry on the next loop iteration
                         mapModifiedTx.Remove(modit.MempoolEntry.TransactionHash);
-                        failedTx.Add(iter);
+                        failedTx.Add(mempoolEntry);
                     }
 
                     nConsecutiveFailed++;
@@ -415,10 +440,10 @@ namespace Stratis.Bitcoin.Features.Miner
                 long nNoLimit = long.MaxValue;
                 string dummy;
 
-                this.MempoolLock.ReadAsync(() => this.Mempool.CalculateMemPoolAncestors(iter, ancestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, out dummy, false)).ConfigureAwait(false).GetAwaiter().GetResult();
+                this.MempoolLock.ReadAsync(() => this.Mempool.CalculateMemPoolAncestors(mempoolEntry, ancestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, out dummy, false)).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 this.OnlyUnconfirmed(ancestors);
-                ancestors.Add(iter);
+                ancestors.Add(mempoolEntry);
 
                 // Test if all tx's are Final.
                 if (!this.TestPackageTransactions(ancestors))
@@ -426,7 +451,7 @@ namespace Stratis.Bitcoin.Features.Miner
                     if (fUsingModified)
                     {
                         mapModifiedTx.Remove(modit.MempoolEntry.TransactionHash);
-                        failedTx.Add(iter);
+                        failedTx.Add(mempoolEntry);
                     }
                     continue;
                 }

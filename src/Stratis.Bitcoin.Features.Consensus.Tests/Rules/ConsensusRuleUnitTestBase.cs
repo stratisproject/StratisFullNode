@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             else
                 this.ruleContext = new PowRuleContext(new ValidationContext(), this.dateTimeProvider.Object.GetTimeOffset());
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object);
         }
 
         protected void AddBlocksToChain(ChainIndexer chainIndexer, int blockAmount)
@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             uint256 prevBlockHash = chainIndexer.Tip.HashBlock;
 
             (this.ruleContext as UtxoRuleContext).UnspentOutputSet = new UnspentOutputSet();
-            (this.ruleContext as UtxoRuleContext).UnspentOutputSet.SetCoins(new UnspentOutputs[0]);
+            (this.ruleContext as UtxoRuleContext).UnspentOutputSet.SetCoins(new UnspentOutput[0]);
 
             for (int i = 0; i < blockAmount; i++)
             {
@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
                 block.Header.Nonce = nonce;
                 chainIndexer.SetTip(block.Header);
                 prevBlockHash = block.GetHash();
-                (this.ruleContext as UtxoRuleContext).UnspentOutputSet.Update(transaction, i);
+                (this.ruleContext as UtxoRuleContext).UnspentOutputSet.Update(this.network, transaction, i);
                 this.lastAddedTransaction = transaction;
             }
         }
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public PosConsensusRuleUnitTestBase() : base(KnownNetworks.StratisTest)
+        public PosConsensusRuleUnitTestBase() : base(KnownNetworks.StraxTest)
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();
@@ -150,7 +150,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
                 this.ruleContext = new PowRuleContext(new ValidationContext(), this.dateTimeProvider.Object.GetTimeOffset());
             }
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object);
         }
 
         public virtual T InitializeConsensusRules()
@@ -217,7 +217,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StratisTest)
+        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StraxTest)
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();
@@ -312,7 +312,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             {
                 var hash = new uint256(RandomUtils.GetBytes(32));
                 hashes.Add(hash);
-                this.posBlock.Transactions.Add(new Transaction { Time = (uint)i });
+                this.posBlock.Transactions.Add(new PosTransaction { LockTime = (uint)i }); // Arbitrary data to cause different hashes
             }
 
             this.posBlock.UpdateMerkleRoot();

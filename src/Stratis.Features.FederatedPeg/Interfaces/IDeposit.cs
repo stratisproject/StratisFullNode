@@ -1,6 +1,7 @@
 ﻿using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Utilities.JsonConverters;
+using Stratis.Features.FederatedPeg.SourceChain;
 
 namespace Stratis.Features.FederatedPeg.Interfaces
 {
@@ -15,6 +16,11 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         [JsonConverter(typeof(UInt256JsonConverter))]
         uint256 Id { get; }
+
+        /// <summary>
+        /// Whether the deposit is a "faster" or "normal" deposit.
+        /// </summary>
+        DepositRetrievalType RetrievalType { get; }
 
         /// <summary>
         /// The amount of the requested fund transfer.

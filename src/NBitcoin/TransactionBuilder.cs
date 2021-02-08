@@ -589,6 +589,7 @@ namespace NBitcoin
         {
             this.Extensions.Add(new P2PKHBuilderExtension());
             this.Extensions.Add(new P2MultiSigBuilderExtension());
+            this.Extensions.Add(new P2FederationBuilderExtension());
             this.Extensions.Add(new P2PKBuilderExtension());
             this.Extensions.Add(new OPTrueExtension());
         }
@@ -777,6 +778,21 @@ namespace NBitcoin
             this.CurrentGroup.Builders.Add(builder.Build);
             this._LastSendBuilder = builder;
             return this;
+        }
+
+        /// <summary>
+        /// Clears send builders so we can setup recipient sends again.
+        /// </summary>
+        public void ClearSendBuilders()
+        {
+            for (int i = this.CurrentGroup.Builders.Count - 1; i >= 0; i--)
+            {
+                // All other builders have different return type.
+                if (this.CurrentGroup.Builders[i].Method.ReturnType == typeof(Money))
+                {
+                    this.CurrentGroup.Builders.RemoveAt(i);
+                }
+            }
         }
 
         private SendBuilder _LastSendBuilder;
@@ -1161,9 +1177,6 @@ namespace NBitcoin
             if (this._LockTime != null)
                 ctx.Transaction.LockTime = this._LockTime.Value;
 
-            if (this._TimeStamp != null)
-                ctx.Transaction.Time = this._TimeStamp.Value;
-
             foreach (BuilderGroup group in this._BuilderGroups)
             {
                 ctx.Group = group;
@@ -1532,7 +1545,7 @@ namespace NBitcoin
         /// Estimate the physical size of the transaction
         /// </summary>
         /// <param name="tx">The transaction to be estimated</param>
-        /// <returns></returns>
+        /// <returns>The estimated size of the transaction in bytes.</returns>
         public int EstimateSize(Transaction tx)
         {
             return EstimateSize(tx, false);
@@ -1604,7 +1617,7 @@ namespace NBitcoin
             }
 
             if (scriptSigSize == -1)
-                scriptSigSize += coin.TxOut.ScriptPubKey.Length; //Using heurestic to approximate size of unknown scriptPubKey
+                scriptSigSize += coin.TxOut.ScriptPubKey.Length; //Using heuristic to approximate size of unknown scriptPubKey
 
             if (coin.GetHashVersion(this.Network) == HashVersion.Witness)
                 witSize += scriptSigSize + 1; //Account for the push

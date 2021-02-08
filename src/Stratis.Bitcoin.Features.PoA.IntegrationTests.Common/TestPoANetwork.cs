@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.Collateral.ConsensusRules;
+using Stratis.Bitcoin.Features.Collateral.MempoolRules;
 using Stratis.Bitcoin.Tests.Common;
 
 namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
@@ -13,9 +15,11 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
         public Key FederationKey3 { get; private set; }
 
-        public TestPoANetwork()
+        public TestPoANetwork(string networkName = "")
         {
             this.Name = "PoATest";
+            if (!string.IsNullOrEmpty(networkName))
+                this.Name = networkName;
 
             this.FederationKey1 = new Mnemonic("lava frown leave wedding virtual ghost sibling able mammal liar wide wisdom").DeriveExtKey().PrivateKey;
             this.FederationKey2 = new Mnemonic("idle power swim wash diesel blouse photo among eager reward govern menu").DeriveExtKey().PrivateKey;
@@ -27,6 +31,10 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 new FederationMember(this.FederationKey2.PubKey), // 03b539807c64abafb2d14c52a0d1858cc29d7c7fad0598f92a1274789c18d74d2d
                 new FederationMember(this.FederationKey3.PubKey)  // 02d6792cf941b68edd1e9056653573917cbaf974d46e9eeb9801d6fcedf846477a
             };
+
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
+
+            this.StraxMiningMultisigMembers = genesisFederationMembers.Select(m => m.PubKey).ToArray();
 
             var baseOptions = this.Consensus.Options as PoAConsensusOptions;
 
@@ -49,17 +57,27 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
 
     public class TestPoACollateralNetwork : TestPoANetwork
     {
-        public TestPoACollateralNetwork() : base()
+        public TestPoACollateralNetwork(bool enableIdleKicking = false, string name = "") : base()
         {
             // Upgrade genesis members to CollateralFederationMember.
             var options = (PoAConsensusOptions)this.Consensus.Options;
-            var members = options.GenesisFederationMembers
-                .Select(m => new CollateralFederationMember(m.PubKey, true, new Money(0), "")).ToList();
+            var members = options.GenesisFederationMembers.Select(m => new CollateralFederationMember(m.PubKey, true, new Money(0), "")).ToList();
             options.GenesisFederationMembers.Clear();
             foreach (IFederationMember member in members)
                 options.GenesisFederationMembers.Add(member);
 
+            this.ConsensusOptions.AutoKickIdleMembers = enableIdleKicking;
+            this.Consensus.ConsensusRules.FullValidationRules.Add(typeof(MandatoryCollateralMemberVotingRule));
+            this.Consensus.MempoolRules.Add(typeof(VotingRequestValidationRule));
+
             this.Name = "PoaCollateralMain";
+            if (!string.IsNullOrEmpty(name))
+                this.Name = name;
+        }
+
+        protected override PoAConsensusFactory GetConsensusFactory()
+        {
+            return new CollateralPoAConsensusFactory();
         }
     }
 }

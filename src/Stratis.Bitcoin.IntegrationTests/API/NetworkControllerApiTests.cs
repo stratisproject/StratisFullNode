@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             using (var builder = NodeBuilder.Create(this))
                 
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var nodeA = builder.CreateStratisPosNode(network, "nc-1-nodeA").Start();
 
@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             using (var builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var nodeA = builder.CreateStratisPosNode(network, "nc-2-nodeA").Start();
 
@@ -101,7 +101,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             using (var builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var nodeA = builder.CreateStratisPosNode(network, "nc-3-nodeA").Start();
 
@@ -127,7 +127,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
         {
             using (var builder = NodeBuilder.Create(this))
             {
-                var network = new StratisRegTest();
+                var network = new StraxRegTest();
 
                 var nodeA = builder.CreateStratisPosNode(network, "nc-4-nodeA").Start();
 

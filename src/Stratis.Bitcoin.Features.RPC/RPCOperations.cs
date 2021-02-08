@@ -13,6 +13,7 @@
         dumpprivkey,
         importprivkey,
         importaddress,
+        importpubkey,
         dumpwallet,
         importwallet,
 
@@ -85,7 +86,7 @@
         getmempoolinfo,
         getrawmempool,
         getblockhash,
-        getblock,
+        getblock, // Note that stratisX also has a 'getblockbynumber' which is not present in bitcoind at all
         gettxoutsetinfo,
         gettxout,
         verifychain,

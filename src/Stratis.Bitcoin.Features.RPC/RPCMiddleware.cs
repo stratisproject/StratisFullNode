@@ -5,14 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using NBitcoin.DataEncoders;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.RPC.Exceptions;
 using Stratis.Bitcoin.Utilities;
@@ -30,10 +28,15 @@ namespace Stratis.Bitcoin.Features.RPC
 
         private readonly IHttpContextFactory httpContextFactory;
         private readonly DataFolder dataFolder;
+        private readonly string contentType;
 
-        public const string ContentType = "application/json; charset=utf-8";
-
-        public RPCMiddleware(RequestDelegate next, IRPCAuthorization authorization, ILoggerFactory loggerFactory, IHttpContextFactory httpContextFactory, DataFolder dataFolder)
+        public RPCMiddleware(
+            RequestDelegate next,
+            IRPCAuthorization authorization,
+            ILoggerFactory loggerFactory,
+            IHttpContextFactory httpContextFactory,
+            DataFolder dataFolder,
+            RpcSettings rpcSettings)
         {
             Guard.NotNull(next, nameof(next));
             Guard.NotNull(authorization, nameof(authorization));
@@ -43,6 +46,7 @@ namespace Stratis.Bitcoin.Features.RPC
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.httpContextFactory = httpContextFactory;
             this.dataFolder = dataFolder;
+            this.contentType = rpcSettings.RPCContentType;
         }
 
         public async Task InvokeAsync(HttpContext httpContext)
@@ -80,7 +84,7 @@ namespace Stratis.Bitcoin.Features.RPC
                     throw new NotImplementedException("The request is not supported.");
                 }
 
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
 
                 // Write the response body.
                 using (StreamWriter streamWriter = new StreamWriter(httpContext.Response.Body, Encoding.Default, 1024, true))
@@ -106,7 +110,7 @@ namespace Stratis.Bitcoin.Features.RPC
             }
 
             // Allows streams to be read multiple times.
-            request.EnableRewind();
+            request.EnableBuffering();
 
             // Read the request.
             var builder = new StringBuilder();
@@ -131,44 +135,44 @@ namespace Stratis.Bitcoin.Features.RPC
             if (ex is ArgumentException || ex is FormatException)
             {
                 JObject response = CreateError(RPCErrorCode.RPC_MISC_ERROR, "Argument error: " + ex.Message);
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
             else if (ex is BlockNotFoundException)
             {
                 JObject response = CreateError(RPCErrorCode.RPC_INVALID_REQUEST, "Argument error: " + ex.Message);
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
             else if (ex is ConfigurationException)
             {
                 JObject response = CreateError(RPCErrorCode.RPC_INTERNAL_ERROR, ex.Message);
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
             else if (ex is RPCServerException)
             {
                 var rpcEx = (RPCServerException)ex;
                 JObject response = CreateError(rpcEx.ErrorCode, ex.Message);
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
             else if (httpContext.Response?.StatusCode == 404)
             {
                 JObject response = CreateError(RPCErrorCode.RPC_METHOD_NOT_FOUND, "Method not found");
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
             else if (this.IsDependencyFailure(ex))
             {
                 JObject response = CreateError(RPCErrorCode.RPC_METHOD_NOT_FOUND, ex.Message);
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
             else if (httpContext.Response?.StatusCode == 500 || ex != null)
             {
                 JObject response = CreateError(RPCErrorCode.RPC_INTERNAL_ERROR, "Internal error");
-                httpContext.Response.ContentType = ContentType;
+                httpContext.Response.ContentType = this.contentType;
                 this.logger.LogError(new EventId(0), ex, "Internal error while calling RPC Method");
                 await httpContext.Response.WriteAsync(response.ToString(Formatting.Indented));
             }
@@ -214,11 +218,10 @@ namespace Stratis.Bitcoin.Features.RPC
             contextFeatures.Set<IHttpRequestFeature>(requestFeature);
 
             var responseMemoryStream = new MemoryStream();
-            var responseFeature = new HttpResponseFeature()
-            {
-                Body = responseMemoryStream
-            };
-            contextFeatures.Set<IHttpResponseFeature>(responseFeature);
+            var responseFeature = new StreamResponseBodyFeature(responseMemoryStream);
+
+            contextFeatures.Set<IHttpResponseFeature>(new HttpResponseFeature());
+            contextFeatures.Set<IHttpResponseBodyFeature>(responseFeature);
 
             contextFeatures.Set<IHttpRequestLifetimeFeature>(new HttpRequestLifetimeFeature());
 

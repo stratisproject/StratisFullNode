@@ -6,28 +6,12 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.TargetChain;
 
 namespace Stratis.Features.FederatedPeg
 {
-    public interface IFederatedPegOptions
-    {
-        int WalletSyncFromHeight { get; }
-    }
-
-    public sealed class FederatedPegOptions : IFederatedPegOptions
-    {
-        /// <summary>
-        /// The height to start syncing the wallet from.
-        /// </summary>
-        public int WalletSyncFromHeight { get; }
-
-        public FederatedPegOptions(int walletSyncFromHeight = 1)
-        {
-            this.WalletSyncFromHeight = walletSyncFromHeight;
-        }
-    }
-
     /// <inheritdoc />
     public sealed class FederatedPegSettings : IFederatedPegSettings
     {
@@ -37,11 +21,19 @@ namespace Stratis.Features.FederatedPeg
 
         public const string PublicKeyParam = "publickey";
 
+        public const string FederationKeysParam = "federationkeys";
+
+        public const string FederationQuorumParam = "federationquorum";
+
         public const string FederationIpsParam = "federationips";
 
         public const string CounterChainDepositBlock = "counterchaindepositblock";
 
-        private const string MinimumDepositConfirmationsParam = "mindepositconfirmations";
+        private const string ThresholdAmountSmallDepositParam = "thresholdamountsmalldeposit";
+        private const string ThresholdAmountNormalDepositParam = "thresholdamountnormaldeposit";
+
+        private const string MinimumConfirmationsSmallDepositsParam = "minconfirmationssmalldeposits";
+        private const string MinimumConfirmationsNormalDepositsParam = "minconfirmationsnormaldeposits";
 
         /// <summary>
         /// The fee taken by the federation to build withdrawal transactions. The federation will keep most of this.
@@ -63,7 +55,7 @@ namespace Stratis.Features.FederatedPeg
         /// <summary>
         /// The fee always given to a withdrawal transaction.
         /// </summary>
-        public static readonly Money BaseTransactionFee = Money.Coins(0.0002m);
+        public static readonly Money BaseTransactionFee = Money.Coins(0.0003m);
 
         /// <summary>
         /// The extra fee given to a withdrawal transaction per input it spends. This number should be high enough such that the built transactions are always valid, yet low enough such that the federation can turn a profit.
@@ -75,39 +67,57 @@ namespace Stratis.Features.FederatedPeg
         /// </summary>
         public static readonly Money ConsolidationFee = Money.Coins(0.01m);
 
+        public const string MaximumPartialTransactionsParam = "maxpartials";
+
         /// <summary>
         /// The maximum number of inputs we want our built withdrawal transactions to have. We don't want them to get too big for Standardness reasons.
         /// </summary>
         public const int MaxInputs = 50;
 
-        /// <summary>
-        /// Sidechains to STRAT don't need to check for deposits for the whole main chain. Only from when they begun.
-        ///
-        /// This block was mined on 5th Dec 2018. Further optimisations could be more specific per network.
-        /// </summary>
-        public const int StratisMainDepositStartBlock = 1_100_000;
-
-        public FederatedPegSettings(NodeSettings nodeSettings, IFederatedPegOptions federatedPegOptions = null)
+        public FederatedPegSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
             TextFileConfiguration configReader = nodeSettings.ConfigReader;
 
-            this.IsMainChain = configReader.GetOrDefault<bool>("mainchain", false);
+            this.IsMainChain = configReader.GetOrDefault("mainchain", false);
             if (!this.IsMainChain && !configReader.GetOrDefault("sidechain", false))
                 throw new ConfigurationException("Either -mainchain or -sidechain must be specified");
 
             string redeemScriptRaw = configReader.GetOrDefault<string>(RedeemScriptParam, null);
             Console.WriteLine(redeemScriptRaw);
-            if (redeemScriptRaw == null)
-                throw new ConfigurationException($"could not find {RedeemScriptParam} configuration parameter");
 
-            this.MultiSigRedeemScript = new Script(redeemScriptRaw);
+            PayToMultiSigTemplateParameters para = null;
+
+            if (!string.IsNullOrEmpty(redeemScriptRaw))
+            {
+                var redeemScript = new Script(redeemScriptRaw);
+                para = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript) ??
+                    PayToFederationTemplate.Instance.ExtractScriptPubKeyParameters(redeemScript, nodeSettings.Network);
+            }
+
+            if (para == null)
+            {
+                string pubKeys = configReader.GetOrDefault<string>(FederationKeysParam, null);
+                if (string.IsNullOrEmpty(pubKeys))
+                    throw new ConfigurationException($"Either -{RedeemScriptParam} or -{FederationKeysParam} must be specified.");
+
+                para.PubKeys = pubKeys.Split(",").Select(s => new PubKey(s.Trim())).ToArray();
+                para.SignatureCount = (pubKeys.Length + 1) / 2;
+            }
+
+            para.SignatureCount = configReader.GetOrDefault(FederationQuorumParam, para.SignatureCount);
+
+            IFederation federation;
+            federation = new Federation(para.PubKeys, para.SignatureCount);
+            nodeSettings.Network.Federations.RegisterFederation(federation);
+            counterChainNetworkWrapper.CounterChainNetwork.Federations.RegisterFederation(federation);
+
+            this.MultiSigRedeemScript = federation.MultisigScript;
             this.MultiSigAddress = this.MultiSigRedeemScript.Hash.GetAddress(nodeSettings.Network);
-            PayToMultiSigTemplateParameters payToMultisigScriptParams = PayToMultiSigTemplate.Instance.ExtractScriptPubKeyParameters(this.MultiSigRedeemScript);
-            this.MultiSigM = payToMultisigScriptParams.SignatureCount;
-            this.MultiSigN = payToMultisigScriptParams.PubKeys.Length;
-            this.FederationPublicKeys = payToMultisigScriptParams.PubKeys;
+            this.MultiSigM = para.SignatureCount;
+            this.MultiSigN = para.PubKeys.Length;
+            this.FederationPublicKeys = para.PubKeys;
 
             this.PublicKey = configReader.GetOrDefault<string>(PublicKeyParam, null);
 
@@ -125,16 +135,45 @@ namespace Stratis.Features.FederatedPeg
             IEnumerable<IPEndPoint> endPoints = federationIpsRaw.Split(',').Select(a => a.ToIPEndPoint(nodeSettings.Network.DefaultPort));
 
             this.FederationNodeIpEndPoints = new HashSet<IPEndPoint>(endPoints, new IPEndPointComparer());
-            this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x=>x.Address), new IPAddressComparer());
+            this.FederationNodeIpAddresses = new HashSet<IPAddress>(endPoints.Select(x => x.Address), new IPAddressComparer());
 
             // These values are only configurable for tests at the moment. Fed members on live networks shouldn't play with them.
-            this.CounterChainDepositStartBlock = configReader.GetOrDefault<int>(CounterChainDepositBlock, this.IsMainChain ? 1 : StratisMainDepositStartBlock);
-            this.MinimumDepositConfirmations = (uint)configReader.GetOrDefault<int>(MinimumDepositConfirmationsParam, (int)nodeSettings.Network.Consensus.MaxReorgLength + 1);
-            this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, federatedPegOptions?.WalletSyncFromHeight ?? 0);
+            this.CounterChainDepositStartBlock = configReader.GetOrDefault(CounterChainDepositBlock, 1);
+
+            this.SmallDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(ThresholdAmountSmallDepositParam, 50));
+            this.NormalDepositThresholdAmount = Money.Coins(configReader.GetOrDefault(ThresholdAmountNormalDepositParam, 1000));
+
+            this.MinimumConfirmationsSmallDeposits = configReader.GetOrDefault(MinimumConfirmationsSmallDepositsParam, 25);
+            this.MinimumConfirmationsNormalDeposits = configReader.GetOrDefault(MinimumConfirmationsNormalDepositsParam, 80);
+            this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
+            this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
+
+            this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
+            this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
 
         /// <inheritdoc/>
         public bool IsMainChain { get; }
+
+        /// <inheritdoc/>
+        public int MaximumPartialTransactionThreshold { get; }
+
+        /// <inheritdoc />
+        public int MinimumConfirmationsSmallDeposits { get; }
+
+        /// <inheritdoc />
+        public int MinimumConfirmationsNormalDeposits { get; }
+
+        /// <inheritdoc />
+        public int MinimumConfirmationsLargeDeposits { get; }
+
+        public int MinimumConfirmationsDistributionDeposits { get; }
+
+        /// <inheritdoc />
+        public Money SmallDepositThresholdAmount { get; }
+
+        /// <inheritdoc />
+        public Money NormalDepositThresholdAmount { get; }
 
         /// <inheritdoc/>
         public HashSet<IPEndPoint> FederationNodeIpEndPoints { get; }
@@ -158,6 +197,10 @@ namespace Stratis.Features.FederatedPeg
         public int MultiSigN { get; }
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// TODO: In future we need to look at dynamically calculating the fee by also including
+        /// the number of outputs in the calculation.
+        /// </remarks>
         public Money GetWithdrawalTransactionFee(int numInputs)
         {
             return BaseTransactionFee + numInputs * InputTransactionFee;
@@ -171,8 +214,5 @@ namespace Stratis.Features.FederatedPeg
 
         /// <inheritdoc/>
         public Script MultiSigRedeemScript { get; }
-
-        /// <inheritdoc />
-        public uint MinimumDepositConfirmations { get; }
     }
 }

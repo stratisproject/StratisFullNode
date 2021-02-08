@@ -9,7 +9,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
 {
     public class MinerSettingsTest : LogsTestBase
     {
-        public MinerSettingsTest() : base(KnownNetworks.StratisTest)
+        public MinerSettingsTest() : base(KnownNetworks.StraxTest)
         {
         }
 

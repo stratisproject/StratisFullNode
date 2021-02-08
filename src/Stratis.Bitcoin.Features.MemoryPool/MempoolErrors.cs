@@ -148,11 +148,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>'txn-already-known' error returns a <see cref="RejectAlreadyKnown"/> reject code.</summary>
         public static MempoolError AlreadyKnown = new MempoolError(RejectAlreadyKnown, "txn-already-known");
 
-        /// <summary>'bad-txns-inputs-spent' error returns a <see cref="RejectDuplicate"/> reject code.</summary>
-        public static MempoolError BadInputsSpent = new MempoolError(RejectDuplicate, "bad-txns-inputs-spent");
-
-        /// <summary>'bad-txns-inputs-missing' error returns a <see cref="RejectInvalid"/> reject code.</summary>
-        public static MempoolError MissingInputs = new MempoolError(RejectInvalid, "bad-txns-inputs-missing");
+        /// <summary>'bad-txns-inputs-missingorspent' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError MissingOrSpentInputs = new MempoolError(RejectInvalid, "bad-txns-inputs-missingorspent");
 
         /// <summary>'non-BIP68-final' error returns a <see cref="RejectNonstandard"/> reject code.</summary>
         public static MempoolError NonBIP68Final = new MempoolError(RejectNonstandard, "non-BIP68-final");
@@ -184,6 +181,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <summary>'mandatory-script-verify-flag-failed' error returns a <see cref="RejectInvalid"/> reject code.</summary>
         public static MempoolError MandatoryScriptVerifyFlagFailed = new MempoolError(RejectInvalid, "mandatory-script-verify-flag-failed");
 
+        /// <summary>'non-mandatory-script-verify-flag' error returns a <see cref="RejectNonstandard"/> reject code.</summary>
+        public static MempoolError NonMandatoryScriptVerifyFlagFailed = new MempoolError(RejectNonstandard, "non-mandatory-script-verify-flag");
+
         /// <summary>'version' error returns a <see cref="RejectNonStandard"/> reject code.</summary>
         public static MempoolError Version = new MempoolError(RejectNonstandard, "version");
 
@@ -213,5 +213,18 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         /// <summary>'mempool-tx-contains-dust-outputs' error returns a <see cref="RejectInvalid"/> reject code.</summary>
         public static MempoolError TransactionContainsDustTxOuts = new MempoolError(RejectInvalid, "mempool-tx-contains-dust-outputs");
+
+        /// <summary>'invalid-voting-request-multisig' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError VotingRequestInvalidMultisig = new MempoolError(RejectInvalid, "invalid-voting-request-multisig");
+
+        /// <summary>'invalid-collateral-requirement' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError InvalidCollateralRequirement = new MempoolError(RejectInvalid, "invalid-collateral-requirement");
+
+        /// <summary>'invalid-voting-request-collateral' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError VotingRequestInvalidCollateralReuse = new MempoolError(RejectInvalid, "invalid-voting-request-collateral");
+
+        // TODO: It is not clear from the Bitcoin Core source what the actual message is supposed to be in this case. Chose witness-mutated as an unambiguous message.
+        /// <summary>'witness-mutated' error returns a <see cref="RejectInvalid"/> reject code.</summary>
+        public static MempoolError WitnessMutated = new MempoolError(RejectInvalid, "witness-mutated");
     }
 }

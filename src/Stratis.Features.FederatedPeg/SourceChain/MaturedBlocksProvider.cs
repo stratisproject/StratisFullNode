@@ -1,13 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin;
+using NLog;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Primitives;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 
@@ -18,113 +19,190 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <summary>
         /// Retrieves deposits for the indicated blocks from the block repository and throws an error if the blocks are not mature enough.
         /// </summary>
-        /// <param name="blockHeight">The block height at which to start retrieving blocks.</param>
-        /// <param name="maxBlocks">The number of blocks to retrieve.</param>
-        /// <param name="maxDeposits">The number of deposits to retrieve.</param>
+        /// <param name="retrieveFromHeight">The block height at which to start retrieving blocks.</param>
+        /// 
         /// <returns>A list of mature block deposits.</returns>
-        SerializableResult<List<MaturedBlockDepositsModel>> GetMaturedDeposits(int blockHeight, int maxBlocks, int maxDeposits = int.MaxValue);
+        SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int retrieveFromHeight);
+
+        /// <summary>
+        /// Retrieves the list of maturing deposits from the cache (if available).
+        /// </summary>
+        /// <param name="maxToReturn">The maximum number of deposits to return.</param>
+        /// <returns>A list of maturing deposits ordered by first maturing.</returns>
+        (int blocksBeforeMature, IDeposit deposit)[] GetMaturingDeposits(int maxToReturn);
+    }
+
+    public sealed class BlockDeposits
+    {
+        public uint256 BlockHash { get; set; }
+
+        public IReadOnlyList<IDeposit> Deposits { get; set; }
     }
 
     public sealed class MaturedBlocksProvider : IMaturedBlocksProvider
     {
-        public const string RetrieveBlockHeightHigherThanMaturedTipMessage = "The submitted block height of {0} is not mature enough. Blocks below {1} can be returned.";
-
+        public const int MaturedBlocksBatchSize = 100;
         public const string UnableToRetrieveBlockDataFromConsensusMessage = "Stopping mature block collection and sending what we've collected. Reason: Unable to get block data for {0} from consensus.";
 
         private readonly IConsensusManager consensusManager;
-
         private readonly IDepositExtractor depositExtractor;
-
+        private readonly ConcurrentDictionary<int, BlockDeposits> deposits;
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
+        private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
 
-        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, ILoggerFactory loggerFactory)
+        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings)
         {
-            this.depositExtractor = depositExtractor;
             this.consensusManager = consensusManager;
+            this.depositExtractor = depositExtractor;
+            this.federatedPegSettings = federatedPegSettings;
+            this.logger = LogManager.GetCurrentClassLogger();
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            // Take a copy of the tip upfront so that we work with the same tip later.
+            this.deposits = new ConcurrentDictionary<int, BlockDeposits>();
+            this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
+            {
+                [DepositRetrievalType.Small] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits,
+                [DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits,
+                [DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits
+            };
+
+            if (this.federatedPegSettings.IsMainChain)
+                this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
         }
 
         /// <inheritdoc />
-        public SerializableResult<List<MaturedBlockDepositsModel>> GetMaturedDeposits(int retrieveFromHeight, int maxBlocks, int maxDeposits = int.MaxValue)
+        public SerializableResult<List<MaturedBlockDepositsModel>> RetrieveDeposits(int maturityHeight)
         {
-            ChainedHeader consensusTip = this.consensusManager.Tip;
+            if (this.consensusManager.Tip == null)
+                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (it is un-initialized or still starting up).");
 
-            if (consensusTip == null)
+            var result = new SerializableResult<List<MaturedBlockDepositsModel>>
             {
-                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks.");
-            }
+                Value = new List<MaturedBlockDepositsModel>(),
+                Message = ""
+            };
 
-            int matureTipHeight = (consensusTip.Height - (int)this.depositExtractor.MinimumDepositConfirmations);
+            // If we're asked for blocks beyond the tip then let the caller know that there are no new blocks available.
+            if (maturityHeight > this.consensusManager.Tip.Height)
+                return result;
 
-            if (retrieveFromHeight > matureTipHeight)
+            int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
+            int startHeight = maturityHeight - maxConfirmations;
+
+            // Determine the first block to extract deposits for.
+            ChainedHeader firstToProcess = this.consensusManager.Tip.GetAncestor(maturityHeight);
+            for (ChainedHeader verifyBlock = firstToProcess?.Previous; verifyBlock != null && verifyBlock.Height >= startHeight; verifyBlock = verifyBlock.Previous)
+                if (!this.deposits.TryGetValue(verifyBlock.Height, out BlockDeposits blockDeposits) || blockDeposits.BlockHash != verifyBlock.HashBlock)
+                    firstToProcess = verifyBlock;
+
+            var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
+            DepositRetrievalType[] retrievalTypes = this.retrievalTypeConfirmations.Keys.ToArray();
+
+            // Process the blocks after the previous block until the last available block or time expires.
+            foreach (ChainedHeaderBlock chainedHeaderBlock in this.consensusManager.GetBlocksAfterBlock(firstToProcess?.Previous, MaturedBlocksBatchSize, cancellationToken))
             {
-                this.logger.LogTrace("(-)[RETRIEVEFROMBLOCK_HIGHER_THAN_MATUREDTIP]:{0}={1},{2}={3}", nameof(retrieveFromHeight), retrieveFromHeight, nameof(matureTipHeight), matureTipHeight);
-                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail(string.Format(RetrieveBlockHeightHigherThanMaturedTipMessage, retrieveFromHeight, matureTipHeight));
-            }
+                // Find all deposits in the given block.
+                RecordBlockDeposits(chainedHeaderBlock, retrievalTypes);
 
-            var maturedBlockDepositModels = new List<MaturedBlockDepositsModel>();
-
-            // Half of the timeout. We will also need time to convert it to json.
-            int maxTimeCollectionCanTakeMs = RestApiClientBase.TimeoutMs / 2;
-            var cancellation = new CancellationTokenSource(maxTimeCollectionCanTakeMs);
-
-            int maxBlockHeight = Math.Min(matureTipHeight, retrieveFromHeight + maxBlocks - 1);
-
-            var headers = new List<ChainedHeader>();
-            ChainedHeader header = consensusTip.GetAncestor(maxBlockHeight);
-            for (int i = maxBlockHeight; i >= retrieveFromHeight; i--)
-            {
-                headers.Add(header);
-                header = header.Previous;
-            }
-
-            headers.Reverse();
-
-            int numberOfDeposits = 0;
-
-            for (int headerIndex = 0; headerIndex < headers.Count; headerIndex += 100)
-            {
-                List<ChainedHeader> currentHeaders = headers.GetRange(headerIndex, Math.Min(100, headers.Count - headerIndex));
-
-                var hashes = currentHeaders.Select(h => h.HashBlock).ToList();
-
-                ChainedHeaderBlock[] blocks = this.consensusManager.GetBlockData(hashes);
-
-                foreach (ChainedHeaderBlock chainedHeaderBlock in blocks)
+                // Don't process blocks below the requested maturity height.
+                if (chainedHeaderBlock.ChainedHeader.Height < maturityHeight)
                 {
-                    if (chainedHeaderBlock?.Block?.Transactions == null)
+                    this.logger.Debug("{0} below maturity height of {1}.", chainedHeaderBlock.ChainedHeader, maturityHeight);
+                    continue;
+                }
+
+                var maturedDeposits = new List<IDeposit>();
+
+                // Inspect the deposits in the block for each retrieval type (validate against the retrieval type's confirmation requirement).
+                foreach ((DepositRetrievalType retrievalType, int requiredConfirmations) in this.retrievalTypeConfirmations)
+                {
+                    // If the block height is more than the required confirmations, then the potential deposits
+                    // contained within are valid for the given retrieval type.
+                    if (chainedHeaderBlock.ChainedHeader.Height > requiredConfirmations)
                     {
-                        this.logger.LogDebug(UnableToRetrieveBlockDataFromConsensusMessage, chainedHeaderBlock.ChainedHeader);
-                        this.logger.LogTrace("(-)[BLOCKDATA_MISSING_FROM_CONSENSUS]");
-                        return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels, string.Format(UnableToRetrieveBlockDataFromConsensusMessage, chainedHeaderBlock.ChainedHeader));
+                        foreach (IDeposit deposit in this.RecallBlockDeposits(chainedHeaderBlock.ChainedHeader.Height - requiredConfirmations, retrievalType))
+                            maturedDeposits.Add(deposit);
                     }
+                }
 
-                    MaturedBlockDepositsModel maturedBlockDepositModel = this.depositExtractor.ExtractBlockDeposits(chainedHeaderBlock);
+                this.logger.Debug("{0} mature deposits retrieved from block '{1}'.", maturedDeposits.Count, chainedHeaderBlock.ChainedHeader);
 
-                    if (maturedBlockDepositModel.Deposits != null && maturedBlockDepositModel.Deposits.Count > 0)
-                        this.logger.LogDebug("{0} deposits extracted at block {1}", maturedBlockDepositModel.Deposits.Count, chainedHeaderBlock.ChainedHeader);
+                result.Value.Add(new MaturedBlockDepositsModel(new MaturedBlockInfoModel()
+                {
+                    BlockHash = chainedHeaderBlock.ChainedHeader.HashBlock,
+                    BlockHeight = chainedHeaderBlock.ChainedHeader.Height,
+                    BlockTime = chainedHeaderBlock.ChainedHeader.Header.Time
+                }, maturedDeposits));
 
-                    maturedBlockDepositModels.Add(maturedBlockDepositModel);
+                // Clean-up.
+                this.deposits.TryRemove(chainedHeaderBlock.ChainedHeader.Height - maxConfirmations, out _);
+            }
 
-                    numberOfDeposits += maturedBlockDepositModel.Deposits?.Count ?? 0;
+            return result;
+        }
 
-                    if (maturedBlockDepositModels.Count >= maxBlocks || numberOfDeposits >= maxDeposits)
+        public (int blocksBeforeMature, IDeposit deposit)[] GetMaturingDeposits(int maxToReturn)
+        {
+            ChainedHeader tip = this.consensusManager.Tip;
+
+            int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
+
+            var deposits = new SortedDictionary<int, IDeposit>();
+
+            for (int offset = -maxConfirmations; offset < 0; offset++)
+            {
+                if (this.deposits.TryGetValue(tip.Height + offset, out BlockDeposits blockDeposits))
+                {
+                    foreach (IDeposit deposit in blockDeposits.Deposits)
                     {
-                        this.logger.LogDebug("Stopping matured blocks collection, thresholds reached; {0}={1}, {2}={3}", nameof(maturedBlockDepositModels), maturedBlockDepositModels.Count, nameof(numberOfDeposits), numberOfDeposits);
-                        return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels);
-                    }
-
-                    if (cancellation.IsCancellationRequested)
-                    {
-                        this.logger.LogDebug("Stopping matured blocks collection, the request is taking too long. Sending what has been collected.");
-
-                        return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels);
+                        int blocksBeforeMature = (deposit.BlockNumber + this.retrievalTypeConfirmations[deposit.RetrievalType]) - tip.Height;
+                        if (blocksBeforeMature >= 0)
+                            deposits[blocksBeforeMature] = deposit;
                     }
                 }
             }
 
-            return SerializableResult<List<MaturedBlockDepositsModel>>.Ok(maturedBlockDepositModels);
+            return deposits.Keys.Take(maxToReturn).Select(d => (d, deposits[d])).ToArray();
         }
+
+        private void RecordBlockDeposits(ChainedHeaderBlock chainedHeaderBlock, DepositRetrievalType[] retrievalTypes)
+        {
+            // Already have this recorded?
+            if (this.deposits.TryGetValue(chainedHeaderBlock.ChainedHeader.Height, out BlockDeposits blockDeposits) && blockDeposits.BlockHash == chainedHeaderBlock.ChainedHeader.HashBlock)
+            {
+                this.logger.Debug("Deposits already recorded for '{0}'.", chainedHeaderBlock.ChainedHeader);
+                return;
+            }
+
+            IReadOnlyList<IDeposit> deposits = this.depositExtractor.ExtractDepositsFromBlock(chainedHeaderBlock.Block, chainedHeaderBlock.ChainedHeader.Height, retrievalTypes);
+
+            this.logger.Debug("{0} potential deposits extracted from block '{1}'.", deposits.Count, chainedHeaderBlock.ChainedHeader);
+
+            this.deposits[chainedHeaderBlock.ChainedHeader.Height] = new BlockDeposits()
+            {
+                BlockHash = chainedHeaderBlock.ChainedHeader.HashBlock,
+                Deposits = deposits
+            };
+        }
+
+        private IEnumerable<IDeposit> RecallBlockDeposits(int blockHeight, DepositRetrievalType retrievalType)
+        {
+            return this.deposits[blockHeight].Deposits.Where(d => d.RetrievalType == retrievalType);
+        }
+    }
+
+    /// <summary>
+    /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposits"/> confirmations (blocks).
+    /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposits"/>) confirmations (blocks).
+    /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposits"/>) confirmations (blocks).
+    /// Similarly, reward distribution deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
+    /// </summary>
+    public enum DepositRetrievalType
+    {
+        Small,
+        Normal,
+        Large,
+        Distribution
     }
 }

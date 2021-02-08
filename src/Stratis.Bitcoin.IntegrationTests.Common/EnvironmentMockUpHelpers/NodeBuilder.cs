@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
 {
@@ -56,8 +57,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <returns>A <see cref="NodeBuilder"/> instance with logs disabled.</returns>
         private static NodeBuilder CreateNodeBuilder(string testFolderPath)
         {
-            return new NodeBuilder(testFolderPath)
-                .WithLogsDisabled();
+            return new NodeBuilder(testFolderPath);
         }
 
         private static string GetBitcoinCorePath(string version)
@@ -77,23 +77,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             throw new FileNotFoundException($"Could not load the file {path}.");
         }
 
-        private static string GetStratisXPath(string version)
-        {
-            string path;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                path = $"../../../../External libs/StratisX/{version}/Windows/stratisd.exe";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                path = $"../../../../External libs/StratisX/{version}/Linux/stratisd";
-            else
-                path = $"../../../../External libs/StratisX/{version}/OSX/stratisd";
-
-            if (File.Exists(path))
-                return path;
-
-            throw new FileNotFoundException($"Could not load the file {path}.");
-        }
-
         protected CoreNode CreateNode(NodeRunner runner, string configFile = "bitcoin.conf", bool useCookieAuth = false, NodeConfigParameters configParameters = null)
         {
             var node = new CoreNode(runner, configParameters, configFile, useCookieAuth);
@@ -101,26 +84,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             return node;
         }
 
-        public CoreNode CreateBitcoinCoreNode(string version = "0.13.1", bool useCookieAuth = false)
+        public CoreNode CreateBitcoinCoreNode(string version = "0.13.1", bool useCookieAuth = false, bool useNewConfigStyle = false)
         {
             string bitcoinDPath = GetBitcoinCorePath(version);
-            return this.CreateNode(new BitcoinCoreRunner(this.GetNextDataFolderName(), bitcoinDPath), useCookieAuth: useCookieAuth);
-        }
-
-        public CoreNode CreateStratisXNode(string version = "2.0.0.5", bool useCookieAuth = false)
-        {
-            string stratisDPath = GetStratisXPath(version);
-            return this.CreateNode(new StratisXRunner(this.GetNextDataFolderName(), stratisDPath), "stratis.conf", useCookieAuth);
-        }
-
-        public CoreNode CreateMainnetStratisXNode(string version = "2.0.0.5", bool useCookieAuth = false)
-        {
-            var parameters = new NodeConfigParameters();
-            parameters.Add("regtest", "0");
-            parameters.Add("server", "0");
-
-            string stratisDPath = GetStratisXPath(version);
-            return this.CreateNode(new StratisXRunner(this.GetNextDataFolderName(), stratisDPath), "stratis.conf", useCookieAuth, parameters);
+            return this.CreateNode(new BitcoinCoreRunner(this.GetNextDataFolderName(), bitcoinDPath, useNewConfigStyle), useCookieAuth: useCookieAuth);
         }
 
         /// <summary>
@@ -146,6 +113,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
                .UseMempool()
                .AddMining()
                .UseWallet()
+               .AddSQLiteWalletRepository()
                .AddRPC()
                .UseApi()
                .UseTestChainedHeaderTree()
@@ -163,16 +131,32 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         /// <param name="network">The network the node will run on.</param>
         /// <param name="agent">Overrides the node's agent prefix.</param>
         /// <param name="configParameters">Adds to the nodes configuration parameters.</param>
-        /// <param name="isGateway">Whether the node is a Proven Headers gateway node.</param>
+        /// 
         /// <returns>The constructed PoS node.</returns>
-        public CoreNode CreateStratisPosNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null, bool isGateway = false)
+        public CoreNode CreateStratisPosNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null)
         {
-            return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent, isGateway), "stratis.conf", configParameters: configParameters);
+            return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent), network.DefaultConfigFilename, configParameters: configParameters);
+        }
+
+        /// <summary>
+        /// Creates a Stratis Proof-of-Stake node with the cold staking feature in lieu of the regular wallet.
+        /// <para>
+        /// <see cref="P2P.PeerDiscovery"/> and <see cref="P2P.PeerConnectorDiscovery"/> are disabled by default.
+        /// </para>
+        /// </summary>
+        /// <param name="network">The network the node will run on.</param>
+        /// <param name="agent">Overrides the node's agent prefix.</param>
+        /// <param name="configParameters">Adds to the nodes configuration parameters.</param>
+        /// 
+        /// <returns>The constructed PoS node.</returns>
+        public CoreNode CreateStratisColdStakingNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null)
+        {
+            return CreateNode(new StratisBitcoinColdStakingRunner(this.GetNextDataFolderName(), network, agent), network.DefaultConfigFilename, configParameters: configParameters);
         }
 
         public CoreNode CloneStratisNode(CoreNode cloneNode, string agent = "StratisBitcoin")
         {
-            var node = new CoreNode(new StratisBitcoinPowRunner(cloneNode.FullNode.Settings.DataFolder.RootPath, cloneNode.FullNode.Network, agent), this.ConfigParameters, "bitcoin.conf");
+            var node = new CoreNode(new StratisBitcoinPowRunner(cloneNode.FullNode.Settings.DataFolder.RootPath, cloneNode.FullNode.Network, agent), this.ConfigParameters, cloneNode.FullNode.Network.DefaultConfigFilename);
             this.Nodes.Add(node);
             this.Nodes.Remove(cloneNode);
             return node;
@@ -198,7 +182,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
             return CreateNode(new CustomNodeRunner(dataDir, callback, network, protocolVersion, configParameters, agent, minProtocolVersion), configFileName);
         }
 
-        protected string GetNextDataFolderName(string folderName = null)
+        public string GetNextDataFolderName(string folderName = null)
         {
             string hash = Guid.NewGuid().ToString("N").Substring(0, 7);
             string numberedFolderName = string.Join(

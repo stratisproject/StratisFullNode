@@ -13,8 +13,11 @@ using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.SQLiteWalletRepository;
 
 namespace Stratis.SmartContracts.Tests.Common
 {
@@ -42,9 +45,12 @@ namespace Stratis.SmartContracts.Tests.Common
                             {
                                 options.UseReflectionExecutor();
                             })
-                            .UseSmartContractPoAConsensus()
-                            .UseSmartContractPoAMining()
+                            .UsePoAConsensus()
+                            .AddPoAFeature()
+                            .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
+                            .SetCounterChainNetwork(new StraxRegTest())
                             .UseSmartContractWallet()
+                            .AddSQLiteWalletRepository()
                             .ReplaceTimeProvider(this.timeProvider)
                             .MockIBD()
                             .AddFastMiningCapability();

@@ -75,10 +75,9 @@ namespace NBitcoin.BitcoinCore
 
         public Coins(Transaction tx, int height)
         {
-            if (tx is PosTransaction)
+            if (tx is PosTransaction) // TODO: See if this should be flattened into Transaction so that PosTransaction can be removed
             {
                 this.fCoinStake = tx.IsCoinStake;
-                this.nTime = tx.Time;
             }
 
             this.CoinBase = tx.IsCoinBase;

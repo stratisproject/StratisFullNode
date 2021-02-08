@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using NBitcoin;
-using NBitcoin.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules;
 using Stratis.Bitcoin.Networks;
@@ -47,19 +46,21 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             List<Type> fullValidationRules = network.Consensus.ConsensusRules.FullValidationRules;
 
-            fullValidationRules.Count.Should().Be(5);
+            fullValidationRules.Count.Should().Be(6);
 
             fullValidationRules[0].FullName.Should().Be(typeof(SetActivationDeploymentsFullValidationRule).FullName);
-            fullValidationRules[1].FullName.Should().Be(typeof(LoadCoinviewRule).FullName);
+            fullValidationRules[1].FullName.Should().Be(typeof(FetchCoinviewRule).FullName);
             fullValidationRules[2].FullName.Should().Be(typeof(TransactionDuplicationActivationRule).FullName);
             fullValidationRules[3].FullName.Should().Be(typeof(PowCoinviewRule).FullName);
-            fullValidationRules[4].FullName.Should().Be(typeof(SaveCoinviewRule).FullName);
+            fullValidationRules[4].FullName.Should().Be(typeof(PushCoinviewRule).FullName);
+            fullValidationRules[5].FullName.Should().Be(typeof(FlushCoinviewRule).FullName);
+
         }
 
         [Fact]
-        public void StratisConsensusRulesRegistrationTest()
+        public void StraxConsensusRulesRegistrationTest()
         {
-            Network network = new StratisTest();
+            Network network = new StraxTest();
             //new FullNodeBuilderConsensusExtension.PosConsensusRulesRegistration().RegisterRules(network.Consensus);
 
             List<Type> headerValidationRules = network.Consensus.ConsensusRules.HeaderValidationRules;
@@ -67,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             headerValidationRules.Count.Should().Be(7);
             headerValidationRules[0].FullName.Should().Be(typeof(HeaderTimeChecksRule).FullName);
             headerValidationRules[1].FullName.Should().Be(typeof(HeaderTimeChecksPosRule).FullName);
-            headerValidationRules[2].FullName.Should().Be(typeof(StratisBugFixPosFutureDriftRule).FullName);
+            headerValidationRules[2].FullName.Should().Be(typeof(PosFutureDriftRule).FullName);
             headerValidationRules[3].FullName.Should().Be(typeof(CheckDifficultyPosRule).FullName);
             headerValidationRules[4].FullName.Should().Be(typeof(StratisHeaderVersionRule).FullName);
             headerValidationRules[5].FullName.Should().Be(typeof(ProvenHeaderSizeRule).FullName);
@@ -94,7 +95,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             partialValidationRules[7].FullName.Should().Be(typeof(CheckPowTransactionRule).FullName);
             partialValidationRules[8].FullName.Should().Be(typeof(CheckPosTransactionRule).FullName);
             partialValidationRules[9].FullName.Should().Be(typeof(CheckSigOpsRule).FullName);
-            partialValidationRules[10].FullName.Should().Be(typeof(PosCoinstakeRule).FullName);
+            partialValidationRules[10].FullName.Should().Be(typeof(StraxCoinstakeRule).FullName);
 
             List<Type> fullValidationRules = network.Consensus.ConsensusRules.FullValidationRules;
 
@@ -104,8 +105,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             fullValidationRules[1].FullName.Should().Be(typeof(CheckDifficultyHybridRule).FullName);
             fullValidationRules[2].FullName.Should().Be(typeof(LoadCoinviewRule).FullName);
             fullValidationRules[3].FullName.Should().Be(typeof(TransactionDuplicationActivationRule).FullName);
-            fullValidationRules[4].FullName.Should().Be(typeof(PosCoinviewRule).FullName);
-            fullValidationRules[5].FullName.Should().Be(typeof(PosColdStakingRule).FullName);
+            fullValidationRules[4].FullName.Should().Be(typeof(StraxCoinviewRule).FullName);
+            fullValidationRules[5].FullName.Should().Be(typeof(StraxColdStakingRule).FullName);
             fullValidationRules[6].FullName.Should().Be(typeof(SaveCoinviewRule).FullName);
         }
     }

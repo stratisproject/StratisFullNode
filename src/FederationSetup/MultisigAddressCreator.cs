@@ -1,24 +1,15 @@
 ﻿using System.Text;
 using NBitcoin;
-using Xunit.Abstractions;
 
 namespace FederationSetup
 {
     public class MultisigAddressCreator
     {
-        private readonly ITestOutputHelper output;
-
-        public MultisigAddressCreator(ITestOutputHelper output = null)
-        {
-            if (output == null) return;
-            this.output = output;
-        }
-
-        public string CreateMultisigAddresses(Network mainchainNetwork, Network sidechainNetwork, PubKey[] pubKeys, int quorum = 3)
+        public string CreateMultisigAddresses(Network mainchainNetwork, Network sidechainNetwork)
         {
             var output = new StringBuilder();
 
-            Script payToMultiSig = PayToMultiSigTemplate.Instance.GenerateScriptPubKey(quorum, pubKeys);
+            Script payToMultiSig = PayToFederationTemplate.Instance.GenerateScriptPubKey(sidechainNetwork.Federations.GetOnlyFederation().Id);
             output.AppendLine("Redeem script: " + payToMultiSig.ToString());
 
             BitcoinAddress sidechainMultisigAddress = payToMultiSig.Hash.GetAddress(sidechainNetwork);

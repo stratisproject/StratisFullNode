@@ -1,6 +1,7 @@
 ﻿using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral.CounterChain
 {
@@ -25,15 +26,15 @@ namespace Stratis.Features.Collateral.CounterChain
         /// <inheritdoc />
         public Network CounterChainNetwork { get; set; }
 
-        public CounterChainSettings(NodeSettings nodeSettings, Network counterChainNetwork)
+        public CounterChainSettings(NodeSettings nodeSettings, CounterChainNetworkWrapper counterChainNetwork)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
             TextFileConfiguration configReader = nodeSettings.ConfigReader;
 
             this.CounterChainApiHost = configReader.GetOrDefault(CounterChainApiHostParam, "localhost");
-            this.CounterChainApiPort = configReader.GetOrDefault(CounterChainApiPortParam, counterChainNetwork.DefaultAPIPort);
-            this.CounterChainNetwork = counterChainNetwork;
+            this.CounterChainApiPort = configReader.GetOrDefault(CounterChainApiPortParam, counterChainNetwork.CounterChainNetwork.DefaultAPIPort);
+            this.CounterChainNetwork = counterChainNetwork.CounterChainNetwork;
         }
     }
 }

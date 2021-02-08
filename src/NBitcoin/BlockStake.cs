@@ -114,7 +114,7 @@ namespace NBitcoin
             if (IsProofOfStake(block))
             {
                 blockStake.SetProofOfStake();
-                blockStake.StakeTime = block.Transactions[1].Time;
+                blockStake.StakeTime = block.Header.Time;
                 blockStake.PrevoutStake = block.Transactions[1].Inputs[0].PrevOut;
             }
 

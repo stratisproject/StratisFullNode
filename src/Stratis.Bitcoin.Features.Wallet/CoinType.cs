@@ -7,18 +7,18 @@
     public enum CoinType
     {
         /// <summary>
-        /// Bitcoin
+        /// Bitcoin (mainnet)
         /// </summary>
         Bitcoin = 0,
 
         /// <summary>
-        /// Testnet (all coins)
+        /// Testnet and regtest (all coins)
         /// </summary>
         Testnet = 1,
 
         /// <summary>
-        /// Stratis
+        /// Strax (mainnet)
         /// </summary>
-        Stratis = 105
+        Strax = 105105
     }
 }

@@ -10,6 +10,7 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -31,26 +32,28 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         private int repositorySavesCount = 0;
         private int repositoryTotalBlocksSaved = 0;
         private int repositoryTotalBlocksDeleted = 0;
-        private Random random;
-        private StoreSettings storeSettings;
+        private readonly Random random;
+        private readonly StoreSettings storeSettings;
 
-        private Dictionary<uint256, Block> listOfSavedBlocks;
-        private ILoggerFactory loggerFactory;
-        private ISignals signals;
-        private AsyncProvider asyncProvider;
+        private readonly Dictionary<uint256, Block> listOfSavedBlocks;
+        private readonly ILoggerFactory loggerFactory;
+        private readonly ISignals signals;
+        private readonly AsyncProvider asyncProvider;
 
-        private readonly string testBlockHex = "07000000af72d939050259913e440b23bee62e3b9604129ec8424d265a6ee4916e060000a5a2cbad28617657336403daf202b797bfc4b9c5cfc65a258f32ec33ec9ad485314ea957ffff0f1e812b07000101000000184ea957010000000000000000000000000000000000000000000000000000000000000000ffffffff03510101ffffffff010084d717000000001976a9140099e795d9ee809dc74dce32c79d26db0265072488ac0000000000";
+        private readonly string testBlockHex = "0000002082d011586557647aa1461c214bedc0987cf8f7c5eb19662770c42593d058e1ebc41b5aabaee7c7db2fdb09fe1986635b9208d8b298610252840295766809f2ff6c26a95fffff0f1e667f000001010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff025100ffffffff0200d2496b00000000232103186e88ef2ca4684befe5028c270783fe2d2f9e4a866afd37faa44ce0bbb7c2afac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf9012000000000000000000000000000000000000000000000000000000000000000000000000000";
 
         public BlockStoreTests()
         {
-            this.network = KnownNetworks.StratisMain;
+            this.network = new StraxMain();
             this.repositoryTipHashAndHeight = new HashHeightPair(this.network.GenesisHash, 0);
             this.storeSettings = new StoreSettings(NodeSettings.Default(this.network));
 
             this.random = new Random();
 
-            this.listOfSavedBlocks = new Dictionary<uint256, Block>();
-            this.listOfSavedBlocks.Add(uint256.One, Block.Parse(this.testBlockHex, KnownNetworks.StratisMain.Consensus.ConsensusFactory));
+            this.listOfSavedBlocks = new Dictionary<uint256, Block>
+            {
+                { uint256.One, Block.Parse(this.testBlockHex, this.network.Consensus.ConsensusFactory) }
+            };
 
             this.chainIndexer = CreateChain(10);
 
@@ -94,7 +97,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.loggerFactory = new LoggerFactory();
             this.signals = new Signals.Signals(this.loggerFactory, null);
-            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushCondition, this.storeSettings,
                 this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
@@ -165,7 +168,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         [Fact]
         public async Task BatchIsSavedAfterSizeThresholdReachedAsync()
         {
-            Block block = Block.Load(Encoders.Hex.DecodeData(this.testBlockHex), KnownNetworks.StratisMain.Consensus.ConsensusFactory);
+            Block block = Block.Load(Encoders.Hex.DecodeData(this.testBlockHex), this.network.Consensus.ConsensusFactory);
             int blockSize = block.GetSerializedSize();
             this.chainState.ConsensusTip = null;
 
@@ -192,7 +195,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             await WaitUntilQueueIsEmptyAsync().ConfigureAwait(false);
             Assert.Equal(longChainIndexer.GetHeader(count - 1), this.chainState.BlockStoreTip);
-            Assert.Equal(1, this.repositorySavesCount);
+            Assert.True(this.repositorySavesCount > 0);
         }
 
         [Fact]

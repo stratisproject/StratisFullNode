@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.InputConsolidation;
-using Stratis.Features.FederatedPeg.TargetChain;
 
 namespace Stratis.Features.FederatedPeg.Interfaces
 {

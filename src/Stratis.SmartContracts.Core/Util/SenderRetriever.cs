@@ -41,25 +41,26 @@ namespace Stratis.SmartContracts.Core.Util
             // Check the utxoset for the p2pk of the unspent output for this transaction
             if (coinView != null)
             {
-                FetchCoinsResponse fetchCoinResult = coinView.FetchCoins(new uint256[] { prevOut.Hash });
-                UnspentOutputs unspentOutputs = fetchCoinResult.UnspentOutputs.FirstOrDefault();
+                FetchCoinsResponse fetchCoinResult = coinView.FetchCoins(new OutPoint[] { prevOut });
 
-                if (unspentOutputs == null)
+                // The result from the coinview should never be null, so we do not check for that condition here.
+                // It will simply not contain the requested outputs in the dictionary if they did not exist in the coindb.
+                if (fetchCoinResult.UnspentOutputs.All(o => o.Key != prevOut))
                 {
                     return GetSenderResult.CreateFailure(OutputsNotInCoinView);
                 }
+                
+                UnspentOutput unspentOutputs = fetchCoinResult.UnspentOutputs.First(o => o.Key == prevOut).Value;
 
-                if (prevOut.N >= unspentOutputs.Outputs.Length)
-                {
-                    return GetSenderResult.CreateFailure(InvalidOutputIndex);
-                }
-
-                TxOut senderOutput = unspentOutputs.Outputs[prevOut.N];
-
-                if (senderOutput == null)
+                // Since we now fetch a specific UTXO from the coindb instead of an entire transaction, it is no longer meaningful to check
+                // (for the coindb at least - block transactions are handled separately above) whether the prevOut index is within bounds.
+                // So that check has been removed from here and we proceed directly to checking spent-ness.
+                if (unspentOutputs.Coins == null)
                 {
                     return GetSenderResult.CreateFailure(OutputAlreadySpent);
                 }
+
+                TxOut senderOutput = unspentOutputs.Coins.TxOut;
 
                 return this.GetAddressFromScript(senderOutput.ScriptPubKey);
             }

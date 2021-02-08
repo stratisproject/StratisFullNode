@@ -38,7 +38,9 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         public NodeInitialisationTests()
         {
             this.sidechainNetwork = (CirrusRegTest)CirrusNetwork.NetworksSelector.Regtest();
-            this.mainNetwork = Networks.Stratis.Regtest();
+            this.mainNetwork = Networks.Strax.Regtest();
+            this.mainNetwork.RewardClaimerBatchActivationHeight = 50;
+
             var pubKeysByMnemonic = this.sidechainNetwork.FederationMnemonics.ToDictionary(m => m, m => m.DeriveExtKey().PrivateKey.PubKey);
             this.scriptAndAddresses = FederatedPegTestHelper.GenerateScriptAndAddresses(this.mainNetwork, this.sidechainNetwork, 2, pubKeysByMnemonic);
         }
@@ -46,7 +48,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         [Fact]
         public void SidechainUserStarts()
         {
-            using (SidechainNodeBuilder nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
+            using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
                 CoreNode user = nodeBuilder.CreateSidechainNode(new CirrusSideChainStartsRegTest());
 
@@ -61,9 +63,9 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         [Fact]
         public void SidechainMinerStarts()
         {
-            using (SidechainNodeBuilder nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
+            using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
-                Key federationKey = new Key();
+                var federationKey = new Key();
 
                 CoreNode miner = nodeBuilder.CreateSidechainMinerNode(this.sidechainNetwork, this.mainNetwork, federationKey);
 
@@ -91,9 +93,9 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         [Fact]
         public void SidechainGatewayStarts()
         {
-            using (SidechainNodeBuilder nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
+            using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
-                Key federationKey = new Key();
+                var federationKey = new Key();
 
                 CoreNode gateway = nodeBuilder.CreateSidechainFederationNode(this.sidechainNetwork, this.mainNetwork, federationKey);
                 gateway.AppendToConfig("sidechain=1");
@@ -112,7 +114,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         [Fact]
         public void MainChainGatewayStarts()
         {
-            using (SidechainNodeBuilder nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
+            using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
                 CoreNode gateway = nodeBuilder.CreateMainChainFederationNode(this.mainNetwork, this.sidechainNetwork);
                 gateway.AppendToConfig("mainchain=1");
@@ -133,38 +135,37 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         {
             CirrusRegTest collateralSidechainNetwork = new CirrusSingleCollateralRegTest();
 
-            using (SidechainNodeBuilder sideNodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
-            using (NodeBuilder nodeBuilder = NodeBuilder.Create(this))
-            {
-                CoreNode main = nodeBuilder.CreateStratisPosNode(this.mainNetwork).WithWallet();
-                main.AppendToConfig("addressindex=1");
+            using var sideNodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this);
+            using var nodeBuilder = NodeBuilder.Create(this);
 
-                Key federationKey = new Key();
+            CoreNode main = nodeBuilder.CreateStratisPosNode(this.mainNetwork).WithWallet();
+            main.AppendToConfig("addressindex=1");
 
-                CoreNode side = sideNodeBuilder.CreateSidechainMinerNode(collateralSidechainNetwork, this.mainNetwork, federationKey);
-                side.AppendToConfig("sidechain=1");
-                side.AppendToConfig($"redeemscript={this.scriptAndAddresses.payToMultiSig}");
-                side.AppendToConfig($"publickey={collateralSidechainNetwork.FederationMnemonics[0].DeriveExtKey().PrivateKey.PubKey}");
-                side.AppendToConfig("federationips=0.0.0.0,0.0.0.1"); // Placeholders
-                side.AppendToConfig($"mindepositconfirmations={DepositConfirmations}");
-                side.AppendToConfig($"counterchainapiport={main.ApiPort}");
+            var federationKey = new Key();
 
-                main.Start();
-                side.Start();
+            CoreNode side = sideNodeBuilder.CreateSidechainMinerNode(collateralSidechainNetwork, this.mainNetwork, federationKey);
+            side.AppendToConfig("sidechain=1");
+            side.AppendToConfig($"redeemscript={this.scriptAndAddresses.payToMultiSig}");
+            side.AppendToConfig($"publickey={collateralSidechainNetwork.FederationMnemonics[0].DeriveExtKey().PrivateKey.PubKey}");
+            side.AppendToConfig("federationips=0.0.0.0,0.0.0.1"); // Placeholders
+            side.AppendToConfig($"mindepositconfirmations={DepositConfirmations}");
+            side.AppendToConfig($"counterchainapiport={main.ApiPort}");
 
-                Assert.Equal(CoreNodeState.Running, main.State);
-                Assert.Equal(CoreNodeState.Running, side.State);
+            main.Start();
+            side.Start();
 
-                // Collateral is checked - they're talking!
-                TestHelper.MineBlocks(main, 1);
-                TestBase.WaitLoop(() => side.FullNode.NodeService<ICollateralChecker>().GetCounterChainConsensusHeight() > 0);
-            }
+            Assert.Equal(CoreNodeState.Running, main.State);
+            Assert.Equal(CoreNodeState.Running, side.State);
+
+            // Collateral is checked - they're talking!
+            TestHelper.MineBlocks(main, 1);
+            TestBase.WaitLoop(() => side.FullNode.NodeService<ICollateralChecker>().GetCounterChainConsensusHeight() > 0);
         }
 
         [Fact]
         public void GatewayPairStarts()
         {
-            using (SidechainNodeBuilder nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
+            using (var nodeBuilder = SidechainNodeBuilder.CreateSidechainNodeBuilder(this))
             {
                 CoreNode side = nodeBuilder.CreateSidechainFederationNode(this.sidechainNetwork, this.mainNetwork, this.sidechainNetwork.FederationKeys[0]);
                 side.AppendToConfig("sidechain=1");
@@ -229,7 +230,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         internal CirrusSingleCollateralRegTest()
         {
             this.Name = "CirrusSingleCollateralRegTest";
-            CollateralFederationMember firstMember = this.ConsensusOptions.GenesisFederationMembers[0] as CollateralFederationMember;
+            var firstMember = this.ConsensusOptions.GenesisFederationMembers[0] as CollateralFederationMember;
             firstMember.CollateralAmount = Money.Coins(100m);
             firstMember.CollateralMainchainAddress = new Key().ScriptPubKey.GetDestinationAddress(this).ToString();
         }

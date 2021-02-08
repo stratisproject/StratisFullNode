@@ -35,11 +35,12 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
         public AddressIndexerTests()
         {
-            this.network = new StratisMain();
-            var storeSettings = new StoreSettings(NodeSettings.Default(this.network));
-
-            storeSettings.AddressIndex = true;
-            storeSettings.TxIndex = true;
+            this.network = new StraxMain();
+            var storeSettings = new StoreSettings(NodeSettings.Default(this.network))
+            {
+                AddressIndex = true,
+                TxIndex = true
+            };
 
             var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
             var stats = new Mock<INodeStats>();
@@ -49,8 +50,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             this.asyncProviderMock = new Mock<IAsyncProvider>();
 
+            var utxoIndexerMock = new Mock<IUtxoIndexer>();
+
             this.addressIndexer = new AddressIndexer(storeSettings, dataFolder, new ExtendedLoggerFactory(), this.network, stats.Object,
-                this.consensusManagerMock.Object, this.asyncProviderMock.Object, indexer, new DateTimeProvider());
+                this.consensusManagerMock.Object, this.asyncProviderMock.Object, indexer, new DateTimeProvider(), utxoIndexerMock.Object);
 
             this.genesisHeader = new ChainedHeader(this.network.GetGenesis().Header, this.network.GetGenesis().Header.GetHash(), 0);
         }
@@ -371,7 +374,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             Assert.Equal(maxReorgBtc, AddressIndexer.FallBackMaxReorg);
 
-            var stratis = new StratisMain();
+            var stratis = new StraxMain();
 
             int maxReorgStratis = AddressIndexer.GetMaxReorgOrFallbackMaxReorg(stratis);
 

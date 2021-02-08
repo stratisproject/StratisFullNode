@@ -253,6 +253,14 @@ namespace NBitcoin
             }
         }
 
+        public bool WitScriptEmpty
+        {
+            get
+            {
+                return this.WitScript == WitScript.Empty || this.WitScript == null;
+            }
+        }
+
         #region IBitcoinSerializable Members
 
         public void ReadWrite(BitcoinStream stream)
@@ -802,6 +810,11 @@ namespace NBitcoin
         {
             return new Coin(this);
         }
+
+        public OutPoint ToOutPoint()
+        {
+            return new OutPoint(this.Transaction, this.N);
+        }
     }
 
     public class TxOutList : UnsignedList<TxOut>
@@ -1159,20 +1172,6 @@ namespace NBitcoin
             }
         }
 
-        private uint nTime = Utils.DateTimeToUnixTime(DateTime.UtcNow);
-
-        public uint Time
-        {
-            get
-            {
-                return this.nTime;
-            }
-            set
-            {
-                this.nTime = value;
-            }
-        }
-
         private TxInList vin;
         private TxOutList vout;
         private LockTime nLockTime;
@@ -1233,10 +1232,6 @@ namespace NBitcoin
             {
                 stream.ReadWrite(ref this.nVersion);
 
-                // the POS time stamp
-                if (this is PosTransaction)
-                    stream.ReadWrite(ref this.nTime);
-
                 /* Try to read the vin. In case the dummy is there, this will be read as an empty vector. */
                 stream.ReadWrite<TxInList, TxIn>(ref this.vin);
 
@@ -1285,10 +1280,6 @@ namespace NBitcoin
             {
                 uint version = (witSupported && (this.vin.Count == 0 && this.vout.Count > 0)) ? this.nVersion | NoDummyInput : this.nVersion;
                 stream.ReadWrite(ref version);
-
-                // the POS time stamp
-                if (this is PosTransaction)
-                    stream.ReadWrite(ref this.nTime);
 
                 if (witSupported)
                 {
@@ -1653,9 +1644,15 @@ namespace NBitcoin
             return GetFormatter(format, network).ParseJson(tx);
         }
 
+        /// <remarks>Note that this does not accept a ProtocolVersion parameter so care needs to be taken that the default version is acceptable.</remarks>
         public string ToHex()
         {
             return Encoders.Hex.EncodeData(this.ToBytes());
+        }
+
+        public string ToHex(ProtocolVersion protocolVersion)
+        {
+            return Encoders.Hex.EncodeData(this.ToBytes(protocolVersion));
         }
 
         public override string ToString()
@@ -1894,7 +1891,7 @@ namespace NBitcoin
         {
             get
             {
-                return this.Inputs.Any(i => i.WitScript != WitScript.Empty && i.WitScript != null);
+                return this.Inputs.Any(i => i.WitScriptEmpty == false);
             }
         }
 
