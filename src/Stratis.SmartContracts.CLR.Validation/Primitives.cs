@@ -15,6 +15,8 @@ namespace Stratis.SmartContracts.CLR.Validation
             typeof(uint),
             typeof(long),
             typeof(ulong),
+            typeof(UInt128),
+            typeof(UInt256),
             typeof(string)
         };
     }
