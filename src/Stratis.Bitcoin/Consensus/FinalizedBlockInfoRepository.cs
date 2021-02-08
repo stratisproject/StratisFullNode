@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Consensus
         public void Dispose()
         {
             this.cancellation.Cancel();
-            this.finalizedBlockInfoPersistingTask.GetAwaiter().GetResult();
+            this.finalizedBlockInfoPersistingTask?.GetAwaiter().GetResult();
         }
     }
 }
