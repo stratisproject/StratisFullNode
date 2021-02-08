@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Configuration.Settings
             this.MaxTipAge = config.GetOrDefault("maxtipage", nodeSettings.Network.MaxTipAge, this.logger);
             this.MaxBlockMemoryInMB = config.GetOrDefault("maxblkmem", 200, this.logger);
             this.MaxCoindbCacheInMB = config.GetOrDefault("dbcache", 200, this.logger);
-            this.CoindbIbdFlushMin = config.GetOrDefault("dbflush", 10, this.logger);
+            this.CoindbIbdFlushMin = config.GetOrDefault("dbflush", 2, this.logger);
         }
 
         /// <summary>Prints the help information on how to configure the Consensus settings to the logger.</summary>
