@@ -43,13 +43,11 @@ namespace Stratis.Bitcoin.Utilities
 
     public class NodeStats : INodeStats
     {
+        /// <inheritdoc />
         public bool DisplayBenchStats { get; set; }
 
         // The amount of seconds the period loop will wait on a component to return it's stats before cancelling.
         private const int ComponentStatsWaitSeconds = 10;
-
-        /// <inheritdoc />
-        public bool DisplayBenchStats { get; set; }
 
         /// <summary>Protects access to <see cref="stats"/>.</summary>
         private readonly object locker;
@@ -63,7 +61,6 @@ namespace Stratis.Bitcoin.Utilities
 
         public NodeStats(IDateTimeProvider dateTimeProvider, NodeSettings nodeSettings, IVersionProvider versionProvider)
         {
-            this.DisplayBenchStats = nodeSettings.ConfigReader.GetOrDefault("displaybenchstats", false);
             this.dateTimeProvider = dateTimeProvider;
             this.DisplayBenchStats = nodeSettings.ConfigReader.GetOrDefault("displaybenchstats", false);
             this.locker = new object();
