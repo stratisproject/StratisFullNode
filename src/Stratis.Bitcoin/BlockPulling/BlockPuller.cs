@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -957,38 +958,41 @@ namespace Stratis.Bitcoin.BlockPulling
         [NoTrace]
         private void AddComponentStats(StringBuilder statsBuilder)
         {
-            statsBuilder.AppendLine();
-            statsBuilder.AppendLine("======Block Puller======");
+            statsBuilder.AppendLine(">> Block Puller");
+
+            int pendingBlocks = 0;
+            int unassignedDownloads = 0;
 
             lock (this.assignedLock)
             {
-                int pendingBlocks = this.assignedDownloadsByHash.Count;
-                statsBuilder.AppendLine($"Blocks being downloaded: {pendingBlocks}");
+                pendingBlocks = this.assignedDownloadsByHash.Count;
             }
 
             lock (this.queueLock)
             {
-                int unassignedDownloads = 0;
-
                 foreach (DownloadJob downloadJob in this.downloadJobsQueue)
                     unassignedDownloads += downloadJob.Headers.Count;
-
-                statsBuilder.AppendLine($"Queued downloads: {unassignedDownloads}");
             }
 
-            double avgBlockSizeBytes = this.GetAverageBlockSizeBytes();
-            double averageBlockSizeKb = avgBlockSizeBytes / 1024.0;
-            statsBuilder.AppendLine($"Average block size: {Math.Round(averageBlockSizeKb, 2)} KB");
+            statsBuilder.AppendLine("Blocks being downloaded".PadRight(LoggingConfiguration.ColumnLength) + $": {pendingBlocks} ({unassignedDownloads} queued)");
 
             double totalSpeedBytesPerSec = this.GetTotalSpeedOfAllPeersBytesPerSec();
             double totalSpeedKbPerSec = (totalSpeedBytesPerSec / 1024.0);
-            statsBuilder.AppendLine($"Total download speed: {Math.Round(totalSpeedKbPerSec, 2)} KB/sec");
-
+            double avgBlockSizeBytes = this.GetAverageBlockSizeBytes();
+            double averageBlockSizeKb = avgBlockSizeBytes / 1024.0;
             double timeToDownloadBlockMs = Math.Round((avgBlockSizeBytes / totalSpeedBytesPerSec) * 1000, 2);
-            statsBuilder.AppendLine($"Average time to download a block: {timeToDownloadBlockMs} ms");
-
             double blocksPerSec = Math.Round(totalSpeedBytesPerSec / avgBlockSizeBytes, 2);
-            statsBuilder.AppendLine($"Amount of blocks node can download in 1 second: {blocksPerSec}");
+
+            statsBuilder.AppendLine(
+                "Total Download Speed".PadRight(LoggingConfiguration.ColumnLength) + $": {Math.Round(totalSpeedKbPerSec, 2)} KB/sec".PadRight(20, ' ') +
+                "Block Download Average".PadRight(LoggingConfiguration.ColumnLength) + $": {timeToDownloadBlockMs} ms"
+                );
+
+            statsBuilder.AppendLine(
+                "Average block size".PadRight(LoggingConfiguration.ColumnLength) + $": {Math.Round(averageBlockSizeKb, 2)} KB".PadRight(20, ' ') +
+                "Blocks downloadable in 1 sec".PadRight(LoggingConfiguration.ColumnLength) + $": {blocksPerSec}");
+
+            statsBuilder.AppendLine();
 
             // TODO: add logging per each peer
             // peer -- quality score -- assigned blocks -- speed  (SORT BY QualityScore)

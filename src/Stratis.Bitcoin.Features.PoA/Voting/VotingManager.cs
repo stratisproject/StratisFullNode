@@ -6,6 +6,7 @@ using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
@@ -548,19 +549,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
-            log.AppendLine();
-            log.AppendLine("====== Voting & Poll Data ======");
+            log.AppendLine(">> Voting & Poll Data");
 
             lock (this.locker)
             {
-                log.AppendLine("Pending Member Polls".PadRight(30) + ": " + GetPendingPolls().MemberPolls().Count);
-                log.AppendLine("Approved Member Polls".PadRight(30) + ": " + GetApprovedPolls().MemberPolls().Count);
-                log.AppendLine("Executed Member Polls".PadRight(30) + ": " + GetExecutedPolls().MemberPolls().Count);
-                log.AppendLine("Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
-                log.AppendLine("Approved Whitelist Polls".PadRight(30) + ": " + GetApprovedPolls().WhitelistPolls().Count);
-                log.AppendLine("Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
-                log.AppendLine("Scheduled Votes".PadRight(30) + ": " + this.scheduledVotingData.Count);
-                log.AppendLine($"Scheduled votes will be added to the next block this node mines.");
+                log.AppendLine("Member Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {GetPendingPolls().MemberPolls().Count} Approved: {GetApprovedPolls().MemberPolls().Count} Executed : {GetExecutedPolls().MemberPolls().Count}");
+                log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {GetPendingPolls().WhitelistPolls().Count} Approved: {GetApprovedPolls().WhitelistPolls().Count} Executed : {GetExecutedPolls().WhitelistPolls().Count}");
+                log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
+                log.AppendLine("Scheduled votes will be added to the next block this node mines.");
+                log.AppendLine();
             }
         }
 

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -108,7 +109,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             this.Cache = new MemorySizeCache<int, ProvenBlockHeader>(this.MemoryCacheSizeLimitInBytes);
 
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name);
+
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name);
+
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
 
@@ -316,7 +320,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             if (this.TipHashHeight != null)
             {
-                benchLog.AppendLine("======ProvenBlockHeaderStore Bench======");
+                benchLog.AppendLine(">> ProvenBlockHeaderStore Bench");
 
                 BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 
@@ -348,11 +352,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             decimal totalMaxCacheInMb = Convert.ToDecimal(this.Cache.MaxSize / Math.Pow(2, 20));
             decimal totalBatchInMb = Convert.ToDecimal(totalBytes / Math.Pow(2, 20));
 
-            log.AppendLine();
-            log.AppendLine("======ProvenBlockHeaderStore======");
-            log.AppendLine($"Batch Size: {Math.Round(totalBatchInMb, 2)} Mb ({count} headers)");
-            log.AppendLine($"Cache Size: {Math.Round(totalCacheInMb, 2)}/{Math.Round(totalMaxCacheInMb, 2)} MB");
-            log.AppendLine();
+            this.logger.LogDebug(">> Proven Block Header Store");
+            this.logger.LogDebug($"Batch Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {Math.Round(totalBatchInMb, 2)} Mb ({count} headers)");
+            this.logger.LogDebug($"Cache Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {Math.Round(totalCacheInMb, 2)}/{Math.Round(totalMaxCacheInMb, 2)} MB");
+            this.logger.LogDebug("");
         }
 
         /// <inheritdoc />
