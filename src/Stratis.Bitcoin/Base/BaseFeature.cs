@@ -226,7 +226,7 @@ namespace Stratis.Bitcoin.Base
             this.blockStore.Initialize();
 
             // The finalized repository needs to be initialized before the rules engine in case the
-            // node shutdown enexpectedly and the finalized block info has to be reset.
+            // node shutdown unexpectedly and the finalized block info needs to be reset.
             this.finalizedBlockInfoRepository.Initialize(this.chainIndexer.Tip);
 
             this.consensusRules.Initialize(this.chainIndexer.Tip);

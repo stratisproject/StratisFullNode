@@ -30,6 +30,10 @@ namespace Stratis.Bitcoin.Consensus
         /// <returns><c>true</c> if new value was set, <c>false</c> if <paramref name="height"/> is lower or equal than current value.</returns>
         bool SaveFinalizedBlockHashAndHeight(uint256 hash, int height);
 
+        /// <summary>
+        /// Initializes the finalized block repository by checking its tip and starting the persist task.
+        /// </summary>
+        /// <param name="chainTip">The current chain's tip.</param>
         void Initialize(ChainedHeader chainTip);
     }
 
@@ -84,8 +88,11 @@ namespace Stratis.Bitcoin.Consensus
             this.cancellation = new CancellationTokenSource();
         }
 
+        /// <inheritdoc />
         public void Initialize(ChainedHeader chainTip)
         {
+            // If the node shut down unexpectedly, it is possible that the finalized height could be 
+            // higher than the chain tip. In this case we have to set the finalized height back to the chain's tip.
             if (this.GetFinalizedBlockInfo()?.Height > chainTip.Height)
             {
                 var resetFinalization = new HashHeightPair(chainTip);
