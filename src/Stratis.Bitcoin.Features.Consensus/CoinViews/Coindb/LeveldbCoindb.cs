@@ -13,7 +13,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// <summary>
     /// Persistent implementation of coinview using dBreeze database.
     /// </summary>
-    public class LeveldbCoindb : ICoindb, IStakedb, IDisposable
+    public class LevelDbCoindb : ICoindb, IStakedb, IDisposable
     {
         /// <summary>Database key under which the block hash of the coin view's current tip is stored.</summary>
         private static readonly byte[] blockHashKey = new byte[0];
@@ -42,13 +42,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public LeveldbCoindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
+        public LevelDbCoindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
             : this(network, dataFolder.CoindbPath, dateTimeProvider, loggerFactory, nodeStats, dBreezeSerializer)
         {
         }
 
-        public LeveldbCoindb(Network network, string folder, IDateTimeProvider dateTimeProvider,
+        public LevelDbCoindb(Network network, string folder, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
@@ -111,7 +111,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 foreach (OutPoint outPoint in utxos)
                 {
                     byte[] row = this.leveldb.Get(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
-                    Utilities.Coins outputs = row != null ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(row) : null;
+                    Coins outputs = row != null ? this.dBreezeSerializer.Deserialize<Coins>(row) : null;
 
                     this.logger.LogTrace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 

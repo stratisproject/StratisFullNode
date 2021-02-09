@@ -93,7 +93,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
             testRulesContext.DateTimeProvider = DateTimeProvider.Default;
 
             network.Consensus.Options = new ConsensusOptions();
-            //new FullNodeBuilderConsensusExtension.PowConsensusRulesRegistration().RegisterRules(network.Consensus);
 
             ConsensusSettings consensusSettings = new ConsensusSettings(testRulesContext.NodeSettings);
             testRulesContext.Checkpoints = new Checkpoints();

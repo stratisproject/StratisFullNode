@@ -98,7 +98,6 @@ namespace Stratis.Bitcoin.Consensus
 
             if (nodeStats.DisplayBenchStats)
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 500);
-
         }
 
         /// <inheritdoc />

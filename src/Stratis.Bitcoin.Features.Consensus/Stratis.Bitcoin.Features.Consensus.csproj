@@ -28,6 +28,7 @@
     <PackageReference Include="LevelDB.Standard" Version="2.1.6.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
     <PackageReference Include="Microsoft.FASTER" Version="2020.2.1.1" />
+    <PackageReference Include="RocksDB" Version="6.15.4.15287" />
   </ItemGroup>
 
   <ItemGroup>

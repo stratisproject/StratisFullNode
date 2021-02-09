@@ -43,11 +43,11 @@ namespace Stratis.Bitcoin.Utilities
 
     public class NodeStats : INodeStats
     {
-        // The amount of seconds the period loop will wait on a component to return it's stats before cancelling.
-        private const int ComponentStatsWaitSeconds = 10;
-
         /// <inheritdoc />
         public bool DisplayBenchStats { get; set; }
+
+        // The amount of seconds the period loop will wait on a component to return it's stats before cancelling.
+        private const int ComponentStatsWaitSeconds = 10;
 
         /// <summary>Protects access to <see cref="stats"/>.</summary>
         private readonly object locker;

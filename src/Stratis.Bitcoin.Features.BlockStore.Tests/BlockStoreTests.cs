@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
 
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushCondition, this.storeSettings,
-                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
+                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
         }
 
         private ChainIndexer CreateChain(int blocksCount)
@@ -180,7 +180,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             var blockStoreFlushCondition = new BlockStoreQueueFlushCondition(this.chainState, this.initialBlockDownloadState.Object);
 
             this.blockStoreQueue = new BlockStoreQueue(longChainIndexer, this.chainState, blockStoreFlushCondition, this.storeSettings,
-                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
+                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
             this.blockStoreQueue.Initialize();
             this.chainState.ConsensusTip = longChainIndexer.Tip;
@@ -205,7 +205,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             var blockStoreFlushConditionMock = new Mock<IBlockStoreQueueFlushCondition>();
             blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(false);
-            this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings, this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
+            this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings, this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
             this.blockStoreQueue.Initialize();
 
@@ -240,7 +240,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             var blockStoreFlushConditionMock = new Mock<IBlockStoreQueueFlushCondition>();
             blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(false);
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings,
-                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
+                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
             this.blockStoreQueue.Initialize();
             this.chainState.ConsensusTip = this.chainIndexer.Tip;
@@ -283,7 +283,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             var blockStoreFlushConditionMock = new Mock<IBlockStoreQueueFlushCondition>();
             blockStoreFlushConditionMock.Setup(s => s.ShouldFlush).Returns(false);
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushConditionMock.Object, this.storeSettings,
-                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
+                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
             this.blockStoreQueue.Initialize();
 
@@ -338,7 +338,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             blockStoreFlushCondition.Setup(s => s.ShouldFlush).Returns(false);
 
             this.blockStoreQueue = new BlockStoreQueue(this.chainIndexer, this.chainState, blockStoreFlushCondition.Object, this.storeSettings,
-                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider);
+                this.blockRepositoryMock.Object, this.loggerFactory, new Mock<INodeStats>().Object, this.asyncProvider, new Mock<IInitialBlockDownloadState>().Object);
 
             this.blockStoreQueue.Initialize();
             this.chainState.ConsensusTip = this.chainIndexer.Tip;
