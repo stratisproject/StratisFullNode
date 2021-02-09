@@ -29,10 +29,18 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="height">Block height.</param>
         /// <returns><c>true</c> if new value was set, <c>false</c> if <paramref name="height"/> is lower or equal than current value.</returns>
         bool SaveFinalizedBlockHashAndHeight(uint256 hash, int height);
+
+        /// <summary>
+        /// Initializes the finalized block repository by checking its tip and starting the persist task.
+        /// </summary>
+        /// <param name="chainTip">The current chain's tip.</param>
+        void Initialize(ChainedHeader chainTip);
     }
 
     public class FinalizedBlockInfoRepository : IFinalizedBlockInfoRepository
     {
+        private readonly IAsyncProvider asyncProvider;
+
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
@@ -43,6 +51,7 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <summary>Height and hash of a block that can't be reorged away from.</summary>
         private HashHeightPair finalizedBlockInfo;
+        private readonly INodeStats nodeStats;
 
         /// <summary>Queue of finalized infos to save.</summary>
         /// <remarks>All access should be protected by <see cref="queueLock"/>.</remarks>
@@ -52,7 +61,7 @@ namespace Stratis.Bitcoin.Consensus
         private readonly object queueLock;
 
         /// <summary>Task that continuously persists finalized block info to the database.</summary>
-        private readonly Task finalizedBlockInfoPersistingTask;
+        private Task finalizedBlockInfoPersistingTask;
 
         private readonly CancellationTokenSource cancellation;
 
@@ -68,6 +77,7 @@ namespace Stratis.Bitcoin.Consensus
             Guard.NotNull(keyValueRepo, nameof(keyValueRepo));
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
 
+            this.asyncProvider = asyncProvider;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.keyValueRepo = keyValueRepo;
@@ -76,9 +86,22 @@ namespace Stratis.Bitcoin.Consensus
 
             this.queueUpdatedEvent = new AsyncManualResetEvent(false);
             this.cancellation = new CancellationTokenSource();
-            this.finalizedBlockInfoPersistingTask = this.PersistFinalizedBlockInfoContinuouslyAsync();
+        }
 
-            asyncProvider.RegisterTask($"{nameof(FinalizedBlockInfoRepository)}.{nameof(this.finalizedBlockInfoPersistingTask)}", this.finalizedBlockInfoPersistingTask);
+        /// <inheritdoc />
+        public void Initialize(ChainedHeader chainTip)
+        {
+            // If the node shut down unexpectedly, it is possible that the finalized height could be 
+            // higher than the chain tip. In this case we have to set the finalized height back to the chain's tip.
+            if (this.GetFinalizedBlockInfo()?.Height > chainTip.Height)
+            {
+                var resetFinalization = new HashHeightPair(chainTip);
+                this.keyValueRepo.SaveValue(FinalizedBlockKey, resetFinalization);
+                this.finalizedBlockInfo = resetFinalization;
+            }
+
+            this.finalizedBlockInfoPersistingTask = this.PersistFinalizedBlockInfoContinuouslyAsync();
+            this.asyncProvider.RegisterTask($"{nameof(FinalizedBlockInfoRepository)}.{nameof(this.finalizedBlockInfoPersistingTask)}", this.finalizedBlockInfoPersistingTask);
         }
 
         private async Task PersistFinalizedBlockInfoContinuouslyAsync()
@@ -166,7 +189,7 @@ namespace Stratis.Bitcoin.Consensus
         public void Dispose()
         {
             this.cancellation.Cancel();
-            this.finalizedBlockInfoPersistingTask.GetAwaiter().GetResult();
+            this.finalizedBlockInfoPersistingTask?.GetAwaiter().GetResult();
         }
     }
 }
