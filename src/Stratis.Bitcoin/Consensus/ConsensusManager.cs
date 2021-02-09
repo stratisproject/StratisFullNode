@@ -1497,8 +1497,8 @@ namespace Stratis.Bitcoin.Consensus
                 long tipAge = currentTime - this.chainState.ConsensusTip.Header.BlockTime.ToUnixTimeSeconds();
                 long maxTipAge = this.consensusSettings.MaxTipAge;
 
-                log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge).ToString(@"dd\.hh\:mm\:ss") } (maximum is { TimeSpan.FromSeconds(maxTipAge).ToString(@"dd\.hh\:mm\:ss") })");
-                log.AppendLine("Is Synced (IBD)".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
+                log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge):dd\\.hh\\:mm\\:ss} (maximum is { TimeSpan.FromSeconds(maxTipAge):dd\\.hh\\:mm\\:ss})");
+                log.AppendLine("Synced with Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 

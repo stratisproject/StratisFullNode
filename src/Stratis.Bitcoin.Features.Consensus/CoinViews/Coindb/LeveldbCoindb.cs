@@ -274,7 +274,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void AddBenchStats(StringBuilder log)
         {
-            log.AppendLine("======Leveldb Bench======");
+            log.AppendLine(">> Leveldb Bench");
 
             BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 

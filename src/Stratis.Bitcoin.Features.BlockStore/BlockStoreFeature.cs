@@ -91,9 +91,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             ChainedHeader highestBlock = this.chainState.BlockStoreTip;
 
             if (highestBlock != null)
-            {
                 log.AppendLine("BlockStore Height".PadRight(LoggingConfiguration.ColumnLength) + $": {highestBlock.Height}".PadRight(10) + $"(Hash: {highestBlock.HashBlock})");
-            }
         }
 
         /// <summary>

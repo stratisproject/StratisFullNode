@@ -23,12 +23,9 @@ namespace Stratis.Bitcoin.Base
 
         private BlockLocator locator;
 
-        public Network Network { get; }
-
-        public ChainRepository(IChainStore chainStore, Network network)
+        public ChainRepository(IChainStore chainStore)
         {
             this.chainStore = chainStore;
-            this.Network = network;
         }
 
         /// <inheritdoc />

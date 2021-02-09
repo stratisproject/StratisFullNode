@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
 
             if (nodeStats.DisplayBenchStats)
-                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
         public void Initialize()
@@ -344,7 +344,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void AddBenchStats(StringBuilder log)
         {
-            log.AppendLine("======DBreezeCoinView Bench======");
+            log.AppendLine(">> DBreezeCoinView Bench");
 
             BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 

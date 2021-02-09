@@ -451,6 +451,18 @@ namespace Stratis.Bitcoin.Features.BlockStore
             return newTip;
         }
 
+        [NoTrace]
+        private void AddComponentStats(StringBuilder log)
+        {
+            if (this.storeTip != null)
+            {
+                log.AppendLine(">> Block Store");
+                log.AppendLine("Batch Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched)");
+                log.AppendLine("Queue Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued)");
+                log.AppendLine();
+            }
+        }
+
         /// <inheritdoc />
         public void AddToPending(ChainedHeaderBlock chainedHeaderBlock)
         {
@@ -685,17 +697,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             this.SetStoreTip(expectedStoreTip);
             this.logger.LogDebug("Store tip rewound to '{0}'.", this.storeTip);
-        }
-
-        private void AddComponentStats(StringBuilder log)
-        {
-            if (this.storeTip != null)
-            {
-                log.AppendLine(">> Block Store");
-                log.AppendLine("Batch Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.currentBatchSizeBytes.BytesToMegaBytes()} MB / {this.BatchThresholdSizeBytes.BytesToMegaBytes()} MB ({this.batch.Count} batched)");
-                log.AppendLine("Queue Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.blocksQueueSizeBytes.BytesToMegaBytes()} MB ({this.blocksQueue.Count} queued)");
-                log.AppendLine();
-            }
         }
 
         /// <inheritdoc />

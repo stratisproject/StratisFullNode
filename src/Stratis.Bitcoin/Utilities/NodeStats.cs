@@ -14,6 +14,10 @@ namespace Stratis.Bitcoin.Utilities
 {
     public interface INodeStats
     {
+
+        /// <summary>
+        /// A flag indicating whether or not to display bench stats on the console output.
+        /// </summary>
         bool DisplayBenchStats { get; set; }
 
         /// <summary>Registers action that will be used to append node stats when they are being collected.</summary>
@@ -44,6 +48,9 @@ namespace Stratis.Bitcoin.Utilities
         // The amount of seconds the period loop will wait on a component to return it's stats before cancelling.
         private const int ComponentStatsWaitSeconds = 10;
 
+        /// <inheritdoc />
+        public bool DisplayBenchStats { get; set; }
+
         /// <summary>Protects access to <see cref="stats"/>.</summary>
         private readonly object locker;
 
@@ -58,6 +65,7 @@ namespace Stratis.Bitcoin.Utilities
         {
             this.DisplayBenchStats = nodeSettings.ConfigReader.GetOrDefault("displaybenchstats", false);
             this.dateTimeProvider = dateTimeProvider;
+            this.DisplayBenchStats = nodeSettings.ConfigReader.GetOrDefault("displaybenchstats", false);
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.nodeSettings = nodeSettings;
@@ -163,6 +171,7 @@ namespace Stratis.Bitcoin.Utilities
                 statsBuilder.AppendLine();
                 statsBuilder.AppendLine($">> Node Stats");
                 statsBuilder.AppendLine("Agent".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Agent}:{this.versionProvider.GetVersion()} ({(int)this.nodeSettings.ProtocolVersion})");
+                statsBuilder.AppendLine("Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Network.Name}");
                 statsBuilder.AppendLine("Database".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.ConfigReader.GetOrDefault("dbtype", "leveldb")}");
                 statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeStartedOn}");
                 statsBuilder.AppendLine("Current Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentDateTime}");

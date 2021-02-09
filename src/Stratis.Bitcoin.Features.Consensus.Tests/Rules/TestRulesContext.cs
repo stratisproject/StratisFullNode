@@ -179,7 +179,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             var deployments = new NodeDeployments(testRulesContext.Network, testRulesContext.ChainIndexer);
             testRulesContext.ConsensusRuleEngine = new PowConsensusRuleEngine(testRulesContext.Network, testRulesContext.LoggerFactory, testRulesContext.DateTimeProvider,
                 testRulesContext.ChainIndexer, deployments, consensusSettings, testRulesContext.Checkpoints, new InMemoryCoinView(new HashHeightPair()), testRulesContext.ChainState,
-                new InvalidBlockHashStore(DateTimeProvider.Default), new NodeStats(DateTimeProvider.Default, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), testRulesContext.AsyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
+                new InvalidBlockHashStore(DateTimeProvider.Default), new NodeStats(testRulesContext.DateTimeProvider, testRulesContext.NodeSettings, new Mock<IVersionProvider>().Object), testRulesContext.AsyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
 
             return testRulesContext;
         }

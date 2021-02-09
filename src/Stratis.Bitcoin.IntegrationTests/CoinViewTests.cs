@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Persistence.ChainStores;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -282,7 +281,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             var chain = new ChainIndexer(this.regTest);
             var data = new DataFolder(TestBase.CreateTestDir(this));
 
-            using (var repo = new ChainRepository(new LevelDbChainStore(this.network, data, chain), this.network))
+            using (var repo = new ChainRepository(new LeveldbHeaderStore(this.network, data, chain)))
             {
                 chain.SetTip(repo.LoadAsync(chain.Genesis).GetAwaiter().GetResult());
                 Assert.True(chain.Tip == chain.Genesis);

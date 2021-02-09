@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
 
             this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, provider.Object, this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
                 this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, new ChainState(), new InvalidBlockHashStore(provider.Object),
-                 new NodeStats(provider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider,
+                new NodeStats(provider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider,
                 new ConsensusRulesContainer(), null);
 
             this.timeChecksRule.Parent = this.rulesEngine;
@@ -110,9 +110,9 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
             dateTimeProvider.Setup(x => x.GetAdjustedTimeAsUnixTimestamp())
                 .Returns(time.ToUnixTimeSeconds() + this.consensusOptions.TargetSpacingSeconds);
 
-            this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, dateTimeProvider.Object, this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
-                this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, this.chainState, new InvalidBlockHashStore(dateTimeProvider.Object),
-                 new NodeStats(dateTimeProvider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider, new ConsensusRulesContainer(), null);
+            this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, timeProvider.Object, this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
+                this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, this.chainState, new InvalidBlockHashStore(timeProvider.Object),
+                new NodeStats(DateTimeProvider.Default, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.slotsManager, this.poaHeaderValidator, this.votingManager, this.federationManager, this.asyncProvider, new ConsensusRulesContainer(), null);
 
             var timeRule = new HeaderTimeChecksPoARule();
             this.InitRule(timeRule);

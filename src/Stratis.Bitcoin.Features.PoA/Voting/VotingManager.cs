@@ -556,7 +556,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 log.AppendLine("Member Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {GetPendingPolls().MemberPolls().Count} Approved: {GetApprovedPolls().MemberPolls().Count} Executed : {GetExecutedPolls().MemberPolls().Count}");
                 log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {GetPendingPolls().WhitelistPolls().Count} Approved: {GetApprovedPolls().WhitelistPolls().Count} Executed : {GetExecutedPolls().WhitelistPolls().Count}");
                 log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
-                log.AppendLine($"Scheduled votes will be added to the next block this node mines.");
+                log.AppendLine("Scheduled votes will be added to the next block this node mines.");
                 log.AppendLine();
             }
         }

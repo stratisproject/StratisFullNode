@@ -290,9 +290,9 @@ namespace Stratis.Bitcoin.AsyncWork
                     Exception = info.Exception?.Message
                 };
 
-            foreach (var item in this.benchmarkColumnsDefinition)
+            foreach (var (Name, Width) in this.benchmarkColumnsDefinition)
             {
-                sb.Append(item.Name.PadRight(item.Width));
+                sb.Append(Name.PadRight(Width));
             }
 
             sb.AppendLine();
@@ -373,7 +373,6 @@ namespace Stratis.Bitcoin.AsyncWork
         ///  This method is called when a registered Task throws an unhandled exception.
         /// </summary>
         /// <param name="task">The task causing the exception.</param>
-        /// <param name="state">not used</param>
         private void OnRegisteredTaskUnhandledException(Task task)
         {
             AsyncTaskInfo delegateInfo;

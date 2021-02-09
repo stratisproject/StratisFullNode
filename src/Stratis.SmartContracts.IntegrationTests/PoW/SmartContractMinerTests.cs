@@ -209,7 +209,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 this.NodeSettings = new NodeSettings(this.network, args: new string[] { "-checkpoints" });
                 var consensusSettings = new ConsensusSettings(this.NodeSettings);
                 var checkPoints = new Checkpoints(this.network, consensusSettings);
-                this.cachedCoinView = new CachedCoinView(this.network, checkPoints, inMemoryCoinView, dateTimeProvider, this.loggerFactory, new NodeStats(DateTimeProvider.Default, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), consensusSettings);
+                this.cachedCoinView = new CachedCoinView(this.network, checkPoints, inMemoryCoinView, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.NodeSettings, new Mock<IVersionProvider>().Object), consensusSettings);
 
                 var nodeDeployments = new NodeDeployments(this.network, this.ChainIndexer);
 
@@ -256,7 +256,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         this.cachedCoinView,
                         chainState,
                         new InvalidBlockHashStore(dateTimeProvider),
-                        new NodeStats(DateTimeProvider.Default, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object),
+                        new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object),
                         asyncProvider,
                         consensusRulesContainer)
                     .SetupRulesEngineParent();

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -319,7 +320,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         {
             if (this.TipHashHeight != null)
             {
-                this.logger.LogDebug(">> Proven Block Header Store Bench");
+                benchLog.AppendLine(">> ProvenBlockHeaderStore Bench");
 
                 BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 
@@ -354,8 +355,8 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             decimal totalBatchInMb = Convert.ToDecimal(totalBytes / Math.Pow(2, 20));
 
             this.logger.LogDebug(">> Proven Block Header Store");
-            this.logger.LogDebug($"Batch Size: {Math.Round(totalBatchInMb, 2)} Mb ({count} headers)");
-            this.logger.LogDebug($"Cache Size: {Math.Round(totalCacheInMb, 2)}/{Math.Round(totalMaxCacheInMb, 2)} MB");
+            this.logger.LogDebug($"Batch Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {Math.Round(totalBatchInMb, 2)} Mb ({count} headers)");
+            this.logger.LogDebug($"Cache Size".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {Math.Round(totalCacheInMb, 2)}/{Math.Round(totalMaxCacheInMb, 2)} MB");
             this.logger.LogDebug("");
         }
 
