@@ -325,13 +325,13 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
                 BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 
                 if (this.latestPerformanceSnapShot == null)
-                    this.logger.LogDebug(snapShot.ToString());
+                    benchLog.AppendLine(snapShot.ToString());
                 else
-                    this.logger.LogDebug((snapShot - this.latestPerformanceSnapShot).ToString());
+                    benchLog.AppendLine((snapShot - this.latestPerformanceSnapShot).ToString());
 
                 this.latestPerformanceSnapShot = snapShot;
 
-                this.logger.LogDebug("");
+                benchLog.AppendLine();
             }
         }
 
