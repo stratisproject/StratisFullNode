@@ -56,10 +56,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
 
             // A temporary hack until tip manage will be introduced.
             var coindb = ((CachedCoinView)this.UtxoSet).ICoindb;
-            HashHeightPair hash = coindb.GetTipHash();
-            ChainedHeader tip = chainTip.FindAncestorOrSelf(hash.Hash);
+            ChainedHeader coinDbTip = chainTip.FindAncestorOrSelf(coindb.GetTipHash().Hash);
 
-            this.RewindDataIndexCache.Initialize(tip.Height, this.UtxoSet);
+            this.RewindDataIndexCache.Initialize(coinDbTip.Height, this.UtxoSet);
         }
     }
 }
