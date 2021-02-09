@@ -29,6 +29,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
             {
+                repo.Initialize(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0));
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
             }
 
@@ -49,6 +50,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
 
             using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
             {
+                repo.Initialize(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0));
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 555);
 

@@ -18,7 +18,6 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
@@ -226,6 +225,10 @@ namespace Stratis.Bitcoin.Base
             // This may be a temporary solution until a better way is found to solve this dependency.
             this.blockStore.Initialize();
 
+            // The finalized repository needs to be initialized before the rules engine in case the
+            // node shutdown unexpectedly and the finalized block info needs to be reset.
+            this.finalizedBlockInfoRepository.Initialize(this.chainIndexer.Tip);
+
             this.consensusRules.Initialize(this.chainIndexer.Tip);
 
             await this.consensusManager.InitializeAsync(this.chainIndexer.Tip).ConfigureAwait(false);
@@ -273,8 +276,8 @@ namespace Stratis.Bitcoin.Base
                     await this.provenBlockHeaderStore.SaveAsync().ConfigureAwait(false);
             },
             this.nodeLifetime.ApplicationStopping,
-            repeatEvery: TimeSpan.FromMinutes(1.0),
-            startAfter: TimeSpan.FromMinutes(1.0));
+            repeatEvery: TimeSpan.FromMinutes(2),
+            startAfter: TimeSpan.FromMinutes(2));
         }
 
         /// <summary>

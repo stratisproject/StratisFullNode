@@ -147,7 +147,7 @@ namespace Stratis.Bitcoin.Utilities
 
                 var statsBuilder = new StringBuilder();
 
-                statsBuilder.AppendLine($"======Node stats====== {date}");
+                statsBuilder.AppendLine($"======Node stats===== {date}");
 
                 foreach (var item in inlineStatsBuilders)
                 {
