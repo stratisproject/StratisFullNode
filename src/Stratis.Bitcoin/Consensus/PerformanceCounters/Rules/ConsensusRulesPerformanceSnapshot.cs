@@ -29,7 +29,7 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.Rules
             var builder = new StringBuilder();
 
             builder.AppendLine();
-            builder.AppendLine("======ConsensusRules Bench======");
+            builder.AppendLine(">> ConsensusRules Bench");
 
             if (this.PerformanceInfo.All(x => x.Value.CalledTimes == 0))
             {
