@@ -2,24 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using LevelDB;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Persistence.ChainStores;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Bitcoin.Utilities;
 using Xunit;
 
 namespace Stratis.Bitcoin.Tests.Base
 {
     public class ChainRepositoryTest : TestBase
     {
-        private readonly DBreezeSerializer dBreezeSerializer;
-
         public ChainRepositoryTest() : base(KnownNetworks.StraxRegTest)
         {
-            this.dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
         }
 
         [Fact]
@@ -29,7 +25,7 @@ namespace Stratis.Bitcoin.Tests.Base
             var chain = new ChainIndexer(KnownNetworks.StraxRegTest);
             this.AppendBlock(chain);
 
-            using (var repo = new ChainRepository(new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain)))
+            using (var repo = new ChainRepository(new LevelDbChainStore(chain.Network, new DataFolder(dir), chain)))
             {
                 repo.SaveAsync(chain).GetAwaiter().GetResult();
             }
@@ -79,7 +75,7 @@ namespace Stratis.Bitcoin.Tests.Base
                     {
                         batch.Put(1, BitConverter.GetBytes(block.Height),
                             new ChainRepository.ChainRepositoryData()
-                                    { Hash = block.HashBlock, Work = block.ChainWorkBytes }
+                            { Hash = block.HashBlock, Work = block.ChainWorkBytes }
                                 .ToBytes(this.Network.Consensus.ConsensusFactory));
                     }
 
@@ -87,7 +83,7 @@ namespace Stratis.Bitcoin.Tests.Base
                 }
             }
 
-            using (var repo = new ChainRepository(new LeveldbHeaderStore(chain.Network, new DataFolder(dir), chain)))
+            using (var repo = new ChainRepository(new LevelDbChainStore(chain.Network, new DataFolder(dir), chain)))
             {
                 var testChain = new ChainIndexer(KnownNetworks.StraxRegTest);
                 testChain.SetTip(repo.LoadAsync(testChain.Genesis).GetAwaiter().GetResult());

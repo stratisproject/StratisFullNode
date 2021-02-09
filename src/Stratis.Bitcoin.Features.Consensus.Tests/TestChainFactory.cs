@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -148,12 +149,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
 
             var dBreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
 
-            var blockRepository = new BlockRepository(testChainContext.Network, dataFolder, testChainContext.LoggerFactory, dBreezeSerializer);
+            var blockRepository = new LevelDbBlockRepository(testChainContext.Network, dataFolder, dBreezeSerializer);
 
             var blockStoreFlushCondition = new BlockStoreQueueFlushCondition(testChainContext.ChainState, testChainContext.InitialBlockDownloadState);
 
             var blockStore = new BlockStoreQueue(testChainContext.ChainIndexer, testChainContext.ChainState, blockStoreFlushCondition, new Mock<StoreSettings>().Object,
-                blockRepository, testChainContext.LoggerFactory, new Mock<INodeStats>().Object, testChainContext.AsyncProvider);
+                blockRepository, testChainContext.LoggerFactory, new Mock<INodeStats>().Object, testChainContext.AsyncProvider, testChainContext.InitialBlockDownloadState);
 
             blockStore.Initialize();
 

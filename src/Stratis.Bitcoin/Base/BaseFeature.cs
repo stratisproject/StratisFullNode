@@ -24,6 +24,9 @@ using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Persistence.ChainStores;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
@@ -369,7 +372,7 @@ namespace Stratis.Bitcoin.Base
         /// </summary>
         /// <param name="fullNodeBuilder">Builder responsible for creating the node.</param>
         /// <returns>Full node builder's interface to allow fluent code.</returns>
-        public static IFullNodeBuilder UseBaseFeature(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseBaseFeature(this IFullNodeBuilder fullNodeBuilder, DbType dbType = DbType.Leveldb)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -392,12 +395,23 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>();
                     services.AddSingleton<IChainState, ChainState>();
                     services.AddSingleton<IChainRepository, ChainRepository>();
-                    services.AddSingleton<IChainStore, LeveldbHeaderStore>();
+
+                    if (dbType == DbType.Leveldb)
+                    {
+                        services.AddSingleton<IChainStore, LevelDbChainStore>();
+                        services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
+                    }
+
+                    if (dbType == DbType.RocksDb)
+                    {
+                        services.AddSingleton<IChainStore, RocksDbChainStore>();
+                        services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
+                    }
+
                     services.AddSingleton<IFinalizedBlockInfoRepository, FinalizedBlockInfoRepository>();
                     services.AddSingleton<ITimeSyncBehaviorState, TimeSyncBehaviorState>();
                     services.AddSingleton<NodeDeployments>();
                     services.AddSingleton<IInitialBlockDownloadState, InitialBlockDownloadState>();
-                    services.AddSingleton<IKeyValueRepository, KeyValueRepository>();
                     services.AddSingleton<ITipsManager, TipsManager>();
                     services.AddSingleton<IAsyncProvider, AsyncProvider>();
 

@@ -52,9 +52,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
         /// <summary>The highest stored block in the repository.</summary>
         private ChainedHeader storeTip;
 
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
         /// <inheritdoc cref="ILogger"/>
         private readonly ILogger logger;
-
         private readonly IBlockStoreQueueFlushCondition blockStoreQueueFlushCondition;
 
         /// <inheritdoc cref="IChainState"/>
@@ -103,7 +104,8 @@ namespace Stratis.Bitcoin.Features.BlockStore
             IBlockRepository blockRepository,
             ILoggerFactory loggerFactory,
             INodeStats nodeStats,
-            IAsyncProvider asyncProvider)
+            IAsyncProvider asyncProvider,
+            IInitialBlockDownloadState initialBlockDownloadState)
         {
             Guard.NotNull(blockStoreQueueFlushCondition, nameof(blockStoreQueueFlushCondition));
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
@@ -113,6 +115,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
             Guard.NotNull(blockRepository, nameof(blockRepository));
             Guard.NotNull(nodeStats, nameof(nodeStats));
 
+            this.initialBlockDownloadState = initialBlockDownloadState;
             this.blockStoreQueueFlushCondition = blockStoreQueueFlushCondition;
             this.chainIndexer = chainIndexer;
             this.chainState = chainState;
@@ -154,9 +157,7 @@ namespace Stratis.Bitcoin.Features.BlockStore
 
             headers.Reverse();
 
-            BlockRepository blockRepository = (BlockRepository)this.blockRepository;
-
-            foreach (Block block in blockRepository.EnumeratehBatch(headers))
+            foreach (Block block in this.blockRepository.EnumerateBatch(headers))
             {
                 if (block == null)
                     throw new Exception();
@@ -173,7 +174,6 @@ namespace Stratis.Bitcoin.Features.BlockStore
                 {
                     this.logger.LogInformation("Reindex in process... {0}/{1} blocks processed.", newChainedHeader.Height, this.storeTip.Height);
                 }
-
             }
         }
 
@@ -504,10 +504,10 @@ namespace Stratis.Bitcoin.Features.BlockStore
             while (!this.cancellation.IsCancellationRequested)
             {
                 // Start new dequeue task if not started already.
-                dequeueTask = dequeueTask ?? this.blocksQueue.DequeueAsync();
+                dequeueTask ??= this.blocksQueue.DequeueAsync();
 
                 // Start timer if it is not started already.
-                timerTask = timerTask ?? Task.Delay(BatchMaxSaveIntervalSeconds * 1000, this.cancellation.Token);
+                timerTask ??= Task.Delay(BatchMaxSaveIntervalSeconds * 1000, this.cancellation.Token);
 
                 // Wait for one of the tasks: dequeue or timer (if available) to finish.
                 Task task = await Task.WhenAny(dequeueTask, timerTask).ConfigureAwait(false);
@@ -541,10 +541,13 @@ namespace Stratis.Bitcoin.Features.BlockStore
                     if (this.blockStoreQueueFlushCondition.ShouldFlush)
                         this.FlushAllCollections();
 
-                    // Don't allow block store to fall MaxReorg length behind consensus tip
+                    // If we are out of IBD, don't allow the block store to fall MaxReorg length behind consensus tip
                     // otherwise the chain will need to rewind further than it's capable of doing.
-                    if ((this.blocksQueue.Count + this.batch.Count) >= this.chainIndexer.Network.Consensus.MaxReorgLength / 2)
-                        this.FlushAllCollections();
+                    if (!this.initialBlockDownloadState.IsInitialBlockDownload())
+                    {
+                        if ((this.blocksQueue.Count + this.batch.Count) >= this.chainIndexer.Network.Consensus.MaxReorgLength / 2)
+                            this.FlushAllCollections();
+                    }
                 }
                 else
                 {

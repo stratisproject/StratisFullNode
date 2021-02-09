@@ -18,7 +18,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 {
     public static partial class IFullNodeBuilderExtensions
     {
-
         /// <summary>
         /// Configures the node with the smart contract proof of stake consensus model.
         /// </summary>
@@ -32,7 +31,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
                     .AddFeature<ConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        AddCoindbImplementation(services, coindbType);
+                        services.ConfigureCoinDatabaseImplementation(coindbType);
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<StakeChainStore>().AddSingleton<IStakeChain, StakeChainStore>(provider => provider.GetService<StakeChainStore>());
                         services.AddSingleton<IStakeValidator, StakeValidator>();
@@ -41,18 +40,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             });
 
             return fullNodeBuilder;
-        }
-
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
-        {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
-
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
-
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
         }
 
         /// <summary>

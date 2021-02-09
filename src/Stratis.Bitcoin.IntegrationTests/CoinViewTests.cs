@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Persistence.ChainStores;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -54,7 +55,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
                 ctx.Coindb.SaveChanges(new List<UnspentOutput>(), new HashHeightPair(previous), new HashHeightPair(chained));
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
-                ctx.ReloadPersistentCoinView();
+                ctx.ReloadPersistentCoinView(network);
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -281,7 +282,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             var chain = new ChainIndexer(this.regTest);
             var data = new DataFolder(TestBase.CreateTestDir(this));
 
-            using (var repo = new ChainRepository(new LeveldbHeaderStore(this.network, data, chain)))
+            using (var repo = new ChainRepository(new LevelDbChainStore(this.network, data, chain)))
             {
                 chain.SetTip(repo.LoadAsync(chain.Genesis).GetAwaiter().GetResult());
                 Assert.True(chain.Tip == chain.Genesis);
