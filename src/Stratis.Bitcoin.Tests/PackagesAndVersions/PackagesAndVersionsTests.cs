@@ -50,7 +50,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                 string projectFolder = Path.GetDirectoryName(project.AbsolutePath);
                 string targetName = $"{name.ToLower()}.{version}-nuget.symbols";
-                string targetFolder = Path.Combine(projectFolder, $"bin{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}");
+                string targetFolder = Path.Combine(projectFolder, "bin", "Release");
                 string targetPath = Path.Combine(targetFolder, targetName);
                 if (!Directory.Exists(targetPath))
                 {
