@@ -17,8 +17,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
         {
             // 1) Read solution file and get all projects with package information.
             // 2) Retrieve the package from NuGet if not retrieved already
-            // 3) Build the package from source if not built already.
-            // 4) If the assemblies DLLs are different (and same version) then this is an error.
+            // 3) If the source code is different and same version then this is an error.
 
             var modifiedPackages = new List<string>();
 
