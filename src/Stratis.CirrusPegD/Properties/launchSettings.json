@@ -2,7 +2,7 @@
   "profiles": {
     "Stratis.CirrusPegD": {
       "commandName": "Project",
-      "commandLineArgs": "-testnet -interop=1 -ethereumaccount=0xecefb8d0afceb34889899458f8f95fb3884a6948 -ethereumpassphrase=password -multisigwalletcontractaddress=0x36348b7e25295b4e01cf5a724b95a556cf09628c -wrappedstraxcontractaddress=0xafe20b2579e454375de98d015ef70845500d5ee7 -txindex=1 -ipRangeFiltering=false -sidechain -counterchaindepositblock=0 -apiport=38223 -counterchainapiport=27103 -redeemscript=\"4 021040ef28c82fcffb63028e69081605ed4712910c8384d5115c9ffeacd9dbcae4 0244290a31824ba7d53e59c7a29d13dbeca15a9b0d36fdd4d28fce426753107bfc 032df4a2d62c0db12cd1d66201819a10788637c9b90a1cd2a5a3f5196fdab7a621 028ed190eb4ed6e46440ac6af21d8a67a537bd1bd7edb9cc5177d36d5a0972244d 02ff9923324399a188daf4310825a85dd3b89e2301d0ad073295b6f33ae1c72f7a 030e03b808ddb51701d4d3dbc0a74a6f9aedfecf23d5f874914641fc81197b239a 02270d6c20d3393fad7f74c59d2d26b0824ed016ccbc15e698e7354314459a60a5 7 OP_CHECKMULTISIG\" -publickey=021040ef28c82fcffb63028e69081605ed4712910c8384d5115c9ffeacd9dbcae4 -federationips=82.146.153.160,51.195.136.221,82.146.153.162,82.146.153.163,82.146.153.164,82.146.153.166,82.146.153.168 -ethereumclienturl=http://localhost:8545/"
+      "commandLineArgs": "-mainchain"
     }
   }
 }
