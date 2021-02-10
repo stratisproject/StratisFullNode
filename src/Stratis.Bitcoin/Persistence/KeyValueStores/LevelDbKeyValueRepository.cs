@@ -1,48 +1,24 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using LevelDB;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
 
-namespace Stratis.Bitcoin.Utilities
+namespace Stratis.Bitcoin.Persistence.KeyValueStores
 {
-    /// <summary>Allows saving and loading single values to and from key-value storage.</summary>
-    public interface IKeyValueRepository : IDisposable
-    {
-        /// <summary>Persists byte array to the database.</summary>
-        void SaveBytes(string key, byte[] bytes);
-
-        /// <summary>Persists any object that <see cref="DBreezeSerializer"/> can serialize to the database.</summary>
-        void SaveValue<T>(string key, T value);
-
-        /// <summary>Persists any object to the database. Object is stored as JSON.</summary>
-        void SaveValueJson<T>(string key, T value);
-
-        /// <summary>Loads byte array from the database.</summary>
-        byte[] LoadBytes(string key);
-
-        /// <summary>Loads an object that <see cref="DBreezeSerializer"/> can deserialize from the database.</summary>
-        T LoadValue<T>(string key);
-
-        /// <summary>Loads JSON from the database and deserializes it.</summary>
-        T LoadValueJson<T>(string key);
-    }
-
-    public class KeyValueRepository : IKeyValueRepository
+    public class LevelDbKeyValueRepository : IKeyValueRepository
     {
         /// <summary>Access to database.</summary>
         private readonly DB leveldb;
 
-        private const string TableName = "common";
-
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public KeyValueRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.KeyValueRepositoryPath, dBreezeSerializer)
+        public LevelDbKeyValueRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.KeyValueRepositoryPath, dBreezeSerializer)
         {
         }
 
-        public KeyValueRepository(string folder, DBreezeSerializer dBreezeSerializer)
+        public LevelDbKeyValueRepository(string folder, DBreezeSerializer dBreezeSerializer)
         {
             Directory.CreateDirectory(folder);
             this.dBreezeSerializer = dBreezeSerializer;

@@ -216,7 +216,9 @@ namespace Stratis.Bitcoin.Consensus
 
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 1000);
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1000);
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 1000);
+
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 1000);
         }
 
         /// <inheritdoc />
@@ -1465,16 +1467,10 @@ namespace Stratis.Bitcoin.Consensus
                 if ((bestTip == null) || (bestTip.Height < this.Tip.Height))
                     bestTip = this.Tip;
 
-                string headersLog = "Headers.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + bestTip.Height.ToString().PadRight(8) +
-                                    " Headers.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + bestTip.HashBlock;
-
-                log.AppendLine(headersLog);
+                log.AppendLine("Headers Height".PadRight(LoggingConfiguration.ColumnLength) + $": {bestTip.Height}".PadRight(10) + $"(Hash: {bestTip.HashBlock})");
             }
 
-            string consensusLog = "Consensus.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + this.Tip.Height.ToString().PadRight(8) +
-                                  " Consensus.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.Tip.HashBlock;
-
-            log.AppendLine(consensusLog);
+            log.AppendLine("Consensus Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.Tip.Height}".PadRight(10) + $"(Hash: {this.Tip.HashBlock})");
         }
 
         [NoTrace]
@@ -1486,8 +1482,7 @@ namespace Stratis.Bitcoin.Consensus
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
-            log.AppendLine();
-            log.AppendLine("======Consensus Manager======");
+            log.AppendLine(">> Consensus Manager");
 
             lock (this.peerLock)
             {
@@ -1502,19 +1497,20 @@ namespace Stratis.Bitcoin.Consensus
                 long tipAge = currentTime - this.chainState.ConsensusTip.Header.BlockTime.ToUnixTimeSeconds();
                 long maxTipAge = this.consensusSettings.MaxTipAge;
 
-                log.AppendLine($"Tip Age: { TimeSpan.FromSeconds(tipAge).ToString(@"dd\.hh\:mm\:ss") } (maximum is { TimeSpan.FromSeconds(maxTipAge).ToString(@"dd\.hh\:mm\:ss") })");
-                log.AppendLine($"In IBD Stage: { (this.isIbd ? "Yes" : "No") }");
+                log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge):dd\\.hh\\:mm\\:ss} (maximum is { TimeSpan.FromSeconds(maxTipAge):dd\\.hh\\:mm\\:ss})");
+                log.AppendLine("Synced with Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 
                 double filledPercentage = Math.Round((this.chainedHeaderTree.UnconsumedBlocksDataBytes / (double)this.maxUnconsumedBlocksDataBytes) * 100, 2);
 
-                log.AppendLine($"Unconsumed blocks: {unconsumedBlocks} -- ({this.chainedHeaderTree.UnconsumedBlocksDataBytes.BytesToMegaBytes()} / {this.maxUnconsumedBlocksDataBytes.BytesToMegaBytes()} MB). Cache is filled by: {filledPercentage}%");
+                log.AppendLine("Unconsumed blocks".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {unconsumedBlocks} -- ({this.chainedHeaderTree.UnconsumedBlocksDataBytes.BytesToMegaBytes()} / {this.maxUnconsumedBlocksDataBytes.BytesToMegaBytes()} MB). Cache filled by: {filledPercentage}%");
 
                 int pendingDownloadCount = this.callbacksByBlocksRequestedHash.Count;
                 int currentlyDownloadingCount = this.expectedBlockSizes.Count;
 
-                log.AppendLine($"Downloading blocks: {currentlyDownloadingCount} queued out of {pendingDownloadCount} pending");
+                log.AppendLine("Downloading blocks".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentlyDownloadingCount} queued out of {pendingDownloadCount} pending");
+                log.AppendLine();
             }
         }
 

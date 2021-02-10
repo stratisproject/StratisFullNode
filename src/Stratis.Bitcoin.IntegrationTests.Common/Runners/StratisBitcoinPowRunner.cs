@@ -29,9 +29,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
             NodeSettings settings;
 
             if (string.IsNullOrEmpty(this.Agent))
-                settings = new NodeSettings(this.Network, args: new string[] { "-conf=bitcoin.conf", "-datadir=" + this.DataFolder });
+                settings = new NodeSettings(this.Network, args: new string[] { "-conf=bitcoin.conf", "-datadir=" + this.DataFolder, "-displayextendednodestats=true" });
             else
-                settings = new NodeSettings(this.Network, agent: this.Agent, args: new string[] { "-conf=bitcoin.conf", "-datadir=" + this.DataFolder });
+                settings = new NodeSettings(this.Network, agent: this.Agent, args: new string[] { "-conf=bitcoin.conf", "-datadir=" + this.DataFolder, "-displayextendednodestats=true" });
 
             var builder = new FullNodeBuilder()
                             .UseNodeSettings(settings)

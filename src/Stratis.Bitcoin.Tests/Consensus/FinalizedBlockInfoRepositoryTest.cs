@@ -4,6 +4,7 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -23,12 +24,13 @@ namespace Stratis.Bitcoin.Tests.Consensus
         public async Task FinalizedHeightSavedOnDiskAsync()
         {
             string dir = CreateTestDir(this);
-            var kvRepo = new KeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
+            var kvRepo = new LevelDbKeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
             using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
             {
+                repo.Initialize(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0));
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
             }
 
@@ -43,12 +45,13 @@ namespace Stratis.Bitcoin.Tests.Consensus
         public async Task FinalizedHeightCantBeDecreasedAsync()
         {
             string dir = CreateTestDir(this);
-            var kvRepo = new KeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
+            var kvRepo = new LevelDbKeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
             using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
             {
+                repo.Initialize(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0));
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 555);
 
