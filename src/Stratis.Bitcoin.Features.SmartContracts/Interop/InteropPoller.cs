@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient;
 using Stratis.Bitcoin.Features.SmartContracts.Interop.Models;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR.Serialization;

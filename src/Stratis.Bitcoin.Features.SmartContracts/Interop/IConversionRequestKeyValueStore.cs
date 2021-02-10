@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Persistence;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 {
