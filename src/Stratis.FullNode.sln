@@ -177,6 +177,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.StraxD", "Stratis.S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SwapExtractionTool", "SwapExtractionTool\SwapExtractionTool.csproj", "{F2999E86-9949-4962-A6C6-38D1F0409D73}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Patricia", "Stratis.Patricia\Stratis.Patricia.csproj", "{57457525-FD6E-401D-BF3F-862F7A2D2AC9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Patricia.Tests", "Stratis.Patricia.Tests\Stratis.Patricia.Tests.csproj", "{EE71EBA7-5515-4F1E-B0E0-6C32BAAD6B35}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -463,6 +467,14 @@ Global
 		{F2999E86-9949-4962-A6C6-38D1F0409D73}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2999E86-9949-4962-A6C6-38D1F0409D73}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2999E86-9949-4962-A6C6-38D1F0409D73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57457525-FD6E-401D-BF3F-862F7A2D2AC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57457525-FD6E-401D-BF3F-862F7A2D2AC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57457525-FD6E-401D-BF3F-862F7A2D2AC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57457525-FD6E-401D-BF3F-862F7A2D2AC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE71EBA7-5515-4F1E-B0E0-6C32BAAD6B35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE71EBA7-5515-4F1E-B0E0-6C32BAAD6B35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE71EBA7-5515-4F1E-B0E0-6C32BAAD6B35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE71EBA7-5515-4F1E-B0E0-6C32BAAD6B35}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -528,6 +540,8 @@ Global
 		{AA085181-BBB4-495E-BFD8-7AE4BB52A0A0} = {15D29FFD-6142-4DC5-AFFD-10BA0CA55C45}
 		{789E4584-5616-4F0C-A3E8-88669B6AA91F} = {EAE139C2-B19C-4905-9117-8A4068ABD3D2}
 		{F2999E86-9949-4962-A6C6-38D1F0409D73} = {1B9A916F-DDAC-4675-B424-EDEDC1A58231}
+		{57457525-FD6E-401D-BF3F-862F7A2D2AC9} = {1B9A916F-DDAC-4675-B424-EDEDC1A58231}
+		{EE71EBA7-5515-4F1E-B0E0-6C32BAAD6B35} = {1B9A916F-DDAC-4675-B424-EDEDC1A58231}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6C780ABA-5872-4B83-AD3F-A5BD423AD907}

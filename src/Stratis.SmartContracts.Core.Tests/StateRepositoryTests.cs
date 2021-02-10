@@ -34,6 +34,7 @@ namespace Stratis.SmartContracts.Core.Tests
         private static readonly byte[] horseVal0 = "c0a0".HexToByteArray();
 
         private static readonly uint160 testAddress = 111111;
+        // TODO: Create a proper test directory for this
         private const string DbreezeTestLocation = "C:/temp";
         private const string DbreezeTestDb = "test";
 

@@ -11,7 +11,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.R
     /// </summary>
     public class SmartContractFormatLogic : IContractTransactionPartialValidationRule
     {
-        public const ulong GasLimitMaximum = 100_000;
+        public const ulong GasLimitMaximum = 250_000;
 
         public const ulong GasLimitCallMinimum = GasPriceList.BaseCost;
 

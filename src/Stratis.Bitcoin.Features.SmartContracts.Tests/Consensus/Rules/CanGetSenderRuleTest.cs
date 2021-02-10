@@ -7,7 +7,6 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -17,6 +16,7 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -37,8 +37,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
         public CanGetSenderRuleTest()
         {
-            var loggerFactory = ExtendedLoggerFactory.Create();
-
             this.network = new SmartContractsRegTest();
             this.senderRetriever = new Mock<ISenderRetriever>();
             this.rule = new CanGetSenderRule(this.senderRetriever.Object);
@@ -51,7 +49,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
                 new NodeDeployments(KnownNetworks.RegTest, new ChainIndexer(this.network)),
                 new ConsensusSettings(NodeSettings.Default(this.network)), new Mock<ICheckpoints>().Object, new Mock<ICoinView>().Object, new Mock<IChainState>().Object,
                 new InvalidBlockHashStore(null),
-                new NodeStats(null, loggerFactory),
+                new NodeStats(DateTimeProvider.Default, NodeSettings.Default(network), new Mock<IVersionProvider>().Object),
                 new AsyncProvider(new Mock<ILoggerFactory>().Object, new Mock<ISignals>().Object),
                 new ConsensusRulesContainer());
 

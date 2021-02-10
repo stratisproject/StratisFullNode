@@ -8,6 +8,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA.Events;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 

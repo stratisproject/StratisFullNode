@@ -24,12 +24,8 @@ using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.Miner;
-using Stratis.Bitcoin.Features.Wallet;
-using Stratis.Bitcoin.Features.Wallet.Broadcasting;
-using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
-using Stratis.Bitcoin.IntegrationTests.Wallet;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Networks;
@@ -155,7 +151,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var consensusSettings = new ConsensusSettings(nodeSettings);
 
                 var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(this.ChainIndexer.Tip));
-                var nodeStats = new NodeStats(dateTimeProvider, loggerFactory);
+                var nodeStats = new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object);
                 this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings);
 
                 var signals = new Signals.Signals(loggerFactory, null);

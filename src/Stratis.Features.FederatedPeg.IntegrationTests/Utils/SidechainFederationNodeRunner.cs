@@ -63,6 +63,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
+                .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .MockIBD()

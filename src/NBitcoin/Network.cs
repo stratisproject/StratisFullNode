@@ -192,6 +192,8 @@ namespace NBitcoin
 
         IFederation GetFederation(byte[] federationId);
 
+        IFederation GetFederationAtHeight(byte[] federationId, ulong blockHeight, uint256 blockHash);
+
         IFederation GetOnlyFederation();
     }
 
@@ -211,6 +213,13 @@ namespace NBitcoin
 
         public IFederation GetFederation(byte[] federationId)
         {
+            return this.federations.TryGetValue(new FederationId(federationId), out IFederation federation) ? federation : null;
+        }
+
+        public IFederation GetFederationAtHeight(byte[] federationId, ulong blockHeight, uint256 blockHash)
+        {
+            // TODO: Determine the federation at the given height.
+
             return this.federations.TryGetValue(new FederationId(federationId), out IFederation federation) ? federation : null;
         }
 

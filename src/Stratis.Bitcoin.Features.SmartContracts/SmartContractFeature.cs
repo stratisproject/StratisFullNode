@@ -47,7 +47,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         private readonly IStateRepositoryRoot stateRoot;
         private readonly InteropPoller interopPoller;
 
-        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, InteropPoller interopPoller)
+        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, InteropPoller interopPoller = null)
         {
             this.consensusManager = consensusLoop;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);

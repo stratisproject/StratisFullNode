@@ -36,9 +36,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public object[] Deserialize(byte[] bytes)
         {
-            RLPCollection list = RLP.Decode(bytes);
-
-            RLPCollection innerList = (RLPCollection)list[0];
+            RLPCollection innerList = (RLPCollection)RLP.Decode(bytes);
 
             IList<byte[]> encodedParamBytes = innerList.Select(x => x.RLPData).ToList();
 

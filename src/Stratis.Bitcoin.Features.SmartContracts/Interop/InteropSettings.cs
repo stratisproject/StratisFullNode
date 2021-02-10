@@ -43,6 +43,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.EthereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
             this.EthereumPassphrase = nodeSettings.ConfigReader.GetOrDefault(EthereumPassphraseKey, "");
 
+            if (!this.Enabled)
+                return;
+
             if (string.IsNullOrWhiteSpace(this.MultisigWalletAddress))
                 throw new Exception($"Cannot initialize interoperability feature without -{MultisigWalletContractAddressKey} specified.");
 

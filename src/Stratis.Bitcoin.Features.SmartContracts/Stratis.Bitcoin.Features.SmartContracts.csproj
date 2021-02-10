@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>    
-    <Version>1.0.6.4</Version>
+    <Version>1.0.7.1</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Features.SmartContracts</PackageId>
     <Product>Stratis.Features.SmartContracts</Product>
@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="3.0.1" />
     <PackageReference Include="Nethereum.Web3" Version="3.8.0" />
-    <PackageReference Include="Stratis.SmartContracts" Version="1.2.1" />
+    <PackageReference Include="Stratis.SmartContracts" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>

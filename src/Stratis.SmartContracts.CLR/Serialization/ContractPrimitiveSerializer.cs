@@ -25,46 +25,25 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         public byte[] Serialize(object o)
         {
-            if (o is null)
-                return null;
-
-            if (o is byte[] bytes)
-                return bytes;
-
-            if (o is Array array)
-                return this.Serialize(array);
-
-            if (o is byte b1)
-                return new byte[] { b1 };
-
-            if (o is char c)
-                return this.Serialize(c);
-
-            if (o is Address address)
-                return this.Serialize(address);
-
-            if (o is bool b)
-                return this.Serialize(b);
-
-            if (o is int i)
-                return this.Serialize(i);
-
-            if (o is long l)
-                return this.Serialize(l);
-
-            if (o is uint u)
-                return this.Serialize(u);
-
-            if (o is ulong ul)
-                return this.Serialize(ul);
-
-            if (o is string s)
-                return this.Serialize(s);
-
-            if (o.GetType().IsValueType)
-                return this.SerializeStruct(o);
-                
-            throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", o.GetType().Name));
+            return o switch
+            {
+                null => null,
+                byte[] bytes => bytes,
+                Array array => Serialize(array),
+                byte b1 => new byte[] { b1 },
+                char c => Serialize(c),
+                Address address => Serialize(address),
+                bool b => Serialize(b),
+                int i => Serialize(i),
+                long l => Serialize(l),
+                UInt128 u => Serialize(u),
+                UInt256 u => Serialize(u),
+                uint u => Serialize(u),
+                ulong u => Serialize(u),
+                string s => Serialize(s),
+                _ when o.GetType().IsValueType => SerializeStruct(o),
+                _ => throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", o.GetType().Name))
+            };
         }
 
         #region Primitive serialization
@@ -97,6 +76,16 @@ namespace Stratis.SmartContracts.CLR.Serialization
         private byte[] Serialize(ulong ul)
         {
             return BitConverter.GetBytes(ul);
+        }
+
+        private byte[] Serialize(UInt128 u128)
+        {
+            return u128.ToBytes();
+        }
+
+        private byte[] Serialize(UInt256 u256)
+        {
+            return u256.ToBytes();
         }
 
         private byte[] Serialize(char c)
@@ -155,43 +144,24 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (stream == null || stream.Length == 0)
                 return null;
 
-            if (type == typeof(byte[]))
-                return stream;
-
-            if (type.IsArray)
-                return this.DeserializeArray(type.GetElementType(), stream);
-
-            if (type == typeof(byte))
-                return stream[0];
-
-            if (type == typeof(char))
-                return this.ToChar(stream);
-
-            if (type == typeof(Address))
-                return this.ToAddress(stream);
-
-            if (type == typeof(bool))
-                return this.ToBool(stream);
-
-            if (type == typeof(int))
-                return this.ToInt32(stream);
-
-            if (type == typeof(long))
-                return this.ToInt64(stream);
-
-            if (type == typeof(string))
-                return this.ToString(stream);
-
-            if (type == typeof(uint))
-                return this.ToUInt32(stream);
-
-            if (type == typeof(ulong))
-                return this.ToUInt64(stream);
-
-            if (type.IsValueType)
-                return this.DeserializeStruct(type, stream);
-                
-            throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", type.Name));
+            return Type.GetTypeCode(type) switch
+            {
+                TypeCode.Byte => stream[0],
+                TypeCode.Char => ToChar(stream),
+                TypeCode.Boolean => ToBool(stream),
+                TypeCode.Int32 => ToInt32(stream),
+                TypeCode.Int64 => ToInt64(stream),
+                TypeCode.String => ToString(stream),
+                TypeCode.UInt32 => ToUInt32(stream),
+                TypeCode.UInt64 => ToUInt64(stream),
+                _ when type == typeof(byte[]) => stream,
+                _ when type == typeof(UInt128) => ToUInt128(stream),
+                _ when type == typeof(UInt256) => ToUInt256(stream),
+                _ when type == typeof(Address) => ToAddress(stream),
+                _ when type.IsArray => DeserializeArray(type.GetElementType(), stream),
+                _ when type.IsValueType => DeserializeStruct(type, stream),
+                _ => throw new ContractPrimitiveSerializationException(string.Format("{0} is not supported.", type.Name)),
+            };
         }
 
         public Address ToAddress(string address)
@@ -231,6 +201,16 @@ namespace Stratis.SmartContracts.CLR.Serialization
             return BitConverter.ToUInt64(val, 0);
         }
 
+        private UInt128 ToUInt128(byte[] val)
+        {
+            return new UInt128(val);
+        }
+
+        private UInt256 ToUInt256(byte[] val)
+        {
+            return new UInt256(val);
+        }
+
         private char ToChar(byte[] val)
         {
             return BitConverter.ToChar(val, 0);
@@ -245,7 +225,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         private object DeserializeStruct(Type type, byte[] bytes)
         {
-            RLPCollection collection = (RLPCollection) RLP.Decode(bytes)[0];
+            RLPCollection collection = (RLPCollection) RLP.Decode(bytes);
 
             object ret = Activator.CreateInstance(type);
 
@@ -266,7 +246,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (elementType == typeof(byte))
                 return bytes;
 
-            RLPCollection collection = (RLPCollection)RLP.Decode(bytes)[0];
+            RLPCollection collection = (RLPCollection)RLP.Decode(bytes);
 
             Array ret = Array.CreateInstance(elementType, collection.Count);
 
