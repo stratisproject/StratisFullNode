@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using LevelDB;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
 
