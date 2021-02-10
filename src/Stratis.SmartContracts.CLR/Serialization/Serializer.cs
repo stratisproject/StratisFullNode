@@ -226,7 +226,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         private T DeserializeStruct<T>(byte[] bytes) where T : struct
         {
-            RLPCollection collection = (RLPCollection)RLP.Decode(bytes)[0];
+            RLPCollection collection = (RLPCollection)RLP.Decode(bytes);
 
             Type type = typeof(T);
 
