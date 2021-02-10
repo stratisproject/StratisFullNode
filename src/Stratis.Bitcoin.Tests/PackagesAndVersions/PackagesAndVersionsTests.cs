@@ -54,6 +54,8 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                 string targetPath = Path.Combine(targetFolder, targetName);
                 if (!Directory.Exists(targetPath))
                 {
+                    Directory.CreateDirectory(targetFolder);
+
                     string targetFile = Path.Combine(projectFolder, $"{targetPath}.nupkg");
                     if (!File.Exists(targetFile))
                     {
