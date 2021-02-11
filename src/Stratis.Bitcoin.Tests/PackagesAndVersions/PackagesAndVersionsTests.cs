@@ -129,12 +129,11 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                         XmlDocument doc3 = projectFiles[includeFullPath];
                         string name3 = doc3.SelectSingleNode("Project/PropertyGroup/PackageId")?.InnerText;
-                        string version3 = doc3.SelectSingleNode("Project/PropertyGroup/Version")?.InnerText;
 
                         XmlNode depNode = doc2.SelectSingleNode($"//*[name()='dependency' and @id='{name3}']");
                         string cmpVersion = depNode.Attributes["version"].Value;
 
-                        if (cmpVersion != version3)
+                        if (cmpVersion != referencedVersions[includeFullPath])
                         {
                             versionsMatch = false;
                             break;
@@ -146,6 +145,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                 }
 
                 modifiedPackages.Add(project.ProjectName);
+                referencedVersions[projectFolder] = "mismatch";
             }
 
             Assert.Empty(modifiedPackages);
