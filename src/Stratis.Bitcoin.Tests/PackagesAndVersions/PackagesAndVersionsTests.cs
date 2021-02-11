@@ -83,7 +83,38 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                 // Compare source with files from NuGet.
                 string packageSource = Path.Combine(targetPath, "src", project.ProjectName);
                 if (Directory.Exists(packageSource) && DirectoryEquals(packageSource, projectFolder))
-                    continue;
+                {
+                    // Even though the project file may be unchanged the references could be referring
+                    // to different versions.
+
+                    // Load the NUSPEC file from the package.
+                    string nuspecFile = Path.Combine(targetPath, $"{name}.nuspec");
+                    XmlDocument doc2 = new XmlDocument();
+                    doc2.Load(nuspecFile);
+
+                    bool versionsMatch = true;
+                    foreach (XmlNode x in doc.SelectNodes("/Project/ItemGroup/ProjectReference"))
+                    {
+                        string includePath = x.Attributes["Include"].Value;
+
+                        XmlDocument doc3 = new XmlDocument();
+                        doc3.Load(Path.Combine(projectFolder, includePath));
+                        string name3 = doc3.SelectSingleNode("Project/PropertyGroup/PackageId")?.InnerText;
+                        string version3 = doc3.SelectSingleNode("Project/PropertyGroup/Version")?.InnerText;
+
+                        XmlNode depNode = doc2.SelectSingleNode($"//*[name()='dependency' and @id='{name3}']");
+                        string cmpVersion = depNode.Attributes["version"].Value;
+
+                        if (cmpVersion != version3)
+                        {
+                            versionsMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (versionsMatch)
+                        continue;
+                }
 
                 modifiedPackages.Add(project.ProjectName);
             }
