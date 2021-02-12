@@ -300,6 +300,14 @@ if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort )
     Shutdown-SidechainNode
 }
 
+Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
+if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
+{
+    Write-Host (Get-TimeStamp) "WARNING: A node is already running, will perform a graceful shutdown" -ForegroundColor DarkYellow
+    ""
+    Stop-Process -Name geth -Force
+}
+
 #Check for running dashboard
 Write-Host (Get-TimeStamp) "Checking for the Stratis Masternode Dashboard" -ForegroundColor Cyan
 if ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue )
@@ -316,6 +324,67 @@ Check-TimeDifference
 
 if ( $NodeType -eq "50K" ) 
 {
+
+    #Launching GETH
+    $API = $gethAPIPort
+    Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--ropsten --syncmode fast --rpc --rpccorsdomain=* --rpcapi web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+
+    While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
+    {
+        Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
+        Start-Sleep 3
+        if ( $StartNode.HasExited -eq $true )
+        {
+            Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+            Start-Sleep 30
+            Exit
+        }
+    }
+
+    $gethPeerCountBody = ConvertTo-Json -Compress @{
+        jsonrpc = "2.0"
+        method = "net_peerCount"
+        id = "1"
+    }
+
+    [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
+    While ( $gethPeerCount -lt 1 )
+    {
+        Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
+        Start-Sleep 3
+        [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
+    }
+
+    $gethSyncStateBody = ConvertTo-Json -Compress @{
+        jsonrpc = "2.0"
+        method = "eth_syncing"
+        id = "1"
+    }
+
+    $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
+    While ( $syncStatus -eq $false -or $syncStatus.currentBlock -eq $null )
+    {
+        Write-Host (Get-TimeStamp) "Waiting for Blockchain Synchronization to begin" -ForegroundColor Yellow
+        Start-Sleep 10
+        $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
+    }
+
+    [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
+    [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
+
+    While ( ( $highestBlock ) -gt ( $currentBlock ) ) 
+    {
+        [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
+        [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
+        $syncProgress = $highestBlock - $currentBlock
+        ""
+        Write-Host (Get-TimeStamp) "The Local Height is $currentBlock" -ForegroundColor Yellow
+        Write-Host (Get-TimeStamp) "The Current Tip is $highestBlock" -ForegroundColor Yellow
+        Write-Host (Get-TimeStamp) "$syncProgress Blocks Require Indexing..." -ForegroundColor Yellow
+        Start-Sleep 10
+    }
+
     #Move to CirrusPegD
     Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
 }
