@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -40,8 +41,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             }
 
             // Timestamp shouldn't be more than current time plus max future drift.
-            long maxValidTime = this.Parent.DateTimeProvider.GetAdjustedTimeAsUnixTimestamp() + MaxFutureDriftSeconds;
-            if (chainedHeader.Header.Time > maxValidTime)
+            DateTime maxValidTime = this.Parent.DateTimeProvider.GetAdjustedTime() + TimeSpan.FromSeconds(MaxFutureDriftSeconds);
+            if (chainedHeader.Header.BlockTime > maxValidTime)
             {
                 this.Logger.LogWarning("Peer presented header with timestamp that is too far in to the future. Header was ignored." +
                                        " If you see this message a lot consider checking if your computer's time is correct.");
