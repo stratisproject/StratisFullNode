@@ -417,6 +417,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
         private void ProcessEthereumRequests()
         {
+            if (this.interopRequestRepository == null)
+                return;
+
             List<InteropRequest> requests = this.interopRequestRepository.GetAllEthereum(true);
 
             foreach (InteropRequest request in requests)
@@ -495,6 +498,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
         private void ProcessStratisRequests()
         {
+            if (this.interopRequestRepository == null)
+                return;
+
             List<InteropRequest> requests = this.interopRequestRepository.GetAllStratis(true);
 
             this.logger.LogDebug($"Processing {requests.Count} stored interop requests from Ethereum network.");
@@ -535,6 +541,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
         private void TransmitStratisResponses()
         {
+            if (this.interopRequestRepository == null)
+                return;
+
             List<InteropRequest> requests = this.interopRequestRepository.GetAllStratis(true);
 
             foreach (InteropRequest request in requests)
