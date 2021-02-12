@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
             // Timestamp should be greater than timestamp of prev block.
-            if (chainedHeader.Header.Time <= chainedHeader.Previous.Header.Time)
+            if (chainedHeader.Header.BlockTime <= chainedHeader.Previous.Header.BlockTime)
             {
                 this.Logger.LogTrace("(-)[TIME_TOO_OLD]");
                 ConsensusErrors.TimeTooOld.Throw();
@@ -47,13 +47,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                                        " If you see this message a lot consider checking if your computer's time is correct.");
                 this.Logger.LogTrace("(-)[TIME_TOO_NEW]");
                 ConsensusErrors.TimeTooNew.Throw();
-            }
-
-            // Timestamp should be divisible by target spacing.
-            if (!this.slotsManager.IsValidTimestamp(chainedHeader.Header.Time))
-            {
-                this.Logger.LogTrace("(-)[INVALID_TIMESTAMP]");
-                PoAConsensusErrors.InvalidHeaderTimestamp.Throw();
             }
         }
     }
