@@ -303,9 +303,9 @@ if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort )
 Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
 if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
 {
-    Write-Host (Get-TimeStamp) "WARNING: A node is already running, will perform a graceful shutdown" -ForegroundColor DarkYellow
+    Write-Host (Get-TimeStamp) "WARNING: A node is already running, ending the GETH process" -ForegroundColor DarkYellow
     ""
-    Stop-Process -Name geth -Force
+    Stop-Process -Name geth 
 }
 
 #Check for running dashboard
@@ -385,6 +385,10 @@ if ( $NodeType -eq "50K" )
         Start-Sleep 10
     }
 
+    $gethProcess = Start-Process geth -ArgumentList "account list" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $env:TEMP\accountlist.txt 
+    $gethAccountsOuput = Get-Content $env:TEMP\accountlist.txt
+    $ethAddress = ($gethAccountsOuput.Split('{').Split('}') | Select-Object -Index 1).Insert('0','0x')
+
     #Move to CirrusPegD
     Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
 }
@@ -462,7 +466,7 @@ $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
 if ( $NodeType -eq "50K" ) 
 {
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
+    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
 }
     Else
     {
@@ -665,8 +669,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUNjDKWkl5DNclOcReU/bbOt2t
-# 1j2gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUqtuIA6mRyi/zq2p/4ug7uyYf
+# KeugggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -736,11 +740,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFLVSB4FSW+DI
-# nvxrRxJ5M8+ETM94MA0GCSqGSIb3DQEBAQUABIIBAGX++n4uElYFjo2HkbFBQllW
-# q6c7Hti09KnDyw75pWPM4CiQ8XE+4W44k3t4OKIe5GcBQW/3BniDoHzZQP6AF31i
-# kmoAazG5IraZuQhj9xiqudD/dzQNfg/gBf60M7RFydpGc/vhIecQR3ZQ8o3JgF5U
-# 5XfXbscPdWgFkaEgFGs+LfAoJopLLjmb1lJlrUUrVHl8wnMry3XrZvDsLB4whwHp
-# QBKMbeYrLbM19Ln8rsHzLuiKwY8H5aGksClJQ2Ip/u3OkYEIBGy1Vp8gkPsq8nIM
-# boWpdBBgeQUsOoWyOSpO2zdSfe9s08n2zEYcuiHarUM2WAc3O70hzwM8NJs8iSA=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFM5+uyUN2wCn
+# g9unXvxNiYDmDD1dMA0GCSqGSIb3DQEBAQUABIIBAGf8K3C6dmV43jLdU7NfFnvf
+# DY5+yzkoRAxVxZbEoWh1zZopqN5511E6RYrrIvJPJ84ShYEZGKBDF06p3ZtikwGx
+# cQ4dq51Tt0c4g9pQyDDxk+pwnrFIsz7BH8Izd7gdZF9Ck1T02vLZYcUIInax/bEs
+# Qf2G+fIq6GqAHG5v0EcoFMj3htUIGLyXQPRkvz1Erk9Jh/brDPzfofMnJl27nmxa
+# R0yXm77eUK1z1IZPwFMQ+CBJ/RAkbCIjal3zUuvmbUi5HRhw85iYNrmaK7U+1n54
+# UzzcEoOSJ+ete1ELrHzX2tF5V/XM7fmg+dD6xL25z0WgvuThySsKBkxdOYG22Pc=
 # SIG # End signature block
