@@ -369,7 +369,7 @@ if ( $NodeType -eq "50K" )
     While ( $gethPeerCount -lt 1 )
     {
         Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
-        Start-Sleep 3
+        Start-Sleep 2
         [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
     }
 
@@ -383,8 +383,8 @@ if ( $NodeType -eq "50K" )
     While ( $syncStatus -eq $false -or $syncStatus.currentBlock -eq $null )
     {
         Write-Host (Get-TimeStamp) "Waiting for Blockchain Synchronization to begin" -ForegroundColor Yellow
-        Start-Sleep 10
         $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
+        Start-Sleep 2
     }
 
     [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
@@ -682,12 +682,11 @@ Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -For
 #>
 
 Exit
-
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUdi/jWT8ECdmHfgrLc68FdPkQ
-# DFSgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUpLT2XNjfdfG7wkM/TA0UCa7y
+# QCigggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -757,11 +756,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFPCdi6pdG2NK
-# 4vG8+syJClo0YrvVMA0GCSqGSIb3DQEBAQUABIIBAJG2aqrGH8bgjrCvShfzA7xN
-# qeD0ruEyaD2XMudyWCenii0JfPPeNtaZx04Z7f4NlC7mZYS1sRb2csfm7Csz0YEH
-# 98NHt8Xhv6ryVCprfawF/Yz3JRsHAkl7kusCVPU+CIjDCS03qzC9F1ACPC+BUIuG
-# yPg8kzz9WTcjPWvvJVIwiu/SWp5lRjbSJo7dZHIozsAj5bxOcvipmXBrH3ldEts8
-# WNKMljZeIVBokEZQv4UyrD/88iMoSSCedrOd+NkuDgshnTdevoPS4p2TMYsdQqgy
-# FD9Vw0alDxRd3Up7pTUFqYi3cZE3HTAiSqd7UOiNw880qQHObRwkiBxMu03rqPg=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDd72GMvQ5jU
+# Ko8zm+z746qFZpnEMA0GCSqGSIb3DQEBAQUABIIBAJ22B8aTj2I7alBnsD7cHc2G
+# sYdznFgXq7pn4c3j1mrb7GX+YKaYZLeWw9DcIHoI4RbREMWFjOsZXnR3M644NCHS
+# QnChPR0ZgJR5/Iiyaa7x7wK+nG1F/AwJJMR7Q3RNqaTVBa1b77ROp1b75Emk80pe
+# rUx3F3hpVLUfHtCpoUdz2fP9AzlO5ibsjlaY2i7427wqKpwLZdR5NicwjqYaRJH1
+# 1wNAnl5X0dRav3v4Tp1lTy7t45pDBAKNqXGm36wJlfih7E9pmEIFI1BGd119i5gY
+# /gWaBL0hu0htSNkFo33N4RnHT25by+AA36Ky/LGXHYRhSdrnBxA/hnnNwv1Fz/k=
 # SIG # End signature block
