@@ -100,8 +100,6 @@ namespace Stratis.Bitcoin.Features.Wallet
                 log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.walletManager.WalletTipHeight}".PadRight(10) + $"(Hash: {this.walletManager.WalletTipHash})");
             else
                 log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + ": No Wallet");
-
-            log.AppendLine();
         }
 
         private void AddComponentStats(StringBuilder log)
