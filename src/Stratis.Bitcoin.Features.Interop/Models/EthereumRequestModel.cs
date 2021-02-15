@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop.Models
+namespace Stratis.Bitcoin.Features.Interop.Models
 {
     public class EthereumRequestModel
     {

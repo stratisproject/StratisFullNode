@@ -2,15 +2,15 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.Payloads;
+using Stratis.Bitcoin.Features.Interop.EthereumClient;
+using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropBehavior : NetworkPeerBehavior
     {

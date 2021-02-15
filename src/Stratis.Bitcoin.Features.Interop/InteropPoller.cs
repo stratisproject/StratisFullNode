@@ -1,23 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Nethereum.Contracts;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.Models;
+using Stratis.Bitcoin.Features.Interop.EthereumClient;
+using Stratis.Bitcoin.Features.Interop.Models;
+using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.State;
+using Block = NBitcoin.Block;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropPoller : IDisposable
     {
@@ -42,6 +47,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly IFederationManager federationManager;
         private readonly IFederationHistory federationHistory;
+        private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
         private readonly IInteropRequestRepository interopRequestRepository;
         private readonly IBlockStoreQueue blockStoreQueue;
         private readonly IKeyValueRepository keyValueRepo;
@@ -67,6 +73,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             IInitialBlockDownloadState initialBlockDownloadState,
             IFederationManager federationManager,
             IFederationHistory federationHistory,
+            IFederatedPegBroadcaster federatedPegBroadcaster,
             //IInteropRequestRepository interopRequestRepository,
             IBlockStoreQueue blockStoreQueue,
             IKeyValueRepository keyValueRepo,
@@ -85,6 +92,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.federationManager = federationManager;
             this.federationHistory = federationHistory;
+            this.federatedPegBroadcaster = federatedPegBroadcaster;
             //this.interopRequestRepository = interopRequestRepository;
             this.blockStoreQueue = blockStoreQueue;
             this.keyValueRepo = keyValueRepo;
@@ -113,7 +121,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                 // Genesis.
                 this.lastScanned = this.chainIndexer.Tip.GetAncestor(0);
 
-            this.logger.LogDebug($"Interoperability last scanned height set to {this.lastScanned.Height}.");
+            this.logger.LogDebug("Interoperability last scanned height set to {0}.", this.lastScanned.Height);
 
             // Initialize the interop polling loop, to check for interop contract requests.
             this.interopLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckInterop", async (cancellation) =>
@@ -125,6 +133,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
                     try
                     {
+                        this.CheckEthereumNode();
                         this.CheckForEthereumRequests();
                         this.ProcessEthereumRequests();
 
@@ -134,7 +143,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                     }
                     catch (Exception e)
                     {
-                        this.logger.LogWarning($"Exception raised when checking interop requests. {e}");
+                        this.logger.LogWarning("Exception raised when checking interop requests. {0}", 0);
                     }
 
                     this.logger.LogTrace("Finishing interop loop.");
@@ -153,6 +162,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
                     try
                     {
+                        this.CheckForContractEvents();
                         this.ProcessConversionRequests();
                     }
                     catch (Exception e)
@@ -167,12 +177,107 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                 startAfter: TimeSpans.Second);
         }
 
+        private void CheckEthereumNode()
+        {
+            try
+            {
+                BigInteger blockHeight = this.ethereumClientBase.GetBlockHeight();
+
+                this.logger.LogDebug("Current Ethereum node block height is {0}.", blockHeight);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Error checking Ethereum node status: {0}", e);
+            }
+        }
+
+        private void CheckForContractEvents()
+        {
+            // TODO: Maybe the filter should only be set up once IBD completes?
+
+            // Check for all Transfer events against the WrappedStrax contract since the last time we checked.
+            // In future this could also poll for other events as the need arises.
+            List<EventLog<TransferEventDTO>> transferEvents = this.ethereumClientBase.GetTransferEventsForWrappedStrax();
+
+            foreach (EventLog<TransferEventDTO> transferEvent in transferEvents)
+            {
+                // Will probably never be the case, but check anyway.
+                if (string.IsNullOrWhiteSpace(transferEvent.Log.TransactionHash))
+                    continue;
+
+                // Transfers can only be burns if they are made with the zero address as the destination.
+                if (transferEvent.Event.To != EthereumClientBase.ZeroAddress)
+                    continue;
+
+                this.logger.LogDebug("Conversion burn transaction {0} received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
+
+                if (this.conversionRequestRepository.Get(transferEvent.Log.TransactionHash) != null)
+                {
+                    this.logger.LogDebug("Conversion burn transaction {0} already exists, ignoring.", transferEvent.Log.TransactionHash);
+
+                    continue;
+                }
+
+                if (transferEvent.Event.Value == BigInteger.Zero)
+                {
+                    this.logger.LogDebug("Ignoring zero-valued burn transaction {0}.", transferEvent.Log.TransactionHash);
+
+                    continue;
+                }
+
+                if (transferEvent.Event.Value < BigInteger.Zero)
+                {
+                    this.logger.LogDebug("Ignoring negative-valued burn transaction {0}.", transferEvent.Log.TransactionHash);
+
+                    continue;
+                }
+
+                if (transferEvent.Event.Value > 10_000_000_000) // 100
+                {
+                    this.logger.LogError("Ignoring burn transaction {0} due to temporary risk-limitation measures.", transferEvent.Log.TransactionHash);
+
+                    continue;
+                }
+
+                this.logger.LogDebug("Conversion burn transaction {0} has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
+
+                // Look up the desired destination address for this account.
+                string destinationAddress = this.ethereumClientBase.GetDestinationAddress(transferEvent.Event.From);
+
+                this.logger.LogDebug("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
+
+                // TODO: Validate that it is a mainchain address here before bothering to add it to the repository.
+
+                // Schedule this transaction to be processed at the next block height that is divisible by 10. If the current block height is divisible by 10, add a further 10 to it.
+                // In this way, burns will always be scheduled at a predictable future time across the multisig.
+                ulong blockHeight = (ulong)this.chainIndexer.Tip.Height - ((ulong)this.chainIndexer.Tip.Height % 10) + 10;
+
+                if (blockHeight <= 0)
+                    blockHeight = 10;
+
+                this.conversionRequestRepository.Save(new ConversionRequest()
+                {
+                    RequestId = transferEvent.Log.TransactionHash,
+                    RequestType = (int)ConversionRequestType.Burn,
+                    Processed = false,
+                    RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                    Amount = (ulong)transferEvent.Event.Value,
+                    BlockHeight = (int)blockHeight,
+                    DestinationAddress = destinationAddress
+                });
+            }
+        }
+
         private void ProcessConversionRequests()
         {
             List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true);
 
+            this.logger.LogDebug("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
+
             foreach (ConversionRequest request in mintRequests)
             {
+                this.logger.LogDebug("Processing conversion mint request {0}.", request.RequestId);
+
                 IFederationMember member = this.federationHistory.GetFederationMemberForBlock(this.chainIndexer.Tip);
 
                 bool originator = member.Equals(this.federationManager.GetCurrentFederationMember());
@@ -180,25 +285,31 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                 // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
                 if (originator)
                 {
+                    this.logger.LogDebug("This node selected as originator for transaction {0}.", request.RequestId);
+
                     // First construct the necessary minting transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                     string abiData = this.ethereumClientBase.EncodeMintParams(request.DestinationAddress, request.Amount);
 
-                    this.ethereumClientBase.SubmitTransaction(request.DestinationAddress, 0, abiData);
+                    BigInteger transactionId = this.ethereumClientBase.SubmitTransaction(request.DestinationAddress, 0, abiData);
+
+                    // The originator isn't responsible for anything further at this point.
+                    request.RequestStatus = (int)ConversionRequestStatus.Processed;
+                    request.Processed = true;
+
+                    // Persist the updated request before broadcasting it.
+                    this.conversionRequestRepository.Save(request);
 
                     // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
                     // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
                     // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation node.
                     // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                     // The transactionId must be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified.
-
-                    // The originator isn't responsible for anything further at this point.
-                    request.RequestStatus = (int)ConversionRequestStatus.Processed;
-                    request.Processed = true;
-
-                    this.conversionRequestRepository.Save(request);
+                    this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId)).GetAwaiter().GetResult();
                 }
                 else
                 {
+                    this.logger.LogDebug("This node was not selected as the originator for transaction {0}.", request.RequestId);
+
                     // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
                     // Initially there will not be a quorum of nodes that agree on the transactionId.
                     // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
@@ -210,11 +321,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
                     if (agreedUponId != BigInteger.MinusOne)
                     {
+                        this.logger.LogDebug("Quorum reached for conversion transaction {0}, submitting confirmation.", request.RequestId);
+
                         // Once a quorum is reached, each node confirms the agreed transactionId.
                         // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
-                        this.ethereumClientBase.ConfirmTransaction(agreedUponId);
+                        string confirmationHash = this.ethereumClientBase.ConfirmTransaction(agreedUponId);
 
-                        request.RequestStatus = (int)ConversionRequestStatus.Processed; // TODO: .Confirmed?
+                        this.logger.LogDebug("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
+
+                        request.RequestStatus = (int)ConversionRequestStatus.Processed;
                         request.Processed = true;
 
                         this.conversionRequestRepository.Save(request);
@@ -222,15 +337,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                 }
             }
 
-            List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
+            // Unlike the mint requests, burns are not initiated by the multisig wallet.
+            // Instead they are initiated by the user, via a contract call to the burn() method on the WrappedStrax contract.
+            // They need to have already associated a destination address with their account prior to calling this method.
 
-            foreach (ConversionRequest burn in burnRequests)
-            {
-                // Unlike the mint requests, burns are not initiated by the multisig wallet.
+            // Properly processing burn transactions requires emulating a withdrawal on the main chain from the multisig wallet.
+            // It will be easier when conversion can be done directly to and from a Cirrus contract instead.
 
-                // Properly processing burn transactions requires emulating a withdrawal from the Cirrus chain.
-                // It will be easier when conversion can be done directly to and from a Cirrus contract.
-            }
+            // Currently the processing is done in the WithdrawalExtractor.
         }
 
         private void CheckForEthereumRequests()
@@ -265,7 +379,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                     {
                         // If the block still can't be found we want to be able to investigate why.
                         // In theory we could use GetOrDownload but that complicates the relationship between this component and consensus.
-                        this.logger.LogWarning($"Unable to retrieve block with hash {chainedHeader.HashBlock}. Availability: {chainedHeader.BlockDataAvailability}.");
+                        this.logger.LogWarning("Unable to retrieve block with hash {0}. Availability: {1}.", chainedHeader.HashBlock, chainedHeader.BlockDataAvailability);
 
                         continue;
                     }
@@ -464,7 +578,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             }
             catch (Exception e)
             {
-                this.logger.LogWarning("Exception during Stratis interop request lookup: " + e);
+                this.logger.LogWarning("Exception during Stratis interop request lookup: {0}", e);
 
                 requests = new List<EthereumRequestModel>();
             }
@@ -473,12 +587,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             {
                 if (this.interopRequestRepository.Get(contractRequest.RequestId) != null)
                 {
-                    this.logger.LogDebug($"Already saved interop request {contractRequest.RequestId}.");
+                    this.logger.LogDebug("Already saved interop request {0}.", contractRequest.RequestId);
 
                     continue;
                 }
 
-                this.logger.LogDebug($"Saving interop request {contractRequest.RequestId} from Fabric network.");
+                this.logger.LogDebug("Saving interop request {0} from Fabric network.", contractRequest.RequestId);
 
                 var request = new InteropRequest() { 
                     RequestId = contractRequest.RequestId,
@@ -503,7 +617,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
 
             List<InteropRequest> requests = this.interopRequestRepository.GetAllStratis(true);
 
-            this.logger.LogDebug($"Processing {requests.Count} stored interop requests from Ethereum network.");
+            this.logger.LogDebug("Processing {0} stored interop requests from Ethereum network.", requests.Count);
 
             foreach (InteropRequest request in requests)
             {
@@ -513,7 +627,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                     continue;
                 }
 
-                this.logger.LogDebug($"Processing stored interop request {request.RequestId} from Fabric network.");
+                this.logger.LogDebug("Processing stored interop request {0} from Ethereum network.", request.RequestId);
                 
                 /*
                 // TODO: Area of improvement - check the method signature of the contract being called and translate the parameters to their proper types

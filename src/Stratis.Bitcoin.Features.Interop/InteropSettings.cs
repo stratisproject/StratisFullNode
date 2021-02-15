@@ -1,7 +1,7 @@
 ﻿using System;
 using Stratis.Bitcoin.Configuration;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropSettings
     {

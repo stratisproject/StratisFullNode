@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -15,8 +14,6 @@ using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
-using Stratis.Bitcoin.Features.SmartContracts.Interop;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.Bitcoin.Interfaces;
@@ -45,15 +42,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         private readonly ILogger logger;
         private readonly Network network;
         private readonly IStateRepositoryRoot stateRoot;
-        private readonly InteropPoller interopPoller;
 
-        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, InteropPoller interopPoller = null)
+        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot)
         {
             this.consensusManager = consensusLoop;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.stateRoot = stateRoot;
-            this.interopPoller = interopPoller;
         }
 
         public override Task InitializeAsync()
@@ -65,15 +60,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
             this.stateRoot.SyncToRoot(((ISmartContractBlockHeader)this.consensusManager.Tip.Header).HashStateRoot.ToBytes());
 
-            this.interopPoller?.Initialize();
-
             this.logger.LogInformation("Smart Contract Feature Injected.");
             return Task.CompletedTask;
         }
 
         public override void Dispose()
         {
-            this.interopPoller?.Dispose();
         }
     }
 
@@ -148,25 +140,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SmartContractOptions(services, fullNodeBuilder.Network));
                     });
-            });
-
-            return fullNodeBuilder;
-        }
-
-        public static IFullNodeBuilder AddInteroperability(this IFullNodeBuilder fullNodeBuilder)
-        {
-            fullNodeBuilder.ConfigureFeature(features =>
-            {
-                IFeatureRegistration feature = fullNodeBuilder.Features.FeatureRegistrations.FirstOrDefault(f => f.FeatureType == typeof(SmartContractFeature));
-                feature.FeatureServices(services =>
-                {
-                    services.AddSingleton<InteropSettings>();
-                    services.AddSingleton<IEthereumClientBase, EthereumClientBase>();
-                    //services.AddSingleton<IInteropRequestRepository, InteropRequestRepository>();
-                    //services.AddSingleton<IInteropRequestKeyValueStore, InteropRequestKeyValueStore>();
-                    services.AddSingleton<IInteropTransactionManager, InteropTransactionManager>();
-                    services.AddSingleton<InteropPoller>();
-                });
             });
 
             return fullNodeBuilder;

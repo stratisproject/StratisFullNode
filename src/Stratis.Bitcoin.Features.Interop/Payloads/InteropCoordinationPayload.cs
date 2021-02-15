@@ -1,7 +1,7 @@
 ﻿using NBitcoin;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop.Payloads
+namespace Stratis.Bitcoin.Features.Interop.Payloads
 {
     [Payload("coord")]
     public class InteropCoordinationPayload : Payload

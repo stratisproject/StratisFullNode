@@ -11,7 +11,7 @@ using Nethereum.Contracts.CQS;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
 	[Function("getOwners", "address[]")]
 	public class GetOwnersFunction : FunctionMessage

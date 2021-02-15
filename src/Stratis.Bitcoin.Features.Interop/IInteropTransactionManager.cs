@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public interface IInteropTransactionManager
     {

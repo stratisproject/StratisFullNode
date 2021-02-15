@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.Features.SmartContracts.Interop;
+using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -117,19 +117,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d => d.RetrievalType == DepositRetrievalType.Conversion))
                 {
-                    this.logger.Debug("Conversion transaction: " + conversionTransaction.ToString());
+                    this.logger.Debug("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
 
-                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) == null)
+                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
                     {
-                        this.conversionRequestRepository.Save(new ConversionRequest()
-                        {
-                            RequestId = conversionTransaction.Id.ToString(),
-                            RequestType = (int)ConversionRequestType.Mint,
-                            Processed = false,
-                            RequestStatus = (int)ConversionRequestStatus.Unprocessed,
-                            Amount = conversionTransaction.Amount
-                        });
+                        this.logger.Debug("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
+
+                        continue;
                     }
+
+                    this.conversionRequestRepository.Save(new ConversionRequest() {
+                        RequestId = conversionTransaction.Id.ToString(),
+                        RequestType = (int)ConversionRequestType.Mint,
+                        Processed = false,
+                        RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                        Amount = conversionTransaction.Amount,
+                        BlockHeight = conversionTransaction.BlockNumber,
+                        DestinationAddress = conversionTransaction.TargetAddress
+                    });
                 }
 
                 // Order all other transactions in the block deterministically.

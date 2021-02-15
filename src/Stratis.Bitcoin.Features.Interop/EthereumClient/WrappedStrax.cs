@@ -9,7 +9,7 @@ using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Util;
 using Nethereum.Web3;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
 	public class WrappedStraxTokenDeployment : ContractDeploymentMessage
 	{
@@ -48,6 +48,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
 		public BigInteger TokenAmount { get; set; }
 	}
 
+    [Event("Transfer")]
+    public class TransferEventDTO : IEventDTO
+    {
+        [Parameter("address", "_from", 1, true)]
+        public string From { get; set; }
+
+        [Parameter("address", "_to", 2, true)]
+        public string To { get; set; }
+
+        [Parameter("uint256", "_value", 3, false)]
+        public BigInteger Value { get; set; }
+    }
+
 	[Function("owner", "address")]
 	public class OwnerFunction : FunctionMessage
 	{
@@ -59,6 +72,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
 		[Parameter("address", "newOwner", 1)]
 		public string NewOwner { get; set; }
 	}
+
+    [Function("withdrawalAddresses")]
+    public class WithdrawalAddressesFunction : FunctionMessage
+    {
+        [Parameter("address", "", 1)]
+        public string Address { get; set; }
+    }
 
 	[Function("mint")]
 	public class MintFunction : FunctionMessage
@@ -80,12 +100,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
     public class TransferParamsInput
     {
         [Parameter("address", 1)] public string To { get; set; }
+
         [Parameter("uint256", 2)] public BigInteger Value { get; set; }
     }
 
 	public class MintParamsInput
     {
         [Parameter("address", 1)] public string Account { get; set; }
+
         [Parameter("uint256", 2)] public BigInteger Amount { get; set; }
     }
 
@@ -187,6 +209,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
 
 			return owner;
 		}
+
+        public static async Task<string> GetDestinationAddress(Web3 web3, string contractAddress, string addressToQuery)
+        {
+            var withdrawalAddressesFunctionMessage = new WithdrawalAddressesFunction()
+            {
+				Address = addressToQuery
+            };
+
+            IContractQueryHandler<WithdrawalAddressesFunction> queryHandler = web3.Eth.GetContractQueryHandler<WithdrawalAddressesFunction>();
+            string destinationAddress = await queryHandler.QueryAsync<string>(contractAddress, withdrawalAddressesFunctionMessage);
+
+            return destinationAddress;
+        }
 
 		public static string ABI = @"[
 	        {

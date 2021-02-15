@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using NBitcoin;
+using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Features.FederatedPeg.Interfaces;
 using TracerAttributes;
 
@@ -32,6 +34,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// </summary>
         private const int ExpectedNumberOfOutputsChange = 3;
 
+        private readonly IConversionRequestRepository conversionRequestRepository;
+
         private readonly IOpReturnDataReader opReturnDataReader;
 
         private readonly Network network;
@@ -40,10 +44,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         public WithdrawalExtractor(
             IFederatedPegSettings federatedPegSettings,
+            IConversionRequestRepository conversionRequestRepository,
             IOpReturnDataReader opReturnDataReader,
             Network network)
         {
             this.multisigAddress = federatedPegSettings.MultiSigAddress;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.opReturnDataReader = opReturnDataReader;
             this.network = network;
         }
@@ -52,6 +58,27 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         public IReadOnlyList<IWithdrawal> ExtractWithdrawalsFromBlock(Block block, int blockHeight)
         {
             var withdrawals = new List<IWithdrawal>();
+
+            // Check if this is the target height for a conversion transaction from wSTRAX back to STRAX.
+            // These get returned before any other withdrawal transactions in the block to ensure consistent ordering.
+            List<ConversionRequest> burnRequests = this.conversionRequestRepository.GetAllBurn(true);
+
+            foreach (ConversionRequest burnRequest in burnRequests)
+            {
+                // So that we don't get stuck if we miss one inadvertently, don't break out of the loop if the height is less.
+                if (burnRequest.BlockHeight < blockHeight)
+                {
+                    continue;
+                }
+
+                // We expect them to be ordered, so as soon as they exceed the current height, ignore the rest.
+                if (burnRequest.BlockHeight > blockHeight)
+                {
+                    break;
+                }
+
+                withdrawals.Add(new Withdrawal(new uint256(burnRequest.RequestId.Replace("0x", "")), null, Money.Satoshis(burnRequest.Amount), burnRequest.DestinationAddress, burnRequest.BlockHeight, block.GetHash()));
+            }
 
             if (block.Transactions.Count <= 1)
                 return withdrawals;

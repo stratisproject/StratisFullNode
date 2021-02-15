@@ -1,21 +1,33 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using Nethereum.ABI;
+using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
+using Nethereum.Hex.HexTypes;
+using Nethereum.RPC.Eth.Blocks;
+using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.Models;
+using Stratis.Bitcoin.Features.Interop.Models;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
     public class EthereumClientBase : IEthereumClientBase
     {
         private readonly InteropSettings interopSettings;
         private readonly Web3 web3;
+        private readonly Event<TransferEventDTO> transferEventHandler;
+        private readonly NewFilterInput filterAllTransferEventsForContract;
+        private readonly HexBigInteger filterId;
+
+        public const string ZeroAddress = "0x0000000000000000000000000000000000000000";
 
         public EthereumClientBase(InteropSettings interopSettings)
         {
             this.interopSettings = interopSettings;
+
+            if (!this.interopSettings.Enabled)
+                return;
 
             var account = new ManagedAccount(interopSettings.EthereumAccount, interopSettings.EthereumPassphrase);
             
@@ -24,6 +36,31 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
                 this.web3 = new Web3(account, interopSettings.EthereumClientUrl);
             else
                 this.web3 = new Web3(account);
+
+            this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(interopSettings.WrappedStraxAddress);
+            this.filterAllTransferEventsForContract = this.transferEventHandler.CreateFilterInput();
+            this.filterId = this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).GetAwaiter().GetResult();
+        }
+
+        public List<EventLog<TransferEventDTO>> GetTransferEventsForWrappedStrax()
+        {
+            // Note: this will only return events from after the filter is created.
+            List<EventLog<TransferEventDTO>> newTransferEventsForContract = this.transferEventHandler.GetFilterChanges(this.filterId).GetAwaiter().GetResult();
+
+            return newTransferEventsForContract;
+        }
+
+        public string GetDestinationAddress(string address)
+        {
+            return WrappedStrax.GetDestinationAddress(this.web3, this.interopSettings.WrappedStraxAddress, address).GetAwaiter().GetResult();
+        }
+
+        public BigInteger GetBlockHeight()
+        {
+            var blockNumberHandler = new EthBlockNumber(this.web3.Client);
+            HexBigInteger block = blockNumberHandler.SendRequestAsync().GetAwaiter().GetResult();
+            
+            return block.Value;
         }
 
         /// <inheritdoc />
@@ -73,7 +110,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
 
         public List<EthereumRequestModel> GetStratisInteropRequests()
         {
-            // TODO: Filter the receipt logs for the interop contract and extract
+            // TODO: Filter the receipt logs for the interop contract and extract any interop requests
             return new List<EthereumRequestModel>();
         }
 
