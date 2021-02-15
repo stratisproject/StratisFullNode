@@ -303,9 +303,26 @@ if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort )
 Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
 if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
 {
-    Write-Host (Get-TimeStamp) "WARNING: A node is already running, ending the GETH process" -ForegroundColor DarkYellow
+    Write-Host (Get-TimeStamp) "WARNING: A node is already running, please gracefully close GETH with CTRL+C to avoid forceful shutdown" -ForegroundColor DarkYellow
     ""
-    Stop-Process -Name geth 
+    While ( $shutdownCounter -le "30" )
+    {
+        if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
+        {
+            Start-Sleep 3
+            Write-Host (Get-TimeStamp) "Waiting for graceful shutdown ( CTRL+C )..."
+            $shutdownCounter++
+        }
+            Else
+            {
+                return
+            }
+    }
+    if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
+    {
+        Write-Host (Get-TimeStamp) "WARNING: A node is still running, performing a forced shutdown" -ForegroundColor DarkYellow
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    }
 }
 
 #Check for running dashboard
@@ -669,8 +686,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUqtuIA6mRyi/zq2p/4ug7uyYf
-# KeugggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU0SLTNxBSqa2PnN8Lj/G75mIO
+# WNegggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -740,11 +757,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFM5+uyUN2wCn
-# g9unXvxNiYDmDD1dMA0GCSqGSIb3DQEBAQUABIIBAGf8K3C6dmV43jLdU7NfFnvf
-# DY5+yzkoRAxVxZbEoWh1zZopqN5511E6RYrrIvJPJ84ShYEZGKBDF06p3ZtikwGx
-# cQ4dq51Tt0c4g9pQyDDxk+pwnrFIsz7BH8Izd7gdZF9Ck1T02vLZYcUIInax/bEs
-# Qf2G+fIq6GqAHG5v0EcoFMj3htUIGLyXQPRkvz1Erk9Jh/brDPzfofMnJl27nmxa
-# R0yXm77eUK1z1IZPwFMQ+CBJ/RAkbCIjal3zUuvmbUi5HRhw85iYNrmaK7U+1n54
-# UzzcEoOSJ+ete1ELrHzX2tF5V/XM7fmg+dD6xL25z0WgvuThySsKBkxdOYG22Pc=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFBAvK4ZtH16s
+# yiHalepW7tTvZkPaMA0GCSqGSIb3DQEBAQUABIIBAHVCoYAxpynykXX3bV6mEuNA
+# sYJ2DIFXr/c3pGACzX7zsNLvfvKjtyX57pwo4xbWaRCDrYDcdr7r77PYMMqsibRb
+# Xipp71BxfexX96qjSN9LEh9gN/VCaHNzy7vH+ijSWYowHWKFxz37rg+b3PqEPoU3
+# RR816MI/k0/ovYm/C6OX7vKjJ+TDhJ+wDK8LGEg5da2+LmefE+/HVyILxb4ygEiM
+# MArve2miSGO25UXuDBiy5L7EtRhdxekpcu/rp+OiCLWlBWQ6sAbNyqZy3/papPaO
+# ssMjRuj7tjHsV9458nYgw6GyKz3r9VbImSdv+IC0BO+9C4tYSufOgBjVg7sWFOQ=
 # SIG # End signature block
