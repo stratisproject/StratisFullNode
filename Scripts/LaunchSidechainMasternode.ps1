@@ -315,7 +315,7 @@ if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
         }
             Else
             {
-                return
+                $shutdownCounter = "31"
             }
     }
     if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
