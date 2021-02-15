@@ -1,692 +1,154 @@
+Write-Host STRAX MultiSig Masternode Launch Script - Version 5 - InterFlux Initial -ForegroundColor Cyan
+""
+Start-Sleep 5
+
+#Required Variables
+$ethDataDir = Read-Host -Prompt "Please enter the path to your Ethereum datadir (if you are using default data directory please press ENTER)"
+if ( $ethDataDir -eq $null ) { $ethDataDir = "$env:LOCALAPPDATA\Ethereum\ropsten" }
+if ( -not ( Test-Path $ethDataDir\geth ) )
+{
+    ""
+    $ethDataDir = Read-Host -Prompt "I could not find a data directory in the location you specified ($ethDataDir\geth). If you are performing a new synchronization, please re-enter the path to your Ethereum datadir to confirm. Alternatively, enter the correct path for the Ethereum data directory."
+}   
+Clear-Host
+$ethPassword = Read-Host "Please Enter the Passphrase used to Protect the Ethereum Account"
+Clear-Host
+$multiSigMnemonic = ( Read-Host "Please Enter your 12 Mnemonic Words")
+Clear-Host
+$multiSigPassword = ( Read-Host "Please Enter the Passphrase used to Protect the MultiSig Wallet" )
+Clear-Host
+$multiSigPublicKey = ( Read-Host "Please Enter your Masternode Signing Key" )
+$federationIPs = "167.86.74.136,206.220.197.50,217.160.46.215,5.158.81.18,13.90.213.188,165.173.0.136,27.72.97.81,217.7.52.43,104.237.202.7,3.94.72.119,93.114.128.47,139.99.237.65,51.195.100.33,167.88.12.75"
+$mainChainAPIPort = '17103'
+$sideChainAPIPort = '37223'
+$gethAPIPort = "8545"
+$ethMultiSigContract = "0x7a49ba62943a8a3eb590b2e27734d4cc67f878ba"
+$ethWrappedStraxContract = "0xebc6d09f44c9133bc0fc0d47411cadd5230c0225"
+$redeemScript = "8 02ba8b842997ce50c8e29c24a5452de5482f1584ae79778950b7bae24d4cc68dad 0337e816a3433c71c4bbc095a54a0715a6da7a70526d2afb8dba3d8d78d33053bf 032e4088451c5a7952fb6a862cdad27ea18b2e12bccb718f13c9fdcc1caf0535b4 035569e42835e25c854daa7de77c20f1009119a5667494664a46b5154db7ee768a 02d371f3a0cffffcf5636e6d4b79d9f018a1a18fbf64c39542b382c622b19af9de 02b3e16d2e4bbad6dba1e699934a52d58d9b60b6e7eed303e400e95f2dbc2ef3fd 0209cfca2490dec022f097114090c919e85047de0790c1c97451e0f50c2199a957 02387a219b1de54d4dc73a710a2315d957fc37ab04052a6e225c89205b90a881cd 035bf78614171397b080c5b375dbb7a5ed2a4e6fb43a69083267c880f66de5a4f9 02cbd907b0bf4d757dee7ea4c28e63e46af19dc8df0c924ee5570d9457be2f4c73 03797a2047f84ba7dcdd2816d4feba45ae70a59b3aa97f46f7877df61aa9f06a21 03cda7ea577e8fbe5d45b851910ec4a795e5cc12d498cf80d39ba1d9a455942188 02f891910d28fc26f272da8d7f548fdc18c286704907673e839dc07e8df416c15e 028078c0613033e5b4d4745300ede15d87ed339e379daadc6481d87abcb78732fa 02680321118bce869933b07ea42cc04d2a2804134b06db582427d6b9688b3536a4 f OP_CHECKMULTISIG"
+$sidechainMasternodesRepo = "https://github.com/stratisproject/StratisFullNode.git"
+$sidechainMasternodeBranch = "interfluxtest"
+$stratisMasternodeDashboardRepo = "https://github.com/stratisproject/StratisMasternodeDashboard"
+
 #Create Functions
 function Get-TimeStamp 
 {
     return "[{0:dd/MM/yy} {0:HH:mm:ss}]" -f (Get-Date)
 }
 
-function Get-IndexerStatus
+#Check for pre-requisites
+$dotnetVersion = dotnet --version
+if ( -not ($dotnetVersion -gt "3.1.*") ) 
 {
-    $Headers = @{}
-    $Headers.Add("Accept","application/json")
-    $AsyncLoopStats = Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/Dashboard/AsyncLoopsStats | Select-Object -ExpandProperty content 
-    if ( $AsyncLoopStats.Contains("Fault Reason: Missing outpoint data") )
-    {
-        Write-Host "ERROR: Indexing Database is corrupt" -ForegroundColor Red
-        Write-Host "Would you like to delete the database?"
-        $DeleteDB = Read-Host -Prompt "Enter 'Yes' to remove the Indexing Database or 'No' to exit the script"
-        While ( $DeleteDB -ne "Yes" -and $DeleteDB -ne "No" )
-        {
-            $DeleteDB = Read-Host -Prompt "Enter 'Yes' to remove the indexing database or 'No' to exit the script"
-        }
-        Switch ( $DeleteDB )
-        {
-            Yes 
-            {
-                Shutdown-MainchainNode
-                Remove-Item -Path $mainChainDataDir\addressindex.litedb -Force
-                if ( -not ( Get-Item -Path $mainChainDataDir\addressindex.litedb ) )
-                {
-                    Write-Host "SUCCESS: Indexing Database has been removed. Please re-run the script" -ForegroundColor Green
-                    Start-Sleep 10
-                    Exit
-                }
-                    Else
-                    {
-                        Write-Host "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
-                    }
-            }
-                
-            No 
-            { 
-                Shutdown-MainchainNode
-                Write-Host "WARNING: Masternode cannot run until Indexing Database is recovered. This will require a re-index. Please remove the addressindex.litedb file and re-run the script" -ForegroundColor DarkYellow
-                Start-Sleep 10
-                Exit
-            }
-        }
-    }
-}
-
-function Shutdown-MainchainNode
-{
-    Write-Host "Shutting down Mainchain Node..." -ForegroundColor Yellow
-    $Headers = @{}
-    $Headers.Add("Accept","application/json")
-    Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $Headers -Body "true" -ErrorAction SilentlyContinue | Out-Null
-
-    While ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort -ErrorAction SilentlyContinue )
-    {
-        Write-Host "Waiting for node to stop..." -ForegroundColor Yellow
-        Start-Sleep 5
-    }
-
-    Write-Host "SUCCESS: Mainchain Node shutdown" -ForegroundColor Green
-    Write-Host ""
-}
-
-function Shutdown-SidechainNode
-{
-    Write-Host "Shutting down Sidechain Node..." -ForegroundColor Yellow
-    $Headers = @{}
-    $Headers.Add("Accept","application/json")
-    Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Node/shutdown -Method Post -ContentType application/json-patch+json -Headers $Headers -Body "true" -ErrorAction SilentlyContinue | Out-Null
-
-    While ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort -ErrorAction SilentlyContinue )
-    {
-        Write-Host "Waiting for node to stop..." -ForegroundColor Yellow
-        Start-Sleep 5
-    }
-
-     Write-Host "SUCCESS: Sidechain Node shutdown" -ForegroundColor Green
-     Write-Host ""
-}
-
-function Get-MaxHeight 
-{
-    $Height = @{}
-    $Peers = Invoke-WebRequest -Uri http://localhost:$API/api/ConnectionManager/getpeerinfo | ConvertFrom-Json
-    foreach ( $Peer in $Peers )
-    {
-        if ( $Peer.subver -eq "StratisNode:0.13.0 (70000)" )
-        {
-        }
-            Else
-            {
-                $Height.Add($Peer.id,$Peer.startingheight)
-            }
-    }    
-    
-    $MaxHeight = $Height.Values | Measure-Object -Maximum | Select-Object -ExpandProperty Maximum
-    $MaxHeight
-}       
-
-function Get-LocalHeight 
-{
-    $StatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status
-    $Stats = ConvertFrom-Json $StatsRequest
-    $LocalHeight = $Stats.blockStoreHeight
-    $LocalHeight
-}
-
-function Get-LocalIndexerHeight 
-{
-    $IndexStatsRequest = Invoke-WebRequest -Uri http://localhost:$API/api/BlockStore/addressindexertip
-    $IndexStats = ConvertFrom-Json $IndexStatsRequest
-    $LocalIndexHeight = $IndexStats.tipHeight
-    $LocalIndexHeight
-}
-
-function Get-BlockStoreStatus
-{
-    $FeatureStatus = Invoke-WebRequest -Uri http://localhost:$API/api/Node/status | ConvertFrom-Json | Select-Object -ExpandProperty featuresData
-    $BlockStoreStatus = $FeatureStatus | Where-Object { $_.namespace -eq "Stratis.Bitcoin.Features.BlockStore.BlockStoreFeature" }
-    $BlockStoreStatus.state
-}
-
-function Shutdown-Dashboard
-{
-    Write-Host "Shutting down Stratis Masternode Dashboard..." -ForegroundColor Yellow
-    Start-Job -ScriptBlock { Invoke-WebRequest -Uri http://localhost:37000/shutdown } | Out-Null
-        While ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue )
-        {
-            Write-Host "Waiting for Stratis Masternode Dashboard to shut down" -ForegroundColor Yellow
-            Start-Sleep 5
-        }
-}
-
-function Get-Median($numberSeries)
-{
-    $sortedNumbers = @($numberSeries | Sort-Object)
-    if ( $numberSeries.Count % 2 ) 
-	{
-	    # Odd, pick the middle
-        $sortedNumbers[(($sortedNumbers.Count - 1) / 2)]
-    } 
-		Else 
-		{
-			# Even, average the middle two
-			($sortedNumbers[($sortedNumbers.Count / 2)] + $sortedNumbers[($sortedNumbers.Count / 2) - 1]) / 2
-		}
-}
-
-function Check-TimeDifference
-{
-    Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
-    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
-    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content)
-    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
-    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
-    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
-    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
-    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
-    $timeDif = Get-Median -numberSeries $timeDifSamples
-
-    if ( $timeDif -gt 2 -or $timeDif -lt 2 )
-    {
-        Clear-Variable timeDif,timeDifSamples
-        Check-TimeDifference2
-    }
-        Else
-        {
-            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
-            Write-Host ""
-        }
-}
-
-function Check-TimeDifference2
-{
-    Write-Host "Checking UTC Time Difference (unixtimestamp.com)" -ForegroundColor Cyan
-    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
-    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
-    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
-    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
-    $timeDif = Get-Median -numberSeries $timeDifSamples
-
-    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
-    {
-        Clear-Variable timeDif,timeDifSamples
-        Check-TimeDifference3
-    }
-        Else
-        {
-            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
-            Write-Host ""
-        }
-}
-
-function Check-TimeDifference3
-{
-    Write-Host "Checking UTC Time Difference (google.com)" -ForegroundColor Cyan
-    $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
-    $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
-    $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
-    $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
-    $timeDif = Get-Median -numberSeries $timeDifSamples
-
-    if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
-    {
-        Write-Host "ERROR: System Time is not accurate. Currently $timeDif seconds diffence with actual time! Correct Time & Date and restart" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-        Else
-        {
-            Write-Host "SUCCESS: Time difference is $timeDif seconds" -ForegroundColor Green
-            Write-Host ""
-        }
-}
-
-#Create DataDir(s)
-if ( -not ( Get-Item -Path $mainChainDataDir -ErrorAction SilentlyContinue ) )
-{
-    New-Item -ItemType Directory -Path $mainChainDataDir
-}
-
-if ( -not ( Get-Item -Path $sideChainDataDir -ErrorAction SilentlyContinue ) )
-{
-    New-Item -ItemType Directory -Path $sideChainDataDir
-}
-
-#Gather Federation Detail
-if ( -not ( Test-Path $sideChainDataDir\federationKey.dat ) ) 
-{
-    $miningDAT = Read-Host "Please Enter the full path to the federationKey.dat"
-    Copy-Item $miningDAT -Destination $sideChainDataDir -Force -ErrorAction Stop
-}
-
-#Establish Node Type
-if ( $multiSigMnemonic -ne $null )
-{
-    $NodeType = "50K"
-}
-
-#Check for Completion
-$varError = $false
-
-if ( $NodeType -eq "50K" )
-{
-    if ( -not ( $multiSigPassword ) ) 
-	{ 
-		$varError = $true 
-	}
-}
-	ElseIf ( -not ( $miningPassword ) ) 
-	{ 
-		$varError = $true 
-	}
-
-if ( -not ( $mainChainDataDir )  ) { $varError = $true }
-if ( -not ( $sideChainDataDir )  ) { $varError = $true }
-if ( -not ( Test-Path $sideChainDataDir/federationKey.dat ) ) { $varError = $true }
-if ( $varError -eq $true )  
-{
-    Write-Host (Get-TimeStamp) "ERROR: Some Values were not set. Please re-run this script" -ForegroundColor Red
+    Write-Host "ERROR:  .NET Core 3.1 SDK or above not found" -ForegroundColor Red
     Start-Sleep 30
     Exit
 }
 
-#Clear Host
-Clear-Host
-
-#Check for an existing running node
-Write-Host (Get-TimeStamp) "Checking for running Mainchain Node" -ForegroundColor Cyan
-if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort )
+$gitVersion = git --version
+if ( -not ($gitVersion -ne $null) ) 
 {
-    Write-Host (Get-TimeStamp) "WARNING: A node is already running, will perform a graceful shutdown" -ForegroundColor DarkYellow
-    ""
-    Shutdown-MainchainNode
+    Write-Host "ERROR:  git not found" -ForegroundColor Red
+    Start-Sleep 30
+    Exit
 }
 
-Write-Host (Get-TimeStamp) "Checking for running Sidechain Node" -ForegroundColor Cyan
-if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort )
+$pwshVersion = $PSVersionTable.PSVersion.ToString()
+if ( -not ($pwshVersion -gt "7.1") ) 
 {
-    Write-Host (Get-TimeStamp) "WARNING: A node is already running, will perform a graceful shutdown" -ForegroundColor DarkYellow
-    ""
-    Shutdown-SidechainNode
+    Write-Host "ERROR:  PowerShell Core not found" -ForegroundColor Red
+    Start-Sleep 30
+    Exit
+}   
+
+$gethVersion = (geth version | ForEach-Object { if ( $_ -Like "Version:*" ) { $_ } })
+if ( $gethVersion -eq $null )
+{
+    Write-Host "ERROR:  GETH not found" -ForegroundColor Red
+    Start-Sleep 30
+    Exit
 }
 
-Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
-if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
+#Set Required Environment Variables
+if ($IsWindows) 
 {
-    Write-Host (Get-TimeStamp) "WARNING: A node is already running, please gracefully close GETH with CTRL+C to avoid forceful shutdown" -ForegroundColor DarkYellow
-    ""
-    While ( $shutdownCounter -le "30" )
+    $mainChainDataDir = "$env:APPDATA\StratisNode\strax\StraxMain"
+    $sideChainDataDir = "$env:APPDATA\StratisNode\cirrus\CirrusMain"
+    $cloneDir = "$HOME\Desktop\STRAX-SidechainMasternodes-InterFluxTest"
+    $stratisMasternodeDashboardCloneDir = $cloneDir.Replace('SidechainMasternodes','StratisMasternodeDashboard')
+}
+    Else
     {
-        if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
+        Write-Host "ERROR: Windows OS was not detected." -ForegroundColor Red
+        Start-Sleep 10
+        Exit
+    }
+
+#Code Update
+if ( -not ( Test-Path -Path $cloneDir\src\Stratis.StraxD -ErrorAction SilentlyContinue ) )
+{ 
+    Remove-Item -Path $cloneDir -Force -Recurse -ErrorAction SilentlyContinue
+}
+
+Write-Host (Get-TimeStamp) INFO: "Checking for updates.." -ForegroundColor Yellow
+if ( -not ( Test-Path -Path $CloneDir -ErrorAction SilentlyContinue) ) 
+{
+    Write-Host (Get-TimeStamp) INFO: "Cloning SidechainMasternodes Branch" -ForegroundColor Cyan
+    Start-Process git.exe -ArgumentList "clone --recurse-submodules $sidechainMasternodesRepo -b $sidechainMasternodeBranch $cloneDir" -Wait
+}
+    Else 
+    {
+        Set-Location $cloneDir
+        Start-Process git.exe -ArgumentList "pull" -Wait
+    }
+
+if ( -not ( Test-Path -Path $stratisMasternodeDashboardCloneDir -ErrorAction SilentlyContinue ) )
+{
+    Write-Host (Get-TimeStamp) INFO:  "Cloning Stratis Masternode Dashboard" -ForegroundColor Cyan
+    Start-Process git.exe -ArgumentList "clone $stratisMasternodeDashboardRepo $stratisMasternodeDashboardCloneDir" -Wait
+}
+    Else
+    {
+        Set-Location $stratisMasternodeDashboardCloneDir
+        Start-Process git.exe -ArgumentList "pull" -Wait
+    }
+
+if ( Test-Path -Path $sideChainDataDir\blocks\_DBreezeSchema )
+{
+    Write-Host (Get-TimeStamp) ERROR:  "Your current data directory using an old data store. Resyncronisation is required..." -ForegroundColor Cyan
+    $DeleteDataDir = Read-Host -Prompt "Enter 'Yes' to download an updated data directory or 'No' to exit the script"
+    While ( $DeleteDataDir -ne "Yes" -and $DeleteDataDir -ne "No" )
+    {
+        ""
+        $DeleteDataDir = Read-Host -Prompt "Enter 'Yes' to download an updated data directory or 'No' to exit the script"
+        ""
+    }
+    Switch ( $DeleteDataDir )
+    {
+        Yes 
         {
-            Start-Sleep 3
-            Write-Host (Get-TimeStamp) "Waiting for graceful shutdown ( CTRL+C )..."
-            $shutdownCounter++
+            Rename-Item -Path $sideChainDataDir CirrusMain_OLD
+            Write-Host (Get-TimeStamp) INFO:  "Downloading CirrusMain data directory..." -ForegroundColor Yellow
+            Invoke-WebRequest -Uri http://academy.stratisplatform.com/CirrusMain-DataDir.zip -OutFile $env:TEMP\CirrusMain-DataDir.zip
+            Expand-Archive -Path $env:TEMP\CirrusMain-DataDir.zip -DestinationPath $sideChainDataDir
         }
-            Else
-            {
-                $shutdownCounter = "31"
-            }
-    }
-    if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
-    {
-        Write-Host (Get-TimeStamp) "WARNING: A node is still running, performing a forced shutdown" -ForegroundColor DarkYellow
-        Stop-Process -Force -ErrorAction SilentlyContinue
-    }
-}
-
-#Check for running dashboard
-Write-Host (Get-TimeStamp) "Checking for the Stratis Masternode Dashboard" -ForegroundColor Cyan
-if ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue )
-{
-    Write-Host (Get-TimeStamp) "WARNING: The Stratis Masternode Dashboard is already running, will perform a graceful shutdown" -ForegroundColor DarkYellow
-    ""
-    Shutdown-Dashboard
-}
-
-""
-
-#Check Time Difference
-Check-TimeDifference
-
-if ( $NodeType -eq "50K" ) 
-{
-
-    #Launching GETH
-    $API = $gethAPIPort
-    Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
-    $StartNode = Start-Process 'geth.exe' -ArgumentList "--ropsten --syncmode fast --rpc --rpccorsdomain=* --rpcapi web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
-
-    While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
-    {
-        Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
-        Start-Sleep 3
-        if ( $StartNode.HasExited -eq $true )
-        {
-            Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+                
+        No 
+        { 
+            Write-Host (Get-TimeStamp) "ERROR: You cannot run the node until you perform a clean IBD with this codebase or obtain the bootstrap data directory" -ForegroundColor DarkYellow
             Start-Sleep 30
             Exit
         }
     }
-
-    $gethPeerCountBody = ConvertTo-Json -Compress @{
-        jsonrpc = "2.0"
-        method = "net_peerCount"
-        id = "1"
-    }
-
-    [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
-    While ( $gethPeerCount -lt 1 )
-    {
-        Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
-        Start-Sleep 2
-        [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
-    }
-
-    $gethSyncStateBody = ConvertTo-Json -Compress @{
-        jsonrpc = "2.0"
-        method = "eth_syncing"
-        id = "1"
-    }
-
-    $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
-    While ( $syncStatus -eq $false -or $syncStatus.currentBlock -eq $null )
-    {
-        Write-Host (Get-TimeStamp) "Waiting for Blockchain Synchronization to begin" -ForegroundColor Yellow
-        $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
-        Start-Sleep 2
-    }
-
-    [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
-    [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
-
-    While ( ( $highestBlock ) -gt ( $currentBlock ) ) 
-    {
-        [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
-        [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
-        $syncProgress = $highestBlock - $currentBlock
-        ""
-        Write-Host (Get-TimeStamp) "The Local Height is $currentBlock" -ForegroundColor Yellow
-        Write-Host (Get-TimeStamp) "The Current Tip is $highestBlock" -ForegroundColor Yellow
-        Write-Host (Get-TimeStamp) "$syncProgress Blocks Require Indexing..." -ForegroundColor Yellow
-        Start-Sleep 10
-    }
-
-    $gethProcess = Start-Process geth -ArgumentList "account list" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $env:TEMP\accountlist.txt 
-    $gethAccountsOuput = Get-Content $env:TEMP\accountlist.txt
-    $ethAddress = ($gethAccountsOuput.Split('{').Split('}') | Select-Object -Index 1).Insert('0','0x')
-
-    #Move to CirrusPegD
-    Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
-}
-    Else
-    {
-        #Move to CirrusMinerD
-        Set-Location -Path $cloneDir/src/Stratis.CirrusMinerD
-    }
-
-#Start Mainchain Node
-$API = $mainChainAPIPort
-Write-Host (Get-TimeStamp) "Starting Mainchain Masternode" -ForegroundColor Cyan
-if ( $NodeType -eq "50K" ) 
-{
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort -counterchainapiport=$sideChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
-}
-    Else
-    {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -mainchain -addressindex=1 -apiport=$mainChainAPIPort" -PassThru
-    }
-
-#Wait for API
-While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
-{
-    Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
-    Start-Sleep 3
-    if ( $StartNode.HasExited -eq $true )
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
 }
 
-#Wait for BlockStore Feature
-While ( ( Get-BlockStoreStatus ) -ne "Initialized" )  
-{ 
-    Write-Host (Get-TimeStamp) "Waiting for BlockStore to Initialize..." -ForegroundColor Yellow
-    Start-Sleep 10
-    if ( $StartNode.HasExited -eq $true )
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-}
-
-#Wait for IBD
-While ( ( Get-MaxHeight ) -eq $null ) 
-{
-    Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
-    Start-Sleep 10
-}
-
-While ( ( Get-MaxHeight ) -gt ( Get-LocalIndexerHeight ) ) 
-{
-    $a = Get-MaxHeight
-    $b = Get-LocalIndexerHeight 
-    $c = $a - $b
-    ""
-    Write-Host (Get-TimeStamp) "The Indexed Height is $b" -ForegroundColor Yellow
-    Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
-    Write-Host (Get-TimeStamp) "$c Blocks Require Indexing..." -ForegroundColor Yellow
-    Start-Sleep 10
-    Get-IndexerStatus
-}
-
-#Clear Variables
-if ( Get-Variable a -ErrorAction SilentlyContinue ) { Clear-Variable a }
-if ( Get-Variable b -ErrorAction SilentlyContinue ) { Clear-Variable b }
-if ( Get-Variable c -ErrorAction SilentlyContinue ) { Clear-Variable c }
-
-#Start Sidechain Node
-$API = $sideChainAPIPort
-Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
-if ( $NodeType -eq "50K" ) 
-{
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
-}
-    Else
-    {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort" -PassThru
-    }
-
-#Wait for API
-While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
-{
-    Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
-    Start-Sleep 3
-    if ( $StartNode.HasExited -eq $true )
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-}
-
-#Wait for BlockStore Feature
-While ( ( Get-BlockStoreStatus ) -ne "Initialized" )  
-{ 
-    Write-Host (Get-TimeStamp) "Waiting for BlockStore to Initialize..." -ForegroundColor Yellow
-    Start-Sleep 10
-    if ( $StartNode.HasExited -eq $true )
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-}
-
-#Wait for IBD
-While ( ( Get-MaxHeight ) -eq $null ) 
-{
-Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
-Start-Sleep 10
-}
-
-While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) ) 
-{
-    $a = Get-MaxHeight
-    $b = Get-LocalHeight 
-    $c = $a - $b
-    ""
-    Write-Host (Get-TimeStamp) "The Local Synced Height is $b" -ForegroundColor Yellow
-    Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
-    Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
-    Start-Sleep 10
-}
-
-#Mining Wallet Creation
-
-$WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
-if ( $WalletNames -eq $null )
-{
-    $CirrusMiningWallet = Read-Host "Please enter your Cirrus Mining Wallet name"
-    Clear-Host
-
-    $WalletNames = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/list-wallets -UseBasicParsing | Select-Object -ExpandProperty content | ConvertFrom-Json | Select-Object -ExpandProperty walletNames
-    if ( -not ( $WalletNames -contains $CirrusMiningWallet ) ) 
-    {
-        Write-Host (Get-TimeStamp) "Creating Mining Wallet" -ForegroundColor Cyan
-        $Body = @{} 
-        $Body.Add("name", $CirrusMiningWallet)
-
-        if ( $NodeType -eq "50K" )
-        {    
-            $Body.Add("password",$multiSigPassword)
-            $Body.Add("passphrase",$multiSigPassword)
-            $Body.Add("mnemonic",$multiSigMnemonic)
-            $Body = $Body | ConvertTo-Json
-            Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json" | Out-Null
-        }
-            Else
-            {
-                $Body.Add("password",$miningPassword)
-                $Body.Add("passphrase",$miningPassword)
-                $Body = $Body | ConvertTo-Json
-                $CreateWallet = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/Wallet/create -Method Post -Body $Body -ContentType "application/json"
-                $Mnemonic = ($CreateWallet.Content).Trim('"')
-                Write-Host (Get-TimeStamp) INFO: A Mining Wallet has now been created, please take a note of the below recovery words -ForegroundColor Yellow
-                ""
-                $Mnemonic
-                ""
-                Write-Host (Get-TimeStamp) INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss -ForegroundColor Cyan
-
-                $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
-                While ( $ReadyToContinue -ne "Yes" -and $ReadyToContinue -ne "No" )
-                {
-                    ""
-                    $ReadyToContinue = Read-Host -Prompt "Have you written down your words? Enter 'Yes' to continue or 'No' to exit the script"
-                    ""
-                }
-                Switch ( $ReadyToContinue )
-                {
-                    Yes 
-                    {
-                        Write-Host (Get-TimeStamp) "INFO: Please take note of these words as they will be required to restore your wallet in the event of data loss" -ForegroundColor Green
-                    }
-                
-                    No 
-                    { 
-                        Write-Host (Get-TimeStamp) "WARNING: You have said No.. In the event of data loss your wallet will be unrecoverable unless you have taken a backup of the wallet database" -ForegroundColor Red
-                        Start-Sleep 60
-                        Exit
-                    }
-                }
-            }
-    }
-}
-if ( $NodeType -eq "50K" )
-{
-    #Enable Federation
-    Write-Host (Get-TimeStamp) "Enabling Federation" -ForegroundColor Cyan
-
-    $Body = @{} 
-    $Body.Add("password",$multiSigPassword)
-    $Body.Add("passphrase",$multiSigPassword)
-    $Body.Add("mnemonic",$multiSigMnemonic)
-    $Body = $Body | ConvertTo-Json
-
-    Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/FederationWallet/enable-federation -Method Post -Body $Body -ContentType "application/json" | Out-Null
-    Write-Host (Get-TimeStamp) "Sidechain Gateway Enabled" -ForegroundColor Cyan
-
-    Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/FederationWallet/enable-federation -Method Post -Body $Body -ContentType "application/json" | Out-Null
-    Write-Host (Get-TimeStamp) "Mainchain Gateway Enabled" -ForegroundColor Cyan
-
-    #Checking Mainchain Federation Status
-    $MainchainFedInfo = Invoke-WebRequest -Uri http://localhost:$mainChainAPIPort/api/FederationGateway/info | Select-Object -ExpandProperty Content | ConvertFrom-Json
-    if ( $MainchainFedInfo.active -ne "True" )
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Federation Inactive! Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-
-    #Checking Sidechain Federation Status
-    $SidechainFedInfo = Invoke-WebRequest -Uri http://localhost:$sideChainAPIPort/api/FederationGateway/info | Select-Object -ExpandProperty Content | ConvertFrom-Json
-    if ( $SidechainFedInfo.active -ne "True" )
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Federation Inactive, ensure correct mnemonic words were entered. Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-}
-
-#Checking Node Ports
-if ( ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort ) -and ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort ) )
-{
-    Write-Host (Get-TimeStamp) "SUCCESS: Masternode is running" -ForegroundColor Green
-    Start-Sleep 10
-}
-    Else
-    {
-        Write-Host (Get-TimeStamp) "ERROR: Cannot connect to nodes! Please contact support in Discord" -ForegroundColor Red
-        Start-Sleep 30
-        Exit
-    }
-
-""
-#Launching Masternode Dashboard
-<#
-Set-Location $stratisMasternodeDashboardCloneDir
-if ( $NodeType -eq "50K" )
-{
-    Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (50K Mode)" -ForegroundColor Cyan
-    $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-    While ( $Clean.HasExited -ne $true )  
-    {
-        Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-        Start-Sleep 3
-    }
-    Start-Process dotnet.exe -ArgumentList "run -c Release -- --nodetype 50K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
-}
-    Else
-    {
-        Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (10K Mode)" -ForegroundColor Cyan
-        $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-        While ( $Clean.HasExited -ne $true ) 
-        {
-            Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-            Start-Sleep 3
-        }
-        Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
-    }
-
-While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue ) )
-{
-    Write-Host (Get-TimeStamp) "Waiting for Stratis Masternode Dashboard..." -ForegroundColor Yellow
-    Start-Sleep 3
-}
-
-Start-Process http://localhost:37000
-Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -ForegroundColor Green
-#>
-
-Exit
+#Call Launch Script
+Set-Location $cloneDir\Scripts\
+& '.\LaunchSidechainMasternode.ps1'
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUpLT2XNjfdfG7wkM/TA0UCa7y
-# QCigggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUo/xfOiic54O3ekqU6WhLDRJQ
+# T9KgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -756,11 +218,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFDd72GMvQ5jU
-# Ko8zm+z746qFZpnEMA0GCSqGSIb3DQEBAQUABIIBAJ22B8aTj2I7alBnsD7cHc2G
-# sYdznFgXq7pn4c3j1mrb7GX+YKaYZLeWw9DcIHoI4RbREMWFjOsZXnR3M644NCHS
-# QnChPR0ZgJR5/Iiyaa7x7wK+nG1F/AwJJMR7Q3RNqaTVBa1b77ROp1b75Emk80pe
-# rUx3F3hpVLUfHtCpoUdz2fP9AzlO5ibsjlaY2i7427wqKpwLZdR5NicwjqYaRJH1
-# 1wNAnl5X0dRav3v4Tp1lTy7t45pDBAKNqXGm36wJlfih7E9pmEIFI1BGd119i5gY
-# /gWaBL0hu0htSNkFo33N4RnHT25by+AA36Ky/LGXHYRhSdrnBxA/hnnNwv1Fz/k=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFGGCCye77Gwh
+# Dgqj6ecZUFnqRCdDMA0GCSqGSIb3DQEBAQUABIIBAELjVMIgVKQaYn3kY46j20Gg
+# +vK5L/IZS+i10utfdYO39x3jIcSGn0uJAzi/MM8Lmhg4oTToIJSxRIUWfv/5O3hA
+# sqVoLhRwe5kbZ2gw82O2y+ADYI9INsu8Z0uEO0PCgIlxgdeTvky2EtA7VB5kHGZf
+# jUwY2DWcN6FJvIMYpQ/9K8R0qVzX6g2sHozCzpxnDFs+wmfeoVy/Yhkq5CgZMthH
+# yxhVW5cDzMMwYDVyFO6w6YH7rJMWMzmwrELFgqRMuXvixBe/JEq35OpjszPDmOS2
+# LCiMA13cyrisVgFWGr22ZGng+PGObwy0KBsZR5Tn2PacyMM0ndhxJ5jeNxKYezU=
 # SIG # End signature block
