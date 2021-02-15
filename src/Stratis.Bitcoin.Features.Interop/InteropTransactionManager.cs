@@ -9,6 +9,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly object lockObject = new object();
 
+        public InteropTransactionManager()
+        {
+            this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
+        }
+
         public void AddVote(string requestId, BigInteger transactionId)
         {
             lock (this.lockObject)
