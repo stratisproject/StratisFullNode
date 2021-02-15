@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Stratis.Bitcoin.Networks\Stratis.Bitcoin.Networks.csproj" />
     <ProjectReference Include="..\Stratis.Features.Collateral\Stratis.Features.Collateral.csproj" />
     <ProjectReference Include="..\Stratis.Features.FederatedPeg\Stratis.Features.FederatedPeg.csproj" />
+    <ProjectReference Include="..\Stratis.Bitcoin.Features.Interop\Stratis.Bitcoin.Features.Interop.csproj" />
     <ProjectReference Include="..\Stratis.Features.SQLiteWalletRepository\Stratis.Features.SQLiteWalletRepository.csproj" />
     <ProjectReference Include="..\Stratis.Sidechains.Networks\Stratis.Sidechains.Networks.csproj" />
   </ItemGroup>

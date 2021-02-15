@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public interface IInteropRequestRepository
     {

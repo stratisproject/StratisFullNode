@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -26,17 +27,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// </summary>
         /// <param name="network">Network we are running on.</param>
         /// <param name="federatedPegSettings">Federation settings providing access to number of signatures required.</param>
+        /// /// <param name="conversionRequestRepository">Repository containing all cross-network mint and burn transactions.</param>
         /// <param name="mempoolManager">Mempool which provides information about transactions in the mempool.</param>
         /// <param name="counterChainNetworkWrapper">Counter chain network.</param>
         public WithdrawalHistoryProvider(
             Network network,
             IFederatedPegSettings federatedPegSettings,
+            IConversionRequestRepository conversionRequestRepository,
             MempoolManager mempoolManager,
             CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             this.network = network;
             this.federatedPegSettings = federatedPegSettings;
-            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, new OpReturnDataReader(counterChainNetworkWrapper), network);
+            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, conversionRequestRepository, new OpReturnDataReader(counterChainNetworkWrapper), network);
             this.mempoolManager = mempoolManager;
         }
 

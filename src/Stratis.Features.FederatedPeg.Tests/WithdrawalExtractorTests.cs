@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
+using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Networks;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
@@ -14,6 +15,8 @@ namespace Stratis.Features.FederatedPeg.Tests
     public class WithdrawalExtractorTests
     {
         private readonly IFederatedPegSettings settings;
+
+        private readonly IConversionRequestRepository repository;
 
         private readonly IOpReturnDataReader opReturnDataReader;
 
@@ -36,6 +39,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.settings = Substitute.For<IFederatedPegSettings>();
+            this.repository = Substitute.For<IConversionRequestRepository>();
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
 
             this.addressHelper = new MultisigAddressHelper(this.network, this.counterChainNetwork);
@@ -49,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.transactionBuilder = new TestMultisigTransactionBuilder(this.addressHelper);
 
             this.withdrawalExtractor = new WithdrawalExtractor(
-                this.settings, this.opReturnDataReader, this.network);
+                this.settings, this.repository, this.opReturnDataReader, this.network);
         }
 
         // TODO: Will depend on decision made on backlog issue https://github.com/stratisproject/FederatedSidechains/issues/124

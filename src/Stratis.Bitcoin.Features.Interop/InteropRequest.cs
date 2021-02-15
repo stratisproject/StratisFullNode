@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public enum InteropRequestType
     {

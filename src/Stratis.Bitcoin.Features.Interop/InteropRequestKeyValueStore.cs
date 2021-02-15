@@ -3,23 +3,32 @@ using System.IO;
 using System.Text;
 using LevelDB;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
-    public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
+    /// <summary>
+    /// This is implemented separately to <see cref="KeyValueRepository"/> so that the repository can live in its own folder on disk.
+    /// </summary>
+    public interface IInteropRequestKeyValueStore : IKeyValueRepository
+    {
+        List<InteropRequest> GetAll(int type, bool onlyUnprocessed);
+    }
+
+    public class InteropRequestKeyValueStore : IInteropRequestKeyValueStore
     {
         /// <summary>Access to database.</summary>
         private readonly DB leveldb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        public ConversionRequestKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.InteropRepositoryPath, dBreezeSerializer)
+        public InteropRequestKeyValueStore(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer) : this(dataFolder.InteropRepositoryPath, dBreezeSerializer)
         {
         }
 
-        public ConversionRequestKeyValueStore(string folder, DBreezeSerializer dBreezeSerializer)
+        public InteropRequestKeyValueStore(string folder, DBreezeSerializer dBreezeSerializer)
         {
             Directory.CreateDirectory(folder);
             this.dBreezeSerializer = dBreezeSerializer;
@@ -29,9 +38,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.leveldb = new DB(options, folder);
         }
 
-        public List<ConversionRequest> GetAll(int type, bool onlyUnprocessed)
+        public List<InteropRequest> GetAll(int type, bool onlyUnprocessed)
         {
-            var values = new List<ConversionRequest>();
+            var values = new List<InteropRequest>();
             IEnumerator<KeyValuePair<byte[], byte[]>> enumerator = this.leveldb.GetEnumerator();
 
             while (enumerator.MoveNext())
@@ -41,7 +50,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
                 if (value == null)
                     continue;
 
-                ConversionRequest deserialized = this.dBreezeSerializer.Deserialize<ConversionRequest>(value);
+                InteropRequest deserialized = this.dBreezeSerializer.Deserialize<InteropRequest>(value);
 
                 if (deserialized.RequestType != type)
                     continue;
@@ -55,6 +64,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             return values;
         }
 
+        /// <inheritdoc />
         public void SaveBytes(string key, byte[] bytes)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
@@ -62,11 +72,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.leveldb.Put(keyBytes, bytes);
         }
 
+        /// <inheritdoc />
         public void SaveValue<T>(string key, T value)
         {
             this.SaveBytes(key, this.dBreezeSerializer.Serialize(value));
         }
 
+        /// <inheritdoc />
         public void SaveValueJson<T>(string key, T value)
         {
             string json = Serializer.ToString(value);
@@ -75,6 +87,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             this.SaveBytes(key, jsonBytes);
         }
 
+        /// <inheritdoc />
         public byte[] LoadBytes(string key)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
@@ -87,6 +100,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             return row;
         }
 
+        /// <inheritdoc />
         public T LoadValue<T>(string key)
         {
             byte[] bytes = this.LoadBytes(key);
@@ -98,6 +112,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             return value;
         }
 
+        /// <inheritdoc />
         public T LoadValueJson<T>(string key)
         {
             byte[] bytes = this.LoadBytes(key);
@@ -112,6 +127,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Interop
             return value;
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             this.leveldb.Dispose();

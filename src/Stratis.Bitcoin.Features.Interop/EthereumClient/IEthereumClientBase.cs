@@ -1,11 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
-using Stratis.Bitcoin.Features.SmartContracts.Interop.Models;
+using Nethereum.Contracts;
+using Stratis.Bitcoin.Features.Interop.Models;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
     public interface IEthereumClientBase
     {
+        List<EventLog<TransferEventDTO>> GetTransferEventsForWrappedStrax();
+
+        string GetDestinationAddress(string address);
+
+        BigInteger GetBlockHeight();
+
         /// <summary>
         /// Submits a transaction to the multisig wallet contract, to enable it to be separately confirmed by a quorum of the multisig wallet owners.
         /// </summary>

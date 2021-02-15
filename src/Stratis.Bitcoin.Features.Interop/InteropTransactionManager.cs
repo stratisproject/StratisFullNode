@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropTransactionManager : IInteropTransactionManager
     {

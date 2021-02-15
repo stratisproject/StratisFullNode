@@ -1,13 +1,11 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.Interop
+namespace Stratis.Bitcoin.Features.FederatedPeg
 {
     public class ConversionRequestRepository : IConversionRequestRepository
     {
-        private const string TableName = "ConversionRequests";
-
-        public IConversionRequestKeyValueStore KeyValueStore { get; }
+        private IConversionRequestKeyValueStore KeyValueStore { get; }
 
         private readonly ILogger logger;
 
