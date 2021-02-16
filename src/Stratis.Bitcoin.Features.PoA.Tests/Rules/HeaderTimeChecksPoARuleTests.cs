@@ -61,11 +61,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
         public void EnsureTimestampIsNotTooNew()
         {
             long timestamp = new DateTimeProvider().GetUtcNow().ToUnixTimestamp() / this.consensusOptions.TargetSpacingSeconds * this.consensusOptions.TargetSpacingSeconds;
-            DateTimeOffset time = DateTimeOffset.FromUnixTimeSeconds(timestamp);
+            DateTime time = DateTimeOffset.FromUnixTimeSeconds(timestamp).DateTime;
 
             // Pretend we receive the next block right on its timestamp
             var provider = new Mock<IDateTimeProvider>();
-            provider.Setup(x => x.GetAdjustedTimeAsUnixTimestamp()).Returns(timestamp + this.consensusOptions.TargetSpacingSeconds);
+            provider.Setup(x => x.GetAdjustedTime()).Returns(time + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds));
 
             this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, provider.Object, this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
                 this.consensusSettings, new Checkpoints(this.network, this.consensusSettings), new Mock<ICoinView>().Object, new ChainState(), new InvalidBlockHashStore(provider.Object),
@@ -80,14 +80,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
 
             ChainedHeader prevHeader = this.currentHeader.Previous;
 
-            prevHeader.Header.Time = (uint)time.ToUnixTimeSeconds();
+            prevHeader.Header.BlockTime = time;
 
             // There is no "valid future offset" as the time is restricted to be accurate within 1 target spacing.
-            this.currentHeader.Header.Time = prevHeader.Header.Time + this.consensusOptions.TargetSpacingSeconds;
+            this.currentHeader.Header.BlockTime = prevHeader.Header.BlockTime + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds);
             this.timeChecksRule.Run(ruleContext);
 
             // Send a block too far into the future, more than a targetspacing away
-            this.currentHeader.Header.Time = this.currentHeader.Header.Time + this.consensusOptions.TargetSpacingSeconds;
+            this.currentHeader.Header.BlockTime = this.currentHeader.Header.BlockTime + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds);
             Assert.Throws<ConsensusErrorException>(() => this.timeChecksRule.Run(ruleContext));
 
             try
