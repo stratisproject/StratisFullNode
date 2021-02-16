@@ -4,6 +4,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.ColdStaking;
@@ -32,10 +33,15 @@ namespace Stratis.StraxD
                     MinProtocolVersion = ProtocolVersion.PROVEN_HEADER_VERSION
                 };
 
+                // Set the console window title to identify this as a Strax full node (for clarity when running Strax and Cirrus on the same machine).
+                Console.Title = $"Strax Full Node {nodeSettings.Network.NetworkType}";
+
+                DbType dbType = nodeSettings.GetDbType();
+
                 IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
-                    .UseNodeSettings(nodeSettings)
-                    .UseBlockStore()
-                    .UsePosConsensus()
+                    .UseNodeSettings(nodeSettings, dbType)
+                    .UseBlockStore(dbType)
+                    .UsePosConsensus(dbType)
                     .UseMempool()
                     .UseColdStakingWallet()
                     .AddSQLiteWalletRepository()

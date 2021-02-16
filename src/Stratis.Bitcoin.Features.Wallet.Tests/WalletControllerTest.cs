@@ -405,7 +405,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [Fact]
         public async Task RecoverWalletWithExceptionReturnsBadRequest()
         {
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock => {
+            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
+            {
                 mock.Setup(w => w.RecoverWallet(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                         It.IsAny<DateTime>(), null, null))
                     .Throws(new FormatException("Formatting failed."));
@@ -768,7 +769,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             string walletName = "myWallet";
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount)).Returns(
+                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null)).Returns(
                     new List<AccountHistory>
                     {
                         new AccountHistory
@@ -815,7 +816,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount))
+                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
                     .Returns(accountsHistory));
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
 
@@ -891,7 +892,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
 
-            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount))
+            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
                 .Returns(accountsHistory);
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
 
@@ -957,7 +958,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
 
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount))
+                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
                     .Returns(accountsHistory));
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
 
@@ -1037,7 +1038,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
 
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount))
+                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
                     .Returns(accountsHistory));
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
 
@@ -1140,7 +1141,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(w => w.GetWallet(walletName)).Returns(wallet));
-            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount))
+            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
                 .Returns(accountsHistory);
 
             var controller = this.GetWalletController();
@@ -1177,7 +1178,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             string walletName = "myWallet";
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory("myWallet", WalletManager.DefaultAccount))
+                mock.Setup(w => w.GetHistory("myWallet", WalletManager.DefaultAccount, null))
                     .Throws(new InvalidOperationException("Issue retrieving wallets.")));
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(new Wallet());
 
@@ -1254,8 +1255,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var mockWalletManager = this.ConfigureMock<IWalletManager>();
 
             var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-            mockWalletManager.Setup(w =>
-                w.GetHistory(walletName, WalletManager.DefaultAccount)).Returns(accountsHistory);
+            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null)).Returns(accountsHistory);
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
 
             var controller = this.GetWalletController();

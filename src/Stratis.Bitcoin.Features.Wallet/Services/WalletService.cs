@@ -186,8 +186,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletHistoryModel> GetHistory(WalletHistoryRequest request,
-            CancellationToken cancellationToken)
+        public async Task<WalletHistoryModel> GetHistory(WalletHistoryRequest request, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
             {
@@ -195,9 +194,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 // Get a list of all the transactions found in an account (or in a wallet if no account is specified), with the addresses associated with them.
                 IEnumerable<AccountHistory> accountsHistory = request.Take == null
-                    ? this.walletManager.GetHistory(request.WalletName, request.AccountName)
-                    : this.walletManager.GetHistory(request.WalletName, request.AccountName, request.PrevOutputTxTime,
-                        request.PrevOutputIndex, request.Take);
+                    ? this.walletManager.GetHistory(request.WalletName, request.AccountName, request.SearchQuery)
+                    : this.walletManager.GetHistory(request.WalletName, request.AccountName, request.PrevOutputTxTime, request.PrevOutputIndex, request.Take);
 
                 foreach (AccountHistory accountHistory in accountsHistory)
                 {
@@ -230,8 +228,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                     // Represents a sublist of transactions associated with receive addresses + a sublist of already spent transactions associated with change addresses.
                     // In effect, we filter out 'change' transactions that are not spent, as we don't want to show these in the history.
-                    foreach (FlatHistory item in items.Where(t =>
-                        !t.Address.IsChangeAddress() || (t.Address.IsChangeAddress() && t.Transaction.IsSpent())))
+                    foreach (FlatHistory item in items.Where(t => !t.Address.IsChangeAddress() || (t.Address.IsChangeAddress() && t.Transaction.IsSpent())))
                     {
                         // Count only unique transactions and limit it to MaxHistoryItemsPerAccount.
                         int processedTransactions = uniqueProcessedTxIds.Count;
@@ -653,10 +650,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 var recipients = new List<Recipient>();
 
+                bool seenSubtractFlag = false;
                 foreach (RecipientModel recipientModel in request.Recipients)
                 {
                     if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
                         throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
+
+                    if (recipientModel.SubtractFeeFromAmount)
+                    {
+                        if (seenSubtractFlag)
+                        {
+                            throw new FeatureException(HttpStatusCode.BadRequest, "Multiple fee subtraction recipients.", "The transaction fee can only be removed from a single output.");
+                        }
+
+                        seenSubtractFlag = true;
+                    }
 
                     Script destination;
 
@@ -672,7 +680,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     recipients.Add(new Recipient
                     {
                         ScriptPubKey = destination,
-                        Amount = recipientModel.Amount
+                        Amount = recipientModel.Amount,
+                        SubtractFeeFromAmount = recipientModel.SubtractFeeFromAmount
                     });
                 }
 
@@ -1208,10 +1217,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 var recipients = new List<Recipient>();
 
+                bool seenSubtractFlag = false;
                 foreach (RecipientModel recipientModel in request.Recipients)
                 {
                     if (string.IsNullOrWhiteSpace(recipientModel.DestinationAddress) && string.IsNullOrWhiteSpace(recipientModel.DestinationScript))
                         throw new FeatureException(HttpStatusCode.BadRequest, "No recipient address.", "Either a destination address or script must be specified.");
+
+                    if (recipientModel.SubtractFeeFromAmount)
+                    {
+                        if (seenSubtractFlag)
+                        {
+                            throw new FeatureException(HttpStatusCode.BadRequest, "Multiple fee subtraction recipients.", "The transaction fee can only be removed from a single output.");
+                        }
+
+                        seenSubtractFlag = true;
+                    }
 
                     Script destination;
 
@@ -1227,7 +1247,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     recipients.Add(new Recipient
                     {
                         ScriptPubKey = destination,
-                        Amount = recipientModel.Amount
+                        Amount = recipientModel.Amount,
+                        SubtractFeeFromAmount = recipientModel.SubtractFeeFromAmount
                     });
                 }
 
@@ -1389,11 +1410,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 if (!string.IsNullOrWhiteSpace(request.SingleAddress))
                 {
-                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                    utxos = this.walletManager.GetSpendableTransactionsInWallet(request.WalletName, 1).Where(u => u.Address.Address == request.SingleAddress || u.Address.Address == request.SingleAddress).OrderBy(u2 => u2.Transaction.Amount).ToList();
                 }
                 else
                 {
-                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference).OrderBy(u2 => u2.Transaction.Amount).ToList();
+                    utxos = this.walletManager.GetSpendableTransactionsInAccount(accountReference, 1).OrderBy(u2 => u2.Transaction.Amount).ToList();
                 }
 
                 if (utxos.Count == 0)
@@ -1488,6 +1509,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
 
+                if (request.Broadcast)
+                {
+                    this.broadcasterManager.BroadcastTransactionAsync(transaction);
+                }
+
                 return transaction.ToHex();
             }, cancellationToken);
         }
@@ -1498,15 +1524,20 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             return size <= (0.95m * this.network.Consensus.Options.MaxStandardTxWeight);
         }
 
-        private int GetTransactionSizeForUtxoCount(List<UnspentOutputReference> utxos, int count, WalletAccountReference accountReference, Script destination)
+        private int GetTransactionSizeForUtxoCount(List<UnspentOutputReference> utxos, int targetCount, WalletAccountReference accountReference, Script destination)
         {
             Money totalToSend = Money.Zero;
             var outpoints = new List<OutPoint>();
 
-            foreach (var utxo in utxos)
+            int count = 0;
+            foreach (UnspentOutputReference utxo in utxos)
             {
+                if (count >= targetCount)
+                    break;
+
                 totalToSend += utxo.Transaction.Amount;
                 outpoints.Add(utxo.ToOutPoint());
+                count++;
             }
 
             var context = new TransactionBuildContext(this.network)

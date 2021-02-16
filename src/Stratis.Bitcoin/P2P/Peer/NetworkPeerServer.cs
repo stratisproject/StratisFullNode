@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -123,13 +124,13 @@ namespace Stratis.Bitcoin.P2P.Peer
         /// <summary>
         /// Starts listening on the server's initialized endpoint.
         /// </summary>
-        public void Listen()
+        public void Listen(IReadOnlyNetworkPeerCollection networkPeers, List<IPEndPoint> iprangeFilteringExclusions)
         {
             try
             {
                 this.tcpListener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 this.tcpListener.Start();
-                this.acceptTask = this.AcceptClientsAsync();
+                this.acceptTask = this.AcceptClientsAsync(networkPeers, iprangeFilteringExclusions);
             }
             catch (Exception e)
             {
@@ -141,7 +142,7 @@ namespace Stratis.Bitcoin.P2P.Peer
         /// <summary>
         /// Implements loop accepting connections from newly connected clients.
         /// </summary>
-        private async Task AcceptClientsAsync()
+        private async Task AcceptClientsAsync(IReadOnlyNetworkPeerCollection networkPeers, List<IPEndPoint> iprangeFilteringExclusions)
         {
             this.logger.LogDebug("Accepting incoming connections.");
 
@@ -151,7 +152,7 @@ namespace Stratis.Bitcoin.P2P.Peer
                 {
                     TcpClient tcpClient = await this.tcpListener.AcceptTcpClientAsync().WithCancellationAsync(this.serverCancel.Token).ConfigureAwait(false);
 
-                    (bool successful, string reason) = this.AllowClientConnection(tcpClient);
+                    (bool successful, string reason) = this.AllowClientConnection(tcpClient, networkPeers, iprangeFilteringExclusions);
                     if (!successful)
                     {
                         this.signals.Publish(new PeerConnectionAttemptFailed(true, (IPEndPoint)tcpClient.Client.RemoteEndPoint, reason));
@@ -210,10 +211,17 @@ namespace Stratis.Bitcoin.P2P.Peer
         /// Check if the client is allowed to connect based on certain criteria.
         /// </summary>
         /// <returns>When criteria is met returns <c>true</c>, to allow connection.</returns>
-        private (bool successful, string reason) AllowClientConnection(TcpClient tcpClient)
+        private (bool successful, string reason) AllowClientConnection(TcpClient tcpClient, IReadOnlyNetworkPeerCollection networkPeers, List<IPEndPoint> iprangeFilteringExclusions)
         {
             // This is the IP address of the client connection.
             var clientRemoteEndPoint = tcpClient.Client.RemoteEndPoint as IPEndPoint;
+
+            var isFromSameNetworkGroup = this.CheckIfPeerFromSameNetworkGroup(networkPeers, clientRemoteEndPoint, iprangeFilteringExclusions);
+            if (isFromSameNetworkGroup)
+            {
+                this.logger.LogTrace("(-)[PEER_SAME_NETWORK_GROUP]:false");
+                return (false, $"Inbound Refused: Peer {clientRemoteEndPoint} is from the same network group.");
+            }
 
             var peers = this.peerAddressManager.FindPeersByIp(clientRemoteEndPoint);
             var bannedPeer = peers.FirstOrDefault(p => p.IsBanned(this.dateTimeProvider.GetUtcNow()));
@@ -259,6 +267,60 @@ namespace Stratis.Bitcoin.P2P.Peer
             this.logger.LogInformation("Node '{0}' is not whitelisted via endpoint '{1}' during initial block download.", clientRemoteEndPoint, clientLocalEndPoint);
 
             return (false, "Inbound Refused: Non Whitelisted endpoint connected during IBD.");
+        }
+
+        /// <summary>
+        /// Determines if the peer should be disconnected.
+        /// Peer should be disconnected in case it's IP is from the same group in which any other peer
+        /// is and the peer wasn't added using -connect or -addNode command line arguments.
+        /// </summary>
+        private bool CheckIfPeerFromSameNetworkGroup(IReadOnlyNetworkPeerCollection networkPeers, IPEndPoint ipEndpoint, List<IPEndPoint> iprangeFilteringExclusions)
+        {
+            // Don't disconnect if range filtering is not turned on.
+            if (!this.connectionManagerSettings.IpRangeFiltering)
+            {
+                this.logger.LogTrace("(-)[IP_RANGE_FILTERING_OFF]:false");
+                return false;
+            }
+
+            // Don't disconnect if this peer has a local host address.
+            if (ipEndpoint.Address.IsLocal())
+            {
+                this.logger.LogTrace("(-)[IP_IS_LOCAL]:false");
+                return false;
+            }
+
+            // Don't disconnect if this peer is in -addnode or -connect.
+            if (this.connectionManagerSettings.RetrieveAddNodes().Union(this.connectionManagerSettings.Connect).Any(ep => ipEndpoint.MatchIpOnly(ep)))
+            {
+                this.logger.LogTrace("(-)[ADD_NODE_OR_CONNECT]:false");
+                return false;
+            }
+
+            // Don't disconnect if this peer is in the exclude from IP range filtering group.
+            if (iprangeFilteringExclusions.Any(ip => ip.MatchIpOnly(ipEndpoint)))
+            {
+                this.logger.LogTrace("(-)[PEER_IN_IPRANGEFILTER_EXCLUSIONS]:false");
+                return false;
+            }
+
+            byte[] peerGroup = ipEndpoint.MapToIpv6().Address.GetGroup();
+
+            foreach (INetworkPeer connectedPeer in networkPeers)
+            {
+                if (ipEndpoint == connectedPeer.PeerEndPoint)
+                    continue;
+
+                byte[] group = connectedPeer.PeerEndPoint.MapToIpv6().Address.GetGroup();
+
+                if (peerGroup.SequenceEqual(group))
+                {
+                    this.logger.LogTrace("(-)[SAME_GROUP]:true");
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

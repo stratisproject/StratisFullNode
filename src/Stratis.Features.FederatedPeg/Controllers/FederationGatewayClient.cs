@@ -32,14 +32,14 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ILoggerFactory loggerFactory,
             ICounterChainSettings counterChainSettings,
             IHttpClientFactory httpClientFactory)
-            : base(loggerFactory, httpClientFactory, counterChainSettings.CounterChainApiPort, "FederationGateway", $"http://{counterChainSettings.CounterChainApiHost}")
+            : base(httpClientFactory, counterChainSettings.CounterChainApiPort, "FederationGateway", $"http://{counterChainSettings.CounterChainApiHost}")
         {
         }
 
         /// <inheritdoc />
         public Task<SerializableResult<List<MaturedBlockDepositsModel>>> GetMaturedBlockDepositsAsync(int height, CancellationToken cancellation = default)
         {
-            return this.SendGetRequestAsync<SerializableResult<List<MaturedBlockDepositsModel>>>(FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, $"h={height}", cancellation);
+            return this.SendGetRequestAsync<SerializableResult<List<MaturedBlockDepositsModel>>>(FederationGatewayRouteEndPoint.GetMaturedBlockDeposits, $"blockHeight={height}", cancellation);
         }
     }
 }

@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
@@ -106,7 +107,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             testChainContext.DateTimeProvider = DateTimeProvider.Default;
 
             testChainContext.Signals = new Signals.Signals(testChainContext.NodeSettings.LoggerFactory, null);
-            testChainContext.AsyncProvider = new AsyncProvider(testChainContext.NodeSettings.LoggerFactory, testChainContext.Signals, new Mock<INodeLifetime>().Object);
+            testChainContext.AsyncProvider = new AsyncProvider(testChainContext.NodeSettings.LoggerFactory, testChainContext.Signals);
 
             network.Consensus.Options = new ConsensusOptions();
             //new FullNodeBuilderConsensusExtension.PowConsensusRulesRegistration().RegisterRules(network.Consensus);
@@ -118,7 +119,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             testChainContext.InitialBlockDownloadState = new InitialBlockDownloadState(testChainContext.ChainState, testChainContext.Network, consensusSettings, new Checkpoints(), testChainContext.NodeSettings.LoggerFactory, testChainContext.DateTimeProvider);
 
             var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(testChainContext.ChainIndexer.Tip));
-            var cachedCoinView = new CachedCoinView(network, new Checkpoints(), inMemoryCoinView, DateTimeProvider.Default, testChainContext.LoggerFactory, new NodeStats(testChainContext.DateTimeProvider, testChainContext.LoggerFactory), new ConsensusSettings(testChainContext.NodeSettings));
+            var cachedCoinView = new CachedCoinView(network, new Checkpoints(), inMemoryCoinView, DateTimeProvider.Default, testChainContext.LoggerFactory, new NodeStats(testChainContext.DateTimeProvider, testChainContext.NodeSettings, new Mock<IVersionProvider>().Object), new ConsensusSettings(testChainContext.NodeSettings));
 
             var dataFolder = new DataFolder(TestBase.AssureEmptyDir(dataDir).FullName);
             testChainContext.PeerAddressManager =
@@ -139,7 +140,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             var deployments = new NodeDeployments(testChainContext.Network, testChainContext.ChainIndexer);
             testChainContext.ConsensusRules = new PowConsensusRuleEngine(testChainContext.Network, testChainContext.LoggerFactory, testChainContext.DateTimeProvider,
                 testChainContext.ChainIndexer, deployments, consensusSettings, testChainContext.Checkpoints, cachedCoinView, testChainContext.ChainState,
-                    new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, testChainContext.LoggerFactory), testChainContext.AsyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
+                    new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, testChainContext.NodeSettings, new Mock<IVersionProvider>().Object), testChainContext.AsyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
 
             testChainContext.HeaderValidator = new HeaderValidator(testChainContext.ConsensusRules, testChainContext.LoggerFactory);
             testChainContext.IntegrityValidator = new IntegrityValidator(testChainContext.ConsensusRules, testChainContext.LoggerFactory);
@@ -148,12 +149,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
 
             var dBreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
 
-            var blockRepository = new BlockRepository(testChainContext.Network, dataFolder, testChainContext.LoggerFactory, dBreezeSerializer);
+            var blockRepository = new LevelDbBlockRepository(testChainContext.Network, dataFolder, dBreezeSerializer);
 
             var blockStoreFlushCondition = new BlockStoreQueueFlushCondition(testChainContext.ChainState, testChainContext.InitialBlockDownloadState);
 
             var blockStore = new BlockStoreQueue(testChainContext.ChainIndexer, testChainContext.ChainState, blockStoreFlushCondition, new Mock<StoreSettings>().Object,
-                blockRepository, testChainContext.LoggerFactory, new Mock<INodeStats>().Object, testChainContext.AsyncProvider);
+                blockRepository, testChainContext.LoggerFactory, new Mock<INodeStats>().Object, testChainContext.AsyncProvider, testChainContext.InitialBlockDownloadState);
 
             blockStore.Initialize();
 

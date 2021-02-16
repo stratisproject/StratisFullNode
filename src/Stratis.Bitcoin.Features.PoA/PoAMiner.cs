@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
@@ -346,7 +347,7 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 if (this.network.ConsensusOptions.AutoKickIdleMembers)
                 {
-                   // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+                    // Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
                     this.idleFederationMembersKicker.Execute(this.consensusManager.Tip);
                 }
 
@@ -369,9 +370,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (account == null)
                 return null;
-            
+
             HdAddress address = account.ExternalAddresses.FirstOrDefault();
-            
+
             return address?.Pubkey;
         }
 
@@ -400,12 +401,12 @@ namespace Stratis.Bitcoin.Features.PoA
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
-            log.AppendLine();
-            log.AppendLine("======PoA Miner======");
+            log.AppendLine(">> Miner");
 
             if (this.ibdState.IsInitialBlockDownload())
             {
-                log.AppendLine($"Mining information is not available during IBD.");
+                log.AppendLine("Mining information is not available whilst the node is syncing.");
+                log.AppendLine("The node will mine once it reaches the network's height.");
                 log.AppendLine();
                 return;
             }
@@ -460,8 +461,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
             log.Append("...");
             log.AppendLine();
-            log.AppendLine($"Block producers hits      : {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
-            log.AppendLine($"Block producers idle time : {TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
+            log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
+            log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": { TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
             log.AppendLine();
         }
 

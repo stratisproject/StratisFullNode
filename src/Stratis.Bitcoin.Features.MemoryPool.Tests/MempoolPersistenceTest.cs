@@ -307,10 +307,10 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 consensusRulesContainer.FullValidationRules.Add(rule);
             }
 
-            var asyncProvider = new AsyncProvider(nodeSettings.LoggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(nodeSettings.LoggerFactory, new Mock<ISignals>().Object);
 
             ConsensusRuleEngine consensusRules = new PowConsensusRuleEngine(this.network, loggerFactory, dateTimeProvider, chain, deployments,
-                consensusSettings, new Checkpoints(), coins, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, loggerFactory), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
+                consensusSettings, new Checkpoints(), coins, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
             // The mempool rule constructors aren't parameterless, so we have to manually inject the dependencies for every rule
             var mempoolRules = new List<MempoolRule>

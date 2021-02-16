@@ -12,11 +12,13 @@ using NSubstitute.Core;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -76,13 +78,15 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private FederationGatewayController CreateController(IFederatedPegSettings federatedPegSettings)
         {
             var controller = new FederationGatewayController(
+                Substitute.For<IAsyncProvider>(),
+                new ChainIndexer(),
+                Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
                 this.federatedPegSettings,
                 this.federationWalletManager,
-                this.signedMultisigTransactionBroadcaster,
+                Substitute.For<IFullNode>(),
                 this.federationManager);
 
             return controller;
@@ -105,7 +109,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 return blocks;
             });
 
-            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, this.loggerFactory);
+            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings);
         }
 
         [Fact]
@@ -205,13 +209,15 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var federatedPegSettings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
+                Substitute.For<IAsyncProvider>(),
+                new ChainIndexer(),
+                Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.loggerFactory,
                 this.GetMaturedBlocksProvider(federatedPegSettings),
                 this.network,
                 federatedPegSettings,
                 this.federationWalletManager,
-                this.signedMultisigTransactionBroadcaster,
+                Substitute.For<IFullNode>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -248,8 +254,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         private VotingManager InitializeVotingManager(NodeSettings nodeSettings)
         {
             var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
-            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals, new Mock<INodeLifetime>().Object);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
+            var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
@@ -297,13 +303,15 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             var settings = new FederatedPegSettings(nodeSettings, new CounterChainNetworkWrapper(KnownNetworks.StraxRegTest));
 
             var controller = new FederationGatewayController(
+                Substitute.For<IAsyncProvider>(),
+                new ChainIndexer(),
+                Substitute.For<IConnectionManager>(),
                 this.crossChainTransferStore,
-                this.loggerFactory,
                 this.GetMaturedBlocksProvider(settings),
                 this.network,
                 settings,
                 this.federationWalletManager,
-                this.signedMultisigTransactionBroadcaster,
+                Substitute.For<IFullNode>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

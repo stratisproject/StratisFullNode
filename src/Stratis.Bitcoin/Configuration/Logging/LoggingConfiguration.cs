@@ -28,30 +28,38 @@ namespace Stratis.Bitcoin.Configuration.Logging
 
         public static ILoggerFactory Create()
         {
-            return ExtendedLoggerFactory.Create(builder =>
-                {
-                    builder.AddFilter("Default", LogLevel.Information)
-                        .AddFilter("System", LogLevel.Warning)
-                        .AddFilter("Microsoft", LogLevel.Warning)
-                        .AddFilter("Microsoft.AspNetCore", LogLevel.Error)
-                        .AddConsole();
-                }
+            return Create(builder =>
+            {
+                builder
+                    .AddFilter("Default", LogLevel.Information)
+                    .AddFilter("System", LogLevel.Warning)
+                    .AddFilter("Microsoft", LogLevel.Warning)
+                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error)
+                    .AddConsole();
+            }
             );
         }
 
         /// <summary>Loads the NLog.config file from the <see cref="DataFolder"/>, if it exists.</summary>
-        public static ILoggerFactory Create(LogSettings settings)
+        public static ILoggerFactory Create(LogSettings settings, DataFolder dataFolder)
         {
-            return ExtendedLoggerFactory.Create(builder =>
-                {
-                    LoggingConfiguration.ConfigureConsoleFilters(builder, settings);
-                    builder.AddFilter("Default", LogLevel.Information)
-                        .AddFilter("System", LogLevel.Warning)
-                        .AddFilter("Microsoft", LogLevel.Warning)
-                        .AddFilter("Microsoft.AspNetCore", LogLevel.Error)
-                        .AddConsole();
-                }
-            );
+            return Create(builder =>
+            {
+                LoggingConfiguration.ConfigureConsoleFilters(builder, settings);
+
+                builder
+                    .AddFilter("Default", LogLevel.Information)
+                    .AddFilter("System", LogLevel.Warning)
+                    .AddFilter("Microsoft", LogLevel.Warning)
+                    .AddFilter("Microsoft.AspNetCore", LogLevel.Error)
+                    .AddConsole();
+
+                string configPath = Path.Combine(dataFolder.RootPath, LoggingConfiguration.NLogConfigFileName);
+                if (File.Exists(configPath))
+                    builder.AddNLog(configPath);
+                else
+                    builder.AddNLog();
+            });
         }
     }
 
@@ -63,7 +71,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
         /// <summary>Width of a column for pretty console/log outputs.</summary>
         public const int ColumnLength = 24;
 
-        private const string NLogConfigFileName = "NLog.config";
+        public const string NLogConfigFileName = "NLog.config";
 
         /// <summary>Currently used node's log settings.</summary>
         private static LogSettings logSettings;

@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             this.nodeLifetime = new Mock<INodeLifetime>();
             this.walletRepository = Mock.Get(((WalletManager)this.walletManager.Object).WalletRepository);
             this.signals = new Signals.Signals(new LoggerFactory(), null);
-            this.asyncProvider = new AsyncProvider(new LoggerFactory(), this.signals, this.nodeLifetime.Object);
+            this.asyncProvider = new AsyncProvider(new LoggerFactory(), this.signals);
             this.walletSyncManager = new WalletSyncManager(this.LoggerFactory.Object, this.walletManager.Object, this.chainIndexer, this.Network,
                 this.blockStore.Object, this.storeSettings, this.signals, this.asyncProvider, this.nodeLifetime.Object);
             this.walletName = "test";

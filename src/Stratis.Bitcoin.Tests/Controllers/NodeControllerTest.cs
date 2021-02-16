@@ -13,8 +13,8 @@ using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
@@ -257,11 +257,8 @@ namespace Stratis.Bitcoin.Tests.Controllers
             var txId = new uint256(12142124);
             this.pooledTransaction.Setup(p => p.GetTransaction(txId))
                 .ReturnsAsync(transaction);
-            var blockStore = new Mock<IBlockStore>();
-            blockStore.Setup(b => b.GetBlockIdByTransactionId(txId))
+            this.blockStore.Setup(b => b.GetBlockIdByTransactionId(txId))
                 .Returns(block.HashBlock);
-            this.fullNode.Setup(f => f.NodeFeature<IBlockStore>(false))
-                .Returns(blockStore.Object);
             string txid = txId.ToString();
             bool verbose = true;
 

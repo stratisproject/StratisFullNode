@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Base

@@ -171,6 +171,7 @@ namespace Stratis.Bitcoin.Consensus
         private readonly ConsensusSettings consensusSettings;
         private readonly IFinalizedBlockInfoRepository finalizedBlockInfo;
         private readonly IInvalidBlockHashStore invalidHashesStore;
+        private readonly IChainWorkComparer chainWorkComparer;
         private readonly object lockObject;
 
         /// <inheritdoc />
@@ -218,7 +219,8 @@ namespace Stratis.Bitcoin.Consensus
             IChainState chainState,
             IFinalizedBlockInfoRepository finalizedBlockInfo,
             ConsensusSettings consensusSettings,
-            IInvalidBlockHashStore invalidHashesStore)
+            IInvalidBlockHashStore invalidHashesStore,
+            IChainWorkComparer chainWorkComparer)
         {
             this.network = network;
             this.headerValidator = headerValidator;
@@ -227,6 +229,7 @@ namespace Stratis.Bitcoin.Consensus
             this.finalizedBlockInfo = finalizedBlockInfo;
             this.consensusSettings = consensusSettings;
             this.invalidHashesStore = invalidHashesStore;
+            this.chainWorkComparer = chainWorkComparer;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.lockObject = new object();
 
@@ -387,7 +390,7 @@ namespace Stratis.Bitcoin.Consensus
 
             chainedHeader.BlockValidationState = ValidationState.PartiallyValidated;
 
-            if (chainedHeader.ChainWork > this.GetConsensusTip().ChainWork)
+            if (this.chainWorkComparer.Compare(chainedHeader, this.GetConsensusTip()) > 0)
             {
                 // A better tip that was partially validated is found. Set our node's claim on the tip to avoid that chain removal in
                 // case all the peers that were claiming a better chain are disconnected before we switch consensus tip of our node.
@@ -745,7 +748,7 @@ namespace Stratis.Bitcoin.Consensus
                 }
             }
 
-            if (latestNewHeader.ChainWork > this.GetConsensusTip().ChainWork)
+            if (this.chainWorkComparer.Compare(latestNewHeader, this.GetConsensusTip()) > 0)
             {
                 this.logger.LogDebug("Chained header '{0}' is the tip of a chain with more work than our current consensus tip.", latestNewHeader);
 
@@ -815,7 +818,7 @@ namespace Stratis.Bitcoin.Consensus
             ChainedHeader bestTip = this.GetConsensusTip();
             var connectNewHeadersResult = new ConnectNewHeadersResult() { Consumed = latestNewHeader };
 
-            if (latestNewHeader.ChainWork > bestTip.ChainWork)
+            if (this.chainWorkComparer.Compare(latestNewHeader, bestTip) > 0)
             {
                 this.logger.LogDebug("Chained header '{0}' is the tip of a chain with more work than our current consensus tip.", latestNewHeader);
 
@@ -1210,7 +1213,7 @@ namespace Stratis.Bitcoin.Consensus
 
                     ChainedHeader tip = this.chainedHeadersByHash[idTipHashPair.Value];
 
-                    if ((bestTip == null) || (tip.ChainWork > bestTip.ChainWork))
+                    if ((bestTip == null) || this.chainWorkComparer.Compare(tip, bestTip) > 0)
                         bestTip = tip;
                 }
 

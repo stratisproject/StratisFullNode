@@ -1,5 +1,6 @@
 ﻿using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Core.State.AccountAbstractionLayer;
 using Xunit;
@@ -111,7 +112,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void ExternalCall_Success()
         {
-            var gasLimit = (RuntimeObserver.Gas)(GasPriceList.BaseCost + 100000);
+            var gasLimit = (RuntimeObserver.Gas)(GasPriceList.BaseCost + SmartContractFormatLogic.GasLimitMaximum);
             var vmExecutionResult = VmExecutionResult.Ok(true, "Test");
 
             // Code must have a length to pass precondition checks.
@@ -167,7 +168,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void ExternalCall_Vm_Error()
         {
-            var gasLimit = (RuntimeObserver.Gas)(GasPriceList.BaseCost + 100000);
+            var gasLimit = (RuntimeObserver.Gas)(GasPriceList.BaseCost + SmartContractFormatLogic.GasLimitMaximum);
             var vmExecutionResult = VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, "Error");
 
             // Code must have a length to pass precondition checks.
@@ -221,7 +222,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void ExternalCall_Code_Null()
         {
-            var gasLimit = (RuntimeObserver.Gas)(GasPriceList.BaseCost + 100000);
+            var gasLimit = (RuntimeObserver.Gas)(GasPriceList.BaseCost + SmartContractFormatLogic.GasLimitMaximum);
 
             var externalCallMessage = new ExternalCallMessage(
                 uint160.Zero,

@@ -18,13 +18,15 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Consensus.Validators;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Persistence.ChainStores;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
@@ -226,13 +228,17 @@ namespace Stratis.Bitcoin.Base
             // This may be a temporary solution until a better way is found to solve this dependency.
             this.blockStore.Initialize();
 
+            // The finalized repository needs to be initialized before the rules engine in case the
+            // node shutdown unexpectedly and the finalized block info needs to be reset.
+            this.finalizedBlockInfoRepository.Initialize(this.chainIndexer.Tip);
+
             this.consensusRules.Initialize(this.chainIndexer.Tip);
 
             await this.consensusManager.InitializeAsync(this.chainIndexer.Tip).ConfigureAwait(false);
 
             this.chainState.ConsensusTip = this.consensusManager.Tip;
 
-            this.nodeStats.RegisterStats(sb => sb.Append(this.asyncProvider.GetStatistics(!this.nodeSettings.Log.DebugArgs.Any())), StatsType.Component, this.GetType().Name, 100);
+            this.nodeStats.RegisterStats(sb => sb.Append(this.asyncProvider.GetStatistics(!this.nodeSettings.LogSettings.DebugArgs.Any())), StatsType.Component, this.GetType().Name, 100);
 
             // TODO: Should this always be called?
             ((IBlockStoreQueue)this.blockStore).ReindexChain(this.consensusManager, this.nodeLifetime.ApplicationStopping);
@@ -273,8 +279,8 @@ namespace Stratis.Bitcoin.Base
                     await this.provenBlockHeaderStore.SaveAsync().ConfigureAwait(false);
             },
             this.nodeLifetime.ApplicationStopping,
-            repeatEvery: TimeSpan.FromMinutes(1.0),
-            startAfter: TimeSpan.FromMinutes(1.0));
+            repeatEvery: TimeSpan.FromMinutes(2),
+            startAfter: TimeSpan.FromMinutes(2));
         }
 
         /// <summary>
@@ -366,7 +372,7 @@ namespace Stratis.Bitcoin.Base
         /// </summary>
         /// <param name="fullNodeBuilder">Builder responsible for creating the node.</param>
         /// <returns>Full node builder's interface to allow fluent code.</returns>
-        public static IFullNodeBuilder UseBaseFeature(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseBaseFeature(this IFullNodeBuilder fullNodeBuilder, DbType dbType = DbType.Leveldb)
         {
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -389,12 +395,23 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>();
                     services.AddSingleton<IChainState, ChainState>();
                     services.AddSingleton<IChainRepository, ChainRepository>();
-                    services.AddSingleton<IChainStore, LeveldbHeaderStore>();
+
+                    if (dbType == DbType.Leveldb)
+                    {
+                        services.AddSingleton<IChainStore, LevelDbChainStore>();
+                        services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
+                    }
+
+                    if (dbType == DbType.RocksDb)
+                    {
+                        services.AddSingleton<IChainStore, RocksDbChainStore>();
+                        services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
+                    }
+
                     services.AddSingleton<IFinalizedBlockInfoRepository, FinalizedBlockInfoRepository>();
                     services.AddSingleton<ITimeSyncBehaviorState, TimeSyncBehaviorState>();
                     services.AddSingleton<NodeDeployments>();
                     services.AddSingleton<IInitialBlockDownloadState, InitialBlockDownloadState>();
-                    services.AddSingleton<IKeyValueRepository, KeyValueRepository>();
                     services.AddSingleton<ITipsManager, TipsManager>();
                     services.AddSingleton<IAsyncProvider, AsyncProvider>();
 
@@ -458,6 +475,7 @@ namespace Stratis.Bitcoin.Base
                         consensusSettings: provider.GetService<ConsensusSettings>(),
                         dateTimeProvider: provider.GetService<IDateTimeProvider>()));
 
+                    services.AddSingleton<IChainWorkComparer, ChainWorkComparer>();
                     services.AddSingleton<IChainedHeaderTree, ChainedHeaderTree>();
                     services.AddSingleton<IHeaderValidator, HeaderValidator>();
                     services.AddSingleton<IIntegrityValidator, IntegrityValidator>();
@@ -466,9 +484,6 @@ namespace Stratis.Bitcoin.Base
 
                     // Console
                     services.AddSingleton<INodeStats, NodeStats>();
-
-                    // Controller
-                    services.AddTransient<NodeController>();
                 });
             });
 

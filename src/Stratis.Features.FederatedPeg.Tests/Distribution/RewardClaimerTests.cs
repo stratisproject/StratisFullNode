@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -56,7 +57,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
             this.initialBlockDownloadState.IsInitialBlockDownload().Returns(false);
 
-            this.opReturnDataReader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(new CirrusRegTest()));
+            this.opReturnDataReader = new OpReturnDataReader(new CounterChainNetworkWrapper(new CirrusRegTest()));
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
@@ -79,11 +80,11 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public void RewardClaimer_RetrieveSingleDeposits()
         {
             DataFolder dataFolder = TestBase.CreateDataFolder(this);
-            var keyValueRepository = new KeyValueRepository(dataFolder, this.dbreezeSerializer);
+            var keyValueRepository = new LevelDbKeyValueRepository(dataFolder, this.dbreezeSerializer);
 
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
-            using (var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.initialBlockDownloadState, keyValueRepository, this.loggerFactory, this.network, this.signals))
+            using (var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.initialBlockDownloadState, keyValueRepository, this.network, this.signals))
             {
                 var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
 
@@ -107,13 +108,13 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
         public void RewardClaimer_RetrieveBatchedDeposits()
         {
             DataFolder dataFolder = TestBase.CreateDataFolder(this);
-            var keyValueRepository = new KeyValueRepository(dataFolder, this.dbreezeSerializer);
+            var keyValueRepository = new LevelDbKeyValueRepository(dataFolder, this.dbreezeSerializer);
 
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
 
             // The reward claimer should look at block 10 to 20.
-            using (var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.initialBlockDownloadState, keyValueRepository, this.loggerFactory, this.network, this.signals))
+            using (var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.initialBlockDownloadState, keyValueRepository, this.network, this.signals))
             {
                 Transaction rewardTransaction = rewardClaimer.BuildRewardTransaction(true);
 

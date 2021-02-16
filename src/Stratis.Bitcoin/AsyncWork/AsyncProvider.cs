@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
@@ -36,7 +37,6 @@ namespace Stratis.Bitcoin.AsyncWork
         private ILoggerFactory loggerFactory;
         private ILogger logger;
         private ISignals signals;
-        private readonly INodeLifetime nodeLifetime;
 
         private (string Name, int Width)[] benchmarkColumnsDefinition = new[]
         {
@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.AsyncWork
         /// <inheritdoc />
         public ISignals Signals => this.signals;
 
-        public AsyncProvider(ILoggerFactory loggerFactory, ISignals signals, INodeLifetime nodeLifetime)
+        public AsyncProvider(ILoggerFactory loggerFactory, ISignals signals)
         {
             this.lockAsyncDelegates = new object();
             this.lockRegisteredTasks = new object();
@@ -60,7 +60,6 @@ namespace Stratis.Bitcoin.AsyncWork
             this.logger = this.loggerFactory.CreateLogger(this.GetType().FullName);
 
             this.signals = Guard.NotNull(signals, nameof(signals));
-            this.nodeLifetime = Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
         }
 
         /// <inheritdoc />
@@ -248,7 +247,7 @@ namespace Stratis.Bitcoin.AsyncWork
 
         /// <inheritdoc />
         [NoTrace]
-        public string GetStatistics(bool faultyOnly)
+        public string GetStatistics(bool faultyOnly, bool summaryOnly = false)
         {
             var taskInformations = new List<AsyncTaskInfo>();
             lock (this.lockAsyncDelegates)
@@ -264,12 +263,18 @@ namespace Stratis.Bitcoin.AsyncWork
             int running = taskInformations.Where(info => info.IsRunning).Count();
             int faulted = taskInformations.Where(info => !info.IsRunning).Count();
 
+            if (summaryOnly)
+                return $"Running: {running} Faulted: {faulted}";
+
             var sb = new StringBuilder();
-            sb.AppendLine();
-            sb.AppendLine($"====== Async loops ======   [Running: {running.ToString()}] [Faulted: {faulted.ToString()}]");
+            sb.AppendLine($">> Async Loops");
+            sb.AppendLine($"Status".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {running} running [{faulted} faulted]");
 
             if (faultyOnly && faulted == 0)
+            {
+                sb.AppendLine();
                 return sb.ToString(); // If there are no faulty tasks and faultOnly is set to true, return just the header.
+            }
 
             var data =
                 from info in taskInformations
@@ -285,9 +290,9 @@ namespace Stratis.Bitcoin.AsyncWork
                     Exception = info.Exception?.Message
                 };
 
-            foreach (var item in this.benchmarkColumnsDefinition)
+            foreach (var (Name, Width) in this.benchmarkColumnsDefinition)
             {
-                sb.Append(item.Name.PadRight(item.Width));
+                sb.Append(Name.PadRight(Width));
             }
 
             sb.AppendLine();
@@ -315,6 +320,8 @@ namespace Stratis.Bitcoin.AsyncWork
             }
 
             sb.AppendLine("-".PadRight(this.benchmarkColumnsDefinition.Sum(column => column.Width), '-'));
+
+            sb.AppendLine();
 
             return sb.ToString();
         }
@@ -366,7 +373,6 @@ namespace Stratis.Bitcoin.AsyncWork
         ///  This method is called when a registered Task throws an unhandled exception.
         /// </summary>
         /// <param name="task">The task causing the exception.</param>
-        /// <param name="state">not used</param>
         private void OnRegisteredTaskUnhandledException(Task task)
         {
             AsyncTaskInfo delegateInfo;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -10,6 +11,7 @@ using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -38,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.dataFolder = TestBase.CreateDataFolder(this);
             this.dateTimeProvider = new DateTimeProvider();
             this.loggerFactory = new ExtendedLoggerFactory();
-            this.nodeStats = new NodeStats(this.dateTimeProvider, this.loggerFactory);
+            this.nodeStats = new NodeStats(this.dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object);
 
             this.coindb = new DBreezeCoindb(this.network, this.dataFolder, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new DBreezeSerializer(this.network.Consensus.ConsensusFactory));
             this.coindb.Initialize();

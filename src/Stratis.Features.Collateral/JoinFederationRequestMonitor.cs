@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA;
@@ -16,7 +16,6 @@ namespace Stratis.Features.Collateral
 {
     public class JoinFederationRequestMonitor
     {
-        private readonly ILoggerFactory loggerFactory;
         private readonly ILogger logger;
         private readonly ISignals signals;
         private SubscriptionToken blockConnectedToken;
@@ -26,11 +25,10 @@ namespace Stratis.Features.Collateral
         private readonly IFederationManager federationManager;
         private readonly HashSet<uint256> pollsCheckedWithJoinFederationRequestMonitor;
 
-        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals, ILoggerFactory loggerFactory)
+        public JoinFederationRequestMonitor(VotingManager votingManager, Network network, CounterChainNetworkWrapper counterChainNetworkWrapper, IFederationManager federationManager, ISignals signals)
         {
             this.signals = signals;
-            this.loggerFactory = loggerFactory;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.votingManager = votingManager;
             this.network = network;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
@@ -62,7 +60,7 @@ namespace Stratis.Features.Collateral
 
             List<Transaction> transactions = blockConnectedData.ConnectedBlock.Block.Transactions;
 
-            var encoder = new JoinFederationRequestEncoder(this.loggerFactory);
+            var encoder = new JoinFederationRequestEncoder();
 
             for (int i = 0; i < transactions.Count; i++)
             {
@@ -90,14 +88,14 @@ namespace Stratis.Features.Collateral
 
                     if (collateralAmount != expectedCollateralAmount)
                     {
-                        this.logger.LogDebug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
+                        this.logger.Debug("Ignoring voting collateral amount '{0}', when expecting '{1}'.", collateralAmount, expectedCollateralAmount);
 
                         continue;
                     }
 
                     // Fill in the request.removalEventId (if any).
                     Script collateralScript = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
-                    
+
                     var collateralFederationMember = new CollateralFederationMember(request.PubKey, false, request.CollateralAmount, collateralScript.GetDestinationAddress(this.counterChainNetwork).ToString());
 
                     byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(collateralFederationMember);
@@ -105,7 +103,7 @@ namespace Stratis.Features.Collateral
                     // Nothing to do if already voted.
                     if (this.votingManager.AlreadyVotingFor(VoteKey.AddFederationMember, federationMemberBytes))
                     {
-                        this.logger.LogDebug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
+                        this.logger.Debug("Skipping because already voted for adding '{0}'.", request.PubKey.ToHex());
 
                         continue;
                     }
@@ -120,12 +118,12 @@ namespace Stratis.Features.Collateral
                     PubKey key = PubKey.RecoverFromMessage(request.SignatureMessage, request.Signature);
                     if (key.Hash != request.CollateralMainchainAddress)
                     {
-                        this.logger.LogDebug("Invalid collateral address validation signature for joining federation via transaction '{0}'", tx.GetHash());
+                        this.logger.Debug("Invalid collateral address validation signature for joining federation via transaction '{0}'", tx.GetHash());
                         continue;
                     }
 
                     // Vote to add the member.
-                    this.logger.LogDebug("Voting to add federation member '{0}'.", request.PubKey.ToHex());
+                    this.logger.Debug("Voting to add federation member '{0}'.", request.PubKey.ToHex());
 
                     this.votingManager.ScheduleVote(new VotingData()
                     {
@@ -136,7 +134,7 @@ namespace Stratis.Features.Collateral
                 }
                 catch (Exception err)
                 {
-                    this.logger.LogDebug(err.Message);
+                    this.logger.Error(err.Message);
                 }
             }
         }

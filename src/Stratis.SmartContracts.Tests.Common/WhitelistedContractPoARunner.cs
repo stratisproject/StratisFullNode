@@ -31,7 +31,7 @@ namespace Stratis.SmartContracts.Tests.Common
 
         public override void BuildNode()
         {
-            var settings = new NodeSettings(this.Network, args: new string[] { "-conf=poa.conf", "-datadir=" + this.DataFolder });
+            var settings = new NodeSettings(this.Network, args: new string[] { "-conf=poa.conf", "-datadir=" + this.DataFolder, "-displayextendednodestats=true" });
 
             this.FullNode = (FullNode)new FullNodeBuilder()
                 .UseNodeSettings(settings)

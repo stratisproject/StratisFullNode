@@ -102,7 +102,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
             var nodeLifetime = new NodeLifetime();
             var signals = new Mock<ISignals>();
-            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals.Object, nodeLifetime);
+            var asyncProvider = new AsyncProvider(loggerFactory.Object, signals.Object);
             var dataFolder = new DataFolder(TestBase.CreateTestDir(this));
             var chainIndexer = new ChainIndexer(this.network);
 
@@ -111,8 +111,8 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
 
             // Create the wallet manager.
             var federationWalletManager = new FederationWalletManager(
-                loggerFactory.Object,
                 this.network,
+                new Mock<INodeStats>().Object,
                 chainIndexer,
                 dataFolder,
                 new Mock<IWalletFeePolicy>().Object,

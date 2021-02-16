@@ -49,6 +49,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             const long testLong = Int64.MaxValue;
             const uint testUint = UInt32.MaxValue;
             const ulong testUlong = UInt64.MaxValue;
+            UInt128 testUInt128 = UInt128.MaxValue;
+            UInt256 testUInt256 = UInt256.MaxValue;
             const string testString = "The quick brown fox jumps over the lazy dog";
             byte[] testBytes = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09 };
 
@@ -61,6 +63,8 @@ namespace Stratis.SmartContracts.IntegrationTests
                 string.Format("{0}#{1}", (int)MethodParameterDataType.Long, testLong),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.UInt, testUint),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ULong, testUlong),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.UInt128, testUInt128),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.UInt256, testUInt256),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.String, testString),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, testBytes.ToHexString()),
             };
@@ -89,6 +93,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Equal(this.serializer.Serialize(testLong), this.node1.GetStorageValue(response.NewContractAddress, "long"));
             Assert.Equal(this.serializer.Serialize(testUint), this.node1.GetStorageValue(response.NewContractAddress, "uint"));
             Assert.Equal(this.serializer.Serialize(testUlong), this.node1.GetStorageValue(response.NewContractAddress, "ulong"));
+            Assert.Equal(this.serializer.Serialize(testUInt128), this.node1.GetStorageValue(response.NewContractAddress, "UInt128"));
+            Assert.Equal(this.serializer.Serialize(testUInt256), this.node1.GetStorageValue(response.NewContractAddress, "UInt256"));
             Assert.Equal(this.serializer.Serialize(testString), this.node1.GetStorageValue(response.NewContractAddress, "string"));
             Assert.Equal(testBytes, this.node1.GetStorageValue(response.NewContractAddress, "bytes"));
 
@@ -103,6 +109,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testLong)));
             Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testUint)));
             Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testUlong)));
+            Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testUInt128)));
+            Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testUInt256)));
             Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testString)));
             Assert.True(scBlockHeader.LogsBloom.Test(this.serializer.Serialize(testBytes)));
             // And sanity test that random fields aren't contained in bloom.
@@ -146,6 +154,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             const long testLong = Int64.MaxValue;
             const uint testUint = UInt32.MaxValue;
             const ulong testUlong = UInt64.MaxValue;
+            UInt128 testUInt128 = UInt128.MaxValue;
+            UInt256 testUInt256 = UInt256.MaxValue;
             const string testString = "The quick brown fox jumps over the lazy dog";
 
             string[] parameters = new string[]
@@ -157,6 +167,8 @@ namespace Stratis.SmartContracts.IntegrationTests
                 string.Format("{0}#{1}", (int)MethodParameterDataType.Long, testLong),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.UInt, testUint),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ULong, testUlong),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.UInt128, testUInt128),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.UInt256, testUInt256),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.String, testString)
             };
             BuildCallContractTransactionResponse response = this.node1.SendCallContractTransaction(nameof(CallWithAllParameters.Call), preResponse.NewContractAddress, amount, parameters);
@@ -210,6 +222,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             const long testLong = Int64.MaxValue;
             const uint testUint = UInt32.MaxValue;
             const ulong testUlong = UInt64.MaxValue;
+            UInt128 testUInt128 = UInt128.MaxValue;
+            UInt256 testUInt256 = UInt256.MaxValue;
             const string testString = "The quick brown fox jumps over the lazy dog";
 
             string[] parameters = new string[]
@@ -221,6 +235,8 @@ namespace Stratis.SmartContracts.IntegrationTests
                 string.Format("{0}#{1}", (int)MethodParameterDataType.Long, testLong),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.UInt, testUint),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ULong, testUlong),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.UInt128, testUInt128),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.UInt256, testUInt256),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.String, testString),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.Address, preResponse.NewContractAddress) // sendTo
             };
@@ -271,6 +287,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             long[] longs = new long[] { 1, -123, long.MaxValue };
             uint[] uints = new uint[] { 1, 123, uint.MaxValue };
             ulong[] ulongs = new ulong[] { 1, 123, ulong.MaxValue };
+            UInt128[] uint128s = new UInt128[] { 1, 123, UInt128.MaxValue };
+            UInt256[] uint256s = new UInt256[] { 1, 123, UInt256.MaxValue };
             string[] strings = new string[] { "Test", "", "The quick brown fox jumps over the lazy dog" }; // TODO: Ensure Assert checks "" equality in contract when null bug fixed
 
             string[] parameters = new string[]
@@ -282,6 +300,8 @@ namespace Stratis.SmartContracts.IntegrationTests
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, this.serializer.Serialize(longs).ToHexString()),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, this.serializer.Serialize(uints).ToHexString()),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, this.serializer.Serialize(ulongs).ToHexString()),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, this.serializer.Serialize(uint128s).ToHexString()),
+                string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, this.serializer.Serialize(uint256s).ToHexString()),
                 string.Format("{0}#{1}", (int)MethodParameterDataType.ByteArray, this.serializer.Serialize(strings).ToHexString())
             };
             BuildCreateContractTransactionResponse response = this.node1.SendCreateContractTransaction(compilationResult.Compilation, amount, parameters);
@@ -309,6 +329,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Equal(this.serializer.Serialize(longs), this.node1.GetStorageValue(response.NewContractAddress, "longs"));
             Assert.Equal(this.serializer.Serialize(uints), this.node1.GetStorageValue(response.NewContractAddress, "uints"));
             Assert.Equal(this.serializer.Serialize(ulongs), this.node1.GetStorageValue(response.NewContractAddress, "ulongs"));
+            Assert.Equal(this.serializer.Serialize(uint128s), this.node1.GetStorageValue(response.NewContractAddress, "uint128s"));
+            Assert.Equal(this.serializer.Serialize(uint256s), this.node1.GetStorageValue(response.NewContractAddress, "uint256s"));
             Assert.Equal(this.serializer.Serialize(strings), this.node1.GetStorageValue(response.NewContractAddress, "strings"));
 
             // Receipt is correct

@@ -18,12 +18,12 @@
 				],
 				"body": {},
 				"url": {
-					"raw": "http://localhost:37220/api/node/shutdown",
+					"raw": "http://localhost:17103/api/node/shutdown",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "37220",
+					"port": "17103",
 					"path": [
 						"api",
 						"node",
@@ -40,12 +40,12 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://localhost:38221/api/node/status",
+					"raw": "http://localhost:17103/api/node/status",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "38221",
+					"port": "17103",
 					"path": [
 						"api",
 						"node",

@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -61,8 +62,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             ISignals signals = new Signals(loggerFactory, new DefaultSubscriptionErrorHandler(loggerFactory));
             var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
-            var asyncProvider = new AsyncProvider(loggerFactory, signals, new Mock<INodeLifetime>().Object);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
+            var asyncProvider = new AsyncProvider(loggerFactory, signals);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
@@ -79,7 +80,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             federationManager.Initialize();
 
-            this.collateralChecker = new CollateralChecker(loggerFactory, clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
+            this.collateralChecker = new CollateralChecker(clientFactory, counterChainSettings, federationManager, signals, network, asyncMock.Object, (new Mock<INodeLifetime>()).Object);
         }
 
         [Fact]

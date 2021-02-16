@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Tests.P2P
             this.nodeLifetime = new NodeLifetime();
             this.signals = new Mock<ISignals>().Object;
 
-            this.asyncProvider = new AsyncProvider(this.extendedLoggerFactory, this.signals, this.nodeLifetime);
+            this.asyncProvider = new AsyncProvider(this.extendedLoggerFactory, this.signals);
         }
 
         [Fact]

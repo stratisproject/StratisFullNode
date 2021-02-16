@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -56,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
             else
                 this.ruleContext = new PowRuleContext(new ValidationContext(), this.dateTimeProvider.Object.GetTimeOffset());
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object);
         }
 
         protected void AddBlocksToChain(ChainIndexer chainIndexer, int blockAmount)
@@ -108,7 +109,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
                 Logger = this.logger.Object,
                 Parent = new TestPosConsensusRules(this.network, this.loggerFactory.Object, this.dateTimeProvider.Object, this.ChainIndexer, this.nodeDeployments,
                     this.consensusSettings, this.checkpoints.Object, this.coinView.Object, this.stakeChain.Object, this.stakeValidator.Object, this.chainState.Object,
-                    new InvalidBlockHashStore(new DateTimeProvider()), new NodeStats(this.dateTimeProvider.Object, this.loggerFactory.Object), this.rewindDataIndexStore.Object, this.asyncProvider, new ConsensusRulesContainer())
+                    new InvalidBlockHashStore(new DateTimeProvider()), new NodeStats(this.dateTimeProvider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.rewindDataIndexStore.Object, this.asyncProvider, new ConsensusRulesContainer())
             };
         }
     }
@@ -150,7 +151,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
                 this.ruleContext = new PowRuleContext(new ValidationContext(), this.dateTimeProvider.Object.GetTimeOffset());
             }
 
-            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object, new NodeLifetime());
+            this.asyncProvider = new AsyncProvider(this.loggerFactory.Object, new Mock<ISignals>().Object);
         }
 
         public virtual T InitializeConsensusRules()
@@ -205,7 +206,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         public override TestConsensusRules InitializeConsensusRules()
         {
             return new TestConsensusRules(this.network, this.loggerFactory.Object, this.dateTimeProvider.Object, this.ChainIndexer, this.nodeDeployments,
-                this.consensusSettings, this.checkpoints.Object, this.chainState.Object, new InvalidBlockHashStore(this.dateTimeProvider.Object), new NodeStats(this.dateTimeProvider.Object, this.loggerFactory.Object), new ConsensusRulesContainer());
+                this.consensusSettings, this.checkpoints.Object, this.chainState.Object, new InvalidBlockHashStore(this.dateTimeProvider.Object), new NodeStats(this.dateTimeProvider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusRulesContainer());
         }
     }
 
@@ -238,7 +239,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         {
             return new TestPosConsensusRules(this.network, this.loggerFactory.Object, this.dateTimeProvider.Object, this.ChainIndexer,
                 this.nodeDeployments, this.consensusSettings, this.checkpoints.Object, this.coinView.Object, this.stakeChain.Object,
-                this.stakeValidator.Object, this.chainState.Object, new InvalidBlockHashStore(this.dateTimeProvider.Object), new NodeStats(this.dateTimeProvider.Object, this.loggerFactory.Object), this.rewindDataIndexStore.Object, this.asyncProvider, new ConsensusRulesContainer());
+                this.stakeValidator.Object, this.chainState.Object, new InvalidBlockHashStore(this.dateTimeProvider.Object), new NodeStats(this.dateTimeProvider.Object, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), this.rewindDataIndexStore.Object, this.asyncProvider, new ConsensusRulesContainer());
         }
     }
 

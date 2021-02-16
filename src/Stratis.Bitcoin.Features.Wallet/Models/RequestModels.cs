@@ -418,6 +418,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string DestinationScript { get; set; }
 
         /// <summary>
+        /// An indicator whether the transaction fee should be subtracted from the current recipient.
+        /// </summary>
+        /// <remarks>Only one recipient in a transaction can have this flag set.</remarks>
+        public bool SubtractFeeFromAmount { get; set; }
+
+        /// <summary>
         /// The amount that will be sent.
         /// </summary>
         [Required(ErrorMessage = "An amount is required.")]
@@ -1049,5 +1055,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [MoneyFormat(isRequired: false, ErrorMessage = "The amount is not in the correct format.")]
         public string UtxoValueThreshold { get; set; }
+
+        /// <summary>
+        /// For convenience, whether the built consolidated transaction should be automatically broadcast.
+        /// </summary>
+        public bool Broadcast { get; set; }
     }
 }

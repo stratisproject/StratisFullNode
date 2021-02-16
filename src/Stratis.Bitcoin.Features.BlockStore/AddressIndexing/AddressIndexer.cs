@@ -389,7 +389,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         private void AddInlineStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine("AddressIndexer.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + this.IndexerTip.Height.ToString().PadRight(9) +
+            benchLog.AppendLine("AddressIndexer Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.IndexerTip.Height}".PadRight(9) +
                                 "AddressCache%: " + this.addressIndexRepository.GetLoadPercentage().ToString().PadRight(8) +
                                 "OutPointCache%: " + this.outpointsRepository.GetLoadPercentage().ToString().PadRight(8) +
                                 $"Ms/block: {Math.Round(this.averageTimePerBlock.Average, 2)}");
@@ -673,7 +673,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             // Height 0 is used as a placeholder height for compacted address balance records, so ignore them if they are the only record.
             if (lastBalanceHeight == 0)
                 return null;
-            
+
             ChainedHeader header = this.chainIndexer.GetHeader(lastBalanceHeight);
 
             if (header == null)

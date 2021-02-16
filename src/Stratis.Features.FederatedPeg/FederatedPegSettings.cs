@@ -8,6 +8,7 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.TargetChain;
 
 namespace Stratis.Features.FederatedPeg
 {
@@ -54,7 +55,7 @@ namespace Stratis.Features.FederatedPeg
         /// <summary>
         /// The fee always given to a withdrawal transaction.
         /// </summary>
-        public static readonly Money BaseTransactionFee = Money.Coins(0.0002m);
+        public static readonly Money BaseTransactionFee = Money.Coins(0.0003m);
 
         /// <summary>
         /// The extra fee given to a withdrawal transaction per input it spends. This number should be high enough such that the built transactions are always valid, yet low enough such that the federation can turn a profit.
@@ -65,6 +66,8 @@ namespace Stratis.Features.FederatedPeg
         /// Fee applied to consolidating transactions.
         /// </summary>
         public static readonly Money ConsolidationFee = Money.Coins(0.01m);
+
+        public const string MaximumPartialTransactionsParam = "maxpartials";
 
         /// <summary>
         /// The maximum number of inputs we want our built withdrawal transactions to have. We don't want them to get too big for Standardness reasons.
@@ -145,11 +148,15 @@ namespace Stratis.Features.FederatedPeg
             this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
+            this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
 
         /// <inheritdoc/>
         public bool IsMainChain { get; }
+
+        /// <inheritdoc/>
+        public int MaximumPartialTransactionThreshold { get; }
 
         /// <inheritdoc />
         public int MinimumConfirmationsSmallDeposits { get; }
@@ -190,6 +197,10 @@ namespace Stratis.Features.FederatedPeg
         public int MultiSigN { get; }
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// TODO: In future we need to look at dynamically calculating the fee by also including
+        /// the number of outputs in the calculation.
+        /// </remarks>
         public Money GetWithdrawalTransactionFee(int numInputs)
         {
             return BaseTransactionFee + numInputs * InputTransactionFee;

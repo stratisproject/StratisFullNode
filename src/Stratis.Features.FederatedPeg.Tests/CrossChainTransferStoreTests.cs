@@ -148,7 +148,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 Assert.Equal(3, transactions[0].Outputs.Count);
 
                 // Transaction[0] output value - change.
-                Assert.Equal(new Money(10.00055999m, MoneyUnit.BTC), transactions[0].Outputs[0].Value);
+                Assert.Equal(new Money(10.00045999m, MoneyUnit.BTC), transactions[0].Outputs[0].Value);
                 Assert.Equal(multiSigAddress.ScriptPubKey, transactions[0].Outputs[0].ScriptPubKey);
 
                 // Transaction[0] output value - recipient 1, but minus 0.001 for the tx fee and 0.01 for sender fee.
@@ -157,7 +157,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[0] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[0].Outputs[2].Value);
-                new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper).TryGetTransactionId(transactions[0], out string actualDepositId);
+                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[0], out string actualDepositId);
                 Assert.Equal(deposit1.Id.ToString(), actualDepositId);
 
                 // Transactions[1] inputs.
@@ -169,7 +169,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 Assert.Equal(3, transactions[1].Outputs.Count);
 
                 // Transaction[1] output value - change. Includes an extra 0.01 taken from sender deposit.
-                Assert.Equal(new Money(10.00067999m, MoneyUnit.BTC), transactions[1].Outputs[0].Value);
+                Assert.Equal(new Money(10.00057999m, MoneyUnit.BTC), transactions[1].Outputs[0].Value);
                 Assert.Equal(multiSigAddress.ScriptPubKey, transactions[1].Outputs[0].ScriptPubKey);
 
                 // Transaction[1] output value - recipient 2, but minus 0.001 for the tx fee and 0.01 for sender fee.
@@ -178,7 +178,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[1] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[1].Outputs[2].Value);
-                new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper).TryGetTransactionId(transactions[1], out string actualDepositId2);
+                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[1], out string actualDepositId2);
                 Assert.Equal(deposit2.Id.ToString(), actualDepositId2);
 
                 ICrossChainTransfer[] transfers = crossChainTransferStore.GetAsync(new uint256[] { 0, 1 }).GetAwaiter().GetResult().ToArray();
@@ -301,7 +301,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 Assert.Equal(3, transactions[0].Outputs.Count);
 
                 // Transaction[0] output value - Change + small profit. 2 UTXOS used as inputs. 1 satoshi for opreturn.
-                Assert.Equal(new Money(10.00055999m, MoneyUnit.BTC), transactions[0].Outputs[0].Value);
+                Assert.Equal(new Money(10.00045999m, MoneyUnit.BTC), transactions[0].Outputs[0].Value);
                 Assert.Equal(multiSigAddress.ScriptPubKey, transactions[0].Outputs[0].ScriptPubKey);
 
                 // Transaction[0] output value - recipient 1, but minus 0.001 for the constant tx fee.
@@ -310,7 +310,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[0] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[0].Outputs[2].Value);
-                new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper).TryGetTransactionId(transactions[0], out string actualDepositId);
+                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[0], out string actualDepositId);
                 Assert.Equal(deposit1.Id.ToString(), actualDepositId);
 
                 Assert.Null(transactions[1]);
@@ -339,7 +339,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 Assert.Equal(3, transactions[1].Outputs.Count);
 
                 // Transaction[1] output value - change.
-                Assert.Equal(new Money(970.00055999m, MoneyUnit.BTC), transactions[1].Outputs[0].Value);
+                Assert.Equal(new Money(970.00045999m, MoneyUnit.BTC), transactions[1].Outputs[0].Value);
                 Assert.Equal(multiSigAddress.ScriptPubKey, transactions[1].Outputs[0].ScriptPubKey);
 
                 // Transaction[1] output value - recipient 2, but minus 0.001 for the tx fee and 0.01 for sender fee.
@@ -348,7 +348,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[1] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[1].Outputs[2].Value);
-                new OpReturnDataReader(this.loggerFactory, this.counterChainNetworkWrapper).TryGetTransactionId(transactions[1], out string actualDepositId2);
+                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[1], out string actualDepositId2);
                 Assert.Equal(deposit2.Id.ToString(), actualDepositId2);
 
                 Assert.Equal(2, transfers.Length);
@@ -359,7 +359,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 (Money confirmed, Money unconfirmed) spendable = this.federationWalletManager.GetSpendableAmount();
 
                 // Includes ~0.0012 taken from deposit amounts - our profit.
-                Assert.Equal(new Money(980.00111998m, MoneyUnit.BTC), spendable.unconfirmed);
+                Assert.Equal(new Money(980.00091998m, MoneyUnit.BTC), spendable.unconfirmed);
             }
         }
 
@@ -562,8 +562,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 ICrossChainTransfer[] transactions = crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial });
 
-                var requester = new PartialTransactionRequester(this.loggerFactory, crossChainTransferStore, this.asyncProvider,
-                    this.nodeLifetime, this.federatedPegBroadcaster, this.ibdState, this.federationWalletManager, this.inputConsolidator);
+                var requester = new PartialTransactionRequester(crossChainTransferStore, this.asyncProvider, this.nodeLifetime,
+                    this.federatedPegBroadcaster, this.ibdState, this.federationWalletManager, this.inputConsolidator);
 
                 requester.Start();
 
@@ -604,7 +604,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             var transaction = new PosTransaction(model.Hex);
 
-            var reader = new OpReturnDataReader(this.loggerFactory, new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet()));
+            var reader = new OpReturnDataReader(new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet()));
             var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader);
             IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1);
 

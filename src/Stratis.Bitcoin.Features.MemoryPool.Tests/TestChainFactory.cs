@@ -110,12 +110,12 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var chainState = new ChainState();
             var deployments = new NodeDeployments(network, chain);
 
-            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object);
 
             var stakeChain = new StakeChainStore(network, chain, null, loggerFactory);
             ConsensusRuleEngine consensusRules = new PosConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
                 inMemoryCoinView, stakeChain, new StakeValidator(network, stakeChain, chain, inMemoryCoinView, loggerFactory), chainState, new InvalidBlockHashStore(dateTimeProvider),
-                new NodeStats(dateTimeProvider, loggerFactory), new RewindDataIndexCache(dateTimeProvider, network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints()), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
+                new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object), new RewindDataIndexCache(dateTimeProvider, network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints()), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
             ConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
 
@@ -227,13 +227,13 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             var chain = new ChainIndexer(network);
             var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chain.Tip));
 
-            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object, new NodeLifetime());
+            var asyncProvider = new AsyncProvider(loggerFactory, new Mock<ISignals>().Object);
 
             var chainState = new ChainState();
             var deployments = new NodeDeployments(network, chain);
 
             ConsensusRuleEngine consensusRules = new PowConsensusRuleEngine(network, loggerFactory, dateTimeProvider, chain, deployments, consensusSettings, new Checkpoints(),
-                inMemoryCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, loggerFactory), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
+                inMemoryCoinView, chainState, new InvalidBlockHashStore(dateTimeProvider), new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object), asyncProvider, consensusRulesContainer).SetupRulesEngineParent();
 
             ConsensusManager consensus = ConsensusManagerHelper.CreateConsensusManager(network, dataDir, chainState, chainIndexer: chain, consensusRules: consensusRules, inMemoryCoinView: inMemoryCoinView);
 
