@@ -1435,7 +1435,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine("====== Cross Chain Transfer Store ======");
+            benchLog.AppendLine(">> Cross Chain Transfer Store");
             benchLog.AppendLine("Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.TipHashAndHeight.Height} [{this.TipHashAndHeight.HashBlock}]");
             benchLog.AppendLine("NextDepositHeight".PadRight(LoggingConfiguration.ColumnLength) + $": {this.NextMatureDepositHeight}");
             benchLog.AppendLine("Partial Txs".PadRight(LoggingConfiguration.ColumnLength) + $": {GetTransferCountByStatus(CrossChainTransferStatus.Partial)}");

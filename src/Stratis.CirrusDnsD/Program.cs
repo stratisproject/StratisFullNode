@@ -4,6 +4,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Dns;
@@ -12,8 +13,10 @@ using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Sidechains.Networks;
 
@@ -67,9 +70,11 @@ namespace Stratis.CirrusDnsD
 
         private static IFullNode GetSideChainFullNode(NodeSettings nodeSettings)
         {
-            IFullNode node = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+            DbType dbType = nodeSettings.GetDbType();
+
+            IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
                 .UseMempool()
                 .AddSmartContracts(options =>
                 {
@@ -77,16 +82,20 @@ namespace Stratis.CirrusDnsD
                     options.UsePoAWhitelistedContracts();
                 })
                 .AddPoAFeature()
-                .UsePoAConsensus()
+                .UsePoAConsensus(dbType)
                 .CheckCollateralCommitment()
+
+                // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
+                // Perhaps we can introduce a block height check rather?
+                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .UseApi()
                 .AddRPC()
-                .UseDns()
-                .Build();
+                .UseDns();
 
-            return node;
+            return nodeBuilder.Build();
         }
 
         private static IFullNode GetDnsNode(NodeSettings nodeSettings)
