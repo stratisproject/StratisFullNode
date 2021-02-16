@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Company>NStratis</Company>
@@ -7,7 +7,7 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <Version>4.0.0.79</Version>
+    <Version>4.0.0.80</Version>
   </PropertyGroup>
   
   <PropertyGroup>
