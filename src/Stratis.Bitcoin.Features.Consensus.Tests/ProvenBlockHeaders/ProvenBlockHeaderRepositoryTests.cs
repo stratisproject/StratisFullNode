@@ -4,11 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using LevelDB;
-using Microsoft.Extensions.Logging;
-using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
@@ -18,14 +17,12 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 {
     public class ProvenBlockHeaderRepositoryTests : LogsTestBase
     {
-        private readonly Mock<ILoggerFactory> loggerFactory;
         private readonly DBreezeSerializer dBreezeSerializer;
         private static readonly byte ProvenBlockHeaderTable = 1;
         private static readonly byte BlockHashHeightTable = 2;
 
         public ProvenBlockHeaderRepositoryTests() : base(KnownNetworks.StraxTest)
         {
-            this.loggerFactory = new Mock<ILoggerFactory>();
             this.dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
         }
 
@@ -118,7 +115,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             }
 
             // Query the repository for the item that was inserted in the above code.
-            using (ProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
+            using (LevelDbProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
             {
                 var headerOut = await repo.GetAsync(blockHeight).ConfigureAwait(false);
 
@@ -138,7 +135,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
                 engine.Put(BlockHashHeightTable, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(), 1)));
             }
 
-            using (ProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
+            using (LevelDbProvenBlockHeaderRepository repo = this.SetupRepository(this.Network, folder))
             {
                 // Select a different block height.
                 ProvenBlockHeader outHeader = await repo.GetAsync(2).ConfigureAwait(false);
@@ -176,9 +173,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             }
         }
 
-        private ProvenBlockHeaderRepository SetupRepository(Network network, string folder)
+        private LevelDbProvenBlockHeaderRepository SetupRepository(Network network, string folder)
         {
-            var repo = new ProvenBlockHeaderRepository(network, folder, this.LoggerFactory.Object, this.dBreezeSerializer);
+            var repo = new LevelDbProvenBlockHeaderRepository(network, folder, this.LoggerFactory.Object, this.dBreezeSerializer);
 
             Task task = repo.InitializeAsync();
 

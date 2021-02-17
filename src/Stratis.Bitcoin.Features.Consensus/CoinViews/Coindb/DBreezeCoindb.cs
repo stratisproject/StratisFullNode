@@ -37,7 +37,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <summary>Access to dBreeze database.</summary>
         private readonly DBreezeEngine dBreeze;
 
-        private DBreezeSerializer dBreezeSerializer;
+        private readonly DBreezeSerializer dBreezeSerializer;
 
         public DBreezeCoindb(Network network, DataFolder dataFolder, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
@@ -61,7 +61,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.network = network;
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
 
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
         public void Initialize()
@@ -343,7 +344,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void AddBenchStats(StringBuilder log)
         {
-            log.AppendLine("======DBreezeCoinView Bench======");
+            log.AppendLine(">> DBreezeCoinView Bench");
 
             BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
@@ -13,6 +14,7 @@ using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR;
@@ -79,7 +81,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
         /// <summary>
         /// Creates test chain with a consensus loop.
         /// </summary>
-        public static TestRulesContext CreateAsync(Network network, [CallerMemberName]string pathName = null)
+        public static TestRulesContext CreateAsync(Network network, [CallerMemberName] string pathName = null)
         {
             var testRulesContext = new TestRulesContext() { Network = network };
 
@@ -91,7 +93,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
             testRulesContext.DateTimeProvider = DateTimeProvider.Default;
 
             network.Consensus.Options = new ConsensusOptions();
-            //new FullNodeBuilderConsensusExtension.PowConsensusRulesRegistration().RegisterRules(network.Consensus);
 
             ConsensusSettings consensusSettings = new ConsensusSettings(testRulesContext.NodeSettings);
             testRulesContext.Checkpoints = new Checkpoints();
@@ -105,7 +106,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
             testRulesContext.Consensus = new PowConsensusRuleEngine(testRulesContext.Network, testRulesContext.LoggerFactory, testRulesContext.DateTimeProvider,
                 testRulesContext.ChainIndexer, deployments, consensusSettings, testRulesContext.Checkpoints, null, testRulesContext.ChainState,
-                new InvalidBlockHashStore(new DateTimeProvider()), new NodeStats(new DateTimeProvider(), testRulesContext.LoggerFactory), testRulesContext.AsyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
+                new InvalidBlockHashStore(new DateTimeProvider()), new NodeStats(testRulesContext.DateTimeProvider, testRulesContext.NodeSettings, new Mock<IVersionProvider>().Object), testRulesContext.AsyncProvider, new ConsensusRulesContainer()).SetupRulesEngineParent();
 
             testRulesContext.CallDataSerializer = new CallDataSerializer(new ContractPrimitiveSerializer(network));
             return testRulesContext;

@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using LevelDB;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Base
@@ -25,21 +21,11 @@ namespace Stratis.Bitcoin.Base
     {
         private readonly IChainStore chainStore;
 
-        /// <summary>Instance logger.</summary>
-        private readonly ILogger logger;
-
         private BlockLocator locator;
 
-        public Network Network { get; }
-
-        public ChainRepository(ILoggerFactory loggerFactory, IChainStore chainStore, Network network)
+        public ChainRepository(IChainStore chainStore)
         {
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
-
             this.chainStore = chainStore;
-            this.Network = network;
-
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <inheritdoc />

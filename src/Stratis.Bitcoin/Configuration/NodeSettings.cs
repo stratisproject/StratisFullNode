@@ -391,6 +391,7 @@ namespace Stratis.Bitcoin.Configuration
             builder.AppendLine($"-mintxfee=<number>        Minimum fee rate. Defaults to {network.MinTxFee}.");
             builder.AppendLine($"-fallbackfee=<number>     Fallback fee rate. Defaults to {network.FallbackFee}.");
             builder.AppendLine($"-minrelaytxfee=<number>   Minimum relay fee rate. Defaults to {network.MinRelayTxFee}.");
+            builder.AppendLine($"-displaybenchstats=<bool> Logs benchmark statistics to the console window (true/false).");
 
             defaults.Logger.LogInformation(builder.ToString());
 
