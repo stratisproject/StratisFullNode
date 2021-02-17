@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
-using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.State;
 using Block = NBitcoin.Block;
@@ -111,7 +110,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.LogDebug($"Interoperability enabled, initializing periodic loop.");
+            this.logger.LogInformation($"Interoperability enabled, initializing periodic loop.");
 
             HashHeightPair lastScannedHashHeight = this.keyValueRepo.LoadValue<HashHeightPair>(LastScannedHeightKey);
 
@@ -121,7 +120,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // Genesis.
                 this.lastScanned = this.chainIndexer.Tip.GetAncestor(0);
 
-            this.logger.LogDebug("Interoperability last scanned height set to {0}.", this.lastScanned.Height);
+            this.logger.LogInformation("Interoperability last scanned height set to {0}.", this.lastScanned.Height);
 
             // Initialize the interop polling loop, to check for interop contract requests.
             this.interopLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckInterop", async (cancellation) =>
@@ -183,7 +182,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 BigInteger blockHeight = this.ethereumClientBase.GetBlockHeight();
 
-                this.logger.LogDebug("Current Ethereum node block height is {0}.", blockHeight);
+                this.logger.LogInformation("Current Ethereum node block height is {0}.", blockHeight);
             }
             catch (Exception e)
             {
@@ -209,25 +208,25 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (transferEvent.Event.To != EthereumClientBase.ZeroAddress)
                     continue;
 
-                this.logger.LogDebug("Conversion burn transaction {0} received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
+                this.logger.LogInformation("Conversion burn transaction {0} received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
 
                 if (this.conversionRequestRepository.Get(transferEvent.Log.TransactionHash) != null)
                 {
-                    this.logger.LogDebug("Conversion burn transaction {0} already exists, ignoring.", transferEvent.Log.TransactionHash);
+                    this.logger.LogInformation("Conversion burn transaction {0} already exists, ignoring.", transferEvent.Log.TransactionHash);
 
                     continue;
                 }
 
                 if (transferEvent.Event.Value == BigInteger.Zero)
                 {
-                    this.logger.LogDebug("Ignoring zero-valued burn transaction {0}.", transferEvent.Log.TransactionHash);
+                    this.logger.LogInformation("Ignoring zero-valued burn transaction {0}.", transferEvent.Log.TransactionHash);
 
                     continue;
                 }
 
                 if (transferEvent.Event.Value < BigInteger.Zero)
                 {
-                    this.logger.LogDebug("Ignoring negative-valued burn transaction {0}.", transferEvent.Log.TransactionHash);
+                    this.logger.LogInformation("Ignoring negative-valued burn transaction {0}.", transferEvent.Log.TransactionHash);
 
                     continue;
                 }
@@ -239,12 +238,12 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
-                this.logger.LogDebug("Conversion burn transaction {0} has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
+                this.logger.LogInformation("Conversion burn transaction {0} has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
 
                 // Look up the desired destination address for this account.
                 string destinationAddress = this.ethereumClientBase.GetDestinationAddress(transferEvent.Event.From);
 
-                this.logger.LogDebug("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
+                this.logger.LogInformation("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
 
                 // TODO: Validate that it is a mainchain address here before bothering to add it to the repository.
 
@@ -272,11 +271,11 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true);
 
-            this.logger.LogDebug("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
+            this.logger.LogInformation("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
 
             foreach (ConversionRequest request in mintRequests)
             {
-                this.logger.LogDebug("Processing conversion mint request {0}.", request.RequestId);
+                this.logger.LogInformation("Processing conversion mint request {0}.", request.RequestId);
 
                 IFederationMember member = this.federationHistory.GetFederationMemberForBlock(this.chainIndexer.Tip);
 
@@ -285,7 +284,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
                 if (originator)
                 {
-                    this.logger.LogDebug("This node selected as originator for transaction {0}.", request.RequestId);
+                    this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
 
                     // First construct the necessary minting transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                     string abiData = this.ethereumClientBase.EncodeMintParams(request.DestinationAddress, request.Amount);
@@ -299,16 +298,23 @@ namespace Stratis.Bitcoin.Features.Interop
                     // Persist the updated request before broadcasting it.
                     this.conversionRequestRepository.Save(request);
 
+                    string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
+
                     // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
                     // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
                     // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation node.
                     // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                     // The transactionId must be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified.
-                    this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId)).GetAwaiter().GetResult();
+                    this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).GetAwaiter().GetResult();
+
+                    // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
+                    // That is why it does not need to check the agreed transactionId confirmation count.
+
+                    return;
                 }
                 else
                 {
-                    this.logger.LogDebug("This node was not selected as the originator for transaction {0}.", request.RequestId);
+                    this.logger.LogInformation("This node was not selected as the originator for transaction {0}.", request.RequestId);
 
                     // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
                     // Initially there will not be a quorum of nodes that agree on the transactionId.
@@ -321,20 +327,27 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     if (agreedUponId != BigInteger.MinusOne)
                     {
-                        this.logger.LogDebug("Quorum reached for conversion transaction {0}, submitting confirmation.", request.RequestId);
+                        this.logger.LogInformation("Quorum reached for conversion transaction {0}, submitting confirmation.", request.RequestId);
 
                         // Once a quorum is reached, each node confirms the agreed transactionId.
                         // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
                         string confirmationHash = this.ethereumClientBase.ConfirmTransaction(agreedUponId);
 
-                        this.logger.LogDebug("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
+                        this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
 
                         request.RequestStatus = (int)ConversionRequestStatus.Processed;
                         request.Processed = true;
 
                         this.conversionRequestRepository.Save(request);
+
+                        return;
                     }
                 }
+
+                // If we reach this point, the node was not the originator but there were also insufficient votes to determine a transactionId yet.
+                // This scenario has to be handled carefully, because we want to avoid having nodes need to change their votes due to a new submission to the multisig contract.
+
+                // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract
             }
 
             // Unlike the mint requests, burns are not initiated by the multisig wallet.
@@ -587,12 +600,12 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 if (this.interopRequestRepository.Get(contractRequest.RequestId) != null)
                 {
-                    this.logger.LogDebug("Already saved interop request {0}.", contractRequest.RequestId);
+                    this.logger.LogInformation("Already saved interop request {0}.", contractRequest.RequestId);
 
                     continue;
                 }
 
-                this.logger.LogDebug("Saving interop request {0} from Fabric network.", contractRequest.RequestId);
+                this.logger.LogInformation("Saving interop request {0} from Ethereum network.", contractRequest.RequestId);
 
                 var request = new InteropRequest() { 
                     RequestId = contractRequest.RequestId,

@@ -117,11 +117,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             {
                 foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d => d.RetrievalType == DepositRetrievalType.Conversion))
                 {
-                    this.logger.Debug("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
+                    this.logger.Info("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
 
                     if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
                     {
-                        this.logger.Debug("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
+                        this.logger.Info("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
 
                         continue;
                     }

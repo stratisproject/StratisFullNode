@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Interop.EthereumClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
@@ -20,6 +21,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly Network network;
 
+        private readonly IFederationManager federationManager;
+
         private readonly IInteropTransactionManager interopTransactionManager;
 
         private readonly IEthereumClientBase ethereumClientBase;
@@ -27,17 +30,20 @@ namespace Stratis.Bitcoin.Features.Interop
         public InteropBehavior(
             ILoggerFactory loggerFactory,
             Network network,
+            IFederationManager federationManager,
             IInteropTransactionManager interopTransactionManager,
             IEthereumClientBase ethereumClientBase)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(network, nameof(network));
+            Guard.NotNull(federationManager, nameof(federationManager));
             Guard.NotNull(interopTransactionManager, nameof(interopTransactionManager));
             Guard.NotNull(ethereumClientBase, nameof(ethereumClientBase));
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.loggerFactory = loggerFactory;
             this.network = network;
+            this.federationManager = federationManager;
             this.interopTransactionManager = interopTransactionManager;
             this.ethereumClientBase = ethereumClientBase;
         }
@@ -45,7 +51,7 @@ namespace Stratis.Bitcoin.Features.Interop
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.loggerFactory, this.network, this.interopTransactionManager, this.ethereumClientBase);
+            return new InteropBehavior(this.loggerFactory, this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase);
         }
 
         protected override void AttachCore()
@@ -60,23 +66,20 @@ namespace Stratis.Bitcoin.Features.Interop
             this.AttachedPeer.MessageReceived.Unregister(this.OnMessageReceivedAsync);
         }
 
-        /// <summary>
-        /// Broadcast the interop coordination request to federation members.
-        /// </summary>
-        /// <param name="payload">The payload to broadcast.</param>
-        private async Task BroadcastAsync(InteropCoordinationPayload payload)
-        {
-            this.logger.LogDebug("Broadcasting to {0}", this.AttachedPeer.PeerEndPoint.Address);
-            // TODO: Add federation check
-            await this.AttachedPeer.SendMessageAsync(payload).ConfigureAwait(false);
-        }
-
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
         {
             if (!(message.Message.Payload is InteropCoordinationPayload payload))
                 return;
 
-            this.logger.LogDebug("{0} received from '{1}':'{2}'.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address);
+            this.logger.LogInformation("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+
+            // Check that the payload is signed by a federation member.
+            PubKey pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.TransactionId, payload.Signature);
+
+            if (pubKey == null || !this.federationManager.IsMultisigMember(pubKey))
+            {
+                this.logger.LogWarning("Received unverified coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+            }
 
             // Check that the transaction ID in the payload actually exists, and is unconfirmed.
             BigInteger confirmationCount = this.ethereumClientBase.GetConfirmationCount(payload.TransactionId);
@@ -84,15 +87,14 @@ namespace Stratis.Bitcoin.Features.Interop
             // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
             if (confirmationCount < 1)
             {
-                this.logger.LogDebug("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
+                this.logger.LogInformation("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
                 
                 return;
             }
 
-            this.logger.LogDebug("Multisig wallet transaction {0} has {1} confirmations.", payload.TransactionId, confirmationCount);
+            this.logger.LogInformation("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
-            // TODO: Add a signature to the payload that gets verified here
-            this.interopTransactionManager.AddVote(payload.RequestId, payload.TransactionId);
+            this.interopTransactionManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
         }
     }
 }
