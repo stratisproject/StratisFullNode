@@ -84,7 +84,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 diff += federationMembers.Count;
 
             DateTimeOffset tipTime = tip.Header.BlockTime;
-            while ((tipTime + roundTime) <= timeNow)
+            while ((tipTime + roundTime) < timeNow)
                 tipTime += roundTime;
 
             DateTimeOffset timeToMine = tipTime + roundTime * diff / federationMembers.Count;

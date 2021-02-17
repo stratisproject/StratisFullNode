@@ -80,7 +80,7 @@ namespace Stratis.Bitcoin.Features.PoA
         private IFederationMember GetFederationMemberForBlockInternal(ChainedHeader chainedHeader, List<IFederationMember> federation)
         {
             if (chainedHeader.Height == 0)
-                return federation.Last();
+                return federation.First();
 
             // Try to provide the member that signed the block.
             try
