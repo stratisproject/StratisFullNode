@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Interop.EthereumClient;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 
 namespace Stratis.Bitcoin.Features.Interop
@@ -16,7 +17,9 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly ILoggerFactory loggerFactory;
         
         private readonly Network network;
-        
+
+        private readonly IFederationManager federationManager;
+
         private readonly IConnectionManager connectionManager;
         
         private readonly InteropPoller interopPoller;
@@ -27,6 +30,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropFeature(ILoggerFactory loggerFactory, 
             Network network, 
+            IFederationManager federationManager,
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
             IInteropTransactionManager interopTransactionManager, 
@@ -34,6 +38,7 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             this.loggerFactory = loggerFactory;
             this.network = network;
+            this.federationManager = federationManager;
             this.connectionManager = connectionManager;
             this.interopPoller = interopPoller;
             this.interopTransactionManager = interopTransactionManager;
@@ -45,7 +50,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.loggerFactory, this.network, this.interopTransactionManager, this.ethereumClientBase));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.loggerFactory, this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase));
 
             return Task.CompletedTask;
         }
