@@ -238,12 +238,20 @@ namespace Stratis.Bitcoin.Features.PoA
                 {
                     DateTimeOffset myTimestamp = this.slotsManager.GetMiningTimestamp(tip, timeNow);
 
-                    if (myTimestamp <= timeNow)
-                        return (tip, myTimestamp);
+                    if (myTimestamp > timeNow)
+                    {
+                        TimeSpan waitTime = myTimestamp - timeNow;
 
-                    TimeSpan waitTime = myTimestamp - timeNow;
+                        if (waitTime.Milliseconds > 50)
+                        {
+                            await Task.Delay(50, this.cancellation.Token).ConfigureAwait(false);
+                            continue;
+                        }
 
-                    await Task.Delay(Math.Min(waitTime.Milliseconds, 50), this.cancellation.Token).ConfigureAwait(false);
+                        await Task.Delay(waitTime, this.cancellation.Token).ConfigureAwait(false);
+                    }
+
+                    return (tip, myTimestamp);
                 }
                 catch (NotAFederationMemberException)
                 {
