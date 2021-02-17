@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
@@ -16,7 +15,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets next timestamp at which current node can produce a block.</summary>
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
-        uint GetMiningTimestamp(uint currentTime);
+        DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset timeNow);
 
         uint GetRoundLengthSeconds(int? federationMembersCount = null);
     }
@@ -44,61 +43,68 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public uint GetMiningTimestamp(uint currentTime)
+        public DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset timeNow)
         {
             /*
             A miner can calculate when its expected to mine by looking at the ordered list of federation members
             and the last block that was mined and by whom. It can count the number of mining slots from that member
             to itself and multiply that with the target spacing to arrive at its mining timestamp.
             */
-
-            if (!this.federationManager.IsFederationMember)
-                throw new NotAFederationMemberException();
-
-            ChainedHeader tip = this.chainIndexer.Tip;
             List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, true);
 
-            // Round length in seconds.
-            uint roundTime = this.GetRoundLengthSeconds(federationMembers.Count);
+            int myIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
+            if (myIndex < 0)
+                throw new NotAFederationMemberException();
 
-            // Determine when the last round started by looking at who mined the tip.
-            IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip, federationMembers);
-            int lastMinerIndex = federationMembers.FindIndex(m => m.PubKey == lastMiner.PubKey);
-            uint lastRoundStart = tip.Header.Time - (uint)(lastMinerIndex * roundTime / federationMembers.Count);
+            var roundTime = TimeSpan.FromSeconds(this.GetRoundLengthSeconds(federationMembers.Count));
 
-            // To calculate the latest round start bring the last round forward in round time increments but stop short of the current time.
-            uint prevRoundStart = lastRoundStart + ((currentTime - lastRoundStart) / roundTime) * roundTime;
+            // Determine the index of the miner that mined the last block.
+            IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip);
+            List<IFederationMember> oldFederationMembers = this.federationHistory.GetFederationForBlock(tip);
+            int lastMinerIndex = oldFederationMembers.FindIndex(m => m.PubKey == lastMiner.PubKey);
+            if (lastMinerIndex < 0)
+                throw new Exception($"The miner ('{lastMiner.PubKey.ToHex()}') of the block at height {tip.Height} could not be located in federation.");
 
-            // Add our own slot position to determine our earliest mining timestamp.
-            int thisMinerIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey.PubKey);
-            uint nextTimestampForMining = prevRoundStart + (uint)(thisMinerIndex * roundTime / federationMembers.Count);
-            // Start in the past in case we still have to mine that slot.
-            if (nextTimestampForMining > currentTime)
-                nextTimestampForMining -= roundTime;
+            int index = -1;
 
-            // If the current time is closer to the next mining slot then mine there.
-            if (currentTime > nextTimestampForMining + roundTime / 2)
-                nextTimestampForMining += roundTime;
-
-            // Can't mine before the current tip.
-            while (nextTimestampForMining < tip.Header.Time)
-                nextTimestampForMining += roundTime;
-
-            // Don't break the round time rule.
-            // Look up to "round time" blocks back to find the last block we mined.
-            for (ChainedHeader prev = tip; prev != null; prev = prev.Previous)
+            // Looking back, find the first member in common between the old and new federation.
+            for (int i = oldFederationMembers.Count; i >= 1 && index < 0; i--)
             {
-                if (prev.Header.Time <= (nextTimestampForMining - roundTime))
+                PubKey keyToFind = oldFederationMembers[(i + lastMinerIndex) % oldFederationMembers.Count].PubKey;
+                index = federationMembers.FindIndex(m => m.PubKey == keyToFind);
+            }
+            
+            if (index < 0)
+                throw new Exception("Could not find a member in common between the old and new federation");
+
+            // Found a member that occurs in both old and new federation.
+            // Determine "distance" apart in new federation.
+            int diff = myIndex - index;
+            while (diff < 0)
+                diff += federationMembers.Count;
+
+            DateTimeOffset tipTime = tip.Header.BlockTime;
+            while ((tipTime + roundTime) <= timeNow)
+                tipTime += roundTime;
+
+            DateTimeOffset timeToMine = tipTime + roundTime * diff / federationMembers.Count;
+            if (timeToMine < timeNow)
+                timeToMine += roundTime;
+
+            // Ensure we have not already mined in this round.
+            for (ChainedHeader header = tip; header != null; header = header.Previous)
+            {
+                if ((header.Header.BlockTime + roundTime) <= timeToMine)
                     break;
 
-                if (this.federationHistory.GetFederationMemberForBlock(prev, federationMembers)?.PubKey == this.federationManager.CurrentFederationKey.PubKey)
+                if (this.federationHistory.GetFederationMemberForBlock(header).PubKey == this.federationManager.CurrentFederationKey.PubKey)
                 {
-                    nextTimestampForMining += roundTime;
+                    timeToMine += roundTime;
                     break;
                 }
             }
 
-            return nextTimestampForMining;
+            return timeToMine;
         }
 
         public uint GetRoundLengthSeconds(int? federationMembersCount = null)

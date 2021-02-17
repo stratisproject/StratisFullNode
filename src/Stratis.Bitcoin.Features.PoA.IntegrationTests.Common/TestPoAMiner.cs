@@ -62,13 +62,14 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
                 this.timeProvider.AdjustedTimeOffset += TimeSpan.FromSeconds(
                     this.slotsManager.GetRoundLengthSeconds(this.federationManager.GetFederationMembers().Count));
 
-                uint timeNow = (uint)this.timeProvider.GetAdjustedTimeAsUnixTimestamp();
+                DateTime timeNow = this.timeProvider.GetAdjustedTime();
+                ChainedHeader tip = this.consensusManager.Tip;
 
-                uint myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
+                DateTimeOffset myTimestamp = this.slotsManager.GetMiningTimestamp(tip, timeNow);
 
-                this.timeProvider.AdjustedTimeOffset += TimeSpan.FromSeconds(myTimestamp - timeNow);
+                this.timeProvider.AdjustedTimeOffset += (myTimestamp - timeNow);
 
-                ChainedHeader chainedHeader = await this.MineBlockAtTimestampAsync(myTimestamp).ConfigureAwait(false);
+                ChainedHeader chainedHeader = await this.MineBlockAtTimestampAsync(tip, myTimestamp).ConfigureAwait(false);
 
                 if (chainedHeader == null)
                 {
