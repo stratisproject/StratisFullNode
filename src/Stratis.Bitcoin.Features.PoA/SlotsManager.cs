@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 
@@ -15,7 +14,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets next timestamp at which current node can produce a block.</summary>
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
-        DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset timeNow);
+        DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset currentTime);
 
         TimeSpan GetRoundLength(int? federationMembersCount = null);
     }
@@ -28,18 +27,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IFederationHistory federationHistory;
 
-        private readonly ChainIndexer chainIndexer;
-
-        private readonly ILogger logger;
-
-        public SlotsManager(Network network, IFederationManager federationManager, IFederationHistory federationHistory, ChainIndexer chainIndexer, ILoggerFactory loggerFactory)
+        public SlotsManager(Network network, IFederationManager federationManager, IFederationHistory federationHistory)
         {
             Guard.NotNull(network, nameof(network));
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.federationHistory = Guard.NotNull(federationHistory, nameof(federationHistory));
-            this.chainIndexer = chainIndexer;
             this.consensusOptions = (network as PoANetwork).ConsensusOptions;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <inheritdoc />

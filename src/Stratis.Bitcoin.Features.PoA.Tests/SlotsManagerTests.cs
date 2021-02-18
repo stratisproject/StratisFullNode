@@ -5,7 +5,6 @@ using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
@@ -27,7 +26,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.federationManager = PoATestsBase.CreateFederationManager(this).federationManager;
             var federationHistory = new FederationHistory(this.federationManager);
             this.chainIndexer = new Mock<ChainIndexer>();
-            this.slotsManager = new SlotsManager(this.network, this.federationManager, federationHistory, this.chainIndexer.Object, new LoggerFactory());
+            this.slotsManager = new SlotsManager(this.network, this.federationManager, federationHistory);
         }
         
         [Fact]
@@ -40,7 +39,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             IFederationManager fedManager = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null)).federationManager;
             var header = new BlockHeader();
             this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            this.slotsManager = new SlotsManager(this.network, fedManager, new FederationHistory(fedManager), this.chainIndexer.Object, new LoggerFactory());
+            this.slotsManager = new SlotsManager(this.network, fedManager, new FederationHistory(fedManager));
 
             List<IFederationMember> federationMembers = fedManager.GetFederationMembers();
             DateTimeOffset roundStart = DateTimeOffset.FromUnixTimeSeconds(this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count * 5);

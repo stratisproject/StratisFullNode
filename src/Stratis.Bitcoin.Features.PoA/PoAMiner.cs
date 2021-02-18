@@ -258,6 +258,11 @@ namespace Stratis.Bitcoin.Features.PoA
                     this.logger.LogWarning("This node is no longer a federation member!");
                     break;
                 }
+                catch (Exception err)
+                {
+                    this.logger.LogError(err.Message);
+                    break;
+                }
             }
 
             throw new OperationCanceledException();
