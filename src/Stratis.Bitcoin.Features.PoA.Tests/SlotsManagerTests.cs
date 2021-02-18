@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             var tool = new KeyTool(new DataFolder(string.Empty));
             Key key = tool.GeneratePrivateKey();
-            this.network = new TestPoANetwork(new List<PubKey>() { tool.GeneratePrivateKey().PubKey, key.PubKey, tool.GeneratePrivateKey().PubKey });
+            this.network = new TestPoANetwork(new List<PubKey>() { key.PubKey, tool.GeneratePrivateKey().PubKey, tool.GeneratePrivateKey().PubKey });
 
             IFederationManager fedManager = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null)).federationManager;
             var header = new BlockHeader();
