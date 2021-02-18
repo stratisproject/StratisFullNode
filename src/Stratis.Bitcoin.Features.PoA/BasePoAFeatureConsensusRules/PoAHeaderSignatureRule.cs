@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             }
 
             // Look at the last round of blocks to find the previous time that the miner mined.
-            var roundTime = TimeSpan.FromSeconds(this.slotsManager.GetRoundLengthSeconds(federation.Count));
+            var roundTime = this.slotsManager.GetRoundLength(federation.Count);
             int blockCounter = 0;
 
             for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
@@ -89,10 +89,10 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
                 // Mining slots shift when the federation changes. 
                 // Only raise an error if the federation did not change.
-                if (TimeSpan.FromSeconds(this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader).Count)) != roundTime)
+                if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
                     break;
 
-                if (TimeSpan.FromSeconds(this.slotsManager.GetRoundLengthSeconds(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count)) != roundTime)
+                if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
                     break;
 
                 this.Logger.LogDebug("Block {0} was mined by the same miner '{1}' as {2} blocks ({3})s ago and there was no federation change.", prevHeader.HashBlock, pubKey.ToHex(), blockCounter, header.Time - prevHeader.Header.Time);

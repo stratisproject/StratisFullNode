@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
         DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset timeNow);
 
-        uint GetRoundLengthSeconds(int? federationMembersCount = null);
+        TimeSpan GetRoundLength(int? federationMembersCount = null);
     }
 
     public class SlotsManager : ISlotsManager
@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.PoA
             if (myIndex < 0)
                 throw new NotAFederationMemberException();
 
-            var roundTime = TimeSpan.FromSeconds(this.GetRoundLengthSeconds(federationMembers.Count));
+            var roundTime = this.GetRoundLength(federationMembers.Count);
 
             // Determine the index of the miner that mined the last block.
             IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip);
@@ -107,13 +107,13 @@ namespace Stratis.Bitcoin.Features.PoA
             return timeToMine;
         }
 
-        public uint GetRoundLengthSeconds(int? federationMembersCount = null)
+        public TimeSpan GetRoundLength(int? federationMembersCount)
         {
             federationMembersCount = federationMembersCount ?? this.federationManager.GetFederationMembers().Count;
 
             uint roundLength = (uint)(federationMembersCount * this.consensusOptions.TargetSpacingSeconds);
 
-            return roundLength;
+            return TimeSpan.FromSeconds(roundLength);
         }
     }
 }
