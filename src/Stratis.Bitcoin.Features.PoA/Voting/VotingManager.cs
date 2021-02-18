@@ -272,7 +272,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader, bool nextBlock = false)
+        public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader, int offset = 0)
         {
             lock (this.locker)
             {
@@ -286,7 +286,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     foreach (Poll poll in approvedPolls.OrderBy(a => a.PollVotedInFavorBlockData.Height))
                     {
                         // When block "PollVotedInFavorBlockData"+MaxReorgLength connects, block "PollVotedInFavorBlockData" is executed. See VotingManager.OnBlockConnected.
-                        if ((poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) > (nextBlock ? chainedHeader.Height + 1 : chainedHeader.Height))
+                        if ((poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength) > (chainedHeader.Height + offset))
                             break;
 
                         IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
@@ -300,7 +300,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     // Set the IsMultisigMember flags to match the expected values.
                     int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight();
-                    if (multisigMinersApplicabilityHeight != null && (nextBlock ? chainedHeader.Height + 1 : chainedHeader.Height) < multisigMinersApplicabilityHeight)
+                    if (multisigMinersApplicabilityHeight != null && (chainedHeader.Height + offset) < multisigMinersApplicabilityHeight)
                     {
                         // If we are accessing blocks prior to STRAX activation then the IsMultisigMember values for the members may be different. 
                         foreach (CollateralFederationMember member in modifiedFederation.Where(m => m is CollateralFederationMember))

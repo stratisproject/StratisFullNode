@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Features.PoA
             and the last block that was mined and by whom. It can count the number of mining slots from that member
             to itself and multiply that with the target spacing to arrive at its mining timestamp.
             */
-            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, true);
+            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);
 
             int myIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
             if (myIndex < 0)
