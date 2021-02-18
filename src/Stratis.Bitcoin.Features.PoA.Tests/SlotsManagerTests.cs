@@ -48,20 +48,20 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             fedManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(IFederationManager.CurrentFederationKey), key);
             fedManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(this.federationManager.IsFederationMember), true);
 
-            Assert.Equal(roundStart + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds), this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart));
-            Assert.Equal(roundStart + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds), this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart + TimeSpan.FromSeconds(4)));
+            TimeSpan targetSpacing = TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds);
 
-            roundStart = roundStart + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count);
-            Assert.Equal(roundStart + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds), this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart - TimeSpan.FromSeconds(5)));
-            Assert.Equal(roundStart + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds), this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart - TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds + 1)));
+            Assert.Equal(roundStart + targetSpacing, this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart));
+            Assert.Equal(roundStart + targetSpacing, this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart + TimeSpan.FromSeconds(4)));
 
-            //Assert.True(this.slotsManager.IsValidTimestamp(this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart - TimeSpan.FromSeconds(5)).ToUnixTimeSeconds()));
+            roundStart = roundStart + targetSpacing * federationMembers.Count;
+            Assert.Equal(roundStart + targetSpacing, this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart - TimeSpan.FromSeconds(5)));
+            Assert.Equal(roundStart + targetSpacing, this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, roundStart - TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds + 1)));
 
-            DateTimeOffset thisTurnTimestamp = roundStart + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds);
-            DateTimeOffset nextTurnTimestamp = thisTurnTimestamp + TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count);
+            DateTimeOffset thisTurnTimestamp = roundStart + targetSpacing;
+            DateTimeOffset nextTurnTimestamp = thisTurnTimestamp + targetSpacing * federationMembers.Count;
 
             // If we are past our last timestamp's turn, always give us the NEXT timestamp.
-            DateTimeOffset justPastOurTurnTime = thisTurnTimestamp + TimeSpan.FromSeconds((this.consensusOptions.TargetSpacingSeconds / 2) + 1);
+            DateTimeOffset justPastOurTurnTime = thisTurnTimestamp + targetSpacing / 2 + TimeSpan.FromSeconds(1);
             Assert.Equal(nextTurnTimestamp, this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, justPastOurTurnTime));
 
             // TODO: Refactor this.
@@ -79,7 +79,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.slotsManager = new SlotsManager(this.network, fedManager, new FederationHistory(fedManager), this.chainIndexer.Object, new LoggerFactory());
             Assert.Equal(nextTurnTimestamp, this.slotsManager.GetMiningTimestamp(this.chainIndexer.Object.Tip, thisTurnTimestamp + TimeSpan.FromSeconds(1)));
             */
-        }
-        
+        }        
     }
 }
