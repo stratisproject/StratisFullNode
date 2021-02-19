@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public void Initialize()
         {
             this.blockConnectedToken = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
-            this.blockConnectedToken = this.signals.Subscribe<ReconstructPollData>(this.OnRecontruction);
+            this.blockConnectedToken = this.signals.Subscribe<ReconstructVoteDataForBlock>(this.OnRecontruction);
             this.fedMemberAddedToken = this.signals.Subscribe<FedMemberAdded>(this.OnFedMemberAdded);
             this.fedMemberKickedToken = this.signals.Subscribe<FedMemberKicked>(this.OnFedMemberKicked);
 
@@ -115,7 +115,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.fedPubKeysByLastActiveTime;
         }
 
-        private void OnRecontruction(ReconstructPollData reconstructPollData)
+        private void OnRecontruction(ReconstructVoteDataForBlock reconstructPollData)
         {
             UpdateFederationMembersLastActiveTime(reconstructPollData.ConnectedBlock, false);
         }

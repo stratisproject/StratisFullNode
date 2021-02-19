@@ -132,10 +132,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <param name="height">The height to start reconstructing from.</param>
         public void ReconstructVotingDataFromHeight(int height)
         {
-            this.isBusyReconstructing = true;
-
             try
             {
+                this.isBusyReconstructing = true;
+
                 var currentHeight = height;
                 this.logger.LogInformation($"Reconstructing voting poll data from height {currentHeight}.");
 
@@ -482,11 +482,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         if (this.IsVotingOnMultisigMember(data))
                             continue;
-
-                        if (data.Key == VoteKey.KickFederationMember)
-                        {
-
-                        }
 
                         Poll poll = this.polls.SingleOrDefault(x => x.VotingData == data && x.IsPending);
 
