@@ -9,6 +9,7 @@ using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
@@ -19,7 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime();
         bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
         void Execute(ChainedHeader consensusTip);
-        void Initialize();
+        void Initialize(bool reset = false);
     }
 
     /// <summary>
@@ -72,13 +73,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <inheritdoc />
-        public void Initialize()
+        public void Initialize(bool reset = false)
         {
             this.blockConnectedToken = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
+            this.blockConnectedToken = this.signals.Subscribe<ReconstructPollData>(this.OnRecontruction);
             this.fedMemberAddedToken = this.signals.Subscribe<FedMemberAdded>(this.OnFedMemberAdded);
             this.fedMemberKickedToken = this.signals.Subscribe<FedMemberKicked>(this.OnFedMemberKicked);
 
-            Dictionary<string, uint> loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
+            Dictionary<string, uint> loaded = null;
+            if (!reset)
+                loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
 
             if (loaded != null)
             {
@@ -111,13 +115,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.fedPubKeysByLastActiveTime;
         }
 
+        private void OnRecontruction(ReconstructPollData reconstructPollData)
+        {
+            UpdateFederationMembersLastActiveTime(reconstructPollData.ConnectedBlock, false);
+        }
+
         /// <summary>
         /// This is to ensure that we keep <see cref="fedPubKeysByLastActiveTime"></see> up to date from other blocks being mined.
         /// </summary>
         /// <param name="blockConnected">The block that was connected.</param>
         private void OnBlockConnected(BlockConnected blockConnected)
         {
-            UpdateFederationMembersLastActiveTime(blockConnected);
+            UpdateFederationMembersLastActiveTime(blockConnected.ConnectedBlock);
         }
 
         private void OnFedMemberKicked(FedMemberKicked fedMemberKickedData)
@@ -215,16 +224,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private void UpdateFederationMembersLastActiveTime(BlockConnected blockConnected)
+        private void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true)
         {
             // The pubkey of the member that signed the block.
-            PubKey key = this.federationHistory.GetFederationMemberForBlock(blockConnected.ConnectedBlock.ChainedHeader).PubKey;
+            PubKey key = this.federationHistory.GetFederationMemberForBlock(blockConnected.ChainedHeader).PubKey;
 
             // Update the dictionary.
-            this.fedPubKeysByLastActiveTime.AddOrReplace(key, blockConnected.ConnectedBlock.ChainedHeader.Header.Time);
+            this.fedPubKeysByLastActiveTime.AddOrReplace(key, blockConnected.ChainedHeader.Header.Time);
 
             // Save it back.
-            this.SaveMembersByLastActiveTime();
+            if (save)
+                this.SaveMembersByLastActiveTime();
         }
 
         private void SaveMembersByLastActiveTime()
