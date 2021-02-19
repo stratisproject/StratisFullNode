@@ -9,6 +9,7 @@ using Nethereum.Contracts;
 using Nethereum.Contracts.ContractHandlers;
 using Nethereum.Contracts.CQS;
 using Nethereum.RPC.Eth.DTOs;
+using Nethereum.Util;
 using Nethereum.Web3;
 
 namespace Stratis.Bitcoin.Features.Interop.EthereumClient
@@ -104,7 +105,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 			return owners;
 		}
 
-		public static async Task<BigInteger> SubmitTransaction(Web3 web3, string contractAddress, string destination, BigInteger value, string data)
+		public static async Task<BigInteger> SubmitTransaction(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
 		{
 			IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
 
@@ -112,7 +113,9 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 			{
 				Destination = destination,
 				Value = value,
-				Data = ConvertHexStringToByteArray(data)
+				Data = ConvertHexStringToByteArray(data),
+				Gas = gas,
+                GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
 			};
 
 			TransactionReceipt submitTransactionReceipt = await submitHandler.SendRequestAndWaitForReceiptAsync(contractAddress, submitTransactionFunctionMessage);
@@ -143,15 +146,16 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 			return data;
 		}
 
-		public static async Task<string> ConfirmTransaction(Web3 web3, string contractAddress, BigInteger transactionId)
+		public static async Task<string> ConfirmTransaction(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
 		{
 			IContractTransactionHandler<ConfirmTransactionFunction> confirmationHandler = web3.Eth.GetContractTransactionHandler<ConfirmTransactionFunction>();
 
 			var confirmTransactionFunctionMessage = new ConfirmTransactionFunction()
 			{
 				TransactionId = transactionId,
-				Gas = 1_000_000
-            };
+                Gas = gas,
+				GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
+			};
 
 			TransactionReceipt confirmTransactionReceipt = await confirmationHandler.SendRequestAndWaitForReceiptAsync(contractAddress, confirmTransactionFunctionMessage);
 
@@ -162,15 +166,16 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 		/// Normally the final mandatory confirmation will automatically call the execute.
 		/// This is provided in case it has to be called again due to an error condition.
 		/// </summary>
-		public static async Task<string> ExecuteTransaction(Web3 web3, string contractAddress, BigInteger transactionId)
+		public static async Task<string> ExecuteTransaction(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
 		{
 			IContractTransactionHandler<ExecuteTransactionFunction> executionHandler = web3.Eth.GetContractTransactionHandler<ExecuteTransactionFunction>();
 
 			var executeTransactionFunctionMessage = new ExecuteTransactionFunction()
 			{
 				TransactionId = transactionId,
-				Gas = 1_000_000
-            };
+                Gas = gas,
+                GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
+			};
 
 			TransactionReceipt executeTransactionReceipt = await executionHandler.SendRequestAndWaitForReceiptAsync(contractAddress, executeTransactionFunctionMessage);
 
@@ -182,7 +187,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 			var getConfirmationCountFunctionMessage = new GetConfirmationCountFunction()
 			{
 				TransactionId = transactionId
-			};
+            };
 
 			IContractQueryHandler<GetConfirmationCountFunction> confirmationHandler = web3.Eth.GetContractQueryHandler<GetConfirmationCountFunction>();
 			BigInteger confirmations = await confirmationHandler.QueryAsync<BigInteger>(contractAddress, getConfirmationCountFunctionMessage);

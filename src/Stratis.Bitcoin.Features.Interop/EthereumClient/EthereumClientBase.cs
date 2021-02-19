@@ -66,13 +66,13 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         /// <inheritdoc />
         public BigInteger SubmitTransaction(string destination, BigInteger value, string data)
         {
-            return MultisigWallet.SubmitTransaction(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data).GetAwaiter().GetResult();
+            return MultisigWallet.SubmitTransaction(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />
         public string ConfirmTransaction(BigInteger transactionId)
         {
-            return MultisigWallet.ConfirmTransaction(this.web3, this.interopSettings.MultisigWalletAddress, transactionId).GetAwaiter().GetResult();
+            return MultisigWallet.ConfirmTransaction(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).GetAwaiter().GetResult();
         }
 
         public BigInteger GetConfirmationCount(BigInteger transactionId)

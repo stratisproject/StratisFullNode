@@ -145,22 +145,24 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 			return balance;
 		}
 
-		public static async Task<string> Transfer(Web3 web3, string contractAddress, string recipient, BigInteger amount)
+		public static async Task<string> Transfer(Web3 web3, string contractAddress, string recipient, BigInteger amount, BigInteger gas, BigInteger gasPrice)
 		{
 			IContractTransactionHandler<TransferFunction> transferHandler = web3.Eth.GetContractTransactionHandler<TransferFunction>();
 
 			var transfer = new TransferFunction()
 			{
 				To = recipient,
-				TokenAmount = amount
-			};
+				TokenAmount = amount,
+                Gas = gas,
+                GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
+            };
 
 			TransactionReceipt transactionTransferReceipt = await transferHandler.SendRequestAndWaitForReceiptAsync(contractAddress, transfer);
 
 			return transactionTransferReceipt.TransactionHash;
 		}
 
-		public static async Task<string> TransferOffline(Web3 web3, string contractAddress, string recipient, BigInteger amount, HexBigInteger nonce, string fromAddress = null)
+		public static async Task<string> TransferOffline(Web3 web3, string contractAddress, string recipient, BigInteger amount, HexBigInteger nonce, BigInteger gas, BigInteger gasPrice, string fromAddress = null)
 		{
 			IContractTransactionHandler<TransferFunction> transferHandler = web3.Eth.GetContractTransactionHandler<TransferFunction>();
 
@@ -173,8 +175,8 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 			// Nethereum internally calls the Ethereum client to set the GasPrice, Nonce and estimate the Gas, 
 			// so if we want to sign the transaction for the contract completely offline we will need to set those values beforehand.
 			transfer.Nonce = nonce.Value;
-			transfer.Gas = 21000;
-			transfer.GasPrice = Web3.Convert.ToWei(25, UnitConversion.EthUnit.Gwei);
+			transfer.Gas = gas;
+			transfer.GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei);
 
 			if (fromAddress != null)
 				transfer.FromAddress = fromAddress;
