@@ -53,10 +53,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IBlockStoreQueue blockStoreQueue;
 
+        private readonly ReconstructFederationService reconstructFederationService;
+
         public PoAFeature(IFederationManager federationManager, PayloadProvider payloadProvider, IConnectionManager connectionManager, ChainIndexer chainIndexer,
             IInitialBlockDownloadState initialBlockDownloadState, IConsensusManager consensusManager, IPeerBanning peerBanning, ILoggerFactory loggerFactory,
             VotingManager votingManager, IFederationHistory federationHistory, Network network, IWhitelistedHashesRepository whitelistedHashesRepository,
-            IIdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue, IPoAMiner miner = null)
+            IIdleFederationMembersKicker idleFederationMembersKicker, IChainState chainState, IBlockStoreQueue blockStoreQueue, IPoAMiner miner = null, ReconstructFederationService reconstructFederationService = null)
         {
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
@@ -73,6 +75,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.chainState = chainState;
             this.blockStoreQueue = blockStoreQueue;
+            this.reconstructFederationService = reconstructFederationService;
 
             payloadProvider.DiscoverPayloads(this.GetType().Assembly);
         }
@@ -106,6 +109,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
+
+            this.reconstructFederationService.Reconstruct(1_420_000);
 
             this.miner?.InitializeMining();
 

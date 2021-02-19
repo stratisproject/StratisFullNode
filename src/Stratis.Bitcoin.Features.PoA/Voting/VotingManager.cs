@@ -116,7 +116,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             var idsToRemove = new List<int>();
 
-            this.pollsRepository.Initialize();
             this.polls = this.pollsRepository.GetAllPolls();
 
             foreach (Poll poll in this.polls.Where(p => p.PollStartBlockData.Height >= height))
@@ -125,7 +124,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             if (idsToRemove.Any())
-                this.pollsRepository.CleanPolls(idsToRemove.ToArray());
+            {
+                this.pollsRepository.DeletePollsAndSetHighestPollId(idsToRemove.ToArray());
+                this.polls = this.pollsRepository.GetAllPolls();
+            }
         }
 
         /// <summary> Reconstructs voting and poll data from a given height.</summary>
@@ -149,10 +151,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (block == null)
                         break;
 
-                    // Publish this event so that the idle members kicker gets updated.
-                    this.signals.Publish(new ReconstructVoteDataForBlock(new ChainedHeaderBlock(block, chainedHeader)));
-
-                    OnBlockConnected(new BlockConnected(new ChainedHeaderBlock(block, chainedHeader)));
+                    var chainedHeaderBlock = new ChainedHeaderBlock(block, chainedHeader);
+                    this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(chainedHeaderBlock, false);
+                    OnBlockConnected(new BlockConnected(chainedHeaderBlock));
 
                     currentHeight++;
 

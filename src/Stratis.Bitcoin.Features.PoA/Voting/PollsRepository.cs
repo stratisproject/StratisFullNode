@@ -81,8 +81,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             transaction.Insert<byte[], int>(TableName, RepositoryHighestIndexKey, this.highestPollId);
         }
 
-        /// <summary>Removes polls under provided ids.</summary>
-        public void CleanPolls(params int[] ids)
+        /// <summary>Removes polls for the provided ids.</summary>
+        public void DeletePollsAndSetHighestPollId(params int[] ids)
         {
             lock (this.lockObject)
             {

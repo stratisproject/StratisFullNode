@@ -21,7 +21,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
         void Execute(ChainedHeader consensusTip);
         void Initialize();
-        void InitializeFederationMemberLastActiveTime();
+        void InitializeFederationMemberLastActiveTime(IEnumerable<IFederationMember> federationMembers);
+        void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true);
     }
 
     /// <summary>
@@ -77,7 +78,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public void Initialize()
         {
             this.blockConnectedToken = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
-            this.blockConnectedToken = this.signals.Subscribe<ReconstructVoteDataForBlock>(this.OnRecontruction);
             this.fedMemberAddedToken = this.signals.Subscribe<FedMemberAdded>(this.OnFedMemberAdded);
             this.fedMemberKickedToken = this.signals.Subscribe<FedMemberKicked>(this.OnFedMemberKicked);
 
@@ -94,17 +94,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             else
             {
                 this.logger.LogDebug("No saved data found. Initializing federation data with current timestamp.");
-                InitializeFederationMemberLastActiveTime();
+                InitializeFederationMemberLastActiveTime(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
             }
         }
 
         /// <inheritdoc />
-        public void InitializeFederationMemberLastActiveTime()
+        public void InitializeFederationMemberLastActiveTime(IEnumerable<IFederationMember> federationMembers)
         {
             this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
 
-            foreach (IFederationMember federationMember in ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers)
+            foreach (IFederationMember federationMember in federationMembers)
+            {
                 this.fedPubKeysByLastActiveTime[federationMember.PubKey] = this.network.GenesisTime;
+            }
 
             this.SaveMembersByLastActiveTime();
         }
@@ -113,11 +115,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime()
         {
             return this.fedPubKeysByLastActiveTime;
-        }
-
-        private void OnRecontruction(ReconstructVoteDataForBlock reconstructPollData)
-        {
-            UpdateFederationMembersLastActiveTime(reconstructPollData.ConnectedBlock, false);
         }
 
         /// <summary>
@@ -224,7 +221,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true)
+        public void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true)
         {
             // The pubkey of the member that signed the block.
             PubKey key = this.federationHistory.GetFederationMemberForBlock(blockConnected.ChainedHeader).PubKey;
