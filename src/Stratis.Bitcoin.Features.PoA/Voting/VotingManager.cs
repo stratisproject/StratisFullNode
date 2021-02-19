@@ -108,47 +108,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger.LogDebug("VotingManager initialized.");
         }
 
-        private void EnsureChainAndPollHeightsAreAligned()
+        /// <summary> Remove all polls that started on or after the given height.</summary>
+        /// <param name="height">The height to clean polls from.</param>
+        public void DeletePollsAfterHeight(int height)
         {
-            var idsToRemove = new List<int>();
-
-            List<Poll> pendingPolls = this.GetPendingPolls().MemberPolls();
-
-            // Clean polls that are pending but that has already executed.
-            foreach (Poll executedPoll in this.GetExecutedPolls().MemberPolls())
-            {
-                IFederationMember memberVotedOn = GetMemberVotedOn(executedPoll.VotingData);
-                IEnumerable<Poll> stalePendingPolls = pendingPolls.Where(pp => GetMemberVotedOn(pp.VotingData).PubKey == memberVotedOn.PubKey);
-
-                foreach (Poll stalePoll in stalePendingPolls)
-                {
-                    if (!idsToRemove.Contains(stalePoll.Id))
-                        idsToRemove.Add(stalePoll.Id);
-                }
-            }
-
-            if (idsToRemove.Any())
-            {
-                this.pollsRepository.CleanPolls(idsToRemove.ToArray());
-                this.pollsRepository.Initialize();
-                this.polls = this.pollsRepository.GetAllPolls();
-            }
-        }
-
-        /// <summary> Remove all polls that started after VotingManagerV2ActivationHeight and reconstruct them.</summary>
-        public void CleanPollsAfterVotingManagerV2Height()
-        {
-            //var heightToCheck = this.poaConsensusOptions.VotingManagerV2ActivationHeight;
-            var heightToCheck = 1_400_000;
-
-            this.logger.LogInformation($"Cleaning poll data from height {heightToCheck}.");
+            this.logger.LogInformation($"Cleaning poll data from height {height}.");
 
             var idsToRemove = new List<int>();
 
             this.pollsRepository.Initialize();
             this.polls = this.pollsRepository.GetAllPolls();
 
-            foreach (Poll poll in this.polls.Where(p => p.PollStartBlockData.Height >= heightToCheck))
+            foreach (Poll poll in this.polls.Where(p => p.PollStartBlockData.Height >= height))
             {
                 idsToRemove.Add(poll.Id);
             }
@@ -157,20 +128,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.pollsRepository.CleanPolls(idsToRemove.ToArray());
         }
 
-        /// <summary> Remove all polls that started after VotingManagerV2ActivationHeight and reconstruct them.</summary>
-        public void ReconstructFederationFromVotingManagerV2Height()
+        /// <summary> Reconstructs voting and poll data from a given height.</summary>
+        /// <param name="height">The height to start reconstructing from.</param>
+        public void ReconstructVotingDataFromHeight(int height)
         {
             this.isBusyReconstructing = true;
 
             try
             {
-                var heightToCheck = 1_400_000;
-
-                this.logger.LogInformation($"Reconstructing voting poll data from height {heightToCheck}.");
+                var currentHeight = height;
+                this.logger.LogInformation($"Reconstructing voting poll data from height {currentHeight}.");
 
                 do
                 {
-                    ChainedHeader chainedHeader = this.chainIndexer.GetHeader(heightToCheck);
+                    ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
                     if (chainedHeader == null)
                         break;
 
@@ -178,14 +149,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (block == null)
                         break;
 
-                    this.signals.Publish(new ReconstructPollData(new ChainedHeaderBlock(block, chainedHeader)));
+                    // Publish this event so that the idle members kicker gets updated.
+                    this.signals.Publish(new ReconstructVoteDataForBlock(new ChainedHeaderBlock(block, chainedHeader)));
 
                     OnBlockConnected(new BlockConnected(new ChainedHeaderBlock(block, chainedHeader)));
 
-                    heightToCheck++;
+                    currentHeight++;
 
-                    if (heightToCheck % 10000 == 0)
-                        this.logger.LogInformation($"Reconstruction progress at height {heightToCheck}");
+                    if (currentHeight % 10000 == 0)
+                        this.logger.LogInformation($"Reconstructing voting data at height {currentHeight}");
 
                 } while (true);
             }

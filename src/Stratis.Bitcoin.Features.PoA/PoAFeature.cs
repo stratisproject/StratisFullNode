@@ -88,8 +88,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             var options = (PoAConsensusOptions)this.network.Consensus.Options;
 
-            this.votingManager.CleanPollsAfterVotingManagerV2Height();
-
             if (options.VotingEnabled)
             {
                 // If we are kicking members, we need to initialize this component before the VotingManager.
@@ -97,7 +95,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 // The IdleKicker can much more easily find out who the block is from if it receives the block first.
                 if (options.AutoKickIdleMembers)
                 {
-                    this.idleFederationMembersKicker.Initialize(true);
+                    this.idleFederationMembersKicker.Initialize();
                     this.votingManager.Initialize(this.federationHistory, this.idleFederationMembersKicker);
                 }
                 else
@@ -108,8 +106,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
-
-            this.votingManager.ReconstructFederationFromVotingManagerV2Height();
 
             this.miner?.InitializeMining();
 

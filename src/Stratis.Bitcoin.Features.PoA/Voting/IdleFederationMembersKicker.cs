@@ -20,7 +20,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime();
         bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
         void Execute(ChainedHeader consensusTip);
-        void Initialize(bool reset = false);
+        void Initialize();
+        void InitializeFederationMemberLastActiveTime();
     }
 
     /// <summary>
@@ -73,17 +74,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <inheritdoc />
-        public void Initialize(bool reset = false)
+        public void Initialize()
         {
             this.blockConnectedToken = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockConnectedToken = this.signals.Subscribe<ReconstructPollData>(this.OnRecontruction);
             this.fedMemberAddedToken = this.signals.Subscribe<FedMemberAdded>(this.OnFedMemberAdded);
             this.fedMemberKickedToken = this.signals.Subscribe<FedMemberKicked>(this.OnFedMemberKicked);
 
-            Dictionary<string, uint> loaded = null;
-            if (!reset)
-                loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
-
+            Dictionary<string, uint> loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
             if (loaded != null)
             {
                 this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
@@ -96,17 +94,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             else
             {
                 this.logger.LogDebug("No saved data found. Initializing federation data with current timestamp.");
-
-                this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
-
-                // If this is a clean sync initialize each member's last active time with the genesis timestamp.
-                // Each member's last active time will be updated on each block connected event during syncing
-                // or on block mined.
-                foreach (IFederationMember federationMember in ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers)
-                    this.fedPubKeysByLastActiveTime[federationMember.PubKey] = this.network.GenesisTime;
-
-                this.SaveMembersByLastActiveTime();
+                InitializeFederationMemberLastActiveTime();
             }
+        }
+
+        /// <inheritdoc />
+        public void InitializeFederationMemberLastActiveTime()
+        {
+            this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
+
+            foreach (IFederationMember federationMember in ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers)
+                this.fedPubKeysByLastActiveTime[federationMember.PubKey] = this.network.GenesisTime;
+
+            this.SaveMembersByLastActiveTime();
         }
 
         /// <inheritdoc />

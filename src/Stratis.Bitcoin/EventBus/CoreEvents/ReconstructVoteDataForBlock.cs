@@ -3,14 +3,14 @@
 namespace Stratis.Bitcoin.EventBus.CoreEvents
 {
     /// <summary>
-    /// Event that is executed when a block is connected to a consensus chain.
+    /// Event that is executed when voting data should be reconstructed for a given block.
     /// </summary>
     /// <seealso cref="EventBase" />
-    public class BlockConnected : EventBase
+    public class ReconstructVoteDataForBlock : EventBase
     {
         public ChainedHeaderBlock ConnectedBlock { get; }
 
-        public BlockConnected(ChainedHeaderBlock connectedBlock)
+        public ReconstructVoteDataForBlock(ChainedHeaderBlock connectedBlock)
         {
             this.ConnectedBlock = connectedBlock;
         }
