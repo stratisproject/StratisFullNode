@@ -13,6 +13,8 @@ namespace Stratis.Bitcoin.Features.Interop
         public const string EthereumClientUrlKey = "ethereumclienturl";
         public const string EthereumAccountKey = "ethereumaccount";
         public const string EthereumPassphraseKey = "ethereumpassphrase";
+        public const string EthereumGasKey = "ethereumgas";
+        public const string EthereumGasPriceKey = "ethereumgasprice";
 
         public bool Enabled { get; set; }
 
@@ -30,6 +32,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public string EthereumPassphrase { get; set; }
 
+        /// <summary>
+        /// The gas limit for Ethereum interoperability transactions.
+        /// </summary>
+        public int EthereumGas { get; set; }
+
+        /// <summary>
+        /// The gas price for Ethereum interoperability transactions (will be converted to gwei).
+        /// </summary>
+        public int EthereumGasPrice { get; set; }
+
         public InteropSettings(NodeSettings nodeSettings)
         {
             this.Enabled = nodeSettings.ConfigReader.GetOrDefault(InteropKey, false);
@@ -42,6 +54,10 @@ namespace Stratis.Bitcoin.Features.Interop
             this.EthereumClientUrl = nodeSettings.ConfigReader.GetOrDefault(EthereumClientUrlKey, "http://localhost:8545");
             this.EthereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
             this.EthereumPassphrase = nodeSettings.ConfigReader.GetOrDefault(EthereumPassphraseKey, "");
+
+            // TODO: These defaults are intended for Ropsten; they will need to be adjusted in future
+            this.EthereumGas = nodeSettings.ConfigReader.GetOrDefault(EthereumGasKey, 3_000_000);
+            this.EthereumGasPrice = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceKey, 1);
 
             if (!this.Enabled)
                 return;
