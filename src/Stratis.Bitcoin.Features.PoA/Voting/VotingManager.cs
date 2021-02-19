@@ -152,7 +152,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         break;
 
                     var chainedHeaderBlock = new ChainedHeaderBlock(block, chainedHeader);
+
                     this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(chainedHeaderBlock, false);
+
                     OnBlockConnected(new BlockConnected(chainedHeaderBlock));
 
                     currentHeight++;

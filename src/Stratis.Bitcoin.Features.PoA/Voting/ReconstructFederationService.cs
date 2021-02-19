@@ -28,9 +28,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public void Reconstruct(int height)
         {
             if (!this.poaConsensusOptions.VotingEnabled)
+            {
                 this.logger.Warn("Voting is not enabled on this node.");
+                return;
+            }
 
-            // First we delete all polls that was started after the given height.
+            // First delete all polls that was started on or after the given height.
             this.logger.Info($"Reconstructing voting data: Cleaning polls after height {height}");
             this.votingManager.DeletePollsAfterHeight(height);
 
@@ -40,7 +43,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.federationManager.Initialize();
 
             // Re-initialize the idle members kicker as we will be resetting the
-            // last active times via the reconstruction events..
+            // last active times via the reconstruction events.
             this.logger.Info($"Reconstructing voting data: Re-initializing federation members last active times.");
             this.idleFederationMembersKicker.InitializeFederationMemberLastActiveTime(this.federationManager.GetFederationMembers());
 
