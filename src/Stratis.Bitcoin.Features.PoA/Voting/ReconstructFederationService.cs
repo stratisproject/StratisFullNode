@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
@@ -11,10 +12,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly IFederationManager federationManager;
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
+        private readonly object locker;
         private readonly Logger logger;
         private readonly NodeSettings nodeSettings;
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly VotingManager votingManager;
+        private bool isBusyReconstructing;
 
         public ReconstructFederationService(
             IFederationManager federationManager,
@@ -28,6 +31,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.nodeSettings = nodeSettings;
             this.votingManager = votingManager;
 
+            this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.poaConsensusOptions = (PoAConsensusOptions)network.Consensus.Options;
         }
@@ -40,33 +44,53 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return;
             }
 
-            // First delete all polls that was started on or after the given height.
-            this.logger.Info($"Reconstructing voting data: Cleaning polls after height {ReconstructionHeight}");
-            this.votingManager.DeletePollsAfterHeight(ReconstructionHeight);
-
-            // Re-initialize the federation manager which will re-contruct the federation make-up
-            // up to the given height.
-            this.logger.Info($"Reconstructing voting data: Re-initializing federation members.");
-            this.federationManager.Initialize();
-
-            // Re-initialize the idle members kicker as we will be resetting the
-            // last active times via the reconstruction events.
-            this.logger.Info($"Reconstructing voting data: Re-initializing federation members last active times.");
-            this.idleFederationMembersKicker.InitializeFederationMemberLastActiveTime(this.federationManager.GetFederationMembers());
-
-            // Reconstruct polls per block which will rebuild the federation.
-            this.logger.Info($"Reconstructing voting data...");
-            this.votingManager.ReconstructVotingDataFromHeight(ReconstructionHeight);
-
-            this.logger.Info($"Reconstruction completed");
-            SetReconstructionFlag(false);
-        }
-
-        public void SetReconstructionFlag(bool reconstructOnStartup)
-        {
-            using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
+            if (this.isBusyReconstructing)
             {
-                sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
+                this.logger.Info($"Reconstruction of the federation is already underway.");
+                return;
+            }
+
+            lock (this.locker)
+            {
+                try
+                {
+                    this.isBusyReconstructing = true;
+
+                    // First delete all polls that was started on or after the given height.
+                    this.logger.Info($"Reconstructing voting data: Cleaning polls after height {ReconstructionHeight}");
+                    this.votingManager.DeletePollsAfterHeight(ReconstructionHeight);
+
+                    // Re-initialize the federation manager which will re-contruct the federation make-up
+                    // up to the given height.
+                    this.logger.Info($"Reconstructing voting data: Re-initializing federation members.");
+                    this.federationManager.Initialize();
+
+                    // Re-initialize the idle members kicker as we will be resetting the
+                    // last active times via the reconstruction events.
+                    this.logger.Info($"Reconstructing voting data: Re-initializing federation members last active times.");
+                    this.idleFederationMembersKicker.InitializeFederationMemberLastActiveTime(this.federationManager.GetFederationMembers());
+
+                    // Reconstruct polls per block which will rebuild the federation.
+                    this.logger.Info($"Reconstructing voting data...");
+                    this.votingManager.ReconstructVotingDataFromHeightLocked(ReconstructionHeight);
+                }
+                catch (Exception ex)
+                {
+                    this.logger.Error($"An exception occurred reconstructing the federation: {ex}");
+                    throw ex;
+                }
+                finally
+                {
+                    this.isBusyReconstructing = false;
+                }
+            }
+
+            public void SetReconstructionFlag(bool reconstructOnStartup)
+            {
+                using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
+                {
+                    sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
+                }
             }
         }
     }
