@@ -95,10 +95,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             string[] configLines = File.ReadAllLines(this.nodeSettings.ConfigurationFile);
 
-            var applicable = configLines.FirstOrDefault(c => c.Contains(PoAFeature.ReconstructFederationFlag));
-            if (applicable != null)
+            if (configLines.Any(c => c.Contains(PoAFeature.ReconstructFederationFlag)))
             {
-                applicable = $"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}";
+                for (int i = 0; i < configLines.Length; i++)
+                {
+                    if (configLines[i].Contains(PoAFeature.ReconstructFederationFlag))
+                        configLines[i] = $"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}";
+                }
+
                 File.WriteAllLines(this.nodeSettings.ConfigurationFile, configLines);
             }
             else
