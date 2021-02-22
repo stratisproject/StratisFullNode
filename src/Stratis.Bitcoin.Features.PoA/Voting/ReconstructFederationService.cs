@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
@@ -73,6 +74,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     // Reconstruct polls per block which will rebuild the federation.
                     this.logger.Info($"Reconstructing voting data...");
                     this.votingManager.ReconstructVotingDataFromHeightLocked(ReconstructionHeight);
+
+                    this.logger.Info($"Reconstruction completed");
+
+                    SetReconstructionFlag(false);
                 }
                 catch (Exception ex)
                 {
@@ -88,9 +93,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public void SetReconstructionFlag(bool reconstructOnStartup)
         {
-            using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
+            string[] configLines = File.ReadAllLines(this.nodeSettings.ConfigurationFile);
+
+            var applicable = configLines.FirstOrDefault(c => c.Contains(PoAFeature.ReconstructFederationFlag));
+            if (applicable != null)
             {
-                sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
+                applicable = $"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}";
+                File.WriteAllLines(this.nodeSettings.ConfigurationFile, configLines);
+            }
+            else
+            {
+                using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
+                {
+                    sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
+                };
             }
         }
     }
