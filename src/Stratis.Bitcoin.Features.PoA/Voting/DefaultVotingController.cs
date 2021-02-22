@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.reconstructFederationService.SetReconstructionFlag(true);
 
-                return Json("Recontruction flag set, please restart the node.");
+                return Json("Reconstruction flag set, please restart the node.");
             }
             catch (Exception e)
             {
@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult VoteWhitelistHash([FromBody]HashModel request)
+        public IActionResult VoteWhitelistHash([FromBody] HashModel request)
         {
             return this.VoteWhitelistRemoveHashMember(request, true);
         }
@@ -333,7 +333,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult VoteRemoveHash([FromBody]HashModel request)
+        public IActionResult VoteRemoveHash([FromBody] HashModel request)
         {
             return this.VoteWhitelistRemoveHashMember(request, false);
         }
