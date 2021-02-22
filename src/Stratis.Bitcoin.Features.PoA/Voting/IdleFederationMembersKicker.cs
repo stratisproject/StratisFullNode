@@ -21,6 +21,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
         void Execute(ChainedHeader consensusTip);
         void Initialize();
+
+        /// <summary> 
+        /// If this is a clean sync initialize each member's last active time with the genesis timestamp.
+        /// Each member's last active time will be updated on each block connected event during syncing
+        /// or on block mined.
+        /// </summary>
         void InitializeFederationMemberLastActiveTime(IEnumerable<IFederationMember> federationMembers);
         void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true);
     }

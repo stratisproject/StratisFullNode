@@ -11,6 +11,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly VotingManager votingManager;
 
+        private bool isBusyReconstructing;
+
         public ReconstructFederationService(
             IFederationManager federationManager,
             Network network,
@@ -33,6 +35,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return;
             }
 
+            if (this.isBusyReconstructing)
+            {
+                this.logger.Info($"Reconstructing the federation is already underway.");
+                return;
+            }
+
             // First delete all polls that was started on or after the given height.
             this.logger.Info($"Reconstructing voting data: Cleaning polls after height {height}");
             this.votingManager.DeletePollsAfterHeight(height);
@@ -50,6 +58,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // Reconstruct polls per block which will rebuild the federation.
             this.logger.Info($"Reconstructing voting data...");
             this.votingManager.ReconstructVotingDataFromHeight(height);
+
+            this.isBusyReconstructing = false;
         }
     }
 }
