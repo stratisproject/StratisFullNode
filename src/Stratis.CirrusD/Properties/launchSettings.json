@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Stratis.CirrusD": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-datadir=d:\\Stratis\\Testing"
     }
   }
 }

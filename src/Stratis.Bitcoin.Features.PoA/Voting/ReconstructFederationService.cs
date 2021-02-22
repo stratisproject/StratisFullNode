@@ -1,31 +1,38 @@
-﻿using NBitcoin;
+﻿using System.IO;
+using NBitcoin;
 using NLog;
+using Stratis.Bitcoin.Configuration;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public sealed class ReconstructFederationService
     {
+        private const int ReconstructionHeight = 1_410_000;
+
         private readonly IFederationManager federationManager;
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly Logger logger;
+        private readonly NodeSettings nodeSettings;
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly VotingManager votingManager;
 
         public ReconstructFederationService(
             IFederationManager federationManager,
+            NodeSettings nodeSettings,
             Network network,
             IIdleFederationMembersKicker idleFederationMembersKicker,
             VotingManager votingManager)
         {
             this.federationManager = federationManager;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
+            this.nodeSettings = nodeSettings;
             this.votingManager = votingManager;
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.poaConsensusOptions = (PoAConsensusOptions)network.Consensus.Options;
         }
 
-        public void Reconstruct(int height)
+        public void Reconstruct()
         {
             if (!this.poaConsensusOptions.VotingEnabled)
             {
@@ -34,8 +41,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             // First delete all polls that was started on or after the given height.
-            this.logger.Info($"Reconstructing voting data: Cleaning polls after height {height}");
-            this.votingManager.DeletePollsAfterHeight(height);
+            this.logger.Info($"Reconstructing voting data: Cleaning polls after height {ReconstructionHeight}");
+            this.votingManager.DeletePollsAfterHeight(ReconstructionHeight);
 
             // Re-initialize the federation manager which will re-contruct the federation make-up
             // up to the given height.
@@ -49,7 +56,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             // Reconstruct polls per block which will rebuild the federation.
             this.logger.Info($"Reconstructing voting data...");
-            this.votingManager.ReconstructVotingDataFromHeight(height);
+            this.votingManager.ReconstructVotingDataFromHeight(ReconstructionHeight);
+
+            this.logger.Info($"Reconstruction completed");
+            SetReconstructionFlag(false);
+        }
+
+        public void SetReconstructionFlag(bool reconstructOnStartup)
+        {
+            using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
+            {
+                sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
+            }
         }
     }
 }
