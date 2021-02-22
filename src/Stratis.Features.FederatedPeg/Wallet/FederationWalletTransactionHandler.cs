@@ -115,7 +115,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// Initializes the context transaction builder from information in <see cref="TransactionBuildContext"/>.
         /// </summary>
         /// <param name="context">Transaction build context.</param>
-        private TransactionBuilder InitializeTransactionBuilder(Wallet.TransactionBuildContext context)
+        private TransactionBuilder InitializeTransactionBuilder(TransactionBuildContext context)
         {
             Guard.NotNull(context, nameof(context));
             Guard.NotNull(context.Recipients, nameof(context.Recipients));
