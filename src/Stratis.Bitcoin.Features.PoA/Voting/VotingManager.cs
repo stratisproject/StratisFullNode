@@ -133,7 +133,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         /// <summary> Reconstructs voting and poll data from a given height.</summary>
         /// <param name="height">The height to start reconstructing from.</param>
-        public void ReconstructVotingDataFromHeight(int height)
+        public void ReconstructVotingDataFromHeightLocked(int height)
         {
             try
             {

@@ -84,13 +84,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.isBusyReconstructing = false;
                 }
             }
+        }
 
-            public void SetReconstructionFlag(bool reconstructOnStartup)
+        public void SetReconstructionFlag(bool reconstructOnStartup)
+        {
+            using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
             {
-                using (StreamWriter sw = File.AppendText(this.nodeSettings.ConfigurationFile))
-                {
-                    sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
-                }
+                sw.WriteLine($"{PoAFeature.ReconstructFederationFlag}={reconstructOnStartup}");
             }
         }
     }
