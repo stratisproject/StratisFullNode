@@ -80,28 +80,25 @@ namespace Stratis.CirrusD
             .AddSQLiteWalletRepository()
             .UseApi()
             .AddRPC()
-            .UseDiagnosticFeature();
-
-            if (nodeSettings.EnableSignalR)
+            .AddSignalR(options =>
             {
-                nodeBuilder.AddSignalR(options =>
+                options.EventsToHandle = new[]
                 {
-                    options.EventsToHandle = new[]
-                    {
-                        (IClientEvent) new BlockConnectedClientEvent(),
-                        new TransactionReceivedClientEvent()
-                    };
+                    (IClientEvent) new BlockConnectedClientEvent(),
+                    new ReconstructFederationClientEvent(),
+                    new TransactionReceivedClientEvent(),
+                };
 
-                    options.ClientEventBroadcasters = new[]
+                options.ClientEventBroadcasters = new[]
+                {
+                    (Broadcaster: typeof(CirrusWalletInfoBroadcaster),
+                    ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
                     {
-                        (Broadcaster: typeof(CirrusWalletInfoBroadcaster),
-                            ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
-                            {
-                                BroadcastFrequencySeconds = 5
-                            })
-                    };
-                });
-            }
+                        BroadcastFrequencySeconds = 5
+                    })
+                };
+            })
+            .UseDiagnosticFeature();
 
             return nodeBuilder.Build();
         }

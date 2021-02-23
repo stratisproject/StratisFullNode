@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.Logging;
+using NLog;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Signals;
 
@@ -17,19 +17,18 @@ namespace Stratis.Bitcoin.Features.SignalR
         private readonly SignalROptions options;
         private readonly ISignals signals;
         private readonly EventsHub eventsHub;
-        private readonly ILogger<SignalRFeature> logger;
+        private readonly ILogger logger;
         private readonly List<SubscriptionToken> subscriptions = new List<SubscriptionToken>();
 
         public EventSubscriptionService(
             SignalROptions options,
-            ILoggerFactory loggerFactory,
             ISignals signals,
             EventsHub eventsHub)
         {
             this.options = options;
             this.signals = signals;
             this.eventsHub = eventsHub;
-            this.logger = loggerFactory.CreateLogger<SignalRFeature>();
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         public void Init()
@@ -38,7 +37,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             MethodInfo onEventCallbackMethod = typeof(EventSubscriptionService).GetMethod("OnEvent");
             foreach (IClientEvent eventToHandle in this.options.EventsToHandle)
             {
-                this.logger.LogDebug("Create subscription for {0}", eventToHandle.NodeEventType);
+                this.logger.Debug("Create subscription for {0}", eventToHandle.NodeEventType);
                 MethodInfo subscribeMethodInfo = subscribeMethod.MakeGenericMethod(eventToHandle.NodeEventType);
                 Type callbackType = typeof(Action<>).MakeGenericType(eventToHandle.NodeEventType);
                 Delegate onEventDelegate = Delegate.CreateDelegate(callbackType, this, onEventCallbackMethod);
@@ -48,8 +47,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             }
         }
 
-        // ReSharper disable once UnusedMember.Global
-        // This is invoked through reflection
+        /// <summary> This is invoked through reflection.</summary>
         public void OnEvent(EventBase @event)
         {
             Type childType = @event.GetType();
