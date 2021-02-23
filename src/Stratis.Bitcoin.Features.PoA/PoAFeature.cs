@@ -19,6 +19,8 @@ namespace Stratis.Bitcoin.Features.PoA
 {
     public class PoAFeature : FullNodeFeature
     {
+        public const string ReconstructFederationFlag = "reconstructfederation";
+
         /// <summary>Manager of node's network connections.</summary>
         private readonly IConnectionManager connectionManager;
 
@@ -130,9 +132,9 @@ namespace Stratis.Bitcoin.Features.PoA
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
 
-            var rebuildFederationHeight = this.nodeSettings.ConfigReader.GetOrDefault("rebuildfederationheight", 0);
-            if (rebuildFederationHeight != 0)
-                this.reconstructFederationService.Reconstruct(rebuildFederationHeight);
+            var rebuildFederationHeight = this.nodeSettings.ConfigReader.GetOrDefault(ReconstructFederationFlag, false);
+            if (rebuildFederationHeight)
+                this.reconstructFederationService.Reconstruct();
 
             this.miner?.InitializeMining();
 

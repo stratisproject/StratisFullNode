@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -139,7 +140,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.isBusyReconstructing = true;
 
                 var currentHeight = height;
-                this.logger.LogInformation($"Reconstructing voting poll data from height {currentHeight}.");
+                var progress = $"Reconstructing voting poll data from height {currentHeight}.";
+                this.logger.LogInformation(progress);
+                this.signals.Publish(new RecontructFederationProgressEvent() { Progress = progress });
 
                 do
                 {
@@ -160,13 +163,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     currentHeight++;
 
                     if (currentHeight % 10000 == 0)
-                        this.logger.LogInformation($"Reconstructing voting data at height {currentHeight}");
-
+                    {
+                        progress = $"Reconstructing voting data at height {currentHeight}";
+                        this.logger.LogInformation(progress);
+                        this.signals.Publish(new RecontructFederationProgressEvent() { Progress = progress });
+                    }
                 } while (true);
-            }
-            catch (Exception ex)
-            {
-                throw ex;
             }
             finally
             {
