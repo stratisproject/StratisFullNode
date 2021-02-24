@@ -152,31 +152,6 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
 
         [Fact]
         [Trait("DNS", "UnitTest")]
-        public void WhenLoad_AndStreamContainsPointerResourceRecord_ThenEntryIsPopulated()
-        {
-            // Arrange
-            var domain = new Domain("stratis.test.com");
-            var nsDomain = new Domain("pointer.stratis.test.com");
-
-            var testResourceRecord = new PointerResourceRecord(domain, nsDomain);
-
-            var question = new Question(domain, RecordType.PTR);
-
-            // Act.
-            IList<IResourceRecord> resourceRecords = this.WhenLoad_AndStreamContainsEntry_ThenEntryIsPopulated(testResourceRecord, question);
-
-            // Assert.
-            resourceRecords.Should().NotBeNull();
-            resourceRecords.Should().NotBeNullOrEmpty();
-
-            IList<PointerResourceRecord> pointerResourceRecord = resourceRecords.OfType<PointerResourceRecord>().ToList();
-            pointerResourceRecord.Should().HaveCount(1);
-            pointerResourceRecord[0].Name.ToString().Should().Be(domain.ToString());
-            pointerResourceRecord[0].PointerDomainName.ToString().Should().Be(testResourceRecord.PointerDomainName.ToString());
-        }
-
-        [Fact]
-        [Trait("DNS", "UnitTest")]
         public void WhenLoad_AndStreamContainsStartOfAuthorityResourceRecord_ThenEntryIsPopulated()
         {
             // Arrange
@@ -419,36 +394,6 @@ namespace Stratis.Bitcoin.Features.Dns.Tests
                 nameServerResourceRecord.Should().HaveCount(1);
                 nameServerResourceRecord[0].Name.ToString().Should().Be(domain.ToString());
                 nameServerResourceRecord[0].NSDomainName.ToString().Should().Be(testResourceRecord.NSDomainName.ToString());
-            }
-        }
-
-        [Fact]
-        [Trait("DNS", "UnitTest")]
-        public void WhenSave_AndMasterListContainsPointerResourceRecord_ThenEntryIsSaved()
-        {
-            // Arrange
-            var domain = new Domain("stratis.test.com");
-            var nsDomain = new Domain("pointer.stratis.test.com");
-
-            var testResourceRecord = new PointerResourceRecord(domain, nsDomain);
-            var masterFile = new DnsSeedMasterFile(new List<IResourceRecord> { testResourceRecord });
-
-            using (var stream = new MemoryStream())
-            {
-                // Act.
-                masterFile.Save(stream);
-
-                // Assert.                
-                stream.Should().NotBeNull();
-                IList<IResourceRecord> resourceRecords = this.ReadResourceRecords(stream);
-
-                resourceRecords.Should().NotBeNull();
-                resourceRecords.Should().NotBeNullOrEmpty();
-
-                IList<PointerResourceRecord> pointerResourceRecord = resourceRecords.OfType<PointerResourceRecord>().ToList();
-                pointerResourceRecord.Should().HaveCount(1);
-                pointerResourceRecord[0].Name.ToString().Should().Be(domain.ToString());
-                pointerResourceRecord[0].PointerDomainName.ToString().Should().Be(testResourceRecord.PointerDomainName.ToString());
             }
         }
 

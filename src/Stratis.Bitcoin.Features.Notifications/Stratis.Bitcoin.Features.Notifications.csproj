@@ -23,7 +23,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.1.11" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Filter" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
   </ItemGroup>
 

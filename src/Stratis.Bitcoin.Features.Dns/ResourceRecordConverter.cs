@@ -181,9 +181,9 @@ namespace Stratis.Bitcoin.Features.Dns
         /// <returns>The read <see cref="PointerResourceRecord"/>.</returns>
         private PointerResourceRecord ReadPointerResourceRecordJson(JObject jObject)
         {
-            Domain domain = this.ReadDomainJson(jObject, NameFieldName);
+            var ipAddress = this.ReadDomainJson(jObject, NameFieldName);
             Domain pointerDomain = this.ReadDomainJson(jObject, PointerDomainNameFieldName);
-            return new PointerResourceRecord(domain, pointerDomain);
+            return new PointerResourceRecord(null, pointerDomain);
         }
 
         /// <summary>

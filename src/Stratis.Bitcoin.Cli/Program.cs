@@ -11,8 +11,8 @@ using NBitcoin.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.Api;
+using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Utilities.Extensions;
 
 namespace Stratis.Bitcoin.Cli
@@ -241,7 +241,7 @@ namespace Stratis.Bitcoin.Cli
 
             // Get the response.
             Console.WriteLine($"Sending API 'GET' command to {urlWithArgs}.");
-            return urlWithArgs.GetAsync().GetAwaiter().GetResult();
+            return urlWithArgs.GetAsync().GetAwaiter().GetResult().ResponseMessage;
         }
 
         private static HttpResponseMessage CallApiPost(string url, object commandArgObj)
@@ -249,7 +249,7 @@ namespace Stratis.Bitcoin.Cli
             string json = JObject.FromObject(commandArgObj).ToString();
 
             Console.WriteLine($"Sending API 'POST' command to {url}. Post body is '{json}'.");
-            return url.PostJsonAsync(commandArgObj).GetAwaiter().GetResult();
+            return url.PostJsonAsync(commandArgObj).GetAwaiter().GetResult().ResponseMessage;
         }
 
         private static HttpResponseMessage CallApiDelete(string url, object commandArgObj)
@@ -258,7 +258,7 @@ namespace Stratis.Bitcoin.Cli
 
             // Get the response.
             Console.WriteLine($"Sending API 'DELETE' command to {urlWithArgs}.");
-            return urlWithArgs.DeleteAsync().GetAwaiter().GetResult();
+            return urlWithArgs.DeleteAsync().GetAwaiter().GetResult().ResponseMessage;
         }
 
         /// <summary>
