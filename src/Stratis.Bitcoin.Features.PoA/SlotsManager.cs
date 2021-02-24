@@ -43,28 +43,28 @@ namespace Stratis.Bitcoin.Features.PoA
             and the last block that was mined and by whom. It can count the number of mining slots from that member
             to itself and multiply that with the target spacing to arrive at its mining timestamp.
             */
-            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);
+            List<IFederationMember> federationMembersAtMinedBlock = this.federationHistory.GetFederationForBlock(tip, 1);
 
-            int myIndex = federationMembers.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
+            int myIndex = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
             if (myIndex < 0)
                 throw new NotAFederationMemberException();
 
-            var roundTime = this.GetRoundLength(federationMembers.Count);
+            var roundTime = this.GetRoundLength(federationMembersAtMinedBlock.Count);
 
             // Determine the index of the miner that mined the last block.
             IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip);
-            List<IFederationMember> oldFederationMembers = this.federationHistory.GetFederationForBlock(tip);
-            int lastMinerIndex = oldFederationMembers.FindIndex(m => m.PubKey == lastMiner.PubKey);
+            List<IFederationMember> federationMembersAtTip = this.federationHistory.GetFederationForBlock(tip);
+            int lastMinerIndex = federationMembersAtTip.FindIndex(m => m.PubKey == lastMiner.PubKey);
             if (lastMinerIndex < 0)
                 throw new Exception($"The miner ('{lastMiner.PubKey.ToHex()}') of the block at height {tip.Height} could not be located in federation.");
 
             int index = -1;
 
             // Looking back, find the first member in common between the old and new federation.
-            for (int i = oldFederationMembers.Count; i >= 1 && index < 0; i--)
+            for (int i = federationMembersAtTip.Count; i >= 1 && index < 0; i--)
             {
-                PubKey keyToFind = oldFederationMembers[(i + lastMinerIndex) % oldFederationMembers.Count].PubKey;
-                index = federationMembers.FindIndex(m => m.PubKey == keyToFind);
+                PubKey keyToFind = federationMembersAtTip[(i + lastMinerIndex) % federationMembersAtTip.Count].PubKey;
+                index = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == keyToFind);
             }
             
             if (index < 0)
@@ -74,22 +74,26 @@ namespace Stratis.Bitcoin.Features.PoA
             // Determine "distance" apart in new federation.
             int diff = myIndex - index;
             while (diff < 0)
-                diff += federationMembers.Count;
+                diff += federationMembersAtMinedBlock.Count;
 
             DateTimeOffset tipTime = tip.Header.BlockTime;
             while ((tipTime + roundTime) < timeNow)
                 tipTime += roundTime;
 
-            DateTimeOffset timeToMine = tipTime + roundTime * diff / federationMembers.Count;
+            DateTimeOffset timeToMine = tipTime + roundTime * diff / federationMembersAtMinedBlock.Count;
             if (timeToMine < timeNow)
                 timeToMine += roundTime;
 
             // Ensure we have not already mined in this round.
+            // The loop tries to find a block (mined by us) within "roundTime" of "timeToMine". 
+            // If found the timeToMine is bumped by one round.
             for (ChainedHeader header = tip; header != null; header = header.Previous)
             {
+                // If the current block is to far back in time to meeting our criteria the exit.
                 if ((header.Header.BlockTime + roundTime) <= timeToMine)
                     break;
 
+                // A recent block was found. Postpone mining to the next round.
                 if (this.federationHistory.GetFederationMemberForBlock(header).PubKey == this.federationManager.CurrentFederationKey.PubKey)
                 {
                     timeToMine += roundTime;
