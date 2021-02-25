@@ -30,6 +30,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                         services.AddSingleton<IWhitelistedHashesRepository, WhitelistedHashesRepository>();
                         services.AddSingleton<IPollResultExecutor, PollResultExecutor>();
                         services.AddSingleton<IIdleFederationMembersKicker, IdleFederationMembersKicker>();
+                        services.AddSingleton<ReconstructFederationService, ReconstructFederationService>();
 
                         // Federation Awareness
                         services.AddSingleton<IFederationManager, FederationManager>();

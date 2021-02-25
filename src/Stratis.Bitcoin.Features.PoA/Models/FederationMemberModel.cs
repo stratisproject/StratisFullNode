@@ -9,6 +9,9 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         [JsonProperty("pubkey")]
         public PubKey PubKey { get; set; }
 
+        [JsonProperty("collateralAmount")]
+        public decimal CollateralAmount { get; set; }
+
         [JsonProperty("lastActiveTime")]
         public DateTime? LastActiveTime { get; set; }
 
