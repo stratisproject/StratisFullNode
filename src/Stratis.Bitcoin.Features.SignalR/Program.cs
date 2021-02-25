@@ -9,8 +9,7 @@ namespace Stratis.Bitcoin.Features.SignalR
 {
     public class Program
     {
-        public static IWebHost Initialize(IEnumerable<ServiceDescriptor> services, FullNode fullNode,
-            SignalRSettings settings, IWebHostBuilder webHostBuilder)
+        public static IWebHost Initialize(IEnumerable<ServiceDescriptor> services, FullNode fullNode, SignalRSettings settings, IWebHostBuilder webHostBuilder)
         {
             Guard.NotNull(fullNode, nameof(fullNode));
             Guard.NotNull(webHostBuilder, nameof(webHostBuilder));

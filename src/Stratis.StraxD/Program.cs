@@ -48,15 +48,12 @@ namespace Stratis.StraxD
                     .AddPowPosMining(true)
                     .UseApi()
                     .AddRPC()
-                    .UseDiagnosticFeature();
-
-                if (nodeSettings.EnableSignalR)
-                {
-                    nodeBuilder.AddSignalR(options =>
+                    .AddSignalR(options =>
                     {
                         options.EventsToHandle = new[]
                         {
                             (IClientEvent) new BlockConnectedClientEvent(),
+                            new ReconstructFederationClientEvent(),
                             new TransactionReceivedClientEvent()
                         };
 
@@ -71,8 +68,8 @@ namespace Stratis.StraxD
                                     BroadcastFrequencySeconds = 5
                                 })
                         };
-                    });
-                }
+                    })
+                    .UseDiagnosticFeature();
 
                 IFullNode node = nodeBuilder.Build();
 
