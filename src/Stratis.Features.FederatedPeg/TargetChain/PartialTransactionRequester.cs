@@ -41,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
-        private readonly FederatedPegSettings federationSettings;
+        private readonly IFederatedPegSettings federationSettings;
         private readonly IInitialBlockDownloadState ibdState;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInputConsolidator inputConsolidator;
@@ -54,7 +54,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             INodeLifetime nodeLifetime,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IInitialBlockDownloadState ibdState,
-            FederatedPegSettings federationSettings,
+            IFederatedPegSettings federationSettings,
             IFederationWalletManager federationWalletManager,
             IInputConsolidator inputConsolidator)
         {

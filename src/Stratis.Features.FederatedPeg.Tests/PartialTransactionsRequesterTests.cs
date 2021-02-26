@@ -21,6 +21,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly IInputConsolidator inputConsolidator;
 
         private readonly IInitialBlockDownloadState ibdState;
+        private readonly IFederatedPegSettings federationSettings;
         private readonly IFederationWalletManager federationWalletManager;
 
         public PartialTransactionsRequesterTests()
@@ -34,10 +35,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegBroadcaster = Substitute.For<IFederatedPegBroadcaster>();
             this.inputConsolidator = Substitute.For<IInputConsolidator>();
             this.ibdState = Substitute.For<IInitialBlockDownloadState>();
+            this.federationSettings = Substitute.For<IFederatedPegSettings>();
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
         }
-
 
         [Fact]
         public async Task DoesntBroadcastInIBD()
@@ -50,6 +51,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.nodeLifetime,
                 this.federatedPegBroadcaster,
                 this.ibdState,
+                this.federationSettings,
                 this.federationWalletManager,
                 this.inputConsolidator);
 
@@ -69,6 +71,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.nodeLifetime,
                 this.federatedPegBroadcaster,
                 this.ibdState,
+                this.federationSettings,
                 this.federationWalletManager,
                 this.inputConsolidator);
 
