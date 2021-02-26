@@ -562,7 +562,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 ICrossChainTransfer[] transactions = crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial });
 
-                var requester = new PartialTransactionRequester(crossChainTransferStore, this.asyncProvider, this.nodeLifetime, this.federatedPegBroadcaster, this.ibdState, this.federatedPegSettings, this.federationWalletManager, this.inputConsolidator);
+                var requester = new PartialTransactionRequester(crossChainTransferStore, this.asyncProvider, this.nodeLifetime, this.federatedPegBroadcaster, this.ibdState, this.federationWalletManager, this.inputConsolidator);
 
                 requester.Start();
 

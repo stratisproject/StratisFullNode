@@ -52,7 +52,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.nodeLifetime,
                 this.federatedPegBroadcaster,
                 this.ibdState,
-                this.federationSettings,
                 this.federationWalletManager,
                 this.inputConsolidator);
 
@@ -72,7 +71,6 @@ namespace Stratis.Features.FederatedPeg.Tests
                 this.nodeLifetime,
                 this.federatedPegBroadcaster,
                 this.ibdState,
-                this.federationSettings,
                 this.federationWalletManager,
                 this.inputConsolidator);
 

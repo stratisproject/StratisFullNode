@@ -10,7 +10,6 @@ namespace Stratis.Features.FederatedPeg.Payloads
         public static readonly uint256 ConsolidationDepositId = uint256.Zero;
 
         private uint256 depositId;
-        private string pubKey;
         private Transaction transactionPartial;
 
         /// <summary>
@@ -18,7 +17,6 @@ namespace Stratis.Features.FederatedPeg.Payloads
         /// See <see cref="InputConsolidator"/>
         /// </summary>
         public uint256 DepositId => this.depositId;
-        public string PubKey => this.pubKey;
         public Transaction PartialTransaction => this.transactionPartial;
 
         /// <remarks>Needed for deserialization.</remarks>
@@ -26,10 +24,9 @@ namespace Stratis.Features.FederatedPeg.Payloads
         {
         }
 
-        public RequestPartialTransactionPayload(uint256 depositId, string pubKey)
+        public RequestPartialTransactionPayload(uint256 depositId)
         {
             this.depositId = depositId;
-            this.pubKey = pubKey;
         }
 
         public RequestPartialTransactionPayload AddPartial(Transaction partialTransaction)
@@ -41,10 +38,6 @@ namespace Stratis.Features.FederatedPeg.Payloads
         public override void ReadWriteCore(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.depositId);
-
-            if (!string.IsNullOrEmpty(this.pubKey))
-                stream.ReadWrite(ref this.pubKey);
-
             stream.ReadWrite(ref this.transactionPartial);
         }
 
