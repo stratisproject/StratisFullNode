@@ -19,7 +19,6 @@ namespace Stratis.Bitcoin.Features.Dns
         private const string ExchangeDomainNameFieldName = "ExchangeDomainName";
         private const string PreferenceFieldName = "Preference";
         private const string NSDomainNameFieldName = "NSDomainName";
-        private const string PointerDomainNameFieldName = "PointerDomainName";
         private const string MasterDomainNameFieldName = "MasterDomainName";
         private const string ResponsibleDomainNameFieldName = "ResponsibleDomainName";
         private const string SerialNumberFieldName = "SerialNumber";
@@ -67,10 +66,6 @@ namespace Stratis.Bitcoin.Features.Dns
             {
                 return ReadNameServerResourceRecordJson(jObject);
             }
-            else if (resourceRecordType == typeof(PointerResourceRecord).Name)
-            {
-                return this.ReadPointerResourceRecordJson(jObject);
-            }
             else if (resourceRecordType == typeof(StartOfAuthorityResourceRecord).Name)
             {
                 return this.ReadStartOfAuthorityResourceRecordJson(jObject, serializer);
@@ -106,10 +101,6 @@ namespace Stratis.Bitcoin.Features.Dns
             else if (value is NameServerResourceRecord)
             {
                 jObject = this.WriteNameServerResourceRecordJson((NameServerResourceRecord)value);
-            }
-            else if (value is PointerResourceRecord)
-            {
-                jObject = this.WritePointerResourceRecordJson((PointerResourceRecord)value);
             }
             else if (value is StartOfAuthorityResourceRecord)
             {
@@ -172,18 +163,6 @@ namespace Stratis.Bitcoin.Features.Dns
             Domain domain = this.ReadDomainJson(jObject, NameFieldName);
             Domain nsDomain = this.ReadDomainJson(jObject, NSDomainNameFieldName);
             return new NameServerResourceRecord(domain, nsDomain);
-        }
-
-        /// <summary>
-        /// Reads a <see cref="PointerResourceRecord"/> from JSON.
-        /// </summary>
-        /// <param name="jObject">The JSON object to read from.</param>
-        /// <returns>The read <see cref="PointerResourceRecord"/>.</returns>
-        private PointerResourceRecord ReadPointerResourceRecordJson(JObject jObject)
-        {
-            Domain domain = this.ReadDomainJson(jObject, NameFieldName);
-            Domain pointerDomain = this.ReadDomainJson(jObject, PointerDomainNameFieldName);
-            return new PointerResourceRecord(domain, pointerDomain);
         }
 
         /// <summary>
@@ -284,21 +263,6 @@ namespace Stratis.Bitcoin.Features.Dns
                 { TypeFieldName, resourceRecord.GetType().Name },
                 { NameFieldName, resourceRecord.Name.ToString() },
                 { NSDomainNameFieldName, resourceRecord.NSDomainName.ToString() }
-             };
-        }
-
-        /// <summary>
-        /// Writes a <see cref="PointerResourceRecord"/> to JSON.
-        /// </summary>
-        /// <param name="resourceRecord">The <see cref="PointerResourceRecord"/> to write.</param>
-        /// <returns>The written JSON.</returns>
-        private JObject WritePointerResourceRecordJson(PointerResourceRecord resourceRecord)
-        {
-            return new JObject
-            {
-                { TypeFieldName, resourceRecord.GetType().Name },
-                { NameFieldName, resourceRecord.Name.ToString() },
-                { PointerDomainNameFieldName, resourceRecord.PointerDomainName.ToString() }
              };
         }
 

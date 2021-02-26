@@ -92,25 +92,25 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Assert.
                 var exception = firstAttempt.Should().Throw<FlurlHttpException>().Which;
                 var response = exception.Call.Response;
-                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 List<ErrorModel> errors = errorResponse.Errors;
-                response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+                response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be($"An entry with label 'label1' or address '{address1}' already exist in the address book.");
 
                 exception = secondAttempt.Should().Throw<FlurlHttpException>().Which;
                 response = exception.Call.Response;
-                errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 errors = errorResponse.Errors;
-                response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+                response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be($"An entry with label 'label2' or address '{address1}' already exist in the address book.");
 
                 exception = thirdAttempt.Should().Throw<FlurlHttpException>().Which;
                 response = exception.Call.Response;
-                errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 errors = errorResponse.Errors;
-                response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+                response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be($"An entry with label 'label1' or address '{address2}' already exist in the address book.");
             }
@@ -135,9 +135,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Assert.
                 var exception = act.Should().Throw<FlurlHttpException>().Which;
                 var response = exception.Call.Response;
-                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 List<ErrorModel> errors = errorResponse.Errors;
-                response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+                response.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be("No item with label 'label1' was found in the address book.");
             }

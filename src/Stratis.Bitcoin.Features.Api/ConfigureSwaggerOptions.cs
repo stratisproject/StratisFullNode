@@ -1,11 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.PlatformAbstractions;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Stratis.Bitcoin.Features.Api
@@ -59,7 +58,7 @@ namespace Stratis.Bitcoin.Features.Api
             }
 
             // Includes XML comments in Swagger documentation 
-            string basePath = PlatformServices.Default.Application.ApplicationBasePath;
+            string basePath = AppContext.BaseDirectory;
             foreach (string xmlPath in ApiXmlDocuments.Select(xmlDocument => Path.Combine(basePath, xmlDocument)))
             {
                 if (File.Exists(xmlPath))
