@@ -41,7 +41,10 @@ namespace Stratis.Features.FederatedPeg.Payloads
         public override void ReadWriteCore(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.depositId);
-            stream.ReadWrite(ref this.pubKey);
+
+            if (!string.IsNullOrEmpty(this.pubKey))
+                stream.ReadWrite(ref this.pubKey);
+
             stream.ReadWrite(ref this.transactionPartial);
         }
 
