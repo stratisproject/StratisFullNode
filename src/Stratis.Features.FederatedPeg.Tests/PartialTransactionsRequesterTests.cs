@@ -36,6 +36,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.inputConsolidator = Substitute.For<IInputConsolidator>();
             this.ibdState = Substitute.For<IInitialBlockDownloadState>();
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
+            this.federationSettings.PublicKey.Returns("03191898544c4061ef427dd0a2feff8d7bf66ed6ae9db47f1a00e78f4a6439dc28");
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletManager.IsFederationWalletActive().Returns(true);
         }

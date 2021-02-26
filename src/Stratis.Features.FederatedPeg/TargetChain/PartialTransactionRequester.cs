@@ -88,8 +88,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ICrossChainTransfer transfer in partialtransfers)
             {
+                this.logger.Debug("Partial template requested for deposit Id '{0}'; My Pubkey '{1}'", transfer.DepositTransactionId, this.federationSettings.PublicKey);
                 await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId, this.federationSettings.PublicKey).AddPartial(transfer.PartialTransaction));
-                this.logger.Debug("Partial template requested for deposit Id '{0}'", transfer.DepositTransactionId);
             }
 
             // If we don't have any broadcastable transactions, check if we have any consolidating transactions to sign.
