@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.InputConsolidation;
@@ -42,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
-        private readonly IFederationManager federationManager;
+        private readonly FederatedPegSettings federationSettings;
         private readonly IInitialBlockDownloadState ibdState;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInputConsolidator inputConsolidator;
@@ -55,7 +54,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             INodeLifetime nodeLifetime,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IInitialBlockDownloadState ibdState,
-            IFederationManager federationManager,
+            FederatedPegSettings federationSettings,
             IFederationWalletManager federationWalletManager,
             IInputConsolidator inputConsolidator)
         {
@@ -69,7 +68,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.nodeLifetime = nodeLifetime;
             this.ibdState = ibdState;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
-            this.federationManager = federationManager;
+            this.federationSettings = federationSettings;
             this.federationWalletManager = federationWalletManager;
             this.inputConsolidator = inputConsolidator;
         }
@@ -89,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ICrossChainTransfer transfer in partialtransfers)
             {
-                await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId, this.federationManager.GetCurrentFederationMember().PubKey.ToHex()).AddPartial(transfer.PartialTransaction));
+                await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId, this.federationSettings.PublicKey).AddPartial(transfer.PartialTransaction));
                 this.logger.Debug("Partial template requested for deposit Id '{0}'", transfer.DepositTransactionId);
             }
 
@@ -104,7 +103,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (toSign != null)
                     {
-                        await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(RequestPartialTransactionPayload.ConsolidationDepositId, this.federationManager.GetCurrentFederationMember().PubKey.ToHex()).AddPartial(toSign.PartialTransaction));
+                        await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(RequestPartialTransactionPayload.ConsolidationDepositId, this.federationSettings.PublicKey).AddPartial(toSign.PartialTransaction));
                         this.logger.Debug("Partial consolidating transaction requested for '{0}'.", toSign.PartialTransaction.GetHash());
                     }
                 }
