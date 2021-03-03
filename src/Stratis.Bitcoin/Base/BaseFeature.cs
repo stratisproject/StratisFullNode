@@ -242,13 +242,6 @@ namespace Stratis.Bitcoin.Base
 
             // TODO: Should this always be called?
             ((IBlockStoreQueue)this.blockStore).ReindexChain(this.consensusManager, this.nodeLifetime.ApplicationStopping);
-
-            this.InspectRewindData();
-        }
-
-        private void InspectRewindData()
-        {
-            var coinDb = this.consensusRules.GetRewindData();
         }
 
         /// <summary>
