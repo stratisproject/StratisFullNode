@@ -22,6 +22,7 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Miner.Staking
@@ -702,7 +703,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
             int eventuallyStakableUtxosCount = utxoStakeDescriptions.Count;
             Transaction coinstakeTx = this.PrepareCoinStakeTransactions(chainTip.Height, coinstakeContext, coinstakeOutputValue, eventuallyStakableUtxosCount, ourWeight, reward);
-            
+
             // Sign.
             if (!this.SignTransactionInput(coinstakeInput, coinstakeTx))
             {

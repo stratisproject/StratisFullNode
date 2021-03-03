@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -68,24 +69,75 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         {
             base.Initialize(chainTip);
 
-            var coindb = ((CachedCoinView)this.UtxoSet).ICoindb;
+            // TODO: Move this initialization out of the rules engine.
+            var coinViewDatabase = ((CachedCoinView)this.UtxoSet).ICoinDb;
+            coinViewDatabase.Initialize();
 
-            coindb.Initialize();
+            HashHeightPair coinViewDatabaseTip = coinViewDatabase.GetTipHash();
 
-            HashHeightPair consensusTipHash = coindb.GetTipHash();
+            // If the chain's height is more than the current coinview's tip,
+            // we need to inspect it's integrity.
+            if (chainTip.Height > coinViewDatabaseTip.Height)
+                RestoreCoinDatabaseIntegrity(coinViewDatabase, coinViewDatabaseTip.Height);
 
             while (true)
             {
-                ChainedHeader pendingTip = chainTip.FindAncestorOrSelf(consensusTipHash.Hash);
+                ChainedHeader pendingTip = chainTip.FindAncestorOrSelf(coinViewDatabaseTip.Hash);
 
                 if (pendingTip != null)
                     break;
 
-                this.logger.LogInformation("Rewinding coin db from {0}", consensusTipHash);
+                this.logger.LogInformation("Rewinding coin db from {0}", coinViewDatabaseTip);
+
                 // In case block store initialized behind, rewind until or before the block store tip.
                 // The node will complete loading before connecting to peers so the chain will never know if a reorg happened.
-                consensusTipHash = coindb.Rewind();
+                coinViewDatabaseTip = coinViewDatabase.Rewind();
             }
+        }
+
+        /// <summary>
+        /// If, on startup, the chain's tip is higher than the coinview's tip,
+        /// it is possible that the node got shutdown unexpectedly.
+        /// In this scenario we need to inspect the coin database's rewind data to ensure
+        /// that there aren't any outpoints that has been deleted/restored that shouldn't have been.
+        /// We need to walk up the height from the current chain tip until there is no more rewind data and rewind said
+        /// rewind items.
+        /// </summary>
+        /// <param name="coinDb">Access to the coin database.</param>
+        /// <param name="coinViewHeight">The height to start the inspection from.</param>
+        private void RestoreCoinDatabaseIntegrity(ICoindb coinDb, int coinViewHeight)
+        {
+            this.logger.LogInformation("The chain's tip is higher than the coinview's tip... Inspecting the coin database's outpoint integrity.");
+
+            var rewindDataItems = new List<(RewindData RewindDataItem, int Height)>();
+
+            // Determine whether there are rewind items that are persisted above the chain tip's height.
+            var inspectionHeight = coinViewHeight + 1;
+            do
+            {
+                var rewindDataItem = coinDb.GetRewindData(inspectionHeight);
+                if (rewindDataItem == null)
+                    break;
+
+                rewindDataItems.Add((rewindDataItem, inspectionHeight));
+
+                inspectionHeight += 1;
+
+            } while (true);
+
+            if (rewindDataItems.Count > 0)
+            {
+                this.logger.LogInformation($"{rewindDataItems.Count} rewind data items found that will need to be rewound.");
+
+                foreach (var (RewindDataItem, Height) in rewindDataItems.OrderByDescending(r => r.Height))
+                {
+                    coinDb.RewindDataItem(RewindDataItem, Height);
+                }
+
+                this.logger.LogInformation($"Coin database integrity restored.");
+            }
+            else
+                this.logger.LogInformation($"Coin database integrity check reported no issues.");
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)
@@ -106,19 +158,18 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         {
             this.prefetcher.Dispose();
 
-            var cache = this.UtxoSet as CachedCoinView;
-            if (cache != null)
+            if (this.UtxoSet is CachedCoinView cache)
             {
                 this.logger.LogInformation("Flushing Cache CoinView.");
                 cache.Flush();
             }
 
-            ((IDisposable)((CachedCoinView)this.UtxoSet).ICoindb).Dispose();
+            ((IDisposable)((CachedCoinView)this.UtxoSet).ICoinDb).Dispose();
         }
 
         public override List<RewindData> GetRewindData()
         {
-            var coindb = ((CachedCoinView)this.UtxoSet).ICoindb;
+            var coindb = ((CachedCoinView)this.UtxoSet).ICoinDb;
             var levelDb = (LevelDbCoindb)coindb;
             return levelDb.GetAllRewindData();
         }

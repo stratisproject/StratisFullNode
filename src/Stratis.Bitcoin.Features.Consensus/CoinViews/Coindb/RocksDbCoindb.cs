@@ -159,7 +159,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         {
                             foreach (RewindData rewindData in rewindDataList)
                             {
-                                var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
+                                var nextRewindIndex = rewindData.PreviousHashHeight.Height + 1;
 
                                 this.logger.Debug("Rewind state #{0} created.", nextRewindIndex);
 
@@ -214,7 +214,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                             batch.Put(new byte[] { coinsTable }.Concat(rewindDataOutput.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
                         }
 
-                        previousBlockHash = rewindData.PreviousBlockHash;
+                        previousBlockHash = rewindData.PreviousHashHeight;
 
                         rocksDb.Write(batch);
                     }
@@ -224,6 +224,36 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 return previousBlockHash;
             }
+        }
+
+        /// <inheritdoc />
+        public void RewindDataItem(RewindData rewindDataItem, int rewindDataItemHeight)
+        {
+            using (var batch = new WriteBatch())
+            {
+                using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
+                {
+                    this.logger.Info("Rewinding/Restoring outpoints for height '{0}'.", rewindDataItemHeight);
+
+                    batch.Delete(BitConverter.GetBytes(rewindDataItemHeight));
+
+                    foreach (OutPoint outPoint in rewindDataItem.OutputsToRemove)
+                    {
+                        this.logger.Debug("Outputs of outpoint '{0}' will be removed.", outPoint);
+                        batch.Delete(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
+                    }
+
+                    foreach (RewindDataOutput rewindDataOutput in rewindDataItem.OutputsToRestore)
+                    {
+                        this.logger.Debug("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
+                        batch.Put(new byte[] { coinsTable }.Concat(rewindDataOutput.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
+                    }
+
+                    rocksDb.Write(batch);
+                }
+            }
+
+            this.SetBlockHash(rewindDataItem.PreviousHashHeight);
         }
 
         public RewindData GetRewindData(int height)

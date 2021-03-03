@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
@@ -120,10 +119,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules
             // First try and find the previous trx in the database.
             TxIn txIn = header.Coinstake.Inputs[0];
 
-            UnspentOutput prevUtxo = null;
-
             FetchCoinsResponse coins = this.PosParent.UtxoSet.FetchCoins(new[] { txIn.PrevOut });
-            prevUtxo = coins.UnspentOutputs[txIn.PrevOut];
+            var prevUtxo = coins.UnspentOutputs[txIn.PrevOut];
             if (prevUtxo?.Coins == null)
             {
                 // We did not find the previous trx in the database, look in rewind data.

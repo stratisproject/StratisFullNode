@@ -22,6 +22,7 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Tests.Wallet.Common;
@@ -90,7 +91,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 .Returns(asyncLoop)
                 .Verifiable();
 
-            this.posMinting.Stake(new List<WalletSecret>() 
+            this.posMinting.Stake(new List<WalletSecret>()
             {
                 new WalletSecret()
                 {

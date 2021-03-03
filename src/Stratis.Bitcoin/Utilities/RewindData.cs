@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Utilities
         public long TotalSize { get; set; }
 
         /// <summary>Hash of the block header of the tip of the previous state of the coinview.</summary>
-        public HashHeightPair PreviousBlockHash
+        public HashHeightPair PreviousHashHeight
         {
             get { return this.previousBlockHash; }
             set { this.previousBlockHash = value; }

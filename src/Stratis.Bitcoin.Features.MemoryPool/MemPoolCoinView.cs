@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.MemoryPool

@@ -59,6 +59,17 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         HashHeightPair Rewind();
 
         /// <summary>
+        /// Rewinds the coinview with a specific item.
+        /// <para>
+        /// This operation includes removing the UTXOs of the recent transactions
+        /// and restoring recently spent outputs as UTXOs.
+        /// </para>
+        /// </summary>
+        /// <param name="rewindDataitem">The rewind data item to rewind/restore.</param>
+        /// <param name="height">The height of rewind data item.</param>
+        void RewindDataItem(RewindData rewindDataitem, int height);
+
+        /// <summary>
         /// Gets the rewind data by block height.
         /// </summary>
         /// <param name="height">The height of the block.</param>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 using ReaderWriterLock = NBitcoin.ReaderWriterLock;
@@ -97,6 +96,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         public HashHeightPair Rewind()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc />
+        public void RewindDataItem(RewindData rewindDataItem, int rewindDataItemHeight)
         {
             throw new NotImplementedException();
         }

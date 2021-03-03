@@ -9,6 +9,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Tests.Common.Logging;
 using Stratis.Bitcoin.Utilities;
@@ -303,7 +304,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             Assert.Equal(expectedTarget, result);
         }
 
-        [Fact(Skip="Returns success when run in isolation")]
+        [Fact(Skip = "Returns success when run in isolation")]
         public void CalculateRetarget_FirstBlockAfterSecondBlock_UsesLowerTargetSpacing_WithinLimit_CalculatesNewTarget()
         {
             var now = DateTime.UtcNow;
@@ -592,7 +593,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             Assert.Equal(expectedTarget, result);
         }
 
-        [Fact(Skip="Returns success when run in isolation, but fails when run with the other tests")]
+        [Fact(Skip = "Returns success when run in isolation, but fails when run with the other tests")]
         public void GetNextTargetRequired_PoS_BlocksExist_PosNoRetargetDisabled_CalculatesRetarget()
         {
             var headers = ChainedHeadersHelper.CreateConsecutiveHeaders(5, includePrevBlock: true, network: this.Network);
@@ -1300,12 +1301,12 @@ namespace Stratis.Bitcoin.Tests.Consensus
             inputm.Inputs[0].PrevOut.Hash = output.GetHash();
             inputm.Inputs[0].PrevOut.N = 0;
             inputm.Inputs[0].WitScript = new WitScript();
-            
+
             inputm.Outputs.Add(new TxOut(0, Script.Empty));
             inputm.Outputs.Add(new TxOut(Money.Satoshis(1), Script.Empty));
             bool ret = SignSignature(keystore, output, inputm);
             Assert.True(ret == success, "couldn't sign");
-            
+
             input = this.Network.CreateTransaction(inputm.ToBytes());
             Assert.True(input.Inputs.Count == 1);
             Assert.True(input.Inputs[0].ToBytes().SequenceEqual(inputm.Inputs[0].ToBytes()));

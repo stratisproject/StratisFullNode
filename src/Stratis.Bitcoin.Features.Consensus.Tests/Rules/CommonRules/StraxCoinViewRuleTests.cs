@@ -16,6 +16,7 @@ using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -184,7 +185,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             // Cirrus reward output
             coinstakeTransaction.Outputs.Add(new TxOut(this.network.Consensus.ProofOfStakeReward * StraxCoinviewRule.CirrusRewardPercentage / 100, StraxCoinstakeRule.CirrusRewardScript));
-            
+
             // Normal pay to public key that belongs to the second miner with value that
             // equals to the sum of the inputs.
             coinstakeTransaction.Outputs.Add(new TxOut(Money.COIN * 15_000_000, scriptPubKey2));

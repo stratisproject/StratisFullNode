@@ -206,7 +206,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     {
                         foreach (RewindData rewindData in rewindDataList)
                         {
-                            var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
+                            var nextRewindIndex = rewindData.PreviousHashHeight.Height + 1;
 
                             this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
 
@@ -264,7 +264,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 var rewindData = this.dBreezeSerializer.Deserialize<RewindData>(row.Value);
 
-                this.SetBlockHash(transaction, rewindData.PreviousBlockHash);
+                this.SetBlockHash(transaction, rewindData.PreviousHashHeight);
 
                 foreach (OutPoint outPoint in rewindData.OutputsToRemove)
                 {
@@ -278,12 +278,18 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     transaction.Insert("Coins", rewindDataOutput.OutPoint.ToBytes(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
                 }
 
-                res = rewindData.PreviousBlockHash;
+                res = rewindData.PreviousHashHeight;
 
                 transaction.Commit();
             }
 
             return res;
+        }
+
+        /// <inheritdoc />
+        public void RewindDataItem(RewindData rewindDataItem, int rewindDataItemHeight)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

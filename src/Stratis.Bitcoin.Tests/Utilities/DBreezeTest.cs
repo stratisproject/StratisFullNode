@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Tests.Utilities
 
             var result = (RewindData)this.dbreezeSerializer.Deserialize(rewindData.ToBytes(), typeof(RewindData));
 
-            Assert.Equal(genesis.GetHash(), result.PreviousBlockHash.Hash);
+            Assert.Equal(genesis.GetHash(), result.PreviousHashHeight.Hash);
         }
 
         [Fact]

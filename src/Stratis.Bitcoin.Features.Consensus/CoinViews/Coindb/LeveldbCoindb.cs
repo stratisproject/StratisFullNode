@@ -167,7 +167,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     {
                         foreach (RewindData rewindData in rewindDataList)
                         {
-                            var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
+                            var nextRewindIndex = rewindData.PreviousHashHeight.Height + 1;
 
                             this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
 
@@ -216,14 +216,41 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     batch.Put(new byte[] { coinsTable }.Concat(rewindDataOutput.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
                 }
 
-                res = rewindData.PreviousBlockHash;
+                res = rewindData.PreviousHashHeight;
 
                 this.leveldb.Write(batch, new WriteOptions() { Sync = true });
 
-                this.SetBlockHash(rewindData.PreviousBlockHash);
+                this.SetBlockHash(rewindData.PreviousHashHeight);
             }
 
             return res;
+        }
+
+        /// <inheritdoc />
+        public void RewindDataItem(RewindData rewindDataItem, int rewindDataItemHeight)
+        {
+            using (var batch = new WriteBatch())
+            {
+                this.logger.LogInformation("Rewinding/Restoring outpoints for height '{0}'.", rewindDataItemHeight);
+
+                batch.Delete(BitConverter.GetBytes(rewindDataItemHeight));
+
+                foreach (OutPoint outPoint in rewindDataItem.OutputsToRemove)
+                {
+                    this.logger.LogDebug("Outputs of outpoint '{0}' will be removed.", outPoint);
+                    batch.Delete(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
+                }
+
+                foreach (RewindDataOutput rewindDataOutput in rewindDataItem.OutputsToRestore)
+                {
+                    this.logger.LogDebug("Outputs of outpoint '{0}' will be restored.", rewindDataOutput.OutPoint);
+                    batch.Put(new byte[] { coinsTable }.Concat(rewindDataOutput.OutPoint.ToBytes()).ToArray(), this.dBreezeSerializer.Serialize(rewindDataOutput.Coins));
+                }
+
+                this.leveldb.Write(batch, new WriteOptions() { Sync = true });
+
+                this.SetBlockHash(rewindDataItem.PreviousHashHeight);
+            }
         }
 
         public List<RewindData> GetAllRewindData()
@@ -244,7 +271,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         allData.Add(res);
                 }
 
-            } while (true);
+            } while (enumerator.MoveNext());
 
             return allData;
         }

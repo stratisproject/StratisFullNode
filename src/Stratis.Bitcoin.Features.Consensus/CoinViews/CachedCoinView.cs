@@ -94,8 +94,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>All access to this list has to be protected by <see cref="lockobj"/>.</remarks>
         private readonly Dictionary<int, RewindData> cachedRewindData;
 
-        /// <inheritdoc />
-        public ICoindb ICoindb => this.coindb;
+        public ICoindb ICoinDb => this.coindb;
 
         /// <summary>Storage of POS block information.</summary>
         private readonly StakeChainStore stakeChainStore;
@@ -126,7 +125,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly ConsensusSettings consensusSettings;
         private CachePerformanceSnapshot latestPerformanceSnapShot;
-        private int lastCheckpointHeight;
+        private readonly int lastCheckpointHeight;
 
         private readonly Random random;
 

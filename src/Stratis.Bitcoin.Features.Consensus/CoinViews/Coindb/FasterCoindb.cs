@@ -239,7 +239,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                             context.FinalizeRead(ref addStatus, ref output);
                         }
 
-                        Utilities.Coins outputs = addStatus == Status.OK ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(output.value.value) : null;
+                        Coins outputs = addStatus == Status.OK ? this.dBreezeSerializer.Deserialize<Utilities.Coins>(output.value.value) : null;
 
                         this.logger.LogDebug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
@@ -311,7 +311,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     {
                         foreach (RewindData rewindData in rewindDataList)
                         {
-                            var nextRewindIndex = rewindData.PreviousBlockHash.Height + 1;
+                            var nextRewindIndex = rewindData.PreviousHashHeight.Height + 1;
 
                             this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
 
@@ -368,7 +368,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 var rewindData = this.dBreezeSerializer.Deserialize<RewindData>(output1.value.value);
 
-                this.SetBlockHash(wrapper, rewindData.PreviousBlockHash);
+                this.SetBlockHash(wrapper, rewindData.PreviousHashHeight);
 
                 foreach (OutPoint outPoint in rewindData.OutputsToRemove)
                 {
@@ -394,10 +394,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         throw new Exception();
                 }
 
-                res = rewindData.PreviousBlockHash;
+                res = rewindData.PreviousHashHeight;
             }
 
             return res;
+        }
+
+        /// <inheritdoc />
+        public void RewindDataItem(RewindData rewindDataItem, int rewindDataItemHeight)
+        {
+            throw new NotImplementedException();
         }
 
         private void AddBenchStats(StringBuilder log)
@@ -420,11 +426,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         public void PutStake(IEnumerable<StakeItem> stakeEntries)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void PutStakeInternal(DBreeze.Transactions.Transaction transaction, IEnumerable<StakeItem> stakeEntries)
         {
             throw new NotImplementedException();
         }

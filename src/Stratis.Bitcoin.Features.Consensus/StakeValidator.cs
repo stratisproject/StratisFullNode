@@ -9,6 +9,7 @@ using NBitcoin.Crypto;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus
@@ -65,10 +66,8 @@ namespace Stratis.Bitcoin.Features.Consensus
         /// <summary>Consensus' view of UTXO set.</summary>
         private readonly ICoinView coinView;
 
-        /// <inheritdoc cref="Network"/>
         private readonly Network network;
 
-        /// <inheritdoc />
         /// <param name="network">Specification of the network the node runs on - regtest/testnet/mainnet.</param>
         /// <param name="stakeChain">Database of stake related data for the current blockchain.</param>
         /// <param name="chainIndexer">Chain of headers.</param>

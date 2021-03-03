@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Threading;
 using NBitcoin;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
