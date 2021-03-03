@@ -1,8 +1,7 @@
 {
   "profiles": {
     "Stratis.StraxD": {
-      "commandName": "Project",
-      "commandLineArgs": "-datadir=d:\\stratis\\testing"
+      "commandName": "Project"
     },
     "Stratis.StraxD Test": {
       "commandName": "Project",
