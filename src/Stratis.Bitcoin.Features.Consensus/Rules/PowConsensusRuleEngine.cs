@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -113,6 +114,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
             }
 
             ((IDisposable)((CachedCoinView)this.UtxoSet).ICoindb).Dispose();
+        }
+
+        public override List<RewindData> GetRewindData()
+        {
+            var coindb = ((CachedCoinView)this.UtxoSet).ICoindb;
+            var levelDb = (LevelDbCoindb)coindb;
+            return levelDb.GetAllRewindData();
         }
     }
 }

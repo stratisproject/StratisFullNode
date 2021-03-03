@@ -236,31 +236,31 @@ namespace Stratis.Bitcoin.Consensus
             // We should consider creating a consensus store class that will internally contain
             // coinview and it will abstract the methods `RewindAsync()` `GetBlockHashAsync()`
 
-            HashHeightPair consensusTipHash = this.ConsensusRules.GetBlockHash();
+            HashHeightPair coinviewTip = this.ConsensusRules.GetBlockHash();
 
-            ChainedHeader pendingTip;
+            ChainedHeader pendingCoinviewTip;
 
             while (true)
             {
-                pendingTip = chainTip.FindAncestorOrSelf(consensusTipHash.Hash);
+                pendingCoinviewTip = chainTip.FindAncestorOrSelf(coinviewTip.Hash);
 
-                if ((pendingTip != null) && (this.chainState.BlockStoreTip.Height >= pendingTip.Height))
+                if ((pendingCoinviewTip != null) && (this.chainState.BlockStoreTip.Height >= pendingCoinviewTip.Height))
                     break;
 
-                this.logger.LogInformation("Consensus at height {0} is ahead of the block store at height {1}, rewinding consensus.", pendingTip, this.chainState.BlockStoreTip);
+                this.logger.LogInformation("Consensus at height {0} is ahead of the block store at height {1}, rewinding consensus.", pendingCoinviewTip, this.chainState.BlockStoreTip);
 
                 // In case block store initialized behind, rewind until or before the block store tip.
                 // The node will complete loading before connecting to peers so the chain will never know if a reorg happened.
                 RewindState transitionState = await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
-                consensusTipHash = transitionState.BlockHash;
+                coinviewTip = transitionState.BlockHash;
             }
 
-            this.chainedHeaderTree.Initialize(pendingTip);
+            this.chainedHeaderTree.Initialize(pendingCoinviewTip);
 
-            this.SetConsensusTip(pendingTip);
+            this.SetConsensusTip(pendingCoinviewTip);
 
-            if (this.chainIndexer.Tip != pendingTip)
-                this.chainIndexer.Initialize(pendingTip);
+            if (this.chainIndexer.Tip != pendingCoinviewTip)
+                this.chainIndexer.Initialize(pendingCoinviewTip);
 
             this.blockPuller.Initialize(this.BlockDownloaded);
 

@@ -125,6 +125,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         {
             throw new NotImplementedException();
         }
+
+        public override List<RewindData> GetRewindData()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     /// <summary>

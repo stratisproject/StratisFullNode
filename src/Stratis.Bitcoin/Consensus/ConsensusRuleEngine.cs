@@ -312,6 +312,8 @@ namespace Stratis.Bitcoin.Consensus
         {
             benchLog.AppendLine(this.performanceCounter.TakeSnapshot().ToString());
         }
+
+        public abstract List<RewindData> GetRewindData();
     }
 
     /// <summary>

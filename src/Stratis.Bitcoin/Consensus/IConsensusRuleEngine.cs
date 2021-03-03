@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -40,9 +41,9 @@ namespace Stratis.Bitcoin.Consensus
         RuleContext CreateRuleContext(ValidationContext validationContext);
 
         /// <summary>
-        /// Retrieves the block hash of the current tip of the chain.
+        /// Retrieves the current tip of the chain (coinview).
         /// </summary>
-        /// <returns>Block hash and height of the current tip of the chain.</returns>
+        /// <returns>Block hash and height of the current tip of the chain (coinview).</returns>
         HashHeightPair GetBlockHash();
 
         /// <summary>
@@ -77,5 +78,7 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="block">The block that is going to be validated.</param>
         /// <returns>Context that contains validation result related information.</returns>
         Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block);
+
+        List<RewindData> GetRewindData();
     }
 }

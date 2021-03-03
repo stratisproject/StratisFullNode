@@ -226,6 +226,29 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             return res;
         }
 
+        public List<RewindData> GetAllRewindData()
+        {
+            var allData = new List<RewindData>();
+            var enumerator = this.leveldb.GetEnumerator();
+            enumerator.MoveNext();
+            do
+            {
+                var current = enumerator.Current;
+                if (current.Key == null)
+                    break;
+
+                if (current.Key[0] == rewindTable)
+                {
+                    var res = this.dBreezeSerializer.Deserialize<RewindData>(current.Value);
+                    if (res != null)
+                        allData.Add(res);
+                }
+
+            } while (true);
+
+            return allData;
+        }
+
         public RewindData GetRewindData(int height)
         {
             byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
