@@ -166,12 +166,5 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
 
             ((IDisposable)((CachedCoinView)this.UtxoSet).ICoinDb).Dispose();
         }
-
-        public override List<RewindData> GetRewindData()
-        {
-            var coindb = ((CachedCoinView)this.UtxoSet).ICoinDb;
-            var levelDb = (LevelDbCoindb)coindb;
-            return levelDb.GetAllRewindData();
-        }
     }
 }

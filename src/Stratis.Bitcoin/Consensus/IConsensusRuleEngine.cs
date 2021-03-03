@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -78,7 +77,5 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="block">The block that is going to be validated.</param>
         /// <returns>Context that contains validation result related information.</returns>
         Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block);
-
-        List<RewindData> GetRewindData();
     }
 }
