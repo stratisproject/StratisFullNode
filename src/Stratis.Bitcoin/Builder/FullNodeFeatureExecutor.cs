@@ -39,12 +39,12 @@ namespace Stratis.Bitcoin.Builder
         /// Initializes an instance of the object with specific full node and logger factory.
         /// </summary>
         /// <param name="fullNode">Full node which features are to be managed by this executor.</param>
-        public FullNodeFeatureExecutor(IFullNode fullNode)
+        public FullNodeFeatureExecutor(IFullNode fullNode, ISignals signals)
         {
             Guard.NotNull(fullNode, nameof(fullNode));
 
             this.node = fullNode;
-            this.signals = fullNode.NodeService<ISignals>();
+            this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
