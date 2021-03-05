@@ -3,11 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
+using NLog;
 
 namespace Stratis.Bitcoin.Features.SignalR
 {
-    // ReSharper disable once ClassNeverInstantiated.Global
     public class SignalRMessageArgs
     {
         public string Target { get; set; }
@@ -21,30 +20,27 @@ namespace Stratis.Bitcoin.Features.SignalR
 
     public class EventsHub : Hub
     {
-        private readonly IDictionary<string, List<Action<SignalRMessageArgs>>> featureSubscriptions
-            = new ConcurrentDictionary<string, List<Action<SignalRMessageArgs>>>(StringComparer.OrdinalIgnoreCase);
+        private readonly IDictionary<string, List<Action<SignalRMessageArgs>>> featureSubscriptions = new ConcurrentDictionary<string, List<Action<SignalRMessageArgs>>>(StringComparer.OrdinalIgnoreCase);
+        private readonly ILogger logger;
 
-        private readonly ILogger<EventsHub> logger;
-
-        public EventsHub(ILoggerFactory loggerFactory)
+        public EventsHub()
         {
-            this.logger = loggerFactory.CreateLogger<EventsHub>();
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         public override Task OnConnectedAsync()
         {
-            this.logger.LogDebug("New client with id {id} connected", this.Context.ConnectionId);
+            this.logger.Debug("New client with id {id} connected", this.Context.ConnectionId);
             return base.OnConnectedAsync();
         }
 
         public override Task OnDisconnectedAsync(Exception exception)
         {
-            this.logger.LogDebug("Client with id {id} disconnected", this.Context.ConnectionId);
+            this.logger.Debug("Client with id {id} disconnected", this.Context.ConnectionId);
             return base.OnDisconnectedAsync(exception);
         }
 
         /// <summary>Called using reflection from SignalR</summary> 
-        // ReSharper disable once UnusedMember.Global
         public void SendMessage(SignalRMessageArgs message)
         {
             try
@@ -59,7 +55,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             }
             catch (Exception e)
             {
-                this.logger.LogError("Error SendMessage", e);
+                this.logger.Error("Error SendMessage", e);
             }
         }
 
@@ -92,7 +88,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex, "Error sending to clients");
+                this.logger.Error(ex, "Error sending to clients");
             }
         }
     }

@@ -1,8 +1,8 @@
 ﻿using System.IO;
 using System.Net;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.P2P;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Configuration
 {
@@ -20,26 +20,32 @@ namespace Stratis.Bitcoin.Configuration
         /// <summary>
         /// Initializes the path locations.
         /// </summary>
-        /// <param name="path">The data directory root path.</param>
-        public DataFolder(string path)
+        /// <param name="rootPath">The data directory root path.</param>
+        public DataFolder(string rootPath, DbType dbType = DbType.Leveldb)
         {
-            this.CoindbPath = Path.Combine(path, "coindb");
-            this.AddressManagerFilePath = path;
-            this.ChainPath = Path.Combine(path, "chain");
-            this.KeyValueRepositoryPath = Path.Combine(path, "common");
-            this.InteropRepositoryPath = Path.Combine(path, "interop");
-            this.ConversionRepositoryPath = Path.Combine(path, "conversion");
-            this.BlockPath = Path.Combine(path, "blocks");
-            this.PollsPath = Path.Combine(path, "polls");
-            this.IndexPath = Path.Combine(path, "index");
-            this.RpcCookieFile = Path.Combine(path, ".cookie");
-            this.WalletPath = Path.Combine(path);
-            this.LogPath = Path.Combine(path, "logs");
-            this.ApplicationsPath = Path.Combine(path, "apps");
-            this.DnsMasterFilePath = path;
-            this.SmartContractStatePath = Path.Combine(path, "contracts");
-            this.ProvenBlockHeaderPath = Path.Combine(path, "provenheaders");
-            this.RootPath = path;
+            string databasePath = rootPath;
+            if (dbType != DbType.Leveldb)
+            {
+                databasePath = Path.Combine(rootPath, dbType.ToString().ToLowerInvariant());
+                Directory.CreateDirectory(databasePath);
+            }
+
+            this.CoindbPath = Path.Combine(databasePath, "coindb");
+            this.AddressManagerFilePath = rootPath;
+            this.ChainPath = Path.Combine(databasePath, "chain");
+            this.KeyValueRepositoryPath = Path.Combine(databasePath, "common");
+            this.InteropRepositoryPath = Path.Combine(rootPath, "interop");
+            this.ConversionRepositoryPath = Path.Combine(rootPath, "conversion");
+            this.BlockPath = Path.Combine(databasePath, "blocks");
+            this.PollsPath = Path.Combine(rootPath, "polls");
+            this.IndexPath = Path.Combine(rootPath, "index");
+            this.RpcCookieFile = Path.Combine(rootPath, ".cookie");
+            this.WalletPath = Path.Combine(rootPath);
+            this.LogPath = Path.Combine(rootPath, "logs");
+            this.DnsMasterFilePath = rootPath;
+            this.SmartContractStatePath = Path.Combine(rootPath, "contracts");
+            this.ProvenBlockHeaderPath = Path.Combine(databasePath, "provenheaders");
+            this.RootPath = rootPath;
         }
 
         /// <summary>
@@ -97,8 +103,5 @@ namespace Stratis.Bitcoin.Configuration
 
         /// <summary>Path to the folder for <see cref="ProvenBlockHeader"/> items database files.</summary>
         public string ProvenBlockHeaderPath { get; set; }
-
-        /// <summary>Path to Stratis applications</summary>
-        public string ApplicationsPath { get; internal set; }
     }
 }

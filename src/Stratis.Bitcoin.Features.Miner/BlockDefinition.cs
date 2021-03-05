@@ -610,9 +610,9 @@ namespace Stratis.Bitcoin.Features.Miner
         /// <summary>Update the block's header information.</summary>
         protected void UpdateBaseHeaders()
         {
+            this.block.Header.Nonce = 0;
             this.block.Header.HashPrevBlock = this.ChainTip.HashBlock;
             this.block.Header.UpdateTime(this.DateTimeProvider.GetTimeOffset(), this.Network, this.ChainTip);
-            this.block.Header.Nonce = 0;
         }
 
         /// <summary>Network specific logic specific as to how the block's header will be set.</summary>

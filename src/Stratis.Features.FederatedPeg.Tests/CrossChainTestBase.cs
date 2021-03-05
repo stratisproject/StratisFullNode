@@ -99,7 +99,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletSyncManager = Substitute.For<IFederationWalletSyncManager>();
             this.FederationWalletTransactionHandler = Substitute.For<IFederationWalletTransactionHandler>();
-            this.walletFeePolicy = Substitute.For<IWalletFeePolicy>();
+            this.walletFeePolicy = new WalletFeePolicy(NodeSettings.Default(this.network));
+
             this.connectionManager = Substitute.For<IConnectionManager>();
             this.federatedPegBroadcaster = Substitute.For<IFederatedPegBroadcaster>();
             this.inputConsolidator = Substitute.For<IInputConsolidator>();

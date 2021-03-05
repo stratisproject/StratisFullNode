@@ -14,13 +14,13 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <Version>1.0.7.0</Version>
+    <Version>1.0.8.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DNS" Version="2.1.0" />
+    <PackageReference Include="DNS" Version="6.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
 

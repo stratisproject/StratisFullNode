@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg
                 return;
             }
 
-            this.logger.Debug("{0} received from '{1}':'{2}'.", nameof(RequestPartialTransactionPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address);
+            this.logger.Debug("{0} with deposit Id '{1}' received from '{2}':'{3}'.", nameof(RequestPartialTransactionPayload), payload.DepositId, peer.PeerEndPoint.Address, peer.RemoteSocketAddress);
 
             ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
 

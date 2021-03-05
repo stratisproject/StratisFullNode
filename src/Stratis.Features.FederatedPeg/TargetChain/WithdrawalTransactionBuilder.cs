@@ -105,7 +105,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     return null;
                 }
 
-                multiSigContext.TransactionFee = this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count); // The "actual fee". Everything else goes to the fed.
                 multiSigContext.SelectedInputs = unspentOutputs.Select(u => u.ToOutPoint()).ToList();
                 multiSigContext.AllowOtherInputs = false;
 
