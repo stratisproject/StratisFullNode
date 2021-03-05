@@ -28,13 +28,13 @@ namespace Stratis.Bitcoin.Tests.Consensus
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 repo.Initialize(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0));
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
             }
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 await repo.LoadFinalizedBlockInfoAsync(this.Network);
                 Assert.Equal(777, repo.GetFinalizedBlockInfo().Height);
@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             var asyncMock = new Mock<IAsyncProvider>();
             asyncMock.Setup(a => a.RegisterTask(It.IsAny<string>(), It.IsAny<Task>()));
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 repo.Initialize(new ChainedHeader(this.Network.GetGenesis().Header, this.Network.GetGenesis().GetHash(), 0));
                 repo.SaveFinalizedBlockHashAndHeight(uint256.One, 777);
@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
                 Assert.Equal(777, repo.GetFinalizedBlockInfo().Height);
             }
 
-            using (var repo = new FinalizedBlockInfoRepository(kvRepo, this.loggerFactory, asyncMock.Object))
+            using (var repo = new FinalizedBlockInfoRepository(kvRepo, asyncMock.Object))
             {
                 await repo.LoadFinalizedBlockInfoAsync(this.Network);
                 Assert.Equal(777, repo.GetFinalizedBlockInfo().Height);

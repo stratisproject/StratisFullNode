@@ -40,9 +40,9 @@ namespace Stratis.Bitcoin.Consensus
         RuleContext CreateRuleContext(ValidationContext validationContext);
 
         /// <summary>
-        /// Retrieves the block hash of the current tip of the chain.
+        /// Retrieves the block hash and height of the current tip of the coinview (coin database).
         /// </summary>
-        /// <returns>Block hash and height of the current tip of the chain.</returns>
+        /// <returns>Block hash and height of the current tip of the coinview (coin database).</returns>
         HashHeightPair GetBlockHash();
 
         /// <summary>

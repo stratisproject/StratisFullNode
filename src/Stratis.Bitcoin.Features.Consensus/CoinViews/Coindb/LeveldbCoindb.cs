@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Network network;
 
         /// <summary>Hash of the block which is currently the tip of the coinview.</summary>
-        private HashHeightPair blockHash;
+        private HashHeightPair persistedCoinviewTip;
 
         /// <summary>Performance counter to measure performance of the database insert and query operations.</summary>
         private readonly BackendPerformanceCounter performanceCounter;
@@ -74,30 +74,30 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             Block genesis = this.network.GetGenesis();
 
             if (this.GetTipHash() == null)
-            {
                 this.SetBlockHash(new HashHeightPair(genesis.GetHash(), 0));
-            }
+
+            this.logger.LogInformation("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
         private void SetBlockHash(HashHeightPair nextBlockHash)
         {
-            this.blockHash = nextBlockHash;
+            this.persistedCoinviewTip = nextBlockHash;
             this.leveldb.Put(new byte[] { blockTable }.Concat(blockHashKey).ToArray(), nextBlockHash.ToBytes());
         }
 
         public HashHeightPair GetTipHash()
         {
-            if (this.blockHash == null)
+            if (this.persistedCoinviewTip == null)
             {
                 var row = this.leveldb.Get(new byte[] { blockTable }.Concat(blockHashKey).ToArray());
                 if (row != null)
                 {
-                    this.blockHash = new HashHeightPair();
-                    this.blockHash.FromBytes(row);
+                    this.persistedCoinviewTip = new HashHeightPair();
+                    this.persistedCoinviewTip.FromBytes(row);
                 }
             }
 
-            return this.blockHash;
+            return this.persistedCoinviewTip;
         }
 
         public FetchCoinsResponse FetchCoins(OutPoint[] utxos)

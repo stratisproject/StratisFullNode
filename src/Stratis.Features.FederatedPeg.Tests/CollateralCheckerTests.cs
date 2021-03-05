@@ -63,7 +63,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             ISignals signals = new Signals(loggerFactory, new DefaultSubscriptionErrorHandler(loggerFactory));
             var dbreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
             var asyncProvider = new AsyncProvider(loggerFactory, signals);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), loggerFactory, asyncProvider);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
