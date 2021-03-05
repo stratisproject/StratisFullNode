@@ -7,6 +7,8 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
     public interface IEthereumClientBase
     {
+        void CreateTransferEventFilter();
+
         List<EventLog<TransferEventDTO>> GetTransferEventsForWrappedStrax();
 
         string GetDestinationAddress(string address);
@@ -34,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 
         string EncodeMintParams(string address, BigInteger amount);
 
-        string EncodeBurnParams(BigInteger amount);
+        string EncodeBurnParams(BigInteger amount, string straxAddress);
 
         Dictionary<string, string> InvokeContract(InteropRequest request);
 

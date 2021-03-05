@@ -60,6 +60,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private ChainedHeader lastScanned;
 
+        private bool firstPoll;
+
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
             IEthereumClientBase ethereumClientBase,
@@ -100,6 +102,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
             
             this.lastScanned = this.chainIndexer.Genesis;
+            this.firstPoll = true;
         }
 
         public void Initialize()
@@ -192,7 +195,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private void CheckForContractEvents()
         {
-            // TODO: Maybe the filter should only be set up once IBD completes?
+            if (this.firstPoll)
+            {
+                // The filter should only be set up once IBD completes.
+                this.ethereumClientBase.CreateTransferEventFilter();
+
+                this.firstPoll = false;
+            }
 
             // Check for all Transfer events against the WrappedStrax contract since the last time we checked.
             // In future this could also poll for other events as the need arises.
@@ -231,13 +240,6 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
-                if (transferEvent.Event.Value > 10_000_000_000) // 100
-                {
-                    this.logger.LogError("Ignoring burn transaction {0} due to temporary risk-limitation measures.", transferEvent.Log.TransactionHash);
-
-                    continue;
-                }
-
                 this.logger.LogInformation("Conversion burn transaction {0} has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
 
                 // Look up the desired destination address for this account.
@@ -245,10 +247,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
 
-                // TODO: Validate that it is a mainchain address here before bothering to add it to the repository.
+                // TODO: Validate that it is a mainchain address here before bothering to add it to the repository
 
                 // Schedule this transaction to be processed at the next block height that is divisible by 10. If the current block height is divisible by 10, add a further 10 to it.
                 // In this way, burns will always be scheduled at a predictable future time across the multisig.
+                // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
                 ulong blockHeight = (ulong)this.chainIndexer.Tip.Height - ((ulong)this.chainIndexer.Tip.Height % 10) + 10;
 
                 if (blockHeight <= 0)
@@ -304,7 +307,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
                     // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation node.
                     // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
-                    // The transactionId must be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified.
+                    // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
                     this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).GetAwaiter().GetResult();
 
                     // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
@@ -347,7 +350,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // If we reach this point, the node was not the originator but there were also insufficient votes to determine a transactionId yet.
                 // This scenario has to be handled carefully, because we want to avoid having nodes need to change their votes due to a new submission to the multisig contract.
 
-                // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract
+                // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint
             }
 
             // Unlike the mint requests, burns are not initiated by the multisig wallet.
@@ -360,6 +363,8 @@ namespace Stratis.Bitcoin.Features.Interop
             // Currently the processing is done in the WithdrawalExtractor.
         }
 
+        // These methods are not used for wSTRAX (conversion) transactions
+#region Interoperability
         private void CheckForEthereumRequests()
         {
             if (string.IsNullOrWhiteSpace(this.interopSettings.InteropContractCirrusAddress))
@@ -368,7 +373,7 @@ namespace Stratis.Bitcoin.Features.Interop
             // TODO: Is reorg recovery needed? In any case we can't really undo a request from the other chain if we've returned a response to it already
             IEnumerable<ChainedHeader> blockHeaders = this.chainIndexer.EnumerateToTip(this.lastScanned);
             
-            // As endorsements don't have receipts at present we can't filter out the blocks in any meaningful way. So just loop through all of them.
+            // TODO: Change this to back to scanning the receipt bloom filters instead
             ChainedHeader scanned = this.lastScanned;
 
             int count = 0;
@@ -717,6 +722,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 */
             }
         }
+#endregion Interoperability
 
         public void Dispose()
         {

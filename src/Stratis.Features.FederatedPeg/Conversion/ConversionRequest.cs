@@ -43,9 +43,9 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
         public int RequestStatus { get { return this.requestStatus; } set { this.requestStatus = value; } }
 
         /// <summary>
-        /// For a mint request this is not really needed other than for informational purposes.
-        /// However, a burn request needs to be scheduled for a future block on the main chain
-        /// so that it can be cleanly inserted into the sequence of transfers.
+        /// For a mint request this is needed to coordinate which multisig member is considered the transaction originator on the wallet contract.
+        /// A burn request needs to be scheduled for a future block on the main chain
+        /// so that the conversion can be cleanly inserted into the sequence of transfers.
         /// </summary>
         public int BlockHeight { get { return this.blockHeight; } set { this.blockHeight = value; } }
 

@@ -34,6 +34,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ChainIndexer chainIndexer;
 
         private IAsyncLoop requestDepositsTask;
 
@@ -45,13 +46,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private const int InitializationDelaySeconds = 10;
 
         public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient,
-            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository)
+            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository, ChainIndexer chainIndexer)
         {
             this.asyncProvider = asyncProvider;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
+            this.chainIndexer = chainIndexer;
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -123,6 +125,33 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     {
                         this.logger.Info("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
 
+                        continue;
+                    }
+
+                    // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+                    // TODO: This can probably be made more efficient than looping every time. 
+                    ChainedHeader header = this.chainIndexer.Tip;
+                    bool found = false;
+
+                    while (true)
+                    {
+                        if (header == this.chainIndexer.Genesis)
+                        {
+                            break;
+                        }
+
+                        if (header.Previous.Header.Time < maturedBlockDeposit.BlockInfo.BlockTime)
+                        {
+                            found = true;
+
+                            break;
+                        }
+
+                        header = header.Previous;
+                    }
+
+                    if (!found)
+                    {
                         continue;
                     }
 

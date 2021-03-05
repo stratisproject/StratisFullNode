@@ -4,6 +4,7 @@ using Nethereum.ABI;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Hex.HexTypes;
+using Nethereum.JsonRpc.Client;
 using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
@@ -16,9 +17,9 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
     {
         private readonly InteropSettings interopSettings;
         private readonly Web3 web3;
-        private readonly Event<TransferEventDTO> transferEventHandler;
-        private readonly NewFilterInput filterAllTransferEventsForContract;
-        private readonly HexBigInteger filterId;
+        private Event<TransferEventDTO> transferEventHandler;
+        private NewFilterInput filterAllTransferEventsForContract;
+        private HexBigInteger filterId;
 
         public const string ZeroAddress = "0x0000000000000000000000000000000000000000";
 
@@ -36,18 +37,29 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 this.web3 = new Web3(account, interopSettings.EthereumClientUrl);
             else
                 this.web3 = new Web3(account);
+        }
 
-            this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(interopSettings.WrappedStraxAddress);
+        public void CreateTransferEventFilter()
+        {
+            this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(this.interopSettings.WrappedStraxAddress);
             this.filterAllTransferEventsForContract = this.transferEventHandler.CreateFilterInput();
             this.filterId = this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).GetAwaiter().GetResult();
         }
 
         public List<EventLog<TransferEventDTO>> GetTransferEventsForWrappedStrax()
         {
-            // Note: this will only return events from after the filter is created.
-            List<EventLog<TransferEventDTO>> newTransferEventsForContract = this.transferEventHandler.GetFilterChanges(this.filterId).GetAwaiter().GetResult();
+            try
+            {
+                // Note: this will only return events from after the filter is created.
+                return this.transferEventHandler.GetFilterChanges(this.filterId).GetAwaiter().GetResult();
+            }
+            catch (RpcResponseException)
+            {
+                // If the filter is no longer available it may need to be re-created.
+                this.CreateTransferEventFilter();
+            }
 
-            return newTransferEventsForContract;
+            return this.transferEventHandler.GetFilterChanges(this.filterId).GetAwaiter().GetResult();
         }
 
         public string GetDestinationAddress(string address)
@@ -91,10 +103,10 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return result;
         }
 
-        public string EncodeBurnParams(BigInteger amount)
+        public string EncodeBurnParams(BigInteger amount, string straxAddress)
         {
             // TODO: Extract this directly from the ABI
-            const string BurnMethod = "42966c68";
+            const string BurnMethod = "7641e6f3";
 
             var abiEncode = new ABIEncode();
             string result = BurnMethod + abiEncode.GetABIEncoded(new ABIValue("uint256", amount)).ToHex();
