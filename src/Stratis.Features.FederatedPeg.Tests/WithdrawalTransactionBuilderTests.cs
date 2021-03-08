@@ -39,20 +39,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.signals = new Mock<ISignals>();
 
             this.logger = new Mock<ILogger>();
-            this.loggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
-                .Returns(this.logger.Object);
+            this.loggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(this.logger.Object);
 
-            this.federationGatewaySettings.Setup(x => x.GetWithdrawalTransactionFee(It.IsAny<int>()))
-                .Returns<int>((numInputs) =>
-                {
-                    return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-                });
+            this.federationWalletManager.Setup(x => x.Secret).Returns(new WalletSecret());
 
-            this.federationWalletManager.Setup(x => x.Secret)
-                .Returns(new WalletSecret());
-
-            this.federationWalletTransactionHandler.Setup(x => x.BuildTransaction(It.IsAny<TransactionBuildContext>()))
-                .Returns(this.network.CreateTransaction());
+            this.federationWalletTransactionHandler.Setup(x => x.BuildTransaction(It.IsAny<TransactionBuildContext>())).Returns(this.network.CreateTransaction());
         }
 
         [Fact]
