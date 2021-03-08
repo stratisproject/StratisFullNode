@@ -7,6 +7,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public sealed class DepositExtractor : IDepositExtractor
     {
+        // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
+        private const decimal ConversionTransactionMinimum = 50;
+
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
         /// Deposits will have 2 outputs when there is no change.
@@ -90,6 +93,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (conversionTransaction)
             {
+                if (amount < Money.Coins(ConversionTransactionMinimum))
+                    return null;
+
                 if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.ConversionLarge;
                 else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
