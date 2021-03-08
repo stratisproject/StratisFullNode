@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 
     public class WrappedStrax
     {
-        public static async Task<string> DeployContract(Web3 web3, BigInteger totalSupply)
+        public static async Task<string> DeployContractAsync(Web3 web3, BigInteger totalSupply)
         {
             var deploymentMessage = new WrappedStraxTokenDeployment()
             {
@@ -135,7 +135,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return contractAddress;
         }
 
-        public static async Task<BigInteger> GetErc20Balance(Web3 web3, string contractAddress, string addressToQuery)
+        public static async Task<BigInteger> GetErc20BalanceAsync(Web3 web3, string contractAddress, string addressToQuery)
         {
             var balanceOfFunctionMessage = new BalanceOfFunction()
             {
@@ -148,7 +148,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return balance;
         }
 
-        public static async Task<string> Transfer(Web3 web3, string contractAddress, string recipient, BigInteger amount, BigInteger gas, BigInteger gasPrice)
+        public static async Task<string> TransferAsync(Web3 web3, string contractAddress, string recipient, BigInteger amount, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<TransferFunction> transferHandler = web3.Eth.GetContractTransactionHandler<TransferFunction>();
 
@@ -165,7 +165,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return transactionTransferReceipt.TransactionHash;
         }
 
-        public static async Task<string> TransferOffline(Web3 web3, string contractAddress, string recipient, BigInteger amount, HexBigInteger nonce, BigInteger gas, BigInteger gasPrice, string fromAddress = null)
+        public static async Task<string> TransferOfflineAsync(Web3 web3, string contractAddress, string recipient, BigInteger amount, HexBigInteger nonce, BigInteger gas, BigInteger gasPrice, string fromAddress = null)
         {
             IContractTransactionHandler<TransferFunction> transferHandler = web3.Eth.GetContractTransactionHandler<TransferFunction>();
 
@@ -189,7 +189,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return result;
         }
 
-        public static async Task<string> TransferOwnership(Web3 web3, string contractAddress, string newOwner)
+        public static async Task<string> TransferOwnershipAsync(Web3 web3, string contractAddress, string newOwner)
         {
             IContractTransactionHandler<TransferOwnershipFunction> transferHandler = web3.Eth.GetContractTransactionHandler<TransferOwnershipFunction>();
 
@@ -203,7 +203,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return transactionTransferReceipt.TransactionHash;
         }
 
-        public static async Task<string> GetOwner(Web3 web3, string contractAddress)
+        public static async Task<string> GetOwnerAsync(Web3 web3, string contractAddress)
         {
             var ownerFunctionMessage = new OwnerFunction()
             {
@@ -215,7 +215,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return owner;
         }
 
-        public static async Task<string> GetDestinationAddress(Web3 web3, string contractAddress, string addressToQuery)
+        public static async Task<string> GetDestinationAddressAsync(Web3 web3, string contractAddress, string addressToQuery)
         {
             var withdrawalAddressesFunctionMessage = new WithdrawalAddressesFunction()
             {

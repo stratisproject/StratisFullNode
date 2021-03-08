@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 
     public class MultisigWallet
     {
-        public static async Task<string> DeployContract(Web3 web3, string[] owners, uint required)
+        public static async Task<string> DeployContractAsync(Web3 web3, string[] owners, uint required)
         {
             var deploymentMessage = new MultisigWalletDeployment()
             {
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return contractAddress;
         }
 
-        public static async Task<List<string>> GetOwners(Web3 web3, string contractAddress)
+        public static async Task<List<string>> GetOwnersAsync(Web3 web3, string contractAddress)
         {
             var getOwnersFunctionMessage = new GetOwnersFunction()
             {
@@ -104,7 +104,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return owners;
         }
 
-        public static async Task<BigInteger> SubmitTransaction(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
+        public static async Task<BigInteger> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
             
@@ -127,7 +127,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return submission.Event.TransactionId;
         }
 
-        public static async Task<string> ConfirmTransaction(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
+        public static async Task<string> ConfirmTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<ConfirmTransactionFunction> confirmationHandler = web3.Eth.GetContractTransactionHandler<ConfirmTransactionFunction>();
 
@@ -147,7 +147,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         /// Normally the final mandatory confirmation will automatically call the execute.
         /// This is provided in case it has to be called again due to an error condition.
         /// </summary>
-        public static async Task<string> ExecuteTransaction(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
+        public static async Task<string> ExecuteTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<ExecuteTransactionFunction> executionHandler = web3.Eth.GetContractTransactionHandler<ExecuteTransactionFunction>();
 
@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return executeTransactionReceipt.TransactionHash;
         }
 
-        public static async Task<BigInteger> GetConfirmationCount(Web3 web3, string contractAddress, BigInteger transactionId)
+        public static async Task<BigInteger> GetConfirmationCountAsync(Web3 web3, string contractAddress, BigInteger transactionId)
         {
             var getConfirmationCountFunctionMessage = new GetConfirmationCountFunction()
             {

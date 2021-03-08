@@ -96,7 +96,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-            BigInteger confirmationCount = this.ethereumClientBase.GetConfirmationCount(payload.TransactionId);
+            BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
 
             // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
             if (confirmationCount < 1)

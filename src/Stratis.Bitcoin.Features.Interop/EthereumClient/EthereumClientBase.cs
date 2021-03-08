@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
+using System.Threading.Tasks;
 using Nethereum.ABI;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
@@ -39,57 +40,57 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 this.web3 = new Web3(account);
         }
 
-        public void CreateTransferEventFilter()
+        public async Task CreateTransferEventFilterAsync()
         {
             this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(this.interopSettings.WrappedStraxAddress);
             this.filterAllTransferEventsForContract = this.transferEventHandler.CreateFilterInput();
-            this.filterId = this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).GetAwaiter().GetResult();
+            this.filterId = await this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).ConfigureAwait(false);
         }
 
-        public List<EventLog<TransferEventDTO>> GetTransferEventsForWrappedStrax()
+        public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
         {
             try
             {
                 // Note: this will only return events from after the filter is created.
-                return this.transferEventHandler.GetFilterChanges(this.filterId).GetAwaiter().GetResult();
+                return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
             }
             catch (RpcResponseException)
             {
                 // If the filter is no longer available it may need to be re-created.
-                this.CreateTransferEventFilter();
+                await this.CreateTransferEventFilterAsync().ConfigureAwait(false);
             }
 
-            return this.transferEventHandler.GetFilterChanges(this.filterId).GetAwaiter().GetResult();
+            return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
         }
 
-        public string GetDestinationAddress(string address)
+        public async Task<string> GetDestinationAddressAsync(string address)
         {
-            return WrappedStrax.GetDestinationAddress(this.web3, this.interopSettings.WrappedStraxAddress, address).GetAwaiter().GetResult();
+            return await WrappedStrax.GetDestinationAddressAsync(this.web3, this.interopSettings.WrappedStraxAddress, address).ConfigureAwait(false);
         }
 
-        public BigInteger GetBlockHeight()
+        public async Task<BigInteger> GetBlockHeightAsync()
         {
             var blockNumberHandler = new EthBlockNumber(this.web3.Client);
-            HexBigInteger block = blockNumberHandler.SendRequestAsync().GetAwaiter().GetResult();
+            HexBigInteger block = await blockNumberHandler.SendRequestAsync().ConfigureAwait(false);
             
             return block.Value;
         }
 
         /// <inheritdoc />
-        public BigInteger SubmitTransaction(string destination, BigInteger value, string data)
+        public async Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data)
         {
-            return MultisigWallet.SubmitTransaction(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).GetAwaiter().GetResult();
+            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public string ConfirmTransaction(BigInteger transactionId)
+        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
         {
-            return MultisigWallet.ConfirmTransaction(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).GetAwaiter().GetResult();
+            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).ConfigureAwait(false);
         }
 
-        public BigInteger GetConfirmationCount(BigInteger transactionId)
+        public async Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId)
         {
-            return MultisigWallet.GetConfirmationCount(this.web3, this.interopSettings.MultisigWalletAddress, transactionId).GetAwaiter().GetResult();
+            return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
         public string EncodeMintParams(string address, BigInteger amount)
