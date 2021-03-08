@@ -72,6 +72,9 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!(message.Message.Payload is InteropCoordinationPayload payload))
                 return;
 
+            if (!this.federationManager.IsFederationMember)
+                return;
+
             this.logger.LogInformation("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
             // Check that the payload is signed by a federation member.

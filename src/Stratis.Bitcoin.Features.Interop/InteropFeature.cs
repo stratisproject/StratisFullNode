@@ -7,8 +7,10 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Interop.EthereumClient;
+using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
+using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -34,7 +36,8 @@ namespace Stratis.Bitcoin.Features.Interop
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
             IInteropTransactionManager interopTransactionManager, 
-            IEthereumClientBase ethereumClientBase)
+            IEthereumClientBase ethereumClientBase,
+            IFullNode fullNode)
         {
             this.loggerFactory = loggerFactory;
             this.network = network;
@@ -43,6 +46,9 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller = interopPoller;
             this.interopTransactionManager = interopTransactionManager;
             this.ethereumClientBase = ethereumClientBase;
+
+            var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
+            payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
         }
 
         public override Task InitializeAsync()
@@ -73,8 +79,6 @@ namespace Stratis.Bitcoin.Features.Interop
                     .FeatureServices(services => services
                     .AddSingleton<InteropSettings>()
                     .AddSingleton<IEthereumClientBase, EthereumClientBase>()
-                    //.AddSingleton<IInteropRequestRepository, InteropRequestRepository>()
-                    //.AddSingleton<IInteropRequestKeyValueStore, InteropRequestKeyValueStore>()
                     .AddSingleton<IInteropTransactionManager, InteropTransactionManager>()
                     .AddSingleton<InteropPoller>()
                     ));
