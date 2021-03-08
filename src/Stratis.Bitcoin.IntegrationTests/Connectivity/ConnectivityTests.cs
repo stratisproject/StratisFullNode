@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Connectivity
 
         public ConnectivityTests()
         {
-            this.posNetwork = new StraxRegTest();
+            this.posNetwork = TestBase.GetStraxRegTestNetworkWithNoSCRules();
             this.powNetwork = new BitcoinRegTest();
         }
 

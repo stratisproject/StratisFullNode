@@ -185,7 +185,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StratisConsensusOptionsOverrideTest();
+                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
 
                 // MinerA requires a physical wallet to stake with.
                 var minerA = builder.CreateStratisPosNode(network, "cm-2-minerA").OverrideDateTimeProvider().WithWallet().Start();
@@ -523,7 +523,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
 
                 var sharedMnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
 
@@ -601,7 +601,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
 
                 var sharedMnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
 
@@ -658,7 +658,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
 
                 var minerA = builder.CreateStratisPosNode(network, "cm-11-minerA").OverrideDateTimeProvider().WithWallet().Start();
                 var minerB = builder.CreateStratisPosNode(network, "cm-11-minerB").OverrideDateTimeProvider().Start();
@@ -719,7 +719,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
 
                 // MinerA requires a physical wallet to stake with.
                 var minerA = builder.CreateStratisPosNode(network, "minerA").WithWallet().Start();

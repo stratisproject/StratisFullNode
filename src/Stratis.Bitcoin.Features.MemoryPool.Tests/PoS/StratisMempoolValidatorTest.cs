@@ -6,6 +6,8 @@ using NBitcoin.BouncyCastle.Math;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Tests.Common;
@@ -18,8 +20,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
     /// </summary>
     public class StratisMempoolValidatorTest : TestBase
     {
-        public StratisMempoolValidatorTest() : base(new StraxRegTest())
+        public StratisMempoolValidatorTest() : base(GetStraxRegTestNetworkWithNoSCRules())
         {
+
         }
 
         [Fact]

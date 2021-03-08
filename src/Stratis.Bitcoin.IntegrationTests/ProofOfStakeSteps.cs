@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public void PremineNodeWithWallet(string testId)
         {
-            this.PremineNodeWithCoins = this.nodeBuilder.CreateStratisPosNode(new StraxRegTest(), testId).WithWallet().Start();
+            this.PremineNodeWithCoins = this.nodeBuilder.CreateStratisPosNode(TestBase.GetStraxRegTestNetworkWithNoSCRules(), testId).WithWallet().Start();
         }
 
         public void PremineNodeWithWalletWithOverrides()

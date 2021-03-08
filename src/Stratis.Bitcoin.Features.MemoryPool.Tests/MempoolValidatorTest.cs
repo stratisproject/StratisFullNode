@@ -609,7 +609,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             string dataDir = GetTestDirectoryPath(this);
 
             // Need to use a PoS network for this test, as coinstakes have no real meaning on pure PoW
-            var network = KnownNetworks.StraxRegTest;
+            var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
             var minerSecret = new BitcoinSecret(new Key(), network);
             ITestChainContext context = await TestChainFactory.CreatePosAsync(network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
             IMempoolValidator validator = context.MempoolValidator;

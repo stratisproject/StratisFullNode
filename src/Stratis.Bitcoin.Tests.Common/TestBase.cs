@@ -7,6 +7,10 @@ using System.Threading;
 using FluentAssertions;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
+using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
 
@@ -317,6 +321,26 @@ namespace Stratis.Bitcoin.Tests.Common
                     Assert.False(true, $"{message}{Environment.NewLine}{e.Message} [{e.InnerException?.Message}]");
                 }
             }
+        }
+
+        public static Network GetStraxRegTestNetworkWithNoSCRules(string name = null)
+        {
+            var network = new StraxRegTest();
+            network.SetPrivatePropertyValue(nameof(StratisRegTest.Name), name ?? nameof(StraxRegTest));
+
+            network.Consensus.MempoolRules.Remove(typeof(CanGetSenderMempoolRule));
+            network.Consensus.MempoolRules.Remove(typeof(CheckMinGasLimitSmartContractMempoolRule));
+
+            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(ContractTransactionFullValidationRule));
+            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(TxOutSmartContractExecRule));
+            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(OpSpendRule));
+            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(CanGetSenderRule));
+            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(P2PKHNotContractRule));
+            int coinviewRuleIndex = network.Consensus.ConsensusRules.FullValidationRules.IndexOf(typeof(StraxCoinviewRule));
+            network.Consensus.ConsensusRules.FullValidationRules.RemoveAt(coinviewRuleIndex);
+            network.Consensus.ConsensusRules.FullValidationRules.Insert(coinviewRuleIndex, typeof(PosCoinviewRule));
+
+            return network;
         }
     }
 }

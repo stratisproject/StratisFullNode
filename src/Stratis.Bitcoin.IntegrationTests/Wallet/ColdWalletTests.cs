@@ -112,7 +112,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         {
             using (var builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
 
                 CoreNode stratisSender = CreatePowPosMiningNode(builder, network, TestBase.CreateTestDir(this), coldStakeNode: false);
                 CoreNode stratisHotStake = CreatePowPosMiningNode(builder, network, TestBase.CreateTestDir(this), coldStakeNode: true);
