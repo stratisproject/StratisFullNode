@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using NBitcoin;
+using Nethereum.Web3;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.FederatedPeg;
@@ -117,7 +119,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDepositsResult.Value)
             {
-                foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d => d.RetrievalType == DepositRetrievalType.Conversion))
+                foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d =>
+                    d.RetrievalType == DepositRetrievalType.ConversionSmall ||
+                    d.RetrievalType == DepositRetrievalType.ConversionNormal ||
+                    d.RetrievalType == DepositRetrievalType.ConversionLarge))
                 {
                     this.logger.Info("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
 
@@ -160,14 +165,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         RequestType = (int)ConversionRequestType.Mint,
                         Processed = false,
                         RequestStatus = (int)ConversionRequestStatus.Unprocessed,
-                        Amount = conversionTransaction.Amount,
+                        // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                        Amount = (ulong)conversionTransaction.Amount.Satoshi,
                         BlockHeight = conversionTransaction.BlockNumber,
                         DestinationAddress = conversionTransaction.TargetAddress
                     });
                 }
 
                 // Order all other transactions in the block deterministically.
-                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.Where(d => d.RetrievalType != DepositRetrievalType.Conversion).OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.Where(d =>
+                    d.RetrievalType != DepositRetrievalType.ConversionSmall &&
+                    d.RetrievalType != DepositRetrievalType.ConversionNormal &&
+                    d.RetrievalType != DepositRetrievalType.ConversionLarge).OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
@@ -175,7 +184,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
             }
 
-            // If we received a portion of blocks we can ask for new portion without any delay.
+            // If we received a portion of blocks we can ask for a new portion without any delay.
             RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
             return !result.MatureDepositRecorded;
         }

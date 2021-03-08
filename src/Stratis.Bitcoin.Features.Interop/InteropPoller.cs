@@ -4,6 +4,8 @@ using System.Numerics;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Nethereum.Contracts;
+using Nethereum.Util;
+using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
@@ -179,6 +181,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 startAfter: TimeSpans.Second);
         }
 
+        /// <summary>
+        /// Retrieves the current Ethereum chain height via the RPC interface to geth.
+        /// </summary>
         private void CheckEthereumNode()
         {
             try
@@ -193,6 +198,10 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <summary>
+        /// Retrieves any Transfer events from the logs of the Wrapped Strax contract.
+        /// Transfers with the zero (0x0000...) address as their destination can be considered to be burn transactions and are saved for processing as withdrawals on the mainchain.
+        /// </summary>
         private void CheckForContractEvents()
         {
             if (this.firstPoll)
@@ -211,6 +220,9 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 // Will probably never be the case, but check anyway.
                 if (string.IsNullOrWhiteSpace(transferEvent.Log.TransactionHash))
+                    continue;
+
+                if (transferEvent.Event.From == EthereumClientBase.ZeroAddress)
                     continue;
 
                 // Transfers can only be burns if they are made with the zero address as the destination.
@@ -263,16 +275,37 @@ namespace Stratis.Bitcoin.Features.Interop
                     RequestType = (int)ConversionRequestType.Burn,
                     Processed = false,
                     RequestStatus = (int)ConversionRequestStatus.Unprocessed,
-                    Amount = (ulong)transferEvent.Event.Value,
+                    Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
                     BlockHeight = (int)blockHeight,
                     DestinationAddress = destinationAddress
                 });
             }
         }
 
+        /// <summary>
+        /// Converting from wei to satoshi will result in a loss of precision past the 8th decimal place.
+        /// </summary>
+        /// <param name="wei">The number of wei to convert.</param>
+        /// <returns>The equivalent number of satoshi corresponding to the number of wei.</returns>
+        private ulong ConvertWeiToSatoshi(BigInteger wei)
+        {
+            decimal baseCurrencyUnits = Web3.Convert.FromWei(wei, UnitConversion.EthUnit.Ether);
+
+            return Convert.ToUInt64(Money.Coins(baseCurrencyUnits).Satoshi);
+        }
+
+        /// <summary>
+        /// Iterates through all unprocessed mint requests in the repository.
+        /// If this node is regarded as the designated originator of the multisig transaction, it will submit the mint transaction data to
+        /// the multisig wallet contract on the Ethereum chain. This data consists of a method call to the mint() method on the contract, as
+        /// well as the amount
+        /// </summary>
         private void ProcessConversionRequests()
         {
             List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true);
+
+            if (mintRequests == null)
+                return;
 
             this.logger.LogInformation("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
 
@@ -290,7 +323,11 @@ namespace Stratis.Bitcoin.Features.Interop
                     this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
 
                     // First construct the necessary minting transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
-                    string abiData = this.ethereumClientBase.EncodeMintParams(request.DestinationAddress, request.Amount);
+                    
+                    // The request is denominated in satoshi and needs to be converted to wei.
+                    ulong amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
+                    
+                    string abiData = this.ethereumClientBase.EncodeMintParams(request.DestinationAddress, amountInWei);
 
                     BigInteger transactionId = this.ethereumClientBase.SubmitTransaction(request.DestinationAddress, 0, abiData);
 
@@ -363,8 +400,15 @@ namespace Stratis.Bitcoin.Features.Interop
             // Currently the processing is done in the WithdrawalExtractor.
         }
 
+        private ulong CoinsToWei(Money coins)
+        {
+            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(coins.ToUnit(MoneyUnit.BTC));
+
+            return (ulong)baseCurrencyUnits;
+        }
+
         // These methods are not used for wSTRAX (conversion) transactions
-#region Interoperability
+        #region Interoperability
         private void CheckForEthereumRequests()
         {
             if (string.IsNullOrWhiteSpace(this.interopSettings.InteropContractCirrusAddress))

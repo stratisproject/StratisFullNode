@@ -87,16 +87,27 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
-            if (targetAddress == this.network.CirrusRewardDummyAddress)
-                depositRetrievalType = DepositRetrievalType.Distribution;
-            else if (conversionTransaction)
-                depositRetrievalType = DepositRetrievalType.Conversion;
-            else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
-                depositRetrievalType = DepositRetrievalType.Large;
-            else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
-                depositRetrievalType = DepositRetrievalType.Normal;
+
+            if (conversionTransaction)
+            {
+                if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.ConversionLarge;
+                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.ConversionNormal;
+                else
+                    depositRetrievalType = DepositRetrievalType.ConversionSmall;
+            }
             else
-                depositRetrievalType = DepositRetrievalType.Small;
+            {
+                if (targetAddress == this.network.CirrusRewardDummyAddress)
+                    depositRetrievalType = DepositRetrievalType.Distribution;
+                else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.Large;
+                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.Normal;
+                else
+                    depositRetrievalType = DepositRetrievalType.Small;
+            }
 
             return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, blockHeight, blockHash);
         }

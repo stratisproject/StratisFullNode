@@ -38,14 +38,20 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
         /// </summary>
         public string RequestId { get { return this.requestId; } set { this.requestId = value; } }
 
+        /// <summary>
+        /// The type of the conversion request, mint or burn.
+        /// </summary>
         public int RequestType { get { return this.requestType; } set { this.requestType = value; } }
 
+        /// <summary>
+        /// The status of the request, from unprocessed to processed.
+        /// </summary>
         public int RequestStatus { get { return this.requestStatus; } set { this.requestStatus = value; } }
 
         /// <summary>
         /// For a mint request this is needed to coordinate which multisig member is considered the transaction originator on the wallet contract.
-        /// A burn request needs to be scheduled for a future block on the main chain
-        /// so that the conversion can be cleanly inserted into the sequence of transfers.
+        /// A burn request needs to be scheduled for a future block on the main chain so that the conversion can be cleanly inserted into the sequence
+        /// of transfers.
         /// </summary>
         public int BlockHeight { get { return this.blockHeight; } set { this.blockHeight = value; } }
 
@@ -55,7 +61,9 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
         public string DestinationAddress { get { return this.destinationAddress; } set { this.destinationAddress = value; } }
 
         /// <summary>
-        /// Amount of the conversion, in satoshi. Conversions are currently processed 1:1.
+        /// Amount of the conversion, this is always denominated in satoshi. This needs to be converted to wei for submitting mint transactions.
+        /// Burn transactions are already denominated in wei on the Ethereum chain and thus need to be converted back into satoshi when the
+        /// conversion request is created. Conversions are currently processed 1 ether : 1 STRAX.
         /// </summary>
         public ulong Amount { get { return this.amount; } set { this.amount = value; } }
 

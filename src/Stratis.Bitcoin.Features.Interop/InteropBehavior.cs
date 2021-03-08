@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -74,11 +75,24 @@ namespace Stratis.Bitcoin.Features.Interop
             this.logger.LogInformation("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
             // Check that the payload is signed by a federation member.
-            PubKey pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.TransactionId, payload.Signature);
+            PubKey pubKey;
 
-            if (pubKey == null || !this.federationManager.IsMultisigMember(pubKey))
+            try
             {
-                this.logger.LogWarning("Received unverified coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.TransactionId, payload.Signature);
+
+                if (!this.federationManager.IsMultisigMember(pubKey))
+                {
+                    this.logger.LogWarning("Received unverified coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                this.logger.LogWarning("Received malformed coordination payload for {0}.", payload.RequestId);
+
+                return;
             }
 
             // Check that the transaction ID in the payload actually exists, and is unconfirmed.

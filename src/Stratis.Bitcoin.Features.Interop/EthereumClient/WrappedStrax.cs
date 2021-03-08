@@ -129,7 +129,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractDeploymentTransactionHandler<WrappedStraxTokenDeployment> deploymentHandler = web3.Eth.GetContractDeploymentHandler<WrappedStraxTokenDeployment>();
-            TransactionReceipt transactionReceiptDeployment = await deploymentHandler.SendRequestAndWaitForReceiptAsync(deploymentMessage);
+            TransactionReceipt transactionReceiptDeployment = await deploymentHandler.SendRequestAndWaitForReceiptAsync(deploymentMessage).ConfigureAwait(false);
             string contractAddress = transactionReceiptDeployment.ContractAddress;
 
             return contractAddress;
@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractQueryHandler<BalanceOfFunction> balanceHandler = web3.Eth.GetContractQueryHandler<BalanceOfFunction>();
-            BigInteger balance = await balanceHandler.QueryAsync<BigInteger>(contractAddress, balanceOfFunctionMessage);
+            BigInteger balance = await balanceHandler.QueryAsync<BigInteger>(contractAddress, balanceOfFunctionMessage).ConfigureAwait(false);
 
             return balance;
         }
@@ -160,7 +160,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
             };
 
-            TransactionReceipt transactionTransferReceipt = await transferHandler.SendRequestAndWaitForReceiptAsync(contractAddress, transfer);
+            TransactionReceipt transactionTransferReceipt = await transferHandler.SendRequestAndWaitForReceiptAsync(contractAddress, transfer).ConfigureAwait(false);
 
             return transactionTransferReceipt.TransactionHash;
         }
@@ -184,7 +184,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             if (fromAddress != null)
                 transfer.FromAddress = fromAddress;
 
-            string result = await transferHandler.SignTransactionAsync(contractAddress, transfer);
+            string result = await transferHandler.SignTransactionAsync(contractAddress, transfer).ConfigureAwait(false);
 
             return result;
         }
@@ -198,7 +198,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 NewOwner = newOwner
             };
 
-            TransactionReceipt transactionTransferReceipt = await transferHandler.SendRequestAndWaitForReceiptAsync(contractAddress, transfer);
+            TransactionReceipt transactionTransferReceipt = await transferHandler.SendRequestAndWaitForReceiptAsync(contractAddress, transfer).ConfigureAwait(false);
 
             return transactionTransferReceipt.TransactionHash;
         }
@@ -210,7 +210,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractQueryHandler<OwnerFunction> ownerHandler = web3.Eth.GetContractQueryHandler<OwnerFunction>();
-            string owner = await ownerHandler.QueryAsync<string>(contractAddress, ownerFunctionMessage);
+            string owner = await ownerHandler.QueryAsync<string>(contractAddress, ownerFunctionMessage).ConfigureAwait(false);
 
             return owner;
         }
@@ -223,7 +223,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractQueryHandler<WithdrawalAddressesFunction> queryHandler = web3.Eth.GetContractQueryHandler<WithdrawalAddressesFunction>();
-            string destinationAddress = await queryHandler.QueryAsync<string>(contractAddress, withdrawalAddressesFunctionMessage);
+            string destinationAddress = await queryHandler.QueryAsync<string>(contractAddress, withdrawalAddressesFunctionMessage).ConfigureAwait(false);
 
             return destinationAddress;
         }

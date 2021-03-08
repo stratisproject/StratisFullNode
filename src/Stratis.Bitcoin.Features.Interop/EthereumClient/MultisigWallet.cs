@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using NBitcoin.DataEncoders;
 using Nethereum.ABI.FunctionEncoding.Attributes;
 using Nethereum.Contracts;
 using Nethereum.Contracts.ContractHandlers;
@@ -87,7 +86,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractDeploymentTransactionHandler<MultisigWalletDeployment> deploymentHandler = web3.Eth.GetContractDeploymentHandler<MultisigWalletDeployment>();
-            TransactionReceipt transactionReceiptDeployment = await deploymentHandler.SendRequestAndWaitForReceiptAsync(deploymentMessage);
+            TransactionReceipt transactionReceiptDeployment = await deploymentHandler.SendRequestAndWaitForReceiptAsync(deploymentMessage).ConfigureAwait(false);
             string contractAddress = transactionReceiptDeployment.ContractAddress;
 
             return contractAddress;
@@ -100,7 +99,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractQueryHandler<GetOwnersFunction> ownerHandler = web3.Eth.GetContractQueryHandler<GetOwnersFunction>();
-            List<string> owners = await ownerHandler.QueryAsync<List<string>>(contractAddress, getOwnersFunctionMessage);
+            List<string> owners = await ownerHandler.QueryAsync<List<string>>(contractAddress, getOwnersFunctionMessage).ConfigureAwait(false);
 
             return owners;
         }
@@ -108,17 +107,17 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         public static async Task<BigInteger> SubmitTransaction(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
-
+            
             var submitTransactionFunctionMessage = new SubmitTransactionFunction()
             {
                 Destination = destination,
                 Value = value,
-                Data = ConvertHexStringToByteArray(data),
+                Data = Encoders.Hex.DecodeData(data),
                 Gas = gas,
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
             };
 
-            TransactionReceipt submitTransactionReceipt = await submitHandler.SendRequestAndWaitForReceiptAsync(contractAddress, submitTransactionFunctionMessage);
+            TransactionReceipt submitTransactionReceipt = await submitHandler.SendRequestAndWaitForReceiptAsync(contractAddress, submitTransactionFunctionMessage).ConfigureAwait(false);
             EventLog<SubmissionEventDTO> submission = submitTransactionReceipt.DecodeAllEvents<SubmissionEventDTO>().FirstOrDefault();
 
             // Use -1 as an error indicator.
@@ -126,24 +125,6 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 return BigInteger.MinusOne;
 
             return submission.Event.TransactionId;
-        }
-
-        private static byte[] ConvertHexStringToByteArray(string hexString)
-        {
-            if (hexString.Length % 2 != 0)
-            {
-                throw new ArgumentException("The hex cannot have an odd number of digits");
-            }
-
-            byte[] data = new byte[hexString.Length / 2];
-
-            for (int index = 0; index < data.Length; index++)
-            {
-                string byteValue = hexString.Substring(index * 2, 2);
-                data[index] = byte.Parse(byteValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            }
-
-            return data;
         }
 
         public static async Task<string> ConfirmTransaction(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
@@ -157,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
             };
 
-            TransactionReceipt confirmTransactionReceipt = await confirmationHandler.SendRequestAndWaitForReceiptAsync(contractAddress, confirmTransactionFunctionMessage);
+            TransactionReceipt confirmTransactionReceipt = await confirmationHandler.SendRequestAndWaitForReceiptAsync(contractAddress, confirmTransactionFunctionMessage).ConfigureAwait(false);
 
             return confirmTransactionReceipt.TransactionHash;
         }
@@ -177,7 +158,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
             };
 
-            TransactionReceipt executeTransactionReceipt = await executionHandler.SendRequestAndWaitForReceiptAsync(contractAddress, executeTransactionFunctionMessage);
+            TransactionReceipt executeTransactionReceipt = await executionHandler.SendRequestAndWaitForReceiptAsync(contractAddress, executeTransactionFunctionMessage).ConfigureAwait(false);
 
             return executeTransactionReceipt.TransactionHash;
         }
@@ -190,7 +171,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             };
 
             IContractQueryHandler<GetConfirmationCountFunction> confirmationHandler = web3.Eth.GetContractQueryHandler<GetConfirmationCountFunction>();
-            BigInteger confirmations = await confirmationHandler.QueryAsync<BigInteger>(contractAddress, getConfirmationCountFunctionMessage);
+            BigInteger confirmations = await confirmationHandler.QueryAsync<BigInteger>(contractAddress, getConfirmationCountFunctionMessage).ConfigureAwait(false);
 
             return confirmations;
         }

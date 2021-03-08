@@ -70,7 +70,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (this.federatedPegSettings.IsMainChain)
             {
                 this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
-                this.retrievalTypeConfirmations[DepositRetrievalType.Conversion] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.ConversionSmall] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.ConversionNormal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.ConversionLarge] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
             }
         }
 
@@ -199,7 +201,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposits"/> confirmations (blocks).
     /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposits"/>) confirmations (blocks).
     /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposits"/>) confirmations (blocks).
-    /// Similarly, reward distribution and conversion deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
+    /// Conversion deposits are processed after similar intervals to the above, according to their size.
+    /// Reward distribution deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
     /// </summary>
     public enum DepositRetrievalType
     {
@@ -207,6 +210,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         Normal,
         Large,
         Distribution,
-        Conversion
+        ConversionSmall,
+        ConversionNormal,
+        ConversionLarge
     }
 }
