@@ -21,6 +21,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
+        /// <inheritdoc/>
         public void AddVote(string requestId, BigInteger transactionId, PubKey pubKey)
         {
             lock (this.lockObject)
@@ -51,6 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <inheritdoc/>
         public BigInteger GetAgreedTransactionId(string requestId, int quorum)
         {
             lock (this.lockObject)
@@ -72,7 +74,44 @@ namespace Stratis.Bitcoin.Features.Interop
                 return highestVoted;
             }
         }
-        
+
+        /// <inheritdoc/>
+        public BigInteger GetCandidateTransactionId(string requestId)
+        {
+            lock (this.lockObject)
+            {
+                if (!this.activeVotes.ContainsKey(requestId))
+                    return BigInteger.MinusOne;
+
+                BigInteger highestVoted = BigInteger.MinusOne;
+                int voteCount = 0;
+                foreach (KeyValuePair<BigInteger, int> vote in this.activeVotes[requestId])
+                {
+                    if (vote.Value > voteCount)
+                    {
+                        highestVoted = vote.Key;
+                        voteCount = vote.Value;
+                    }
+                }
+
+                return highestVoted;
+            }
+        }
+
+        public bool CheckIfVoted(string requestId, PubKey pubKey)
+        {
+            lock (this.lockObject)
+            {
+                if (!this.receivedVotes.ContainsKey(requestId))
+                    return false;
+
+                if (!this.receivedVotes[requestId].Contains(pubKey))
+                    return false;
+
+                return true;
+            }
+        }
+
         public void RemoveTransaction(string requestId)
         {
             lock (this.lockObject)

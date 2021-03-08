@@ -307,10 +307,9 @@ namespace Stratis.Bitcoin.Features.Interop
                     // Initially there will not be a quorum of nodes that agree on the transactionId.
                     // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
                     // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
-                    int quorum = this.network.Federations.GetOnlyFederation().GetFederationDetails().signaturesRequired;
 
                     // Each node must only ever confirm a single transactionId for a given conversion transaction.
-                    BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, quorum);
+                    BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 3);
 
                     if (agreedUponId != BigInteger.MinusOne)
                     {
@@ -328,6 +327,17 @@ namespace Stratis.Bitcoin.Features.Interop
                         this.conversionRequestRepository.Save(request);
 
                         return;
+                    }
+                    else
+                    {
+                        if (this.interopTransactionManager.CheckIfVoted(request.RequestId, this.federationManager.CurrentFederationKey.PubKey))
+                            return;
+
+                        BigInteger transactionId = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+
+                        string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
+
+                        await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).ConfigureAwait(false);
                     }
                 }
 
