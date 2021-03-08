@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Networks;
@@ -451,7 +452,30 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.PartialValidationRules)
                 consensusRulesContainer.PartialValidationRules.Add(Activator.CreateInstance(ruleType) as PartialValidationConsensusRule);
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.FullValidationRules)
-                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
+            {
+                try
+                {
+                    consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
+                }
+                catch (MissingMethodException)
+                {
+                    switch (ruleType.Name)
+                    {
+                        // Smart-contracts are not covered by these tests so we can safely ignore these
+                        // rules that don't have parameterless constructors.
+                        case nameof(ContractTransactionFullValidationRule):
+                        case nameof(CanGetSenderRule):
+                        case nameof(P2PKHNotContractRule):
+                            break;
+                        case nameof(StraxCoinviewRule):
+                            // This is fine for non-SC tests.
+                            consensusRulesContainer.FullValidationRules.Add(new PosCoinviewRule());
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
 
             var posConsensusRules = new PosConsensusRuleEngine(
                 this.Network,

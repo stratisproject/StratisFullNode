@@ -27,7 +27,7 @@ namespace NBitcoin
     /// Merkle proof (<see cref="MerkleProof"/>) that proves the coinstake tx is included in a block that is being represented by the provided header.
     /// </para>
     /// </remarks>
-    public class ProvenBlockHeader : PosBlockHeader
+    public class ProvenBlockHeader : PosBlockHeader, IBitcoinSerializable
     {
         /// <summary>
         /// Coinstake transaction.
@@ -71,7 +71,7 @@ namespace NBitcoin
         public long CoinstakeSize { get; protected set; }
 
         /// <summary>Gets the total header size - including the <see cref="BlockHeader.Size"/> - in bytes. <see cref="ProvenBlockHeader"/> must be serialized or deserialized for this property to be set.</summary>
-        public override long HeaderSize => Size + this.MerkleProofSize + this.SignatureSize + this.CoinstakeSize;
+        public override long HeaderSize => base.HeaderSize + this.MerkleProofSize + this.SignatureSize + this.CoinstakeSize;
 
         /// <summary>
         /// Gets or sets the stake modifier v2.
@@ -91,17 +91,14 @@ namespace NBitcoin
             if (block == null) throw new ArgumentNullException(nameof(block));
 
             // Copy block header properties.
-            this.HashPrevBlock = block.Header.HashPrevBlock;
-            this.HashMerkleRoot = block.Header.HashMerkleRoot;
-            this.Time = block.Header.Time;
-            this.Bits = block.Header.Bits;
-            this.Nonce = block.Header.Nonce;
-            this.Version = block.Header.Version;
+            this.CopyFields(block.Header);
 
             this.signature = block.BlockSignature;
             this.coinstake = block.GetProtocolTransaction();
             this.merkleProof = new MerkleBlock(block, new[] { this.coinstake.GetHash() }).PartialMerkleTree;
         }
+
+        #region IBitcoinSerializable Members
 
         /// <inheritdoc />
         public override void ReadWrite(BitcoinStream stream)
@@ -120,6 +117,8 @@ namespace NBitcoin
             stream.ReadWrite(ref this.coinstake);
             this.CoinstakeSize = stream.ProcessedBytes - prev;
         }
+
+        #endregion
 
         /// <inheritdoc />
         public override string ToString()

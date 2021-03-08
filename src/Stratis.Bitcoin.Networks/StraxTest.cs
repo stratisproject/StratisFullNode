@@ -6,6 +6,7 @@ using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Networks.Policies;
 
@@ -38,7 +39,7 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 166200;
             this.RewardClaimerBlockInterval = 100;
 
-            var consensusFactory = new PosConsensusFactory();
+            var consensusFactory = new StraxConsensusFactory();
 
             // Create the genesis block.
             this.GenesisTime = 1598918400; // 1 September 2020
@@ -73,7 +74,8 @@ namespace Stratis.Bitcoin.Networks
                 // Always active.
                 [StraxBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultTestnetThreshold),
                 [StraxBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultTestnetThreshold),
-                [StraxBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultTestnetThreshold)
+                [StraxBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultTestnetThreshold),
+                [StraxBIP9Deployments.SystemContracts] = new BIP9DeploymentsParameters("SystemContracts", 3, DateTime.Parse("2021-02-25 06:20:00 GMT"), DateTime.Parse("2031-02-20 00:00:00 GMT"), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.

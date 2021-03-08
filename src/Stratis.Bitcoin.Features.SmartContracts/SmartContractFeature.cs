@@ -10,12 +10,15 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts;
@@ -43,18 +46,24 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         private readonly Network network;
         private readonly IStateRepositoryRoot stateRoot;
 
-        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot)
+        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, ISmartContractPosActivationProvider smartContractPosActivationProvider = null)
         {
             this.consensusManager = consensusLoop;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.stateRoot = stateRoot;
+
+            if (network.Consensus.ConsensusFactory is StraxConsensusFactory)
+            {
+                Guard.NotNull(smartContractPosActivationProvider, nameof(smartContractPosActivationProvider));
+            }
         }
 
         public override Task InitializeAsync()
         {
             // TODO: This check should be more robust
             Guard.Assert(this.network.Consensus.ConsensusFactory is SmartContractPowConsensusFactory
+                         || this.network.Consensus.ConsensusFactory is StraxConsensusFactory
                          || this.network.Consensus.ConsensusFactory is SmartContractPoAConsensusFactory
                          || this.network.Consensus.ConsensusFactory is SmartContractCollateralPoAConsensusFactory);
 
@@ -99,6 +108,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<DBreezeContractStateStore>();
                         services.AddSingleton<NoDeleteContractStateSource>();
                         services.AddSingleton<IStateRepositoryRoot, StateRepositoryRoot>();
+                        if (fullNodeBuilder.Network.Consensus.ConsensusFactory is StraxConsensusFactory)
+                        {
+                            services.AddSingleton<ISmartContractPosActivationProvider, SmartContractPosActivationProvider>();
+                        }
 
                         // CONSENSUS ------------------------------------------------------------------------
                         services.Replace(ServiceDescriptor.Singleton<IMempoolValidator, SmartContractMempoolValidator>());
@@ -127,6 +140,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
                         services.AddSingleton<IMethodParameterStringSerializer, MethodParameterStringSerializer>();
                         services.AddSingleton<ICallDataSerializer, CallDataSerializer>();
+
+                        // MINING ---------------------------------------------------------------------------
+                        if (fullNodeBuilder.Network.Consensus.ConsensusFactory is StraxConsensusFactory)
+                        {
+                            services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
+                            services.AddSingleton<BlockDefinition, SmartContractPosBlockDefinition>();
+                            services.AddSingleton<BlockDefinition, PosBlockDefinition>();
+                        }
 
                         // Registers the ScriptAddressReader concrete type and replaces the IScriptAddressReader implementation
                         // with SmartContractScriptAddressReader, which depends on the ScriptAddressReader concrete type.
@@ -182,6 +203,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
             services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
             services.AddSingleton<ISerializer, Serializer>();
+            services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
 
             // Controllers + utils
             services.AddSingleton<CSharpContractDecompiler>();

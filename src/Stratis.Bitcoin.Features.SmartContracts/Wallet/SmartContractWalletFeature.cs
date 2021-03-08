@@ -17,7 +17,7 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
-    public sealed class SmartContractWalletFeature : FullNodeFeature
+    public sealed class SmartContractWalletFeature : BaseWalletFeature
     {
         private readonly BroadcasterBehavior broadcasterBehavior;
         private readonly ChainIndexer chainIndexer;

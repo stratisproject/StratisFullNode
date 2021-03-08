@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
         /// <summary>The rules are kept in a covariant interface.</summary>
         private readonly IEnumerable<IContractTransactionFullValidationRule> internalRules;
 
-        public ContractTransactionFullValidationRule(ICallDataSerializer serializer, IEnumerable<IContractTransactionFullValidationRule> internalRules)
+        public ContractTransactionFullValidationRule(ICallDataSerializer serializer = null, IEnumerable<IContractTransactionFullValidationRule> internalRules = null)
         {
             this.transactionChecker = new ContractTransactionChecker(serializer);
 

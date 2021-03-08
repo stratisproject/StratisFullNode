@@ -15,7 +15,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     {
         private readonly ISenderRetriever senderRetriever;
 
-        public CanGetSenderRule(ISenderRetriever senderRetriever)
+        public CanGetSenderRule(ISenderRetriever senderRetriever = null)
         {
             this.senderRetriever = senderRetriever;
         }

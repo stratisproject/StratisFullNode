@@ -97,6 +97,16 @@ namespace NBitcoin
 
         #endregion
 
+        public virtual void CopyFields(BlockHeader source)
+        {
+            this.HashPrevBlock = source.HashPrevBlock;
+            this.HashMerkleRoot = source.HashMerkleRoot;
+            this.Time = source.Time;
+            this.Bits = source.Bits;
+            this.Nonce = source.Nonce;
+            this.Version = source.Version;
+        }
+
         /// <summary>Populates stream with items that will be used during hash calculation.</summary>
         protected virtual void ReadWriteHashingStream(BitcoinStream stream)
         {

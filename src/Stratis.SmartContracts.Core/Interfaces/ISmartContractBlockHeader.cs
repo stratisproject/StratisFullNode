@@ -2,6 +2,13 @@
 
 namespace Stratis.SmartContracts.Core.Interfaces
 {
+    internal interface IAMAPLACEHOLDER
+    {
+
+    }
+
+    // Moved to NBitcoin.
+    /*
     public interface ISmartContractBlockHeader
     {
         uint256 HashStateRoot { get; set; }
@@ -10,4 +17,5 @@ namespace Stratis.SmartContracts.Core.Interfaces
 
         Bloom LogsBloom { get; set; }
     }
+    */
 }

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Text;
+using NBitcoin;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Networks;

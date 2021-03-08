@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using NBitcoin;
+using Xunit;
 
 namespace Stratis.SmartContracts.Core.Tests
 {
@@ -7,7 +8,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractExec_CallContract_Success()
         {
-            var script = new NBitcoin.Script(new byte[] {(byte) ScOpcodeType.OP_CALLCONTRACT});
+            var script = new Script(new byte[] {(byte) ScOpcodeType.OP_CALLCONTRACT});
 
             Assert.True(script.IsSmartContractExec());
         }
@@ -15,7 +16,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractExec_CallContract_Failure()
         {
-            var script = new NBitcoin.Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CALLCONTRACT, 0xFF });
+            var script = new Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CALLCONTRACT, 0xFF });
 
             Assert.False(script.IsSmartContractExec());
         }
@@ -23,7 +24,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractExec_CreateContract_Success()
         {
-            var script = new NBitcoin.Script(new byte[] { (byte)ScOpcodeType.OP_CREATECONTRACT });
+            var script = new Script(new byte[] { (byte)ScOpcodeType.OP_CREATECONTRACT });
 
             Assert.True(script.IsSmartContractExec());
         }
@@ -31,7 +32,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractExec_CreateContract_Failure()
         {
-            var script = new NBitcoin.Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CREATECONTRACT, 0xFF });
+            var script = new Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CREATECONTRACT, 0xFF });
 
             Assert.False(script.IsSmartContractExec());
         }
@@ -39,7 +40,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractCall_Success()
         {
-            var script = new NBitcoin.Script(new byte[] { (byte)ScOpcodeType.OP_CALLCONTRACT });
+            var script = new Script(new byte[] { (byte)ScOpcodeType.OP_CALLCONTRACT });
 
             Assert.True(script.IsSmartContractCall());
         }
@@ -47,7 +48,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractCall_Failure()
         {
-            var script = new NBitcoin.Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CALLCONTRACT, 0xFF });
+            var script = new Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CALLCONTRACT, 0xFF });
 
             Assert.False(script.IsSmartContractCall());
         }
@@ -55,7 +56,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractCreate_Success()
         {
-            var script = new NBitcoin.Script(new byte[] { (byte)ScOpcodeType.OP_CREATECONTRACT });
+            var script = new Script(new byte[] { (byte)ScOpcodeType.OP_CREATECONTRACT });
 
             Assert.True(script.IsSmartContractCreate());
         }
@@ -63,7 +64,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractCreate_Failure()
         {
-            var script = new NBitcoin.Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CREATECONTRACT, 0xFF });
+            var script = new Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_CREATECONTRACT, 0xFF });
 
             Assert.False(script.IsSmartContractCreate());
         }
@@ -71,7 +72,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractSpend_Success()
         {
-            var script = new NBitcoin.Script(new byte[] { (byte)ScOpcodeType.OP_SPEND });
+            var script = new Script(new byte[] { (byte)ScOpcodeType.OP_SPEND });
 
             Assert.True(script.IsSmartContractSpend());
         }
@@ -79,7 +80,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractSpend_Failure()
         {
-            var script = new NBitcoin.Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_SPEND, 0xFF });
+            var script = new Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_SPEND, 0xFF });
 
             Assert.False(script.IsSmartContractSpend());
         }
@@ -87,7 +88,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractInternalCall_Success()
         {
-            var script = new NBitcoin.Script(new byte[] { (byte)ScOpcodeType.OP_INTERNALCONTRACTTRANSFER });
+            var script = new Script(new byte[] { (byte)ScOpcodeType.OP_INTERNALCONTRACTTRANSFER });
 
             Assert.True(script.IsSmartContractInternalCall());
         }
@@ -95,7 +96,7 @@ namespace Stratis.SmartContracts.Core.Tests
         [Fact]
         public void IsSmartContractInternalCall_Failure()
         {
-            var script = new NBitcoin.Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_INTERNALCONTRACTTRANSFER, 0xFF });
+            var script = new Script(new byte[] { 0xFF, (byte)ScOpcodeType.OP_INTERNALCONTRACTTRANSFER, 0xFF });
 
             Assert.False(script.IsSmartContractInternalCall());
         }

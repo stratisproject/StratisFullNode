@@ -74,7 +74,8 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             Idle = 0,
             StakingRequested = 1,
             StakingInProgress = 2,
-            StopStakingRequested = 3
+            StopStakingRequested = 3,
+            StakingAborted = 4
         }
 
         /// <summary>The maximum allowed size for a serialized block, in bytes (network rule).</summary>
@@ -208,7 +209,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// <summary>
         /// A cancellation token source that can cancel the staking processes and is linked to the <see cref="INodeLifetime.ApplicationStopping"/>.
         /// </summary>
-        private CancellationTokenSource stakeCancellationTokenSource;
+        public CancellationTokenSource StakeCancellationTokenSource { get; private set; }
 
         /// <summary>Provider of IBD state.</summary>
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
@@ -281,7 +282,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             }
 
             this.rpcGetStakingInfoModel.Enabled = true;
-            this.stakeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(new[] { this.nodeLifetime.ApplicationStopping });
+            this.StakeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(new[] { this.nodeLifetime.ApplicationStopping });
 
             this.stakingLoop = this.asyncProvider.CreateAndRunAsyncLoop("PosMining.Stake", async token =>
             {
@@ -322,10 +323,12 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 {
                     this.logger.LogError("Exception: {0}", ex);
                     this.logger.LogTrace("(-)[UNHANDLED_EXCEPTION]");
+
+                    Interlocked.CompareExchange(ref this.currentState, (int)CurrentState.StakingAborted, (int)CurrentState.StakingInProgress);
                     throw;
                 }
             },
-            this.stakeCancellationTokenSource.Token,
+            this.StakeCancellationTokenSource.Token,
             repeatEvery: TimeSpan.FromMilliseconds(this.minerSleep),
             startAfter: TimeSpans.Second);
 
@@ -341,12 +344,12 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 return;
             }
 
-            this.stakeCancellationTokenSource?.Cancel();
+            this.StakeCancellationTokenSource?.Cancel();
             this.logger.LogDebug("Disposing staking loop.");
             this.stakingLoop?.Dispose();
             this.stakingLoop = null;
-            this.stakeCancellationTokenSource?.Dispose();
-            this.stakeCancellationTokenSource = null;
+            this.StakeCancellationTokenSource?.Dispose();
+            this.StakeCancellationTokenSource = null;
             this.rpcGetStakingInfoModel.StopStaking();
 
             Interlocked.CompareExchange(ref this.currentState, (int)CurrentState.Idle, (int)CurrentState.StopStakingRequested);
@@ -361,83 +364,90 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Prevent staking if the system time is not in sync with that of other members on the network.
-                if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
+                try
                 {
-                    this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
-                                         + "Please adjust your system time and restart the node.");
-                    await Task.Delay(TimeSpan.FromMilliseconds(this.systemTimeOutOfSyncSleep), cancellationToken).ConfigureAwait(false);
-                    continue;
+                    // Prevent staking if the system time is not in sync with that of other members on the network.
+                    if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
+                    {
+                        this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
+                                             + "Please adjust your system time and restart the node.");
+                        await Task.Delay(TimeSpan.FromMilliseconds(this.systemTimeOutOfSyncSleep), cancellationToken).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    // Don't stake if the wallet is not up-to-date with the current chain.
+                    if (this.consensusManager.Tip.HashBlock != this.walletManager.WalletTipHash)
+                    {
+                        this.logger.LogDebug("Waiting for wallet to catch up before mining can be started.");
+
+                        await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    // Prevent staking if in initial block download.
+                    if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                    {
+                        this.logger.LogDebug("Waiting for synchronization before mining can be started.");
+
+                        await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    ChainedHeader chainTip = this.consensusManager.Tip;
+
+                    if (this.lastCoinStakeSearchPrevBlockHash != chainTip.HashBlock)
+                    {
+                        this.lastCoinStakeSearchPrevBlockHash = chainTip.HashBlock;
+                        this.lastCoinStakeSearchTime = chainTip.Header.Time;
+                        this.logger.LogDebug("New block '{0}' detected, setting last search time to its timestamp {1}.", chainTip, chainTip.Header.Time);
+
+                        // Reset the template as the chain advanced.
+                        blockTemplate = null;
+                    }
+
+                    uint coinstakeTimestamp = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() & ~PosConsensusOptions.StakeTimestampMask;
+                    if (coinstakeTimestamp <= this.lastCoinStakeSearchTime)
+                    {
+                        this.logger.LogDebug("Current coinstake time {0} is not greater than last search timestamp {1}.", coinstakeTimestamp, this.lastCoinStakeSearchTime);
+                        this.logger.LogTrace("(-)[NOTHING_TO_DO]");
+                        return;
+                    }
+
+                    // Get UTXOs from all wallets that have been enabled for staking.
+                    // Each UTXO has its corresponding wallet secret stored with it, so we do not have to retain additional mappings to the origin wallet.
+                    var utxoStakeDescriptions = new List<UtxoStakeDescription>();
+                    foreach (WalletSecret walletSecret in walletSecrets)
+                    {
+                        utxoStakeDescriptions.AddRange(this.GetUtxoStakeDescriptions(walletSecret, cancellationToken));
+                    }
+
+                    blockTemplate = blockTemplate ?? this.blockProvider.BuildPosBlock(chainTip, new Script());
+                    var posBlock = (PosBlock)blockTemplate.Block;
+
+                    this.networkWeight = (long)this.GetNetworkWeight();
+                    this.rpcGetStakingInfoModel.CurrentBlockSize = posBlock.GetSerializedSize();
+                    this.rpcGetStakingInfoModel.CurrentBlockTx = posBlock.Transactions.Count();
+                    this.rpcGetStakingInfoModel.PooledTx = await this.mempoolLock.ReadAsync(() => this.mempool.MapTx.Count).ConfigureAwait(false);
+                    this.rpcGetStakingInfoModel.Difficulty = this.GetDifficulty(chainTip);
+                    this.rpcGetStakingInfoModel.NetStakeWeight = this.networkWeight;
+
+                    // Trying to create coinstake that satisfies the difficulty target, put it into a block and sign the block.
+                    if (await this.StakeAndSignBlockAsync(utxoStakeDescriptions, blockTemplate, chainTip, blockTemplate.TotalFee, coinstakeTimestamp).ConfigureAwait(false))
+                    {
+                        this.logger.LogDebug("New POS block created and signed successfully.");
+                        await this.CheckStakeAsync(posBlock, chainTip).ConfigureAwait(false);
+
+                        blockTemplate = null;
+                    }
+                    else
+                    {
+                        this.logger.LogDebug("{0} failed to create POS block, waiting {1} ms for next round.", nameof(this.StakeAndSignBlockAsync), this.minerSleep);
+                        await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
+                    }
                 }
-
-                // Don't stake if the wallet is not up-to-date with the current chain.
-                if (this.consensusManager.Tip.HashBlock != this.walletManager.WalletTipHash)
+                catch (Exception ex)
                 {
-                    this.logger.LogDebug("Waiting for wallet to catch up before mining can be started.");
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
-                    continue;
-                }
-
-                // Prevent staking if in initial block download.
-                if (this.initialBlockDownloadState.IsInitialBlockDownload())
-                {
-                    this.logger.LogDebug("Waiting for synchronization before mining can be started.");
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
-                    continue;
-                }
-
-                ChainedHeader chainTip = this.consensusManager.Tip;
-
-                if (this.lastCoinStakeSearchPrevBlockHash != chainTip.HashBlock)
-                {
-                    this.lastCoinStakeSearchPrevBlockHash = chainTip.HashBlock;
-                    this.lastCoinStakeSearchTime = chainTip.Header.Time;
-                    this.logger.LogDebug("New block '{0}' detected, setting last search time to its timestamp {1}.", chainTip, chainTip.Header.Time);
-
-                    // Reset the template as the chain advanced.
-                    blockTemplate = null;
-                }
-
-                uint coinstakeTimestamp = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() & ~PosConsensusOptions.StakeTimestampMask;
-                if (coinstakeTimestamp <= this.lastCoinStakeSearchTime)
-                {
-                    this.logger.LogDebug("Current coinstake time {0} is not greater than last search timestamp {1}.", coinstakeTimestamp, this.lastCoinStakeSearchTime);
-                    this.logger.LogTrace("(-)[NOTHING_TO_DO]");
-                    return;
-                }
-
-                // Get UTXOs from all wallets that have been enabled for staking.
-                // Each UTXO has its corresponding wallet secret stored with it, so we do not have to retain additional mappings to the origin wallet.
-                var utxoStakeDescriptions = new List<UtxoStakeDescription>();
-                foreach (WalletSecret walletSecret in walletSecrets)
-                {
-                    utxoStakeDescriptions.AddRange(this.GetUtxoStakeDescriptions(walletSecret, cancellationToken));
-                }
-
-                blockTemplate = blockTemplate ?? this.blockProvider.BuildPosBlock(chainTip, new Script());
-                var posBlock = (PosBlock)blockTemplate.Block;
-
-                this.networkWeight = (long)this.GetNetworkWeight();
-                this.rpcGetStakingInfoModel.CurrentBlockSize = posBlock.GetSerializedSize();
-                this.rpcGetStakingInfoModel.CurrentBlockTx = posBlock.Transactions.Count();
-                this.rpcGetStakingInfoModel.PooledTx = await this.mempoolLock.ReadAsync(() => this.mempool.MapTx.Count).ConfigureAwait(false);
-                this.rpcGetStakingInfoModel.Difficulty = this.GetDifficulty(chainTip);
-                this.rpcGetStakingInfoModel.NetStakeWeight = this.networkWeight;
-
-                // Trying to create coinstake that satisfies the difficulty target, put it into a block and sign the block.
-                if (await this.StakeAndSignBlockAsync(utxoStakeDescriptions, blockTemplate, chainTip, blockTemplate.TotalFee, coinstakeTimestamp).ConfigureAwait(false))
-                {
-                    this.logger.LogDebug("New POS block created and signed successfully.");
-                    await this.CheckStakeAsync(posBlock, chainTip).ConfigureAwait(false);
-
-                    blockTemplate = null;
-                }
-                else
-                {
-                    this.logger.LogDebug("{0} failed to create POS block, waiting {1} ms for next round.", nameof(this.StakeAndSignBlockAsync), this.minerSleep);
-                    await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
+                    throw ex;
                 }
             }
         }
@@ -543,57 +553,64 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// <returns><c>true</c> if the function succeeds, <c>false</c> otherwise.</returns>
         private async Task<bool> StakeAndSignBlockAsync(List<UtxoStakeDescription> utxoStakeDescriptions, BlockTemplate blockTemplate, ChainedHeader chainTip, long fees, uint coinstakeTimestamp)
         {
-            var block = blockTemplate.Block as PosBlock;
-
-            // If we are trying to sign something except proof-of-stake block template.
-            if (!block.Transactions[0].Outputs[0].IsEmpty)
+            try
             {
-                this.logger.LogTrace("(-)[NO_POS_BLOCK]:false");
-                return false;
-            }
+                var block = blockTemplate.Block as PosBlock;
 
-            // If we are trying to sign a complete proof-of-stake block.
-            if (BlockStake.IsProofOfStake(block))
-            {
-                this.logger.LogTrace("(-)[ALREADY_DONE]:true");
-                return true;
-            }
-
-            var coinstakeContext = new CoinstakeContext { CoinstakeTx = this.network.CreateTransaction() };
-            coinstakeContext.StakeTimeSlot = coinstakeTimestamp;
-
-            // Search to current coinstake time.
-            long searchTime = coinstakeContext.StakeTimeSlot;
-
-            long searchInterval = searchTime - this.lastCoinStakeSearchTime;
-            this.rpcGetStakingInfoModel.SearchInterval = (int)searchInterval;
-
-            this.lastCoinStakeSearchTime = searchTime;
-            this.logger.LogDebug("Search interval set to {0}, last coinstake search timestamp set to {1}.", searchInterval, this.lastCoinStakeSearchTime);
-
-            if (await this.CreateCoinstakeAsync(utxoStakeDescriptions, blockTemplate, chainTip, searchInterval, fees, coinstakeContext).ConfigureAwait(false))
-            {
-                uint minTimestamp = chainTip.Header.Time + 1;
-                if (coinstakeContext.StakeTimeSlot >= minTimestamp)
+                // If we are trying to sign something except proof-of-stake block template.
+                if (!block.Transactions[0].Outputs[0].IsEmpty)
                 {
-                    block.Header.Time = coinstakeContext.StakeTimeSlot;
+                    this.logger.LogTrace("(-)[NO_POS_BLOCK]:false");
+                    return false;
+                }
 
-                    block.Transactions.Insert(1, coinstakeContext.CoinstakeTx);
-
-                    // The coinstake was added to the block so we need to regenerate the witness commitment.
-                    this.blockProvider.BlockModified(chainTip, block);
-
-                    // Append a signature to our block.
-                    ECDSASignature signature = coinstakeContext.Key.Sign(block.GetHash());
-
-                    block.BlockSignature = new BlockSignature { Signature = signature.ToDER() };
+                // If we are trying to sign a complete proof-of-stake block.
+                if (BlockStake.IsProofOfStake(block))
+                {
+                    this.logger.LogTrace("(-)[ALREADY_DONE]:true");
                     return true;
                 }
-                else this.logger.LogDebug("Coinstake transaction created with too early timestamp {0}, minimal timestamp is {1}.", coinstakeContext.StakeTimeSlot, minTimestamp);
-            }
-            else this.logger.LogDebug("Unable to create coinstake transaction.");
 
-            return false;
+                var coinstakeContext = new CoinstakeContext { CoinstakeTx = this.network.CreateTransaction() };
+                coinstakeContext.StakeTimeSlot = coinstakeTimestamp;
+
+                // Search to current coinstake time.
+                long searchTime = coinstakeContext.StakeTimeSlot;
+
+                long searchInterval = searchTime - this.lastCoinStakeSearchTime;
+                this.rpcGetStakingInfoModel.SearchInterval = (int)searchInterval;
+
+                this.lastCoinStakeSearchTime = searchTime;
+                this.logger.LogDebug("Search interval set to {0}, last coinstake search timestamp set to {1}.", searchInterval, this.lastCoinStakeSearchTime);
+
+                if (await this.CreateCoinstakeAsync(utxoStakeDescriptions, blockTemplate, chainTip, searchInterval, fees, coinstakeContext).ConfigureAwait(false))
+                {
+                    uint minTimestamp = chainTip.Header.Time + 1;
+                    if (coinstakeContext.StakeTimeSlot >= minTimestamp)
+                    {
+                        block.Header.Time = coinstakeContext.StakeTimeSlot;
+
+                        block.Transactions.Insert(1, coinstakeContext.CoinstakeTx);
+
+                        // The coinstake was added to the block so we need to regenerate the witness commitment.
+                        this.blockProvider.BlockModified(chainTip, block);
+
+                        // Append a signature to our block.
+                        ECDSASignature signature = coinstakeContext.Key.Sign(block.GetHash());
+
+                        block.BlockSignature = new BlockSignature { Signature = signature.ToDER() };
+                        return true;
+                    }
+                    else this.logger.LogDebug("Coinstake transaction created with too early timestamp {0}, minimal timestamp is {1}.", coinstakeContext.StakeTimeSlot, minTimestamp);
+                }
+                else this.logger.LogDebug("Unable to create coinstake transaction.");
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         /// <inheritdoc/>
@@ -795,7 +812,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                         break;
                     }
 
-                    if (this.stakeCancellationTokenSource.Token.IsCancellationRequested)
+                    if (this.StakeCancellationTokenSource.Token.IsCancellationRequested)
                     {
                         context.Logger.LogDebug("Application shutdown detected, stopping work.");
                         stopWork = true;

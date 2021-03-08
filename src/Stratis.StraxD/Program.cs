@@ -19,6 +19,8 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 
 namespace Stratis.StraxD
 {
@@ -48,6 +50,11 @@ namespace Stratis.StraxD
                     .AddPowPosMining(true)
                     .UseApi()
                     .AddRPC()
+                    .AddSmartContracts(options =>
+                    {
+                        options.UseReflectionExecutor();
+                        options.UsePoSWhitelistedContracts();
+                    })
                     .AddSignalR(options =>
                     {
                         options.EventsToHandle = new[]

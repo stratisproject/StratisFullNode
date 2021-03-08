@@ -1,20 +1,17 @@
-using System.Collections.Generic;
-using NBitcoin;
-using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.PoA
+namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 {
     /// <summary>
     /// Checks hashes against a whitelist.
     /// </summary>
-    public class WhitelistedHashChecker : IWhitelistedHashChecker
+    public class PoSWhitelistedHashChecker : IWhitelistedHashChecker
     {
-        private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
+        //private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
-        public WhitelistedHashChecker(IWhitelistedHashesRepository whitelistedHashesRepository)
+        public PoSWhitelistedHashChecker(/*IWhitelistedHashesRepository whitelistedHashesRepository*/)
         {
-            this.whitelistedHashesRepository = whitelistedHashesRepository;
+            //this.whitelistedHashesRepository = whitelistedHashesRepository;
         }
 
         /// <summary>
@@ -24,6 +21,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
         /// <returns>True if the hash was found in the whitelisted hashes repository.</returns>
         public bool CheckHashWhitelisted(byte[] hash)
         {
+            // TODO: For now just allow. Will have to decide how to handle this for system contracts.
+            return true;
+            /*
             if (hash.Length != 32)
             {
                 // For this implementation, only 32 byte wide hashes are accepted.
@@ -36,6 +36,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
             var hash256 = new uint256(hash);
 
             return allowedHashes.Contains(hash256);
+            */
         }
     }
 }

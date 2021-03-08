@@ -75,12 +75,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
             {
                 // If ProvenBlockHeader copy the header parameters.
                 BlockHeader newHeader = consensusFactory.CreateBlockHeader();
-                newHeader.Bits = blockHeader.Bits;
-                newHeader.Time = blockHeader.Time;
-                newHeader.Nonce = blockHeader.Nonce;
-                newHeader.Version = blockHeader.Version;
-                newHeader.HashMerkleRoot = blockHeader.HashMerkleRoot;
-                newHeader.HashPrevBlock = blockHeader.HashPrevBlock;
+                newHeader.CopyFields(blockHeader);
 
                 blockHeader = newHeader;
             }
