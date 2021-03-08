@@ -2,18 +2,36 @@
 using System.Numerics;
 using System.Threading.Tasks;
 using Nethereum.Contracts;
-using Stratis.Bitcoin.Features.Interop.Models;
 
 namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
     public interface IEthereumClientBase
     {
+        /// <summary>
+        /// Creates the filter that the RPC interface uses to listen for events against the desired contract.
+        /// In this case the filter is specifically listening for Transfer events emitted by the wrapped strax
+        /// contract.
+        /// </summary>
         Task CreateTransferEventFilterAsync();
 
+        /// <summary>
+        /// Queries the previously created event filter for any new events matching the filter criteria.
+        /// </summary>
+        /// <returns>A list of event logs.</returns>
         Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync();
 
+        /// <summary>
+        /// Retrieves the STRAX address that was recorded in the wrapped STRAX contract when a given account
+        /// burnt funds. The destination address must have been provided as a parameter to the burn() method
+        /// invocation and only one address at a time can be associated with each account.
+        /// </summary>
+        /// <param name="address">The Ethereum account to retrieve the destination STRAX address for.</param>
+        /// <returns>The STRAX address associated with the provided Ethereum account.</returns>
         Task<string> GetDestinationAddressAsync(string address);
 
+        /// <summary>
+        /// Retrieves the current block height of the Ethereum node.
+        /// </summary>
         Task<BigInteger> GetBlockHeightAsync();
 
         /// <summary>
@@ -33,16 +51,28 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         /// <returns>The hash of the confirmation transaction.</returns>
         Task<string> ConfirmTransactionAsync(BigInteger transactionId);
 
+        /// <summary>
+        /// Retrieve the number of confirmations a given transaction currently has in the multisig wallet contract.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction.</param>
+        /// <returns>The number of confirmations.</returns>
         Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId);
 
+        /// <summary>
+        /// Constructs the data field for a transaction invoking the mint() method of an ERC20 contract that implements it.
+        /// The actual transaction will be sent to the multisig wallet contract as it is the contract that needs to execute the transaction.
+        /// </summary>
+        /// <param name="address">The account that needs tokens to be minted into it (not the address of the multisig contract or the wrapped STRAX contract)</param>
+        /// <param name="amount">The number of tokens to be minted. This is denominated in wei.</param>
+        /// <returns></returns>
         string EncodeMintParams(string address, BigInteger amount);
 
+        /// <summary>
+        /// Constructs the data field for a transaction invoking the burn() method of an ERC20 contract that implements it.
+        /// The actual transaction will be sent to the multisig wallet contract as it is the contract that needs to execute the transaction.
+        /// </summary>
+        /// <param name="amount">The number of tokens to be minted. This is denominated in wei.</param>
+        /// <param name="straxAddress">The destination address on the STRAX chain that the equivalent value of the burnt funds will be sent to.</param>
         string EncodeBurnParams(BigInteger amount, string straxAddress);
-
-        Dictionary<string, string> InvokeContract(InteropRequest request);
-
-        List<EthereumRequestModel> GetStratisInteropRequests();
-
-        bool TransmitResponse(InteropRequest request);
     }
 }

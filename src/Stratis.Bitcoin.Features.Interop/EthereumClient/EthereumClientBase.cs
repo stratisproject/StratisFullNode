@@ -10,7 +10,6 @@ using Nethereum.RPC.Eth.Blocks;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
-using Stratis.Bitcoin.Features.Interop.Models;
 
 namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 {
@@ -110,27 +109,9 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             const string BurnMethod = "7641e6f3";
 
             var abiEncode = new ABIEncode();
-            string result = BurnMethod + abiEncode.GetABIEncoded(new ABIValue("uint256", amount)).ToHex();
+            string result = BurnMethod + abiEncode.GetABIEncoded(new ABIValue("uint256", amount), new ABIValue("string", straxAddress)).ToHex();
 
             return result;
-        }
-
-        public Dictionary<string, string> InvokeContract(InteropRequest request)
-        {
-            // TODO: Create an Ethereum transaction to invoke the specified method 
-            return new Dictionary<string, string>();
-        }
-
-        public List<EthereumRequestModel> GetStratisInteropRequests()
-        {
-            // TODO: Filter the receipt logs for the interop contract and extract any interop requests
-            return new List<EthereumRequestModel>();
-        }
-
-        public bool TransmitResponse(InteropRequest request)
-        {
-            // TODO: Send a transaction to the interop contract recording the results of the execution on the Cirrus network
-            return true;
         }
     }
 }
