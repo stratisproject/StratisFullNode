@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -185,6 +186,9 @@ namespace Stratis.Bitcoin
             this.logger.LogInformation("Full node initialized on {0}.", this.Network.Name);
 
             this.State = FullNodeState.Initialized;
+
+            this.Signals.Publish(new FullNodeEvent() { Message = $"Full node initialized on {this.Network.Name}.", State = this.State.ToString() });
+
             this.StartTime = this.DateTimeProvider.GetUtcNow();
             return this;
         }

@@ -10,5 +10,6 @@
     public sealed class FullNodeEvent : EventBase
     {
         public string Message { get; set; }
+        public string State { get; set; }
     }
 }

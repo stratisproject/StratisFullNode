@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Builder
     public class FullNodeFeatureExecutor : IFullNodeFeatureExecutor
     {
         /// <summary>Full node which features are to be managed by this executor.</summary>
-        private readonly IFullNode node;
+        private readonly IFullNode fullNode;
 
         /// <summary>Object logger.</summary>
         private readonly ILogger logger;
@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Builder
         {
             Guard.NotNull(fullNode, nameof(fullNode));
 
-            this.node = fullNode;
+            this.fullNode = fullNode;
             this.signals = signals;
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Builder
         {
             try
             {
-                this.Execute(feature => feature.ValidateDependencies(this.node.Services));
+                this.Execute(feature => feature.ValidateDependencies(this.fullNode.Services));
 
                 this.Execute(feature =>
                 {
@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Builder
         /// <exception cref="AggregateException">Thrown in case one or more callbacks threw an exception.</exception>
         private void Execute(Action<IFullNodeFeature> callback, bool disposing = false)
         {
-            if (this.node.Services == null)
+            if (this.fullNode.Services == null)
             {
                 this.logger.Trace("(-)[NO_SERVICES]");
                 return;
@@ -111,7 +111,7 @@ namespace Stratis.Bitcoin.Builder
             if (disposing)
             {
                 // When the node is shutting down, we need to dispose all features, so we don't break on exception.
-                foreach (IFullNodeFeature feature in this.node.Services.Features.Reverse())
+                foreach (IFullNodeFeature feature in this.fullNode.Services.Features.Reverse())
                 {
                     try
                     {
@@ -129,7 +129,7 @@ namespace Stratis.Bitcoin.Builder
             else
             {
                 // Initialize features that are flagged to start before the base feature.
-                foreach (IFullNodeFeature feature in this.node.Services.Features.OrderByDescending(f => f.InitializeBeforeBase))
+                foreach (IFullNodeFeature feature in this.fullNode.Services.Features.OrderByDescending(f => f.InitializeBeforeBase))
                 {
                     try
                     {
