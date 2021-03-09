@@ -92,10 +92,9 @@ namespace Stratis.Bitcoin.Networks
 
                 // The smart contract mempool needs to do more fee checks than its counterpart, so include extra rules.
                 // These rules occur directly after the fee check rule in the non- smart contract mempool.
-                // TODO: Are there PoS-specific rules for the commented rules?
-                //typeof(SmartContractFormatLogicMempoolRule),
+                typeof(SmartContractFormatLogicMempoolRule),
                 typeof(CanGetSenderMempoolRule),
-                //typeof(AllowedCodeHashLogicMempoolRule), // PoA-specific
+                typeof(AllowedCodeHashLogicMempoolRule),
                 typeof(CheckMinGasLimitSmartContractMempoolRule),
 
                 typeof(CheckRateLimitMempoolRule),
