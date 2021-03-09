@@ -358,7 +358,7 @@ if ( $NodeType -eq "50K" )
             Exit
         }
     }
-
+    <#
     $gethPeerCountBody = ConvertTo-Json -Compress @{
         jsonrpc = "2.0"
         method = "net_peerCount"
@@ -401,11 +401,11 @@ if ( $NodeType -eq "50K" )
         Write-Host (Get-TimeStamp) "$syncProgress Blocks Require Indexing..." -ForegroundColor Yellow
         Start-Sleep 10
     }
-
+    #>
     $gethProcess = Start-Process geth -ArgumentList "account list" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $env:TEMP\accountlist.txt 
     $gethAccountsOuput = Get-Content $env:TEMP\accountlist.txt
     $ethAddress = ($gethAccountsOuput.Split('{').Split('}') | Select-Object -Index 1).Insert('0','0x')
-
+    
     #Move to CirrusPegD
     Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
 }
