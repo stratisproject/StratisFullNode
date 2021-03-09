@@ -538,8 +538,9 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
-                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
+                CoreNode listener = builder.CreateStratisPosNode(network).WithWallet().Start();
 
                 IConnectionManager listenerConnMan = listener.FullNode.NodeService<IConnectionManager>();
                 listenerConnMan.Parameters.TemplateBehaviors.Add(new TestBehavior());
@@ -650,8 +651,9 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
-                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
+                CoreNode listener = builder.CreateStratisPosNode(network).WithWallet().Start();
 
                 TestHelper.Connect(listener, node);
 
@@ -735,8 +737,9 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
-                CoreNode listener = builder.CreateStratisPosNode(KnownNetworks.StraxRegTest).WithWallet().Start();
+                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
+                CoreNode listener = builder.CreateStratisPosNode(network).WithWallet().Start();
 
                 TestHelper.Connect(listener, node);
 
