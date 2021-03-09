@@ -13,7 +13,9 @@ using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Utilities.Extensions;
 using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -24,9 +26,12 @@ namespace Stratis.Features.FederatedPeg.Controllers
     {
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetFederationInfo = "info";
+        public const string GetFederationMemberInfo = "member/info";
+        public const string FederationMemberIpAdd = "member/ip/add";
+        public const string FederationMemberIpRemove = "member/ip/remove";
+        public const string FederationMemberIpReplace = "member/ip/replace";
         public const string GetTransfersPartialEndpoint = "transfer/pending";
         public const string GetTransfersFullySignedEndpoint = "transfer/fullysigned";
-        public const string GetFederationMemberInfo = "info/member";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
     }
 
@@ -242,6 +247,112 @@ namespace Stratis.Features.FederatedPeg.Controllers
             catch (Exception e)
             {
                 this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.GetFederationInfo, e.Message);
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Adds a federation member's IP address to the federation IP list.
+        /// </summary>
+        /// <response code="200">The federation member's IP was successfully added.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(FederationGatewayRouteEndPoint.FederationMemberIpAdd)]
+        [HttpPut]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult AddFederationMemberIp([FromBody] FederationMemberIpModel model)
+        {
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            try
+            {
+                IPEndPoint endPoint = model.EndPoint.ToIPEndPoint(this.fullNode.Network.DefaultPort);
+
+                if (this.federatedPegSettings.FederationNodeIpEndPoints.Contains(endPoint))
+                    return this.Json($"{endPoint} already exists in the federation.");
+
+                this.federatedPegSettings.FederationNodeIpEndPoints.Add(endPoint);
+                this.federatedPegSettings.FederationNodeIpAddresses.Add(endPoint.Address);
+
+                return this.Json($"{endPoint} has been added.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpAdd, e.Message);
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Remove's a federation member's IP address from the federation IP list.
+        /// </summary>
+        /// <response code="200">The federation member's IP was successfully added.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(FederationGatewayRouteEndPoint.FederationMemberIpRemove)]
+        [HttpPut]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult RemoveFederationMemberIp([FromBody] FederationMemberIpModel model)
+        {
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            try
+            {
+                IPEndPoint endPoint = model.EndPoint.ToIPEndPoint(this.fullNode.Network.DefaultPort);
+
+                if (!this.federatedPegSettings.FederationNodeIpEndPoints.Contains(endPoint))
+                    return this.Json($"{endPoint} does not exist in the federation.");
+
+                this.federatedPegSettings.FederationNodeIpEndPoints.Remove(endPoint);
+                this.federatedPegSettings.FederationNodeIpAddresses.Remove(endPoint.Address);
+
+                return this.Json($"{endPoint} has been removed.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpRemove, e.Message);
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Replaces a federation member's IP address from the federation IP list with a new one.
+        /// </summary>
+        /// <response code="200">The federation member's IP was successfully added.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route(FederationGatewayRouteEndPoint.FederationMemberIpReplace)]
+        [HttpPut]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult ReplaceFederationMemberIp([FromBody] ReplaceFederationMemberIpModel model)
+        {
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            try
+            {
+                IPEndPoint endPointToReplace = model.EndPoint.ToIPEndPoint(this.fullNode.Network.DefaultPort);
+                IPEndPoint endPointToUse = model.EndPointToUse.ToIPEndPoint(this.fullNode.Network.DefaultPort);
+
+                if (!this.federatedPegSettings.FederationNodeIpEndPoints.Contains(endPointToReplace))
+                    return this.Json($"{endPointToReplace} does not exist in the federation.");
+
+                this.federatedPegSettings.FederationNodeIpEndPoints.Remove(endPointToReplace);
+                this.federatedPegSettings.FederationNodeIpAddresses.Remove(endPointToReplace.Address);
+
+                if (this.federatedPegSettings.FederationNodeIpEndPoints.Contains(endPointToUse))
+                    return this.Json($"{endPointToUse} already exists in the federation.");
+
+                this.federatedPegSettings.FederationNodeIpEndPoints.Add(endPointToUse);
+                this.federatedPegSettings.FederationNodeIpAddresses.Add(endPointToUse.Address);
+
+                return this.Json($"{endPointToUse} has been replaced with {endPointToReplace}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception thrown calling /api/FederationGateway/{0}: {1}.", FederationGatewayRouteEndPoint.FederationMemberIpReplace, e.Message);
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
