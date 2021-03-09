@@ -77,7 +77,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 .AddKeys(keys.Take(m).ToArray())
                 .Send(ultimateReceiver.PubKey.Hash, Money.Coins(inputCount * fundingAmount - 1))
                 .SetChange(redeemScript.Hash)
-                .SendFees(fedPegSettings.GetWithdrawalTransactionFee(inputCount))
+                .SendFees(Money.Satoshis(400000))
                 .BuildTransaction(true);
 
             bool verify = txBuilder.Verify(tx, out TransactionPolicyError[] errors);
@@ -154,7 +154,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 .AddKeys(keys.Take(m).ToArray())
                 .Send(ultimateReceiver.PubKey.Hash, Money.Coins(inputCount * fundingAmount - 1))
                 .SetChange(redeemScript.Hash)
-                .SendFees(fedPegSettings.GetWithdrawalTransactionFee(inputCount))
+                .SendFees(Money.Coins(0.01m))
                 .BuildTransaction(true);
 
             bool verify = txBuilder.Verify(tx, out TransactionPolicyError[] errors);

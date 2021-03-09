@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private static readonly byte stakeTable = 4;
 
         /// <summary>Hash of the block which is currently the tip of the coinview.</summary>
-        private HashHeightPair blockHash;
+        private HashHeightPair persistedCoinviewTip;
         private readonly string dataFolder;
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly DbOptions dbOptions;
@@ -59,29 +59,32 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             if (this.GetTipHash() == null)
                 this.SetBlockHash(new HashHeightPair(genesis.GetHash(), 0));
+
+            this.logger.Info("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
         private void SetBlockHash(HashHeightPair nextBlockHash)
         {
-            this.blockHash = nextBlockHash;
+            this.persistedCoinviewTip = nextBlockHash;
+
             using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
             rocksDb.Put(new byte[] { blockTable }.Concat(blockHashKey).ToArray(), nextBlockHash.ToBytes());
         }
 
         public HashHeightPair GetTipHash()
         {
-            if (this.blockHash == null)
+            if (this.persistedCoinviewTip == null)
             {
                 using var rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
                 var row = rocksDb.Get(new byte[] { blockTable }.Concat(blockHashKey).ToArray());
                 if (row != null)
                 {
-                    this.blockHash = new HashHeightPair();
-                    this.blockHash.FromBytes(row);
+                    this.persistedCoinviewTip = new HashHeightPair();
+                    this.persistedCoinviewTip.FromBytes(row);
                 }
             }
 
-            return this.blockHash;
+            return this.persistedCoinviewTip;
         }
 
         public FetchCoinsResponse FetchCoins(OutPoint[] utxos)

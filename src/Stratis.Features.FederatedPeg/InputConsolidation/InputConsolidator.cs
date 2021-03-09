@@ -190,7 +190,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                 while (oneRound.Count == FederatedPegSettings.MaxInputs)
                 {
                     // We found a set of 50 that is worth enough so no more consolidation needed.
-                    if (oneRound.Sum(x => x.Transaction.Amount) >= amount + this.settings.GetWithdrawalTransactionFee(FederatedPegSettings.MaxInputs))
+                    if (oneRound.Sum(x => x.Transaction.Amount) >= amount + FederatedPegSettings.ConsolidationFee)
                         break;
 
                     // build a transaction and add it to our list.
