@@ -331,11 +331,6 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             return this.stateRoot.GetCode(contractAddress.ToUint160(this.CoreNode.FullNode.Network));
         }
 
-        public void SetCode(string contractAddress, byte[] code)
-        {
-            this.stateRoot.SetCode(contractAddress.ToUint160(this.CoreNode.FullNode.Network), code);
-        }
-
         /// <summary>
         /// Get the bytes stored at a particular key in a particular address.
         /// </summary>

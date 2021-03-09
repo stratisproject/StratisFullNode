@@ -402,8 +402,6 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.True(compilationResult.Success);
             BuildCreateContractTransactionResponse preResponse = this.node1.SendCreateContractTransaction(compilationResult.Compilation, 0);
             this.mockChain.WaitAllMempoolCount(1);
-            this.node1.SetCode(preResponse.NewContractAddress, new byte[] { 42 });
-            Assert.NotNull(this.node1.GetCode(preResponse.NewContractAddress));
             this.mockChain.MineBlocks(1);
             Assert.NotNull(this.node1.GetCode(preResponse.NewContractAddress));
 
