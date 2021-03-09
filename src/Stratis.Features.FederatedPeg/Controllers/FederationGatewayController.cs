@@ -348,7 +348,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 this.federatedPegSettings.FederationNodeIpEndPoints.Add(endPointToUse);
                 this.federatedPegSettings.FederationNodeIpAddresses.Add(endPointToUse.Address);
 
-                return this.Json($"{endPointToUse} has been replaced with {endPointToReplace}.");
+                return this.Json($"{endPointToReplace} has been replaced with {endPointToUse}.");
             }
             catch (Exception e)
             {
