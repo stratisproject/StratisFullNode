@@ -134,6 +134,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     }
 
                     // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+                    // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
                     // TODO: This can probably be made more efficient than looping every time. 
                     ChainedHeader header = this.chainIndexer.Tip;
                     bool found = false;
@@ -145,7 +146,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             break;
                         }
 
-                        if (header.Previous.Header.Time < maturedBlockDeposit.BlockInfo.BlockTime)
+                        if (header.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
                         {
                             found = true;
 
@@ -167,7 +168,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         RequestStatus = (int)ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
                         Amount = (ulong)conversionTransaction.Amount.Satoshi,
-                        BlockHeight = conversionTransaction.BlockNumber,
+                        BlockHeight = header.Height,
                         DestinationAddress = conversionTransaction.TargetAddress
                     });
                 }

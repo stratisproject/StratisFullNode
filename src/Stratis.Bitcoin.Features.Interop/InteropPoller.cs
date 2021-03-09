@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -260,9 +261,37 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 this.logger.LogInformation("Processing conversion mint request {0}.", request.RequestId);
 
-                IFederationMember member = this.federationHistory.GetFederationMemberForBlock(this.chainIndexer.Tip);
+                // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
+                List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(request.BlockHeight));
 
-                bool originator = member.Equals(this.federationManager.GetCurrentFederationMember());
+                var multisig = new List<CollateralFederationMember>();
+
+                var filtered = new List<PubKey>()
+                {
+                    new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
+                    new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
+                    new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
+                    new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61")
+                };
+
+                foreach (IFederationMember member in federation)
+                {
+                    if (!(member is CollateralFederationMember collateralMember))
+                        continue;
+
+                    if (!filtered.Contains(collateralMember.PubKey))
+                        continue;
+
+                    multisig.Add(collateralMember);
+                }
+
+                // This should be impossible.
+                if (multisig.Count == 0)
+                    return;
+
+                IFederationMember designatedMember = multisig[request.BlockHeight % multisig.Count];
+
+                bool originator = designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
 
                 // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
                 if (originator)
@@ -278,12 +307,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     BigInteger transactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, abiData).ConfigureAwait(false);
 
+                    this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
+
                     // The originator isn't responsible for anything further at this point.
                     request.RequestStatus = (int)ConversionRequestStatus.Processed;
                     request.Processed = true;
 
                     // Persist the updated request before broadcasting it.
                     this.conversionRequestRepository.Save(request);
+
+                    this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                     string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
 
@@ -296,11 +329,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
                     // That is why it does not need to check the agreed transactionId confirmation count.
-
-                    return;
                 }
                 else
                 {
+                    if (this.interopTransactionManager.CheckIfVoted(request.RequestId, this.federationManager.CurrentFederationKey.PubKey))
+                        return;
+
                     this.logger.LogInformation("This node was not selected as the originator for transaction {0}.", request.RequestId);
 
                     // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
@@ -313,7 +347,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     if (agreedUponId != BigInteger.MinusOne)
                     {
-                        this.logger.LogInformation("Quorum reached for conversion transaction {0}, submitting confirmation.", request.RequestId);
+                        this.logger.LogInformation("Quorum reached for conversion transaction {0}, submitting confirmation to contract.", request.RequestId);
 
                         // Once a quorum is reached, each node confirms the agreed transactionId.
                         // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
@@ -325,26 +359,28 @@ namespace Stratis.Bitcoin.Features.Interop
                         request.Processed = true;
 
                         this.conversionRequestRepository.Save(request);
-
-                        return;
                     }
                     else
                     {
-                        if (this.interopTransactionManager.CheckIfVoted(request.RequestId, this.federationManager.CurrentFederationKey.PubKey))
-                            return;
-
                         BigInteger transactionId = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
 
-                        string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
+                        if (transactionId != BigInteger.MinusOne)
+                        {
+                            this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId, request.RequestId);
 
-                        await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).ConfigureAwait(false);
+                            this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
+
+                            string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
+
+                            await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).ConfigureAwait(false);
+                        }
                     }
                 }
 
                 // If we reach this point, the node was not the originator but there were also insufficient votes to determine a transactionId yet.
                 // This scenario has to be handled carefully, because we want to avoid having nodes need to change their votes due to a new submission to the multisig contract.
 
-                // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint
+                // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
             }
 
             // Unlike the mint requests, burns are not initiated by the multisig wallet.

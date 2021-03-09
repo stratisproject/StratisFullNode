@@ -77,6 +77,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.LogInformation("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
+            if (payload.TransactionId == BigInteger.MinusOne)
+                return;
+
             // Check that the payload is signed by a federation member.
             PubKey pubKey;
 
@@ -98,8 +101,17 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-            BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+            BigInteger confirmationCount;
+
+            try
+            {
+                // Check that the transaction ID in the payload actually exists, and is unconfirmed.
+                confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                return;
+            }
 
             // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
             if (confirmationCount < 1)
