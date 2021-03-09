@@ -18,6 +18,7 @@ using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.IntegrationTests.Common.ReadyData;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Xunit;
 
@@ -49,7 +50,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public WalletOperationsFixture()
         {
-            this.network = new StraxRegTest();
+            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
             this.builder = NodeBuilder.Create("WalletOperationsTests");
             CoreNode stratisNode = this.builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
 

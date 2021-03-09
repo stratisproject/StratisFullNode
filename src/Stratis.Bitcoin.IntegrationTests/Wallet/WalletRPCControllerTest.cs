@@ -26,7 +26,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public WalletRPCControllerTest()
         {
-            this.network = new StraxRegTest();
+            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
         }
 
         [Fact]

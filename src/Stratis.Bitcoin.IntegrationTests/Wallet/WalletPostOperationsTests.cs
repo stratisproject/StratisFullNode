@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public WalletPostOperationsTests()
         {
-            this.network = new StraxRegTest();
+            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
         }
 
         [Fact]
