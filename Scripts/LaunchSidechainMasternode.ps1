@@ -342,6 +342,14 @@ Check-TimeDifference
 if ( $NodeType -eq "50K" ) 
 {
 
+    #Getting ETH Account
+    $gethProcess = Start-Process geth -ArgumentList "account list --datadir=$ethDataDir" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $env:TEMP\accountlist.txt 
+    $gethAccountsOuput = Get-Content $env:TEMP\accountlist.txt
+    $ethAddress = ($gethAccountsOuput.Split('{').Split('}') | Select-Object -Index 1).Insert('0','0x')
+    Write-Host (Get-TimeStamp) "Loaded $ethAddress..." -ForegroundColor Green
+    ""
+    Start-Sleep 10
+
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
@@ -358,7 +366,7 @@ if ( $NodeType -eq "50K" )
             Exit
         }
     }
-
+    <#
     $gethPeerCountBody = ConvertTo-Json -Compress @{
         jsonrpc = "2.0"
         method = "net_peerCount"
@@ -401,11 +409,8 @@ if ( $NodeType -eq "50K" )
         Write-Host (Get-TimeStamp) "$syncProgress Blocks Require Indexing..." -ForegroundColor Yellow
         Start-Sleep 10
     }
-
-    $gethProcess = Start-Process geth -ArgumentList "account list" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $env:TEMP\accountlist.txt 
-    $gethAccountsOuput = Get-Content $env:TEMP\accountlist.txt
-    $ethAddress = ($gethAccountsOuput.Split('{').Split('}') | Select-Object -Index 1).Insert('0','0x')
-
+    #>
+   
     #Move to CirrusPegD
     Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
 }
@@ -685,8 +690,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUpoAxHHOGqS4yFClf4UVWP3Vj
-# cKigggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU28wW4EC42kIv/PW2+l0QzDsH
+# CNqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -756,11 +761,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFJL7M+jY80Xn
-# EI3lzjtP4eouZPeGMA0GCSqGSIb3DQEBAQUABIIBAB+Y5jo3MW//fXLGjkOXOtaP
-# N4y+AJ2zV6sifOzS/4z9XxVN4m4Uiz652NcLJPl83MOZy+AShFcKkzX8iPT52Qcs
-# AGRAdk9RW00392jN9gchj5bOdFKuUl8vPmLmldtEWsRMDi5ArE9/SGfDfG5TUR21
-# 7Fs7mRSuNNDHiXhvcm6bVLmqk+fC2jLqNhxtKlXPlcwbY7hMiXSa2Yfo6p1izSaN
-# STI2KWGCXjbf/82bnqaV46lEhBwAkf6NDIywWWuHipuca9vKXdhnlSLPkwUXV6pd
-# PO5ORk07OvwX4PwhkCBkjpq36p/DunHOhWtc0BMJvfSBCd0dJBsHCOX5QC6sQAI=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFKTcmZvWbA2S
+# bs7WTE0hlZ9OX1r/MA0GCSqGSIb3DQEBAQUABIIBAJmorx9HnV8E8IB4K/hbcq3g
+# z4IMeFSa5HyffYZJ5IOg8o8x/dPfjt9nxMpbPLbbJjvqF1ggfF83usv3l1yo1//1
+# G5PJffyqof8Mrj6xtujcTaOBX4PmvC8nCLspjxGIgnN78f1KKcg57D9BFypmv5AS
+# tGjC4RchX+3OkI7ttG84FNJX9VfDNPmyvIO3ScpPE/g/hJx1BMDgygLi0Hp95VBY
+# v9lz8lyVLSJ15FzttAqmtC0Fc/6p83lZGYW9xPzeoyzHQEkPAC9h2iv0m6G/iKAF
+# wqb9SvynN6bBZecmGMUKWg+Qk06wpaVH4CX2nkjzGeaX4s//3z1Z7nazumLa2y0=
 # SIG # End signature block
