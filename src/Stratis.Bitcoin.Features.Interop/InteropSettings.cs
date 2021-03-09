@@ -55,9 +55,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.EthereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
             this.EthereumPassphrase = nodeSettings.ConfigReader.GetOrDefault(EthereumPassphraseKey, "");
 
-            // TODO: These defaults are intended for Ropsten; they will need to be adjusted in future
             this.EthereumGas = nodeSettings.ConfigReader.GetOrDefault(EthereumGasKey, 3_000_000);
-            this.EthereumGasPrice = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceKey, 1);
+            this.EthereumGasPrice = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceKey, 100);
 
             if (!this.Enabled)
                 return;
