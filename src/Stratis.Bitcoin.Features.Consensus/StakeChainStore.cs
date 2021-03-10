@@ -48,13 +48,16 @@ namespace Stratis.Bitcoin.Features.Consensus
 
         public void Load()
         {
-            HashHeightPair hash = this.stakeDb.GetTipHash();
-            ChainedHeader currentHeader = this.chainIndexer.GetHeader(hash.Hash);
+            HashHeightPair coinViewTip = this.stakeDb.GetTipHash();
+
+            ChainedHeader currentHeader = this.chainIndexer.GetHeader(coinViewTip.Hash);
 
             while (currentHeader == null)
             {
-                hash = this.stakeDb.Rewind();
-                currentHeader = this.chainIndexer.GetHeader(hash.Hash);
+                this.logger.LogInformation("Rewinding {0} from '{1}'.", this.GetType().Name, coinViewTip);
+
+                coinViewTip = this.stakeDb.Rewind();
+                currentHeader = this.chainIndexer.GetHeader(coinViewTip.Hash);
             }
 
             var load = new List<StakeItem>();
