@@ -6,7 +6,9 @@ using NBitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -143,6 +145,8 @@ namespace Stratis.Bitcoin.Tests.Builder
                 e.AddSingleton(nodeSettings.Network);
                 e.AddSingleton<FullNode>();
                 e.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+                e.AddSingleton<ISignals, Bitcoin.Signals.Signals>();
+                e.AddSingleton<ISubscriptionErrorHandler, DefaultSubscriptionErrorHandler>();
             });
 
             this.fullNodeBuilder.ConfigureFeature(e =>
@@ -186,6 +190,7 @@ namespace Stratis.Bitcoin.Tests.Builder
                     e.AddSingleton(nodeSettings.Network);
                     e.AddSingleton<FullNode>();
                     e.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+                    e.AddSingleton<ISignals, Bitcoin.Signals.Signals>();
                 });
 
                 this.fullNodeBuilder.Build();
