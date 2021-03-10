@@ -192,10 +192,10 @@ namespace Stratis.Bitcoin.Features.PoA
                     // The purpose of bootstrap mode is to kickstart the network when the last mined block is very old, which would normally put the node in IBD and inhibit mining.
                     // There is therefore no point keeping this mode enabled once this node has mined successfully.
                     // Additionally, keeping it enabled may result in network splits if this node becomes disconnected from its peers for a prolonged period.
+                    // If DevMode is enabled the miner will conitnue it's bootstrapped mining, i.e. without any connections.
                     if (this.settings.BootstrappingMode && !this.settings.DevMode)
                     {
                         this.logger.LogInformation("Disabling bootstrap mode as a block has been successfully mined.");
-
                         this.settings.DisableBootstrap();
                     }
                 }

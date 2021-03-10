@@ -8,6 +8,9 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Allows mining in case node is in IBD and not connected to anyone.</summary>
         public bool BootstrappingMode { get; private set; }
 
+        /// <summary>
+        /// A flag that allows the miner to continue its bootstrapped mining, whilst having no connections.
+        /// </summary>
         public bool DevMode { get; private set; }
 
         /// <summary>
