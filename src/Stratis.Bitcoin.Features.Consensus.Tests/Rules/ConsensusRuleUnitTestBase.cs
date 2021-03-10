@@ -218,7 +218,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected Mock<ICoinView> coinView;
         protected Mock<IRewindDataIndexCache> rewindDataIndexStore;
 
-        public TestPosConsensusRulesUnitTestBase() : base(KnownNetworks.StraxTest)
+        public TestPosConsensusRulesUnitTestBase() : base(TestBase.GetStraxTestNetworkWithNoSCRules())
         {
             this.stakeChain = new Mock<IStakeChain>();
             this.stakeValidator = new Mock<IStakeValidator>();

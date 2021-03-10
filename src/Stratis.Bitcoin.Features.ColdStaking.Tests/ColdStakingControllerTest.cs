@@ -77,7 +77,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private Mock<IStakeValidator> stakeValidator;
         private MempoolManager mempoolManager;
 
-        public ColdStakingControllerTest() : base(KnownNetworks.StraxMain)
+        public ColdStakingControllerTest() : base(TestBase.GetStraxMainNetworkWithNoSCRules())
         {
             // Register the cold staking script template.
             this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(ColdStakingScriptTemplate.Instance);
@@ -165,30 +165,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.HeaderValidationRules)
                 consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.FullValidationRules)
-            {
-                try
-                {
-                    consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
-                }
-                catch (MissingMethodException)
-                {
-                    switch (ruleType.Name)
-                    {
-                        // Smart-contracts are not covered by these tests so we can safely ignore these
-                        // rules that don't have parameterless constructors.
-                        case nameof(ContractTransactionFullValidationRule):
-                        case nameof(CanGetSenderRule):
-                        case nameof(P2PKHNotContractRule):
-                            break;
-                        case nameof(StraxCoinviewRule):
-                            // This is fine for non-SC tests.
-                            consensusRulesContainer.FullValidationRules.Add(new PosCoinviewRule());
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
+                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
 
             ConsensusRuleEngine consensusRuleEngine = new PosConsensusRuleEngine(this.Network, this.loggerFactory, this.dateTimeProvider,
                 this.chainIndexer, this.nodeDeployments, this.consensusSettings, checkpoints.Object, this.coinView.Object, this.stakeChain.Object,

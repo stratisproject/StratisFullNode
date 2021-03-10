@@ -41,7 +41,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
         private readonly Mock<IStakeChain> stakeChain;
         private readonly Mock<IStakeValidator> stakeValidator;
 
-        public PosBlockAssemblerTest() : base(new StraxTest())
+        public PosBlockAssemblerTest() : base(TestBase.GetStraxTestNetworkWithNoSCRules())
         {
             this.consensusManager = new Mock<IConsensusManager>();
             this.mempool = new Mock<ITxMempool>();
@@ -452,30 +452,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.PartialValidationRules)
                 consensusRulesContainer.PartialValidationRules.Add(Activator.CreateInstance(ruleType) as PartialValidationConsensusRule);
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.FullValidationRules)
-            {
-                try
-                {
-                    consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
-                }
-                catch (MissingMethodException)
-                {
-                    switch (ruleType.Name)
-                    {
-                        // Smart-contracts are not covered by these tests so we can safely ignore these
-                        // rules that don't have parameterless constructors.
-                        case nameof(ContractTransactionFullValidationRule):
-                        case nameof(CanGetSenderRule):
-                        case nameof(P2PKHNotContractRule):
-                            break;
-                        case nameof(StraxCoinviewRule):
-                            // This is fine for non-SC tests.
-                            consensusRulesContainer.FullValidationRules.Add(new PosCoinviewRule());
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
+                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
 
             var posConsensusRules = new PosConsensusRuleEngine(
                 this.Network,

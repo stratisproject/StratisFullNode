@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Create separate network parameters for this test.
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules(new StraxOverrideRegTest());
+                var network = TestBase.GetStraxNetworkWithNoSCRules(new StraxOverrideRegTest());
 
                 // Set the date ranges such that ColdStaking will 'Start' immediately after the initial confirmation window.
                 // Also reduce the minimum number of 'votes' required within the confirmation window to reach 'LockedIn' state.

@@ -42,30 +42,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             var consensusRulesContainer = new ConsensusRulesContainer();
             foreach (var ruleType in this.network.Consensus.ConsensusRules.FullValidationRules)
-            {
-                try
-                {
-                    consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
-                }
-                catch (MissingMethodException)
-                {
-                    switch (ruleType.Name)
-                    {
-                        // Smart-contracts are not covered by these tests so we can safely ignore these
-                        // rules that don't have parameterless constructors.
-                        case nameof(ContractTransactionFullValidationRule):
-                        case nameof(CanGetSenderRule):
-                        case nameof(P2PKHNotContractRule):
-                            break;
-                        case nameof(StraxCoinviewRule):
-                            // This is fine for non-SC tests.
-                            consensusRulesContainer.FullValidationRules.Add(new PosCoinviewRule());
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
+                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
 
             // Register POS consensus rules.
             // new FullNodeBuilderConsensusExtension.PosConsensusRulesRegistration().RegisterRules(this.network.Consensus);

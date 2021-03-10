@@ -327,10 +327,24 @@ namespace Stratis.Bitcoin.Tests.Common
         {
             var network = new StraxRegTest();
             network.SetPrivatePropertyValue(nameof(StratisRegTest.Name), name ?? nameof(StraxRegTest));
-            return GetStraxRegTestNetworkWithNoSCRules(network);
+            return GetStraxNetworkWithNoSCRules(network);
         }
 
-        public static Network GetStraxRegTestNetworkWithNoSCRules(Network network)
+        public static Network GetStraxMainNetworkWithNoSCRules(string name = null)
+        {
+            var network = new StraxMain();
+            network.SetPrivatePropertyValue(nameof(StratisMain.Name), name ?? nameof(StraxMain));
+            return GetStraxNetworkWithNoSCRules(network);
+        }
+
+        public static Network GetStraxTestNetworkWithNoSCRules(string name = null)
+        {
+            var network = new StraxTest();
+            network.SetPrivatePropertyValue(nameof(StratisTest.Name), name ?? nameof(StraxTest));
+            return GetStraxNetworkWithNoSCRules(network);
+        }
+
+        public static Network GetStraxNetworkWithNoSCRules(Network network)
         {
             network.Consensus.MempoolRules.Remove(typeof(CanGetSenderMempoolRule));
             network.Consensus.MempoolRules.Remove(typeof(CheckMinGasLimitSmartContractMempoolRule));
