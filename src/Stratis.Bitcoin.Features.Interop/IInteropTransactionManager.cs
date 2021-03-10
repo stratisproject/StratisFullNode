@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Numerics;
 using NBitcoin;
 
 namespace Stratis.Bitcoin.Features.Interop
@@ -33,5 +34,7 @@ namespace Stratis.Bitcoin.Features.Interop
         bool CheckIfVoted(string requestId, PubKey pubKey);
 
         void RemoveTransaction(string requestId);
+
+        Dictionary<string, HashSet<PubKey>> GetStatus();
     }
 }

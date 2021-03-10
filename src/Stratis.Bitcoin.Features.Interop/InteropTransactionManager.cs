@@ -120,5 +120,13 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.receivedVotes.Remove(requestId);
             }
         }
+
+        public Dictionary<string, HashSet<PubKey>> GetStatus()
+        {
+            lock (this.lockObject)
+            {
+                return this.receivedVotes;
+            }
+        }
     }
 }
