@@ -300,7 +300,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     // First construct the necessary minting transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                     
                     // The request is denominated in satoshi and needs to be converted to wei.
-                    ulong amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
+                    BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
                     
                     string abiData = this.ethereumClientBase.EncodeMintParams(request.DestinationAddress, amountInWei);
 
@@ -392,11 +392,11 @@ namespace Stratis.Bitcoin.Features.Interop
             // Currently the processing is done in the WithdrawalExtractor.
         }
 
-        private ulong CoinsToWei(Money coins)
+        private BigInteger CoinsToWei(Money coins)
         {
-            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(coins.ToUnit(MoneyUnit.BTC));
+            BigInteger baseCurrencyUnits = Web3.Convert.ToWei(coins.ToUnit(MoneyUnit.BTC), UnitConversion.EthUnit.Ether);
 
-            return (ulong)baseCurrencyUnits;
+            return baseCurrencyUnits;
         }
 
         public void Dispose()
