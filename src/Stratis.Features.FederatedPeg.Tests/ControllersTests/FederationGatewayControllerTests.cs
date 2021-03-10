@@ -87,6 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             return controller;
@@ -218,6 +219,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -312,6 +314,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 settings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
