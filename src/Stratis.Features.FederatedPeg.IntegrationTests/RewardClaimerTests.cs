@@ -51,7 +51,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             using var builder = NodeBuilder.Create(this);
 
             var configParameters = new NodeConfigParameters { { "txindex", "1" } };
-            var network = new StraxRegTestAdjusedCoinbaseMaturity();
+            var network = TestBase.GetStraxNetworkWithNoSCRules(new StraxRegTestAdjusedCoinbaseMaturity());
 
             // Start 2 nodes
             CoreNode nodeA = builder.CreateStratisPosNode(network, "rewards-1-nodeA", configParameters: configParameters).AddRewardClaimer().OverrideDateTimeProvider().WithWallet().Start();

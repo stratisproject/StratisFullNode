@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     {
         private readonly IStateRepositoryRoot stateRepositoryRoot;
 
-        public P2PKHNotContractRule(IStateRepositoryRoot stateRepositoryRoot = null)
+        public P2PKHNotContractRule(IStateRepositoryRoot stateRepositoryRoot)
         {
             this.stateRepositoryRoot = stateRepositoryRoot;
         }

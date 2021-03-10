@@ -123,7 +123,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <inheritdoc />
         public override async Task RunAsync(RuleContext context)
         {
-            if (context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
+            if (this.logic != null && context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
                 await this.logic.RunAsync(base.RunAsync, context);
             else
                 await base.RunAsync(context);
@@ -132,13 +132,16 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <inheritdoc/>
         protected override bool CheckInput(Transaction tx, int inputIndexCopy, TxOut txout, PrecomputedTransactionData txData, TxIn input, DeploymentFlags flags)
         {
-            return this.logic.CheckInput(base.CheckInput, tx, inputIndexCopy, txout, txData, input, flags);
+            if (this.logic != null)
+                return this.logic.CheckInput(base.CheckInput, tx, inputIndexCopy, txout, txData, input, flags);
+
+            return base.CheckInput(tx, inputIndexCopy, txout, txData, input, flags);
         }
 
         /// <inheritdoc/>
         public override void UpdateCoinView(RuleContext context, Transaction transaction)
         {
-            if (context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
+            if (this.logic != null && context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
                 this.logic.UpdateCoinView(base.UpdateCoinView, context, transaction);
             else
                 base.UpdateCoinView(context, transaction);
