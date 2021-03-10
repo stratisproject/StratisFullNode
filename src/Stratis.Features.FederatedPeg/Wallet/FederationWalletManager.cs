@@ -1066,7 +1066,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     TransactionBuilder builder = new TransactionBuilder(this.Wallet.Network).AddCoins(coins);
 
-                    if (builder.Verify(transaction, out TransactionPolicyError[] errors))
+                    if (builder.Verify(transaction, transaction.GetFee(coins.ToArray()), out TransactionPolicyError[] errors))
                         return ValidateTransactionResult.Valid();
 
                     var errorList = new List<string>();
