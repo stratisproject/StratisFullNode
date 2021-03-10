@@ -8,6 +8,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Allows mining in case node is in IBD and not connected to anyone.</summary>
         public bool BootstrappingMode { get; private set; }
 
+        public bool DevMode { get; private set; }
+
         /// <summary>
         /// An address to use when mining, if not specified an address from the wallet will be used.
         /// </summary>
@@ -20,6 +22,7 @@ namespace Stratis.Bitcoin.Features.PoA
             TextFileConfiguration config = nodeSettings.ConfigReader;
 
             this.BootstrappingMode = config.GetOrDefault<bool>("bootstrap", false);
+            this.DevMode = config.GetOrDefault<bool>("devmode", false);
             this.MineAddress = config.GetOrDefault<string>("mineaddress", null);
         }
 

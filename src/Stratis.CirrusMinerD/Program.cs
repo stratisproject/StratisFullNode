@@ -44,7 +44,7 @@ namespace Stratis.CirrusMinerD
                 bool isSidechainNode = args.FirstOrDefault(a => a.ToLower() == SidechainArgument) != null;
                 bool startInDevMode = args.FirstOrDefault(a => a.ToLower() == DevModeArgument) != null;
 
-                IFullNode fullNode;
+                IFullNode fullNode = null;
 
                 if (startInDevMode)
                 {
@@ -59,7 +59,6 @@ namespace Stratis.CirrusMinerD
 
                     // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
                     Console.Title = isMainchainNode ? $"Strax Full Node {fullNode.Network.NetworkType}" : $"Cirrus Full Node {fullNode.Network.NetworkType}";
-
                 }
 
                 if (fullNode != null)
@@ -121,8 +120,6 @@ namespace Stratis.CirrusMinerD
                 .AddPoAFeature()
                 .UsePoAConsensus()
                 .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
-                //.AddDynamicMemberhip() TODO: Implement Non Counterchain version
-                //.SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
