@@ -139,7 +139,7 @@ namespace Stratis.Features.Collateral
                     if (this.joinFederationRequestMonitor.AlreadyChecked(votingRequestHeader.HashBlock))
                         continue;
 
-                    var blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
+                    ChainedHeaderBlock blockData = this.consensusManager.GetBlockData(votingRequestHeader.HashBlock);
 
                     this.joinFederationRequestMonitor.OnBlockConnected(new Bitcoin.EventBus.CoreEvents.BlockConnected(
                         new ChainedHeaderBlock(blockData.Block, votingRequestHeader)));
