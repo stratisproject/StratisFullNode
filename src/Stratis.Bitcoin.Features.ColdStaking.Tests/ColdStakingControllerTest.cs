@@ -191,13 +191,15 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             };
 
             // We also have to check that the manually instantiated rules match the ones in the network, or the test isn't valid
-            for (int i = 0; i < mempoolRules.Count; i++)
+            for (int i = 0; i < this.Network.Consensus.MempoolRules.Count; i++)
             {
-                if (this.Network.Consensus.MempoolRules.Any(r => r.GetType() == mempoolRules[i].GetType()))
+                if (this.Network.Consensus.MempoolRules[i] != mempoolRules[i].GetType())
                 {
                     throw new Exception("Mempool rule type mismatch");
                 }
             }
+
+            Assert.Equal(this.Network.Consensus.MempoolRules.Count, mempoolRules.Count);
 
             var mempoolValidator = new MempoolValidator(this.txMemPool, mempoolLock, this.dateTimeProvider, this.mempoolSettings, this.chainIndexer,
                 this.coinView.Object, this.loggerFactory, this.nodeSettings, consensusRuleEngine, mempoolRules, new Signals.Signals(this.loggerFactory, null), this.nodeDeployments);
