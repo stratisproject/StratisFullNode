@@ -37,6 +37,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             if (BlockStake.IsProofOfStake(block))
             {
                 var posRuleContext = context as PosRuleContext;
+                Transaction coinbase = block.Transactions[0];
                 Transaction coinstake = block.Transactions[1];
                 Money stakeReward = coinstake.TotalOut - posRuleContext.TotalCoinStakeValueIn;
                 Money calcStakeReward = fees + this.GetProofOfStakeReward(height);
@@ -64,15 +65,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 // This means that the hot key can be used for staking by anybody and they will not be able to redirect the non-Cirrus reward to the Cirrus script.
                 // It must additionally not be possible to short-change the Cirrus reward script by deliberately sacrificing part of the overall claimed reward.
                 // TODO: Create a distinct consensus error for this?
-
-                // TODO: Determine why this is not accurate.
-                /*
-                if ((calcStakeReward * CirrusRewardPercentage / 100) != rewardScriptTotal)
+                
+                if (((calcStakeReward - coinbase.TotalOut /* Refund amount */) * CirrusRewardPercentage / 100) != rewardScriptTotal)
                 {
                     this.Logger.LogTrace("(-)[BAD_COINSTAKE_REWARD_SCRIPT_AMOUNT]");
                     ConsensusErrors.BadCirrusRewardAmount.Throw();
                 }
-                */
+                
                 // TODO: Perhaps we should limit it to a single output to prevent unnecessary UTXO set bloating
             }
             else
