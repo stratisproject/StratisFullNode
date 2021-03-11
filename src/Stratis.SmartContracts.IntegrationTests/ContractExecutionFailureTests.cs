@@ -25,10 +25,12 @@ namespace Stratis.SmartContracts.IntegrationTests
 {
     public abstract class ContractExecutionFailureTests<T> : IClassFixture<T> where T : class, IMockChainFixture
     {
-        protected readonly IMockChain mockChain;
-        protected readonly MockChainNode node1;
-        protected readonly MockChainNode node2;
-        protected readonly ISenderRetriever senderRetriever;
+        private readonly IMockChain mockChain;
+        private readonly MockChainNode node1;
+        private readonly MockChainNode node2;
+        private readonly ISenderRetriever senderRetriever;
+
+        private uint? activationTime = null;
 
         protected ContractExecutionFailureTests(T fixture)
         {
@@ -36,6 +38,36 @@ namespace Stratis.SmartContracts.IntegrationTests
             this.node1 = this.mockChain.Nodes[0];
             this.node2 = this.mockChain.Nodes[1];
             this.senderRetriever = new SenderRetriever();
+        }
+
+        protected void SkipPOWPhase()
+        {            
+            // Mine enough blocks for staking maturity.
+            this.mockChain.MineBlocks(20);
+
+            var fullNode1 = this.node1.CoreNode.FullNode;
+            var chainIndexer1 = fullNode1.NodeService<ChainIndexer>();
+            fullNode1.Network.Consensus.LastPOWBlock = chainIndexer1.Tip.Height;
+            fullNode1.Network.Consensus.Options = new TestPosConsensusOptions(fullNode1.Network.Consensus.Options as PosConsensusOptions);
+
+            var fullNode2 = this.node2.CoreNode.FullNode;
+            var chainIndexer2 = fullNode2.NodeService<ChainIndexer>();
+            fullNode2.Network.Consensus.LastPOWBlock = chainIndexer2.Tip.Height;
+            fullNode2.Network.Consensus.Options = new TestPosConsensusOptions(fullNode2.Network.Consensus.Options as PosConsensusOptions);
+
+            Assert.Equal(chainIndexer1.Tip.Header.GetHash(), chainIndexer2.Tip.Header.GetHash());
+
+            this.activationTime = chainIndexer1.Tip.Header.Time;
+
+            fullNode1.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
+            {
+                return prev.Header.Time >= this.activationTime;
+            };
+
+            fullNode2.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
+            {
+                return prev.Header.Time >= this.activationTime;
+            };
         }
 
         [Fact]
@@ -821,38 +853,10 @@ namespace Stratis.SmartContracts.IntegrationTests
 
     public class PoSContractExecutionFailureTests : ContractExecutionFailureTests<PoSMockChainFixture>
     {
-        public static uint? activationTime = null;
-
         public PoSContractExecutionFailureTests(PoSMockChainFixture fixture) : base(fixture)
         {
-            // Mine enough blocks for staking maturity.
-            this.mockChain.MineBlocks(20);
+            SkipPOWPhase();
 
-            var fullNode1 = this.node1.CoreNode.FullNode;
-            var chainIndexer1 = fullNode1.NodeService<ChainIndexer>();
-            fullNode1.Network.Consensus.LastPOWBlock = chainIndexer1.Tip.Height;
-            fullNode1.Network.Consensus.Options = new TestPosConsensusOptions(fullNode1.Network.Consensus.Options as PosConsensusOptions);
-
-            var fullNode2 = this.node2.CoreNode.FullNode;
-            var chainIndexer2 = fullNode2.NodeService<ChainIndexer>();
-            fullNode2.Network.Consensus.LastPOWBlock = chainIndexer2.Tip.Height;
-            fullNode2.Network.Consensus.Options = new TestPosConsensusOptions(fullNode2.Network.Consensus.Options as PosConsensusOptions);
-
-            Assert.Equal(chainIndexer1.Tip.Header.GetHash(), chainIndexer2.Tip.Header.GetHash());
-
-            activationTime = chainIndexer1.Tip.Header.Time;
-
-            fullNode1.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
-            {
-                return prev.Header.Time >= activationTime;
-            };
-
-            fullNode2.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
-            {
-                return prev.Header.Time >= activationTime;
-            };
-
-            Thread.Sleep(2000);
         }
     }
 }

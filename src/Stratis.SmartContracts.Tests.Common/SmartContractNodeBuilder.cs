@@ -38,7 +38,7 @@ namespace Stratis.SmartContracts.Tests.Common
         {
             string dataFolder = this.GetNextDataFolderName();
 
-            CoreNode node = this.CreateNode(new StraxRunner(dataFolder, network), "strax.conf");
+            CoreNode node = this.CreateNode(new StraxRunner(dataFolder, network, this.TimeProvider), "strax.conf");
 
             var settings = new NodeSettings(network, args: new string[] { "-conf=strax.conf", "-datadir=" + dataFolder });
 

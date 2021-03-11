@@ -194,7 +194,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// sense to try timestamps earlier than this value.
         /// </para>
         /// </summary>
-        private long lastCoinStakeSearchTime;
+        protected long lastCoinStakeSearchTime;
 
         /// <summary>
         /// Hash of the block headers of the block that was at the tip of the chain during our last

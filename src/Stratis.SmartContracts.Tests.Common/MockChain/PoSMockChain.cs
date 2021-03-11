@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using NBitcoin;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.Miner.Staking;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Tests.Common;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.SmartContracts.Tests.Common.MockChain
 {
@@ -78,43 +76,25 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
             }
         }
 
-        public void Dispose()
+        public void MineBlocks(int count)
         {
-        }
-
-        public void MineBlocks(int amountOfBlocks)
-        {
-            CoreNode node1 = this.nodes[0].CoreNode;
+            CoreNode node1 = this.Nodes[0].CoreNode;
             ChainIndexer chainIndexer1 = node1.FullNode.NodeService<ChainIndexer>();
             int tipHeight = chainIndexer1.Tip.Height;
-            CancellationToken token = new CancellationToken();
             if (tipHeight >= node1.FullNode.Network.Consensus.LastPOWBlock)
             {
-                var minter = node1.FullNode.NodeService<IPosMinting>() as StraxMinting;
-                var nodeLifetime = node1.FullNode.NodeService<INodeLifetime>();
-
-                minter.SetPrivatePropertyValue(typeof(PosMinting), nameof(PosMinting.StakeCancellationTokenSource), CancellationTokenSource.CreateLinkedTokenSource(new[] { nodeLifetime.ApplicationStopping }));
-
-                tipHeight += amountOfBlocks;
-
-                while (chainIndexer1.Tip.Height < tipHeight)
-                {
-                    minter.GenerateBlocksAsync(new List<WalletSecret>() {
-                    new WalletSecret()
-                    {
-                        WalletPassword = "password",
-                        WalletName = "mywallet"
-                    } }, token).GetAwaiter().GetResult();
-                }
+                (node1.FullNode.NodeService<IPosMinting>() as TestStraxMinting).MineBlocks(count);
             }
             else
             {
-                var miner = node1.FullNode.NodeService<IPowMining>() as PowMining;
-                var mineAddress = node1.FullNode.WalletManager().GetUnusedAddress();
-                miner.GenerateBlocks(new ReserveScript(mineAddress.ScriptPubKey), (ulong)amountOfBlocks, int.MaxValue);
+                TestHelper.MineBlocks(node1, count);
             }
 
             this.WaitForAllNodesToSync();
         }
+
+        public void Dispose()
+        {
+        }      
     }
 }
