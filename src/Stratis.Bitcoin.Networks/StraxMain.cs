@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Networks
                 [StraxBIP9Deployments.CSV] = new BIP9DeploymentsParameters("CSV", 0, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
                 [StraxBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Segwit", 1, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
                 [StraxBIP9Deployments.ColdStaking] = new BIP9DeploymentsParameters("ColdStaking", 2, BIP9DeploymentsParameters.AlwaysActive, 999999999, BIP9DeploymentsParameters.DefaultMainnetThreshold),
-                [StraxBIP9Deployments.SystemContracts] = new BIP9DeploymentsParameters("SystemContracts", 3, DateTime.Parse("2021-02-25 06:20:00 GMT"), DateTime.Parse("2031-02-20 00:00:00 GMT"), BIP9DeploymentsParameters.DefaultRegTestThreshold)
+                [StraxBIP9Deployments.SystemContracts] = new BIP9DeploymentsParameters("SystemContracts", 3, DateTime.Parse("2099-02-28 00:00:00 GMT"), DateTime.Parse("2099-12-31 00:00:00 GMT"), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
             this.Consensus = new NBitcoin.Consensus(
