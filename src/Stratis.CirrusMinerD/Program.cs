@@ -5,6 +5,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
@@ -105,7 +106,7 @@ namespace Stratis.CirrusMinerD
 
         private static IFullNode BuildDevCirrusMiningNode(string[] args)
         {
-            string[] devModeArgs = new[] { "-bootstrap=1", "-dbtype=rocksdb" }.Concat(args).ToArray();
+            string[] devModeArgs = new[] { "-bootstrap=1", "-dbtype=rocksdb", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
 
             var network = new CirrusDev();
 
@@ -114,11 +115,13 @@ namespace Stratis.CirrusMinerD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
+            DbType dbType = nodeSettings.GetDbType();
+
             IFullNode node = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
                 .AddPoAFeature()
-                .UsePoAConsensus()
+                .UsePoAConsensus(dbType)
                 .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
                 .UseTransactionNotification()
                 .UseBlockNotification()
@@ -128,7 +131,7 @@ namespace Stratis.CirrusMinerD
                 .AddSmartContracts(options =>
                 {
                     options.UseReflectionExecutor();
-                    options.UsePoAWhitelistedContracts();
+                    options.UsePoAWhitelistedContracts(true);
                 })
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()

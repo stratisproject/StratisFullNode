@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly VotingDataEncoder votingDataEncoder;
 
-        private readonly PoAMinerSettings settings;
+        private readonly PoASettings settings;
 
         private readonly IAsyncProvider asyncProvider;
 
@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Features.PoA
             IWalletManager walletManager,
             INodeStats nodeStats,
             VotingManager votingManager,
-            PoAMinerSettings poAMinerSettings,
+            PoASettings poAMinerSettings,
             IAsyncProvider asyncProvider,
             IIdleFederationMembersKicker idleFederationMembersKicker)
         {
