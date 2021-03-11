@@ -12,6 +12,7 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
@@ -28,7 +29,6 @@ namespace Stratis.CirrusMinerD
 {
     class Program
     {
-        private const string DevModeArgument = "-devmode";
         private const string MainchainArgument = "-mainchain";
         private const string SidechainArgument = "-sidechain";
 
@@ -43,7 +43,7 @@ namespace Stratis.CirrusMinerD
             {
                 bool isMainchainNode = args.FirstOrDefault(a => a.ToLower() == MainchainArgument) != null;
                 bool isSidechainNode = args.FirstOrDefault(a => a.ToLower() == SidechainArgument) != null;
-                bool startInDevMode = args.FirstOrDefault(a => a.ToLower() == DevModeArgument) != null;
+                bool startInDevMode = args.FirstOrDefault(a => a.ToLower() == $"-{PoASettings.DevModeParam}") != null;
 
                 IFullNode fullNode = null;
 
