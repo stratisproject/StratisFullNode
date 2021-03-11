@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Tests.Common;
 
 namespace Stratis.SmartContracts.Tests.Common.MockChain
 {
@@ -17,6 +19,7 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
         protected PoSMockChainFixture(int nodeNum)
         {
             var network = new StraxRegTest();
+            network.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 111 };
             network.Consensus.CoinbaseMaturity = 0;
 
             // TODO: The PoS tests seem to use the same network class to do sets of tests with different rule requirements (signed/unsigned). Need to normalise it to avoid this hack.
