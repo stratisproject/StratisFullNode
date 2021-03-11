@@ -94,9 +94,9 @@ namespace Stratis.CirrusPegD
                 .UseMempool()
                 .AddRPC()
                 .UsePosConsensus()
-                .UseWallet()
+                .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
-                .AddPowPosMining(true)
+                .UseSmartContractPosPowMining()
                 .AddSmartContracts(options =>
                 {
                     options.UseReflectionExecutor();

@@ -21,6 +21,7 @@ using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 
 namespace Stratis.StraxD
 {
@@ -45,9 +46,9 @@ namespace Stratis.StraxD
                     .UseBlockStore(dbType)
                     .UsePosConsensus(dbType)
                     .UseMempool()
-                    .UseColdStakingWallet()
+                    .UseSmartContractWallet()
                     .AddSQLiteWalletRepository()
-                    .AddPowPosMining(true)
+                    .UseSmartContractPosPowMining()
                     .UseApi()
                     .AddRPC()
                     .AddSmartContracts(options =>
