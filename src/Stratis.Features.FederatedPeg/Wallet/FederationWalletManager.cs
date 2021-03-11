@@ -1298,17 +1298,17 @@ namespace Stratis.Features.FederatedPeg.Wallet
             string hash = this.Wallet?.LastBlockSyncedHash == null ? "N/A" : this.Wallet.LastBlockSyncedHash.ToString();
             string height = this.Wallet?.LastBlockSyncedHeight == null ? "N/A" : this.Wallet.LastBlockSyncedHeight.ToString();
 
-            benchLogs.AppendLine("Fed.Wallet.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + height.ToString().PadRight(8) + " Fed.Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + hash);
+            benchLogs.AppendLine("Fed.Wallet.Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height.PadRight(10)} (Hash : {hash})");
         }
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine("====== Federation Wallet ======");
+            benchLog.AppendLine(">> Federation Wallet");
 
             (Money ConfirmedAmount, Money UnConfirmedAmount) = GetSpendableAmount();
 
-            benchLog.AppendLine("Federation Wallet: ".PadRight(LoggingConfiguration.ColumnLength)
-                                + " Confirmed balance: " + ConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
+            benchLog.AppendLine("Federation Wallet".PadRight(LoggingConfiguration.ColumnLength)
+                                + ": Confirmed balance: " + ConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
                                 + " Reserved for withdrawals: " + UnConfirmedAmount.ToString().PadRight(LoggingConfiguration.ColumnLength)
                                 + " Federation Status: " + (this.isFederationActive ? "Active" : "Inactive"));
             benchLog.AppendLine();

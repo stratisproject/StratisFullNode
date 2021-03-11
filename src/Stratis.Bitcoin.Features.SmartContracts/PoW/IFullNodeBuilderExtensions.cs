@@ -33,25 +33,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
                 .FeatureServices(services =>
                 {
                     services.AddSingleton<ConsensusOptions, ConsensusOptions>();
-                    AddCoindbImplementation(services, coindbType);
+                    services.ConfigureCoinDatabaseImplementation(coindbType);
                     services.AddSingleton<ICoinView, CachedCoinView>();
                     services.AddSingleton<IConsensusRuleEngine, PowConsensusRuleEngine>();
                 });
             });
 
             return fullNodeBuilder;
-        }
-
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
-        {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
-
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
-
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
         }
 
         /// <summary>

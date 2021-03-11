@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DBreeze;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Base;
@@ -30,8 +31,8 @@ using Stratis.Bitcoin.Features.SmartContracts.PoW.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -73,7 +74,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 testContext.network,
                 new SenderRetriever(),
                 testContext.StateRoot,
-                testContext.executionCache, 
+                testContext.executionCache,
                 testContext.callDataSerializer,
                 new NodeDeployments(testContext.network, testContext.ChainIndexer));
         }
@@ -208,7 +209,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 this.NodeSettings = new NodeSettings(this.network, args: new string[] { "-checkpoints" });
                 var consensusSettings = new ConsensusSettings(this.NodeSettings);
                 var checkPoints = new Checkpoints(this.network, consensusSettings);
-                this.cachedCoinView = new CachedCoinView(this.network, checkPoints, inMemoryCoinView, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.loggerFactory), consensusSettings);
+                this.cachedCoinView = new CachedCoinView(this.network, checkPoints, inMemoryCoinView, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, this.NodeSettings, new Mock<IVersionProvider>().Object), consensusSettings);
 
                 var nodeDeployments = new NodeDeployments(this.network, this.ChainIndexer);
 
@@ -255,7 +256,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                         this.cachedCoinView,
                         chainState,
                         new InvalidBlockHashStore(dateTimeProvider),
-                        new NodeStats(dateTimeProvider, this.loggerFactory),
+                        new NodeStats(dateTimeProvider, NodeSettings.Default(network), new Mock<IVersionProvider>().Object),
                         asyncProvider,
                         consensusRulesContainer)
                     .SetupRulesEngineParent();

@@ -870,13 +870,13 @@ namespace Stratis.Bitcoin.Features.Wallet
             return this.WalletRepository.GetUsedAddresses(accountReference, isChange);
         }
 
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null)
+        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null)
         {
-            return this.GetHistory(walletName, accountName, null, null, int.MaxValue);
+            return this.GetHistory(walletName, accountName, null, null, int.MaxValue, searchQuery);
         }
-        
+
         /// <inheritdoc />
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName, long? prevOutputTxTime, int? prevOutputIndex, int? take = int.MaxValue)
+        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName, long? prevOutputTxTime, int? prevOutputIndex, int? take = int.MaxValue, string searchQuery = null)
         {
             Guard.NotEmpty(walletName, nameof(walletName));
 
@@ -903,7 +903,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 foreach (HdAccount account in accounts)
                 {
-                    accountsHistory.Add(this.GetHistoryForAccount(account, prevOutputTxTime, prevOutputIndex, take.GetValueOrDefault()));
+                    accountsHistory.Add(this.GetHistoryForAccount(account, prevOutputTxTime, prevOutputIndex, take.GetValueOrDefault(), searchQuery));
                 }
             }
 
@@ -915,8 +915,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             return this.GetHistoryForAccount(account, null, null, int.MaxValue);
         }
-      
-        protected AccountHistory GetHistoryForAccount(HdAccount account, long? prevOutputTxTime = null, int? prevOutputIndex = null, int take = int.MaxValue)
+
+        protected AccountHistory GetHistoryForAccount(HdAccount account, long? prevOutputTxTime = null, int? prevOutputIndex = null, int take = int.MaxValue, string searchQuery = null)
         {
             Guard.NotNull(account, nameof(account));
             FlatHistory[] items;
@@ -926,10 +926,13 @@ namespace Stratis.Bitcoin.Features.Wallet
                 // Get transactions contained in the account.
                 var query = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
 
+                // When the account is a normal one, we want to filter out all cold stake UTXOs.
                 if (account.IsNormalAccount())
                 {
-                    // When the account is a normal one, we want to filter out all cold stake UTXOs.
-                    items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
+                        items = query.SelectMany(s => s.Transactions.Where(t => (t.IsColdCoinStake == null || t.IsColdCoinStake == false) && t.Id == parsedTxId).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    else
+                        items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
                 }
                 else
                 {
@@ -1207,7 +1210,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                         if (this.WalletRepository.RewindWallet(walletName, fork).RewindExecuted)
                             this.logger.LogDebug("Rewound wallet, {0}='{1}', {2}='{3}'", nameof(fork), fork, nameof(this.ChainIndexer.Tip), this.ChainIndexer.Tip?.HashBlock);
-                            
+
                         // Update the lowest common tip.
                         walletTip = (fork == null) ? null : walletTip?.FindFork(fork);
                     }

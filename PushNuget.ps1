@@ -49,6 +49,10 @@ rm "src\Stratis.Bitcoin.Features.RPC\bin\Release\" -Recurse -Force
 dotnet pack src\Stratis.Bitcoin.Features.RPC --configuration Release --include-source --include-symbols
 dotnet nuget push "src\Stratis.Bitcoin.Features.RPC\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
 
+rm "src\Stratis.Bitcoin.Features.SmartContracts\bin\Release\" -Recurse -Force
+dotnet pack src\Stratis.Bitcoin.Features.SmartContracts --configuration Release --include-source --include-symbols  
+dotnet nuget push "src\Stratis.Bitcoin.Features.SmartContracts\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
+
 rm "src\Stratis.Bitcoin.Features.Wallet\bin\Release\" -Recurse -Force
 dotnet pack src\Stratis.Bitcoin.Features.Wallet --configuration Release --include-source --include-symbols  
 dotnet nuget push "src\Stratis.Bitcoin.Features.Wallet\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
@@ -72,6 +76,10 @@ dotnet nuget push "src\Stratis.Features.FederatedPeg\bin\Release\*.symbols.nupkg
 rm "src\Stratis.Features.SQLiteWalletRepository\bin\Release\" -Recurse -Force
 dotnet pack src\Stratis.Features.SQLiteWalletRepository --configuration Release --include-source --include-symbols
 dotnet nuget push "src\Stratis.Features.SQLiteWalletRepository\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
+
+rm "src\Stratis.Bitcoin.Features.ColdStaking\bin\Release\" -Recurse -Force
+dotnet pack src\Stratis.Bitcoin.Features.ColdStaking --configuration Release --include-source --include-symbols  
+dotnet nuget push "src\Stratis.Bitcoin.Features.ColdStaking\bin\Release\*.symbols.nupkg" -k "" --source "https://api.nuget.org/v3/index.json"
 
 # TEST PROJECTS
 

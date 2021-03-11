@@ -8,14 +8,13 @@ using NBitcoin;
 using NBitcoin.Protocol;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.BlockStore.Repositories;
 using Stratis.Bitcoin.Features.ColdStaking;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.SQLiteWalletRepository.External;
 using Xunit;
 
 namespace Stratis.Features.SQLiteWalletRepository.Tests
@@ -76,7 +75,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
     public class BlockBase
     {
         public NodeSettings NodeSettings { get; private set; }
-        public BlockRepository BlockRepo { get; private set; }
+        public LevelDbBlockRepository BlockRepo { get; private set; }
         public ChainIndexer ChainIndexer { get; private set; }
 
         internal Metrics Metrics { get; set; }
@@ -90,7 +89,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
             var serializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
 
             // Build the chain from the block store.
-            this.BlockRepo = new BlockRepository(network, this.NodeSettings.DataFolder, this.NodeSettings.LoggerFactory, serializer);
+            this.BlockRepo = new LevelDbBlockRepository(network, this.NodeSettings.DataFolder, serializer);
             this.BlockRepo.Initialize();
 
             var prevBlock = new Dictionary<uint256, uint256>();
@@ -443,10 +442,10 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     // FINDFORK
                     // See if FindFork can be run from multiple threads
                     var forks = new ChainedHeader[1];
-                    Parallel.ForEach(forks.Select((f,n) => n), n =>
-                    {
-                        forks[n] = repo.FindFork("test2", chainedHeader2);
-                    });
+                    Parallel.ForEach(forks.Select((f, n) => n), n =>
+                     {
+                         forks[n] = repo.FindFork("test2", chainedHeader2);
+                     });
 
                     Assert.DoesNotContain(forks, f => f.Height != chainedHeader2.Height);
 

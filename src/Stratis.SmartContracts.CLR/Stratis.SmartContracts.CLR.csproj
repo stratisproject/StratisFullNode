@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     
-    <AssemblyVersion>1.0.6.5</AssemblyVersion>
-    <FileVersion>1.0.6.5</FileVersion>
-    <Version>1.0.6.5</Version>
+    <AssemblyVersion>2.0.1.0</AssemblyVersion>
+    <FileVersion>2.0.1.0</FileVersion>
+    <Version>2.0.1.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <Product>Stratis.SmartContracts.CLR</Product>
   </PropertyGroup>
@@ -13,7 +13,7 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />
     <PackageReference Include="ICSharpCode.Decompiler" Version="3.2.0.3856" />
-    <PackageReference Include="Stratis.SmartContracts.Standards" Version="1.0.0" />
+    <PackageReference Include="Stratis.SmartContracts.Standards" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>

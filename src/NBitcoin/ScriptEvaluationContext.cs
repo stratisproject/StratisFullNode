@@ -1411,7 +1411,10 @@ namespace NBitcoin
                                         int sigsReq;
                                         try
                                         {
-                                            (members, sigsReq) = this.Network.Federations.GetFederation(federationId).GetFederationDetails();
+                                            if (s is ScriptAtHeight sah)
+                                                (members, sigsReq) = this.Network.Federations.GetFederationAtHeight(federationId, (ulong)sah.BlockHeight, sah.BlockHash).GetFederationDetails();
+                                            else
+                                                (members, sigsReq) = this.Network.Federations.GetFederation(federationId).GetFederationDetails();
                                         }
                                         catch (Exception)
                                         {

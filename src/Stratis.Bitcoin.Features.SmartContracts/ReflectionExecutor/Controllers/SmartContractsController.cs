@@ -723,6 +723,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                     return this.serializer.ToAddress(bytes);
                 case MethodParameterDataType.ByteArray:
                     return bytes.ToHexString();
+                case MethodParameterDataType.UInt128:
+                    return this.serializer.ToUInt128(bytes);
+                case MethodParameterDataType.UInt256:
+                    return this.serializer.ToUInt256(bytes);
             }
 
             return null;

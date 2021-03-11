@@ -5,12 +5,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using NLog;
+using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Utilities
 {
     public interface INodeStats
     {
+
+        /// <summary>
+        /// A flag indicating whether or not to display bench stats on the console output.
+        /// </summary>
+        bool DisplayBenchStats { get; set; }
+
         /// <summary>Registers action that will be used to append node stats when they are being collected.</summary>
         /// <param name="appendStatsAction">Action that will be invoked during stats collection.</param>
         /// <param name="statsType">Type of stats.</param>
@@ -34,6 +43,9 @@ namespace Stratis.Bitcoin.Utilities
 
     public class NodeStats : INodeStats
     {
+        /// <inheritdoc />
+        public bool DisplayBenchStats { get; set; }
+
         // The amount of seconds the period loop will wait on a component to return it's stats before cancelling.
         private const int ComponentStatsWaitSeconds = 10;
 
@@ -41,17 +53,23 @@ namespace Stratis.Bitcoin.Utilities
         private readonly object locker;
 
         private readonly IDateTimeProvider dateTimeProvider;
-
         private readonly ILogger logger;
-
+        private readonly NodeSettings nodeSettings;
+        private readonly string nodeStartedOn;
         private List<StatsItem> stats;
+        private readonly IVersionProvider versionProvider;
 
-        public NodeStats(IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory)
+        public NodeStats(IDateTimeProvider dateTimeProvider, NodeSettings nodeSettings, IVersionProvider versionProvider)
         {
             this.dateTimeProvider = dateTimeProvider;
+            this.DisplayBenchStats = nodeSettings.ConfigReader.GetOrDefault("displaybenchstats", false);
             this.locker = new object();
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
+            this.nodeSettings = nodeSettings;
             this.stats = new List<StatsItem>();
+            this.versionProvider = versionProvider;
+
+            this.nodeStartedOn = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
         }
 
         /// <inheritdoc />
@@ -85,7 +103,7 @@ namespace Stratis.Bitcoin.Utilities
         {
             lock (this.locker)
             {
-                string date = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
+                string currentDateTime = this.dateTimeProvider.GetUtcNow().ToString(CultureInfo.InvariantCulture);
 
                 var inlineStatsBuilders = this.stats
                     .Where(x => x.StatsType == StatsType.Inline)
@@ -108,11 +126,11 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.LogWarning("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.Warn("{0} failed to provide inline statistics after {1} seconds, please investigate...", inlineStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.LogError("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
+                        this.logger.Warn("{0} failed to provide inline statistics: {1}", inlineStatItem.ComponentName, ex.ToString());
                     }
                 });
 
@@ -137,17 +155,28 @@ namespace Stratis.Bitcoin.Utilities
                     }
                     catch (OperationCanceledException)
                     {
-                        this.logger.LogWarning("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
+                        this.logger.Warn("{0} failed to provide statistics after {1} seconds, please investigate...", componentStatItem.ComponentName, ComponentStatsWaitSeconds);
                     }
                     catch (Exception ex)
                     {
-                        this.logger.LogError("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
+                        this.logger.Warn("{0} failed to provide statistics: {1}", componentStatItem.ComponentName, ex.ToString());
                     }
                 });
 
                 var statsBuilder = new StringBuilder();
 
-                statsBuilder.AppendLine($"======Node stats====== {date}");
+                statsBuilder.AppendLine();
+                statsBuilder.AppendLine($">> Node Stats");
+                statsBuilder.AppendLine("Agent".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Agent}:{this.versionProvider.GetVersion()} ({(int)this.nodeSettings.ProtocolVersion})");
+                statsBuilder.AppendLine("Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.Network.Name}");
+                statsBuilder.AppendLine("Database".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.ConfigReader.GetOrDefault("dbtype", "leveldb")}");
+                statsBuilder.AppendLine("Node Started".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeStartedOn}");
+                statsBuilder.AppendLine("Current Date".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentDateTime}");
+
+                if (this.nodeSettings.ConfigReader.GetOrDefault("displayextendednodestats", false))
+                    statsBuilder.AppendLine("Data Folder".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {this.nodeSettings.DataFolder.RootPath}");
+
+                statsBuilder.AppendLine();
 
                 foreach (var item in inlineStatsBuilders)
                 {

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
@@ -13,7 +14,7 @@ namespace Stratis.Bitcoin.Tests.Base
     public class TipsManagerTests : TestBase
     {
         private readonly LoggerFactory loggerFactory;
-        private readonly KeyValueRepository keyValueRepo;
+        private readonly LevelDbKeyValueRepository keyValueRepo;
         private readonly ITipsManager tipsManager;
 
         private readonly List<ChainedHeader> mainChainHeaders;
@@ -22,7 +23,7 @@ namespace Stratis.Bitcoin.Tests.Base
         {
             this.loggerFactory = new LoggerFactory();
             string dir = CreateTestDir(this);
-            this.keyValueRepo = new KeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
+            this.keyValueRepo = new LevelDbKeyValueRepository(dir, new DBreezeSerializer(this.Network.Consensus.ConsensusFactory));
 
             this.tipsManager = new TipsManager(this.keyValueRepo, this.loggerFactory);
 

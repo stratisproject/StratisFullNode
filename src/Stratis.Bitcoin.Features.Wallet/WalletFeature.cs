@@ -96,9 +96,10 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private void AddInlineStats(StringBuilder log)
         {
-            log.AppendLine("Wallet.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) +
-                (this.walletManager.ContainsWallets ? this.walletManager.WalletTipHeight.ToString().PadRight(8) : "No Wallet".PadRight(8)) +
-                (this.walletManager.ContainsWallets ? (" Wallet.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.walletManager.WalletTipHash) : string.Empty));
+            if (this.walletManager.ContainsWallets)
+                log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.walletManager.WalletTipHeight}".PadRight(10) + $"(Hash: {this.walletManager.WalletTipHash})");
+            else
+                log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + ": No Wallet");
         }
 
         private void AddComponentStats(StringBuilder log)
@@ -108,8 +109,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             if (walletNamesSQL.Any())
             {
-                log.AppendLine();
-                log.AppendLine("======Wallets======");
+                log.AppendLine(">> Wallets");
 
                 var walletManager = (WalletManager)this.walletManager;
 
@@ -119,12 +119,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                     foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
                     {
-                        log.AppendLine(
-                            ($"{watchOnly}{walletName}/{accountBalance.Account.Name}" + ",").PadRight(
-                                LoggingConfiguration.ColumnLength + 10)
-                            + (" Confirmed balance: " + accountBalance.AmountConfirmed.ToString()).PadRight(
-                                LoggingConfiguration.ColumnLength + 20)
-                            + " Unconfirmed balance: " + accountBalance.AmountUnconfirmed.ToString());
+                        log.AppendLine($"{watchOnly}{walletName}/{accountBalance.Account.Name}".PadRight(LoggingConfiguration.ColumnLength) + $": Confirmed balance: {accountBalance.AmountConfirmed}".PadRight(LoggingConfiguration.ColumnLength + 20) + $" Unconfirmed balance: {accountBalance.AmountUnconfirmed}");
                     }
                 }
             }
