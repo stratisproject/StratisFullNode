@@ -7,6 +7,8 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
     {
         public string Message { get; set; }
 
+        public string State { get; set; }
+
         public Type NodeEventType { get; } = typeof(FullNodeEvent);
 
         public void BuildFrom(EventBase @event)
@@ -14,6 +16,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Events
             if (@event is FullNodeEvent progressEvent)
             {
                 this.Message = progressEvent.Message;
+                this.State = progressEvent.State;
                 return;
             }
 
