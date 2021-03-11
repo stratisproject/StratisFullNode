@@ -5,12 +5,14 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
@@ -41,19 +43,27 @@ namespace Stratis.CirrusMinerD
             {
                 bool isMainchainNode = args.FirstOrDefault(a => a.ToLower() == MainchainArgument) != null;
                 bool isSidechainNode = args.FirstOrDefault(a => a.ToLower() == SidechainArgument) != null;
+                bool startInDevMode = args.FirstOrDefault(a => a.ToLower() == $"-{PoASettings.DevModeParam}") != null;
 
-                if (isSidechainNode == isMainchainNode)
+                IFullNode fullNode = null;
+
+                if (startInDevMode)
                 {
-                    throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
+                    fullNode = BuildDevCirrusMiningNode(args);
+                }
+                else
+                {
+                    if (isSidechainNode == isMainchainNode)
+                        throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
+
+                    fullNode = isMainchainNode ? BuildStraxNode(args) : BuildCirrusMiningNode(args);
+
+                    // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
+                    Console.Title = isMainchainNode ? $"Strax Full Node {fullNode.Network.NetworkType}" : $"Cirrus Full Node {fullNode.Network.NetworkType}";
                 }
 
-                IFullNode node = isMainchainNode ? GetStraxNode(args) : GetCirrusMiningNode(args);
-
-                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = isMainchainNode ? $"Strax Full Node {node.Network.NetworkType}" : $"Cirrus Full Node {node.Network.NetworkType}";
-
-                if (node != null)
-                    await node.RunAsync();
+                if (fullNode != null)
+                    await fullNode.RunAsync();
             }
             catch (Exception ex)
             {
@@ -61,7 +71,7 @@ namespace Stratis.CirrusMinerD
             }
         }
 
-        private static IFullNode GetCirrusMiningNode(string[] args)
+        private static IFullNode BuildCirrusMiningNode(string[] args)
         {
             var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
             {
@@ -94,10 +104,45 @@ namespace Stratis.CirrusMinerD
             return node;
         }
 
+        private static IFullNode BuildDevCirrusMiningNode(string[] args)
+        {
+            string[] devModeArgs = new[] { "-bootstrap=1", "-dbtype=rocksdb", "-defaultwalletname=cirrusdev", "-defaultwalletpassword=password" }.Concat(args).ToArray();
+            var network = new CirrusDev();
+
+            var nodeSettings = new NodeSettings(network, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: devModeArgs)
+            {
+                MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
+            };
+
+            DbType dbType = nodeSettings.GetDbType();
+
+            IFullNode node = new FullNodeBuilder()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
+                .AddPoAFeature()
+                .UsePoAConsensus(dbType)
+                .AddPoAMiningCapability<SmartContractPoABlockDefinition>()
+                .UseTransactionNotification()
+                .UseBlockNotification()
+                .UseApi()
+                .UseMempool()
+                .AddRPC()
+                .AddSmartContracts(options =>
+                {
+                    options.UseReflectionExecutor();
+                    options.UsePoAWhitelistedContracts(true);
+                })
+                .UseSmartContractWallet()
+                .AddSQLiteWalletRepository()
+                .Build();
+
+            return node;
+        }
+
         /// <summary>
         /// Returns a standard Stratis node. Just like StratisD.
         /// </summary>
-        private static IFullNode GetStraxNode(string[] args)
+        private static IFullNode BuildStraxNode(string[] args)
         {
             // TODO: Hardcode -addressindex for better user experience
 

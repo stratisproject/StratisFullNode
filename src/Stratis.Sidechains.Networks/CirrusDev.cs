@@ -19,15 +19,15 @@ using Stratis.Bitcoin.Features.SmartContracts.Rules;
 namespace Stratis.Sidechains.Networks
 {
     /// <summary>
-    /// Right now, ripped nearly straight from <see cref="PoANetwork"/>.
+    /// Network to be used when Cirrus Miner is started in devmode.
     /// </summary>
-    public class CirrusRegTest : PoANetwork
+    public sealed class CirrusDev : PoANetwork
     {
         public IList<Mnemonic> FederationMnemonics { get; }
 
-        public CirrusRegTest()
+        public CirrusDev()
         {
-            this.Name = "CirrusRegTest";
+            this.Name = "CirrusDev";
             this.NetworkType = NetworkType.Regtest;
             this.CoinTicker = "TCRS";
             this.Magic = 0x522357C;
@@ -47,7 +47,7 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
 
-            var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
+            var consensusFactory = new SmartContractPoAConsensusFactory();
 
             // Create the genesis block.
             this.GenesisTime = 1513622125;
@@ -57,42 +57,25 @@ namespace Stratis.Sidechains.Networks
             this.GenesisReward = Money.Zero;
 
             string coinbaseText = "https://news.bitcoin.com/markets-update-cryptocurrencies-shed-billions-in-bloody-sell-off/";
-            Block genesisBlock = CirrusNetwork.CreateGenesis(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, coinbaseText);
+            Block genesisBlock = CreateGenesis(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, coinbaseText);
 
             this.Genesis = genesisBlock;
 
             this.FederationMnemonics = new[] {
                 "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
-                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
-                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
             }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
             this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
-
             var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
 
             var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
             foreach (PubKey pubKey in federationPubKeys)
-                genesisFederationMembers.Add(new CollateralFederationMember(pubKey, true, new Money(0), null));
+                genesisFederationMembers.Add(new FederationMember(pubKey));
 
-            // Will replace the last multisig member.
-            var newFederationMemberMnemonics = new string[]
-            {
-                "fat chalk grant major hair possible adjust talent magnet lobster retreat siren"
-            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
-
-            var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
-            var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
-
-            // Mining keys!
-            this.StraxMiningMultisigMembers = newFederationPubKeys;
-
-            // Register only the new federation as we won't be doing anything with the old federation.
             this.Federations = new Federations();
 
-            // Default transaction-signing keys!
-            // Use the new keys as the old keys should never be used by the new opcode.
-            this.Federations.RegisterFederation(new Federation(newFederationPubKeys.ToArray()));
+            // Default transaction-signing keys
+            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
                 maxBlockBaseSize: 1_000_000,
@@ -133,7 +116,7 @@ namespace Stratis.Sidechains.Networks
                 maxMoney: Money.Coins(20_000_000),
                 coinbaseMaturity: 1,
                 premineHeight: 2,
-                premineReward: Money.Coins(20_000_000),
+                premineReward: Money.Coins(1_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
                 targetSpacing: TimeSpan.FromSeconds(16),
@@ -179,13 +162,10 @@ namespace Stratis.Sidechains.Networks
             // 16 below should be changed to TargetSpacingSeconds when we move that field.
             Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
-            // TODO: Do we need Asserts for block hash
-
             this.RegisterRules(this.Consensus);
             this.RegisterMempoolRules(this.Consensus);
         }
 
-        // This should be abstract or virtual
         protected override void RegisterRules(IConsensus consensus)
         {
             // IHeaderValidationConsensusRule -----------------------
@@ -260,7 +240,6 @@ namespace Stratis.Sidechains.Networks
                 // These rules occur directly after the fee check rule in the non- smart contract mempool.
                 typeof(SmartContractFormatLogicMempoolRule),
                 typeof(CanGetSenderMempoolRule),
-                typeof(AllowedCodeHashLogicMempoolRule), // PoA-specific
                 typeof(CheckMinGasLimitSmartContractMempoolRule),
 
                 // Remaining non-SC rules.
@@ -269,6 +248,38 @@ namespace Stratis.Sidechains.Networks
                 typeof(CheckReplacementMempoolRule),
                 typeof(CheckAllInputsMempoolRule)
             };
+        }
+
+        private Block CreateGenesis(SmartContractPoAConsensusFactory consensusFactory, uint genesisTime, uint nonce, uint bits, int version, Money reward, string coinbaseText)
+        {
+            Transaction genesisTransaction = consensusFactory.CreateTransaction();
+            genesisTransaction.Version = 1;
+            genesisTransaction.AddInput(new TxIn()
+            {
+                ScriptSig = new Script(Op.GetPushOp(0), new Op()
+                {
+                    Code = (OpcodeType)0x1,
+                    PushData = new[] { (byte)42 }
+                }, Op.GetPushOp(Encoders.ASCII.DecodeData(coinbaseText)))
+            });
+
+            genesisTransaction.AddOutput(new TxOut()
+            {
+                Value = reward
+            });
+
+            Block genesis = consensusFactory.CreateBlock();
+            genesis.Header.BlockTime = Utils.UnixTimeToDateTime(genesisTime);
+            genesis.Header.Bits = bits;
+            genesis.Header.Nonce = nonce;
+            genesis.Header.Version = version;
+            genesis.Transactions.Add(genesisTransaction);
+            genesis.Header.HashPrevBlock = uint256.Zero;
+            genesis.UpdateMerkleRoot();
+
+            ((SmartContractPoABlockHeader)genesis.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+
+            return genesis;
         }
     }
 }

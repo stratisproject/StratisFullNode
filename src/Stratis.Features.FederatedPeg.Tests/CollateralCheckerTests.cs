@@ -71,7 +71,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             var fullNode = new Mock<IFullNode>();
 
-            IFederationManager federationManager = new FederationManager(counterChainSettings, fullNode.Object, network, nodeSettings, loggerFactory, signals);
+            IFederationManager federationManager = new FederationManager(fullNode.Object, network, nodeSettings, signals, new PoASettings(nodeSettings), counterChainSettings);
             var votingManager = new VotingManager(federationManager, loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, finalizedBlockRepo, network);
             var federationHistory = new FederationHistory(federationManager, votingManager);
             votingManager.Initialize(federationHistory);
