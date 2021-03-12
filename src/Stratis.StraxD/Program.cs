@@ -46,6 +46,7 @@ namespace Stratis.StraxD
                     .UseBlockStore(dbType)
                     .UsePosConsensus(dbType)
                     .UseMempool()
+                    .UseColdStakingWallet()
                     .UseSmartContractWallet()
                     .AddSQLiteWalletRepository()
                     .UseSmartContractPosPowMining()

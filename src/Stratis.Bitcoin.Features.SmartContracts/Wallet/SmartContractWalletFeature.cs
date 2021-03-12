@@ -1,18 +1,16 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Builder;
-using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
@@ -56,39 +54,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
         private void AddComponentStats(StringBuilder log)
         {
-            IEnumerable<string> walletNamesSQL = this.walletManager.GetWalletsNames();
-
-            if (walletNamesSQL.Any())
-            {
-                log.AppendLine(">> Wallets");
-
-                var walletManager = (WalletManager)this.walletManager;
-
-                foreach (string walletName in walletNamesSQL)
-                {
-                    foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
-                    {
-                        log.AppendLine($"{walletName}/{accountBalance.Account.Name}".PadRight(LoggingConfiguration.ColumnLength) + $": Confirmed balance: {accountBalance.AmountConfirmed}".PadRight(LoggingConfiguration.ColumnLength + 20) + $" Unconfirmed balance: {accountBalance.AmountUnconfirmed}");
-                    }
-                }
-            }
         }
 
         private void AddInlineStats(StringBuilder log)
         {
-            if (this.walletManager is WalletManager walletManager)
-            {
-                int height = walletManager.LastBlockHeight();
-                ChainedHeader block = this.chainIndexer.GetHeader(height);
-                uint256 hashBlock = block == null ? 0 : block.HashBlock;
-
-                if (this.walletManager.ContainsWallets)
-                    log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height}".PadRight(10) + $"(Hash: {hashBlock})");
-                else
-                    log.AppendLine("Wallet Height".PadRight(LoggingConfiguration.ColumnLength) + ": No Wallet");
-
-                log.AppendLine("");
-            }
         }
 
         /// <inheritdoc />
@@ -119,21 +88,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
+                if (!features.FeatureRegistrations.Any(f => f.FeatureType.IsAssignableFrom(typeof(WalletFeature))))
+                {
+                    fullNodeBuilder.UseWallet();
+                }
+
                 features
                 .AddFeature<SmartContractWalletFeature>()
                 .FeatureServices(services =>
                 {
-                    services.AddSingleton<IWalletSyncManager, WalletSyncManager>();
-                    services.AddSingleton<IWalletTransactionHandler, SmartContractWalletTransactionHandler>();
-                    services.AddSingleton<IWalletManager, WalletManager>();
-                    services.AddSingleton<IWalletFeePolicy, WalletFeePolicy>();
+                    services.Replace(ServiceDescriptor.Singleton<IWalletTransactionHandler, SmartContractWalletTransactionHandler>());
                     services.AddSingleton<ISmartContractTransactionService, SmartContractTransactionService>();
-                    services.AddSingleton<IBroadcasterManager, FullNodeBroadcasterManager>();
-                    services.AddSingleton<BroadcasterBehavior>();
-                    services.AddSingleton<WalletSettings>();
-                    services.AddSingleton<IAddressBookManager, AddressBookManager>();
-                    services.AddSingleton<IWalletService, WalletService>();
-                    services.AddSingleton<IReserveUtxoService, ReserveUtxoService>();
 
                     services.AddTransient<WalletRPCController>();
                 });
