@@ -53,6 +53,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         private readonly ILogger logger;
         private readonly IMaturedBlocksProvider maturedBlocksProvider;
         private readonly Network network;
+        private readonly IPeerBanning peerBanning;
 
         public FederationGatewayController(
             IAsyncProvider asyncProvider,
@@ -64,6 +65,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             IFederatedPegSettings federatedPegSettings,
             IFederationWalletManager federationWalletManager,
             IFullNode fullNode,
+            IPeerBanning peerBanning,
             IFederationManager federationManager = null)
         {
             this.asyncProvider = asyncProvider;
@@ -77,6 +79,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
             this.maturedBlocksProvider = maturedBlocksProvider;
             this.network = network;
+            this.peerBanning = peerBanning;
         }
 
         /// <summary>
@@ -191,8 +194,15 @@ namespace Stratis.Features.FederatedPeg.Controllers
                     var federationMemberConnection = new FederationMemberConnectionInfo() { FederationMemberIp = federationIpEndpoints.ToString() };
 
                     INetworkPeer peer = this.connectionManager.FindNodeByEndpoint(federationIpEndpoints);
-                    if (peer != null && peer.IsConnected)
-                        federationMemberConnection.Connected = true;
+
+                    if (peer != null)
+                    {
+                        if (peer.IsConnected)
+                            federationMemberConnection.Connected = true;
+
+                        if (this.peerBanning.IsBanned(peer.PeerEndPoint))
+                            federationMemberConnection.IsBanned = true;
+                    }
 
                     infoModel.FederationMemberConnections.Add(federationMemberConnection);
                 }
@@ -287,7 +297,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <summary>
         /// Remove's a federation member's IP address from the federation IP list.
         /// </summary>
-        /// <response code="200">The federation member's IP was successfully added.</response>
+        /// <response code="200">The federation member's IP was successfully removed.</response>
         /// <response code="400">Unexpected exception occurred</response>
         [Route(FederationGatewayRouteEndPoint.FederationMemberIpRemove)]
         [HttpPut]
@@ -320,7 +330,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// <summary>
         /// Replaces a federation member's IP address from the federation IP list with a new one.
         /// </summary>
-        /// <response code="200">The federation member's IP was successfully added.</response>
+        /// <response code="200">The federation member's IP was successfully replaced.</response>
         /// <response code="400">Unexpected exception occurred</response>
         [Route(FederationGatewayRouteEndPoint.FederationMemberIpReplace)]
         [HttpPut]

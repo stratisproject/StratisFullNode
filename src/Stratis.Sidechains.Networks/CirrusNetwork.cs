@@ -6,6 +6,12 @@ namespace Stratis.Sidechains.Networks
 {
     public static class CirrusNetwork
     {
+        /// <summary> The name of the root folder containing the different side chain block data.</summary>
+        public const string NetworkRootFolderName = "cirrus";
+
+        /// <summary> The default name used for the side chain configuration file. </summary>
+        public const string NetworkDefaultConfigFilename = "cirrus.conf";
+
         public static NetworksSelector NetworksSelector
         {
             get

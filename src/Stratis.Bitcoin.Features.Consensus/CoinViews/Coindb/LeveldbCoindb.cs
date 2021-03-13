@@ -11,7 +11,7 @@ using Stratis.Bitcoin.Utilities;
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
     /// <summary>
-    /// Persistent implementation of coinview using dBreeze database.
+    /// Persistent implementation of coinview using the dBreeze database engine.
     /// </summary>
     public class LevelDbCoindb : ICoindb, IStakedb, IDisposable
     {

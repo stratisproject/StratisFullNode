@@ -87,6 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             return controller;
@@ -218,6 +219,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -242,7 +244,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
 
-            this.federationManager = new FederationManager(counterChainSettings, fullNode.Object, this.network, NodeSettings.Default(this.network), this.loggerFactory, this.signals);
+            this.federationManager = new FederationManager(fullNode.Object, this.network, NodeSettings.Default(this.network), this.signals, new PoASettings(nodeSettings), counterChainSettings);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 
@@ -312,6 +314,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 settings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
