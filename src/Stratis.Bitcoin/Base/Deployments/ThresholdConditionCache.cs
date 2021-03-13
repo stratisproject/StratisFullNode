@@ -23,8 +23,12 @@ namespace Stratis.Bitcoin.Base.Deployments
         // Represents bits 001 of the VersionBitsTopMask to indicate that this is a BIP9 version.
         public const uint VersionbitsTopBits = 0x20000000;
 
+        // Indicates that the header contains additional fields.
+        // The first field is a uint "Size" field to indicate the serialized size of additional fields.
+        public const int ExtendedHeaderBit = 0x10000000;
+
         // Total bits available for versionbits.
-        private const int VersionbitsNumBits = 29;
+        private const int VersionbitsNumBits = 28;
 
         // Array size required to hold all BIP9 deployment activation states.
         public int ArraySize => this.consensus.BIP9Deployments.Length;
