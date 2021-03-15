@@ -44,6 +44,10 @@ namespace Stratis.SmartContracts.CLR.Serialization
                     return typeof(ulong);
                 case MethodParameterDataType.ByteArray:
                     return typeof(byte[]);
+                case MethodParameterDataType.UInt128:
+                    return typeof(UInt128);
+                case MethodParameterDataType.UInt256:
+                    return typeof(UInt256);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(b), b, "Unsupported type");
             }
@@ -86,6 +90,12 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
             if (o is int)
                 return MethodParameterDataType.Int;
+
+            if (o is UInt128)
+                return MethodParameterDataType.UInt128;
+
+            if (o is UInt256)
+                return MethodParameterDataType.UInt256;
 
             // Any other types are not supported.
             throw new ArgumentOutOfRangeException(nameof(o), o, string.Format("{0} is not supported.", o.GetType().Name));

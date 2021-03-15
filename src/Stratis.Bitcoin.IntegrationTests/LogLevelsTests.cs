@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Flurl;
@@ -76,10 +75,10 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var exception = act.Should().Throw<FlurlHttpException>().Which;
                 var response = exception.Call.Response;
 
-                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 List<ErrorModel> errors = errorResponse.Errors;
 
-                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+                response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be($"Logger name `{ruleName}` doesn't exist.");
             }
@@ -109,10 +108,10 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var exception = act.Should().Throw<FlurlHttpException>().Which;
                 var response = exception.Call.Response;
 
-                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 List<ErrorModel> errors = errorResponse.Errors;
 
-                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+                response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be($"Failed converting {logLevel} to a member of NLog.LogLevel.");
             }
@@ -133,12 +132,12 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // Act.
                 var request = new LogRulesRequest { LogRules = new List<LogRuleRequest> { new LogRuleRequest { RuleName = ruleName, LogLevel = logLevel } } };
 
-                HttpResponseMessage result = await $"http://localhost:{node.ApiPort}/api"
+                var result = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("node/loglevels")
                     .PutJsonAsync(request);
 
                 // Assert.
-                result.StatusCode.Should().Be(HttpStatusCode.OK);
+                result.StatusCode.Should().Be((int)HttpStatusCode.OK);
                 this.rules = LogManager.Configuration.LoggingRules;
                 this.rules.Single(r => r.LoggerNamePattern == ruleName).Levels.Should().ContainInOrder(new[] { LogLevel.Trace, LogLevel.Debug, LogLevel.Info, LogLevel.Warn, LogLevel.Error, LogLevel.Fatal });
             }
@@ -159,12 +158,12 @@ namespace Stratis.Bitcoin.IntegrationTests
                 // Act.
                 var request = new LogRulesRequest { LogRules = new List<LogRuleRequest> { new LogRuleRequest { RuleName = ruleName, LogLevel = logLevel } } };
 
-                HttpResponseMessage result = await $"http://localhost:{node.ApiPort}/api"
+                var result = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("node/loglevels")
                     .PutJsonAsync(request);
 
                 // Assert.
-                result.StatusCode.Should().Be(HttpStatusCode.OK);
+                result.StatusCode.Should().Be((int)HttpStatusCode.OK);
                 this.rules = LogManager.Configuration.LoggingRules;
                 this.rules.Single(r => r.LoggerNamePattern == ruleName).Levels.Should().ContainInOrder(new[] { LogLevel.Info, LogLevel.Warn, LogLevel.Error, LogLevel.Fatal });
             }
@@ -199,12 +198,12 @@ namespace Stratis.Bitcoin.IntegrationTests
                 }
                 };
 
-                HttpResponseMessage result = await $"http://localhost:{node1.ApiPort}/api"
+                var result = await $"http://localhost:{node1.ApiPort}/api"
                     .AppendPathSegment("node/loglevels")
                     .PutJsonAsync(request);
 
                 // Assert.
-                result.StatusCode.Should().Be(HttpStatusCode.OK);
+                result.StatusCode.Should().Be((int)HttpStatusCode.OK);
                 this.rules = LogManager.Configuration.LoggingRules;
                 this.rules.Single(r => r.LoggerNamePattern == ruleName1).Levels.Should().ContainInOrder(new[] { LogLevel.Error, LogLevel.Fatal });
                 this.rules.Single(r => r.LoggerNamePattern == ruleName2).Levels.Should().ContainInOrder(new[] { LogLevel.Error, LogLevel.Fatal });

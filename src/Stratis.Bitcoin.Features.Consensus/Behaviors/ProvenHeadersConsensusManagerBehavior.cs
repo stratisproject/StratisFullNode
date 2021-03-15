@@ -124,12 +124,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Behaviors
                     if (headersPayload.Headers[i] is ProvenBlockHeader phHeader)
                     {
                         BlockHeader newHeader = this.ChainIndexer.Network.Consensus.ConsensusFactory.CreateBlockHeader();
-                        newHeader.Bits = phHeader.Bits;
-                        newHeader.Time = phHeader.Time;
-                        newHeader.Nonce = phHeader.Nonce;
-                        newHeader.Version = phHeader.Version;
-                        newHeader.HashMerkleRoot = phHeader.HashMerkleRoot;
-                        newHeader.HashPrevBlock = phHeader.HashPrevBlock;
+                        newHeader.CopyFields(phHeader);
 
                         headersPayload.Headers[i] = newHeader;
                     }

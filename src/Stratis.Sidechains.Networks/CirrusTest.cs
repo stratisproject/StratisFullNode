@@ -22,12 +22,6 @@ namespace Stratis.Sidechains.Networks
     /// </summary>
     public class CirrusTest : PoANetwork
     {
-        /// <summary> The name of the root folder containing the different federated peg blockchains.</summary>
-        private const string NetworkRootFolderName = "cirrus";
-
-        /// <summary> The default name used for the federated peg configuration file. </summary>
-        private const string NetworkDefaultConfigFilename = "cirrus.conf";
-
         public CirrusTest()
         {
             this.Name = "CirrusTest";
@@ -44,8 +38,8 @@ namespace Stratis.Sidechains.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = NetworkRootFolderName;
-            this.DefaultConfigFilename = NetworkDefaultConfigFilename;
+            this.RootFolderName = CirrusNetwork.NetworkRootFolderName;
+            this.DefaultConfigFilename = CirrusNetwork.NetworkDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
@@ -221,7 +215,8 @@ namespace Stratis.Sidechains.Networks
                 { 1600000, new CheckpointInfo(new uint256("0x696cd64ec08b67ed3a3ec1e3add77c0e8203d8d6c0bb7df96dd9508dda4ba67e")) },
                 { 1700000, new CheckpointInfo(new uint256("0xf42564107701d81e847e5dc6bd95da6bf32cb54e762d84118a7764349b414e68")) },
                 { 1800000, new CheckpointInfo(new uint256("0x57a3119de52cf43b66d6e805a644c20fdee63557038cd68c429d47b21d111084")) },
-                { 1950000, new CheckpointInfo(new uint256("0xf64b399a0c22cb0641c2aee63c60ced5bc65992ed08ddcec6f061e8bfb3b6b70")) }
+                { 1950000, new CheckpointInfo(new uint256("0xf64b399a0c22cb0641c2aee63c60ced5bc65992ed08ddcec6f061e8bfb3b6b70")) },
+                { 2150000, new CheckpointInfo(new uint256("0x7bcb5e1df4b7ee287cc59a534183af263a8bd19ffe11f818c565af33008ed2aa")) }
             };
 
             this.DNSSeeds = new List<DNSSeedData>

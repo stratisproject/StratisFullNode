@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             IWalletManager walletManager,
             INodeStats nodeStats,
             VotingManager votingManager,
-            PoAMinerSettings poAMinerSettings,
+            PoASettings poAMinerSettings,
             IAsyncProvider asyncProvider,
             IIdleFederationMembersKicker idleFederationMembersKicker) : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
                 connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker)
@@ -59,8 +59,7 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
         {
             for (int i = 0; i < count; i++)
             {
-                this.timeProvider.AdjustedTimeOffset += TimeSpan.FromSeconds(
-                    this.slotsManager.GetRoundLengthSeconds(this.federationManager.GetFederationMembers().Count));
+                this.timeProvider.AdjustedTimeOffset += this.slotsManager.GetRoundLength(this.federationManager.GetFederationMembers().Count);
 
                 uint timeNow = (uint)this.timeProvider.GetAdjustedTimeAsUnixTimestamp();
 

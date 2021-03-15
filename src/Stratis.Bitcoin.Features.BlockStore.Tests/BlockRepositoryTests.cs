@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Stratis.Bitcoin.Tests.Common.Logging;
-using Stratis.Bitcoin.Utilities;
 using LevelDB;
 using NBitcoin;
+using Stratis.Bitcoin.Features.BlockStore.Repositories;
+using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Tests.Common.Logging;
+using Stratis.Bitcoin.Utilities;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.BlockStore.Tests
 {
-    public class BlockRepositoryTests : LogsTestBase
+    public sealed class BlockRepositoryTests : LogsTestBase
     {
         [Fact]
         public void InitializesGenesisBlockAndTxIndexOnFirstLoad()
@@ -21,8 +23,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                byte[] blockRow = engine.Get(BlockRepository.CommonTableName, new byte[0]);
-                bool txIndexRow = BitConverter.ToBoolean(engine.Get(BlockRepository.CommonTableName, new byte[1]));
+                byte[] blockRow = engine.Get(BlockRepositoryConstants.CommonTableName, new byte[0]);
+                bool txIndexRow = BitConverter.ToBoolean(engine.Get(BlockRepositoryConstants.CommonTableName, new byte[1]));
 
                 Assert.Equal(this.Network.GetGenesis().GetHash(), this.DBreezeSerializer.Deserialize<HashHeightPair>(blockRow).Hash);
                 Assert.False(txIndexRow);
@@ -36,8 +38,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(56), 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(new uint256(56), 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -46,8 +48,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                byte[] blockRow = engine.Get(BlockRepository.CommonTableName, new byte[0]);
-                bool txIndexRow = BitConverter.ToBoolean(engine.Get(BlockRepository.CommonTableName, new byte[1]));
+                byte[] blockRow = engine.Get(BlockRepositoryConstants.CommonTableName, new byte[0]);
+                bool txIndexRow = BitConverter.ToBoolean(engine.Get(BlockRepositoryConstants.CommonTableName, new byte[1]));
 
                 Assert.Equal(new HashHeightPair(new uint256(56), 1), this.DBreezeSerializer.Deserialize<HashHeightPair>(blockRow));
                 Assert.True(txIndexRow);
@@ -61,8 +63,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(false));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(false));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -79,8 +81,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
                 var blockId = new uint256(8920);
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -102,10 +104,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
                 block.Header.GetHash();
                 block.Transactions.Add(trans);
 
-                engine.Put(BlockRepository.BlockTableName, block.Header.GetHash().ToBytes(), block.ToBytes());
-                engine.Put(BlockRepository.TransactionTableName, trans.GetHash().ToBytes(), block.Header.GetHash().ToBytes());
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.BlockTableName, block.Header.GetHash().ToBytes(), block.ToBytes());
+                engine.Put(BlockRepositoryConstants.TransactionTableName, trans.GetHash().ToBytes(), block.Header.GetHash().ToBytes());
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -121,8 +123,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(false));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(false));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -138,8 +140,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -155,9 +157,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.TransactionTableName, new uint256(26).ToBytes(), new uint256(42).ToBytes());
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.TransactionTableName, new uint256(26).ToBytes(), new uint256(42).ToBytes());
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -193,8 +195,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[0], this.DBreezeSerializer.Serialize(new HashHeightPair(uint256.Zero, 1)));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -204,10 +206,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                byte[] blockHashKeyRow = engine.Get(BlockRepository.CommonTableName, new byte[0]);
+                byte[] blockHashKeyRow = engine.Get(BlockRepositoryConstants.CommonTableName, new byte[0]);
 
-                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepository.BlockTableName);
-                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepository.TransactionTableName);
+                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepositoryConstants.BlockTableName);
+                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepositoryConstants.TransactionTableName);
 
                 Assert.Equal(new HashHeightPair(nextBlockHash, 100), this.DBreezeSerializer.Deserialize<HashHeightPair>(blockHashKeyRow));
                 Assert.Equal(2, blockDict.Count);
@@ -233,7 +235,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             string dir = CreateTestDir(this);
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -243,7 +245,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                bool txIndexRow = BitConverter.ToBoolean(engine.Get(BlockRepository.CommonTableName, new byte[1]));
+                bool txIndexRow = BitConverter.ToBoolean(engine.Get(BlockRepositoryConstants.CommonTableName, new byte[1]));
                 Assert.False(txIndexRow);
             }
         }
@@ -256,7 +258,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
+                engine.Put(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -281,7 +283,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
                 for (int i = 0; i < blocks.Length; i++)
-                    engine.Put(BlockRepository.BlockTableName, blocks[i].GetHash().ToBytes(), blocks[i].ToBytes());
+                    engine.Put(BlockRepositoryConstants.BlockTableName, blocks[i].GetHash().ToBytes(), blocks[i].ToBytes());
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -313,7 +315,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
+                engine.Put(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
             }
 
             using (IBlockRepository repository = this.SetupRepository(this.Network, dir))
@@ -342,9 +344,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
-                engine.Put(BlockRepository.TransactionTableName, block.Transactions[0].GetHash().ToBytes(), block.GetHash().ToBytes());
-                engine.Put(BlockRepository.CommonTableName, new byte[1], BitConverter.GetBytes(true));
+                engine.Put(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
+                engine.Put(BlockRepositoryConstants.TransactionTableName, block.Transactions[0].GetHash().ToBytes(), block.GetHash().ToBytes());
+                engine.Put(BlockRepositoryConstants.CommonTableName, new byte[1], BitConverter.GetBytes(true));
             }
 
             var tip = new HashHeightPair(new uint256(45), 100);
@@ -356,9 +358,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
 
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                byte[] blockHashKeyRow = engine.Get(BlockRepository.CommonTableName, new byte[0]);
-                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepository.BlockTableName);
-                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepository.TransactionTableName);
+                byte[] blockHashKeyRow = engine.Get(BlockRepositoryConstants.CommonTableName, new byte[0]);
+                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepositoryConstants.BlockTableName);
+                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepositoryConstants.TransactionTableName);
 
                 Assert.Equal(tip, this.DBreezeSerializer.Deserialize<HashHeightPair>(blockHashKeyRow));
                 Assert.Empty(blockDict);
@@ -377,7 +379,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             // Set up database to mimic that created when TxIndex was off. No transactions stored.
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
+                engine.Put(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
             }
 
             // Turn TxIndex on and then reindex database, as would happen on node startup if -txindex and -reindex are set.
@@ -390,8 +392,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             // Check that after indexing database, the transaction inside the block is now indexed.
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepository.BlockTableName);
-                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepository.TransactionTableName);
+                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepositoryConstants.BlockTableName);
+                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepositoryConstants.TransactionTableName);
 
                 // Block stored as expected.
                 Assert.Single(blockDict);
@@ -416,8 +418,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             // Set up database to mimic that created when TxIndex was on. Transaction from block is stored.
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                engine.Put(BlockRepository.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
-                engine.Put(BlockRepository.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
+                engine.Put(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes(), block.ToBytes());
+                engine.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
             }
 
             // Turn TxIndex off and then reindex database, as would happen on node startup if -txindex=0 and -reindex are set.
@@ -430,8 +432,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             // Check that after indexing database, the transaction is no longer stored.
             using (var engine = new DB(new Options() { CreateIfMissing = true }, dir))
             {
-                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepository.BlockTableName);
-                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepository.TransactionTableName);
+                Dictionary<byte[], byte[]> blockDict = engine.SelectDictionary(BlockRepositoryConstants.BlockTableName);
+                Dictionary<byte[], byte[]> transDict = engine.SelectDictionary(BlockRepositoryConstants.TransactionTableName);
 
                 // Block still stored as expected.
                 Assert.Single(blockDict);
@@ -532,13 +534,11 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             }
         }
 
-        private IBlockRepository SetupRepository(Network main, string dir)
+        private IBlockRepository SetupRepository(Network main, string dataFolder)
         {
             var dBreezeSerializer = new DBreezeSerializer(main.Consensus.ConsensusFactory);
-
-            var repository = new BlockRepository(main, dir, this.LoggerFactory.Object, dBreezeSerializer);
+            var repository = new LevelDbBlockRepository(main, dataFolder, dBreezeSerializer);
             repository.Initialize();
-
             return repository;
         }
     }

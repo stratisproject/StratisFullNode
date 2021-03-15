@@ -79,6 +79,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private IFederationMember GetFederationMemberForBlockInternal(ChainedHeader chainedHeader, List<IFederationMember> federation)
         {
+            if (chainedHeader.Height == 0)
+                return federation.Last();
+
             // Try to provide the public key that signed the block.
             try
             {

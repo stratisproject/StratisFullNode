@@ -97,7 +97,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletSyncManager = Substitute.For<IFederationWalletSyncManager>();
             this.FederationWalletTransactionHandler = Substitute.For<IFederationWalletTransactionHandler>();
-            this.walletFeePolicy = Substitute.For<IWalletFeePolicy>();
+            this.walletFeePolicy = new WalletFeePolicy(NodeSettings.Default(this.network));
+
             this.connectionManager = Substitute.For<IConnectionManager>();
             this.federatedPegBroadcaster = Substitute.For<IFederatedPegBroadcaster>();
             this.inputConsolidator = Substitute.For<IInputConsolidator>();
@@ -106,12 +107,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.wallet = null;
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.ChainIndexer = new ChainIndexer(this.network);
-            this.federatedPegSettings.GetWithdrawalTransactionFee(Arg.Any<int>()).ReturnsForAnyArgs((x) =>
-            {
-                int numInputs = x.ArgAt<int>(0);
-
-                return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-            });
 
             // Generate the keys used by the federation members for our tests.
             this.federationKeys = new[]

@@ -32,9 +32,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
-        private DBreezeSerializer dBreezeSerializer;
+        private readonly DBreezeSerializer dBreezeSerializer;
 
-        private string dataFolder;
+        private readonly string dataFolder;
 
         public FasterKV<Types.StoreKey, Types.StoreValue, Types.StoreInput, Types.StoreOutput, Types.StoreContext, Types.StoreFunctions> db;
         public IDevice log;
@@ -60,7 +60,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
             this.dataFolder = folder;
 
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 400);
         }
 
         public void Initialize()
@@ -401,7 +402,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private void AddBenchStats(StringBuilder log)
         {
-            log.AppendLine("======Faster Bench======");
+            log.AppendLine(">> Faster Bench");
 
             BackendPerformanceSnapshot snapShot = this.performanceCounter.Snapshot();
 

@@ -238,7 +238,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
             this.contract.Invoke(methodCall);
 
-            var smartContractState = this.instance.GetBaseTypePrivateFieldValue("state");
+            var smartContractState = this.instance.GetBaseTypePrivateFieldValue("contractState");
 
             Assert.NotNull(smartContractState);
             Assert.Equal<object>(this.state, smartContractState);
@@ -348,7 +348,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
             receiveContract.Invoke(methodCall);
 
-            var smartContractState = receiveInstance.GetBaseTypePrivateFieldValue("state");
+            var smartContractState = receiveInstance.GetBaseTypePrivateFieldValue("contractState");
 
             Assert.NotNull(smartContractState);
             Assert.Equal<object>(this.state, smartContractState);

@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Utilities;
 using LevelDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Persistence;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 {
     /// <summary>
     /// Persistent implementation of the <see cref="ProvenBlockHeader"/> DBreeze repository.
     /// </summary>
-    public class ProvenBlockHeaderRepository : IProvenBlockHeaderRepository
+    public class LevelDbProvenBlockHeaderRepository : IProvenBlockHeaderRepository
     {
         /// <summary>
         /// Instance logger.
@@ -27,25 +28,12 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// </summary>
         private readonly DB leveldb;
 
-        private object locker;
+        private readonly object locker;
 
         /// <summary>
         /// Specification of the network the node runs on - RegTest/TestNet/MainNet.
         /// </summary>
         private readonly Network network;
-
-        /// <summary>
-        /// Database key under which the block hash and height of a <see cref="ProvenBlockHeader"/> tip is stored.
-        /// </summary>
-        private static readonly byte[] blockHashHeightKey = new byte[] { 1 };
-
-        private static readonly byte provenBlockHeaderTable = 1;
-        private static readonly byte blockHashHeightTable = 2;
-
-        /// <summary>
-        /// Current <see cref="ProvenBlockHeader"/> tip.
-        /// </summary>
-        private ProvenBlockHeader provenBlockHeaderTip;
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
@@ -56,10 +44,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// Initializes a new instance of the object.
         /// </summary>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
-        /// <param name="folder"><see cref="ProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
+        /// <param name="folder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
         /// <param name="loggerFactory">Factory to create a logger for this type.</param>
         /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
-        public ProvenBlockHeaderRepository(Network network, DataFolder folder, ILoggerFactory loggerFactory,
+        public LevelDbProvenBlockHeaderRepository(Network network, DataFolder folder, ILoggerFactory loggerFactory,
             DBreezeSerializer dBreezeSerializer)
         : this(network, folder.ProvenBlockHeaderPath, loggerFactory, dBreezeSerializer)
         {
@@ -69,10 +57,10 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// Initializes a new instance of the object.
         /// </summary>
         /// <param name="network">Specification of the network the node runs on - RegTest/TestNet/MainNet.</param>
-        /// <param name="folder"><see cref="ProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
+        /// <param name="folder"><see cref="LevelDbProvenBlockHeaderRepository"/> folder path to the DBreeze database files.</param>
         /// <param name="loggerFactory">Factory to create a logger for this type.</param>
         /// <param name="dBreezeSerializer">The serializer to use for <see cref="IBitcoinSerializable"/> objects.</param>
-        public ProvenBlockHeaderRepository(Network network, string folder, ILoggerFactory loggerFactory,
+        public LevelDbProvenBlockHeaderRepository(Network network, string folder, ILoggerFactory loggerFactory,
             DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
@@ -120,7 +108,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    row = this.leveldb.Get(provenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
+                    row = this.leveldb.Get(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
                 }
 
                 if (row != null)
@@ -157,7 +145,6 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
         /// <summary>
         /// Set's the hash and height tip of the new <see cref="ProvenBlockHeader"/>.
         /// </summary>
-        /// <param name="transaction"> Open database transaction.</param>
         /// <param name="newTip"> Hash height pair of the new block tip.</param>
         private void SetTip(HashHeightPair newTip)
         {
@@ -165,7 +152,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             lock (this.locker)
             {
-                this.leveldb.Put(blockHashHeightTable, blockHashHeightKey, this.dBreezeSerializer.Serialize(newTip));
+                this.leveldb.Put(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey, this.dBreezeSerializer.Serialize(newTip));
             }
         }
 
@@ -178,16 +165,13 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             using (var batch = new WriteBatch())
             {
                 foreach (KeyValuePair<int, ProvenBlockHeader> header in headers)
-                    batch.Put(provenBlockHeaderTable, BitConverter.GetBytes(header.Key), this.dBreezeSerializer.Serialize(header.Value));
+                    batch.Put(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(header.Key), this.dBreezeSerializer.Serialize(header.Value));
 
                 lock (this.locker)
                 {
                     this.leveldb.Write(batch, new WriteOptions() { Sync = true });
                 }
             }
-
-            // Store the latest ProvenBlockHeader in memory.
-            this.provenBlockHeaderTip = headers.Last().Value;
         }
 
         /// <summary>
@@ -201,7 +185,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             byte[] row = null;
             lock (this.locker)
             {
-                row = this.leveldb.Get(blockHashHeightTable, blockHashHeightKey);
+                row = this.leveldb.Get(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey);
             }
 
             if (row != null)

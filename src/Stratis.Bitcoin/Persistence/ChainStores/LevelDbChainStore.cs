@@ -5,9 +5,9 @@ using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
-namespace Stratis.Bitcoin.Consensus
+namespace Stratis.Bitcoin.Persistence.ChainStores
 {
-    public class LeveldbHeaderStore : IChainStore, IDisposable
+    public class LevelDbChainStore : IChainStore, IDisposable
     {
         private readonly Network network;
 
@@ -21,9 +21,9 @@ namespace Stratis.Bitcoin.Consensus
 
         private readonly DB leveldb;
 
-        private object locker;
+        private readonly object locker;
 
-        public LeveldbHeaderStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer)
+        public LevelDbChainStore(Network network, DataFolder dataFolder, ChainIndexer chainIndexer)
         {
             this.network = network;
             this.ChainIndexer = chainIndexer;
@@ -75,12 +75,7 @@ namespace Stratis.Bitcoin.Consensus
             {
                 // If ProvenBlockHeader copy the header parameters.
                 BlockHeader newHeader = consensusFactory.CreateBlockHeader();
-                newHeader.Bits = blockHeader.Bits;
-                newHeader.Time = blockHeader.Time;
-                newHeader.Nonce = blockHeader.Nonce;
-                newHeader.Version = blockHeader.Version;
-                newHeader.HashMerkleRoot = blockHeader.HashMerkleRoot;
-                newHeader.HashPrevBlock = blockHeader.HashPrevBlock;
+                newHeader.CopyFields(blockHeader);
 
                 blockHeader = newHeader;
             }

@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
@@ -465,15 +466,14 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
                 new Mock<IStakeValidator>().Object,
                 new Mock<IChainState>().Object,
                 new InvalidBlockHashStore(dateTimeProvider),
-                new NodeStats(dateTimeProvider, this.LoggerFactory.Object),
+                new NodeStats(dateTimeProvider, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object),
                 new Mock<IRewindDataIndexCache>().Object,
                 this.CreateAsyncProvider(),
                 consensusRulesContainer);
 
             posConsensusRules.SetupRulesEngineParent();
 
-            this.consensusManager.SetupGet(x => x.ConsensusRules)
-                .Returns(posConsensusRules);
+            this.consensusManager.SetupGet(x => x.ConsensusRules).Returns(posConsensusRules);
         }
 
         private TxMempoolEntry[] SetupTxMempool(ChainIndexer chainIndexer, PosConsensusOptions newOptions, Money txFee, params Transaction[] transactions)

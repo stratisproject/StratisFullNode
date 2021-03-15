@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -86,6 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             return controller;
@@ -217,6 +219,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -241,7 +244,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
 
-            this.federationManager = new FederationManager(counterChainSettings, fullNode.Object, this.network, NodeSettings.Default(this.network), this.loggerFactory, this.signals);
+            this.federationManager = new FederationManager(fullNode.Object, this.network, NodeSettings.Default(this.network), this.signals, new PoASettings(nodeSettings), counterChainSettings);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 
@@ -254,7 +257,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
             var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new KeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
+            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
@@ -311,6 +314,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 settings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

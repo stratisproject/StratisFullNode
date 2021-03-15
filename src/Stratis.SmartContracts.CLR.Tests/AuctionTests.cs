@@ -190,6 +190,16 @@ namespace Stratis.SmartContracts.CLR.Tests
             return this.GetObject<ulong>(key);
         }
 
+        public UInt128 GetUInt128(string key)
+        {
+            return this.GetObject<UInt128>(key);
+        }
+
+        public UInt256 GetUInt256(string key)
+        {
+            return this.GetObject<UInt256>(key);
+        }
+
         public string GetString(string key)
         {
             return this.GetObject<string>(key);
@@ -251,6 +261,17 @@ namespace Stratis.SmartContracts.CLR.Tests
         }
 
         public void SetUInt64(string key, ulong value)
+        {
+            this.SetObject(key, value);
+        }
+
+        public void SetUInt128(string key, UInt128 value)
+        {
+            this.SetObject(key, value);
+        }
+
+
+        public void SetUInt256(string key, UInt256 value)
         {
             this.SetObject(key, value);
         }

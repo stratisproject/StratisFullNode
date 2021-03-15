@@ -64,7 +64,7 @@ namespace Stratis.Features.Collateral
                 .FeatureServices(services =>
                 {
                     services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
-                    services.AddSingleton<PoAMinerSettings>();
+                    services.AddSingleton<PoASettings>();
                     services.AddSingleton<MinerSettings>();
                     services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();

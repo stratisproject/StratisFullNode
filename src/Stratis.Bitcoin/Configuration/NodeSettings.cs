@@ -11,6 +11,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Configuration
@@ -107,11 +108,6 @@ namespace Stratis.Bitcoin.Configuration
         /// is met. For this reason, the minimum relay transaction fee is usually lower than the minimum fee.
         /// </summary>
         public FeeRate MinRelayTxFeeRate { get; private set; }
-
-        /// <summary>
-        /// If true then the node will add and start the SignalR feature.
-        /// </summary>
-        public bool EnableSignalR { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the object.
@@ -212,7 +208,10 @@ namespace Stratis.Bitcoin.Configuration
             }
 
             // Set the data folder.
-            this.DataFolder = new DataFolder(this.DataDir);
+            if (this.GetDbType() == DbType.Leveldb)
+                this.DataFolder = new DataFolder(this.DataDir);
+            else
+                this.DataFolder = new DataFolder(this.DataDir, this.GetDbType());
 
             // Attempt to load NLog configuration from the DataFolder.
             this.LogSettings = new LogSettings();
@@ -229,8 +228,6 @@ namespace Stratis.Bitcoin.Configuration
                 if (File.Exists(this.ConfigurationFile))
                     this.ReadConfigurationFile();
             }
-
-            this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR", false, this.Logger);
 
             // Create the custom logger factory.
             this.LoggerFactory.AddFilters(this.LogSettings, this.DataFolder);
@@ -391,6 +388,7 @@ namespace Stratis.Bitcoin.Configuration
             builder.AppendLine($"-mintxfee=<number>        Minimum fee rate. Defaults to {network.MinTxFee}.");
             builder.AppendLine($"-fallbackfee=<number>     Fallback fee rate. Defaults to {network.FallbackFee}.");
             builder.AppendLine($"-minrelaytxfee=<number>   Minimum relay fee rate. Defaults to {network.MinRelayTxFee}.");
+            builder.AppendLine($"-displaybenchstats=<bool> Logs benchmark statistics to the console window (true/false).");
 
             defaults.Logger.LogInformation(builder.ToString());
 

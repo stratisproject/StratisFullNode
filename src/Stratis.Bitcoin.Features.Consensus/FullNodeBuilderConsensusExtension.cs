@@ -27,7 +27,8 @@ namespace Stratis.Bitcoin.Features.Consensus
                     .AddFeature<PowConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        AddCoindbImplementation(services, coindbType);
+                        ConfigureCoinDatabaseImplementation(services, coindbType);
+
                         services.AddSingleton<ConsensusOptions, ConsensusOptions>();
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<IConsensusRuleEngine, PowConsensusRuleEngine>();
@@ -51,8 +52,9 @@ namespace Stratis.Bitcoin.Features.Consensus
                     .AddFeature<PosConsensusFeature>()
                     .FeatureServices(services =>
                     {
-                        AddCoindbImplementation(services, coindbType);
-                        services.AddSingleton<IStakedb>(provider => (IStakedb)provider.GetService<ICoindb>());
+                        services.ConfigureCoinDatabaseImplementation(coindbType);
+
+                        services.AddSingleton(provider => (IStakedb)provider.GetService<ICoindb>());
                         services.AddSingleton<ICoinView, CachedCoinView>();
                         services.AddSingleton<StakeChainStore>().AddSingleton<IStakeChain, StakeChainStore>(provider => provider.GetService<StakeChainStore>());
                         services.AddSingleton<IStakeValidator, StakeValidator>();
@@ -62,31 +64,33 @@ namespace Stratis.Bitcoin.Features.Consensus
                         services.AddSingleton<ConsensusQuery>()
                             .AddSingleton<INetworkDifficulty, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>())
                             .AddSingleton<IGetUnspentTransaction, ConsensusQuery>(provider => provider.GetService<ConsensusQuery>());
+
                         services.AddSingleton<IProvenBlockHeaderStore, ProvenBlockHeaderStore>();
-                        services.AddSingleton<IProvenBlockHeaderRepository, ProvenBlockHeaderRepository>();
+
+                        if (coindbType == DbType.Leveldb)
+                            services.AddSingleton<IProvenBlockHeaderRepository, LevelDbProvenBlockHeaderRepository>();
+
+                        if (coindbType == DbType.RocksDb)
+                            services.AddSingleton<IProvenBlockHeaderRepository, RocksDbProvenBlockHeaderRepository>();
                     });
             });
 
             return fullNodeBuilder;
         }
 
-        private static void AddCoindbImplementation(IServiceCollection services, DbType coindbType)
+        public static void ConfigureCoinDatabaseImplementation(this IServiceCollection services, DbType coindbType)
         {
             if (coindbType == DbType.Dbreeze)
                 services.AddSingleton<ICoindb, DBreezeCoindb>();
 
             if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LeveldbCoindb>();
+                services.AddSingleton<ICoindb, LevelDbCoindb>();
 
             if (coindbType == DbType.Faster)
                 services.AddSingleton<ICoindb, FasterCoindb>();
-        }
-    }
 
-    public enum DbType
-    {
-        Leveldb,
-        Dbreeze,
-        Faster
+            if (coindbType == DbType.RocksDb)
+                services.AddSingleton<ICoindb, RocksDbCoindb>();
+        }
     }
 }

@@ -57,10 +57,10 @@ namespace Stratis.CirrusPegD
                     throw new ArgumentException($"Gateway node needs to be started specifying either a {SidechainArgument} or a {MainchainArgument} argument");
                 }
 
-                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = isMainchainNode ? "Strax Full Node" : "Cirrus Full Node";
-
                 IFullNode node = isMainchainNode ? GetMainchainFullNode(args) : GetSidechainFullNode(args);
+
+                // set the console window title to identify which node this is (for clarity when running Strax and Cirrus on the same machine)
+                Console.Title = isMainchainNode ? $"Strax Full Node {node.Network.NetworkType}" : $"Cirrus Full Node {node.Network.NetworkType}";
 
                 if (node != null)
                     await node.RunAsync();

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Flurl;
@@ -45,7 +44,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
-                
+
                 // Make sure the wallet has two accounts.
                 string newAccountName = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("wallet/account")
@@ -80,7 +79,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Act.
                 string newAddedAccountName = await $"http://localhost:{node.ApiPort}/api"
                     .AppendPathSegment("wallet/account")
-                    .PostJsonAsync(new { walletName = this.walletWithFundsName, password = this.walletWithFundsPassword  })
+                    .PostJsonAsync(new { walletName = this.walletWithFundsName, password = this.walletWithFundsPassword })
                     .ReceiveJson<string>();
 
                 // Assert.
@@ -185,7 +184,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
-                
+
                 AddressesModel addressesModel = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/addresses")
                 .SetQueryParams(new { walletName = this.walletWithFundsName, accountName = "account 0" })
@@ -218,7 +217,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
-                
+
                 // Make sure the account is used, i.e, it has transactions.
                 WalletHistoryModel history = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/history")
@@ -253,7 +252,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
-                
+
                 // Make sure the account is used, i.e, it has transactions.
                 WalletHistoryModel history = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/history")
@@ -274,10 +273,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 var exception = act.Should().Throw<FlurlHttpException>().Which;
                 var response = exception.Call.Response;
 
-                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
                 List<ErrorModel> errors = errorResponse.Errors;
 
-                response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+                response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
                 errors.Should().ContainSingle();
                 errors.First().Message.Should().Be($"One of the query parameters '{nameof(RemoveTransactionsModel.DeleteAll)}', '{nameof(RemoveTransactionsModel.TransactionsIds)}' or '{nameof(RemoveTransactionsModel.FromDate)}' must be set.");
             }
@@ -290,7 +289,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             {
                 // Arrange.
                 CoreNode node = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
-                
+
                 // Make sure the account is used, i.e, it has transactions.
                 WalletHistoryModel history = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/history")
@@ -327,23 +326,23 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Assert.
                 FlurlHttpException exception1 = act1.Should().Throw<FlurlHttpException>().Which;
-                HttpResponseMessage response1 = exception1.Call.Response;
+                var response1 = exception1.Call.Response;
 
                 FlurlHttpException exception2 = act2.Should().Throw<FlurlHttpException>().Which;
-                HttpResponseMessage response2 = exception2.Call.Response;
+                var response2 = exception2.Call.Response;
 
                 FlurlHttpException exception3 = act3.Should().Throw<FlurlHttpException>().Which;
-                HttpResponseMessage response3 = exception3.Call.Response;
+                var response3 = exception3.Call.Response;
 
                 FlurlHttpException exception4 = act4.Should().Throw<FlurlHttpException>().Which;
-                HttpResponseMessage response4 = exception4.Call.Response;
+                var response4 = exception4.Call.Response;
 
-                ErrorResponse errorResponse1 = JsonConvert.DeserializeObject<ErrorResponse>(await response1.Content.ReadAsStringAsync());
-                ErrorResponse errorResponse2 = JsonConvert.DeserializeObject<ErrorResponse>(await response2.Content.ReadAsStringAsync());
-                ErrorResponse errorResponse3 = JsonConvert.DeserializeObject<ErrorResponse>(await response3.Content.ReadAsStringAsync());
-                ErrorResponse errorResponse4 = JsonConvert.DeserializeObject<ErrorResponse>(await response4.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse1 = JsonConvert.DeserializeObject<ErrorResponse>(await response1.ResponseMessage.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse2 = JsonConvert.DeserializeObject<ErrorResponse>(await response2.ResponseMessage.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse3 = JsonConvert.DeserializeObject<ErrorResponse>(await response3.ResponseMessage.Content.ReadAsStringAsync());
+                ErrorResponse errorResponse4 = JsonConvert.DeserializeObject<ErrorResponse>(await response4.ResponseMessage.Content.ReadAsStringAsync());
 
-                response1.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+                response1.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
                 response1.StatusCode.Should().Be(response2.StatusCode);
                 response2.StatusCode.Should().Be(response3.StatusCode);
                 response3.StatusCode.Should().Be(response4.StatusCode);

@@ -29,6 +29,7 @@ namespace Stratis.Bitcoin.Features.SignalR
                                 .AllowCredentials();
                         });
                 });
+
             services.AddSignalR().AddNewtonsoftJsonProtocol(options =>
             {
                 var settings = new JsonSerializerSettings();
@@ -37,8 +38,7 @@ namespace Stratis.Bitcoin.Features.SignalR
             });
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory,
-            IServiceProvider serviceProvider)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
         {
             app.UseRouting();
 
