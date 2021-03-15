@@ -63,8 +63,9 @@ namespace Stratis.SmartContracts.CLR
 
             var contractExecutionCode = this.primitiveSerializer.Deserialize<byte[]>(decodedParams[0]);
             object[] methodParameters = this.DeserializeMethodParameters(decodedParams[1]);
+            byte[][] signatures = (decodedParams.Count > 2) ? this.DeserializeSignatures(decodedParams[2]) : null;
 
-            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractExecutionCode, methodParameters);
+            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractExecutionCode, methodParameters, signatures);
             return Result.Ok(callData);
         }
 
@@ -107,6 +108,8 @@ namespace Stratis.SmartContracts.CLR
             rlpBytes.Add(contractTxData.ContractExecutionCode);
             
             this.AddMethodParams(rlpBytes, contractTxData.MethodParameters);
+            if (contractTxData.Signatures != null)
+                this.AddSignatures(rlpBytes, contractTxData.Signatures);
             
             byte[] encoded = RLP.EncodeList(rlpBytes.Select(RLP.EncodeElement).ToArray());
             
@@ -163,12 +166,29 @@ namespace Stratis.SmartContracts.CLR
             }
         }
 
+        protected void AddSignatures(List<byte[]> rlpBytes, byte[][] signatures)
+        {
+            if (signatures != null && signatures.Any())
+            {
+                rlpBytes.Add(this.SerializeSignatures(signatures));
+            }
+            else if (signatures != null)
+            {
+                rlpBytes.Add(new byte[0]);
+            }
+        }
+
         protected static bool IsCallContract(byte type)
         {
             return type == (byte)ScOpcodeType.OP_CALLCONTRACT;
         }
 
         protected byte[] SerializeMethodParameters(object[] objects)
+        {
+            return this.methodParamSerializer.Serialize(objects);
+        }
+
+        protected byte[] SerializeSignatures(object[] objects)
         {
             return this.methodParamSerializer.Serialize(objects);
         }
@@ -181,6 +201,16 @@ namespace Stratis.SmartContracts.CLR
                 methodParameters = this.methodParamSerializer.Deserialize(methodParametersRaw);
 
             return methodParameters;
+        }
+
+        protected byte[][] DeserializeSignatures(byte[] signaturesRaw)
+        {
+            byte[][] signatures = null;
+
+            if (signaturesRaw != null && signaturesRaw.Length > 0)
+                signatures = (byte[][])this.methodParamSerializer.Deserialize(signaturesRaw);
+
+            return signatures;
         }
     }
 }
