@@ -274,7 +274,7 @@ namespace NBitcoin
             if (Bloom.BloomLength > maxSerializedSize)
                 throw new InvalidOperationException($"'{nameof(ReadWriteCompressed)}' does not support bloom filters greater than {maxSerializedSize} bytes in length.");
 
-            if (stream.Serializing) 
+            if (stream.Serializing)
             {   // Writing to stream.
                 byte[] ser = bloom.GetCompressedBloom();
                 byte len = (byte)(ser.Length - 1);
