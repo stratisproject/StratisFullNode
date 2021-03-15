@@ -280,7 +280,9 @@ namespace Stratis.Bitcoin
             this.logger.LogInformation("Closing node pending.");
 
             // Fire INodeLifetime.Stopping.
-            this.nodeLifetime.StopApplication();
+            // If the node has not started then this can be null.
+            if (this.nodeLifetime != null)
+                this.nodeLifetime.StopApplication();
 
             this.logger.LogInformation("Disposing connection manager.");
             this.ConnectionManager.Dispose();
@@ -293,17 +295,27 @@ namespace Stratis.Bitcoin
             this.periodicBenchmarkLoop?.Dispose();
 
             // Fire the NodeFeatureExecutor.Stop.
-            this.logger.LogInformation("Disposing the full node feature executor.");
-            this.fullNodeFeatureExecutor.Dispose();
+            // If the node has not started then this can be null.
+            if (this.fullNodeFeatureExecutor != null)
+            {
+                this.logger.LogInformation("Disposing the full node feature executor.");
+                this.fullNodeFeatureExecutor.Dispose();
+            }
 
             this.logger.LogInformation("Disposing settings.");
             this.Settings.Dispose();
 
             // Fire INodeLifetime.Stopped.
-            this.logger.LogInformation("Notify application has stopped.");
-            this.nodeLifetime.NotifyStopped();
+            // If the node has not started then this can be null.
+            if (this.nodeLifetime != null)
+            {
+                this.logger.LogInformation("Notify application has stopped.");
+                this.nodeLifetime.NotifyStopped();
+            }
 
-            this.nodeRunningLock.UnlockNodeFolder();
+            // If the node has not started then this can be null.
+            if (this.nodeRunningLock != null)
+                this.nodeRunningLock.UnlockNodeFolder();
 
             this.State = FullNodeState.Disposed;
         }
