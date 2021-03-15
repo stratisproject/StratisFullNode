@@ -886,31 +886,51 @@ namespace Stratis.Bitcoin.Features.Wallet
         protected AccountHistory GetHistoryForAccount(HdAccount account, long? prevOutputTxTime = null, int? prevOutputIndex = null, int take = int.MaxValue, string searchQuery = null)
         {
             Guard.NotNull(account, nameof(account));
-            var items = Enumerable.Empty<FlatHistory>();
+            var items = new List<FlatHistory>();
 
             lock (this.lockObject)
             {
-                // Get transactions contained in the account.
-                var query = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
-
                 // When the account is a normal one, we want to filter out all cold stake UTXOs.
                 if (account.IsNormalAccount())
                 {
+                    static bool coldStakeUtxoFilter(TransactionData d) => d.IsColdCoinStake == null || d.IsColdCoinStake == false;
+
                     if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
                     {
-                        (IEnumerable<TransactionData> transactionData, HdAddress address) = this.WalletRepository.GetTransactionById(account.AccountRoot.Wallet.Name, parsedTxId);
-                        var addressResult = query.Where(a => a.Address == address.Address);
-                        var result = transactionData.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false);
-                        items = result.Select(t => new FlatHistory { Address = address, Transaction = t });
+                        IEnumerable<(HdAddress address, IEnumerable<TransactionData> transactionData)> result = this.WalletRepository.GetTransactionsById(account.AccountRoot.Wallet.Name, parsedTxId);
+                        foreach (var (address, transactionData) in result)
+                        {
+                            items.AddRange(transactionData.Where(coldStakeUtxoFilter).Select(t => new FlatHistory { Address = address, Transaction = t }));
+                        }
+
+                        for (int i = 0; i < items.Count; i++)
+                        {
+                            var toCheck = items[i];
+                            if (toCheck.Transaction.SpendingDetails != null)
+                            {
+                                var paymentDetailsChange = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, items[i].Transaction, true);
+                                toCheck.Transaction.SpendingDetails.Change = new PaymentCollection(toCheck.Transaction.SpendingDetails, paymentDetailsChange.ToList(), true);
+
+                                var paymentDetails = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, items[i].Transaction, false);
+                                toCheck.Transaction.SpendingDetails.Payments = new PaymentCollection(toCheck.Transaction.SpendingDetails, paymentDetails.ToList(), false);
+
+                                items[i] = toCheck;
+                            }
+                        }
                     }
                     else
-                        items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    {
+                        // Get transactions contained in the account.
+                        var allAddresses = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
+                        items = allAddresses.SelectMany(s => s.Transactions.Where(coldStakeUtxoFilter).Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
+                    }
                 }
                 else
                 {
-                    items = account.GetCombinedAddresses()
+                    items = account
+                        .GetCombinedAddresses()
                         .Where(a => a.Transactions.Any())
-                        .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                        .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
                 }
             }
 

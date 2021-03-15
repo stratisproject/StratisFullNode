@@ -1724,12 +1724,17 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public (IEnumerable<TransactionData>, HdAddress) GetTransactionById(string walletName, uint256 transactionId)
+        public IEnumerable<(HdAddress, IEnumerable<TransactionData>)> GetTransactionsById(string walletName, uint256 transactionId)
         {
             WalletContainer walletContainer = this.GetWalletContainer(walletName);
-            var hdTransactionData = HDTransactionData.GetTransactionById(walletContainer.Conn, transactionId.ToString());
-            var result = hdTransactionData.Select(t => this.ToTransactionData(t, null));
-            return (result, new HdAddress() { Address = hdTransactionData.FirstOrDefault()?.Address, AddressType = hdTransactionData.FirstOrDefault()?.AddressType });
+            var hdTransactionData = HDTransactionData.GetTransactionsById(walletContainer.Conn, walletContainer.Wallet.WalletId, transactionId.ToString());
+            var grouped = hdTransactionData.GroupBy(x => x.Address);
+
+            foreach (var group in grouped)
+            {
+                var hdAddress = new HdAddress() { Address = group.Key, AddressType = group.First().AddressType };
+                yield return (hdAddress, group.Select(t => this.ToTransactionData(t, null)));
+            }
         }
     }
 }

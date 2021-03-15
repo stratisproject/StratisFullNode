@@ -363,7 +363,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="walletName">The wallet to query</param>
         /// <param name="transactionId">The id of the transaction to find.</param>
         /// <returns>The requested transaction data as well as the address it relates to.</returns>
-        (IEnumerable<TransactionData>, HdAddress) GetTransactionById(string walletName, uint256 transactionId);
+        IEnumerable<(HdAddress, IEnumerable<TransactionData>)> GetTransactionsById(string walletName, uint256 transactionId);
 
         Func<string, string> Bech32AddressFunc { get; set; }
     }
