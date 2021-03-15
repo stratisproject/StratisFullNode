@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.Features.PoA
             Network network,
             NodeSettings nodeSettings,
             ISignals signals,
-            PoASettings poaSettings = null,
+            PoASettings poaSettings,
             ICounterChainSettings counterChainSettings = null)
         {
             this.counterChainSettings = counterChainSettings;
@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private bool InitializeFederationMemberKey()
         {
-            if (this.poaSettings != null && !this.poaSettings.DevMode)
+            if (!this.poaSettings.DevMode)
             {
                 // Load key.
                 Key key = new KeyTool(this.nodeSettings.DataFolder).LoadPrivateKey();
