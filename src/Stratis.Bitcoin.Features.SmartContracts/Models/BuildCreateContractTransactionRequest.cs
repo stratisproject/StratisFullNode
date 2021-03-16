@@ -96,6 +96,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         /// </summary>
         public string[] Parameters { get; set; }
 
+        /// <summary>
+        /// An array of base 64 encoded strings containing the signatures to add if a "system contract" transaction is being created. 
+        /// </summary>
+        public string[] Signatures { get; set; }
+
         public override string ToString()
         {
             var builder = new StringBuilder();

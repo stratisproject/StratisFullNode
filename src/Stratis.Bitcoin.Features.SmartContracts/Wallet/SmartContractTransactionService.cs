@@ -4,6 +4,7 @@ using System.Linq;
 using CSharpFunctionalExtensions;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
@@ -37,6 +38,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         private readonly IAddressGenerator addressGenerator;
         private readonly IStateRepositoryRoot stateRoot;
         private readonly IReserveUtxoService reserveUtxoService;
+        private readonly ISmartContractPosActivationProvider smartContractPosActivationProvider;
+        private readonly ChainIndexer chainedIndexer;
 
         public SmartContractTransactionService(
             Network network,
@@ -46,7 +49,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             ICallDataSerializer callDataSerializer,
             IAddressGenerator addressGenerator,
             IStateRepositoryRoot stateRoot,
-            IReserveUtxoService reserveUtxoService
+            IReserveUtxoService reserveUtxoService,
+            ISmartContractPosActivationProvider smartContractPosActivationProvider,
+            ChainIndexer chainedIndexer
             )
         {
             this.network = network;
@@ -57,6 +62,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             this.addressGenerator = addressGenerator;
             this.stateRoot = stateRoot;
             this.reserveUtxoService = reserveUtxoService;
+            this.smartContractPosActivationProvider = smartContractPosActivationProvider;
+            this.chainedIndexer = chainedIndexer;
         }
 
         public EstimateFeeResult EstimateFee(ScTxFeeEstimateRequest request)
@@ -270,13 +277,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             if (!string.IsNullOrEmpty(message))
                 return BuildCreateContractTransactionResponse.Failed(message);
 
+            if (request.Signatures != null)
+            {
+                if (!this.smartContractPosActivationProvider.IsActive(this.chainedIndexer.Tip))
+                    return BuildCreateContractTransactionResponse.Failed("Signatures can only be passed if system contracts are supported.");
+            }
+
             ContractTxData txData;
             if (request.Parameters != null && request.Parameters.Any())
             {
                 try
                 {
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
-                    txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), methodParameters);
+                    txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), methodParameters, request.Signatures);
                 }
                 catch (MethodParameterStringSerializerException exception)
                 {
@@ -285,7 +298,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             }
             else
             {
-                txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray());
+                txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), signatures: request.Signatures);
             }
 
             HdAddress senderAddress = null;
