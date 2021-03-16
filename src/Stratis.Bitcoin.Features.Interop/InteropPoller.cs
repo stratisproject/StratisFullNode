@@ -25,6 +25,8 @@ namespace Stratis.Bitcoin.Features.Interop
         // 1x10^24 wei = 1 000 000 tokens
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
 
+        public const string MintPlaceHolderRequestId = "00000000000000000000000000000000";
+
         private readonly InteropSettings interopSettings;
         private readonly IEthereumClientBase ethereumClientBase;
         private readonly Network network;
@@ -44,6 +46,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop conversionLoop;
 
         private bool firstPoll;
+        private bool minting;
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
@@ -284,22 +287,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 var multisig = new List<CollateralFederationMember>();
 
-                var filtered = new List<PubKey>()
-                {
-                    new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
-                    new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
-                    new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488")
-                };
-
                 foreach (IFederationMember member in federation)
                 {
                     if (!(member is CollateralFederationMember collateralMember))
                         continue;
 
                     if (!collateralMember.IsMultisigMember)
-                        continue;
-
-                    if (this.network.NetworkType == NetworkType.Mainnet && !filtered.Contains(collateralMember.PubKey))
                         continue;
 
                     multisig.Add(collateralMember);
@@ -313,33 +306,44 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 bool originator = designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
 
+                // Regardless of whether we are the originator, this is a good time to check the multisig's remaining reserve
+                // token balance. It is necessary to maintain a reserve as mint transactions are many times more expensive than
+                // transfers. As we don't know precisely what value transactions are expected, the sole determining factor is
+                // whether the reserve has a large enough balance to service the current conversion request. If not, trigger a
+                // mint for a predetermined amount.
+                BigInteger reserveBalanace = await this.ethereumClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
+
+                // The request is denominated in satoshi and needs to be converted to wei.
+                BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
+
                 // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
                 if (originator)
                 {
                     this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
-
-                    // The request is denominated in satoshi and needs to be converted to wei.
-                    BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
-
-                    // Since we are the originator this is a good time to check the multisig's remaining reserve token balance.
-                    // It is necessary to maintain a reserve as mint transactions are many times more expensive than transfers.
-                    // As we don't know precisely what value transactions are expected, the sole determining factor is whether the
-                    // reserve has a large enough balance to service the current conversion request. If not, trigger a mint for
-                    // a predetermined amount.
-                    BigInteger reserveBalanace = await this.ethereumClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
-
+                  
                     if (amountInWei > reserveBalanace)
                     {
+                        if (this.minting)
+                        {
+                            this.logger.LogInformation("Minting transaction has not yet confirmed. Waiting.");
+
+                            return;
+                        }
+
+                        this.minting = true;
+
                         this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
 
                         string mintData = this.ethereumClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
 
                         BigInteger mintTransactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
-
+                        
                         // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
-                        string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)mintTransactionId));
-                        // TODO: The other multisigs must be careful not to trust that any given transactionId relates to a mint transaction. Need to validate the recipient
-                        await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)mintTransactionId, mintSignature)).ConfigureAwait(false);
+                        string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(MintPlaceHolderRequestId + ((int)mintTransactionId));
+                        // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
+                        await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(MintPlaceHolderRequestId, (int)mintTransactionId, mintSignature)).ConfigureAwait(false);
+
+                        return;
                     }
 
                     // First construct the necessary transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
@@ -387,7 +391,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
 
                     // Each node must only ever confirm a single transactionId for a given conversion transaction.
-                    BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 3);
+                    BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
 
                     if (agreedUponId != BigInteger.MinusOne)
                     {
@@ -403,6 +407,9 @@ namespace Stratis.Bitcoin.Features.Interop
                         request.Processed = true;
 
                         this.conversionRequestRepository.Save(request);
+
+                        // We no longer need to track votes for this transaction.
+                        this.interopTransactionManager.RemoveTransaction(request.RequestId);
                     }
                     else
                     {
