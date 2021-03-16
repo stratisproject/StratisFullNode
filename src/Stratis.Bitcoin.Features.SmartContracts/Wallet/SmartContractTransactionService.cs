@@ -50,8 +50,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             IAddressGenerator addressGenerator,
             IStateRepositoryRoot stateRoot,
             IReserveUtxoService reserveUtxoService,
-            ISmartContractPosActivationProvider smartContractPosActivationProvider,
-            ChainIndexer chainedIndexer
+            ISmartContractPosActivationProvider smartContractPosActivationProvider = null,
+            ChainIndexer chainedIndexer = null
             )
         {
             this.network = network;
@@ -277,7 +277,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             if (!string.IsNullOrEmpty(message))
                 return BuildCreateContractTransactionResponse.Failed(message);
 
-            if (request.Signatures != null)
+            if (request.Signatures != null && this.smartContractPosActivationProvider != null && this.chainedIndexer != null)
             {
                 if (!this.smartContractPosActivationProvider.IsActive(this.chainedIndexer.Tip))
                     return BuildCreateContractTransactionResponse.Failed("Signatures can only be passed if system contracts are supported.");

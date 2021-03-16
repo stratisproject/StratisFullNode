@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
+using Stratis.Bitcoin.Features.SmartContracts.PoS.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoS
@@ -17,11 +18,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             IServiceCollection services = options.Services;
 
             // These may have been registered by UsePoAMempoolRules already.
-            services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
             services.AddSingleton<IContractCodeHashingStrategy, Keccak256CodeHashingStrategy>();
 
             // Registers an additional contract tx validation consensus rule which checks whether the hash of the contract being deployed is whitelisted.
-            services.AddSingleton<IContractTransactionFullValidationRule, AllowedCodeHashLogic>();
+            services.AddSingleton<IContractTransactionFullValidationRule, PoSAllowedCodeHashLogic>();
 
             return options;
         }

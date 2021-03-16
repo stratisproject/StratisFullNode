@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
+using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoA
