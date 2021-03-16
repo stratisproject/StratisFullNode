@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             this.network = network;
             this.stateRoot = stateRoot;
 
-            if (network.Consensus.ConsensusFactory is StraxConsensusFactory)
+            if (network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
             {
                 Guard.NotNull(smartContractPosActivationProvider, nameof(smartContractPosActivationProvider));
             }
@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         {
             // TODO: This check should be more robust
             Guard.Assert(this.network.Consensus.ConsensusFactory is SmartContractPowConsensusFactory
-                         || this.network.Consensus.ConsensusFactory is StraxConsensusFactory
+                         || this.network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory
                          || this.network.Consensus.ConsensusFactory is SmartContractPoAConsensusFactory
                          || this.network.Consensus.ConsensusFactory is SmartContractCollateralPoAConsensusFactory);
 
@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<DBreezeContractStateStore>();
                         services.AddSingleton<NoDeleteContractStateSource>();
                         services.AddSingleton<IStateRepositoryRoot, StateRepositoryRoot>();
-                        if (fullNodeBuilder.Network.Consensus.ConsensusFactory is StraxConsensusFactory)
+                        if (fullNodeBuilder.Network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
                         {
                             services.AddSingleton<ISmartContractPosActivationProvider, SmartContractPosActivationProvider>();
                         }
@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<ICallDataSerializer, CallDataSerializer>();
 
                         // MINING ---------------------------------------------------------------------------
-                        if (fullNodeBuilder.Network.Consensus.ConsensusFactory is StraxConsensusFactory)
+                        if (fullNodeBuilder.Network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
                         {
                             services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                             services.AddSingleton<BlockDefinition, SmartContractPosBlockDefinition>();

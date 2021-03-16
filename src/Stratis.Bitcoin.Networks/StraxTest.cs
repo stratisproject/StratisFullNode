@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 166200;
             this.RewardClaimerBlockInterval = 100;
 
-            var consensusFactory = new StraxConsensusFactory();
+            var consensusFactory = new SmartContractPoSConsensusFactory();
 
             // Create the genesis block.
             this.GenesisTime = 1598918400; // 1 September 2020

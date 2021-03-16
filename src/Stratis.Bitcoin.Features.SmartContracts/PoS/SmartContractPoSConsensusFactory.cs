@@ -2,7 +2,7 @@
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 {
-    public class StraxConsensusFactory : PosConsensusFactory
+    public class SmartContractPoSConsensusFactory : PosConsensusFactory
     {
     }
 }
