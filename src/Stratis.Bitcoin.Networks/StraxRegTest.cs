@@ -42,7 +42,11 @@ namespace Stratis.Bitcoin.Networks
 
             var powLimit = new Target(new uint256("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
 
-            var consensusFactory = new SmartContractPoSConsensusFactory();
+            var consensusFactory = new SmartContractPoSConsensusFactory(new List<SystemContractsSignatureRequirement>()
+            {
+                // TODO: Add signing pubkeys.
+                //new SystemContractsSignatureRequirement(new PubKey(""))
+            });
 
             // Create the genesis block.
             this.GenesisTime = 1470467000; // TODO: Make this more recent?

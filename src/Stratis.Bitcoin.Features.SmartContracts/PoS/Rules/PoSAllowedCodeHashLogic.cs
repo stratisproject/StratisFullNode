@@ -1,3 +1,4 @@
+using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
@@ -11,10 +12,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
     /// </summary>
     public class PoSAllowedCodeHashLogic : IContractTransactionFullValidationRule
     {
+        private readonly Network network;
         private readonly IContractCodeHashingStrategy hashingStrategy;
 
-        public PoSAllowedCodeHashLogic(IWhitelistedHashChecker whitelistedHashChecker, IContractCodeHashingStrategy hashingStrategy)
+        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy)
         {
+            this.network = network;
             this.hashingStrategy = hashingStrategy;
         }
 
@@ -24,8 +27,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
                 return;
 
             byte[] hashedCode = this.hashingStrategy.Hash(txData.ContractExecutionCode);
+            
+            if (this.network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory factory)
+            {
+                PubKey[] pubKeys = factory.GetSignatureRequirements(0).ToArray();
+                // TODO: Check the hashed code against all required signatures.
+            }
 
-            // TODO: Check the hashed code against all required signatures.
             ThrowInvalidCode();
         }
 
