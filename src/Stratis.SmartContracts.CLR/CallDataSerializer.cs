@@ -63,7 +63,7 @@ namespace Stratis.SmartContracts.CLR
 
             var contractExecutionCode = this.primitiveSerializer.Deserialize<byte[]>(decodedParams[0]);
             object[] methodParameters = this.DeserializeMethodParameters(decodedParams[1]);
-            byte[][] signatures = (decodedParams.Count > 2) ? this.DeserializeSignatures(decodedParams[2]) : null;
+            string[] signatures = (decodedParams.Count > 2) ? this.DeserializeSignatures(decodedParams[2]) : null;
 
             var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractExecutionCode, methodParameters, signatures);
             return Result.Ok(callData);
@@ -166,7 +166,7 @@ namespace Stratis.SmartContracts.CLR
             }
         }
 
-        protected void AddSignatures(List<byte[]> rlpBytes, byte[][] signatures)
+        protected void AddSignatures(List<byte[]> rlpBytes, string[] signatures)
         {
             if (signatures != null && signatures.Any())
             {
@@ -188,11 +188,6 @@ namespace Stratis.SmartContracts.CLR
             return this.methodParamSerializer.Serialize(objects);
         }
 
-        protected byte[] SerializeSignatures(object[] objects)
-        {
-            return this.methodParamSerializer.Serialize(objects);
-        }
-
         protected object[] DeserializeMethodParameters(byte[] methodParametersRaw)
         {
             object[] methodParameters = null;
@@ -203,14 +198,45 @@ namespace Stratis.SmartContracts.CLR
             return methodParameters;
         }
 
-        protected byte[][] DeserializeSignatures(byte[] signaturesRaw)
+        protected byte[] SerializeSignatures(string[] signatures)
         {
-            byte[][] signatures = null;
+            byte[][] signaturesRaw = new byte[signatures.Length][];
+            int totalBytes = 0;
+            for (int i = 0; i < signatures.Length; i++)
+            {
+                signaturesRaw[i] = Convert.FromBase64String(signatures[i]);
+                totalBytes += signaturesRaw[i].Length + 1;
+            }
 
-            if (signaturesRaw != null && signaturesRaw.Length > 0)
-                signatures = (byte[][])this.methodParamSerializer.Deserialize(signaturesRaw);
+            var res = new byte[totalBytes];
+            totalBytes = 0;
+            for (int i = 0; i < signatures.Length; i++)
+            {
+                res[totalBytes] = (byte)signaturesRaw[i].Length;
+                signaturesRaw[i].CopyTo(res, totalBytes + 1);
+                totalBytes += signaturesRaw[i].Length + 1;
+            }
 
-            return signatures;
+            return res;
+        }
+
+        protected string[] DeserializeSignatures(byte[] signaturesRaw)
+        {
+            if (signaturesRaw == null || signaturesRaw.Length == 0)
+                return new string[0];
+
+            var signatures = new List<string>();
+
+            for (int i = 0; i < signaturesRaw.Length; i++)
+            {
+                int length = signaturesRaw[i];
+                var buffer = new byte[length];
+                Array.Copy(signaturesRaw, i + 1, buffer, 0, length);
+                i += length;
+                signatures.Add(Convert.ToBase64String(buffer));
+            }
+
+            return signatures.ToArray();
         }
     }
 }

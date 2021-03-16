@@ -29,7 +29,7 @@ namespace Stratis.SmartContracts.CLR
         /// Creates a ContractTxData for contract creation
         /// </summary>
         public ContractTxData(int vmVersion, ulong gasPrice, RuntimeObserver.Gas gasLimit, byte[] code,
-            object[] methodParameters = null, byte[][] signatures = null)
+            object[] methodParameters = null, string[] signatures = null)
         {
             this.OpCodeType = (byte)ScOpcodeType.OP_CREATECONTRACT;
             this.VmVersion = vmVersion;
@@ -67,7 +67,7 @@ namespace Stratis.SmartContracts.CLR
         public byte[] ContractExecutionCode { get; }
 
         /// <summary>The signatures (if any).</summary>
-        public byte[][] Signatures { get; }
+        public string[] Signatures { get; }
 
         /// <summary>The maximum cost (in satoshi) the contract can spend.</summary>
         public ulong GasCostBudget
