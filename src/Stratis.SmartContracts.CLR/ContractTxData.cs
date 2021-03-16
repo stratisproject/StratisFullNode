@@ -66,7 +66,7 @@ namespace Stratis.SmartContracts.CLR
         /// <summary>The contract code that will be executed.</summary>
         public byte[] ContractExecutionCode { get; }
 
-        /// <summary>The signatures (if any).</summary>
+        /// <summary>The signatures (if any) passed as an array of base 64 encoded byte arrays - as returned by <see cref="Key.SignMessage"/>.</summary>
         public string[] Signatures { get; }
 
         /// <summary>The maximum cost (in satoshi) the contract can spend.</summary>
