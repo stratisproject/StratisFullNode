@@ -58,13 +58,25 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         /// <returns>The number of confirmations.</returns>
         Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId);
 
+        Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
+
+        /// <summary>
+        /// Returns the encoded form of transaction data that calls the transfer(address, uint256) method on the WrappedStrax contract.
+        /// This is exactly the contents of the 'data' field in a normal transaction.
+        /// This encoded data is required for submitting a transaction to the multisig contract.
+        /// </summary>
+        /// <param name="address">The address to transfer a quantity of the wSTRAX token to.</param>
+        /// <param name="amount">The amount (in wei) of tokens to be transferred.</param>
+        /// <returns>The hex data of the encoded parameters.</returns>
+        string EncodeTransferParams(string address, BigInteger amount);
+
         /// <summary>
         /// Constructs the data field for a transaction invoking the mint() method of an ERC20 contract that implements it.
         /// The actual transaction will be sent to the multisig wallet contract as it is the contract that needs to execute the transaction.
         /// </summary>
         /// <param name="address">The account that needs tokens to be minted into it (not the address of the multisig contract or the wrapped STRAX contract)</param>
         /// <param name="amount">The number of tokens to be minted. This is denominated in wei.</param>
-        /// <returns></returns>
+        /// <returns>The hex data of the encoded parameters.</returns>
         string EncodeMintParams(string address, BigInteger amount);
 
         /// <summary>
@@ -73,6 +85,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         /// </summary>
         /// <param name="amount">The number of tokens to be minted. This is denominated in wei.</param>
         /// <param name="straxAddress">The destination address on the STRAX chain that the equivalent value of the burnt funds will be sent to.</param>
+        /// <returns>The hex data of the encoded parameters.</returns>
         string EncodeBurnParams(BigInteger amount, string straxAddress);
     }
 }

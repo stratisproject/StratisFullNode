@@ -39,6 +39,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
                 this.web3 = new Web3(account);
         }
 
+        /// <inheritdoc />
         public async Task CreateTransferEventFilterAsync()
         {
             this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(this.interopSettings.WrappedStraxAddress);
@@ -46,6 +47,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             this.filterId = await this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
         public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
         {
             try
@@ -62,11 +64,13 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return await this.transferEventHandler.GetFilterChanges(this.filterId).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
         public async Task<string> GetDestinationAddressAsync(string address)
         {
             return await WrappedStrax.GetDestinationAddressAsync(this.web3, this.interopSettings.WrappedStraxAddress, address).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
         public async Task<BigInteger> GetBlockHeightAsync()
         {
             var blockNumberHandler = new EthBlockNumber(this.web3.Client);
@@ -87,11 +91,30 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.EthereumGas, this.interopSettings.EthereumGasPrice).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
         public async Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId)
         {
             return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
+        public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
+        {
+            return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.interopSettings.WrappedStraxAddress, addressToQuery).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public string EncodeTransferParams(string address, BigInteger amount)
+        {
+            // TODO: Extract this directly from the ABI
+            const string TransferMethod = "a9059cbb";
+
+            var abiEncode = new ABIEncode();
+            string result = TransferMethod + abiEncode.GetABIEncoded(new ABIValue("address", address), new ABIValue("uint256", amount)).ToHex();
+
+            return result;
+        }
+
+        /// <inheritdoc />
         public string EncodeMintParams(string address, BigInteger amount)
         {
             // TODO: Extract this directly from the ABI
@@ -103,6 +126,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             return result;
         }
 
+        /// <inheritdoc />
         public string EncodeBurnParams(BigInteger amount, string straxAddress)
         {
             // TODO: Extract this directly from the ABI

@@ -169,18 +169,17 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         {
             IContractTransactionHandler<TransferFunction> transferHandler = web3.Eth.GetContractTransactionHandler<TransferFunction>();
 
-            var transfer = new TransferFunction()
+            var transfer = new TransferFunction
             {
                 To = recipient,
-                TokenAmount = amount
+                TokenAmount = amount,
+                // Nethereum internally calls its Ethereum client by default to set the GasPrice, Nonce and estimate the Gas, 
+                // so if we want to sign the transaction for the contract completely offline we will need to set those values ourselves.
+                Nonce = nonce.Value,
+                Gas = gas,
+                GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei)
             };
-
-            // Nethereum internally calls the Ethereum client to set the GasPrice, Nonce and estimate the Gas, 
-            // so if we want to sign the transaction for the contract completely offline we will need to set those values beforehand.
-            transfer.Nonce = nonce.Value;
-            transfer.Gas = gas;
-            transfer.GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei);
-
+            
             if (fromAddress != null)
                 transfer.FromAddress = fromAddress;
 
@@ -227,6 +226,27 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 
             return destinationAddress;
         }
+
+        /*
+	    "39509351": "increaseAllowance(address,uint256)",
+	    "dd62ed3e": "allowance(address,address)",
+	    "095ea7b3": "approve(address,uint256)",
+	    "70a08231": "balanceOf(address)",
+	    "7641e6f3": "burn(uint256,string)",
+	    "979430d2": "burnFrom(address,uint256,string)",
+	    "313ce567": "decimals()",
+	    "a457c2d7": "decreaseAllowance(address,uint256)",
+	    "40c10f19": "mint(address,uint256)",
+	    "06fdde03": "name()",
+	    "8da5cb5b": "owner()",
+	    "715018a6": "renounceOwnership()",
+	    "95d89b41": "symbol()",
+	    "18160ddd": "totalSupply()",
+	    "a9059cbb": "transfer(address,uint256)",
+	    "23b872dd": "transferFrom(address,address,uint256)",
+	    "f2fde38b": "transferOwnership(address)",
+	    "7e051867": "withdrawalAddresses(address)"
+         */
 
         public static string ABI = @"[
             {
