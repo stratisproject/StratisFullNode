@@ -152,7 +152,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 {
                     services.AddSingleton<IPoAMiner, PoAMiner>();
                     services.AddSingleton<MinerSettings>();
-                    services.AddSingleton<PoASettings>();
                     services.AddSingleton<BlockDefinition, T>();
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                 });
