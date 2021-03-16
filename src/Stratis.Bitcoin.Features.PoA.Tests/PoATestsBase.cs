@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
 
-            var federationManager = new FederationManager(fullNode.Object, network, nodeSettings, signals, new PoASettings(nodeSettings), counterChainSettings);
+            var federationManager = new FederationManager(fullNode.Object, network, nodeSettings, signals, counterChainSettings);
             var asyncProvider = new AsyncProvider(loggerFactory, signals);
             var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
