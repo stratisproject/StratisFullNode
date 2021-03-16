@@ -3,6 +3,7 @@ using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
+using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.SmartContracts.CLR;
 
@@ -17,6 +18,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
         private readonly ICallDataSerializer callDataSerializer;
         private readonly IWhitelistedHashChecker whitelistedHashChecker;
         private readonly IContractCodeHashingStrategy hashingStrategy;
+        private readonly IContractTransactionFullValidationRule contractTransactionFullValidationRule;
 
         public AllowedCodeHashLogicMempoolRule(Network network,
             ITxMempool mempool,
@@ -25,11 +27,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
             ILoggerFactory loggerFactory,
             ICallDataSerializer callDataSerializer,
             IWhitelistedHashChecker whitelistedHashChecker,
-            IContractCodeHashingStrategy hashingStrategy) : base(network, mempool, mempoolSettings, chainIndexer, loggerFactory)
+            IContractCodeHashingStrategy hashingStrategy,
+            IContractTransactionFullValidationRule contractTransactionFullValidationRule) : base(network, mempool, mempoolSettings, chainIndexer, loggerFactory)
         {
             this.callDataSerializer = callDataSerializer;
             this.whitelistedHashChecker = whitelistedHashChecker;
             this.hashingStrategy = hashingStrategy;
+            this.contractTransactionFullValidationRule = contractTransactionFullValidationRule;
         }
 
         /// <inheritdoc/>
@@ -45,15 +49,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
 
             ContractTxData txData = ContractTransactionChecker.GetContractTxData(this.callDataSerializer, scTxOut);
 
-            if (!txData.IsCreateContract)
-                return;
-
-            byte[] hashedCode = this.hashingStrategy.Hash(txData.ContractExecutionCode);
-
-            if (!this.whitelistedHashChecker.CheckHashWhitelisted(hashedCode))
-            {
-                AllowedCodeHashLogic.ThrowInvalidCode();
-            }
+            this.contractTransactionFullValidationRule.CheckContractTransaction(txData, Money.Zero);
         }
     }
 }

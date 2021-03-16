@@ -24,12 +24,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
                 return;
 
             byte[] hashedCode = this.hashingStrategy.Hash(txData.ContractExecutionCode);
-            /*
-            if (!this.whitelistedHashChecker.CheckHashWhitelisted(hashedCode))
-            {
-                ThrowInvalidCode();
-            }
-            */
+
+            // TODO: Check the hashed code against all required signatures.
+            ThrowInvalidCode();
         }
 
         public static void ThrowInvalidCode()
