@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.AutoMock;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
@@ -2638,6 +2639,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             mocker.Use(typeof(IConsensusManager), this.GetMock<IConsensusManager>(true));
             mocker.Use(typeof(IDateTimeProvider), this.GetMock<IDateTimeProvider>() ?? DateTimeProvider.Default);
             mocker.Use(typeof(IConnectionManager), this.GetMock<IConnectionManager>(true));
+            mocker.Use(typeof(NodeSettings), NodeSettings.Default(this.Network));
             mocker.Use(typeof(IWalletService), this.GetMock<WalletService>() ?? mocker.CreateInstance<WalletService>());
 
             return mocker.CreateInstance<WalletController>();
