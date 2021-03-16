@@ -286,8 +286,12 @@ namespace NBitcoin
     public class PosBlockHeader : BlockHeader, ISmartContractBlockHeader
 #pragma warning restore 618
     {
+        // Indicates that the header contains additional fields.
+        // The first field is a uint "Size" field to indicate the serialized size of additional fields.
+        public const int ExtendedHeaderBit = 0x10000000;
+
         // Determines whether this object should serialize the new fields associated with smart contracts.
-        public bool HasSmartContractFields => (this.version & 0x10000000 /* ExtendedHeaderBit */) != 0;
+        public bool HasSmartContractFields => (this.version & ExtendedHeaderBit) != 0;
 
         /// <inheritdoc />
         public override int CurrentVersion => 7;
@@ -313,7 +317,7 @@ namespace NBitcoin
         /// </summary>
         private Bloom logsBloom;
         public Bloom LogsBloom { get { return this.logsBloom; } set { this.logsBloom = value; } }
-        
+
         public PosBlockHeader()
         {
             this.hashStateRoot = 0;

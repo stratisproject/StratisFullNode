@@ -4,6 +4,7 @@ using System.Linq;
 using CSharpFunctionalExtensions;
 using NBitcoin;
 using Nethereum.RLP;
+using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
 using TracerAttributes;
@@ -166,16 +167,16 @@ namespace Stratis.SmartContracts.CLR
             }
         }
 
+        /// <summary>
+        /// Adds the passed signatures to the passed list of byte arrays.
+        /// </summary>
+        /// <param name="rlpBytes">The list of byte arrays to add the signatures to.</param>
+        /// <param name="signatures">The signatures as a base 64 encoded byte array. See <see cref="SerializeSignatures(string[])"/></param>
         protected void AddSignatures(List<byte[]> rlpBytes, string[] signatures)
         {
-            if (signatures != null && signatures.Any())
-            {
-                rlpBytes.Add(this.SerializeSignatures(signatures));
-            }
-            else if (signatures != null)
-            {
-                rlpBytes.Add(new byte[0]);
-            }
+            Guard.NotNull(signatures, nameof(signatures));
+
+            rlpBytes.Add(this.SerializeSignatures(signatures));
         }
 
         protected static bool IsCallContract(byte type)
@@ -198,6 +199,11 @@ namespace Stratis.SmartContracts.CLR
             return methodParameters;
         }
 
+        /// <summary>
+        /// Serializes the signatures.
+        /// </summary>
+        /// <param name="signatures">Signatures passed as an array of base 64 encoded byte arrays.</param>
+        /// <returns>A byte array containing the decoded signatures, where each signature is prefixed by its length.</returns>
         protected byte[] SerializeSignatures(string[] signatures)
         {
             byte[][] signaturesRaw = new byte[signatures.Length][];
@@ -220,6 +226,11 @@ namespace Stratis.SmartContracts.CLR
             return res;
         }
 
+        /// <summary>
+        /// Deserializes signatures.
+        /// </summary>
+        /// <param name="signaturesRaw">A byte array containing the decoded signatures, where each signature is prefixed by its length.</param>
+        /// <returns>Signatures as an array of base 64 encoded byte arrays.</returns>
         protected string[] DeserializeSignatures(byte[] signaturesRaw)
         {
             if (signaturesRaw == null || signaturesRaw.Length == 0)
