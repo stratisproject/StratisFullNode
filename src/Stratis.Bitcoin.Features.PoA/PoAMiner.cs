@@ -422,6 +422,7 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
+            // If the node is in DevMode just use the genesis members via the federation manager.
             List<IFederationMember> modifiedFederation;
             if (this.nodeSettings.DevMode)
                 modifiedFederation = this.federationManager.GetFederationMembers();
