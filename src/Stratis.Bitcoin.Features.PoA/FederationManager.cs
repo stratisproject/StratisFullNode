@@ -80,7 +80,6 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly ILogger logger;
         private readonly PoANetwork network;
         private readonly NodeSettings nodeSettings;
-        private readonly PoASettings poaSettings;
         private readonly ISignals signals;
 
         private int? multisigMinersApplicabilityHeight;
@@ -91,14 +90,12 @@ namespace Stratis.Bitcoin.Features.PoA
             Network network,
             NodeSettings nodeSettings,
             ISignals signals,
-            PoASettings poaSettings,
             ICounterChainSettings counterChainSettings = null)
         {
             this.counterChainSettings = counterChainSettings;
             this.fullNode = fullNode;
             this.network = Guard.NotNull(network as PoANetwork, nameof(network));
             this.nodeSettings = Guard.NotNull(nodeSettings, nameof(nodeSettings));
-            this.poaSettings = poaSettings;
             this.signals = Guard.NotNull(signals, nameof(signals));
 
             this.logger = LogManager.GetCurrentClassLogger();
@@ -142,7 +139,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private bool InitializeFederationMemberKey()
         {
-            if (!this.poaSettings.DevMode)
+            if (!this.nodeSettings.DevMode)
             {
                 // Load key.
                 Key key = new KeyTool(this.nodeSettings.DataFolder).LoadPrivateKey();

@@ -244,7 +244,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
 
-            this.federationManager = new FederationManager(fullNode.Object, this.network, NodeSettings.Default(this.network), this.signals, new PoASettings(nodeSettings), counterChainSettings);
+            this.federationManager = new FederationManager(fullNode.Object, this.network, NodeSettings.Default(this.network), this.signals, counterChainSettings);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 

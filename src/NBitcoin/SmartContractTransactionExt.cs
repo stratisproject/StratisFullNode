@@ -2,7 +2,7 @@
 using System.Linq;
 
 namespace NBitcoin
-{   
+{
     public static class SmartContractTransactionExt
     {
         /// <summary>

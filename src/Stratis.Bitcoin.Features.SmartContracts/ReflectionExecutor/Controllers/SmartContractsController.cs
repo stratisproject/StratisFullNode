@@ -10,9 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet;
@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private readonly ILocalExecutor localExecutor;
         private readonly ISmartContractTransactionService smartContractTransactionService;
         private readonly IConnectionManager connectionManager;
-        private readonly PoASettings poaSettings;
+        private readonly NodeSettings nodeSettings;
 
         public SmartContractsController(IBroadcasterManager broadcasterManager,
             IBlockStore blockStore,
@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             ILocalExecutor localExecutor,
             ISmartContractTransactionService smartContractTransactionService,
             IConnectionManager connectionManager,
-            PoASettings poASettings = null)
+            NodeSettings nodeSettings)
         {
             this.stateRoot = stateRoot;
             this.contractDecompiler = contractDecompiler;
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.localExecutor = localExecutor;
             this.smartContractTransactionService = smartContractTransactionService;
             this.connectionManager = connectionManager;
-            this.poaSettings = poASettings;
+            this.nodeSettings = nodeSettings;
         }
 
         /// <summary>
@@ -517,7 +517,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
             // Ignore this check if the node is running dev mode.
-            if ((this.poaSettings != null && !this.poaSettings.DevMode) && !this.connectionManager.ConnectedPeers.Any())
+            if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
             {
                 this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.Forbidden, "Can't send transaction as the node requires at least one connection.", string.Empty);
@@ -570,7 +570,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
             // Ignore this check if the node is running dev mode.
-            if ((this.poaSettings != null && !this.poaSettings.DevMode) && !this.connectionManager.ConnectedPeers.Any())
+            if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
             {
                 this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.Forbidden, "Can't send transaction as the node requires at least one connection.", string.Empty);
