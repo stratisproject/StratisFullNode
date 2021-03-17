@@ -356,9 +356,6 @@ namespace Stratis.Bitcoin.Tests.Common
             network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(OpSpendRule));
             network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(CanGetSenderRule));
             network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(P2PKHNotContractRule));
-            //int coinviewRuleIndex = network.Consensus.ConsensusRules.FullValidationRules.IndexOf(typeof(StraxCoinviewRule));
-            //network.Consensus.ConsensusRules.FullValidationRules.RemoveAt(coinviewRuleIndex);
-            //network.Consensus.ConsensusRules.FullValidationRules.Insert(coinviewRuleIndex, typeof(PosCoinviewRule));
 
             return network;
         }

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Features.PoA.Voting;
-using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 {
@@ -37,5 +36,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 
             return allowedHashes.Contains(hash256);
         }
+    }
+
+    public interface IWhitelistedHashChecker
+    {
+        bool CheckHashWhitelisted(byte[] hash);
     }
 }

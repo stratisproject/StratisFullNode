@@ -85,7 +85,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         protected override void ComputeBlockVersion()
         {
             base.ComputeBlockVersion();
-            this.block.Header.Version |= ThresholdConditionCache.ExtendedHeaderBit;
+            this.block.Header.Version |= PosBlockHeader.ExtendedHeaderBit;
         }
     }
 }

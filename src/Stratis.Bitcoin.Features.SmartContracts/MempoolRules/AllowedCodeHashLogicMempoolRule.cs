@@ -16,8 +16,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
     public class AllowedCodeHashLogicMempoolRule : MempoolRule
     {
         private readonly ICallDataSerializer callDataSerializer;
-        private readonly IWhitelistedHashChecker whitelistedHashChecker;
-        private readonly IContractCodeHashingStrategy hashingStrategy;
         private readonly IContractTransactionFullValidationRule contractTransactionFullValidationRule;
 
         public AllowedCodeHashLogicMempoolRule(Network network,
@@ -26,13 +24,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
             ChainIndexer chainIndexer,
             ILoggerFactory loggerFactory,
             ICallDataSerializer callDataSerializer,
-            IWhitelistedHashChecker whitelistedHashChecker,
-            IContractCodeHashingStrategy hashingStrategy,
             IContractTransactionFullValidationRule contractTransactionFullValidationRule) : base(network, mempool, mempoolSettings, chainIndexer, loggerFactory)
         {
             this.callDataSerializer = callDataSerializer;
-            this.whitelistedHashChecker = whitelistedHashChecker;
-            this.hashingStrategy = hashingStrategy;
             this.contractTransactionFullValidationRule = contractTransactionFullValidationRule;
         }
 

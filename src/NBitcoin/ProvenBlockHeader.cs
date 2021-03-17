@@ -27,7 +27,7 @@ namespace NBitcoin
     /// Merkle proof (<see cref="MerkleProof"/>) that proves the coinstake tx is included in a block that is being represented by the provided header.
     /// </para>
     /// </remarks>
-    public class ProvenBlockHeader : PosBlockHeader, IBitcoinSerializable
+    public class ProvenBlockHeader : PosBlockHeader
     {
         /// <summary>
         /// Coinstake transaction.
@@ -98,8 +98,6 @@ namespace NBitcoin
             this.merkleProof = new MerkleBlock(block, new[] { this.coinstake.GetHash() }).PartialMerkleTree;
         }
 
-        #region IBitcoinSerializable Members
-
         /// <inheritdoc />
         public override void ReadWrite(BitcoinStream stream)
         {
@@ -117,8 +115,6 @@ namespace NBitcoin
             stream.ReadWrite(ref this.coinstake);
             this.CoinstakeSize = stream.ProcessedBytes - prev;
         }
-
-        #endregion
 
         /// <inheritdoc />
         public override string ToString()

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
@@ -82,21 +83,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
     public static partial class IFullNodeBuilderExtensions
     {
-        public static IFullNodeBuilder UseSmartContractWallet(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UseSmartContractWallet(this IFullNodeBuilder fullNodeBuilder, bool addVanillaWallet = true)
         {
             LoggingConfiguration.RegisterFeatureNamespace<WalletFeature>("smart contract wallet");
 
+            if (addVanillaWallet)
+                fullNodeBuilder.UseWallet();
+
             fullNodeBuilder.ConfigureFeature(features =>
             {
-                if (!features.FeatureRegistrations.Any(f => f.FeatureType.IsAssignableFrom(typeof(WalletFeature))))
-                {
-                    fullNodeBuilder.UseWallet();
-                }
-
                 features
                 .AddFeature<SmartContractWalletFeature>()
                 .FeatureServices(services =>
                 {
+                    services.Replace(ServiceDescriptor.Singleton<StandardTransactionPolicy, SmartContractTransactionPolicy>());
                     services.Replace(ServiceDescriptor.Singleton<IWalletTransactionHandler, SmartContractWalletTransactionHandler>());
                     services.AddSingleton<ISmartContractTransactionService, SmartContractTransactionService>();
 
