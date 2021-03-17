@@ -25,7 +25,7 @@
 
         public static bool IsSmartContractInternalCall(this Script script)
         {
-            return TestFirstByte(script, (byte)ScOpcodeType.OP_INTERNALCONTRACTTRANSFER);
+            return TestFirstByte(script, (byte) ScOpcodeType.OP_INTERNALCONTRACTTRANSFER);
         }
 
         private static bool TestFirstByte(Script script, byte opcode)
