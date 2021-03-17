@@ -486,9 +486,16 @@ if ( Get-Variable c -ErrorAction SilentlyContinue ) { Clear-Variable c }
 #Start Sidechain Node
 $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
-if ( $NodeType -eq "50K" ) 
+if ( $NodeType -eq "50K" )
 {
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
+    if ( $ethGasPrice )
+    {
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract -ethereumgasprice=$ethGasPrice" -PassThru
+    }
+        Else
+        {
+            $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
+        }
 }
     Else
     {
@@ -686,12 +693,12 @@ Start-Process http://localhost:37000
 Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -ForegroundColor Green
 #>
 
-Exit
+Exi
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU28wW4EC42kIv/PW2+l0QzDsH
-# CNqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUU/HwOiWbCFGLQnuTM6wVYkr1
+# 8y6gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -761,11 +768,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFKTcmZvWbA2S
-# bs7WTE0hlZ9OX1r/MA0GCSqGSIb3DQEBAQUABIIBAJmorx9HnV8E8IB4K/hbcq3g
-# z4IMeFSa5HyffYZJ5IOg8o8x/dPfjt9nxMpbPLbbJjvqF1ggfF83usv3l1yo1//1
-# G5PJffyqof8Mrj6xtujcTaOBX4PmvC8nCLspjxGIgnN78f1KKcg57D9BFypmv5AS
-# tGjC4RchX+3OkI7ttG84FNJX9VfDNPmyvIO3ScpPE/g/hJx1BMDgygLi0Hp95VBY
-# v9lz8lyVLSJ15FzttAqmtC0Fc/6p83lZGYW9xPzeoyzHQEkPAC9h2iv0m6G/iKAF
-# wqb9SvynN6bBZecmGMUKWg+Qk06wpaVH4CX2nkjzGeaX4s//3z1Z7nazumLa2y0=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFOBpsk3AlNnT
+# 5WpFjTR8G0eGe8UhMA0GCSqGSIb3DQEBAQUABIIBAI7mkr69rGufXNF0pafPBv1v
+# f2zqSS1692uplfQLecKxkzDkkElz+dGYaPBgQFphTzk9ruPkSBHsfwNUwCen0UyB
+# x6U8T1594jOiASVp8SZ20rI5Ja6F7j6A9WYFMOkeGmiC+J6vwxsONKylS35+nLVW
+# TiS6Zerg7JeHnOOXAvSl25Ys9Gwi/hNI3dilb/0OE8/m4+u9Dd7vnXk1iOukha63
+# vHcG0VPu7IlXDXwGRrfIVBEL1awn/7FXgchP5YAAhp8tbuYiUbuilmHPMuriYDBv
+# eata0bLgrsW4+4uE4z5n8UOTB+JGi/s80f6rSByKV/QqLM0N/vEW5z2372DTfDU=
 # SIG # End signature block
