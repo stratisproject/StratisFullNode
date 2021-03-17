@@ -490,7 +490,7 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract -ethereumgasprice=$ethGasPrice" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract -ethereumgasprice=$ethGasPrice -ethereumgas=$ethGasLimit" -PassThru
     }
         Else
         {
