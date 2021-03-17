@@ -174,6 +174,19 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             return (balanceData.TotalBalance, balanceData.ConfirmedBalance, balanceData.SpendableBalance);
         }
 
+        // Retrieves a transaction by it's id.
+        internal static IEnumerable<HDTransactionData> GetTransactionsById(DBConnection conn, int walletId, string transactionId)
+        {
+            string strTransactionId = DBParameter.Create(transactionId);
+            string strWalletId = DBParameter.Create(walletId);
+
+            return conn.Query<HDTransactionData>($@"
+                SELECT  *
+                FROM    HDTransactionData
+                WHERE   WalletId = {strWalletId}
+                AND     (OutputTxId = {strTransactionId} OR SpendTxId = {strTransactionId})");
+        }
+
         // Finds account transactions acting as inputs to other wallet transactions - i.e. not a complete list of transaction inputs.
         internal static IEnumerable<HDTransactionData> FindTransactionInputs(DBConnection conn, int walletId, int? accountIndex, long? transactionTime, string transactionId)
         {

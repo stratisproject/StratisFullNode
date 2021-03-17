@@ -783,7 +783,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -823,7 +823,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -899,7 +899,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -965,7 +965,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1045,7 +1045,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1147,7 +1147,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1185,7 +1185,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1261,7 +1261,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
