@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -115,11 +114,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             });
 
             return fullNodeBuilder;
-        }
-
-        public static IFullNodeBuilder AddFastPoAMiningCapability<T>(this IFullNodeBuilder fullNodeBuilder)
-        {
-            return fullNodeBuilder.ReplaceService<IPoAMiner, T>();
         }
     }
 }
