@@ -11,14 +11,14 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
     public enum ConversionRequestStatus
     {
         Unprocessed,
+        Submitted, // Unused, need to keep it due to previous state ordering in database
+        Processed,
 
         // States particular to Mint transactions
         OriginatorNotSubmitted,
         OriginatorSubmitted,
         VoteFinalised,
-        NotOriginator,
-
-        Processed
+        NotOriginator
     }
 
     public class ConversionRequest : IBitcoinSerializable
