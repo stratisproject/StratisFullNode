@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Nethereum.Contracts;
@@ -334,132 +335,180 @@ namespace Stratis.Bitcoin.Features.Interop
                 // The request is denominated in satoshi and needs to be converted to wei.
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
 
-                // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
-                if (originator)
+                /* Temporarily disabled mint logic
+                if (amountInWei > reserveBalanace)
                 {
-                    this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
-                  
-                    if (amountInWei > reserveBalanace)
+                    if (this.minting)
                     {
-                        if (this.minting)
-                        {
-                            this.logger.LogInformation("Minting transaction has not yet confirmed. Waiting.");
-
-                            return;
-                        }
-
-                        this.minting = true;
-
-                        this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
-
-                        string mintData = this.ethereumClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
-
-                        BigInteger mintTransactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
-                        
-                        // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
-                        string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(MintPlaceHolderRequestId + ((int)mintTransactionId));
-                        // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
-                        await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(MintPlaceHolderRequestId, (int)mintTransactionId, mintSignature)).ConfigureAwait(false);
+                        this.logger.LogInformation("Minting transaction has not yet confirmed. Waiting.");
 
                         return;
                     }
 
-                    // First construct the necessary transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
-                   
-                    // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                    string abiData = this.ethereumClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
+                    this.minting = true;
 
-                    // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
-                    // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
-                    BigInteger transactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, abiData).ConfigureAwait(false);
+                    this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
 
-                    this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
+                    string mintData = this.ethereumClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
 
-                    // The originator isn't responsible for anything further at this point.
-                    request.RequestStatus = (int)ConversionRequestStatus.Processed;
-                    request.Processed = true;
+                    BigInteger mintTransactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
 
-                    // Persist the updated request before broadcasting the coordination data.
-                    this.conversionRequestRepository.Save(request);
+                    // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
+                    string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(MintPlaceHolderRequestId + ((int)mintTransactionId));
+                    // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
+                    await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(MintPlaceHolderRequestId, (int)mintTransactionId, mintSignature)).ConfigureAwait(false);
 
-                    this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
-
-                    string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
-
-                    // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
-                    // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
-                    // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation node.
-                    // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
-                    // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
-                    await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).ConfigureAwait(false);
-
-                    // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                    // That is why it does not need to check the agreed transactionId confirmation count.
+                    return;
                 }
-                else
-                {
-                    if (this.interopTransactionManager.CheckIfVoted(request.RequestId, this.federationManager.CurrentFederationKey.PubKey))
-                        return;
-
-                    this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember.PubKey.ToHex());
-
-                    // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
-                    // Initially there will not be a quorum of nodes that agree on the transactionId.
-                    // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
-                    // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
-
-                    // Each node must only ever confirm a single transactionId for a given conversion transaction.
-                    BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
-
-                    if (agreedUponId != BigInteger.MinusOne)
-                    {
-                        this.logger.LogInformation("Quorum reached for conversion transaction {0}, submitting confirmation to contract.", request.RequestId);
-
-                        // Once a quorum is reached, each node confirms the agreed transactionId.
-                        // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
-                        string confirmationHash = await this.ethereumClientBase.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
-
-                        this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
-
-                        request.RequestStatus = (int)ConversionRequestStatus.Processed;
-                        request.Processed = true;
-
-                        this.conversionRequestRepository.Save(request);
-
-                        // We no longer need to track votes for this transaction.
-                        this.interopTransactionManager.RemoveTransaction(request.RequestId);
-                    }
-                    else
-                    {
-                        BigInteger transactionId = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
-
-                        if (transactionId != BigInteger.MinusOne)
-                        {
-                            this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId, request.RequestId);
-
-                            this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
-
-                            string signature = this.federationManager.CurrentFederationKey.SignMessage(request.RequestId + ((int)transactionId));
-
-                            await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(request.RequestId, (int)transactionId, signature)).ConfigureAwait(false);
-                        }
-                    }
-                }
-
-                // If we reach this point, the node was not the originator but there were also insufficient votes to determine a transactionId yet.
-                // This scenario has to be handled carefully, because we want to avoid having nodes need to change their votes due to a new submission to the multisig contract.
+                */
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
+                switch (request.RequestStatus)
+                {
+                    case ((int)ConversionRequestStatus.Unprocessed):
+                        if (originator)
+                        {
+                            // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
+                            this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
+
+                            request.RequestStatus = (int) ConversionRequestStatus.OriginatorNotSubmitted;
+                        }
+                        else
+                        {
+                            this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember.PubKey.ToHex());
+
+                            request.RequestStatus = (int) ConversionRequestStatus.NotOriginator;
+                        }
+
+                        break;
+                    case ((int)ConversionRequestStatus.OriginatorNotSubmitted):
+                        // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
+
+                        // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
+                        string abiData = this.ethereumClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
+
+                        // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
+                        // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
+                        // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
+                        BigInteger transactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, abiData).ConfigureAwait(false);
+
+                        this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
+
+                        // TODO: Need to persist vote storage across node shutdowns
+                        this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
+
+                        request.RequestStatus = (int)ConversionRequestStatus.OriginatorSubmitted;
+
+                        break;
+                    case ((int)ConversionRequestStatus.OriginatorSubmitted):
+                        // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
+                        // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
+                        // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation multisig node.
+                        // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
+                        // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
+
+                        BigInteger transactionId2 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+                        await this.BroadcastCoordination(request.RequestId, transactionId2).ConfigureAwait(false);
+
+                        BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 8);
+
+                        if (agreedTransactionId != BigInteger.MinusOne)
+                        {
+                            this.logger.LogInformation("Transaction {0} has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
+
+                            request.RequestStatus = (int)ConversionRequestStatus.VoteFinalised;
+                        }
+                        
+                        break;
+                    case ((int)ConversionRequestStatus.VoteFinalised):
+                        BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+
+                        // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
+                        // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
+                        BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
+
+                        if (confirmationCount >= 8)
+                        {
+                            this.logger.LogInformation("Transaction {0} has received at least 8 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
+
+                            request.RequestStatus = (int)ConversionRequestStatus.Processed;
+                            request.Processed = true;
+
+                            // We no longer need to track votes for this transaction.
+                            this.interopTransactionManager.RemoveTransaction(request.RequestId);
+                        }
+                        else
+                        {
+                            this.logger.LogInformation("Transaction {0} has finished voting but does not yet have 8 confirmations, re-broadcasting votes to peers.", transactionId3);
+
+                            // There are not enough confirmations yet.
+                            // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
+                            // Nodes will simply ignore the messages if they are not relevant.
+
+                            await this.BroadcastCoordination(request.RequestId, transactionId3).ConfigureAwait(false);
+
+                            // No state transition here, we are waiting for sufficient confirmations.
+                        }
+
+                        break;
+                    case ((int)ConversionRequestStatus.NotOriginator):
+                        // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
+                        // Initially there will not be a quorum of nodes that agree on the transactionId.
+                        // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
+                        // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
+                        // Each node must only ever confirm a single transactionId for a given conversion transaction.
+                        BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+
+                        if (agreedUponId != BigInteger.MinusOne)
+                        {
+                            this.logger.LogInformation("Quorum reached for conversion transaction {0} with transactionId {1}, submitting confirmation to contract.", request.RequestId, agreedUponId);
+
+                            // Once a quorum is reached, each node confirms the agreed transactionId.
+                            // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
+                            string confirmationHash = await this.ethereumClientBase.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+
+                            this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
+
+                            request.RequestStatus = (int)ConversionRequestStatus.VoteFinalised;
+                        }
+                        else
+                        {
+                            BigInteger transactionId4 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+
+                            if (transactionId4 != BigInteger.MinusOne)
+                            {
+                                this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId4, request.RequestId);
+
+                                this.interopTransactionManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
+
+                                await this.BroadcastCoordination(request.RequestId, transactionId4).ConfigureAwait(false);
+                            }
+
+                            // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
+                        }
+                        
+                        break;
+                }
+
+                // Make sure that any state transitions are persisted to storage.
+                this.conversionRequestRepository.Save(request);
+
+                // Unlike the mint requests, burns are not initiated by the multisig wallet.
+                // Instead they are initiated by the user, via a contract call to the burn() method on the WrappedStrax contract.
+                // They need to provide a destination STRAX address when calling the burn method.
+
+                // Properly processing burn transactions requires emulating a withdrawal on the main chain from the multisig wallet.
+                // It will be easier when conversion can be done directly to and from a Cirrus contract instead.
+
+                // Currently the processing is done in the WithdrawalExtractor.
             }
+        }
 
-            // Unlike the mint requests, burns are not initiated by the multisig wallet.
-            // Instead they are initiated by the user, via a contract call to the burn() method on the WrappedStrax contract.
-            // They need to provide a destination STRAX address when calling the burn method.
+        private async Task BroadcastCoordination(string requestId, BigInteger transactionId)
+        {
+            string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
 
-            // Properly processing burn transactions requires emulating a withdrawal on the main chain from the multisig wallet.
-            // It will be easier when conversion can be done directly to and from a Cirrus contract instead.
-
-            // Currently the processing is done in the WithdrawalExtractor.
+            await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(requestId, (int)transactionId, signature)).ConfigureAwait(false);
         }
 
         private BigInteger CoinsToWei(Money coins)
