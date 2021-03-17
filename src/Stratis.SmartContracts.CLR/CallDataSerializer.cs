@@ -82,7 +82,9 @@ namespace Stratis.SmartContracts.CLR
 
             string methodName = this.primitiveSerializer.Deserialize<string>(decodedParams[0]);
             object[] methodParameters = this.DeserializeMethodParameters(decodedParams[1]);
-            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractAddress, methodName, methodParameters);
+            string[] signatures = (decodedParams.Count > 2) ? this.DeserializeSignatures(decodedParams[2]) : null;
+
+            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractAddress, methodName, methodParameters, signatures);
             return Result.Ok(callData);
         }
 
@@ -130,6 +132,8 @@ namespace Stratis.SmartContracts.CLR
             rlpBytes.Add(this.primitiveSerializer.Serialize(contractTxData.MethodName));
 
             this.AddMethodParams(rlpBytes, contractTxData.MethodParameters);
+            if (contractTxData.Signatures != null)
+                this.AddSignatures(rlpBytes, contractTxData.Signatures);
 
             byte[] encoded = RLP.EncodeList(rlpBytes.Select(RLP.EncodeElement).ToArray());
             

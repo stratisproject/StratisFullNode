@@ -12,7 +12,7 @@ namespace Stratis.SmartContracts.CLR
         /// Creates a ContractTxData object for a method invocation
         /// </summary>
         public ContractTxData(int vmVersion, ulong gasPrice, RuntimeObserver.Gas gasLimit, uint160 contractAddress,
-            string method, object[] methodParameters = null)
+            string method, object[] methodParameters = null, string[] signatures = null)
         {
             this.OpCodeType = (byte) ScOpcodeType.OP_CALLCONTRACT;
             this.VmVersion = vmVersion;
@@ -22,7 +22,7 @@ namespace Stratis.SmartContracts.CLR
             this.MethodName = method;
             this.MethodParameters = methodParameters;
             this.ContractExecutionCode = new byte[0];
-            this.Signatures = null;
+            this.Signatures = signatures;
         }
 
         /// <summary>
