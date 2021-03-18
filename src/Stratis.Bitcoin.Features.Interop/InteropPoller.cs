@@ -410,7 +410,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         BigInteger transactionId2 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
                         await this.BroadcastCoordination(request.RequestId, transactionId2).ConfigureAwait(false);
 
-                        BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 8);
+                        BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
 
                         if (agreedTransactionId != BigInteger.MinusOne)
                         {
