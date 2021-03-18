@@ -1,74 +1,31 @@
-﻿using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder;
+using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Wallet;
-using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
-    public sealed class SmartContractWalletFeature : BaseWalletFeature
+    public sealed class SmartContractWalletFeature : FullNodeFeature
     {
-        private readonly BroadcasterBehavior broadcasterBehavior;
-        private readonly ChainIndexer chainIndexer;
-        private readonly IConnectionManager connectionManager;
         private readonly ILogger logger;
-        private readonly IWalletManager walletManager;
-        private readonly IWalletSyncManager walletSyncManager;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WalletFeature"/> class.
         /// </summary>
-        /// <param name="broadcasterBehavior">The broadcaster behavior.</param>
-        /// <param name="chainIndexer">The chain of blocks.</param>
-        /// <param name="connectionManager">The connection manager.</param>
-        /// <param name="walletManager">The wallet manager.</param>
-        /// <param name="walletSyncManager">The synchronization manager for the wallet, tasked with keeping the wallet synced with the network.</param>
-        public SmartContractWalletFeature(
-            BroadcasterBehavior broadcasterBehavior,
-            ChainIndexer chainIndexer,
-            IConnectionManager connectionManager,
-            ILoggerFactory loggerFactory,
-            IWalletManager walletManager,
-            IWalletSyncManager walletSyncManager,
-            INodeStats nodeStats)
+        public SmartContractWalletFeature(ILoggerFactory loggerFactory)
         {
-            this.broadcasterBehavior = broadcasterBehavior;
-            this.chainIndexer = chainIndexer;
-            this.connectionManager = connectionManager;
             this.logger = loggerFactory.CreateLogger(this.GetType().Name);
-            this.walletManager = walletManager;
-            this.walletSyncManager = walletSyncManager;
-
-            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
-            nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name);
-        }
-
-        private void AddComponentStats(StringBuilder log)
-        {
-        }
-
-        private void AddInlineStats(StringBuilder log)
-        {
         }
 
         /// <inheritdoc />
         public override Task InitializeAsync()
         {
-            this.walletManager.Start();
-            this.walletSyncManager.Start();
-
-            this.connectionManager.Parameters.TemplateBehaviors.Add(this.broadcasterBehavior);
-
             this.logger.LogInformation("Smart Contract Feature Wallet Injected.");
             return Task.CompletedTask;
         }
@@ -76,8 +33,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <inheritdoc />
         public override void Dispose()
         {
-            this.walletManager.Stop();
-            this.walletSyncManager.Stop();
         }
     }
 
@@ -94,10 +49,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 features
                 .AddFeature<SmartContractWalletFeature>()
+                .DependOn<BaseWalletFeature>()
                 .FeatureServices(services =>
                 {
-                    services.Replace(ServiceDescriptor.Singleton<StandardTransactionPolicy, SmartContractTransactionPolicy>());
-                    services.Replace(ServiceDescriptor.Singleton<IWalletTransactionHandler, SmartContractWalletTransactionHandler>());
+                    services.RemoveAll(typeof(StandardTransactionPolicy));
+                    services.AddSingleton<StandardTransactionPolicy, SmartContractTransactionPolicy>();
+
+                    services.RemoveAll(typeof(WalletTransactionHandler));
+                    services.RemoveAll(typeof(IWalletTransactionHandler));
+                    services.AddSingleton<IWalletTransactionHandler, SmartContractWalletTransactionHandler>();
+
+                    services.RemoveAll(typeof(ISmartContractTransactionService));
                     services.AddSingleton<ISmartContractTransactionService, SmartContractTransactionService>();
 
                     services.AddTransient<WalletRPCController>();
