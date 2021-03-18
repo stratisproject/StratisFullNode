@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using NBitcoin.Policy;
+using NLog;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -13,20 +13,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
     public sealed class SmartContractWalletFeature : FullNodeFeature
     {
-        private readonly ILogger logger;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="WalletFeature"/> class.
         /// </summary>
-        public SmartContractWalletFeature(ILoggerFactory loggerFactory)
+        public SmartContractWalletFeature()
         {
-            this.logger = loggerFactory.CreateLogger(this.GetType().Name);
         }
 
         /// <inheritdoc />
         public override Task InitializeAsync()
         {
-            this.logger.LogInformation("Smart Contract Feature Wallet Injected.");
+            ILogger logger = LogManager.GetCurrentClassLogger();
+
+            logger.Info("Smart Contract Feature Wallet Injected.");
+
             return Task.CompletedTask;
         }
 
@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                     services.RemoveAll(typeof(WalletTransactionHandler));
                     services.RemoveAll(typeof(IWalletTransactionHandler));
                     services.AddSingleton<IWalletTransactionHandler, SmartContractWalletTransactionHandler>();
-
+                    
                     services.RemoveAll(typeof(ISmartContractTransactionService));
                     services.AddSingleton<ISmartContractTransactionService, SmartContractTransactionService>();
 
