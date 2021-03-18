@@ -408,46 +408,53 @@ namespace Stratis.Bitcoin.Features.Interop
                         // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
                         BigInteger transactionId2 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
-                        await this.BroadcastCoordination(request.RequestId, transactionId2).ConfigureAwait(false);
 
-                        BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
-
-                        if (agreedTransactionId != BigInteger.MinusOne)
+                        if (transactionId2 != BigInteger.MinusOne)
                         {
-                            this.logger.LogInformation("Transaction {0} has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
+                            await this.BroadcastCoordinationAsync(request.RequestId, transactionId2).ConfigureAwait(false);
 
-                            request.RequestStatus = (int)ConversionRequestStatus.VoteFinalised;
+                            BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+
+                            if (agreedTransactionId != BigInteger.MinusOne)
+                            {
+                                this.logger.LogInformation("Transaction {0} has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
+
+                                request.RequestStatus = (int) ConversionRequestStatus.VoteFinalised;
+                            }
                         }
-                        
+
                         break;
                     case ((int)ConversionRequestStatus.VoteFinalised):
                         BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
 
-                        // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
-                        // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
-                        BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
-
-                        if (confirmationCount >= 6)
+                        if (transactionId3 != BigInteger.MinusOne)
                         {
-                            this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
+                            // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
+                            // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
+                            BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
 
-                            request.RequestStatus = (int)ConversionRequestStatus.Processed;
-                            request.Processed = true;
+                            if (confirmationCount >= 6)
+                            {
+                                this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
 
-                            // We no longer need to track votes for this transaction.
-                            this.interopTransactionManager.RemoveTransaction(request.RequestId);
-                        }
-                        else
-                        {
-                            this.logger.LogInformation("Transaction {0} has finished voting but does not yet have 8 confirmations, re-broadcasting votes to peers.", transactionId3);
+                                request.RequestStatus = (int) ConversionRequestStatus.Processed;
+                                request.Processed = true;
 
-                            // There are not enough confirmations yet.
-                            // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
-                            // Nodes will simply ignore the messages if they are not relevant.
+                                // We no longer need to track votes for this transaction.
+                                this.interopTransactionManager.RemoveTransaction(request.RequestId);
+                            }
+                            else
+                            {
+                                this.logger.LogInformation("Transaction {0} has finished voting but does not yet have 8 confirmations, re-broadcasting votes to peers.", transactionId3);
 
-                            await this.BroadcastCoordination(request.RequestId, transactionId3).ConfigureAwait(false);
+                                // There are not enough confirmations yet.
+                                // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
+                                // Nodes will simply ignore the messages if they are not relevant.
 
-                            // No state transition here, we are waiting for sufficient confirmations.
+                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId3).ConfigureAwait(false);
+
+                                // No state transition here, we are waiting for sufficient confirmations.
+                            }
                         }
 
                         break;
@@ -481,7 +488,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                                 this.interopTransactionManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
 
-                                await this.BroadcastCoordination(request.RequestId, transactionId4).ConfigureAwait(false);
+                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId4).ConfigureAwait(false);
                             }
 
                             // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
@@ -504,7 +511,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task BroadcastCoordination(string requestId, BigInteger transactionId)
+        private async Task BroadcastCoordinationAsync(string requestId, BigInteger transactionId)
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
 
