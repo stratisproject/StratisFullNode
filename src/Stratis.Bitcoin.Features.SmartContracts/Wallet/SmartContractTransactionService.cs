@@ -216,13 +216,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             uint160 addressNumeric = request.ContractAddress.ToUint160(this.network);
 
+            if (request.Signatures != null && this.smartContractPosActivationProvider != null && this.chainedIndexer != null)
+            {
+                if (!this.smartContractPosActivationProvider.IsActive(this.chainedIndexer.Tip))
+                    return BuildCallContractTransactionResponse.Failed("Signatures can only be passed if system contracts are supported.");
+            }
+
             ContractTxData txData;
             if (request.Parameters != null && request.Parameters.Any())
             {
                 try
                 {
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
-                    txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, methodParameters);
+                    txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, methodParameters, request.Signatures);
                 }
                 catch (MethodParameterStringSerializerException exception)
                 {
@@ -231,7 +237,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             }
             else
             {
-                txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName);
+                txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, request.Signatures);
             }
 
             HdAddress senderAddress = null;
