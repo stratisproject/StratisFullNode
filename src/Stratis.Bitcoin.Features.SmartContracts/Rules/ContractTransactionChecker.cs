@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
 
             foreach (Transaction transaction in block.Transactions)
             {
-                this.CheckTransaction(transaction, contractTransactionValidationRules, context.ValidationContext.ChainedHeaderToValidate.Height);
+                this.CheckTransaction(transaction, contractTransactionValidationRules, context.ValidationContext.ChainedHeaderToValidate?.Height ?? 0);
             }
 
             return Task.CompletedTask;
