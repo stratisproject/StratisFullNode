@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         public string NewOwner { get; set; }
     }
 
-    [Function("withdrawalAddresses")]
+    [Function("withdrawalAddresses", "string")]
     public class WithdrawalAddressesFunction : FunctionMessage
     {
         [Parameter("address", "", 1)]

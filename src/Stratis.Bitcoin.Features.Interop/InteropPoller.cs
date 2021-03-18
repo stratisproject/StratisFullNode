@@ -419,7 +419,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 this.logger.LogInformation("Transaction {0} has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
 
-                                request.RequestStatus = (int) ConversionRequestStatus.VoteFinalised;
+                                request.RequestStatus = (int)ConversionRequestStatus.VoteFinalised;
                             }
                         }
 
@@ -437,7 +437,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
 
-                                request.RequestStatus = (int) ConversionRequestStatus.Processed;
+                                request.RequestStatus = (int)ConversionRequestStatus.Processed;
                                 request.Processed = true;
 
                                 // We no longer need to track votes for this transaction.
