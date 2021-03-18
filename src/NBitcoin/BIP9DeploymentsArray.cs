@@ -75,6 +75,7 @@
         /// <inheritdoc />
         public int Length => this.parameters.Length;
 
+        /// <inheritdoc />
         public int FindDeploymentIndexByName(string name)
         {
             name = name.ToLower();
@@ -85,7 +86,6 @@
 
             return -1;
         }
-
     }
 
     /// <summary>
