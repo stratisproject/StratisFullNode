@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             this.hashingStrategy = hashingStrategy;
         }
 
-        public void CheckContractTransaction(ContractTxData txData, Money suppliedBudget)
+        public void CheckContractTransaction(ContractTxData txData, Money suppliedBudget, int blockHeight)
         {
             if (!txData.IsCreateContract)
                 return;
@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
                 try
                 {
                     PubKey[] pubKeysPresented = txData.Signatures.Select(s => PubKey.RecoverFromMessage(hashedCode, s)).ToArray();
-                    PubKey[] pubKeysRequired = factory.GetSignatureRequirements(0).ToArray();
+                    PubKey[] pubKeysRequired = factory.GetSignatureRequirements(blockHeight).ToArray();
                     if (pubKeysRequired.Any(r => !pubKeysPresented.Any(p => p == r)))
                         ThrowInvalidCode();
 
