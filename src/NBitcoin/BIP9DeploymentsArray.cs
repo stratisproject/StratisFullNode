@@ -37,6 +37,13 @@
         /// <param name="deployment">The deployment number (element index in array).</param>
         /// <returns>The deployment parameters if this is a get.</returns>
         BIP9DeploymentsParameters this[int deployment] { get; set; }
+
+        /// <summary>
+        /// Finds the deployment with the given name.
+        /// </summary>
+        /// <param name="name">The name of the deployment to find.</param>
+        /// <returns>The integer deployment number or -1 if the name was not found.</returns>
+        int FindDeploymentIndexByName(string name);
     }
 
     /// <summary>
@@ -67,6 +74,18 @@
 
         /// <inheritdoc />
         public int Length => this.parameters.Length;
+
+        /// <inheritdoc />
+        public int FindDeploymentIndexByName(string name)
+        {
+            name = name.ToLower();
+
+            for (int deployment = 0; deployment < this.parameters.Length; deployment++)
+                if (this.parameters[deployment].Name == name)
+                    return deployment;
+
+            return -1;
+        }
     }
 
     /// <summary>
