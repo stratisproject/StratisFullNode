@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
 
             foreach (Transaction transaction in block.Transactions)
             {
-                this.CheckTransaction(transaction, contractTransactionValidationRules);
+                this.CheckTransaction(transaction, contractTransactionValidationRules, context.ValidationContext.ChainedHeaderToValidate?.Height ?? 0);
             }
 
             return Task.CompletedTask;
@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             return txData;
         }
 
-        private void CheckTransaction(Transaction transaction, IEnumerable<IContractTransactionValidationRule> rules)
+        private void CheckTransaction(Transaction transaction, IEnumerable<IContractTransactionValidationRule> rules, int blockHeight)
         {
             TxOut scTxOut = transaction.TryGetSmartContractTxOut();
 
@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
 
             foreach (IContractTransactionValidationRule rule in rules)
             {
-                rule.CheckContractTransaction(txData, null);
+                rule.CheckContractTransaction(txData, null, blockHeight);
             }
         }
     }

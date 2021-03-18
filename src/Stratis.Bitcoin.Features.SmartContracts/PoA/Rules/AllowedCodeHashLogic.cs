@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA.Rules
             this.hashingStrategy = hashingStrategy;
         }
 
-        public void CheckContractTransaction(ContractTxData txData, Money suppliedBudget)
+        public void CheckContractTransaction(ContractTxData txData, Money suppliedBudget, int blockHeight = 0)
         {
             if (!txData.IsCreateContract)
                 return;

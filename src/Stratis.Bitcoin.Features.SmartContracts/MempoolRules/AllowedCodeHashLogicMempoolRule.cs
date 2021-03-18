@@ -42,7 +42,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
 
             ContractTxData txData = ContractTransactionChecker.GetContractTxData(this.callDataSerializer, scTxOut);
 
-            this.contractTransactionFullValidationRule.CheckContractTransaction(txData, Money.Zero);
+            // Delegate to full validation rule. The full validation rule will differ for PoA/PoS.
+            this.contractTransactionFullValidationRule.CheckContractTransaction(txData, null, this.chainIndexer.Tip.Height);
         }
     }
 }
