@@ -371,13 +371,13 @@ namespace Stratis.Bitcoin.Features.Interop
                             // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
                             this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
 
-                            request.RequestStatus = (int) ConversionRequestStatus.OriginatorNotSubmitted;
+                            request.RequestStatus = (int)ConversionRequestStatus.OriginatorNotSubmitted;
                         }
                         else
                         {
                             this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember.PubKey.ToHex());
 
-                            request.RequestStatus = (int) ConversionRequestStatus.NotOriginator;
+                            request.RequestStatus = (int)ConversionRequestStatus.NotOriginator;
                         }
 
                         break;
@@ -427,9 +427,9 @@ namespace Stratis.Bitcoin.Features.Interop
                         // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
                         BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
 
-                        if (confirmationCount >= 8)
+                        if (confirmationCount >= 6)
                         {
-                            this.logger.LogInformation("Transaction {0} has received at least 8 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
+                            this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
 
                             request.RequestStatus = (int)ConversionRequestStatus.Processed;
                             request.Processed = true;
