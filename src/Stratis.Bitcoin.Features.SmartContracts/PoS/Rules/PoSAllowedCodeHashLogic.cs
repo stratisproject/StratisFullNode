@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
@@ -8,7 +9,7 @@ using Stratis.SmartContracts.CLR;
 namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
 {
     /// <summary>
-    /// Validates that the hash of the supplied smart contract code is contained in a list of supplied hashes.
+    /// Validates that the hash of the supplied smart contract code is allowed.
     /// </summary>
     public class PoSAllowedCodeHashLogic : IContractTransactionFullValidationRule
     {
@@ -30,8 +31,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             
             if (this.network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory factory)
             {
-                PubKey[] pubKeys = factory.GetSignatureRequirements(0).ToArray();
-                // TODO: Check the hashed code against all required signatures.
+                // Check the hashed code against all required signatures.
+                try
+                {
+                    PubKey[] pubKeysPresented = txData.Signatures.Select(s => PubKey.RecoverFromMessage(hashedCode, s)).ToArray();
+                    PubKey[] pubKeysRequired = factory.GetSignatureRequirements(0).ToArray();
+                    if (pubKeysRequired.Any(r => !pubKeysPresented.Any(p => p == r)))
+                        ThrowInvalidCode();
+
+                    return;
+                }
+                catch (Exception)
+                {
+                    ThrowInvalidCode();
+                }
             }
 
             ThrowInvalidCode();

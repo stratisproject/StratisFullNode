@@ -60,8 +60,8 @@ namespace Stratis.Bitcoin.Networks
 
             var consensusFactory = new SmartContractPoSConsensusFactory(new List<SystemContractsSignatureRequirement>()
             {
-                // TODO: Add signing pubkeys.
-                //new SystemContractsSignatureRequirement(new PubKey(""))
+                // TODO: Provide valid keys for signing system contracts. Disabling this for now for main.
+                new SystemContractsSignatureRequirement(new Key().PubKey)
             });
 
             // Create the genesis block.
