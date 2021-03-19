@@ -219,7 +219,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var network = new StraxRegTest();
 
                 // Set the date ranges such that segwit will 'Start' immediately after the initial confirmation window.
                 network.Consensus.BIP9Deployments[StraxBIP9Deployments.Segwit] = new BIP9DeploymentsParameters("Test", 1, 0, DateTime.Now.AddDays(50).ToUnixTimestamp(), 8);
@@ -295,7 +295,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var network = new StraxRegTest();
 
                 // Even though we are mining, we still want to use PoS consensus rules.
                 CoreNode node = builder.CreateStratisPosNode(network).Start();
@@ -323,7 +323,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Even though we are mining, we still want to use PoS consensus rules.
-                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                Network network = new StraxRegTest();
                 CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
 
                 // Need the premine to be past coinbase maturity so that we can stake with it.
@@ -365,7 +365,7 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // Even though we are mining, we still want to use PoS consensus rules.
-                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                Network network = new StraxRegTest();
                 CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
 
                 var address = BitcoinWitPubKeyAddress.Create(node.FullNode.WalletManager().GetUnusedAddress().Bech32Address, network);
@@ -421,7 +421,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var network = new StraxRegTest();
 
                 CoreNode node = builder.CreateStratisPosNode(network).Start();
                 CoreNode listener = builder.CreateStratisPosNode(network).Start();
@@ -466,11 +466,11 @@ namespace Stratis.Bitcoin.IntegrationTests
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
                 // We have to name the networks differently because the NBitcoin network registration won't allow two identical networks to coexist otherwise.
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var network = new StraxRegTest();
                 network.SetPrivatePropertyValue("Name", "StraxRegTestWithDeployments");
                 Assert.NotNull(network.Consensus.BIP9Deployments[2]);
 
-                var networkNoBIP9 = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var networkNoBIP9 = new StraxRegTest();
                 networkNoBIP9.SetPrivatePropertyValue("Name", "StraxRegTestWithoutDeployments");
                 Assert.NotNull(networkNoBIP9.Consensus.BIP9Deployments[2]);
 
@@ -538,7 +538,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                Network network = new StraxRegTest();
                 CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
                 CoreNode listener = builder.CreateStratisPosNode(network).WithWallet().Start();
 
@@ -651,7 +651,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                Network network = new StraxRegTest();
                 CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
                 CoreNode listener = builder.CreateStratisPosNode(network).WithWallet().Start();
 
@@ -737,7 +737,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                Network network = new StraxRegTest();
                 CoreNode node = builder.CreateStratisPosNode(network).WithWallet().Start();
                 CoreNode listener = builder.CreateStratisPosNode(network).WithWallet().Start();
 

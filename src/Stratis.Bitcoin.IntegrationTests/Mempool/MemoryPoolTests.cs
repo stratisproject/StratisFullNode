@@ -354,7 +354,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         {
             // See CheckFinalTransaction_WithElapsedLockTime_ReturnsTrueAsync for the 'unit test' version
 
-            var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            var network = new StraxRegTest();
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -392,7 +392,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         {
             // See AcceptToMemoryPool_TxFinalCannotMine_ReturnsFalseAsync for the 'unit test' version
 
-            var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            var network = new StraxRegTest();
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -429,7 +429,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         [Fact]
         public void Mempool_SendOversizeTransaction_ShouldRejectByMempool()
         {
-            var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            var network = new StraxRegTest();
 
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -465,7 +465,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Mempool
         [Fact]
         public void Mempool_SendTransactionWithLargeOpReturn_ShouldRejectByMempool()
         {
-            var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            var network = new StraxRegTest();
 
             using (var builder = NodeBuilder.Create(this))
             {

@@ -426,7 +426,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                Network network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                Network network = new StraxRegTest();
                 var node = builder.CreateStratisPosNode(network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest10Miner).Start();
                 RPCClient rpcClient = node.CreateRPCClient();
 

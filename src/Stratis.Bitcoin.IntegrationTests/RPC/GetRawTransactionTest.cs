@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
         public GetRawTransactionTest()
         {
-            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            this.network = new StraxRegTest();
         }
 
         [Fact]

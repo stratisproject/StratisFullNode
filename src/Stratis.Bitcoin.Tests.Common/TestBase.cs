@@ -7,10 +7,6 @@ using System.Threading;
 using FluentAssertions;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
-using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
-using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Xunit;
 
@@ -21,6 +17,8 @@ namespace Stratis.Bitcoin.Tests.Common
         public Network Network { get; protected set; }
         public DBreezeSerializer DBreezeSerializer { get; }
 
+        protected MockServiceCollection MockServiceCollection { get; }
+
         /// <summary>
         /// Initializes logger factory for inherited tests.
         /// </summary>
@@ -28,6 +26,7 @@ namespace Stratis.Bitcoin.Tests.Common
         {
             this.Network = network;
             this.DBreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
+            this.MockServiceCollection = new MockServiceCollection();
         }
 
         public static DirectoryInfo AssureEmptyDir(string dir)
@@ -321,43 +320,6 @@ namespace Stratis.Bitcoin.Tests.Common
                     Assert.False(true, $"{message}{Environment.NewLine}{e.Message} [{e.InnerException?.Message}]");
                 }
             }
-        }
-
-        public static Network GetStraxRegTestNetworkWithNoSCRules(string name = null)
-        {
-            var network = new StraxRegTest();
-            network.SetPrivatePropertyValue(nameof(StratisRegTest.Name), name ?? nameof(StraxRegTest));
-            return GetStraxNetworkWithNoSCRules(network);
-        }
-
-        public static Network GetStraxMainNetworkWithNoSCRules(string name = null)
-        {
-            var network = new StraxMain();
-            network.SetPrivatePropertyValue(nameof(StratisMain.Name), name ?? nameof(StraxMain));
-            return GetStraxNetworkWithNoSCRules(network);
-        }
-
-        public static Network GetStraxTestNetworkWithNoSCRules(string name = null)
-        {
-            var network = new StraxTest();
-            network.SetPrivatePropertyValue(nameof(StratisTest.Name), name ?? nameof(StraxTest));
-            return GetStraxNetworkWithNoSCRules(network);
-        }
-
-        public static Network GetStraxNetworkWithNoSCRules(Network network)
-        {
-            network.Consensus.MempoolRules.Remove(typeof(CanGetSenderMempoolRule));
-            network.Consensus.MempoolRules.Remove(typeof(CheckMinGasLimitSmartContractMempoolRule));
-            network.Consensus.MempoolRules.Remove(typeof(SmartContractFormatLogicMempoolRule));
-            network.Consensus.MempoolRules.Remove(typeof(AllowedCodeHashLogicMempoolRule));
-
-            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(ContractTransactionFullValidationRule));
-            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(TxOutSmartContractExecRule));
-            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(OpSpendRule));
-            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(CanGetSenderRule));
-            network.Consensus.ConsensusRules.FullValidationRules.Remove(typeof(P2PKHNotContractRule));
-
-            return network;
         }
     }
 }

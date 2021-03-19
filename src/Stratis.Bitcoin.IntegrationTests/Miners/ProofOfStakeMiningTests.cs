@@ -10,12 +10,20 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
 {
     public class ProofOfStakeMiningTests
     {
+        private class StratisRegTestLastPowBlock : StraxRegTest
+        {
+            public StratisRegTestLastPowBlock()
+            {
+                this.Name = Guid.NewGuid().ToString();
+            }
+        }
+
         [Fact]
         public void MiningAndPropagatingPOS_MineBlockCheckPeerHasNewBlock()
         {
             using (NodeBuilder nodeBuilder = NodeBuilder.Create(this))
             {
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var network = new StraxRegTest();
 
                 CoreNode node = nodeBuilder.CreateStratisPosNode(network, "posmining-1-node").WithDummyWallet().Start();
                 CoreNode syncer = nodeBuilder.CreateStratisPosNode(network, "posmining-1-syncer").Start();
@@ -36,7 +44,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
         {
             using (NodeBuilder nodeBuilder = NodeBuilder.Create(this))
             {
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules(Guid.NewGuid().ToString());
+                var network = new StratisRegTestLastPowBlock();
 
                 CoreNode node = nodeBuilder.CreateStratisPosNode(network, "posmining-2-node").WithDummyWallet().Start();
 

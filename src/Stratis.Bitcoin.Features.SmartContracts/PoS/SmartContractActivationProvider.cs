@@ -39,7 +39,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             this.nodeDeployments = nodeDeployments;
 
             this.deployment = this.network.Consensus.BIP9Deployments.FindDeploymentIndexByName("SystemContracts");
-            Guard.Assert(this.deployment >= 0);
 
             this.lockObject = new object();
 
@@ -47,7 +46,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             {
                 lock (this.lockObject)
                 {
-                    return this.nodeDeployments.BIP9.GetState(prev, this.deployment) == ThresholdState.Active;
+                    return this.deployment >= 0 && this.nodeDeployments.BIP9.GetState(prev, this.deployment) == ThresholdState.Active;
                 }
             };
         }

@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         public OfflineSigningTests()
         {
-            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            this.network = new StraxRegTest();
         }
 
         [Fact]

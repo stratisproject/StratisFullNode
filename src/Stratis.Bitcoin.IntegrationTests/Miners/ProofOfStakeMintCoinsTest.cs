@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Miners
             using (var builder = NodeBuilder.Create(this))
             {
                 var configParameters = new NodeConfigParameters { { "txindex", "1" } };
-                var network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+                var network = new StraxRegTest();
 
                 var minerA = builder.CreateStratisPosNode(network, "stake-1-minerA", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
 

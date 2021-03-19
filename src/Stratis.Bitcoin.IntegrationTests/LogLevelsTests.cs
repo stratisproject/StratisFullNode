@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
         public LogLevelsTests()
         {
-            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            this.network = new StraxRegTest();
         }
 
         public void Dispose()

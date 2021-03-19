@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
         public RawTransactionTests()
         {
-            this.network = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            this.network = new StraxRegTest();
         }
 
         private Money GetTotalInputValue(CoreNode node, Transaction fundedTransaction)

@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests.PoS
     /// </summary>
     public class StratisMempoolValidatorTest : TestBase
     {
-        public StratisMempoolValidatorTest() : base(GetStraxRegTestNetworkWithNoSCRules())
+        public StratisMempoolValidatorTest() : base(new StraxRegTest())
         {
 
         }

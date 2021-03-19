@@ -116,7 +116,7 @@ namespace Stratis.Bitcoin.IntegrationTests.API
             this.posNodeBuilder = NodeBuilder.Create(Path.Combine(this.GetType().Name, this.CurrentTest.DisplayName));
 
             this.powNetwork = new BitcoinRegTestOverrideCoinbaseMaturity(1);
-            this.posNetwork = TestBase.GetStraxRegTestNetworkWithNoSCRules();
+            this.posNetwork = new StraxRegTest();
         }
 
         protected override void AfterTest()

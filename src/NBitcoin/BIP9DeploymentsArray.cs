@@ -81,7 +81,7 @@
             name = name.ToLower();
 
             for (int deployment = 0; deployment < this.parameters.Length; deployment++)
-                if (this.parameters[deployment].Name == name)
+                if (this.parameters[deployment]?.Name == name)
                     return deployment;
 
             return -1;
