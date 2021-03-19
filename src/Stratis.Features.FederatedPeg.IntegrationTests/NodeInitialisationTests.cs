@@ -38,7 +38,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
         public NodeInitialisationTests()
         {
             this.sidechainNetwork = (CirrusRegTest)CirrusNetwork.NetworksSelector.Regtest();
-            this.mainNetwork = new StraxRegTest();
+            this.mainNetwork = Networks.Strax.Regtest();
             this.mainNetwork.RewardClaimerBatchActivationHeight = 50;
 
             var pubKeysByMnemonic = this.sidechainNetwork.FederationMnemonics.ToDictionary(m => m, m => m.DeriveExtKey().PrivateKey.PubKey);

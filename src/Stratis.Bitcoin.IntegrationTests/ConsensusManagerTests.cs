@@ -185,7 +185,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                var network = new StraxRegTest();
+                var network = new StratisConsensusOptionsOverrideTest();
 
                 // MinerA requires a physical wallet to stake with.
                 var minerA = builder.CreateStratisPosNode(network, "cm-2-minerA").OverrideDateTimeProvider().WithWallet().Start();

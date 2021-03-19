@@ -30,7 +30,6 @@ using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Services;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
@@ -80,7 +79,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
         private Mock<IStakeValidator> stakeValidator;
         private MempoolManager mempoolManager;
 
-        public ColdStakingControllerTest() : base(new StraxMain())
+        public ColdStakingControllerTest() : base(KnownNetworks.StraxMain)
         {
             // Register the cold staking script template.
             this.Network.StandardScriptsRegistry.RegisterStandardScriptTemplate(ColdStakingScriptTemplate.Instance);

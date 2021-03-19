@@ -6,7 +6,6 @@ using NBitcoin;
 using NBitcoin.BouncyCastle.Math;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Networks.Policies;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
@@ -610,7 +609,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             string dataDir = GetTestDirectoryPath(this);
 
             // Need to use a PoS network for this test, as coinstakes have no real meaning on pure PoW
-            var network = new StraxRegTest();
+            var network = KnownNetworks.StraxRegTest;
             var minerSecret = new BitcoinSecret(new Key(), network);
             ITestChainContext context = await TestChainFactory.CreatePosAsync(network, minerSecret.PubKey.Hash.ScriptPubKey, dataDir);
             IMempoolValidator validator = context.MempoolValidator;

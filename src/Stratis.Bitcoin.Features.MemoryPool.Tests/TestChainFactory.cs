@@ -108,8 +108,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
             foreach (Type ruleType in network.Consensus.ConsensusRules.FullValidationRules)
                 consensusRulesContainer.FullValidationRules.Add(mockServiceCollection.GetService(ruleType) as FullValidationConsensusRule);
             foreach (Type ruleType in network.Consensus.ConsensusRules.PartialValidationRules)
-                consensusRulesContainer.PartialValidationRules.Add(Activator.CreateInstance(ruleType) as PartialValidationConsensusRule);
-           
+                consensusRulesContainer.PartialValidationRules.Add(Activator.CreateInstance(ruleType) as PartialValidationConsensusRule);           
             var consensusSettings = new ConsensusSettings(nodeSettings);
             var chain = new ChainIndexer(network);
             var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(chain.Tip));
