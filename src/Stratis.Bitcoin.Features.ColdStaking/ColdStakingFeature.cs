@@ -252,6 +252,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                     services.RemoveSingleton<IWalletService>();
                     services.AddSingleton<IWalletService, ColdStakingWalletService>();
 
+                    services.AddSingleton<ScriptAddressReader>();
                     services.AddSingleton<ScriptDestinationReader, ColdStakingDestinationReader>();
                     services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(ColdStakingDestinationReader), ServiceLifetime.Singleton));
                 });

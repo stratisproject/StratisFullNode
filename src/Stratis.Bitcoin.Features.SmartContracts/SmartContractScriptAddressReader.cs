@@ -42,12 +42,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             {
                 if (this.baseAddressReader is IScriptDestinationReader destinationReader)
                 {
-                    foreach (TxDestination address in destinationReader.GetDestinationFromScriptPubKey(network, script))
-                        yield return address;
+                    foreach (TxDestination destination in destinationReader.GetDestinationFromScriptPubKey(network, script))
+                        if (destination != null)
+                            yield return destination;
                 }
                 else
                 {
-                    yield return ScriptDestinationReader.GetDestinationForAddress(this.baseAddressReader.GetAddressFromScriptPubKey(network, script), network);
+                    TxDestination destination = ScriptDestinationReader.GetDestinationForAddress(this.baseAddressReader.GetAddressFromScriptPubKey(network, script), network);
+                    if (destination != null)
+                        yield return destination;
                 }
             }
         }
