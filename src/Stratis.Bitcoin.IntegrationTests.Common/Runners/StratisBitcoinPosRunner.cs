@@ -57,9 +57,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
             if (isstrax)
             {
                 builder
-                    .UseSmartContractWallet(false)
-                    .UseSmartContractPosPowMining()
-                    .AddSmartContracts(options =>
+                .UseSmartContractWallet(false)
+                .UseSmartContractPosPowMining()
+                .AddSmartContracts(options =>
                 {
                     options.UseReflectionExecutor();
                     options.UsePoSWhitelistedContracts();
@@ -103,9 +103,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
                                 .UseBlockStore()
                                 .UsePosConsensus()
                                 .UseMempool()
-                                .UseWallet()
+                                .UseColdStakingWallet()
+                                .UseSmartContractWallet(false)
                                 .AddSQLiteWalletRepository()
-                                .AddPowPosMining(true)
+                                .UseSmartContractPosPowMining()
+                                .AddSmartContracts(options =>
+                                {
+                                    options.UseReflectionExecutor();
+                                    options.UsePoSWhitelistedContracts();
+                                })
                                 .AddRPC()
                                 .MockIBD()
                                 .UseTestChainedHeaderTree()
