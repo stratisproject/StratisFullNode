@@ -1,7 +1,6 @@
 ﻿using System;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
-using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 {
@@ -22,6 +21,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     {
         private readonly Network network;
         private readonly NodeDeployments nodeDeployments;
+        private readonly ChainIndexer chainIndexer;
 
         private readonly int deployment;
         private readonly object lockObject;
@@ -33,10 +33,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// </summary>
         /// <param name="network">Network.</param>
         /// <param name="nodeDeployments">Node deployments providing access to the BIP9 deployments.</param>
-        public SmartContractPosActivationProvider(Network network, NodeDeployments nodeDeployments)
+        /// <param name="chainIndexer">The consensus chain.</param>
+        public SmartContractPosActivationProvider(Network network, NodeDeployments nodeDeployments, ChainIndexer chainIndexer)
         {
             this.network = network;
             this.nodeDeployments = nodeDeployments;
+            this.chainIndexer = chainIndexer;
 
             this.deployment = this.network.Consensus.BIP9Deployments.FindDeploymentIndexByName("SystemContracts");
 
@@ -46,7 +48,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             {
                 lock (this.lockObject)
                 {
-                    return this.deployment >= 0 && this.nodeDeployments.BIP9.GetState(prev, this.deployment) == ThresholdState.Active;
+                    return this.deployment >= 0 && this.nodeDeployments.BIP9.GetState(prev ?? this.chainIndexer.Tip, this.deployment) == ThresholdState.Active;
                 }
             };
         }

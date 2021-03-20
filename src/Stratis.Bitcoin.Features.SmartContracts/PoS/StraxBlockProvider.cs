@@ -49,12 +49,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <inheritdoc/>
         public void BlockModified(ChainedHeader chainTip, Block block)
         {
-            if (chainTip.Height >= this.network.Consensus.LastPOWBlock)
+            if (BlockStake.IsProofOfStake(block))
             {
                 if (this.smartContractPosActivationProvider.IsActive(chainTip))
+                {
                     this.smartContractPosBlockDefinition.BlockModified(chainTip, block);
+                }
                 else
+                {
                     this.posBlockDefinition.BlockModified(chainTip, block);
+                }
             }
             else
             {
