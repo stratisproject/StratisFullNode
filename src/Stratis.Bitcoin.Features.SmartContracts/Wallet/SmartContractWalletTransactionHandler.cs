@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             Network network,
             StandardTransactionPolicy transactionPolicy,
             IReserveUtxoService utxoReservedService, 
-            ISmartContractPosActivationProvider smartContractPosActivationProvider) :
+            ISmartContractPosActivationProvider smartContractPosActivationProvider = null /* Only for PoS */) :
             base(loggerFactory, walletManager, walletFeePolicy, network, transactionPolicy, utxoReservedService)
         {
             this.network = network;
