@@ -54,12 +54,12 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             fullNode1.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
             {
-                return prev.Header.Time >= this.activationTime;
+                return (prev ?? chainIndexer1.Tip).Header.Time >= this.activationTime;
             };
 
             fullNode2.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
             {
-                return prev.Header.Time >= this.activationTime;
+                return (prev ?? chainIndexer2.Tip).Header.Time >= this.activationTime;
             };
         }
 
