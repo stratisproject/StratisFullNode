@@ -7,7 +7,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// <summary>
     /// The purpose of the following code is to determine the activation time with the help of the BIP9 mechanism.
     /// </summary>
-    public interface ISmartContractPosActivationProvider
+    public interface ISmartContractActivationProvider
     {
         /// <summary>
         /// Determines smart contracts are active for a block given the previous block header.
@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     }
 
     /// <inheritdoc/>
-    public class SmartContractPosActivationProvider : ISmartContractPosActivationProvider
+    public class SmartContractPosActivationProvider : ISmartContractActivationProvider
     {
         private readonly Network network;
         private readonly NodeDeployments nodeDeployments;

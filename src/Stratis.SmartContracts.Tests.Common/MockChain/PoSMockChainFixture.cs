@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Tests.Common;
 
 namespace Stratis.SmartContracts.Tests.Common.MockChain
 {

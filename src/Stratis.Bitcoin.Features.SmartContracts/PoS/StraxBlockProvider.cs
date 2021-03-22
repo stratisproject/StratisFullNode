@@ -19,9 +19,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <summary>Defines how proof of work blocks are built on a proof-of-stake network.</summary>
         private readonly PosPowBlockDefinition posPowBlockDefinition;
 
-        private readonly ISmartContractPosActivationProvider smartContractPosActivationProvider;
+        private readonly ISmartContractActivationProvider smartContractPosActivationProvider;
 
-        public StraxBlockProvider(Network network, IEnumerable<BlockDefinition> definitions, ISmartContractPosActivationProvider smartContractPosActivationProvider)
+        public StraxBlockProvider(Network network, IEnumerable<BlockDefinition> definitions, ISmartContractActivationProvider smartContractPosActivationProvider)
         {
             this.network = network;
 

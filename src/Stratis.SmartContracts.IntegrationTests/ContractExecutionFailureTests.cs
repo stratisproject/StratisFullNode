@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using CSharpFunctionalExtensions;
 using Mono.Cecil;
 using NBitcoin;
@@ -14,7 +13,6 @@ using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Util;
 using Stratis.SmartContracts.RuntimeObserver;
 using Stratis.SmartContracts.Tests.Common.MockChain;
@@ -58,14 +56,14 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             this.activationTime = chainIndexer1.Tip.Header.Time;
 
-            fullNode1.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
+            fullNode1.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
             {
-                return prev.Header.Time >= this.activationTime;
+                return (prev ?? chainIndexer1.Tip).Header.Time >= this.activationTime;
             };
 
-            fullNode2.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
+            fullNode2.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
             {
-                return prev.Header.Time >= this.activationTime;
+                return (prev ?? chainIndexer2.Tip).Header.Time >= this.activationTime;
             };
         }
 
@@ -855,7 +853,6 @@ namespace Stratis.SmartContracts.IntegrationTests
         public PoSContractExecutionFailureTests(PoSMockChainFixture fixture) : base(fixture)
         {
             SkipPOWPhase();
-
         }
     }
 }

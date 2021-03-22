@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
-using Stratis.Bitcoin.Features.Miner.Staking;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Tests.Common;
@@ -78,16 +76,17 @@ namespace Stratis.SmartContracts.Tests.Common.MockChain
 
         public void MineBlocks(int count)
         {
-            CoreNode node1 = this.Nodes[0].CoreNode;
-            ChainIndexer chainIndexer1 = node1.FullNode.NodeService<ChainIndexer>();
-            int tipHeight = chainIndexer1.Tip.Height;
-            if (tipHeight >= node1.FullNode.Network.Consensus.LastPOWBlock)
+            // Since node1 spends all its UTXOs during CreateTx node2 will have to perform the staking.
+            CoreNode node2 = this.Nodes[1].CoreNode;
+            ChainIndexer chainIndexer2 = node2.FullNode.NodeService<ChainIndexer>();
+            int tipHeight = chainIndexer2.Tip.Height;
+            if (tipHeight >= node2.FullNode.Network.Consensus.LastPOWBlock)
             {
-                (node1.FullNode.NodeService<IPosMinting>() as TestStraxMinting).MineBlocks(count);
+                (node2.FullNode.NodeService<IPosMinting>() as TestStraxMinting).MineBlocks(count);
             }
             else
             {
-                TestHelper.MineBlocks(node1, count);
+                TestHelper.MineBlocks(node2, count);
             }
 
             this.WaitForAllNodesToSync();

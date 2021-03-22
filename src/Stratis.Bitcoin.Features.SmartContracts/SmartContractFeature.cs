@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         private readonly Network network;
         private readonly IStateRepositoryRoot stateRoot;
 
-        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, ISmartContractPosActivationProvider smartContractPosActivationProvider = null)
+        public SmartContractFeature(IConsensusManager consensusLoop, ILoggerFactory loggerFactory, Network network, IStateRepositoryRoot stateRoot, ISmartContractActivationProvider smartContractPosActivationProvider = null)
         {
             this.consensusManager = consensusLoop;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -109,7 +109,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<IStateRepositoryRoot, StateRepositoryRoot>();
                         if (fullNodeBuilder.Network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
                         {
-                            services.AddSingleton<ISmartContractPosActivationProvider, SmartContractPosActivationProvider>();
+                            services.AddSingleton<ISmartContractActivationProvider, SmartContractPosActivationProvider>();
                         }
 
                         // CONSENSUS ------------------------------------------------------------------------

@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
     public sealed class SmartContractWalletTransactionHandler : WalletTransactionHandler
     {
         private readonly Network network;
-        private readonly ISmartContractPosActivationProvider smartContractPosActivationProvider;
+        private readonly ISmartContractActivationProvider smartContractActivationProvider;
 
         public SmartContractWalletTransactionHandler(
             ILoggerFactory loggerFactory,
@@ -21,11 +21,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             Network network,
             StandardTransactionPolicy transactionPolicy,
             IReserveUtxoService utxoReservedService, 
-            ISmartContractPosActivationProvider smartContractPosActivationProvider = null /* Only for PoS */) :
+            ISmartContractActivationProvider smartContractActivationProvider = null /* Optional */) :
             base(loggerFactory, walletManager, walletFeePolicy, network, transactionPolicy, utxoReservedService)
         {
             this.network = network;
-            this.smartContractPosActivationProvider = smartContractPosActivationProvider;
+            this.smartContractActivationProvider = smartContractActivationProvider;
         }
 
         /// <summary>
@@ -42,10 +42,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 // Just revert to legacy PoS behavior until SC active.
                 base.InitializeTransactionBuilder(context);
-                if (this.smartContractPosActivationProvider.IsActive(null))
-                {
+
+                if (this.smartContractActivationProvider?.IsActive(null) ?? false)
                     context.TransactionBuilder.StandardTransactionPolicy = this.TransactionPolicy;
-                }
 
                 return;
             }

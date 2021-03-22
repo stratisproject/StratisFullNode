@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         private readonly IAddressGenerator addressGenerator;
         private readonly IStateRepositoryRoot stateRoot;
         private readonly IReserveUtxoService reserveUtxoService;
-        private readonly ISmartContractPosActivationProvider smartContractPosActivationProvider;
+        private readonly ISmartContractActivationProvider smartContractPosActivationProvider;
         private readonly ChainIndexer chainedIndexer;
 
         public SmartContractTransactionService(
@@ -50,7 +50,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             IAddressGenerator addressGenerator,
             IStateRepositoryRoot stateRoot,
             IReserveUtxoService reserveUtxoService,
-            ISmartContractPosActivationProvider smartContractPosActivationProvider = null,
+            ISmartContractActivationProvider smartContractPosActivationProvider = null,
             ChainIndexer chainedIndexer = null
             )
         {

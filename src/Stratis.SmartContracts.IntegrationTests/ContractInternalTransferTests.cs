@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Linq;
 using NBitcoin;
-using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Local;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Util;
 using Stratis.SmartContracts.Tests.Common.MockChain;
 using Xunit;
@@ -54,12 +52,12 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             this.activationTime = chainIndexer1.Tip.Header.Time;
 
-            fullNode1.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
+            fullNode1.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
             {
                 return prev.Header.Time >= this.activationTime;
             };
 
-            fullNode2.NodeService<ISmartContractPosActivationProvider>().IsActive = (prev) =>
+            fullNode2.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
             {
                 return prev.Header.Time >= this.activationTime;
             };
