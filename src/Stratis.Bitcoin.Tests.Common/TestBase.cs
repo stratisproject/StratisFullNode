@@ -8,6 +8,9 @@ using FluentAssertions;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
+using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.Core.Util;
 using Xunit;
 
 namespace Stratis.Bitcoin.Tests.Common
@@ -26,7 +29,18 @@ namespace Stratis.Bitcoin.Tests.Common
         {
             this.Network = network;
             this.DBreezeSerializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
-            this.MockServiceCollection = new MockServiceCollection();
+            this.MockServiceCollection = GetMockServiceCollection();
+        }
+
+        public static MockServiceCollection GetMockServiceCollection()
+        {
+            return new MockServiceCollection((collection) =>
+            {
+                collection
+                    .AddMockSingleton<ICallDataSerializer>()
+                    .AddMockSingleton<ISenderRetriever>()
+                    .AddMockSingleton<IStateRepositoryRoot>();
+            });
         }
 
         public static DirectoryInfo AssureEmptyDir(string dir)

@@ -103,7 +103,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Tests
                 consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
             }
 
-            var mockServiceCollection = new MockServiceCollection();
+            var mockServiceCollection = TestBase.GetMockServiceCollection();
 
             foreach (Type ruleType in network.Consensus.ConsensusRules.FullValidationRules)
                 consensusRulesContainer.FullValidationRules.Add(mockServiceCollection.GetService(ruleType) as FullValidationConsensusRule);

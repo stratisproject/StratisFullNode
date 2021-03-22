@@ -1,15 +1,11 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Stratis.SmartContracts.CLR;
-using Stratis.SmartContracts.Core.State;
-using Stratis.SmartContracts.Core.Util;
 
 namespace Stratis.Bitcoin.Tests.Common
 {
-    public class MockServiceCollection
+    public class MockServiceCollection : ServiceCollection
     {
-        private IServiceCollection serviceCollection;
         private IServiceProvider serviceProvider;
 
         public object GetService(Type type)
@@ -18,19 +14,40 @@ namespace Stratis.Bitcoin.Tests.Common
             if (service != null)
                 return service;
 
-            this.serviceCollection.AddSingleton(type, (serviceProvider) => ActivatorUtilities.CreateInstance(serviceProvider, type));
-            this.serviceProvider = this.serviceCollection.BuildServiceProvider();
+            this.AddSingleton(type, (serviceProvider) => ActivatorUtilities.CreateInstance(serviceProvider, type));
+
+            this.serviceProvider = this.BuildServiceProvider();
             
             return this.serviceProvider.GetService(type);
         }
 
-        public MockServiceCollection()
+        public T GetService<T>()
         {
-            this.serviceCollection = new ServiceCollection();
-            this.serviceCollection.AddSingleton(typeof(ICallDataSerializer), new Mock<ICallDataSerializer>().Object);
-            this.serviceCollection.AddSingleton(typeof(ISenderRetriever), new Mock<ISenderRetriever>().Object);
-            this.serviceCollection.AddSingleton(typeof(IStateRepositoryRoot), new Mock<IStateRepositoryRoot>().Object);
-            this.serviceProvider = this.serviceCollection.BuildServiceProvider();
+            return (T)GetService(typeof(T));
+        }
+
+        public void Configure(Action<MockServiceCollection> services = null)
+        {
+            services?.Invoke(this);
+            this.serviceProvider = this.BuildServiceProvider();
+        }
+
+        public MockServiceCollection AddMockSingleton(Type type)
+        {
+            Type mockType = typeof(Mock<>).MakeGenericType(type);
+            Mock mockObject = (Mock)Activator.CreateInstance(mockType);
+            this.AddSingleton(type, mockObject.Object);
+            return this;
+        }
+
+        public MockServiceCollection AddMockSingleton<T>()
+        {
+            return AddMockSingleton(typeof(T));
+        }
+
+        public MockServiceCollection(Action<MockServiceCollection> services = null)
+        {
+            this.Configure(services);
         }
     }
 }
