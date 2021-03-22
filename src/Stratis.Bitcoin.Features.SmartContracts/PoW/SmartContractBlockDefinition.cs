@@ -166,12 +166,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
             this.blockGasConsumed = 0;
 
             base.OnBuild(chainTip, scriptPubKeyIn);
-         
+
             this.coinbase.Outputs.AddRange(this.refundOutputs);
 
             return this.BlockTemplate;
         }
-
 
         /// <inheritdoc/>
         public override BlockTemplate Build(ChainedHeader chainTip, Script scriptPubKeyIn)

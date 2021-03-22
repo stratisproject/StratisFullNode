@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
         {
             var settings = new NodeSettings(this.Network, ProtocolVersion.PROVEN_HEADER_VERSION, this.Agent, args: new string[] { $"-conf={this.Network.DefaultConfigFilename}", "-datadir=" + this.DataFolder, "-displayextendednodestats=true" });
 
-            var isstrax = !(this.Network is StratisMain || this.Network is StratisTest || this.Network is StratisRegTest);
+            var isStrax = !(this.Network is StratisMain || this.Network is StratisTest || this.Network is StratisRegTest);
 
             var builder = new FullNodeBuilder()
                 .UseNodeSettings(settings)
@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
                 .UsePosConsensus()
                 .UseMempool();
 
-            if (isstrax)
+            if (isStrax)
                 builder.UseColdStakingWallet();
             else
                 builder.UseWallet();
@@ -54,7 +54,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
                 .UseTestChainedHeaderTree()
                 .MockIBD();
 
-            if (isstrax)
+            if (isStrax)
             {
                 builder
                 .UseSmartContractWallet(false)
