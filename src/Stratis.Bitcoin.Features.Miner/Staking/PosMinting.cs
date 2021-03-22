@@ -364,90 +364,83 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                try
+                // Prevent staking if the system time is not in sync with that of other members on the network.
+                if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
                 {
-                    // Prevent staking if the system time is not in sync with that of other members on the network.
-                    if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
-                    {
-                        this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
-                                             + "Please adjust your system time and restart the node.");
-                        await Task.Delay(TimeSpan.FromMilliseconds(this.systemTimeOutOfSyncSleep), cancellationToken).ConfigureAwait(false);
-                        continue;
-                    }
-
-                    // Don't stake if the wallet is not up-to-date with the current chain.
-                    if (this.consensusManager.Tip.HashBlock != this.walletManager.WalletTipHash)
-                    {
-                        this.logger.LogDebug("Waiting for wallet to catch up before mining can be started.");
-
-                        await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
-                        continue;
-                    }
-
-                    // Prevent staking if in initial block download.
-                    if (this.initialBlockDownloadState.IsInitialBlockDownload())
-                    {
-                        this.logger.LogDebug("Waiting for synchronization before mining can be started.");
-
-                        await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
-                        continue;
-                    }
-
-                    ChainedHeader chainTip = this.consensusManager.Tip;
-
-                    if (this.lastCoinStakeSearchPrevBlockHash != chainTip.HashBlock)
-                    {
-                        this.lastCoinStakeSearchPrevBlockHash = chainTip.HashBlock;
-                        this.lastCoinStakeSearchTime = chainTip.Header.Time;
-                        this.logger.LogDebug("New block '{0}' detected, setting last search time to its timestamp {1}.", chainTip, chainTip.Header.Time);
-
-                        // Reset the template as the chain advanced.
-                        blockTemplate = null;
-                    }
-
-                    uint coinstakeTimestamp = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() & ~PosConsensusOptions.StakeTimestampMask;
-                    if (coinstakeTimestamp <= this.lastCoinStakeSearchTime)
-                    {
-                        this.logger.LogDebug("Current coinstake time {0} is not greater than last search timestamp {1}.", coinstakeTimestamp, this.lastCoinStakeSearchTime);
-                        this.logger.LogTrace("(-)[NOTHING_TO_DO]");
-                        return;
-                    }
-
-                    // Get UTXOs from all wallets that have been enabled for staking.
-                    // Each UTXO has its corresponding wallet secret stored with it, so we do not have to retain additional mappings to the origin wallet.
-                    var utxoStakeDescriptions = new List<UtxoStakeDescription>();
-                    foreach (WalletSecret walletSecret in walletSecrets)
-                    {
-                        utxoStakeDescriptions.AddRange(this.GetUtxoStakeDescriptions(walletSecret, cancellationToken));
-                    }
-
-                    blockTemplate = blockTemplate ?? this.blockProvider.BuildPosBlock(chainTip, new Script());
-                    var posBlock = (PosBlock)blockTemplate.Block;
-
-                    this.networkWeight = (long)this.GetNetworkWeight();
-                    this.rpcGetStakingInfoModel.CurrentBlockSize = posBlock.GetSerializedSize();
-                    this.rpcGetStakingInfoModel.CurrentBlockTx = posBlock.Transactions.Count();
-                    this.rpcGetStakingInfoModel.PooledTx = await this.mempoolLock.ReadAsync(() => this.mempool.MapTx.Count).ConfigureAwait(false);
-                    this.rpcGetStakingInfoModel.Difficulty = this.GetDifficulty(chainTip);
-                    this.rpcGetStakingInfoModel.NetStakeWeight = this.networkWeight;
-
-                    // Trying to create coinstake that satisfies the difficulty target, put it into a block and sign the block.
-                    if (await this.StakeAndSignBlockAsync(utxoStakeDescriptions, blockTemplate, chainTip, blockTemplate.TotalFee, coinstakeTimestamp).ConfigureAwait(false))
-                    {
-                        this.logger.LogDebug("New POS block created and signed successfully.");
-                        await this.CheckStakeAsync(posBlock, chainTip).ConfigureAwait(false);
-
-                        blockTemplate = null;
-                    }
-                    else
-                    {
-                        this.logger.LogDebug("{0} failed to create POS block, waiting {1} ms for next round.", nameof(this.StakeAndSignBlockAsync), this.minerSleep);
-                        await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
-                    }
+                    this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
+                                            + "Please adjust your system time and restart the node.");
+                    await Task.Delay(TimeSpan.FromMilliseconds(this.systemTimeOutOfSyncSleep), cancellationToken).ConfigureAwait(false);
+                    continue;
                 }
-                catch (Exception ex)
+
+                // Don't stake if the wallet is not up-to-date with the current chain.
+                if (this.consensusManager.Tip.HashBlock != this.walletManager.WalletTipHash)
                 {
-                    throw ex;
+                    this.logger.LogDebug("Waiting for wallet to catch up before mining can be started.");
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                // Prevent staking if in initial block download.
+                if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                {
+                    this.logger.LogDebug("Waiting for synchronization before mining can be started.");
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                ChainedHeader chainTip = this.consensusManager.Tip;
+
+                if (this.lastCoinStakeSearchPrevBlockHash != chainTip.HashBlock)
+                {
+                    this.lastCoinStakeSearchPrevBlockHash = chainTip.HashBlock;
+                    this.lastCoinStakeSearchTime = chainTip.Header.Time;
+                    this.logger.LogDebug("New block '{0}' detected, setting last search time to its timestamp {1}.", chainTip, chainTip.Header.Time);
+
+                    // Reset the template as the chain advanced.
+                    blockTemplate = null;
+                }
+
+                uint coinstakeTimestamp = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp() & ~PosConsensusOptions.StakeTimestampMask;
+                if (coinstakeTimestamp <= this.lastCoinStakeSearchTime)
+                {
+                    this.logger.LogDebug("Current coinstake time {0} is not greater than last search timestamp {1}.", coinstakeTimestamp, this.lastCoinStakeSearchTime);
+                    this.logger.LogTrace("(-)[NOTHING_TO_DO]");
+                    return;
+                }
+
+                // Get UTXOs from all wallets that have been enabled for staking.
+                // Each UTXO has its corresponding wallet secret stored with it, so we do not have to retain additional mappings to the origin wallet.
+                var utxoStakeDescriptions = new List<UtxoStakeDescription>();
+                foreach (WalletSecret walletSecret in walletSecrets)
+                {
+                    utxoStakeDescriptions.AddRange(this.GetUtxoStakeDescriptions(walletSecret, cancellationToken));
+                }
+
+                blockTemplate = blockTemplate ?? this.blockProvider.BuildPosBlock(chainTip, new Script());
+                var posBlock = (PosBlock)blockTemplate.Block;
+
+                this.networkWeight = (long)this.GetNetworkWeight();
+                this.rpcGetStakingInfoModel.CurrentBlockSize = posBlock.GetSerializedSize();
+                this.rpcGetStakingInfoModel.CurrentBlockTx = posBlock.Transactions.Count();
+                this.rpcGetStakingInfoModel.PooledTx = await this.mempoolLock.ReadAsync(() => this.mempool.MapTx.Count).ConfigureAwait(false);
+                this.rpcGetStakingInfoModel.Difficulty = this.GetDifficulty(chainTip);
+                this.rpcGetStakingInfoModel.NetStakeWeight = this.networkWeight;
+
+                // Trying to create coinstake that satisfies the difficulty target, put it into a block and sign the block.
+                if (await this.StakeAndSignBlockAsync(utxoStakeDescriptions, blockTemplate, chainTip, blockTemplate.TotalFee, coinstakeTimestamp).ConfigureAwait(false))
+                {
+                    this.logger.LogDebug("New POS block created and signed successfully.");
+                    await this.CheckStakeAsync(posBlock, chainTip).ConfigureAwait(false);
+
+                    blockTemplate = null;
+                }
+                else
+                {
+                    this.logger.LogDebug("{0} failed to create POS block, waiting {1} ms for next round.", nameof(this.StakeAndSignBlockAsync), this.minerSleep);
+                    await Task.Delay(TimeSpan.FromMilliseconds(this.minerSleep), cancellationToken).ConfigureAwait(false);
                 }
             }
         }
