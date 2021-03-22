@@ -286,7 +286,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 {
                     NBitcoin.Block block = this.network.CreateBlock();
                     block.Header.HashPrevBlock = this.consensusManager.Tip.HashBlock;
-                    ((SmartContractBlockHeader)block.Header).HashStateRoot = ((SmartContractBlockHeader)genesis.Header).HashStateRoot;
+                    ((ISmartContractBlockHeader)block.Header).HashStateRoot = ((ISmartContractBlockHeader)genesis.Header).HashStateRoot;
                     block.Header.Version = 1;
                     block.Header.Time = Utils.DateTimeToUnixTime(this.ChainIndexer.Tip.GetMedianTimePast()) + 1;
 
