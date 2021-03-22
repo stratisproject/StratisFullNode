@@ -546,64 +546,57 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// <returns><c>true</c> if the function succeeds, <c>false</c> otherwise.</returns>
         private async Task<bool> StakeAndSignBlockAsync(List<UtxoStakeDescription> utxoStakeDescriptions, BlockTemplate blockTemplate, ChainedHeader chainTip, long fees, uint coinstakeTimestamp)
         {
-            try
+            var block = blockTemplate.Block as PosBlock;
+
+            // If we are trying to sign something except proof-of-stake block template.
+            if (!block.Transactions[0].Outputs[0].IsEmpty)
             {
-                var block = blockTemplate.Block as PosBlock;
-
-                // If we are trying to sign something except proof-of-stake block template.
-                if (!block.Transactions[0].Outputs[0].IsEmpty)
-                {
-                    this.logger.LogTrace("(-)[NO_POS_BLOCK]:false");
-                    return false;
-                }
-
-                // If we are trying to sign a complete proof-of-stake block.
-                if (BlockStake.IsProofOfStake(block))
-                {
-                    this.logger.LogTrace("(-)[ALREADY_DONE]:true");
-                    return true;
-                }
-
-                var coinstakeContext = new CoinstakeContext { CoinstakeTx = this.network.CreateTransaction() };
-                coinstakeContext.StakeTimeSlot = coinstakeTimestamp;
-
-                // Search to current coinstake time.
-                long searchTime = coinstakeContext.StakeTimeSlot;
-
-                long searchInterval = searchTime - this.lastCoinStakeSearchTime;
-                this.rpcGetStakingInfoModel.SearchInterval = (int)searchInterval;
-
-                this.lastCoinStakeSearchTime = searchTime;
-                this.logger.LogDebug("Search interval set to {0}, last coinstake search timestamp set to {1}.", searchInterval, this.lastCoinStakeSearchTime);
-
-                if (await this.CreateCoinstakeAsync(utxoStakeDescriptions, blockTemplate, chainTip, searchInterval, fees, coinstakeContext).ConfigureAwait(false))
-                {
-                    uint minTimestamp = chainTip.Header.Time + 1;
-                    if (coinstakeContext.StakeTimeSlot >= minTimestamp)
-                    {
-                        block.Header.Time = coinstakeContext.StakeTimeSlot;
-
-                        block.Transactions.Insert(1, coinstakeContext.CoinstakeTx);
-
-                        // The coinstake was added to the block so we need to regenerate the witness commitment.
-                        this.blockProvider.BlockModified(chainTip, block);
-
-                        // Append a signature to our block.
-                        ECDSASignature signature = coinstakeContext.Key.Sign(block.GetHash());
-
-                        block.BlockSignature = new BlockSignature { Signature = signature.ToDER() };
-                        return true;
-                    }
-                    else this.logger.LogDebug("Coinstake transaction created with too early timestamp {0}, minimal timestamp is {1}.", coinstakeContext.StakeTimeSlot, minTimestamp);
-                }
-                else this.logger.LogDebug("Unable to create coinstake transaction.");
-
+                this.logger.LogTrace("(-)[NO_POS_BLOCK]:false");
                 return false;
             }
-            catch (Exception ex)
+
+            // If we are trying to sign a complete proof-of-stake block.
+            if (BlockStake.IsProofOfStake(block))
             {
-                throw ex;
+                this.logger.LogTrace("(-)[ALREADY_DONE]:true");
+                return true;
             }
+
+            var coinstakeContext = new CoinstakeContext { CoinstakeTx = this.network.CreateTransaction() };
+            coinstakeContext.StakeTimeSlot = coinstakeTimestamp;
+
+            // Search to current coinstake time.
+            long searchTime = coinstakeContext.StakeTimeSlot;
+
+            long searchInterval = searchTime - this.lastCoinStakeSearchTime;
+            this.rpcGetStakingInfoModel.SearchInterval = (int)searchInterval;
+
+            this.lastCoinStakeSearchTime = searchTime;
+            this.logger.LogDebug("Search interval set to {0}, last coinstake search timestamp set to {1}.", searchInterval, this.lastCoinStakeSearchTime);
+
+            if (await this.CreateCoinstakeAsync(utxoStakeDescriptions, blockTemplate, chainTip, searchInterval, fees, coinstakeContext).ConfigureAwait(false))
+            {
+                uint minTimestamp = chainTip.Header.Time + 1;
+                if (coinstakeContext.StakeTimeSlot >= minTimestamp)
+                {
+                    block.Header.Time = coinstakeContext.StakeTimeSlot;
+
+                    block.Transactions.Insert(1, coinstakeContext.CoinstakeTx);
+
+                    // The coinstake was added to the block so we need to regenerate the witness commitment.
+                    this.blockProvider.BlockModified(chainTip, block);
+
+                    // Append a signature to our block.
+                    ECDSASignature signature = coinstakeContext.Key.Sign(block.GetHash());
+
+                    block.BlockSignature = new BlockSignature { Signature = signature.ToDER() };
+                    return true;
+                }
+                else this.logger.LogDebug("Coinstake transaction created with too early timestamp {0}, minimal timestamp is {1}.", coinstakeContext.StakeTimeSlot, minTimestamp);
+            }
+            else this.logger.LogDebug("Unable to create coinstake transaction.");
+
+            return false;
         }
 
         /// <inheritdoc/>
