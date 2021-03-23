@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Xunit;
 
 namespace NBitcoin.Tests
@@ -21,7 +20,6 @@ namespace NBitcoin.Tests
                 typeof(ExtPubKey),
                 typeof(PubKey),
                 typeof(PosBlock),
-                typeof(SmartContractPosBlock),
                 typeof(PosBlockHeader),
                 typeof(PosTransaction),
                 typeof(Protocol.CompactVarInt),
