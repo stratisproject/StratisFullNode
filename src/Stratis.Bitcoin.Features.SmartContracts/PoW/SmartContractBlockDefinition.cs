@@ -29,11 +29,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
         private readonly IContractExecutorFactory executorFactory;
         private readonly ILogger logger;
         private readonly List<TxOut> refundOutputs;
-        private readonly List<Receipt> receipts;
+        protected readonly List<Receipt> receipts;
         private readonly IStateRepositoryRoot stateRoot;
-        private readonly IBlockExecutionResultCache executionCache;
+        protected readonly IBlockExecutionResultCache executionCache;
         private readonly ICallDataSerializer callDataSerializer;
-        private IStateRepositoryRoot stateSnapshot;
+        protected IStateRepositoryRoot stateSnapshot;
         private readonly ISenderRetriever senderRetriever;
         private ulong blockGasConsumed;
 
@@ -143,13 +143,22 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
         }
 
         /// <inheritdoc/>
-        public override BlockTemplate Build(ChainedHeader chainTip, Script scriptPubKeyIn)
+        public BlockTemplate BuildNoCache(ChainedHeader chainTip, Script scriptPubKeyIn)
         {
             GetSenderResult getSenderResult = this.senderRetriever.GetAddressFromScript(scriptPubKeyIn);
 
             this.coinbaseAddress = (getSenderResult.Success) ? getSenderResult.Sender : uint160.Zero;
 
-            this.stateSnapshot = this.stateRoot.GetSnapshotTo(((ISmartContractBlockHeader)this.ConsensusManager.Tip.Header).HashStateRoot.ToBytes());
+            if (this.ConsensusManager.Tip.Header is PosBlockHeader posBlockHeader && !posBlockHeader.HasSmartContractFields)
+            {
+                uint256 rootHash = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+                this.stateRoot.SyncToRoot(rootHash.ToBytes());
+                this.stateSnapshot = this.stateRoot.GetSnapshotTo(rootHash.ToBytes()); // Set StateRoot to empty trie.
+            }
+            else
+            {
+                this.stateSnapshot = this.stateRoot.GetSnapshotTo(((ISmartContractBlockHeader)this.ConsensusManager.Tip.Header).HashStateRoot.ToBytes());
+            }
 
             this.refundOutputs.Clear();
             this.receipts.Clear();
@@ -159,6 +168,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
             base.OnBuild(chainTip, scriptPubKeyIn);
 
             this.coinbase.Outputs.AddRange(this.refundOutputs);
+
+            return this.BlockTemplate;
+        }
+
+        /// <inheritdoc/>
+        public override BlockTemplate Build(ChainedHeader chainTip, Script scriptPubKeyIn)
+        {
+            this.BuildNoCache(chainTip, scriptPubKeyIn);
 
             // Cache the results. We don't need to execute these again when validating.
             var cacheModel = new BlockExecutionResultModel(this.stateSnapshot, this.receipts);
@@ -177,15 +194,18 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
         {
             this.UpdateBaseHeaders();
 
+            if (!(this.block.Header is PosBlockHeader posHeader) || posHeader.HasSmartContractFields)
+            {
+                var scHeader = (ISmartContractBlockHeader)this.block.Header;
+
+                scHeader.HashStateRoot = new uint256(this.stateSnapshot.Root);
+
+                this.UpdateReceiptRoot(scHeader);
+
+                this.UpdateLogsBloom(scHeader);
+            }
+
             this.block.Header.Bits = this.block.Header.GetWorkRequired(this.Network, this.ChainTip);
-
-            var scHeader = (ISmartContractBlockHeader)this.block.Header;
-
-            scHeader.HashStateRoot = new uint256(this.stateSnapshot.Root);
-
-            this.UpdateReceiptRoot(scHeader);
-
-            this.UpdateLogsBloom(scHeader);
         }
 
         /// <summary>
