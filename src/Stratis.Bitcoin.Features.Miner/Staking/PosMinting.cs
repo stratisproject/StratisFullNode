@@ -74,7 +74,8 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             Idle = 0,
             StakingRequested = 1,
             StakingInProgress = 2,
-            StopStakingRequested = 3
+            StopStakingRequested = 3,
+            StakingAborted = 4
         }
 
         /// <summary>The maximum allowed size for a serialized block, in bytes (network rule).</summary>
@@ -193,7 +194,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// sense to try timestamps earlier than this value.
         /// </para>
         /// </summary>
-        private long lastCoinStakeSearchTime;
+        protected long lastCoinStakeSearchTime;
 
         /// <summary>
         /// Hash of the block headers of the block that was at the tip of the chain during our last
@@ -208,7 +209,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// <summary>
         /// A cancellation token source that can cancel the staking processes and is linked to the <see cref="INodeLifetime.ApplicationStopping"/>.
         /// </summary>
-        private CancellationTokenSource stakeCancellationTokenSource;
+        public CancellationTokenSource StakeCancellationTokenSource { get; private set; }
 
         /// <summary>Provider of IBD state.</summary>
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
@@ -281,7 +282,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
             }
 
             this.rpcGetStakingInfoModel.Enabled = true;
-            this.stakeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(new[] { this.nodeLifetime.ApplicationStopping });
+            this.StakeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(new[] { this.nodeLifetime.ApplicationStopping });
 
             this.stakingLoop = this.asyncProvider.CreateAndRunAsyncLoop("PosMining.Stake", async token =>
             {
@@ -322,10 +323,12 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 {
                     this.logger.LogError("Exception: {0}", ex);
                     this.logger.LogTrace("(-)[UNHANDLED_EXCEPTION]");
+
+                    Interlocked.CompareExchange(ref this.currentState, (int)CurrentState.StakingAborted, (int)CurrentState.StakingInProgress);
                     throw;
                 }
             },
-            this.stakeCancellationTokenSource.Token,
+            this.StakeCancellationTokenSource.Token,
             repeatEvery: TimeSpan.FromMilliseconds(this.minerSleep),
             startAfter: TimeSpans.Second);
 
@@ -341,12 +344,12 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 return;
             }
 
-            this.stakeCancellationTokenSource?.Cancel();
+            this.StakeCancellationTokenSource?.Cancel();
             this.logger.LogDebug("Disposing staking loop.");
             this.stakingLoop?.Dispose();
             this.stakingLoop = null;
-            this.stakeCancellationTokenSource?.Dispose();
-            this.stakeCancellationTokenSource = null;
+            this.StakeCancellationTokenSource?.Dispose();
+            this.StakeCancellationTokenSource = null;
             this.rpcGetStakingInfoModel.StopStaking();
 
             Interlocked.CompareExchange(ref this.currentState, (int)CurrentState.Idle, (int)CurrentState.StopStakingRequested);
@@ -365,7 +368,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
                 {
                     this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
-                                         + "Please adjust your system time and restart the node.");
+                                            + "Please adjust your system time and restart the node.");
                     await Task.Delay(TimeSpan.FromMilliseconds(this.systemTimeOutOfSyncSleep), cancellationToken).ConfigureAwait(false);
                     continue;
                 }
@@ -795,7 +798,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                         break;
                     }
 
-                    if (this.stakeCancellationTokenSource.Token.IsCancellationRequested)
+                    if (this.StakeCancellationTokenSource.Token.IsCancellationRequested)
                     {
                         context.Logger.LogDebug("Application shutdown detected, stopping work.");
                         stopWork = true;
