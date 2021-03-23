@@ -80,6 +80,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                     // Only OP_RETURN scripts are allowed in coinbase.
                     if (!txOut.ScriptPubKey.IsUnspendable)
                     {
+                        // Make an exception for refund outputs.
+                        if (context.ValidationContext.ChainedHeaderToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
+                        {
+                            if (PayToPubkeyHashTemplate.Instance.CheckScriptPubKey(txOut.ScriptPubKey))
+                                continue;
+                        }
+
                         this.Logger.LogTrace("(-)[COINBASE_SPENDABLE]");
                         ConsensusErrors.BadStakeBlock.Throw();
                     }
