@@ -13,6 +13,9 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
@@ -87,9 +90,15 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 }
 
                 builder
+                 .UseSmartContractWallet(false)
                  .AddSQLiteWalletRepository()
-                 .AddPowPosMining(true)
+                 .UseSmartContractPosPowMining()
                  .AddRPC()
+                 .AddSmartContracts(options =>
+                 {
+                    options.UseReflectionExecutor();
+                    options.UsePoSWhitelistedContracts();
+                 })
                  .UseApi()
                  .UseTestChainedHeaderTree()
                  .MockIBD();

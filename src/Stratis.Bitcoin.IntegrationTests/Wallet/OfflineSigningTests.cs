@@ -113,9 +113,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode miningNode = builder.CreateStratisColdStakingNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
-                CoreNode onlineNode = builder.CreateStratisColdStakingNode(this.network).Start();
-                CoreNode offlineNode = builder.CreateStratisColdStakingNode(this.network).WithWallet().Start();
+                CoreNode miningNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode onlineNode = builder.CreateStratisPosNode(this.network).Start();
+                CoreNode offlineNode = builder.CreateStratisPosNode(this.network).WithWallet().Start();
 
                 // The offline node never gets connected to anything.
                 TestHelper.ConnectAndSync(miningNode, onlineNode);
@@ -361,9 +361,9 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode miningNode = builder.CreateStratisColdStakingNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
-                CoreNode onlineNode = builder.CreateStratisColdStakingNode(this.network).Start();
-                CoreNode offlineNode = builder.CreateStratisColdStakingNode(this.network).WithWallet().Start();
+                CoreNode miningNode = builder.CreateStratisPosNode(this.network).WithReadyBlockchainData(ReadyBlockchain.StraxRegTest150Miner).Start();
+                CoreNode onlineNode = builder.CreateStratisPosNode(this.network).Start();
+                CoreNode offlineNode = builder.CreateStratisPosNode(this.network).WithWallet().Start();
 
                 // The offline node never gets connected to anything.
                 TestHelper.ConnectAndSync(miningNode, onlineNode);

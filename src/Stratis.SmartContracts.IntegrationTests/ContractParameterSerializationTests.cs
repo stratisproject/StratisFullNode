@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Text;
 using NBitcoin;
-using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -20,12 +20,44 @@ namespace Stratis.SmartContracts.IntegrationTests
 
         private readonly IContractPrimitiveSerializer serializer;
 
+        private uint? activationTime = null;
+
         protected ContractParameterSerializationTests(T fixture)
         {
             this.mockChain = fixture.Chain;
             this.node1 = this.mockChain.Nodes[0];
             this.node2 = this.mockChain.Nodes[1];
             this.serializer = new ContractPrimitiveSerializer(this.node1.CoreNode.FullNode.Network);
+        }
+
+        protected void SkipPOWPhase()
+        {
+            // Mine enough blocks for staking maturity.
+            this.mockChain.MineBlocks(20);
+
+            var fullNode1 = this.node1.CoreNode.FullNode;
+            var chainIndexer1 = fullNode1.NodeService<ChainIndexer>();
+            fullNode1.Network.Consensus.LastPOWBlock = chainIndexer1.Tip.Height;
+            fullNode1.Network.Consensus.Options = new TestPosConsensusOptions(fullNode1.Network.Consensus.Options as PosConsensusOptions);
+
+            var fullNode2 = this.node2.CoreNode.FullNode;
+            var chainIndexer2 = fullNode2.NodeService<ChainIndexer>();
+            fullNode2.Network.Consensus.LastPOWBlock = chainIndexer2.Tip.Height;
+            fullNode2.Network.Consensus.Options = new TestPosConsensusOptions(fullNode2.Network.Consensus.Options as PosConsensusOptions);
+
+            Assert.Equal(chainIndexer1.Tip.Header.GetHash(), chainIndexer2.Tip.Header.GetHash());
+
+            this.activationTime = chainIndexer1.Tip.Header.Time;
+
+            fullNode1.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
+            {
+                return (prev ?? chainIndexer1.Tip).Header.Time >= this.activationTime;
+            };
+
+            fullNode2.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
+            {
+                return (prev ?? chainIndexer2.Tip).Header.Time >= this.activationTime;
+            };
         }
 
         [Retry]
@@ -79,7 +111,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotNull(this.node1.GetCode(response.NewContractAddress));
 
             // Block doesn't contain any extra transactions
-            Assert.Equal(2, lastBlock.Transactions.Count);
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 1, lastBlock.Transactions.Count);
 
             // Contract keeps balance
             Assert.Equal((ulong)new Money((ulong)amount, MoneyUnit.BTC), this.node1.GetContractBalance(response.NewContractAddress));
@@ -179,7 +212,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block doesn't contain any extra transactions
-            Assert.Equal(2, lastBlock.Transactions.Count);
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 1, lastBlock.Transactions.Count);
 
             // Contract keeps balance
             Assert.Equal((ulong)new Money((ulong)amount, MoneyUnit.BTC), this.node1.GetContractBalance(preResponse.NewContractAddress));
@@ -249,7 +283,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block contains extra transaction forwarding balance
-            Assert.Equal(3, lastBlock.Transactions.Count);
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
 
             // Contract called internally gets balance
             Assert.Equal((ulong)new Money((ulong)amount, MoneyUnit.BTC), this.node1.GetContractBalance(preResponse.NewContractAddress));
@@ -315,7 +350,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotNull(this.node1.GetCode(response.NewContractAddress));
 
             // Block doesn't contain any extra transactions
-            Assert.Equal(2, lastBlock.Transactions.Count);
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 1, lastBlock.Transactions.Count);
 
             // Contract keeps balance
             Assert.Equal((ulong)new Money((ulong)amount, MoneyUnit.BTC), this.node1.GetContractBalance(response.NewContractAddress));
@@ -357,6 +393,14 @@ namespace Stratis.SmartContracts.IntegrationTests
     {
         public PoWContractParameterSerializationTests(PoWMockChainFixture fixture) : base(fixture)
         {
+        }
+    }
+
+    public class PoSContractParameterSerializationTests : ContractParameterSerializationTests<PoSMockChainFixture>
+    {
+        public PoSContractParameterSerializationTests(PoSMockChainFixture fixture) : base(fixture)
+        {
+            this.SkipPOWPhase(); 
         }
     }
 }

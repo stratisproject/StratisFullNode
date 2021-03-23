@@ -137,23 +137,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
         {
             return CreateNode(new StratisBitcoinPosRunner(this.GetNextDataFolderName(), network, agent), network.DefaultConfigFilename, configParameters: configParameters);
         }
-
-        /// <summary>
-        /// Creates a Stratis Proof-of-Stake node with the cold staking feature in lieu of the regular wallet.
-        /// <para>
-        /// <see cref="P2P.PeerDiscovery"/> and <see cref="P2P.PeerConnectorDiscovery"/> are disabled by default.
-        /// </para>
-        /// </summary>
-        /// <param name="network">The network the node will run on.</param>
-        /// <param name="agent">Overrides the node's agent prefix.</param>
-        /// <param name="configParameters">Adds to the nodes configuration parameters.</param>
-        /// 
-        /// <returns>The constructed PoS node.</returns>
-        public CoreNode CreateStratisColdStakingNode(Network network, string agent = "StratisBitcoin", NodeConfigParameters configParameters = null)
-        {
-            return CreateNode(new StratisBitcoinColdStakingRunner(this.GetNextDataFolderName(), network, agent), network.DefaultConfigFilename, configParameters: configParameters);
-        }
-
+        
         public CoreNode CloneStratisNode(CoreNode cloneNode, string agent = "StratisBitcoin")
         {
             var node = new CoreNode(new StratisBitcoinPowRunner(cloneNode.FullNode.Settings.DataFolder.RootPath, cloneNode.FullNode.Network, agent), this.ConfigParameters, cloneNode.FullNode.Network.DefaultConfigFilename);
