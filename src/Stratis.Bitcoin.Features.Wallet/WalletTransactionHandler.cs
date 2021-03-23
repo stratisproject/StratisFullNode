@@ -414,7 +414,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </remarks>
         protected virtual void AddRecipients(TransactionBuildContext context)
         {
-            if (context.Recipients.Any(a => a.Amount == Money.Zero))
+            if (context.Recipients.Any(a => a.Amount == Money.Zero && !a.ScriptPubKey.IsSmartContractExec()))
                 throw new WalletException("No amount specified.");
 
             int totalSubtractingRecipients = context.Recipients.Count(r => r.SubtractFeeFromAmount);
