@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using NLog;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -20,39 +21,39 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public IInteropRequestKeyValueStore KeyValueStore { get; }
 
-        private readonly ILogger logger;
+        private readonly NLog.ILogger logger;
 
-        public InteropRequestRepository(ILoggerFactory loggerFactory, IInteropRequestKeyValueStore interopRequestKeyValueStore)
+        public InteropRequestRepository(IInteropRequestKeyValueStore interopRequestKeyValueStore)
         {
             this.KeyValueStore = interopRequestKeyValueStore;
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         public void Save(InteropRequest request)
         {
-            this.logger.LogDebug($"Saving interop request {request.RequestId} to store.");
+            this.logger.Debug($"Saving interop request {request.RequestId} to store.");
 
             this.KeyValueStore.SaveValue(request.RequestId, request);
         }
 
         public InteropRequest Get(string requestId)
         {
-            this.logger.LogDebug($"Retrieving interop request {requestId} from store.");
+            this.logger.Debug($"Retrieving interop request {requestId} from store.");
 
             return this.KeyValueStore.LoadValue<InteropRequest>(requestId);
         }
 
         public List<InteropRequest> GetAllEthereum(bool onlyUnprocessed)
         {
-            this.logger.LogDebug($"Retrieving all Ethereum interop requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
+            this.logger.Debug($"Retrieving all Ethereum interop requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
             
             return this.KeyValueStore.GetAll((int)InteropRequestType.InvokeEthereum, onlyUnprocessed);
         }
 
         public List<InteropRequest> GetAllStratis(bool onlyUnprocessed)
         {
-            this.logger.LogDebug($"Retrieving all Stratis interop requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
+            this.logger.Debug($"Retrieving all Stratis interop requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
 
             return this.KeyValueStore.GetAll((int)InteropRequestType.InvokeStratis, onlyUnprocessed);
         }

@@ -16,8 +16,6 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropFeature : FullNodeFeature
     {
-        private readonly ILoggerFactory loggerFactory;
-        
         private readonly Network network;
 
         private readonly IFederationManager federationManager;
@@ -30,7 +28,7 @@ namespace Stratis.Bitcoin.Features.Interop
         
         private readonly IEthereumClientBase ethereumClientBase;
 
-        public InteropFeature(ILoggerFactory loggerFactory, 
+        public InteropFeature(
             Network network, 
             IFederationManager federationManager,
             IConnectionManager connectionManager,
@@ -39,7 +37,6 @@ namespace Stratis.Bitcoin.Features.Interop
             IEthereumClientBase ethereumClientBase,
             IFullNode fullNode)
         {
-            this.loggerFactory = loggerFactory;
             this.network = network;
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
@@ -56,7 +53,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.loggerFactory, this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase));
 
             return Task.CompletedTask;
         }

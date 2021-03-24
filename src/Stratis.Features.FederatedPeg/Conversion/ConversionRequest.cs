@@ -21,22 +21,13 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
         NotOriginator
     }
 
+    /// <summary>Request to mint or burn wSTRAX on ETH chain.</summary>
+    /// <remarks>
+    /// When wSTRAX coins are minted and sent to <see cref="DestinationAddress"/> on ETH chain same amount of STRAX coins should be received by the multisig address.
+    /// When wSTRAX coins are burned on ETH chain same amount of STRAX coins should be sent to <see cref="DestinationAddress"/>.
+    /// </remarks>
     public class ConversionRequest : IBitcoinSerializable
     {
-        private string requestId;
-
-        private int requestType;
-
-        private int requestStatus;
-
-        private int blockHeight;
-
-        private string destinationAddress;
-
-        private ulong amount;
-
-        private bool processed;
-
         /// <summary>
         /// The unique identifier for this particular conversion request.
         /// It gets selected by the request creator.
@@ -46,6 +37,7 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
 
         /// <summary>
         /// The type of the conversion request, mint or burn.
+        /// <see cref="ConversionRequestType"/>
         /// </summary>
         public int RequestType { get { return this.requestType; } set { this.requestType = value; } }
 
@@ -77,6 +69,20 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
         /// Indicates whether or not this request has been processed by the interop poller.
         /// </summary>
         public bool Processed { get { return this.processed; } set { this.processed = value; } }
+
+        private string requestId;
+
+        private int requestType;
+
+        private int requestStatus;
+
+        private int blockHeight;
+
+        private string destinationAddress;
+
+        private ulong amount;
+
+        private bool processed;
 
         public void ReadWrite(BitcoinStream s)
         {

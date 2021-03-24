@@ -33,10 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
             var account = new ManagedAccount(interopSettings.EthereumAccount, interopSettings.EthereumPassphrase);
             
             // TODO: Support loading offline accounts from keystore JSON directly?
-            if (!string.IsNullOrWhiteSpace(interopSettings.EthereumClientUrl))
-                this.web3 = new Web3(account, interopSettings.EthereumClientUrl);
-            else
-                this.web3 = new Web3(account);
+            this.web3 = !string.IsNullOrWhiteSpace(interopSettings.EthereumClientUrl) ? new Web3(account, interopSettings.EthereumClientUrl) : new Web3(account);
         }
 
         /// <inheritdoc />

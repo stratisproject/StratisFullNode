@@ -19,12 +19,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             var serializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
             var kvs = new ConversionRequestKeyValueStore(dataFolder, serializer);
 
-            var logger = new Mock<ILogger>();
-            var loggerFactory = new Mock<ILoggerFactory>();
-            loggerFactory.Setup(l => l.CreateLogger(It.IsAny<string>()))
-                .Returns(logger.Object);
-
-            var repo = new ConversionRequestRepository(loggerFactory.Object, kvs);
+            var repo = new ConversionRequestRepository(kvs);
 
             var request = new ConversionRequest()
             {
@@ -49,12 +44,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             var serializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
             var kvs = new ConversionRequestKeyValueStore(dataFolder, serializer);
 
-            var logger = new Mock<ILogger>();
-            var loggerFactory = new Mock<ILoggerFactory>();
-            loggerFactory.Setup(l => l.CreateLogger(It.IsAny<string>()))
-                .Returns(logger.Object);
-
-            var repo = new ConversionRequestRepository(loggerFactory.Object, kvs);
+            var repo = new ConversionRequestRepository(kvs);
 
             var request = new ConversionRequest()
             {
@@ -89,12 +79,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             var serializer = new DBreezeSerializer(network.Consensus.ConsensusFactory);
             var kvs = new ConversionRequestKeyValueStore(dataFolder, serializer);
 
-            var logger = new Mock<ILogger>();
-            var loggerFactory = new Mock<ILoggerFactory>();
-            loggerFactory.Setup(l => l.CreateLogger(It.IsAny<string>()))
-                .Returns(logger.Object);
-
-            var repo = new ConversionRequestRepository(loggerFactory.Object, kvs);
+            var repo = new ConversionRequestRepository(kvs);
 
             var request = repo.Get("nonexistent");
 
