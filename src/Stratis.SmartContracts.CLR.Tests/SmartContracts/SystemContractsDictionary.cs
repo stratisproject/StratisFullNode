@@ -13,11 +13,25 @@
         {
         }
 
-        public UInt256 GetContractHash(string name)
+        public UInt256 GetCodeHash(string name)
         {
             Assert(!string.IsNullOrEmpty(name));
 
             return this.State.GetUInt256($"ByName:{name}");
+        }
+
+        public Address GetContractAddress(string name)
+        {
+            Assert(!string.IsNullOrEmpty(name));
+
+            UInt256 codeHash = this.State.GetUInt256($"ByName:{name}");
+
+            if (codeHash == default)
+                return default;
+
+            WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+
+            return whiteListEntry.LastAddress;
         }
 
         public Address GetContractAddress(UInt256 codeHash)
