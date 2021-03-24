@@ -10,6 +10,7 @@ using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Networks;
+using Stratis.Sidechains.Networks;
 
 namespace Stratis.External.MasternodeRegistration
 {
@@ -27,7 +28,12 @@ namespace Stratis.External.MasternodeRegistration
             if (networkType == NetworkType.Mainnet)
             {
                 this.mainchainNetwork = new StraxMain();
-                //this.sidechainNetwork = new CirrusMain();
+                this.sidechainNetwork = new CirrusMain();
+            }
+            else
+            {
+                this.mainchainNetwork = new StraxTest();
+                this.sidechainNetwork = new CirrusTest();
             }
 
             // Start main chain node
@@ -39,6 +45,8 @@ namespace Stratis.External.MasternodeRegistration
                 return;
 
             // Wait for main chain node to be synced (out of IBD)
+            if (!await EnsureMainChainNodeIsSyncedAsync())
+                return;
 
             // Start side chain node
 
@@ -105,6 +113,30 @@ namespace Stratis.External.MasternodeRegistration
             } while (true);
 
             return initialized;
+        }
+
+        private async Task<bool> EnsureMainChainNodeIsSyncedAsync()
+        {
+            Console.WriteLine("Waiting for the main chain node to sync with the network...");
+
+            bool result;
+
+            // Call the node status API until the node initialization state is Initialized.
+            do
+            {
+                StatusModel blockModel = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
+                if (blockModel.InIbd.HasValue && !blockModel.InIbd.Value)
+                {
+                    Console.WriteLine($"Main chain node is synced at height {blockModel.ConsensusHeight}");
+                    result = true;
+                    break;
+                }
+
+                Console.WriteLine($"Main chain node syncing, current height {blockModel.ConsensusHeight}...");
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            } while (true);
+
+            return result;
         }
     }
 }

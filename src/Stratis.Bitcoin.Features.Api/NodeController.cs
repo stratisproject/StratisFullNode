@@ -71,8 +71,10 @@ namespace Stratis.Bitcoin.Features.Api
         /// <summary>An interface implementation used to retrieve unspent transactions.</summary>
         private readonly IGetUnspentTransaction getUnspentTransaction;
 
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
         /// <summary>Specification of the network the node runs on.</summary>
-        private Network network; // Not readonly because of ValidateAddress
+        private readonly Network network; // Not readonly because of ValidateAddress
 
         /// <summary>An interface implementation for the blockstore.</summary>
         private readonly IBlockStore blockStore;
@@ -100,7 +102,8 @@ namespace Stratis.Bitcoin.Features.Api
             IGetUnspentTransaction getUnspentTransaction = null,
             INetworkDifficulty networkDifficulty = null,
             IPooledGetUnspentTransaction pooledGetUnspentTransaction = null,
-            IPooledTransaction pooledTransaction = null)
+            IPooledTransaction pooledTransaction = null,
+            IInitialBlockDownloadState initialBlockDownloadState)
         {
             Guard.NotNull(fullNode, nameof(fullNode));
             Guard.NotNull(network, nameof(network));
@@ -127,6 +130,7 @@ namespace Stratis.Bitcoin.Features.Api
             this.consensusManager = consensusManager;
             this.blockStore = blockStore;
             this.getUnspentTransaction = getUnspentTransaction;
+            this.initialBlockDownloadState = initialBlockDownloadState;
             this.networkDifficulty = networkDifficulty;
             this.pooledGetUnspentTransaction = pooledGetUnspentTransaction;
             this.pooledTransaction = pooledTransaction;
@@ -158,7 +162,8 @@ namespace Stratis.Bitcoin.Features.Api
                 RunningTime = this.dateTimeProvider.GetUtcNow() - this.fullNode.StartTime,
                 CoinTicker = this.network.CoinTicker,
                 State = this.fullNode.State.ToString(),
-                BestPeerHeight = this.chainState.BestPeerTip?.Height
+                BestPeerHeight = this.chainState.BestPeerTip?.Height,
+                InIbd = this.initialBlockDownloadState?.IsInitialBlockDownload()
             };
 
             // Add the list of features that are enabled.
