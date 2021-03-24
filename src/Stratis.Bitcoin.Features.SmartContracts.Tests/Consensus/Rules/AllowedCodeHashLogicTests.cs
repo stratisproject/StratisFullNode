@@ -47,7 +47,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
             this.hashingStrategy.Setup(h => h.Hash(code)).Returns(hash);
 
-            string[] signatures = new[] { key.SignMessage(hash) };
+            string[] signatures = new[] { key.SignMessage(PoSAllowedCodeHashLogic.MessageToAllowCode(hash)) };
 
             var tx = new ContractTxData(1, 1000, (Gas)10000, code, signatures: signatures);
 
@@ -77,7 +77,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
             this.hashingStrategy.Setup(h => h.Hash(code)).Returns(hash);
 
-            string[] signatures = new[] { (new Key()).SignMessage(hash) };
+            string message = $"Allow code {(new uint256(hash))}";
+
+            string[] signatures = new[] { (new Key()).SignMessage(message) };
 
             var tx = new ContractTxData(1, 1000, (Gas)10000, code, signatures: signatures);
 
