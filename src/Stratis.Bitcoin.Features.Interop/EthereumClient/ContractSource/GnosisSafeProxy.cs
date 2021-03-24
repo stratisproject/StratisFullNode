@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Threading.Tasks;
 using NBitcoin.DataEncoders;
 using Nethereum.ABI;

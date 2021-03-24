@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Moq;
-using Stratis.Bitcoin.Features.FederatedPeg;
+﻿using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.Networks;

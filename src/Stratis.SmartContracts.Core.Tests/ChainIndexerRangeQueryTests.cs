@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
-using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Sidechains.Networks;
-using Stratis.SmartContracts.Networks;
 using Xunit;
 
 namespace Stratis.SmartContracts.Core.Tests

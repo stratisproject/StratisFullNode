@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using NLog;
 
 namespace Stratis.Bitcoin.Features.FederatedPeg
@@ -17,6 +16,7 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
+        /// <inheritdoc />
         public void Save(ConversionRequest request)
         {
             this.logger.Debug($"Saving conversion request {request.RequestId} to store.");
@@ -24,6 +24,7 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
             this.KeyValueStore.SaveValue(request.RequestId, request);
         }
 
+        /// <inheritdoc />
         public ConversionRequest Get(string requestId)
         {
             this.logger.Debug($"Retrieving conversion request {requestId} from store.");
@@ -31,6 +32,7 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
             return this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
         }
 
+        /// <inheritdoc />
         public List<ConversionRequest> GetAllMint(bool onlyUnprocessed)
         {
             this.logger.Debug($"Retrieving all mint requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
@@ -38,6 +40,7 @@ namespace Stratis.Bitcoin.Features.FederatedPeg
             return this.KeyValueStore.GetAll((int)ConversionRequestType.Mint, onlyUnprocessed);
         }
 
+        /// <inheritdoc />
         public List<ConversionRequest> GetAllBurn(bool onlyUnprocessed)
         {
             this.logger.Debug($"Retrieving all burn requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");

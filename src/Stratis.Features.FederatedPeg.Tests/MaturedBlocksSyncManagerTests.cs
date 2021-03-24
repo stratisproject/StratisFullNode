@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;

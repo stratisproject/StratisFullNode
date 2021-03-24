@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts.CLR;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Receipts;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
