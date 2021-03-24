@@ -3,7 +3,7 @@
     public struct WhiteListEntry
     {
         public UInt256 CodeHash;
-        public string LastAddress;
+        public Address LastAddress;
         public string Name;
     }
 
@@ -13,7 +13,23 @@
         {
         }
 
-        public void WhiteList(string[] signatures, UInt256 codeHash, string lastAddress, string name)
+        public UInt256 GetContractHash(string name)
+        {
+            Assert(!string.IsNullOrEmpty(name));
+
+            return this.State.GetUInt256($"ByName:{name}");
+        }
+
+        public Address GetContractAddress(UInt256 codeHash)
+        {
+            Assert(codeHash != default);
+
+            WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+
+            return whiteListEntry.LastAddress;
+        }
+
+        public void WhiteList(string[] signatures, UInt256 codeHash, Address lastAddress, string name)
         {
             Assert(signatures != null && signatures.Length > 0);
             Assert(codeHash != default);
@@ -33,7 +49,7 @@
 
             string message = $"WhiteList(CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
 
-            this.VerifySignatures(message, signatures);
+            //this.VerifySignatures(message, signatures);
 
             if (whiteListEntry.CodeHash != default)
             {
@@ -61,7 +77,7 @@
 
             string message = $"BlackList(CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
 
-            this.VerifySignatures(message, signatures);
+            //this.VerifySignatures(message, signatures);
 
             this.State.Clear(codeHash.ToString());
             this.State.Clear($"ByName:{whiteListEntry.Name}");
