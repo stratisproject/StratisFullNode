@@ -209,5 +209,18 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 AND     OutputTxTime = {strTransactionTime}")}
                 AND     OutputTxId = {strTransactionId}");
         }
+
+        // Retrieves a transaction by it's id.
+        internal static IEnumerable<HDTransactionData> GetTransactionsById(DBConnection conn, int walletId, string transactionId)
+        {
+            string strTransactionId = DBParameter.Create(transactionId);
+            string strWalletId = DBParameter.Create(walletId);
+
+            return conn.Query<HDTransactionData>($@"
+                SELECT  *
+                FROM    HDTransactionData
+                WHERE   WalletId = {strWalletId}
+                AND     (OutputTxId = {strTransactionId} OR SpendTxId = {strTransactionId})");
+        }
     }
 }
