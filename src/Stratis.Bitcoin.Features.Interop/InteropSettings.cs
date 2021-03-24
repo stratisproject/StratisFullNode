@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public int EthereumGas { get; set; }
 
         /// <summary>
-        /// The gas price for Ethereum interoperability transactions (will be converted to gwei).
+        /// The gas price for Ethereum interoperability transactions (denominated in gwei).
         /// </summary>
         public int EthereumGasPrice { get; set; }
 
