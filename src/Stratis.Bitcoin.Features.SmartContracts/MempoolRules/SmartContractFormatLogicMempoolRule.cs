@@ -6,7 +6,7 @@ using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.SmartContracts.CLR;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules
+namespace Stratis.Bitcoin.Features.SmartContracts.MempoolRules
 {
     /// <summary>
     /// Validates that a smart contract transaction can be deserialized correctly, and that it conforms to gas

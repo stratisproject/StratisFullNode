@@ -1,6 +1,7 @@
+using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 using Stratis.SmartContracts.Core.Hashing;
 
-namespace Stratis.Bitcoin.Features.SmartContracts.PoA
+namespace Stratis.Bitcoin.Features.SmartContracts
 {
     /// <summary>
     /// Hashes data using Keccak256.

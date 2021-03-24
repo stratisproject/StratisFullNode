@@ -18,6 +18,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
         /// </summary>
         /// <param name="txData">The included transaction data.</param>
         /// <param name="suppliedBudget">The total amount sent as the protocol fee.</param>
-        void CheckContractTransaction(ContractTxData txData, Money suppliedBudget);
+        /// <param name="blockHeight">The block height (as permissions change with block height).</param>
+        void CheckContractTransaction(ContractTxData txData, Money suppliedBudget, int blockHeight = 0);
     }
 }

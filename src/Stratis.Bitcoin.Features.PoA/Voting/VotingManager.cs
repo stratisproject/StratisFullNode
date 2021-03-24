@@ -647,14 +647,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             log.AppendLine(">> Voting & Poll Data");
 
-            lock (this.locker)
-            {
-                log.AppendLine("Member Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {GetPendingPolls().MemberPolls().Count} Approved: {GetApprovedPolls().MemberPolls().Count} Executed : {GetExecutedPolls().MemberPolls().Count}");
-                log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {GetPendingPolls().WhitelistPolls().Count} Approved: {GetApprovedPolls().WhitelistPolls().Count} Executed : {GetExecutedPolls().WhitelistPolls().Count}");
-                log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
-                log.AppendLine("Scheduled votes will be added to the next block this node mines.");
-                log.AppendLine();
-            }
+            // Use the polls list directly as opposed to the locked versions of them for console reporting.
+            List<Poll> pendingPolls = this.polls.Where(x => x.IsPending).ToList();
+            List<Poll> approvedPolls = this.polls.Where(x => !x.IsPending).ToList();
+            List<Poll> executedPolls = this.polls.Where(x => x.IsExecuted).ToList();
+
+            log.AppendLine("Member Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.MemberPolls().Count} Approved: {approvedPolls.MemberPolls().Count} Executed : {executedPolls.MemberPolls().Count}");
+            log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.WhitelistPolls().Count} Approved: {approvedPolls.WhitelistPolls().Count} Executed : {executedPolls.WhitelistPolls().Count}");
+            log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
+            log.AppendLine("Scheduled votes will be added to the next block this node mines.");
+            log.AppendLine();
         }
 
         [NoTrace]

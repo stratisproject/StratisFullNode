@@ -8,7 +8,6 @@ using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.Bitcoin.Features.SmartContracts.PoW.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
@@ -41,7 +40,7 @@ namespace Stratis.SmartContracts.Networks
             var consensusFactory = new SmartContractPowConsensusFactory();
 
             NBitcoin.Block genesisBlock = SmartContractNetworkUtils.CreateGenesis(consensusFactory, 1296688602, 2, 0x207fffff, 1, Money.Coins(50m));
-            ((SmartContractBlockHeader)genesisBlock.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+            ((ISmartContractBlockHeader)genesisBlock.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
 
             this.Genesis = genesisBlock;
 

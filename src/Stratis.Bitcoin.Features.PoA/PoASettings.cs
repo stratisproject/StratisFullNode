@@ -3,23 +3,25 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
-    public class PoAMinerSettings
+    public sealed class PoASettings
     {
-        /// <summary>Allows mining in case node is in IBD and not connected to anyone.</summary>
+        /// <summary>
+        /// Allows mining in case node is in IBD and not connected to anyone.
+        /// </summary>
         public bool BootstrappingMode { get; private set; }
 
         /// <summary>
         /// An address to use when mining, if not specified an address from the wallet will be used.
         /// </summary>
-        public string MineAddress { get; set; }
+        public string MineAddress { get; private set; }
 
-        public PoAMinerSettings(NodeSettings nodeSettings)
+        public PoASettings(NodeSettings nodeSettings)
         {
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
             TextFileConfiguration config = nodeSettings.ConfigReader;
 
-            this.BootstrappingMode = config.GetOrDefault<bool>("bootstrap", false);
+            this.BootstrappingMode = config.GetOrDefault("bootstrap", false);
             this.MineAddress = config.GetOrDefault<string>("mineaddress", null);
         }
 

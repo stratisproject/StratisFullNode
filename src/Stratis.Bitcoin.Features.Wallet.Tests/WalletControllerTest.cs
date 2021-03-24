@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.AutoMock;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Broadcasting;
@@ -782,7 +783,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -822,7 +823,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -898,7 +899,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -964,7 +965,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1044,7 +1045,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1146,7 +1147,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1184,7 +1185,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1260,7 +1261,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistory(new WalletHistoryRequest
+            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
             {
                 WalletName = walletName
             });
@@ -1954,7 +1955,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task SendTransactionFailedBecauseNoNodesConnected()
+        public async Task SendTransactionFailedBecauseNoNodesConnectedAsync()
         {
             var mockBroadcasterManager = this.ConfigureMock<IBroadcasterManager>();
 
@@ -1964,8 +1965,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             var controller = this.GetWalletController();
 
-            IActionResult result =
-                await controller.SendTransaction(new SendTransactionRequest(new uint256(15555).ToString()));
+            IActionResult result = await controller.SendTransaction(new SendTransactionRequest(new uint256(15555).ToString()));
 
             var errorResult = Assert.IsType<ErrorResult>(result);
             var errorResponse = Assert.IsType<ErrorResponse>(errorResult.Value);
@@ -1973,8 +1973,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             ErrorModel error = errorResponse.Errors[0];
             Assert.Equal(403, error.Status);
-            Assert.Equal("Can't send transaction: sending transaction requires at least one connection!",
-                error.Message);
+            Assert.Equal("Can't send transaction: sending transaction requires at least one connection.", error.Message);
         }
 
         [Fact]
@@ -2638,6 +2637,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             mocker.Use(typeof(IConsensusManager), this.GetMock<IConsensusManager>(true));
             mocker.Use(typeof(IDateTimeProvider), this.GetMock<IDateTimeProvider>() ?? DateTimeProvider.Default);
             mocker.Use(typeof(IConnectionManager), this.GetMock<IConnectionManager>(true));
+            mocker.Use(typeof(NodeSettings), NodeSettings.Default(this.Network));
             mocker.Use(typeof(IWalletService), this.GetMock<WalletService>() ?? mocker.CreateInstance<WalletService>());
 
             return mocker.CreateInstance<WalletController>();

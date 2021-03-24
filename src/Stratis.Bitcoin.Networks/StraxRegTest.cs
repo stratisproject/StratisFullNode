@@ -112,7 +112,7 @@ namespace Stratis.Bitcoin.Networks
                 buriedDeployments: buriedDeployments,
                 bip9Deployments: bip9Deployments,
                 bip34Hash: null,
-                minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
+                minerConfirmationWindow: 144, // nPowTargetTimespan / nPowTargetSpacing
                 maxReorgLength: 500,
                 defaultAssumeValid: null, // turn off assumevalid for regtest.
                 maxMoney: long.MaxValue,
