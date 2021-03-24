@@ -18,57 +18,52 @@
             Assert(signatures != null && signatures.Length > 0);
             Assert(codeHash != default);
 
-            UInt256 codeHashKey = default;
+            UInt256 codeHashKey = codeHash;
             WhiteListEntry whiteListEntry;
+
             if (!string.IsNullOrEmpty(name))
             {
                 codeHashKey = this.State.GetUInt256($"ByName:{name}");
+
                 if (codeHashKey == default)
-                {
-                    whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
-                    Assert(whiteListEntry.CodeHash == default);
-                }
-                else
-                {
-                    whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHashKey.ToString());
-                }
-            }
-            else
-            {
-                whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+                    codeHashKey = codeHash;
             }
 
-            string message = "WhiteList(";
-            message += $"CodeHash:{whiteListEntry.CodeHash}=>{codeHash},";
-            message += $"LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},";
-            message += $"Name:{whiteListEntry.Name}=>{name})";
+            whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHashKey.ToString());
+
+            string message = $"WhiteList(CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
 
             this.VerifySignatures(message, signatures);
+
+            if (whiteListEntry.CodeHash != default)
+            {
+                if (codeHash != whiteListEntry.CodeHash)
+                    this.State.Clear(whiteListEntry.CodeHash.ToString());
+
+                if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(whiteListEntry.Name))
+                    this.State.Clear($"ByName:{whiteListEntry.Name}");
+            }
 
             whiteListEntry.CodeHash = codeHash;
             whiteListEntry.LastAddress = lastAddress;
             whiteListEntry.Name = name;
 
-            if (codeHashKey != default)
-                this.State.Clear(codeHashKey.ToString());
             this.State.SetStruct<WhiteListEntry>(codeHash.ToString(), whiteListEntry);
             this.State.SetUInt256($"ByName:{name}", codeHash);
         }
 
         public void BlackList(string[] signatures, UInt256 codeHash)
         {
-            UInt256 codeHashKey = codeHash;
+            Assert(signatures != null && signatures.Length > 0);
+            Assert(codeHash != default);
 
             WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
 
-            string message = "BlackList(";
-            message += $"CodeHash:{whiteListEntry.CodeHash},";
-            message += $"LastAddress:{whiteListEntry.LastAddress},";
-            message += $"Name:{whiteListEntry.Name})";
+            string message = $"BlackList(CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
 
             this.VerifySignatures(message, signatures);
 
-            this.State.Clear(codeHashKey.ToString());
+            this.State.Clear(codeHash.ToString());
             this.State.Clear($"ByName:{whiteListEntry.Name}");
         }
     }
