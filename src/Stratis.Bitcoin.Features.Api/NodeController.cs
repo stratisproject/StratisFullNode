@@ -103,7 +103,7 @@ namespace Stratis.Bitcoin.Features.Api
             INetworkDifficulty networkDifficulty = null,
             IPooledGetUnspentTransaction pooledGetUnspentTransaction = null,
             IPooledTransaction pooledTransaction = null,
-            IInitialBlockDownloadState initialBlockDownloadState)
+            IInitialBlockDownloadState initialBlockDownloadState = null)
         {
             Guard.NotNull(fullNode, nameof(fullNode));
             Guard.NotNull(network, nameof(network));
