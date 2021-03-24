@@ -1,6 +1,6 @@
 ﻿using System;
 using NBitcoin;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
+using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.SmartContracts.Networks;
 

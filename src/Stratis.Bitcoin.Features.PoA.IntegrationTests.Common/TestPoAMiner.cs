@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Validators;
@@ -40,10 +41,12 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests.Common
             IWalletManager walletManager,
             INodeStats nodeStats,
             VotingManager votingManager,
-            PoAMinerSettings poAMinerSettings,
+            PoASettings poAMinerSettings,
             IAsyncProvider asyncProvider,
-            IIdleFederationMembersKicker idleFederationMembersKicker) : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
-                connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker)
+            IIdleFederationMembersKicker idleFederationMembersKicker,
+            NodeSettings nodeSettings)
+            : base(consensusManager, dateTimeProvider, network, nodeLifetime, loggerFactory, ibdState, blockDefinition, slotsManager,
+                connectionManager, poaHeaderValidator, federationManager, integrityValidator, walletManager, nodeStats, votingManager, poAMinerSettings, asyncProvider, idleFederationMembersKicker, nodeSettings)
         {
             this.timeProvider = dateTimeProvider as EditableTimeProvider;
 

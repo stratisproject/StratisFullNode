@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Linq;
-using NBitcoin;
-using Stratis.SmartContracts.Core.Hashing;
-using TracerAttributes;
+using HashLib;
+using NBitcoin.DataEncoders;
 
-namespace Stratis.SmartContracts.Core
+namespace NBitcoin
 {
     /// <summary>
     /// Type representation of data used in a bloom filter.
@@ -57,7 +56,7 @@ namespace Stratis.SmartContracts.Core
         /// </remarks>
         public void Add(byte[] input)
         {
-            byte[] hashBytes = HashHelper.Keccak256(input);
+            byte[] hashBytes = Keccak256(input);
             // for first 3 pairs, calculate value of first 11 bits
             for (int i = 0; i < 6; i += 2)
             {
@@ -66,6 +65,16 @@ namespace Stratis.SmartContracts.Core
                 uint index = low8Bits + high3Bits;
                 this.SetBit((int)index);
             }
+        }
+
+        /// <summary>
+        /// Returns a 32-byte Keccak256 hash of the given bytes.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static byte[] Keccak256(byte[] input)
+        {
+            return HashFactory.Crypto.SHA3.CreateKeccak256().ComputeBytes(input).GetBytes();
         }
 
         /// <summary>
@@ -104,7 +113,6 @@ namespace Stratis.SmartContracts.Core
             this.data[byteIndex] |= mask;
         }
 
-        [NoTrace]
         public void ReadWrite(BitcoinStream stream)
         {
             if (stream.Serializing)
@@ -131,7 +139,7 @@ namespace Stratis.SmartContracts.Core
 
         public override string ToString()
         {
-            return this.data.ToHexString();
+            return Encoders.Hex.EncodeData(this.data);
         }
 
         public static bool operator ==(Bloom obj1, Bloom obj2)
@@ -173,6 +181,119 @@ namespace Stratis.SmartContracts.Core
             var result = new byte[BloomLength];
             Buffer.BlockCopy(bloom, 0, result, 0, BloomLength);
             return result;
+        }
+
+        /// <summary>
+        /// Compresses a bloom filter to the following encoding:
+        ///   (length of encoding) [[(number of zeros)(explicit byte) ...]
+        /// </summary>
+        /// <param name="maxSize">The maximum size of the compressed bytes.</param>
+        /// <returns>The compressed bytes  or <c>null</c> if <paramref name="maxSize"/> is exceeded.</returns>
+        public byte[] GetCompressedBloom()
+        {
+            // The compressed version should be shorter than the uncompressed version.
+            int maxSize = BloomLength - 1;
+
+            var b = this.ToBytes();
+            var c = new byte[maxSize];
+            byte zeros = 0;
+            int j = 0;
+            for (int i = 0; i < b.Length; i++)
+            {
+                if (b[i] != 0 || zeros == byte.MaxValue)
+                {
+                    if (j >= (maxSize - 1))
+                        return b;
+
+                    c[j++] = (byte)zeros;
+                    c[j++] = b[i];
+                    zeros = 0;
+                }
+                else if (zeros < byte.MaxValue)
+                {
+                    zeros++;
+                }
+            }
+
+            if (zeros != 0)
+            {
+                if (j >= maxSize)
+                    return b;
+
+                c[j++] = zeros;
+            }
+
+            var res = new byte[j];
+
+            Array.Copy(c, res, j);
+
+            return res;
+        }
+
+        /// <summary>
+        /// Derives a bloom filter by decompressing the following encoding:
+        ///   (length of encoding) [[(number of zeros)(explicit byte) ...]
+        /// </summary>
+        /// <param name="data">The data to decompress.</param>
+        /// <returns>The bloom object.</returns>
+        public static Bloom GetDecompressedBloom(byte[] data)
+        {
+            if (data.Length == Bloom.BloomLength)
+                return new Bloom(data);
+
+            var b = new byte[Bloom.BloomLength];
+            int j = 0;
+            for (int i = 0; i < data.Length; i += 2)
+            {
+                int zeros = data[i];
+                while (zeros-- > 0)
+                    b[j++] = 0;
+
+                if ((i + 1) < data.Length)
+                    b[j++] = data[i + 1];
+            }
+
+            if (j != Bloom.BloomLength)
+                throw new InvalidOperationException("The decompressed bloom filter is not the expected length.");
+
+            return new Bloom(b);
+        }
+
+        public int GetCompressedSize()
+        {
+            return this.GetCompressedBloom().Length + 1;
+        }
+    }
+
+    public static class BloomStreamExt
+    {
+        public static void ReadWriteCompressed(this BitcoinStream stream, ref Bloom bloom)
+        {
+            // Ensure that the length can be serialized using a single byte.
+            const int maxSerializedSize = byte.MaxValue + 1;
+            if (Bloom.BloomLength > maxSerializedSize)
+                throw new InvalidOperationException($"'{nameof(ReadWriteCompressed)}' does not support bloom filters greater than {maxSerializedSize} bytes in length.");
+
+            if (stream.Serializing)
+            {   // Writing to stream.
+                byte[] ser = bloom.GetCompressedBloom();
+                byte len = (byte)(ser.Length - 1);
+                stream.ReadWrite(ref len);
+                stream.ReadWrite(ref ser);
+            }
+            else
+            {   // Reading from stream.
+                byte len = 0;
+                stream.ReadWrite(ref len);
+
+                // A value of 0 can be used to support larger blooms in the future. For now its not supported.
+                if (len == 0)
+                    throw new NotImplementedException("The bloom compression format is not supported.");
+
+                var c = new byte[(int)len + 1];
+                stream.ReadWrite(ref c);
+                bloom = Bloom.GetDecompressedBloom(c);
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
@@ -14,20 +15,36 @@ using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
-namespace Stratis.SmartContracts.Networks
+namespace Stratis.Sidechains.Networks
 {
     /// <summary>
-    /// Right now, ripped nearly straight from <see cref="PoANetwork"/>.
+    /// Network to be used when Cirrus Miner is started in devmode.
     /// </summary>
-    public class SmartContractsPoARegTest : PoANetwork
+    public sealed class CirrusDev : PoANetwork
     {
-        public Key[] FederationKeys { get; private set; }
+        public IList<Mnemonic> FederationMnemonics { get; }
 
-        public SmartContractsPoARegTest()
+        public CirrusDev()
         {
-            this.Name = "SmartContractsPoARegTest";
+            this.Name = "CirrusDev";
             this.NetworkType = NetworkType.Regtest;
-            this.CoinTicker = "SCPOA";
+            this.CoinTicker = "TCRS";
+            this.Magic = 0x522357C;
+            this.DefaultPort = 26179;
+            this.DefaultMaxOutboundConnections = 16;
+            this.DefaultMaxInboundConnections = 109;
+            this.DefaultRPCPort = 26175;
+            this.DefaultAPIPort = 38223;
+            this.MaxTipAge = 768; // 20% of the fastest time it takes for one MaxReorgLength of blocks to be mined.
+            this.MinTxFee = 10000;
+            this.FallbackFee = 10000;
+            this.MinRelayTxFee = 10000;
+            this.RootFolderName = CirrusNetwork.NetworkRootFolderName;
+            this.DefaultConfigFilename = CirrusNetwork.NetworkDefaultConfigFilename;
+            this.MaxTimeOffsetSeconds = 25 * 60;
+            this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
+
+            this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML";
 
             var consensusFactory = new SmartContractPoAConsensusFactory();
 
@@ -38,36 +55,37 @@ namespace Stratis.SmartContracts.Networks
             this.GenesisVersion = 1;
             this.GenesisReward = Money.Zero;
 
-            NBitcoin.Block genesisBlock = CreatePoAGenesisBlock(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward);
-            ((SmartContractPoABlockHeader)genesisBlock.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856"); // Set StateRoot to empty trie.
+            string coinbaseText = "https://news.bitcoin.com/markets-update-cryptocurrencies-shed-billions-in-bloody-sell-off/";
+            Block genesisBlock = CreateGenesis(consensusFactory, this.GenesisTime, this.GenesisNonce, this.GenesisBits, this.GenesisVersion, this.GenesisReward, coinbaseText);
 
             this.Genesis = genesisBlock;
 
-            // Keeping the 3rd there in case we use it in future. For our integration tests we use 2 nodes currently.
-            this.FederationKeys = new Key[]
-            {
-                new Mnemonic("lava frown leave wedding virtual ghost sibling able mammal liar wide wisdom").DeriveExtKey().PrivateKey,
-                new Mnemonic("idle power swim wash diesel blouse photo among eager reward govern menu").DeriveExtKey().PrivateKey,
-                new Mnemonic("high neither night category fly wasp inner kitchen phone current skate hair").DeriveExtKey().PrivateKey
-            };
+            this.FederationMnemonics = new[] {
+                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+            }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
 
-            var genesisFederationMembers = new List<IFederationMember>
-            {
-                new FederationMember(this.FederationKeys[0].PubKey), // 029528e83f065153d7fa655e73a07fc96fc759162f1e2c8936fa592f2942f39af0
-                new FederationMember(this.FederationKeys[1].PubKey), // 03b539807c64abafb2d14c52a0d1858cc29d7c7fad0598f92a1274789c18d74d2d
-                new FederationMember(this.FederationKeys[2].PubKey)  // 02d6792cf941b68edd1e9056653573917cbaf974d46e9eeb9801d6fcedf846477a
-            };
+            this.FederationKeys = this.FederationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
+            var federationPubKeys = this.FederationKeys.Select(k => k.PubKey).ToList();
+
+            var genesisFederationMembers = new List<IFederationMember>(federationPubKeys.Count);
+            foreach (PubKey pubKey in federationPubKeys)
+                genesisFederationMembers.Add(new FederationMember(pubKey));
+
+            this.Federations = new Federations();
+
+            // Default transaction-signing keys
+            this.Federations.RegisterFederation(new Federation(federationPubKeys.ToArray()));
 
             var consensusOptions = new PoAConsensusOptions(
-                maxBlockBaseSize: 500_000, // Half the standard block size / weight. Easier to stress test.
+                maxBlockBaseSize: 1_000_000,
                 maxStandardVersion: 2,
-                maxStandardTxWeight: 100_000,
+                maxStandardTxWeight: 150_000,
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 genesisFederationMembers: genesisFederationMembers,
-                targetSpacingSeconds: 60,
+                targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: false
+                autoKickIdleMembers: true
             );
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -82,7 +100,7 @@ namespace Stratis.SmartContracts.Networks
             this.Consensus = new Consensus(
                 consensusFactory: consensusFactory,
                 consensusOptions: consensusOptions,
-                coinType: 105,
+                coinType: 400,
                 hashGenesisBlock: genesisBlock.GetHash(),
                 subsidyHalvingInterval: 210000,
                 majorityEnforceBlockUpgrade: 750,
@@ -92,15 +110,15 @@ namespace Stratis.SmartContracts.Networks
                 bip9Deployments: bip9Deployments,
                 bip34Hash: new uint256("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
                 minerConfirmationWindow: 2016, // nPowTargetTimespan / nPowTargetSpacing
-                maxReorgLength: 500,
+                maxReorgLength: 240, // Heuristic. Roughly 2 * mining members
                 defaultAssumeValid: null,
-                maxMoney: long.MaxValue,
+                maxMoney: Money.Coins(20_000_000),
                 coinbaseMaturity: 1,
-                premineHeight: 5,
-                premineReward: Money.Coins(100_000_000),
+                premineHeight: 2,
+                premineReward: Money.Coins(1_000_000),
                 proofOfWorkReward: Money.Coins(0),
-                powTargetTimespan: TimeSpan.FromSeconds(14 * 24 * 60 * 60), // two weeks
-                targetSpacing: TimeSpan.FromSeconds(60),
+                powTargetTimespan: TimeSpan.FromDays(14), // two weeks
+                targetSpacing: TimeSpan.FromSeconds(16),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,
@@ -115,8 +133,8 @@ namespace Stratis.SmartContracts.Networks
 
             // Same as current smart contracts test networks to keep tests working
             this.Base58Prefixes = new byte[12][];
-            this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (111) };
-            this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (196) };
+            this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 55 }; // P
+            this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 117 }; // p
             this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (239) };
             this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_NO_EC] = new byte[] { 0x01, 0x42 };
             this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_EC] = new byte[] { 0x01, 0x43 };
@@ -140,13 +158,13 @@ namespace Stratis.SmartContracts.Networks
 
             this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
-            // TODO: Do we need Asserts for block hash
+            // 16 below should be changed to TargetSpacingSeconds when we move that field.
+            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             this.RegisterRules(this.Consensus);
             this.RegisterMempoolRules(this.Consensus);
         }
 
-        // This should be abstract or virtual
         protected override void RegisterRules(IConsensus consensus)
         {
             // IHeaderValidationConsensusRule -----------------------
@@ -201,7 +219,6 @@ namespace Stratis.SmartContracts.Networks
             // ------------------------------------------------------
         }
 
-        // This should be abstract or virtual
         protected override void RegisterMempoolRules(IConsensus consensus)
         {
             consensus.MempoolRules = new List<Type>()
@@ -211,7 +228,7 @@ namespace Stratis.SmartContracts.Networks
                 typeof(AllowedScriptTypeMempoolRule),
                 typeof(P2PKHNotContractMempoolRule),
 
-                // The non-smart contract mempool rules.
+                // The non- smart contract mempool rules
                 typeof(CheckConflictsMempoolRule),
                 typeof(CheckCoinViewMempoolRule),
                 typeof(CreateMempoolEntryMempoolRule),
@@ -230,6 +247,38 @@ namespace Stratis.SmartContracts.Networks
                 typeof(CheckReplacementMempoolRule),
                 typeof(CheckAllInputsMempoolRule)
             };
+        }
+
+        private Block CreateGenesis(SmartContractPoAConsensusFactory consensusFactory, uint genesisTime, uint nonce, uint bits, int version, Money reward, string coinbaseText)
+        {
+            Transaction genesisTransaction = consensusFactory.CreateTransaction();
+            genesisTransaction.Version = 1;
+            genesisTransaction.AddInput(new TxIn()
+            {
+                ScriptSig = new Script(Op.GetPushOp(0), new Op()
+                {
+                    Code = (OpcodeType)0x1,
+                    PushData = new[] { (byte)42 }
+                }, Op.GetPushOp(Encoders.ASCII.DecodeData(coinbaseText)))
+            });
+
+            genesisTransaction.AddOutput(new TxOut()
+            {
+                Value = reward
+            });
+
+            Block genesis = consensusFactory.CreateBlock();
+            genesis.Header.BlockTime = Utils.UnixTimeToDateTime(genesisTime);
+            genesis.Header.Bits = bits;
+            genesis.Header.Nonce = nonce;
+            genesis.Header.Version = version;
+            genesis.Transactions.Add(genesisTransaction);
+            genesis.Header.HashPrevBlock = uint256.Zero;
+            genesis.UpdateMerkleRoot();
+
+            ((SmartContractPoABlockHeader)genesis.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+
+            return genesis;
         }
     }
 }

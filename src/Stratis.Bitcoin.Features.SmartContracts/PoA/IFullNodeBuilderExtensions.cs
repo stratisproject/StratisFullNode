@@ -38,6 +38,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 
                         // Rule Related
                         services.AddSingleton<PoABlockHeaderValidator>();
+
+                        // Settings
+                        services.AddSingleton<PoASettings>();
                     });
             });
 

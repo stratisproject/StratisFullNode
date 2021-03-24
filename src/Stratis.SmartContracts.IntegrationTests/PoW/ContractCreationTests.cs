@@ -51,7 +51,7 @@ namespace Stratis.SmartContracts.IntegrationTests.PoW
                 Assert.Equal(expectedCreatedCatAddress, lastCreatedCatAddress);
 
                 // Test that the contract address, event name, and logging values are available in the bloom, from internal create.
-                var scBlockHeader = receiver.GetLastBlock().Header as SmartContractBlockHeader;
+                var scBlockHeader = receiver.GetLastBlock().Header as ISmartContractBlockHeader;
                 Assert.True(scBlockHeader.LogsBloom.Test(lastCreatedCatAddress.ToBytes()));
                 Assert.True(scBlockHeader.LogsBloom.Test(Encoding.UTF8.GetBytes("CatCreated")));
                 Assert.True(scBlockHeader.LogsBloom.Test(BitConverter.GetBytes(0)));

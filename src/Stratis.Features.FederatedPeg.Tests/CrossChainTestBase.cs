@@ -110,12 +110,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.repository = Substitute.For<IConversionRequestRepository>();
             this.ChainIndexer = new ChainIndexer(this.network);
-            this.federatedPegSettings.GetWithdrawalTransactionFee(Arg.Any<int>()).ReturnsForAnyArgs((x) =>
-            {
-                int numInputs = x.ArgAt<int>(0);
-
-                return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-            });
 
             // Generate the keys used by the federation members for our tests.
             this.federationKeys = new[]

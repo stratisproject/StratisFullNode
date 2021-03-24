@@ -11,7 +11,6 @@ using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
@@ -22,12 +21,6 @@ namespace Stratis.Sidechains.Networks
     /// </summary>
     public class CirrusTest : PoANetwork
     {
-        /// <summary> The name of the root folder containing the different federated peg blockchains.</summary>
-        private const string NetworkRootFolderName = "cirrus";
-
-        /// <summary> The default name used for the federated peg configuration file. </summary>
-        private const string NetworkDefaultConfigFilename = "cirrus.conf";
-
         public CirrusTest()
         {
             this.Name = "CirrusTest";
@@ -44,8 +37,8 @@ namespace Stratis.Sidechains.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = NetworkRootFolderName;
-            this.DefaultConfigFilename = NetworkDefaultConfigFilename;
+            this.RootFolderName = CirrusNetwork.NetworkRootFolderName;
+            this.DefaultConfigFilename = CirrusNetwork.NetworkDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 

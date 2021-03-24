@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using NBitcoin;
-using Stratis.SmartContracts.Core;
 
-namespace Stratis.Bitcoin.Features.SmartContracts
+namespace NBitcoin
 {
-    public static class Extensions
+    public static class SmartContractTransactionExt
     {
         /// <summary>
         /// Filters all transactions for those with smart contract exec opcodes
