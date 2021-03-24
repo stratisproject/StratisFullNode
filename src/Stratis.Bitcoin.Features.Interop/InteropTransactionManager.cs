@@ -98,6 +98,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <inheritdoc/>
         public bool CheckIfVoted(string requestId, PubKey pubKey)
         {
             lock (this.lockObject)
@@ -112,6 +113,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <inheritdoc/>
         public void RemoveTransaction(string requestId)
         {
             lock (this.lockObject)
@@ -121,6 +123,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <inheritdoc/>
         public Dictionary<string, HashSet<PubKey>> GetStatus()
         {
             lock (this.lockObject)

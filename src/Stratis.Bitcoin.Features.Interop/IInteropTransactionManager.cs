@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using NBitcoin;
+using Stratis.Bitcoin.Features.FederatedPeg;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -16,7 +17,7 @@ namespace Stratis.Bitcoin.Features.Interop
         void AddVote(string requestId, BigInteger transactionId, PubKey pubKey);
 
         /// <summary>
-        /// If one of the transactionIds being voted on has reached a quroum, this will return that transactionId.
+        /// If one of the transaction Ids being voted on has reached a quroum, this will return that transactionId.
         /// </summary>
         /// <param name="requestId">The identifier of the request.</param>
         /// <param name="quorum">The number of votes required for a majority.</param>
@@ -31,10 +32,13 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns>The transactionId of the highest-voted request.</returns>
         BigInteger GetCandidateTransactionId(string requestId);
 
+        /// <summary>Checks if vote was received from the pubkey specified for a particular <see cref="ConversionRequest"/>.</summary>
         bool CheckIfVoted(string requestId, PubKey pubKey);
 
+        /// <summary>Removes all votes associated with provided request Id.</summary>
         void RemoveTransaction(string requestId);
 
+        /// <summary>Provides mapping of all request ids to pubkeys that have voted for them.</summary>
         Dictionary<string, HashSet<PubKey>> GetStatus();
     }
 }

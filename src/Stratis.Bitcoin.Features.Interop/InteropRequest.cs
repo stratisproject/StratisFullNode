@@ -4,9 +4,10 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public enum InteropRequestType
     {
-        // Stratis (Cirrus) network invoking Ethereum contract.
+        /// <summary>Stratis (Cirrus) network invoking Ethereum contract.</summary>
         InvokeEthereum = 0,
-        // Ethereum network invoking Stratis (Cirrus) contract.
+
+        /// <summary>Ethereum network invoking Stratis (Cirrus) contract.</summary>
         InvokeStratis = 1
     }
 
