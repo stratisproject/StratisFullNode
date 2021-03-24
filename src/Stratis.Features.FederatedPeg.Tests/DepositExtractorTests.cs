@@ -152,34 +152,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
         }
 
-        [Fact]
-        public void ExtractNormalConversionDeposits_ReturnDeposits_AboveFasterThreshold()
-        {
-            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
-
-            BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
-            byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
-
-            // Set amount to be less than the small threshold amount.
-            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
-
-            // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
-
-            // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
-
-            int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionNormal });
-
-            // Should only be 1, with the value just over the withdrawal fee.
-            extractedDeposits.Count.Should().Be(1);
-            foreach (IDeposit extractedDeposit in extractedDeposits)
-            {
-                Assert.True(extractedDeposit.Amount >= this.federationSettings.SmallDepositThresholdAmount);
-            }
-        }
-
         // Normal Deposits
         [Fact]
         public void ExtractNormalDeposits_ReturnDeposits_AboveSmallThreshold_BelowEqualToNormalThreshold()
@@ -251,41 +223,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
         }
 
-        [Fact]
-        public void ExtractSmallConversionDeposits_ReturnDeposits_BelowSmallThreshold_AboveMinimum()
-        {
-            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
-
-            // Create the target address.
-            BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
-            byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
-
-            // Set amount to be less than deposit minimum
-            CreateConversionTransaction(TargetEthereumAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
-
-            // Set amount to be less than the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
-
-            // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
-
-            // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
-
-            // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
-
-            int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionSmall });
-
-            // Should only be two, with the value just over the withdrawal fee.
-            extractedDeposits.Count.Should().Be(2);
-            foreach (IDeposit extractedDeposit in extractedDeposits)
-            {
-                Assert.True(extractedDeposit.Amount <= this.federationSettings.SmallDepositThresholdAmount);
-            }
-        }
-
         // Large Deposits
         [Fact]
         public void ExtractLargeDeposits_ReturnDeposits_AboveNormalThreshold()
@@ -344,8 +281,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Set amount to be equal to the normal threshold amount.
             CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
-            // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+            // Set amount to be greater than the conversion deposit minimum amount.
+            CreateConversionTransaction(TargetEthereumAddress, block, Money.Coins(DepositExtractor.ConversionTransactionMinimum + 1), opReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });

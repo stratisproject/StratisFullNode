@@ -8,7 +8,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     public sealed class DepositExtractor : IDepositExtractor
     {
         // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
-        private const decimal ConversionTransactionMinimum = 90_000;
+        public const decimal ConversionTransactionMinimum = 90_000;
 
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
