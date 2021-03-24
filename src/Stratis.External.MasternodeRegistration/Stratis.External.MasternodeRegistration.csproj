@@ -5,4 +5,11 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Flurl.Http" Version="3.0.1" />
+    <PackageReference Include="NStratis" Version="4.0.0.80" />
+    <PackageReference Include="Stratis.Core" Version="1.0.7" />
+    <PackageReference Include="Stratis.Core.Networks" Version="1.0.7" />
+  </ItemGroup>
+
 </Project>

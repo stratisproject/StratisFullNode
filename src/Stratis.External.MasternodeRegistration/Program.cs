@@ -1,12 +1,21 @@
-﻿using System;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using NBitcoin;
 
 namespace Stratis.External.MasternodeRegistration
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var service = new RegistrationService();
+
+            NetworkType networkType = NetworkType.Mainnet;
+
+            if (args.Contains("-testnet"))
+                networkType = NetworkType.Testnet;
+
+            await service.StartAsync(networkType);
         }
     }
 }
