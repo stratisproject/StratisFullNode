@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // transfers. As we don't know precisely what value transactions are expected, the sole determining factor is
                 // whether the reserve has a large enough balance to service the current conversion request. If not, trigger a
                 // mint for a predetermined amount.
-                BigInteger reserveBalanace = await this.ethereumClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
+                //BigInteger reserveBalanace = await this.ethereumClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
 
                 // The request is denominated in satoshi and needs to be converted to wei.
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
