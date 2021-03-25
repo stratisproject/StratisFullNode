@@ -72,9 +72,14 @@ public class SystemContractsDictionary : SmartContract
 
         string message;
         if (whiteListEntry.CodeHash == default(UInt256))
+        {
             message = $"WhiteList(CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
+        }
         else
+        {
+            Assert(whiteListEntry.CodeHash != codeHash || whiteListEntry.LastAddress != lastAddress || whiteListEntry.Name != name);
             message = $"WhiteList(CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
+        }
 
         //this.VerifySignatures(message, signatures);
 
