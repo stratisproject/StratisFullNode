@@ -293,7 +293,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public void Clear(string key)
         {
-            throw new NotImplementedException();
+            this.objects.Remove(key);
         }
     }
 }
