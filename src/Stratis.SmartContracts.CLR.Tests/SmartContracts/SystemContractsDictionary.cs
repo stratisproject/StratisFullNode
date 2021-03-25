@@ -54,7 +54,7 @@ public class SystemContractsDictionary : SmartContract
 
     public void WhiteList(byte[] signatures, UInt256 codeHash, Address lastAddress, string name)
     {
-        Assert(signatures != null && signatures.Length > 0);
+        Assert(signatures != null);
         Assert(codeHash != default(UInt256));
 
         UInt256 codeHashKey = codeHash;
@@ -70,18 +70,18 @@ public class SystemContractsDictionary : SmartContract
 
         whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHashKey.ToString());
 
-        string message;
+        string authorizationChallenge;
         if (whiteListEntry.CodeHash == default(UInt256))
         {
-            message = $"WhiteList(CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
+            authorizationChallenge = $"WhiteList(CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
         }
         else
         {
-            Assert(whiteListEntry.CodeHash != codeHash || whiteListEntry.LastAddress != lastAddress || whiteListEntry.Name != name);
-            message = $"WhiteList(CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
+            Assert(whiteListEntry.CodeHash != codeHash || whiteListEntry.LastAddress != lastAddress || whiteListEntry.Name != name, "Nothing changed.");
+            authorizationChallenge = $"WhiteList(CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
-        //this.VerifySignatures(message, signatures);
+        //this.VerifySignatures(authorizationChallenge, signatures);
 
         if (whiteListEntry.CodeHash != default(UInt256))
         {
@@ -102,16 +102,16 @@ public class SystemContractsDictionary : SmartContract
 
     public void BlackList(byte[] signatures, UInt256 codeHash)
     {
-        Assert(signatures != null && signatures.Length > 0);
+        Assert(signatures != null);
         Assert(codeHash != default(UInt256));
 
         WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
         
         Assert(whiteListEntry.CodeHash != default(UInt256));
 
-        string message = $"BlackList(CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
+        string authorizationChallenge = $"BlackList(CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
 
-        //this.VerifySignatures(message, signatures);
+        //this.VerifySignatures(authorizationChallenge, signatures);
 
         this.State.Clear(codeHash.ToString());
         this.State.Clear($"ByName:{whiteListEntry.Name}");
