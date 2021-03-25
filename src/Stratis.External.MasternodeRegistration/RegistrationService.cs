@@ -73,158 +73,12 @@ namespace Stratis.External.MasternodeRegistration
             Console.WriteLine("Assessing Masternode Requirements...");
 
             // Check main chain collateral wallet and balace
-            if (!await CheckMainChainCollateralAsync(this.mainchainNetwork.DefaultAPIPort))
+            if (!await CheckWalletRequirementsAsync(NodeType.MainChain, this.mainchainNetwork.DefaultAPIPort))
                 return;
 
-            // Check side chain fee wallet        
-        }
-
-        private async Task<bool> CheckMainChainCollateralAsync(int apiPort)
-        {
-            Console.WriteLine("Please Enter the Name of the STRAX Wallet that contains the required collateral of a 100 000 STRAX:");
-
-            var collateralWalletName = Console.ReadLine();
-
-            WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
-
-            if (walletInfoModel.WalletNames.Contains(collateralWalletName))
-            {
-                Console.WriteLine("SUCCESS: Collateral wallet found.");
-            }
-            else
-            {
-                Console.WriteLine($"Collateral wallet with name '{collateralWalletName}' does not exist.");
-
-                ConsoleKeyInfo key;
-                do
-                {
-                    Console.WriteLine($"Would you like to restore a wallet that holds the collateral now? Enter (Y) to continue or (N) to exit.");
-                    key = Console.ReadKey();
-                    if (key.Key == ConsoleKey.Y || key.Key == ConsoleKey.N)
-                        break;
-                } while (true);
-
-                if (key.Key == ConsoleKey.N)
-                {
-                    Console.WriteLine($"You have chosen to exit the registration script.");
-                    return false;
-                }
-
-                if (!await RestoreCollateralWalletAsync(this.mainchainNetwork.DefaultAPIPort, collateralWalletName))
-                    return false;
-            }
-
-            // Check collateral wallet height (sync) status.
-            do
-            {
-                WalletGeneralInfoModel walletInfo = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api".AppendPathSegment("wallet/general-info").GetJsonAsync<WalletGeneralInfoModel>();
-                StatusModel blockModel = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
-
-                if (walletInfo.LastBlockSyncedHeight > (blockModel.ConsensusHeight - 50))
-                {
-                    Console.WriteLine($"Main chain collateral wallet is synced.");
-                    break;
-                }
-
-                Console.WriteLine($"Syncing main chain collateral wallet, current height {walletInfo.LastBlockSyncedHeight}...");
-                await Task.Delay(TimeSpan.FromSeconds(3));
-            } while (true);
-
-            // Check collateral wallet balance.
-            try
-            {
-                var walletBalanceRequest = new WalletBalanceRequest();
-                WalletBalanceModel walletBalanceModel = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api"
-                    .AppendPathSegment("wallet/balance")
-                    .SetQueryParams(walletBalanceRequest)
-                    .GetJsonAsync<WalletBalanceModel>();
-
-                if (walletBalanceModel.AccountsBalances[0].SpendableAmount / 100000000 > 100_000)
-                {
-                    Console.WriteLine($"SUCCESS: Main chain collateral wallet contains the required collateral amount.");
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR: An exception occurred trying to check the collateral wallet balance: {ex}");
-            }
-
-            return false;
-        }
-
-        private async Task<bool> RestoreCollateralWalletAsync(int apiPort, string collateralWalletName)
-        {
-            Console.WriteLine($"You have chosen to restore a mainchain (STRAX) collateral wallet.");
-
-            string collateralMnemonic;
-            string collateralPassphrase;
-            string collateralPassword;
-
-            do
-            {
-                Console.WriteLine($"Please enter your 12-Words used to recover your wallet:");
-                collateralMnemonic = Console.ReadLine();
-                Console.WriteLine("Please enter your wallet passphrase:");
-                collateralPassphrase = Console.ReadLine();
-                Console.WriteLine("Please enter the wallet password used to encrypt the wallet:");
-                collateralPassword = Console.ReadLine();
-
-                if (!string.IsNullOrEmpty(collateralMnemonic) && !string.IsNullOrEmpty(collateralPassphrase) && !string.IsNullOrEmpty(collateralPassword))
-                    break;
-
-                Console.WriteLine("ERROR: Please ensure that you enter all the wallet details.");
-
-            } while (true);
-
-            var walletRecoveryRequest = new WalletRecoveryRequest()
-            {
-                CreationDate = new DateTime(2020, 11, 1),
-                Mnemonic = collateralMnemonic,
-                Name = collateralWalletName,
-                Passphrase = collateralPassphrase,
-                Password = collateralPassword
-            };
-
-            try
-            {
-                await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/recover").PostJsonAsync(walletRecoveryRequest);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR: An exception occurred trying to recover your collateral wallet {ex}");
-                return false;
-            }
-
-            WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
-            if (walletInfoModel.WalletNames.Contains(collateralWalletName))
-            {
-                Console.WriteLine("SUCCESS: Collateral wallet has been restored.");
-            }
-            else
-            {
-                Console.WriteLine("ERROR: Collateral wallet failed to be restored, exiting the regisrtation process.");
-                return false;
-            }
-
-            try
-            {
-                Console.WriteLine("The collateral wallet will now be resynced, please be patient...");
-                var walletSyncRequest = new WalletSyncRequest()
-                {
-                    All = true,
-                    WalletName = collateralWalletName
-                };
-
-                await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/sync-from-date").PostJsonAsync(walletSyncRequest);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR: An exception occurred trying to resync your collateral wallet {ex}");
-                return false;
-            }
-
-            return true;
+            // Check side chain fee wallet
+            if (!await CheckWalletRequirementsAsync(NodeType.SideChain, this.sidechainNetwork.DefaultAPIPort))
+                return;
         }
 
         private async Task<bool> StartNodeAsync(NetworkType networkType, NodeType nodeType)
@@ -340,6 +194,158 @@ namespace Stratis.External.MasternodeRegistration
             } while (true);
 
             return result;
+        }
+
+        private async Task<bool> CheckWalletRequirementsAsync(NodeType nodeType, int apiPort)
+        {
+            var chainName = nodeType == NodeType.MainChain ? "STRAX" : "CIRRUS";
+            var amountToCheck = nodeType == NodeType.MainChain ? 100_000 : 500;
+            var chainTicker = nodeType == NodeType.MainChain ? this.mainchainNetwork.CoinTicker : this.sidechainNetwork.CoinTicker;
+
+            Console.WriteLine($"Please enter the name of the {chainName} wallet that contains the required collateral of {amountToCheck} {chainTicker}:");
+
+            var walletName = Console.ReadLine();
+
+            WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
+
+            if (walletInfoModel.WalletNames.Contains(walletName))
+            {
+                Console.WriteLine("SUCCESS: Wallet found.");
+            }
+            else
+            {
+                Console.WriteLine($"Wallet with name '{walletName}' does not exist.");
+
+                ConsoleKeyInfo key;
+                do
+                {
+                    Console.WriteLine($"Would you like to restore a wallet that holds the required amount of {amountToCheck} {chainTicker} now? Enter (Y) to continue or (N) to exit.");
+                    key = Console.ReadKey();
+                    if (key.Key == ConsoleKey.Y || key.Key == ConsoleKey.N)
+                        break;
+                } while (true);
+
+                if (key.Key == ConsoleKey.N)
+                {
+                    Console.WriteLine($"You have chosen to exit the registration script.");
+                    return false;
+                }
+
+                if (!await RestoreWalletAsync(apiPort, walletName))
+                    return false;
+            }
+
+            // Check wallet height (sync) status.
+            do
+            {
+                WalletGeneralInfoModel walletInfo = await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/general-info").GetJsonAsync<WalletGeneralInfoModel>();
+                StatusModel blockModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
+
+                if (walletInfo.LastBlockSyncedHeight > (blockModel.ConsensusHeight - 50))
+                {
+                    Console.WriteLine($"Wallet is synced.");
+                    break;
+                }
+
+                Console.WriteLine($"Syncing wallet, current height {walletInfo.LastBlockSyncedHeight}...");
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            } while (true);
+
+            // Check wallet balance.
+            try
+            {
+                var walletBalanceRequest = new WalletBalanceRequest();
+                WalletBalanceModel walletBalanceModel = await $"http://localhost:{apiPort}/api"
+                    .AppendPathSegment("wallet/balance")
+                    .SetQueryParams(walletBalanceRequest)
+                    .GetJsonAsync<WalletBalanceModel>();
+
+                if (walletBalanceModel.AccountsBalances[0].SpendableAmount / 100000000 > amountToCheck)
+                {
+                    Console.WriteLine($"SUCCESS: Wallet contains the required amount of {amountToCheck}.");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to check the wallet balance: {ex}");
+            }
+
+            return false;
+        }
+
+        private async Task<bool> RestoreWalletAsync(int apiPort, string walletName)
+        {
+            Console.WriteLine($"You have chosen to restore a wallet.");
+
+            string mnemonic;
+            string passphrase;
+            string password;
+
+            do
+            {
+                Console.WriteLine($"Please enter your 12-Words used to recover your wallet:");
+                mnemonic = Console.ReadLine();
+                Console.WriteLine("Please enter your wallet passphrase:");
+                passphrase = Console.ReadLine();
+                Console.WriteLine("Please enter the wallet password used to encrypt the wallet:");
+                password = Console.ReadLine();
+
+                if (!string.IsNullOrEmpty(mnemonic) && !string.IsNullOrEmpty(passphrase) && !string.IsNullOrEmpty(password))
+                    break;
+
+                Console.WriteLine("ERROR: Please ensure that you enter all the wallet details.");
+
+            } while (true);
+
+            var walletRecoveryRequest = new WalletRecoveryRequest()
+            {
+                CreationDate = new DateTime(2020, 11, 1),
+                Mnemonic = mnemonic,
+                Name = walletName,
+                Passphrase = passphrase,
+                Password = password
+            };
+
+            try
+            {
+                await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/recover").PostJsonAsync(walletRecoveryRequest);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to recover your wallet {ex}");
+                return false;
+            }
+
+            WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
+            if (walletInfoModel.WalletNames.Contains(walletName))
+            {
+                Console.WriteLine("SUCCESS: Wallet has been restored.");
+            }
+            else
+            {
+                Console.WriteLine("ERROR: Wallet failed to be restored, exiting the registration process.");
+                return false;
+            }
+
+            try
+            {
+                Console.WriteLine("The wallet will now be resynced, please be patient...");
+                var walletSyncRequest = new WalletSyncRequest()
+                {
+                    All = true,
+                    WalletName = walletName
+                };
+
+                await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/sync-from-date").PostJsonAsync(walletSyncRequest);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to resync your wallet {ex}");
+                return false;
+            }
+
+            return true;
         }
     }
 
