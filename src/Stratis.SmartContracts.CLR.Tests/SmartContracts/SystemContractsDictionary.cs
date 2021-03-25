@@ -13,6 +13,15 @@
         {
         }
 
+        public bool IsWhitelisted(UInt256 codeHash)
+        {
+            Assert(codeHash != default);
+
+            WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+
+            return whiteListEntry.CodeHash != default;
+        }
+
         public UInt256 GetCodeHash(string name)
         {
             Assert(!string.IsNullOrEmpty(name));
