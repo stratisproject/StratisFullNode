@@ -89,7 +89,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// </summary>
     public class WalletRecoveryRequest : RequestModel
     {
-
         /// <summary>
         /// The mnemonic that was used to create the wallet.
         /// </summary>

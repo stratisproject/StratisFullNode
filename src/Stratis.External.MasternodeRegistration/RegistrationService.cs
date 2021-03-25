@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -11,6 +12,7 @@ using NBitcoin;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Models;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Networks;
 using Stratis.Sidechains.Networks;
 
@@ -66,14 +68,168 @@ namespace Stratis.External.MasternodeRegistration
             if (!await EnsureNodeIsSyncedAsync(NodeType.SideChain, this.sidechainNetwork.DefaultAPIPort))
                 return;
 
-            // Check main chain collateral wallet
+            Console.Clear();
+            Console.WriteLine("SUCCESS: STRAX Blockchain and Cirrus Blockchain are now fully synchronised.");
+            Console.WriteLine("Assessing Masternode Requirements...");
+
+            // Check main chain collateral wallet and balace
+            if (!await CheckMainChainCollateralAsync(this.mainchainNetwork.DefaultAPIPort))
+                return;
 
             // Check side chain fee wallet        
         }
 
+        private async Task<bool> CheckMainChainCollateralAsync(int apiPort)
+        {
+            Console.WriteLine("Please Enter the Name of the STRAX Wallet that contains the required collateral of a 100 000 STRAX:");
+
+            var collateralWalletName = Console.ReadLine();
+
+            WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
+
+            if (walletInfoModel.WalletNames.Contains(collateralWalletName))
+            {
+                Console.WriteLine("SUCCESS: Collateral wallet found.");
+            }
+            else
+            {
+                Console.WriteLine($"Collateral wallet with name '{collateralWalletName}' does not exist.");
+
+                ConsoleKeyInfo key;
+                do
+                {
+                    Console.WriteLine($"Would you like to restore a wallet that holds the collateral now? Enter (Y) to continue or (N) to exit.");
+                    key = Console.ReadKey();
+                    if (key.Key == ConsoleKey.Y || key.Key == ConsoleKey.N)
+                        break;
+                } while (true);
+
+                if (key.Key == ConsoleKey.N)
+                {
+                    Console.WriteLine($"You have chosen to exit the registration script.");
+                    return false;
+                }
+
+                if (!await RestoreCollateralWalletAsync(this.mainchainNetwork.DefaultAPIPort, collateralWalletName))
+                    return false;
+            }
+
+            // Check collateral wallet height (sync) status.
+            do
+            {
+                WalletGeneralInfoModel walletInfo = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api".AppendPathSegment("wallet/general-info").GetJsonAsync<WalletGeneralInfoModel>();
+                StatusModel blockModel = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
+
+                if (walletInfo.LastBlockSyncedHeight > (blockModel.ConsensusHeight - 50))
+                {
+                    Console.WriteLine($"Main chain collateral wallet is synced.");
+                    break;
+                }
+
+                Console.WriteLine($"Syncing main chain collateral wallet, current height {walletInfo.LastBlockSyncedHeight}...");
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            } while (true);
+
+            // Check collateral wallet balance.
+            try
+            {
+                var walletBalanceRequest = new WalletBalanceRequest();
+                WalletBalanceModel walletBalanceModel = await $"http://localhost:{this.mainchainNetwork.DefaultAPIPort}/api"
+                    .AppendPathSegment("wallet/balance")
+                    .SetQueryParams(walletBalanceRequest)
+                    .GetJsonAsync<WalletBalanceModel>();
+
+                if (walletBalanceModel.AccountsBalances[0].SpendableAmount / 100000000 > 100_000)
+                {
+                    Console.WriteLine($"SUCCESS: Main chain collateral wallet contains the required collateral amount.");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to check the collateral wallet balance: {ex}");
+            }
+
+            return false;
+        }
+
+        private async Task<bool> RestoreCollateralWalletAsync(int apiPort, string collateralWalletName)
+        {
+            Console.WriteLine($"You have chosen to restore a mainchain (STRAX) collateral wallet.");
+
+            string collateralMnemonic;
+            string collateralPassphrase;
+            string collateralPassword;
+
+            do
+            {
+                Console.WriteLine($"Please enter your 12-Words used to recover your wallet:");
+                collateralMnemonic = Console.ReadLine();
+                Console.WriteLine("Please enter your wallet passphrase:");
+                collateralPassphrase = Console.ReadLine();
+                Console.WriteLine("Please enter the wallet password used to encrypt the wallet:");
+                collateralPassword = Console.ReadLine();
+
+                if (!string.IsNullOrEmpty(collateralMnemonic) && !string.IsNullOrEmpty(collateralPassphrase) && !string.IsNullOrEmpty(collateralPassword))
+                    break;
+
+                Console.WriteLine("ERROR: Please ensure that you enter all the wallet details.");
+
+            } while (true);
+
+            var walletRecoveryRequest = new WalletRecoveryRequest()
+            {
+                CreationDate = new DateTime(2020, 11, 1),
+                Mnemonic = collateralMnemonic,
+                Name = collateralWalletName,
+                Passphrase = collateralPassphrase,
+                Password = collateralPassword
+            };
+
+            try
+            {
+                await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/recover").PostJsonAsync(walletRecoveryRequest);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to recover your collateral wallet {ex}");
+                return false;
+            }
+
+            WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
+            if (walletInfoModel.WalletNames.Contains(collateralWalletName))
+            {
+                Console.WriteLine("SUCCESS: Collateral wallet has been restored.");
+            }
+            else
+            {
+                Console.WriteLine("ERROR: Collateral wallet failed to be restored, exiting the regisrtation process.");
+                return false;
+            }
+
+            try
+            {
+                Console.WriteLine("The collateral wallet will now be resynced, please be patient...");
+                var walletSyncRequest = new WalletSyncRequest()
+                {
+                    All = true,
+                    WalletName = collateralWalletName
+                };
+
+                await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/sync-from-date").PostJsonAsync(walletSyncRequest);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to resync your collateral wallet {ex}");
+                return false;
+            }
+
+            return true;
+        }
+
         private async Task<bool> StartNodeAsync(NetworkType networkType, NodeType nodeType)
         {
-            Console.WriteLine($"Starting the {nodeType.ToString()} node on {networkType}...");
+            Console.WriteLine($"Starting the {nodeType} node on {networkType}...");
 
             var argumentBuilder = new StringBuilder();
 
@@ -100,18 +256,18 @@ namespace Stratis.External.MasternodeRegistration
 
             if (process.HasExited)
             {
-                Console.WriteLine($"{nodeType.ToString()} node process failed to start, exiting...");
+                Console.WriteLine($"{nodeType} node process failed to start, exiting...");
                 return false;
             }
 
-            Console.WriteLine($"{nodeType.ToString()} node started.");
+            Console.WriteLine($"{nodeType} node started.");
 
             return true;
         }
 
         private async Task<bool> EnsureNodeIsInitializedAsync(NodeType nodeType, int apiPort)
         {
-            Console.WriteLine($"Waiting for the {nodeType.ToString()} node to initialize...");
+            Console.WriteLine($"Waiting for the {nodeType} node to initialize...");
 
             bool initialized = false;
 
@@ -121,7 +277,7 @@ namespace Stratis.External.MasternodeRegistration
             {
                 if (cancellationTokenSource.IsCancellationRequested)
                 {
-                    Console.WriteLine($"{nodeType.ToString()} node failed to initialized in 60 seconds...");
+                    Console.WriteLine($"{nodeType} node failed to initialized in 60 seconds...");
                     break;
                 }
 
@@ -129,7 +285,7 @@ namespace Stratis.External.MasternodeRegistration
                 if (blockModel.State == FullNodeState.Started.ToString())
                 {
                     initialized = true;
-                    Console.WriteLine($"{nodeType.ToString()} node initialized.");
+                    Console.WriteLine($"{nodeType} node initialized.");
                     break;
                 }
 
@@ -140,7 +296,7 @@ namespace Stratis.External.MasternodeRegistration
 
         private async Task<bool> EnsureNodeIsSyncedAsync(NodeType nodeType, int apiPort)
         {
-            Console.WriteLine($"Waiting for the {nodeType.ToString()} node to sync with the network...");
+            Console.WriteLine($"Waiting for the {nodeType} node to sync with the network...");
 
             bool result;
 
@@ -150,12 +306,12 @@ namespace Stratis.External.MasternodeRegistration
                 StatusModel blockModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
                 if (blockModel.InIbd.HasValue && !blockModel.InIbd.Value)
                 {
-                    Console.WriteLine($"{nodeType.ToString()} node is synced at height {blockModel.ConsensusHeight}.");
+                    Console.WriteLine($"{nodeType} node is synced at height {blockModel.ConsensusHeight}.");
                     result = true;
                     break;
                 }
 
-                Console.WriteLine($"{nodeType.ToString()} node syncing, current height {blockModel.ConsensusHeight}...");
+                Console.WriteLine($"{nodeType} node syncing, current height {blockModel.ConsensusHeight}...");
                 await Task.Delay(TimeSpan.FromSeconds(3));
             } while (true);
 
