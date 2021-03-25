@@ -19,7 +19,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         // This has to be within the coinview rule because we need access to the coinstake input value to determine the size of the block reward.
         public static readonly int CirrusRewardPercentage = 50;
 
-        // Used by legacy tests that do not exercise SC logic.
+        /// <summary>
+        /// This constructor is used by legacy tests that do not exercise SC logic.
+        /// </summary>
         public StraxCoinviewRule()
         {
             this.logic = null;

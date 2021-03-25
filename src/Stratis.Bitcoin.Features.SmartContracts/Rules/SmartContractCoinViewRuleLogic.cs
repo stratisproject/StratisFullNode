@@ -82,7 +82,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             if (!(prevHeader is PosBlockHeader posHeader) || posHeader.HasSmartContractFields)
                 blockRoot = ((ISmartContractBlockHeader)prevHeader).HashStateRoot;
             else
-                blockRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+                blockRoot = SmartContractBlockDefinition.StateRootEmptyTrie;
 
             this.logger.LogDebug("Block hash state root '{0}'.", blockRoot);
 

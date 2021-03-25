@@ -40,7 +40,7 @@ namespace Stratis.SmartContracts.Networks
             var consensusFactory = new SmartContractPowConsensusFactory();
 
             NBitcoin.Block genesisBlock = SmartContractNetworkUtils.CreateGenesis(consensusFactory, 1296688602, 2, 0x207fffff, 1, Money.Coins(50m));
-            ((ISmartContractBlockHeader)genesisBlock.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+            ((ISmartContractBlockHeader)genesisBlock.Header).HashStateRoot = SmartContractBlockDefinition.StateRootEmptyTrie;
 
             this.Genesis = genesisBlock;
 

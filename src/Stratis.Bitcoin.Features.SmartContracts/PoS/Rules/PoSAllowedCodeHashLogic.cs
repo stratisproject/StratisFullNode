@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
                 {
                     PubKey[] pubKeysPresented = signatures.Select(s => PubKey.RecoverFromMessage(message, s)).ToArray();
                     PubKey[] pubKeysRequired = factory.GetSignatureRequirements(blockHeight).ToArray();
-                    if (pubKeysRequired.Any(r => !pubKeysPresented.Any(p => p == r)))
+                    if (!pubKeysRequired.All(r => pubKeysPresented.Contains(r)))
                         ThrowInvalidCode();
 
                     return;
