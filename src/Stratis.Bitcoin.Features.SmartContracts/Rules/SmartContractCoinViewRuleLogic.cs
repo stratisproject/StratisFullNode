@@ -66,6 +66,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.logger = loggerFactory.CreateLogger<SmartContractCoinViewRuleLogic>();
         }
 
+        /// <inheritdoc/>
         public async Task RunAsync(Func<RuleContext, Task> baseRunAsync, RuleContext context)
         {
             this.blockTxsProcessed.Clear();
@@ -127,9 +128,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.stateRepositoryRoot.SyncToRoot(this.mutableStateRepository.Root);
         }
 
-        /// <summary>
-        /// Executes contracts as necessary and updates the coinview / UTXOset after execution.
-        /// </summary>
+        /// <inheritdoc/>
         public void UpdateCoinView(Action<RuleContext, Transaction> baseUpdateUTXOSet, RuleContext context, Transaction transaction)
         {
             // We already have results for this block. No need to do any processing other than updating the UTXO set.
@@ -335,6 +334,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
                 SmartContractConsensusErrors.UnequalLogsBloom.Throw();
         }
 
+        /// <inheritdoc/>
         public bool CheckInput(Func<Transaction, int, TxOut, PrecomputedTransactionData, TxIn, DeploymentFlags, bool> baseCheckInput, Transaction tx, int inputIndexCopy, TxOut txout, PrecomputedTransactionData txData, TxIn input, DeploymentFlags flags)
         {
             if (txout.ScriptPubKey.IsSmartContractExec() || txout.ScriptPubKey.IsSmartContractInternalCall())
