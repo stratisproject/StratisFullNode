@@ -2,9 +2,11 @@
 
 public struct WhiteListEntry
 {
+    public int Version;
     public UInt256 CodeHash;
     public Address LastAddress;
     public string Name;
+    public bool IsWhiteListed;
 }
 
 public class SystemContractsDictionary : SmartContract
@@ -19,7 +21,7 @@ public class SystemContractsDictionary : SmartContract
 
         WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
 
-        return whiteListEntry.CodeHash != default(UInt256);
+        return whiteListEntry.IsWhiteListed;
     }
 
     public UInt256 GetCodeHash(string name)
@@ -70,15 +72,18 @@ public class SystemContractsDictionary : SmartContract
 
         whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHashKey.ToString());
 
+        int version;
         string authorizationChallenge;
         if (whiteListEntry.CodeHash == default(UInt256))
         {
-            authorizationChallenge = $"WhiteList(CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
+            version = 1;
+            authorizationChallenge = $"WhiteList(Version:{version},CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
         }
         else
         {
-            Assert(whiteListEntry.CodeHash != codeHash || whiteListEntry.LastAddress != lastAddress || whiteListEntry.Name != name, "Nothing changed.");
-            authorizationChallenge = $"WhiteList(CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
+            Assert(whiteListEntry.CodeHash != codeHash || whiteListEntry.LastAddress != lastAddress || whiteListEntry.Name != name || !whiteListEntry.IsWhiteListed, "Nothing changed.");
+            version = whiteListEntry.Version + 1;
+            authorizationChallenge = $"WhiteList(Version:{version},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
         //this.VerifySignatures(authorizationChallenge, signatures);
@@ -92,9 +97,11 @@ public class SystemContractsDictionary : SmartContract
                 this.State.Clear($"ByName:{whiteListEntry.Name}");
         }
 
+        whiteListEntry.Version = version;
         whiteListEntry.CodeHash = codeHash;
         whiteListEntry.LastAddress = lastAddress;
         whiteListEntry.Name = name;
+        whiteListEntry.IsWhiteListed = true;
 
         this.State.SetStruct<WhiteListEntry>(codeHash.ToString(), whiteListEntry);
         this.State.SetUInt256($"ByName:{name}", codeHash);
@@ -107,13 +114,15 @@ public class SystemContractsDictionary : SmartContract
 
         WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
         
-        Assert(whiteListEntry.CodeHash != default(UInt256));
+        Assert(whiteListEntry.CodeHash != default(UInt256) && whiteListEntry.IsWhiteListed);
 
-        string authorizationChallenge = $"BlackList(CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
+        string authorizationChallenge = $"BlackList(Version:{whiteListEntry.Version},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
 
         //this.VerifySignatures(authorizationChallenge, signatures);
 
-        this.State.Clear(codeHash.ToString());
-        this.State.Clear($"ByName:{whiteListEntry.Name}");
+        whiteListEntry.Version++;
+        whiteListEntry.IsWhiteListed = false;
+
+        this.State.SetStruct<WhiteListEntry>(codeHash.ToString(), whiteListEntry);
     }
 }
