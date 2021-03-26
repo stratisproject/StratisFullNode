@@ -49,7 +49,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void UInt128_Json_Outputs_As_String()
         {
-            UInt256 testUInt128 = (UInt256)123;
+            UInt128 testUInt128 = (UInt128)123;
             string expectedString = testUInt128.ToString();
 
             string jsonOutput = JsonConvert.SerializeObject(testUInt128, new JsonSerializerSettings
