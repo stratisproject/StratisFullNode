@@ -63,6 +63,7 @@ namespace Stratis.StraxD
                         {
                             (IClientEvent) new BlockConnectedClientEvent(),
                             new ReconstructFederationClientEvent(),
+                            new FullNodeClientEvent(),
                             new TransactionReceivedClientEvent()
                         };
 
