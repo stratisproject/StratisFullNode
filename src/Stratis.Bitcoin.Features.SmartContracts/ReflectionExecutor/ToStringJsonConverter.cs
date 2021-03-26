@@ -2,7 +2,6 @@
 using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Stratis.SmartContracts;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
 {
@@ -22,7 +21,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(Address);
+            return objectType == typeof(T);
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
