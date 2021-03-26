@@ -81,7 +81,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             Assert.Equal(this.fedWallet.CreationTime, model.CreationTime);
             Assert.Equal(this.fedWallet.LastBlockSyncedHeight, model.LastBlockSyncedHeight);
-            Assert.Equal(this.fedWallet.Network, model.Network);
+            Assert.Equal(this.fedWallet.Network.Name, model.Network);
         }
 
         [Fact]

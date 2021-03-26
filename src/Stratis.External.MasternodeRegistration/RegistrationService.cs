@@ -25,6 +25,9 @@ namespace Stratis.External.MasternodeRegistration
         private Network sidechainNetwork;
         private const string nodeExecutable = "Stratis.CirrusMinerD.exe";
 
+        private const int CollateralRequirement = 100_000;
+        private const int FeeRequirement = 500;
+
         public async Task StartAsync(NetworkType networkType)
         {
             this.rootDataFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "StraxMinerD");
@@ -199,7 +202,7 @@ namespace Stratis.External.MasternodeRegistration
         private async Task<bool> CheckWalletRequirementsAsync(NodeType nodeType, int apiPort)
         {
             var chainName = nodeType == NodeType.MainChain ? "STRAX" : "CIRRUS";
-            var amountToCheck = nodeType == NodeType.MainChain ? 100_000 : 500;
+            var amountToCheck = nodeType == NodeType.MainChain ? CollateralRequirement : FeeRequirement;
             var chainTicker = nodeType == NodeType.MainChain ? this.mainchainNetwork.CoinTicker : this.sidechainNetwork.CoinTicker;
 
             Console.WriteLine($"Please enter the name of the {chainName} wallet that contains the required collateral of {amountToCheck} {chainTicker}:");
@@ -210,16 +213,16 @@ namespace Stratis.External.MasternodeRegistration
 
             if (walletInfoModel.WalletNames.Contains(walletName))
             {
-                Console.WriteLine("SUCCESS: Wallet found.");
+                Console.WriteLine($"SUCCESS: Wallet with name '{chainName}' found.");
             }
             else
             {
-                Console.WriteLine($"Wallet with name '{walletName}' does not exist.");
+                Console.WriteLine($"{chainName} wallet with name '{walletName}' does not exist.");
 
                 ConsoleKeyInfo key;
                 do
                 {
-                    Console.WriteLine($"Would you like to restore a wallet that holds the required amount of {amountToCheck} {chainTicker} now? Enter (Y) to continue or (N) to exit.");
+                    Console.WriteLine($"Would you like to restore you {chainName} wallet that holds the required amount of {amountToCheck} {chainTicker} now? Enter (Y) to continue or (N) to exit.");
                     key = Console.ReadKey();
                     if (key.Key == ConsoleKey.Y || key.Key == ConsoleKey.N)
                         break;
@@ -231,30 +234,31 @@ namespace Stratis.External.MasternodeRegistration
                     return false;
                 }
 
-                if (!await RestoreWalletAsync(apiPort, walletName))
+                if (!await RestoreWalletAsync(apiPort, chainName, walletName))
                     return false;
             }
 
             // Check wallet height (sync) status.
             do
             {
-                WalletGeneralInfoModel walletInfo = await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/general-info").GetJsonAsync<WalletGeneralInfoModel>();
+                var walletNameRequest = new WalletName() { Name = walletName };
+                WalletGeneralInfoModel walletInfo = await $"http://localhost:{apiPort}/api".AppendPathSegment("wallet/general-info").SetQueryParams(walletNameRequest).GetJsonAsync<WalletGeneralInfoModel>();
                 StatusModel blockModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
 
                 if (walletInfo.LastBlockSyncedHeight > (blockModel.ConsensusHeight - 50))
                 {
-                    Console.WriteLine($"Wallet is synced.");
+                    Console.WriteLine($"{chainName} wallet is synced.");
                     break;
                 }
 
-                Console.WriteLine($"Syncing wallet, current height {walletInfo.LastBlockSyncedHeight}...");
+                Console.WriteLine($"Syncing {chainName} wallet, current height {walletInfo.LastBlockSyncedHeight}...");
                 await Task.Delay(TimeSpan.FromSeconds(3));
             } while (true);
 
             // Check wallet balance.
             try
             {
-                var walletBalanceRequest = new WalletBalanceRequest();
+                var walletBalanceRequest = new WalletBalanceRequest() { WalletName = walletName };
                 WalletBalanceModel walletBalanceModel = await $"http://localhost:{apiPort}/api"
                     .AppendPathSegment("wallet/balance")
                     .SetQueryParams(walletBalanceRequest)
@@ -262,9 +266,12 @@ namespace Stratis.External.MasternodeRegistration
 
                 if (walletBalanceModel.AccountsBalances[0].SpendableAmount / 100000000 > amountToCheck)
                 {
-                    Console.WriteLine($"SUCCESS: Wallet contains the required amount of {amountToCheck}.");
+                    Console.WriteLine($"SUCCESS: The {chainName} wallet contains the required amount of {amountToCheck} {chainTicker}.");
                     return true;
                 }
+
+                Console.WriteLine($"ERROR: The {chainName} wallet does not contain the required amount of {amountToCheck} {chainTicker}.");
+
             }
             catch (Exception ex)
             {
@@ -274,9 +281,9 @@ namespace Stratis.External.MasternodeRegistration
             return false;
         }
 
-        private async Task<bool> RestoreWalletAsync(int apiPort, string walletName)
+        private async Task<bool> RestoreWalletAsync(int apiPort, string chainName, string walletName)
         {
-            Console.WriteLine($"You have chosen to restore a wallet.");
+            Console.WriteLine($"You have chosen to restore your {chainName} wallet.");
 
             string mnemonic;
             string passphrase;
@@ -313,24 +320,24 @@ namespace Stratis.External.MasternodeRegistration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ERROR: An exception occurred trying to recover your wallet {ex}");
+                Console.WriteLine($"ERROR: An exception occurred trying to recover your {chainName} wallet: {ex}");
                 return false;
             }
 
             WalletInfoModel walletInfoModel = await $"http://localhost:{apiPort}/api".AppendPathSegment("Wallet/list-wallets").GetJsonAsync<WalletInfoModel>();
             if (walletInfoModel.WalletNames.Contains(walletName))
             {
-                Console.WriteLine("SUCCESS: Wallet has been restored.");
+                Console.WriteLine($"SUCCESS: {chainName} wallet has been restored.");
             }
             else
             {
-                Console.WriteLine("ERROR: Wallet failed to be restored, exiting the registration process.");
+                Console.WriteLine($"ERROR: {chainName} wallet failed to be restored, exiting the registration process.");
                 return false;
             }
 
             try
             {
-                Console.WriteLine("The wallet will now be resynced, please be patient...");
+                Console.WriteLine($"Your {chainName} wallet will now be resynced, please be patient...");
                 var walletSyncRequest = new WalletSyncRequest()
                 {
                     All = true,
@@ -341,7 +348,7 @@ namespace Stratis.External.MasternodeRegistration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ERROR: An exception occurred trying to resync your wallet {ex}");
+                Console.WriteLine($"ERROR: An exception occurred trying to resync your {chainName} wallet: {ex}");
                 return false;
             }
 
