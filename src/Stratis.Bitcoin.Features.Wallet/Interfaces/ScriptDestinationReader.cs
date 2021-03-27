@@ -11,7 +11,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<TxDestination> GetDestinationFromScriptPubKey(Network network, Script script);
     }
 
-    public class ScriptDestinationReader : IScriptAddressReader
+    public abstract class ScriptDestinationReader : IScriptDestinationReader
     {
         private readonly IScriptAddressReader scriptAddressReader;
 
