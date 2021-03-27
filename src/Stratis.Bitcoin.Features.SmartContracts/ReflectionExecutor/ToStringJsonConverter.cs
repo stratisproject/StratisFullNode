@@ -29,16 +29,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             JToken t = JToken.FromObject(value);
-
-            if (t.Type != JTokenType.Object)
-            {
-                t.WriteTo(writer);
-            }
-            else
-            {
-                JValue v = JValue.CreateString(((T)value).ToString());
-                v.WriteTo(writer);
-            }
+            JValue v = JValue.CreateString(value.ToString());
+            v.WriteTo(writer);
         }
     }
 }
