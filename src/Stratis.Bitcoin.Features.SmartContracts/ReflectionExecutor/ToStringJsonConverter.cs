@@ -7,11 +7,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
 {
     public class ToStringJsonConverter<T> : JsonConverter
     {
-        private readonly Network network;
-
-        public ToStringJsonConverter(Network network)
+        public ToStringJsonConverter()
         {
-            this.network = network;
         }
 
         public override bool CanRead
