@@ -9,11 +9,14 @@ using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Models;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Networks;
+using Stratis.Features.PoA.Voting;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.External.MasternodeRegistration
@@ -68,6 +71,10 @@ namespace Stratis.External.MasternodeRegistration
             if (!await EnsureMainChainNodeAddressIndexerIsSyncedAsync())
                 return;
 
+            // Create the masternode public key.
+            if (!CreateFederationKey())
+                return;
+
             // Start side chain node
             if (!await StartNodeAsync(networkType, NodeType.SideChain))
                 return;
@@ -90,6 +97,10 @@ namespace Stratis.External.MasternodeRegistration
 
             // Check side chain fee wallet
             if (!await CheckWalletRequirementsAsync(NodeType.SideChain, this.sidechainNetwork.DefaultAPIPort))
+                return;
+
+            // Check side chain fee wallet
+            if (!await CallJoinFederationRequestAsync())
                 return;
         }
 
@@ -367,6 +378,116 @@ namespace Stratis.External.MasternodeRegistration
             }
 
             return true;
+        }
+
+        private bool CreateFederationKey()
+        {
+            var keyFilePath = Path.Combine(DataDir, this.sidechainNetwork.RootFolderName, this.sidechainNetwork.Name, KeyTool.KeyFileDefaultName);
+
+            if (File.Exists(keyFilePath))
+            {
+                Console.WriteLine($"Your masternode public key file already exists.");
+                return true;
+            }
+
+            Console.Clear();
+            Console.WriteLine($"Your masternode public key will now be generated.");
+
+            string publicKeyPassphrase;
+
+            do
+            {
+                Console.WriteLine($"Please enter a passphrase (this can be anything, but please write it down):");
+                publicKeyPassphrase = Console.ReadLine();
+
+                if (!string.IsNullOrEmpty(publicKeyPassphrase))
+                    break;
+
+                Console.WriteLine("ERROR: Please ensure that you enter a valid passphrase.");
+
+            } while (true);
+
+
+
+            // Generate keys for mining.
+            var tool = new KeyTool(keyFilePath);
+
+            Key key = tool.GeneratePrivateKey();
+
+            string savePath = tool.GetPrivateKeySavePath();
+            tool.SavePrivateKey(key);
+            PubKey miningPubKey = key.PubKey;
+
+            Console.WriteLine($"Your Masternode Public Key (PubKey) is: {Encoders.Hex.EncodeData(miningPubKey.ToBytes(false))}");
+
+            if (publicKeyPassphrase != null)
+            {
+                Console.WriteLine(Environment.NewLine);
+                Console.WriteLine($"Your passphrase: {publicKeyPassphrase}");
+            }
+
+            Console.WriteLine(Environment.NewLine);
+            Console.WriteLine($"It has been saved in the root Cirrus data folder: {savePath}");
+            Console.WriteLine($"Please ensure that you take a backup of this file.");
+            return true;
+        }
+
+        private async Task<bool> CallJoinFederationRequestAsync()
+        {
+            Console.Clear();
+            Console.WriteLine($"The relevant masternode registration wallets has now been setup and verified.");
+            Console.WriteLine($"Press any key to continue (this will deduct the registation fee from your Cirrus wallet)");
+            Console.ReadKey();
+
+            string collateralWallet;
+            string collateralPassword;
+            string collateralAddress;
+            string cirrusWalletName;
+            string cirrusWalletPassword;
+
+            do
+            {
+                Console.WriteLine($"[Strax] Please enter the collateral wallet name:");
+                collateralWallet = Console.ReadLine();
+                Console.WriteLine($"[Strax] Please enter the collateral wallet password:");
+                collateralPassword = Console.ReadLine();
+                Console.WriteLine($"[Strax] Please enter the collateral address in which the collateral amount of {CollateralRequirement} {this.mainchainNetwork.CoinTicker} is held:");
+                collateralAddress = Console.ReadLine();
+
+                Console.WriteLine($"[Cirrus] Please enter the wallet name which holds the registration fee of {FeeRequirement} {this.sidechainNetwork.CoinTicker}:");
+                cirrusWalletName = Console.ReadLine();
+                Console.WriteLine($"[Cirrus] Please enter the above wallet's password:");
+                cirrusWalletPassword = Console.ReadLine();
+
+                if (!string.IsNullOrEmpty(collateralWallet) && !string.IsNullOrEmpty(collateralPassword) && !string.IsNullOrEmpty(collateralAddress) &&
+                    !string.IsNullOrEmpty(cirrusWalletName) && !string.IsNullOrEmpty(cirrusWalletPassword))
+                    break;
+
+                Console.WriteLine("ERROR: Please ensure that you enter the relevant details correctly.");
+
+            } while (true);
+
+            var request = new JoinFederationRequestModel()
+            {
+                CollateralAddress = collateralAddress,
+                CollateralWalletName = collateralWallet,
+                CollateralWalletPassword = collateralPassword,
+                WalletAccount = "account 0",
+                WalletName = cirrusWalletName,
+                WalletPassword = cirrusWalletPassword
+            };
+
+            try
+            {
+                await $"http://localhost:{this.sidechainNetwork.DefaultAPIPort}/api".AppendPathSegment("collateral/joinfederation").PostJsonAsync(request);
+                Console.WriteLine($"SUCCESS: The masternode request has now been submitted to the network,please press any key to view its progress.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: An exception occurred trying to registre your masternode: {ex}");
+                return false;
+            }
         }
     }
 
