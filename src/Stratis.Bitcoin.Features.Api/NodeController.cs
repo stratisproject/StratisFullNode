@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Api
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
         /// <summary>Specification of the network the node runs on.</summary>
-        private readonly Network network; // Not readonly because of ValidateAddress
+        private Network network; // Not readonly because of ValidateAddress
 
         /// <summary>An interface implementation for the blockstore.</summary>
         private readonly IBlockStore blockStore;
