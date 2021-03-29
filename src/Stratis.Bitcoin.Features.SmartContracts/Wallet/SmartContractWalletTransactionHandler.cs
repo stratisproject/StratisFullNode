@@ -1,27 +1,32 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Utilities;
-using Stratis.SmartContracts.Core;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 {
     public sealed class SmartContractWalletTransactionHandler : WalletTransactionHandler
     {
+        private readonly Network network;
+        private readonly ISmartContractActivationProvider smartContractActivationProvider;
+
         public SmartContractWalletTransactionHandler(
             ILoggerFactory loggerFactory,
             IWalletManager walletManager,
             IWalletFeePolicy walletFeePolicy,
             Network network,
             StandardTransactionPolicy transactionPolicy,
-            IReserveUtxoService utxoReservedService) :
+            IReserveUtxoService utxoReservedService, 
+            ISmartContractActivationProvider smartContractActivationProvider = null /* Optional */) :
             base(loggerFactory, walletManager, walletFeePolicy, network, transactionPolicy, utxoReservedService)
         {
+            this.network = network;
+            this.smartContractActivationProvider = smartContractActivationProvider;
         }
 
         /// <summary>
@@ -33,6 +38,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             Guard.NotNull(context, nameof(context));
             Guard.NotNull(context.Recipients, nameof(context.Recipients));
             Guard.NotNull(context.AccountReference, nameof(context.AccountReference));
+
+            if (this.network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
+            {
+                // Just revert to legacy PoS behavior until SC active.
+                base.InitializeTransactionBuilder(context);
+
+                if (this.smartContractActivationProvider?.IsActive(null) ?? false)
+                    context.TransactionBuilder.StandardTransactionPolicy = this.TransactionPolicy;
+
+                return;
+            }
 
             context.TransactionBuilder.CoinSelector = new DefaultCoinSelector
             {

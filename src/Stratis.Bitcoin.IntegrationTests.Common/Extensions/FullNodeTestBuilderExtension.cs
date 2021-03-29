@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Consensus;
@@ -92,6 +93,22 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
                         services.Remove(defaultProivider);
                         services.AddSingleton<IDateTimeProvider>(provider => timeProvider);
+                    });
+                }
+            });
+
+            return fullNodeBuilder;
+        }
+
+        public static IFullNodeBuilder ReplaceService<I,T>(this IFullNodeBuilder fullNodeBuilder)
+        {
+            fullNodeBuilder.ConfigureFeature(features =>
+            {
+                foreach (IFeatureRegistration feature in features.FeatureRegistrations)
+                {
+                    feature.FeatureServices(services =>
+                    {
+                        services.Replace(new ServiceDescriptor(typeof(I), typeof(T), ServiceLifetime.Singleton));
                     });
                 }
             });
