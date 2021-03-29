@@ -83,10 +83,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 var federationMemberModel = new FederationMemberDetailedModel
                 {
-                    PubKey = this.federationManager.CurrentFederationKey.PubKey
+                    PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
-                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == federationMemberModel.PubKey);
+                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == this.federationManager.CurrentFederationKey.PubKey);
                 if (lastActive.Key != null)
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Is this member part of a pending poll
-                Poll poll = this.votingManager.GetPendingPolls().MemberPolls().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
+                Poll poll = this.votingManager.GetPendingPolls().MemberPolls().OrderByDescending(p => p.PollStartBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == this.federationManager.CurrentFederationKey.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
@@ -103,7 +103,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll finished?
-                poll = this.votingManager.GetApprovedPolls().MemberPolls().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
+                poll = this.votingManager.GetApprovedPolls().MemberPolls().OrderByDescending(p => p.PollVotedInFavorBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == this.federationManager.CurrentFederationKey.PubKey);
                 if (poll != null)
                 {
                     federationMemberModel.PollType = poll.VotingData.Key.ToString();
@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 // Has the poll executed?
-                poll = this.votingManager.GetExecutedPolls().MemberPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == federationMemberModel.PubKey);
+                poll = this.votingManager.GetExecutedPolls().MemberPolls().OrderByDescending(p => p.PollExecutedBlockData.Height).FirstOrDefault(p => this.votingManager.GetMemberVotedOn(p.VotingData).PubKey == this.federationManager.CurrentFederationKey.PubKey);
                 if (poll != null)
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
 
@@ -159,7 +159,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     federationMemberModels.Add(new FederationMemberModel()
                     {
-                        PubKey = federationMember.PubKey,
+                        PubKey = federationMember.PubKey.ToHex(),
                         CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC),
                         LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value),
                         PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value)

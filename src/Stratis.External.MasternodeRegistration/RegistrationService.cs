@@ -14,6 +14,7 @@ using Stratis.Bitcoin;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Networks;
 using Stratis.Features.PoA.Voting;
@@ -99,9 +100,12 @@ namespace Stratis.External.MasternodeRegistration
             if (!await CheckWalletRequirementsAsync(NodeType.SideChain, this.sidechainNetwork.DefaultAPIPort))
                 return;
 
-            // Check side chain fee wallet
+            // Call the join federation API call.
             if (!await CallJoinFederationRequestAsync())
                 return;
+
+            // Call the join federation API call.
+            await MonitorJoinFederationRequestAsync();
         }
 
         private async Task<bool> StartNodeAsync(NetworkType networkType, NodeType nodeType)
@@ -488,6 +492,26 @@ namespace Stratis.External.MasternodeRegistration
                 Console.WriteLine($"ERROR: An exception occurred trying to registre your masternode: {ex}");
                 return false;
             }
+        }
+
+        private async Task MonitorJoinFederationRequestAsync()
+        {
+            // Check wallet height (sync) status.
+            do
+            {
+                FederationMemberDetailedModel memberInfo = await $"http://localhost:{this.sidechainNetwork.DefaultAPIPort}/api".AppendPathSegment("federation/members/current").GetJsonAsync<FederationMemberDetailedModel>();
+                StatusModel blockModel = await $"http://localhost:{this.sidechainNetwork.DefaultAPIPort}/api".AppendPathSegment("node/status").GetJsonAsync<StatusModel>();
+
+                Console.Clear();
+                Console.WriteLine($">> Registration Progress");
+                Console.WriteLine($"PubKey".PadRight(30) + $": {memberInfo.PubKey}");
+                Console.WriteLine($"Current Height".PadRight(30) + $": {blockModel.ConsensusHeight}");
+                Console.WriteLine($"Mining will start at height".PadRight(30) + $": {memberInfo.MemberWillStartMiningAtBlockHeight}");
+                Console.WriteLine($"Rewards will start at height".PadRight(30) + $": {memberInfo.MemberWillStartEarningRewardsEstimateHeight}");
+                Console.WriteLine();
+                Console.WriteLine($"Press CRTL-C to exit...");
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            } while (true);
         }
     }
 
