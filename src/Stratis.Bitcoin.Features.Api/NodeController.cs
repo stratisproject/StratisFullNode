@@ -99,11 +99,11 @@ namespace Stratis.Bitcoin.Features.Api
             ISelfEndpointTracker selfEndpointTracker,
             IConsensusManager consensusManager,
             IBlockStore blockStore,
+            IInitialBlockDownloadState initialBlockDownloadState,
             IGetUnspentTransaction getUnspentTransaction = null,
             INetworkDifficulty networkDifficulty = null,
             IPooledGetUnspentTransaction pooledGetUnspentTransaction = null,
-            IPooledTransaction pooledTransaction = null,
-            IInitialBlockDownloadState initialBlockDownloadState = null)
+            IPooledTransaction pooledTransaction = null)
         {
             Guard.NotNull(fullNode, nameof(fullNode));
             Guard.NotNull(network, nameof(network));
@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.Features.Api
                 CoinTicker = this.network.CoinTicker,
                 State = this.fullNode.State.ToString(),
                 BestPeerHeight = this.chainState.BestPeerTip?.Height,
-                InIbd = this.initialBlockDownloadState?.IsInitialBlockDownload()
+                InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
             };
 
             // Add the list of features that are enabled.
