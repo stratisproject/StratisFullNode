@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Linq;
+using System.Runtime.CompilerServices;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.PoA;
@@ -28,6 +29,28 @@ namespace Stratis.SmartContracts.Tests.Common
 
             var tool = new KeyTool(settings.DataFolder);
             tool.SavePrivateKey(network.FederationKeys[nodeIndex]);
+
+            return node;
+        }
+
+        public CoreNode CreateSmartContractPoSNode(SmartContractsPoSRegTest network, int nodeIndex)
+        {
+            string dataFolder = this.GetNextDataFolderName();
+
+            CoreNode node = this.CreateNode(new SmartContractPoSRunner(dataFolder, network, this.TimeProvider), "scpos.conf");
+
+            var settings = new NodeSettings(network, args: new string[] { "-conf=scpos.conf", "-datadir=" + dataFolder });
+
+            var federationMnemonics = new[] {
+                "ensure feel swift crucial bridge charge cloud tell hobby twenty people mandate",
+                "quiz sunset vote alley draw turkey hill scrap lumber game differ fiction",
+                "exchange rent bronze pole post hurry oppose drama eternal voice client state"
+               }.Select(m => new Mnemonic(m, Wordlist.English)).ToList();
+
+            var federationKeys = federationMnemonics.Select(m => m.DeriveExtKey().PrivateKey).ToList();
+
+            var tool = new KeyTool(settings.DataFolder);
+            tool.SavePrivateKey(federationKeys[nodeIndex]);
 
             return node;
         }

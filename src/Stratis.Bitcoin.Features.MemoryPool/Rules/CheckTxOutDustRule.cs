@@ -22,6 +22,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
         /// <inheritdoc />
         public override void CheckTransaction(MempoolValidationContext context)
         {
+            if (context.Transaction.IsSmartContractExecTransaction())
+                return;
+
             foreach (var txOut in context.Transaction.Outputs)
             {
                 if (StandardTransactionPolicy.IsOpReturn(txOut.ScriptPubKey.ToBytes()))
