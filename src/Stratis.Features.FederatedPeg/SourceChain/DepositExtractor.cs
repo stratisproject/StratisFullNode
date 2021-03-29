@@ -1,15 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public sealed class DepositExtractor : IDepositExtractor
     {
-        // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
-        private const decimal ConversionTransactionMinimum = 90_000;
-
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
         /// Deposits will have 2 outputs when there is no change.
@@ -23,13 +21,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
+        private readonly ExternalApiPoller externalApiPoller;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, ExternalApiPoller externalApiPoller)
         {
             this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
+            this.externalApiPoller = externalApiPoller;
         }
 
         /// <inheritdoc />
@@ -93,6 +93,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (conversionTransaction)
             {
+                // Instead of a fixed minimum, check that the deposit size at least covers the fee.
+                int gasPrice = this.externalApiPoller.GetGasPrice();
+                decimal stratisPrice = this.externalApiPoller.GetStratisPrice();
+
                 if (amount < Money.Coins(ConversionTransactionMinimum))
                     return null;
 
