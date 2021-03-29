@@ -46,7 +46,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .SetCounterChainNetwork(this.counterChainNetwork)
                 .AddPoAFeature()
                 .UsePoAConsensus()
-                .AddPoACollateralMiningCapability()
+                .AddPoACollateralMiningCapability<SmartContractPoABlockDefinition>()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
                 .UseBlockNotification()

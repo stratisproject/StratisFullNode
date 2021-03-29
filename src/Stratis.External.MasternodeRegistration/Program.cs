@@ -20,6 +20,9 @@ namespace Stratis.External.MasternodeRegistration
             if (args.Contains("-testnet"))
                 networkType = NetworkType.Testnet;
 
+            if (args.Contains("-regtest"))
+                networkType = NetworkType.Regtest;
+
             await service.StartAsync(networkType);
         }
     }

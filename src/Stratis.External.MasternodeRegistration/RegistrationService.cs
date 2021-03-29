@@ -28,6 +28,8 @@ namespace Stratis.External.MasternodeRegistration
         private const int CollateralRequirement = 100_000;
         private const int FeeRequirement = 500;
 
+        private const string DataDir = @"D:\Stratis\StraxRegTest\Masternode";
+
         public async Task StartAsync(NetworkType networkType)
         {
             this.rootDataFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "StraxMinerD");
@@ -37,10 +39,17 @@ namespace Stratis.External.MasternodeRegistration
                 this.mainchainNetwork = new StraxMain();
                 this.sidechainNetwork = new CirrusMain();
             }
-            else
+
+            if (networkType == NetworkType.Testnet)
             {
                 this.mainchainNetwork = new StraxTest();
                 this.sidechainNetwork = new CirrusTest();
+            }
+
+            if (networkType == NetworkType.Regtest)
+            {
+                this.mainchainNetwork = new StraxRegTest();
+                this.sidechainNetwork = new CirrusRegTest();
             }
 
             // Start main chain node
@@ -86,11 +95,10 @@ namespace Stratis.External.MasternodeRegistration
 
         private async Task<bool> StartNodeAsync(NetworkType networkType, NodeType nodeType)
         {
-            Console.WriteLine($"Starting the {nodeType} node on {networkType}...");
-
             var argumentBuilder = new StringBuilder();
 
             argumentBuilder.Append($"-{nodeType.ToString().ToLowerInvariant()} ");
+            argumentBuilder.Append($"-datadir={DataDir} ");
 
             if (nodeType == NodeType.MainChain)
                 argumentBuilder.Append("-addressindex=1 ");
@@ -100,6 +108,12 @@ namespace Stratis.External.MasternodeRegistration
 
             if (networkType == NetworkType.Testnet)
                 argumentBuilder.Append("-testnet");
+
+            if (networkType == NetworkType.Regtest)
+                argumentBuilder.Append("-regtest");
+
+            Console.WriteLine($"Starting the {nodeType} node on {networkType}.");
+            Console.WriteLine($"Start up arguments: {argumentBuilder}");
 
             var startInfo = new ProcessStartInfo
             {

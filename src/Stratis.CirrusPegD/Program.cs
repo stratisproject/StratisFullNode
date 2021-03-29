@@ -115,7 +115,7 @@ namespace Stratis.CirrusPegD
                 .AddPoAFeature()
                 .UsePoAConsensus()
                 .AddFederatedPeg()
-                .AddPoACollateralMiningCapability()
+                .AddPoACollateralMiningCapability<FederatedPegBlockDefinition>()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
