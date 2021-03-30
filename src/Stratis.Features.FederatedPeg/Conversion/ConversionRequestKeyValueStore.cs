@@ -3,11 +3,17 @@ using System.IO;
 using System.Text;
 using LevelDB;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
+    public interface IConversionRequestKeyValueStore : IKeyValueRepository
+    {
+        List<ConversionRequest> GetAll(int type, bool onlyUnprocessed);
+    }
+
     public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
     {
         /// <summary>Access to database.</summary>
