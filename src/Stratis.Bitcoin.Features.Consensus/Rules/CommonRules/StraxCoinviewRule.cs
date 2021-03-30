@@ -19,14 +19,6 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         // This has to be within the coinview rule because we need access to the coinstake input value to determine the size of the block reward.
         public static readonly int CirrusRewardPercentage = 50;
 
-        /// <summary>
-        /// This constructor is used by legacy tests that do not exercise SC logic.
-        /// </summary>
-        public StraxCoinviewRule()
-        {
-            this.logic = null;
-        }
-
         public StraxCoinviewRule(ISmartContractCoinViewRuleLogic logic)
         {
             this.logic = logic;
@@ -130,9 +122,9 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         public override async Task RunAsync(RuleContext context)
         {
             if (this.logic != null && context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
-                await this.logic.RunAsync(base.RunAsync, context);
+                await this.logic.RunAsync(base.RunAsync, context).ConfigureAwait(false);
             else
-                await base.RunAsync(context);
+                await base.RunAsync(context).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
