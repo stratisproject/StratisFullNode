@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Stratis.Bitcoin.Persistence;
 
-namespace Stratis.Bitcoin.Features.FederatedPeg
+namespace Stratis.Features.FederatedPeg.Conversion
 {
     public interface IConversionRequestKeyValueStore : IKeyValueRepository
     {

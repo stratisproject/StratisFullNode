@@ -1,6 +1,6 @@
-﻿using Stratis.Bitcoin.Features.FederatedPeg;
-using Stratis.Bitcoin.Tests.Common;
+﻿using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.SmartContracts.Networks;
 using Xunit;
 

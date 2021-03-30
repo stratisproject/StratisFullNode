@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using NBitcoin;
-using Stratis.Bitcoin.Features.FederatedPeg;
+using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop
 {

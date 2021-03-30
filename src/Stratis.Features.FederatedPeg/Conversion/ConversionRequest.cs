@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
 
-namespace Stratis.Bitcoin.Features.FederatedPeg
+namespace Stratis.Features.FederatedPeg.Conversion
 {
     public enum ConversionRequestType
     {

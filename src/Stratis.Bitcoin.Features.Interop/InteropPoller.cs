@@ -9,13 +9,13 @@ using Nethereum.Util;
 using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Interop.EthereumClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Interop

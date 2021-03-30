@@ -4,10 +4,10 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NLog;
-using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Features.Interop.Controllers
 {

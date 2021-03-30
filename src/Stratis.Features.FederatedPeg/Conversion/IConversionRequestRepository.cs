@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Stratis.Bitcoin.Features.FederatedPeg
+namespace Stratis.Features.FederatedPeg.Conversion
 {
     /// <summary>Provides saving and retrieving functionality for objects of <see cref="ConversionRequest"/> type.</summary>
     public interface IConversionRequestRepository

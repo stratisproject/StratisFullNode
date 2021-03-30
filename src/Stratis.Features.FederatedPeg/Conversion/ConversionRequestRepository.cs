@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using NLog;
 
-namespace Stratis.Bitcoin.Features.FederatedPeg
+namespace Stratis.Features.FederatedPeg.Conversion
 {
     public class ConversionRequestRepository : IConversionRequestRepository
     {

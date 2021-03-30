@@ -6,7 +6,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
 
-namespace Stratis.Bitcoin.Features.FederatedPeg
+namespace Stratis.Features.FederatedPeg.Conversion
 {
     public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
     {
