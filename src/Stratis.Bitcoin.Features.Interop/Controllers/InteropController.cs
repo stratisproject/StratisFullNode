@@ -4,12 +4,11 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NLog;
-using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
 
-namespace Stratis.Features.Interop.Controllers
+namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
     [ApiVersion("1")]
     [Route("api/[controller]")]
