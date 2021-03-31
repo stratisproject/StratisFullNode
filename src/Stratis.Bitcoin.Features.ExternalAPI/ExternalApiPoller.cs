@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
@@ -10,6 +9,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
 {
     public class ExternalApiPoller : IDisposable
     {
+        // TODO: This should be linked to the setting in the interop feature
+        public const int QuorumSize = 6;
+
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
         private readonly ILogger logger;
@@ -101,7 +103,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             return this.etherscanClient.GetGasPrice();
         }
 
-        public BigInteger EstimateConversionTransactionGas()
+        /// <remarks>The decimal type is acceptable here because it supports sufficiently large numbers for most conceivable gas calculations.</remarks>
+        /// <returns>The estimated total amount of gas a conversion transaction will require.</returns>
+        public decimal EstimateConversionTransactionGas()
         {
             // The cost of submitting a multisig ERC20 transfer to the multisig contract.
             const decimal SubmissionGasCost = 230_000;
@@ -112,27 +116,33 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             // The final confirmation that meets the contract threshold; this incurs slightly higher gas due to the transaction execution occurring as well.
             const decimal ExecuteGasCost = 160_000;
 
-            var totalGas = new BigInteger(SubmissionGasCost + (7 * ConfirmGasCost) + ExecuteGasCost));
+            // Of the required number of confirmations, one confirmation comes from the initial submission, and the final confirmation is more expensive.
+            decimal totalGas = SubmissionGasCost + ((QuorumSize - 2) * ConfirmGasCost) + ExecuteGasCost;
 
             int gasPrice = this.GetGasPrice();
 
             return totalGas * gasPrice;
         }
 
+        /// <returns>The estimated conversion transaction fee, converted from the USD total to the equivalent STRAX amount.</returns>
         public decimal EstimateConversionTransactionFee()
         {
             // The approximate USD fee that will be applied to conversion transactions, over and above the computed gas cost.
             const decimal ConversionTransactionFee = 100;
 
-            var OneEther = new BigInteger(1_000_000_000_000_000_000);
-
-            BigInteger overallGas = this.EstimateConversionTransactionGas();
-
-            // WIP
-
             decimal ethereumUsdPrice = this.GetEthereumPrice();
 
-            decimal stratisPrice = this.GetStratisPrice();
+            if (ethereumUsdPrice == -1)
+                return -1;
+
+            decimal overallGasUsd = this.EstimateConversionTransactionGas() * ethereumUsdPrice;
+
+            decimal stratisPriceUsd = this.GetStratisPrice();
+
+            if (stratisPriceUsd == -1)
+                return -1;
+
+            return (overallGasUsd / stratisPriceUsd) + ConversionTransactionFee;
         }
 
         public void Dispose()

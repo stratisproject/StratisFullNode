@@ -159,6 +159,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
+                    // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated.
+
                     this.conversionRequestRepository.Save(new ConversionRequest() {
                         RequestId = conversionTransaction.Id.ToString(),
                         RequestType = (int)ConversionRequestType.Mint,

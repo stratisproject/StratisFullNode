@@ -9,6 +9,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public const string InteropContractCirrusAddressKey = "interopcontractcirrusaddress";
         public const string InteropContractEthereumAddressKey = "interopcontractethereumaddress";
         public const string MultisigWalletContractAddressKey = "multisigwalletcontractaddress";
+        public const string MultisigWalletContractQuorumKey = "multisigwalletcontractquorum";
         public const string WrappedStraxContractAddressKey = "wrappedstraxcontractaddress";
         public const string EthereumClientUrlKey = "ethereumclienturl";
         public const string EthereumAccountKey = "ethereumaccount";
@@ -23,6 +24,8 @@ namespace Stratis.Bitcoin.Features.Interop
         public string InteropContractEthereumAddress { get; set; }
 
         public string MultisigWalletAddress { get; set; }
+
+        public int MultisigWalletQuorum { get; set; }
 
         public string WrappedStraxAddress { get; set; }
 
@@ -50,6 +53,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.InteropContractEthereumAddress = nodeSettings.ConfigReader.GetOrDefault(InteropContractEthereumAddressKey, "");
 
             this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractAddressKey, "");
+            this.MultisigWalletQuorum = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractQuorumKey, 6);
             this.WrappedStraxAddress = nodeSettings.ConfigReader.GetOrDefault(WrappedStraxContractAddressKey, "");
             this.EthereumClientUrl = nodeSettings.ConfigReader.GetOrDefault(EthereumClientUrlKey, "http://localhost:8545");
             this.EthereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
