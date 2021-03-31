@@ -183,7 +183,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Patricia.Tests", "S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Bitcoin.Features.Interop", "Stratis.Bitcoin.Features.Interop\Stratis.Bitcoin.Features.Interop.csproj", "{3DCC6195-1271-4A12-8B94-E821925D98DC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stratis.External.MasternodeRegistration", "Stratis.External.MasternodeRegistration\Stratis.External.MasternodeRegistration.csproj", "{F04464B5-9D56-4C9A-9778-27B9D314A296}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stratis.External.Masternodes", "Stratis.External.Masternodes\Stratis.External.Masternodes.csproj", "{F04464B5-9D56-4C9A-9778-27B9D314A296}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

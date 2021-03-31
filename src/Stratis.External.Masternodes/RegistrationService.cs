@@ -20,11 +20,12 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Features.PoA.Voting;
 using Stratis.Sidechains.Networks;
 
-namespace Stratis.External.MasternodeRegistration
+namespace Stratis.External.Masternodes
 {
     public sealed class RegistrationService
     {
-        private string rootDataFolder;
+        /// <summary>The folder where the CirrusMinerD.exe is stored.</summary>
+        private string nodeExecutablesPath;
         private Network mainchainNetwork;
         private Network sidechainNetwork;
         private const string nodeExecutable = "Stratis.CirrusMinerD.exe";
@@ -32,11 +33,12 @@ namespace Stratis.External.MasternodeRegistration
         private const int CollateralRequirement = 100_000;
         private const int FeeRequirement = 500;
 
-        private const string DataDir = @"D:\Stratis\StraxRegTest\Masternode";
+        private string rootDataDir;
 
         public async Task StartAsync(NetworkType networkType)
         {
-            this.rootDataFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "StraxMinerD");
+            this.rootDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StratisNode");
+            this.nodeExecutablesPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "StraxMinerD");
 
             if (networkType == NetworkType.Mainnet)
             {
@@ -113,7 +115,6 @@ namespace Stratis.External.MasternodeRegistration
             var argumentBuilder = new StringBuilder();
 
             argumentBuilder.Append($"-{nodeType.ToString().ToLowerInvariant()} ");
-            argumentBuilder.Append($"-datadir={DataDir} ");
 
             if (nodeType == NodeType.MainChain)
                 argumentBuilder.Append("-addressindex=1 ");
@@ -133,7 +134,7 @@ namespace Stratis.External.MasternodeRegistration
             var startInfo = new ProcessStartInfo
             {
                 Arguments = argumentBuilder.ToString(),
-                FileName = Path.Combine(this.rootDataFolder, nodeExecutable),
+                FileName = Path.Combine(this.nodeExecutablesPath, nodeExecutable),
                 UseShellExecute = true,
             };
 
@@ -386,7 +387,7 @@ namespace Stratis.External.MasternodeRegistration
 
         private bool CreateFederationKey()
         {
-            var keyFilePath = Path.Combine(DataDir, this.sidechainNetwork.RootFolderName, this.sidechainNetwork.Name, KeyTool.KeyFileDefaultName);
+            var keyFilePath = Path.Combine(this.rootDataDir, this.sidechainNetwork.RootFolderName, this.sidechainNetwork.Name, KeyTool.KeyFileDefaultName);
 
             if (File.Exists(keyFilePath))
             {

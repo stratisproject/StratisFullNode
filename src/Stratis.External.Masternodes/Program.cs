@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
 
-namespace Stratis.External.MasternodeRegistration
+namespace Stratis.External.Masternodes
 {
     class Program
     {
