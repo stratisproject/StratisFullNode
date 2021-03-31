@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
+using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
@@ -25,7 +26,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     /// Abstraction for shared SC coinview rule logic. 
     /// TODO: Long-term solution requires refactoring of the FN CoinViewRule implementation.
     /// </summary>
-    internal sealed class SmartContractCoinViewRuleLogic
+    internal sealed class SmartContractCoinViewRuleLogic : ISmartContractCoinViewRuleLogic
     {
         private readonly IStateRepositoryRoot stateRepositoryRoot;
         private readonly IContractExecutorFactory executorFactory;
@@ -65,6 +66,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.logger = loggerFactory.CreateLogger<SmartContractCoinViewRuleLogic>();
         }
 
+        /// <inheritdoc/>
         public async Task RunAsync(Func<RuleContext, Task> baseRunAsync, RuleContext context)
         {
             this.blockTxsProcessed.Clear();
@@ -76,7 +78,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.logger.LogDebug("Block to validate '{0}'", block.GetHash());
 
             // Get a IStateRepositoryRoot we can alter without affecting the injected one which is used elsewhere.
-            uint256 blockRoot = ((ISmartContractBlockHeader)context.ValidationContext.ChainedHeaderToValidate.Previous.Header).HashStateRoot;
+            BlockHeader prevHeader = context.ValidationContext.ChainedHeaderToValidate.Previous.Header;
+            uint256 blockRoot;
+            if (!(prevHeader is PosBlockHeader posHeader) || posHeader.HasSmartContractFields)
+                blockRoot = ((ISmartContractBlockHeader)prevHeader).HashStateRoot;
+            else
+                blockRoot = SmartContractBlockDefinition.StateRootEmptyTrie;
 
             this.logger.LogDebug("Block hash state root '{0}'.", blockRoot);
 
@@ -121,9 +128,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
             this.stateRepositoryRoot.SyncToRoot(this.mutableStateRepository.Root);
         }
 
-        /// <summary>
-        /// Executes contracts as necessary and updates the coinview / UTXOset after execution.
-        /// </summary>
+        /// <inheritdoc/>
         public void UpdateCoinView(Action<RuleContext, Transaction> baseUpdateUTXOSet, RuleContext context, Transaction transaction)
         {
             // We already have results for this block. No need to do any processing other than updating the UTXO set.
@@ -329,6 +334,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
                 SmartContractConsensusErrors.UnequalLogsBloom.Throw();
         }
 
+        /// <inheritdoc/>
         public bool CheckInput(Func<Transaction, int, TxOut, PrecomputedTransactionData, TxIn, DeploymentFlags, bool> baseCheckInput, Transaction tx, int inputIndexCopy, TxOut txout, PrecomputedTransactionData txData, TxIn input, DeploymentFlags flags)
         {
             if (txout.ScriptPubKey.IsSmartContractExec() || txout.ScriptPubKey.IsSmartContractInternalCall())

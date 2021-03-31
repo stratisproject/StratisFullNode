@@ -1,7 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Features.Consensus.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
 {
@@ -10,9 +13,16 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
     /// </summary>
     public sealed class StraxCoinviewRule : PosCoinviewRule
     {
+        private ISmartContractCoinViewRuleLogic logic;
+
         // 50% of the block reward should be assigned to the reward script.
         // This has to be within the coinview rule because we need access to the coinstake input value to determine the size of the block reward.
         public static readonly int CirrusRewardPercentage = 50;
+
+        public StraxCoinviewRule(ISmartContractCoinViewRuleLogic logic)
+        {
+            this.logic = logic;
+        }
 
         /// <inheritdoc />
         public override void CheckBlockReward(RuleContext context, Money fees, int height, Block block)
@@ -21,6 +31,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             if (BlockStake.IsProofOfStake(block))
             {
                 var posRuleContext = context as PosRuleContext;
+                Transaction coinbase = block.Transactions[0];
                 Transaction coinstake = block.Transactions[1];
                 Money stakeReward = coinstake.TotalOut - posRuleContext.TotalCoinStakeValueIn;
                 Money calcStakeReward = fees + this.GetProofOfStakeReward(height);
@@ -47,8 +58,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 // This additionally protects cold staking transactions from over-allocating to the Cirrus reward script at the expense of the non-Cirrus reward.
                 // This means that the hot key can be used for staking by anybody and they will not be able to redirect the non-Cirrus reward to the Cirrus script.
                 // It must additionally not be possible to short-change the Cirrus reward script by deliberately sacrificing part of the overall claimed reward.
-                // TODO: Create a distinct consensus error for this?
-                if ((calcStakeReward * CirrusRewardPercentage / 100) != rewardScriptTotal)
+                // TODO: Create a distinct consensus error for this?                
+                if (((calcStakeReward - coinbase.TotalOut /* Refund amount */) * CirrusRewardPercentage / 100) != rewardScriptTotal)
                 {
                     this.Logger.LogTrace("(-)[BAD_COINSTAKE_REWARD_SCRIPT_AMOUNT]");
                     ConsensusErrors.BadCirrusRewardAmount.Throw();
@@ -105,6 +116,33 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
             }
 
             // Otherwise allow the spend (do nothing).
+        }
+
+        /// <inheritdoc />
+        public override async Task RunAsync(RuleContext context)
+        {
+            if (this.logic != null && context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
+                await this.logic.RunAsync(base.RunAsync, context).ConfigureAwait(false);
+            else
+                await base.RunAsync(context).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc/>
+        protected override bool CheckInput(Transaction tx, int inputIndexCopy, TxOut txout, PrecomputedTransactionData txData, TxIn input, DeploymentFlags flags)
+        {
+            if (this.logic != null)
+                return this.logic.CheckInput(base.CheckInput, tx, inputIndexCopy, txout, txData, input, flags);
+
+            return base.CheckInput(tx, inputIndexCopy, txout, txData, input, flags);
+        }
+
+        /// <inheritdoc/>
+        public override void UpdateCoinView(RuleContext context, Transaction transaction)
+        {
+            if (this.logic != null && context.ValidationContext.BlockToValidate.Header is PosBlockHeader posHeader && posHeader.HasSmartContractFields)
+                this.logic.UpdateCoinView(base.UpdateCoinView, context, transaction);
+            else
+                base.UpdateCoinView(context, transaction);
         }
     }
 }
