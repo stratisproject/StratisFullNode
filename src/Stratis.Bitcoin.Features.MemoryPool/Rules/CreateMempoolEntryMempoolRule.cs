@@ -234,7 +234,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool.Rules
                     var redeemScript = new Script(ctx.Stack.Top(-1));
 
                     // TODO: Move this into a network-specific rule so that it only applies to Strax (the Cirrus validator already allows non-standard transactions)
-                    if (redeemScript.GetSigOpCount(true) > MaxP2SHSigOps)
+                    if (redeemScript.GetSigOpCount(true, this.network) > MaxP2SHSigOps)
                     {
                         this.logger.LogTrace("(-)[SIG_OP_MAX]:false");
                         return false;
