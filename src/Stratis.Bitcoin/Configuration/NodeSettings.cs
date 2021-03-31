@@ -35,6 +35,11 @@ namespace Stratis.Bitcoin.Configuration
     /// </summary>
     public class NodeSettings : IDisposable
     {
+        /// <summary>
+        /// String value that defines the devmode flag in config.
+        /// </summary>
+        public const string DevModeParam = "devmode";
+
         /// <summary>The version of the protocol supported by the current implementation of the Full Node.</summary>
         public const ProtocolVersion SupportedProtocolVersion = ProtocolVersion.SENDHEADERS_VERSION;
 
@@ -108,6 +113,15 @@ namespace Stratis.Bitcoin.Configuration
         /// is met. For this reason, the minimum relay transaction fee is usually lower than the minimum fee.
         /// </summary>
         public FeeRate MinRelayTxFeeRate { get; private set; }
+
+        /// <summary>
+        /// A flag that allows node to start in developer (dev) mode.
+        /// <para>
+        /// This is primarily in situations where the node is required to mine and/or send and build transactions
+        /// whilst in a closed (no connections) environment.
+        /// </para>
+        /// </summary>
+        public bool DevMode { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the object.
@@ -234,6 +248,9 @@ namespace Stratis.Bitcoin.Configuration
 
             // Load the configuration.
             this.LoadConfiguration();
+
+            // Set the devmode flag.
+            this.DevMode = this.ConfigReader.GetOrDefault(DevModeParam, false);
         }
 
         /// <summary>Determines whether to print help and exit.</summary>

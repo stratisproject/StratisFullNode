@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
 using NBitcoin.Policy;
-using Stratis.SmartContracts.Core;
 
 namespace Stratis.Bitcoin.Features.SmartContracts
 {

@@ -24,7 +24,9 @@ namespace Stratis.Bitcoin.Base.Deployments
         public const uint VersionbitsTopBits = 0x20000000;
 
         // Total bits available for versionbits.
-        private const int VersionbitsNumBits = 29;
+        // The bit with value 0x10000000 is being excluded and made availble for other uses.
+        // See PosBlockHeader.ExtendedHeaderBit for one such use-case.
+        private const int VersionbitsNumBits = 28;
 
         // Array size required to hold all BIP9 deployment activation states.
         public int ArraySize => this.consensus.BIP9Deployments.Length;

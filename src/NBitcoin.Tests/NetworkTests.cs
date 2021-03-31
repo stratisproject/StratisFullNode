@@ -522,7 +522,7 @@ namespace NBitcoin.Tests
             Assert.Equal(TimeSpan.FromSeconds(45), network.Consensus.TargetSpacing);
             Assert.True(network.Consensus.PowAllowMinDifficultyBlocks);
             Assert.True(network.Consensus.PowNoRetargeting);
-            Assert.Equal(2016, network.Consensus.MinerConfirmationWindow);
+            Assert.Equal(144, network.Consensus.MinerConfirmationWindow);
             Assert.Equal(12500, network.Consensus.LastPOWBlock);
             Assert.True(network.Consensus.IsProofOfStake);
             Assert.Equal(1, network.Consensus.CoinType);

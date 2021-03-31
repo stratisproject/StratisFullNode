@@ -33,13 +33,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
             this.federationSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
             this.federationSettings.NormalDepositThresholdAmount.Returns(Money.Coins(20));
-
             this.federationSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
-            this.federationSettings.GetWithdrawalTransactionFee(Arg.Any<int>()).ReturnsForAnyArgs((x) =>
-            {
-                int numInputs = x.ArgAt<int>(0);
-                return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-            });
 
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });

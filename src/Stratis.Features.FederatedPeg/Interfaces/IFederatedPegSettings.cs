@@ -52,11 +52,6 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         int MultiSigN { get; }
 
         /// <summary>
-        /// The transaction fee required for withdrawals.
-        /// </summary>
-        Money GetWithdrawalTransactionFee(int numInputs);
-
-        /// <summary>
         /// The block number on the other chain to start retrieving deposits from.
         /// </summary>
         int CounterChainDepositStartBlock { get; }

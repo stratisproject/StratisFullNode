@@ -53,16 +53,6 @@ namespace Stratis.Features.FederatedPeg
         public static readonly Money CrossChainTransferMinimum = Money.Coins(1m);
 
         /// <summary>
-        /// The fee always given to a withdrawal transaction.
-        /// </summary>
-        public static readonly Money BaseTransactionFee = Money.Coins(0.0003m);
-
-        /// <summary>
-        /// The extra fee given to a withdrawal transaction per input it spends. This number should be high enough such that the built transactions are always valid, yet low enough such that the federation can turn a profit.
-        /// </summary>
-        public static readonly Money InputTransactionFee = Money.Coins(0.00012m);
-
-        /// <summary>
         /// Fee applied to consolidating transactions.
         /// </summary>
         public static readonly Money ConsolidationFee = Money.Coins(0.01m);
@@ -198,16 +188,6 @@ namespace Stratis.Features.FederatedPeg
 
         /// <inheritdoc/>
         public int MultiSigN { get; }
-
-        /// <inheritdoc/>
-        /// <remarks>
-        /// TODO: In future we need to look at dynamically calculating the fee by also including
-        /// the number of outputs in the calculation.
-        /// </remarks>
-        public Money GetWithdrawalTransactionFee(int numInputs)
-        {
-            return BaseTransactionFee + numInputs * InputTransactionFee;
-        }
 
         /// <inheritdoc/>
         public int CounterChainDepositStartBlock { get; }

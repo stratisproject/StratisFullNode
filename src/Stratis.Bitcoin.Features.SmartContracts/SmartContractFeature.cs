@@ -29,7 +29,6 @@ using Stratis.SmartContracts.CLR.ResultProcessors;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.CLR.Validation;
 using Stratis.SmartContracts.Core;
-using Stratis.SmartContracts.Core.Interfaces;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Core.Util;
@@ -156,7 +155,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 {
                     services.AddSingleton<IPoAMiner, PoAMiner>();
                     services.AddSingleton<MinerSettings>();
-                    services.AddSingleton<PoAMinerSettings>();
                     services.AddSingleton<BlockDefinition, T>();
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                 });

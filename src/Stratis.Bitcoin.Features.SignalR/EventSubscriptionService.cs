@@ -51,8 +51,11 @@ namespace Stratis.Bitcoin.Features.SignalR
         public void OnEvent(EventBase @event)
         {
             Type childType = @event.GetType();
+
             IClientEvent clientEvent = this.options.EventsToHandle.FirstOrDefault(ev => ev.NodeEventType == childType);
-            if (clientEvent == null) return;
+            if (clientEvent == null)
+                return;
+
             clientEvent.BuildFrom(@event);
             this.eventsHub.SendToClientsAsync(clientEvent).ConfigureAwait(false).GetAwaiter().GetResult();
         }

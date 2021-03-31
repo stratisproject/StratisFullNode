@@ -88,13 +88,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                 walletSettings,
                 dataFolder,
                 walletFeePolicy,
-                asyncProvider,
-                nodeLifeTime,
                 dateTimeProvider,
-                scriptAddressReader,
-                walletRepository,
-                broadcasterManager
-                )
+                walletRepository)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(dateTimeProvider, nameof(dateTimeProvider));

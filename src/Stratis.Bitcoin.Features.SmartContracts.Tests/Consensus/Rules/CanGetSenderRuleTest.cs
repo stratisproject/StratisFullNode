@@ -20,7 +20,6 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Util;
 using Stratis.SmartContracts.Networks;
 using Xunit;

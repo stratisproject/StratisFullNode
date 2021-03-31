@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using NBitcoin;
 using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.Interop.Models

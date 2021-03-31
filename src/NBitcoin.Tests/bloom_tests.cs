@@ -397,5 +397,28 @@ namespace NBitcoin.Tests
             Assert.True(!filter.Contains(new OutPoint(uint256.Parse("0x147caa76786596590baa4e98f5d9f48b86c7765e489f7a6ff3360fe5c674360b"), 0)));
             Assert.True(!filter.Contains((new OutPoint(uint256.Parse("0x02981fa052f0481dbc5868f4fc2166035a10f27a03cfd2de67326471df5bc041"), 0))));
         }
+
+        [Fact]
+        [Trait("Core", "Core")]
+        public void CanCompressAndDecompressBloomFilters()
+        {
+            Random r = new Random(0);
+            for (int i = 0; i < 10000; i++)
+            {
+                var bloom = new Bloom();
+                int repeats = 1 << r.Next(10);
+                for (int j = 0; j < repeats; j++)
+                {
+                    var bytes = new byte[2 + r.Next(10)];
+                    r.NextBytes(bytes);
+                    bloom.Add(bytes);
+                }
+
+                byte[] compressed = bloom.GetCompressedBloom();
+                Bloom bloomRecovered = Bloom.GetDecompressedBloom(compressed);
+
+                Assert.Equal(bloom.ToBytes(), bloomRecovered.ToBytes());
+            }
+        }
     }
 }

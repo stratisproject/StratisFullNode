@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
@@ -39,6 +40,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         private readonly ILogger logger;
         private readonly IUtxoIndexer utxoIndexer;
         private readonly IWalletFeePolicy walletFeePolicy;
+        private readonly NodeSettings nodeSettings;
 
         public WalletService(ILoggerFactory loggerFactory,
             IWalletManager walletManager,
@@ -51,7 +53,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             IBroadcasterManager broadcasterManager,
             IDateTimeProvider dateTimeProvider,
             IUtxoIndexer utxoIndexer,
-            IWalletFeePolicy walletFeePolicy)
+            IWalletFeePolicy walletFeePolicy,
+            NodeSettings nodeSettings)
         {
             this.walletManager = walletManager;
             this.consensusManager = consensusManager;
@@ -66,6 +69,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.utxoIndexer = utxoIndexer;
             this.walletFeePolicy = walletFeePolicy;
+            this.nodeSettings = nodeSettings;
         }
 
         public async Task<IEnumerable<string>> GetWalletNames(
@@ -483,17 +487,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<WalletSendTransactionModel> SendTransaction(SendTransactionRequest request,
-            CancellationToken cancellationToken)
+        public async Task<WalletSendTransactionModel> SendTransaction(SendTransactionRequest request, CancellationToken cancellationToken)
         {
             return await Task.Run(() =>
             {
-                if (!this.connectionManager.ConnectedPeers.Any())
+                if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
                 {
                     this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
 
-                    throw new FeatureException(HttpStatusCode.Forbidden,
-                        "Can't send transaction: sending transaction requires at least one connection!", string.Empty);
+                    throw new FeatureException(HttpStatusCode.Forbidden, "Can't send transaction: sending transaction requires at least one connection.", string.Empty);
                 }
 
                 Transaction transaction = this.network.CreateTransaction(request.Hex);
@@ -1556,14 +1558,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
             // Note that this is the virtual size taking the witness scale factor of the current network into account, and not the raw byte count.
             return this.walletTransactionHandler.EstimateSize(context);
-        }
-
-        private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
-            TransactionData transaction)
-        {
-            return items.FirstOrDefault(i => i.Id == transaction.Id &&
-                                             i.Type == TransactionItemType.Received &&
-                                             i.ConfirmedInBlock == transaction.BlockHeight);
         }
     }
 }

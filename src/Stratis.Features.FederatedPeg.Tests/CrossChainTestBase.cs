@@ -12,7 +12,6 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.FederatedPeg;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
@@ -21,6 +20,7 @@ using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -110,12 +110,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.repository = Substitute.For<IConversionRequestRepository>();
             this.ChainIndexer = new ChainIndexer(this.network);
-            this.federatedPegSettings.GetWithdrawalTransactionFee(Arg.Any<int>()).ReturnsForAnyArgs((x) =>
-            {
-                int numInputs = x.ArgAt<int>(0);
-
-                return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-            });
 
             // Generate the keys used by the federation members for our tests.
             this.federationKeys = new[]

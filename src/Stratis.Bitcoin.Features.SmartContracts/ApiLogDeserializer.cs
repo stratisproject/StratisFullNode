@@ -55,6 +55,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 {
                     object fieldValue = this.primitiveSerializer.Deserialize(fieldType, fieldBytes);
 
+                    if (fieldType == typeof(UInt128) || fieldType == typeof(UInt256))
+                        fieldValue = fieldValue.ToString();
+
                     instance[field.Name] = fieldValue;
                 }
             }
