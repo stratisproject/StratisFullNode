@@ -127,11 +127,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules
         protected T consensusRules;
         protected RuleContext ruleContext;
         protected IAsyncProvider asyncProvider;
-
-
+        protected MockServiceCollection mockServiceCollection;
         protected ConsensusRuleUnitTestBase(Network network)
         {
             this.network = network;
+            this.mockServiceCollection = TestBase.GetMockServiceCollection();
             this.loggerFactory = new Mock<ILoggerFactory>();
             this.loggerFactory.Setup(l => l.CreateLogger(It.IsAny<string>())).Returns(new Mock<ILogger>().Object);
 

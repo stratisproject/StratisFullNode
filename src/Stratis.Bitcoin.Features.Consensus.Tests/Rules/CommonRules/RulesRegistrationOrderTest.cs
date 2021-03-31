@@ -4,6 +4,7 @@ using FluentAssertions;
 using NBitcoin;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Networks;
 using Xunit;
 
@@ -99,15 +100,20 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
 
             List<Type> fullValidationRules = network.Consensus.ConsensusRules.FullValidationRules;
 
-            fullValidationRules.Count.Should().Be(7);
+            fullValidationRules.Count.Should().Be(12);
 
             fullValidationRules[0].FullName.Should().Be(typeof(SetActivationDeploymentsFullValidationRule).FullName);
             fullValidationRules[1].FullName.Should().Be(typeof(CheckDifficultyHybridRule).FullName);
             fullValidationRules[2].FullName.Should().Be(typeof(LoadCoinviewRule).FullName);
             fullValidationRules[3].FullName.Should().Be(typeof(TransactionDuplicationActivationRule).FullName);
-            fullValidationRules[4].FullName.Should().Be(typeof(StraxCoinviewRule).FullName);
-            fullValidationRules[5].FullName.Should().Be(typeof(StraxColdStakingRule).FullName);
-            fullValidationRules[6].FullName.Should().Be(typeof(SaveCoinviewRule).FullName);
+            fullValidationRules[4].FullName.Should().Be(typeof(ContractTransactionFullValidationRule).FullName);
+            fullValidationRules[5].FullName.Should().Be(typeof(TxOutSmartContractExecRule).FullName);
+            fullValidationRules[6].FullName.Should().Be(typeof(OpSpendRule).FullName);
+            fullValidationRules[7].FullName.Should().Be(typeof(CanGetSenderRule).FullName);
+            fullValidationRules[8].FullName.Should().Be(typeof(P2PKHNotContractRule).FullName);
+            fullValidationRules[9].FullName.Should().Be(typeof(StraxCoinviewRule).FullName);
+            fullValidationRules[10].FullName.Should().Be(typeof(StraxColdStakingRule).FullName);
+            fullValidationRules[11].FullName.Should().Be(typeof(SaveCoinviewRule).FullName);
         }
     }
 }
