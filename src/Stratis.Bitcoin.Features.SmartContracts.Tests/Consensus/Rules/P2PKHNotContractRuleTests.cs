@@ -1,7 +1,6 @@
 ﻿using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Networks;

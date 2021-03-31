@@ -225,7 +225,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
 
         private object DeserializeStruct(Type type, byte[] bytes)
         {
-            RLPCollection collection = (RLPCollection) RLP.Decode(bytes)[0];
+            RLPCollection collection = (RLPCollection) RLP.Decode(bytes);
 
             object ret = Activator.CreateInstance(type);
 
@@ -246,7 +246,7 @@ namespace Stratis.SmartContracts.CLR.Serialization
             if (elementType == typeof(byte))
                 return bytes;
 
-            RLPCollection collection = (RLPCollection)RLP.Decode(bytes)[0];
+            RLPCollection collection = (RLPCollection)RLP.Decode(bytes);
 
             Array ret = Array.CreateInstance(elementType, collection.Count);
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using NBitcoin;
 using NLog;
 using Stratis.Features.Collateral.CounterChain;
@@ -25,6 +26,8 @@ namespace Stratis.Features.FederatedPeg
         /// <param name="address">The address as a string, or null if nothing is found, or if multiple addresses are found.</param>
         /// <returns><c>true</c> if address was extracted; <c>false</c> otherwise.</returns>
         bool TryGetTargetAddress(Transaction transaction, out string address);
+
+        bool TryGetTargetEthereumAddress(Transaction transaction, out string address);
 
         /// <summary>
         /// Tries to find a single OP_RETURN output that can be interpreted as a transaction id.
@@ -56,6 +59,24 @@ namespace Stratis.Features.FederatedPeg
                 .Where(s => s != null)
                 .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
 
+            if (opReturnAddresses.Count != 1)
+            {
+                address = null;
+                return false;
+            }
+
+            address = opReturnAddresses[0];
+            return true;
+        }
+
+        public bool TryGetTargetEthereumAddress(Transaction transaction, out string address)
+        {
+            var opReturnAddresses = SelectBytesContentFromOpReturn(transaction)
+                .Select(this.TryConvertValidOpReturnDataToEthereumAddress)
+                .Where(s => s != null)
+                .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
+
+            // A standard OP_RETURN is not long enough to fit more than 1 Ethereum address, but a non-standard transaction could have multiple.
             if (opReturnAddresses.Count != 1)
             {
                 address = null;
@@ -111,6 +132,22 @@ namespace Stratis.Features.FederatedPeg
                 this.logger.Debug("Address {destination} could not be converted to a valid address. Reason {message}.", destination, ex.Message);
                 return null;
             }
+        }
+
+        private string TryConvertValidOpReturnDataToEthereumAddress(byte[] data)
+        {
+            // After removing the RETURN operator, convert the remaining bytes to our candidate address.
+            string destination = Encoding.UTF8.GetString(data);
+
+            // Attempt to parse the string. An Ethereum address is 42 characters:
+            // 0x - initial prefix
+            // <20 bytes> - rightmost 20 bytes of the Keccak hash of a public key, encoded as hex
+            Match match = Regex.Match(destination, @"^0x([A-Fa-f0-9]{40})$", RegexOptions.IgnoreCase);
+
+            if (!match.Success)
+                return null;
+
+            return destination;
         }
 
         private string TryConvertValidOpReturnDataToHash(byte[] data)

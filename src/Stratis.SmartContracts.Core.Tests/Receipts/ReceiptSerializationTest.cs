@@ -59,6 +59,23 @@ namespace Stratis.SmartContracts.Core.Tests.Receipts
         }
 
         [Fact]
+        public void SanityTest()
+        {
+            // https://github.com/Nethereum/Nethereum/issues/510
+
+            var item1 = new byte[] { 0x01 };
+            var item2 = new byte[] { 0x01, 0x02 };
+
+            byte[] encoded = RLP.EncodeList(RLP.EncodeElement(item1), RLP.EncodeElement(item2));
+
+            RLPCollection decoded = (RLPCollection)RLP.Decode(encoded);
+
+            // The actual list used to be at decoded[0]. Previously, these asserts would fail.
+            Assert.Equal(item1, decoded[0].RLPData);
+            Assert.Equal(item2, decoded[1].RLPData);
+        }
+
+        [Fact]
         public void Receipt_With_No_MethodName_Or_BlockNumber_Deserializes_Correctly()
         {
             var receipt = new Receipt(new uint256(1234), 12345, new Log[]{}, new uint256(12345), new uint160(25), new uint160(24), null, true, "Test Result", "Test Error Message", 54321, 1_000_000) { BlockHash = new uint256(1234) };
