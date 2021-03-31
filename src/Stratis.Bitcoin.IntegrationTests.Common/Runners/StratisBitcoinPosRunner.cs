@@ -5,10 +5,14 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
+using Stratis.Bitcoin.Features.ColdStaking;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
@@ -30,18 +34,42 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
         {
             var settings = new NodeSettings(this.Network, ProtocolVersion.PROVEN_HEADER_VERSION, this.Agent, args: new string[] { $"-conf={this.Network.DefaultConfigFilename}", "-datadir=" + this.DataFolder, "-displayextendednodestats=true" });
 
+            var isStrax = !(this.Network is StratisMain || this.Network is StratisTest || this.Network is StratisRegTest);
+
             var builder = new FullNodeBuilder()
                 .UseNodeSettings(settings)
                 .UseBlockStore()
                 .UsePosConsensus()
-                .UseMempool()
-                .UseWallet()
+                .UseMempool();
+
+            if (isStrax)
+                builder.UseColdStakingWallet();
+            else
+                builder.UseWallet();
+
+            builder
                 .AddSQLiteWalletRepository()
-                .AddPowPosMining(!(this.Network is StratisMain || this.Network is StratisTest || this.Network is StratisRegTest))
                 .AddRPC()
                 .UseApi()
                 .UseTestChainedHeaderTree()
                 .MockIBD();
+
+            if (isStrax)
+            {
+                builder
+                .UseSmartContractWallet(false)
+                .UseSmartContractPosPowMining()
+                .AddSmartContracts(options =>
+                {
+                    options.UseReflectionExecutor();
+                    options.UsePoSWhitelistedContracts();
+                });
+            }
+            else
+            {
+                builder
+                    .AddPowPosMining(false);
+            }
 
             if (this.OverrideDateTimeProvider)
                 builder.OverrideDateTimeProviderFor<MiningFeature>();
@@ -68,15 +96,22 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.Runners
         /// but all the features required for it are enabled.</remarks>
         public static IFullNode BuildStakingNode(string dataDir, bool staking = true)
         {
-            var nodeSettings = new NodeSettings(networksSelector: Networks.Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: new string[] { $"-datadir={dataDir}", $"-stake={(staking ? 1 : 0)}", "-walletname=dummy", "-walletpassword=dummy" });
+            var network = new StraxRegTest();
+            var nodeSettings = new NodeSettings(network: network, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: new string[] { $"-datadir={dataDir}", $"-stake={(staking ? 1 : 0)}", "-walletname=dummy", "-walletpassword=dummy" });
             var fullNodeBuilder = new FullNodeBuilder(nodeSettings);
             IFullNode fullNode = fullNodeBuilder
                                 .UseBlockStore()
                                 .UsePosConsensus()
                                 .UseMempool()
-                                .UseWallet()
+                                .UseColdStakingWallet()
+                                .UseSmartContractWallet(false)
                                 .AddSQLiteWalletRepository()
-                                .AddPowPosMining(true)
+                                .UseSmartContractPosPowMining()
+                                .AddSmartContracts(options =>
+                                {
+                                    options.UseReflectionExecutor();
+                                    options.UsePoSWhitelistedContracts();
+                                })
                                 .AddRPC()
                                 .MockIBD()
                                 .UseTestChainedHeaderTree()

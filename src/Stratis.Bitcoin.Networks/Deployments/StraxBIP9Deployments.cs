@@ -11,9 +11,10 @@ namespace Stratis.Bitcoin.Networks.Deployments
         public const int CSV = 0;
         public const int Segwit = 1;
         public const int ColdStaking = 2; // TODO: Move this to the end of the deployments to leave room for others from Bitcoin?
+        public const int SystemContracts = 3;
 
         // The number of deployments.
-        public const int NumberOfDeployments = 3;
+        public const int NumberOfDeployments = 4;
 
         /// <summary>
         /// Constructs the BIP9 deployments array.

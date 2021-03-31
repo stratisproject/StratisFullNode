@@ -25,6 +25,8 @@ using Stratis.Bitcoin.Features.Consensus.Rules;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Fee;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
+using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Services;
@@ -34,6 +36,8 @@ using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.Core.Util;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.ColdStaking.Tests
@@ -163,7 +167,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.HeaderValidationRules)
                 consensusRulesContainer.HeaderValidationRules.Add(Activator.CreateInstance(ruleType) as HeaderValidationConsensusRule);
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.FullValidationRules)
-                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
+                consensusRulesContainer.FullValidationRules.Add(this.MockServiceCollection.GetService(ruleType) as FullValidationConsensusRule);
 
             ConsensusRuleEngine consensusRuleEngine = new PosConsensusRuleEngine(this.Network, this.loggerFactory, this.dateTimeProvider,
                 this.chainIndexer, this.nodeDeployments, this.consensusSettings, checkpoints.Object, this.coinView.Object, this.stakeChain.Object,
@@ -173,6 +177,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
             // Create mempool validator.
             var mempoolLock = new MempoolSchedulerLock();
 
+            var callDataSerializer = new Mock<ICallDataSerializer>();
+            var senderRetriever = new Mock<ISenderRetriever>();
+            var contractTransactionFullValidationRule = new Mock<IContractTransactionFullValidationRule>();
+
             // The mempool rule constructors aren't parameterless, so we have to manually inject the dependencies for every rule
             var mempoolRules = new List<MempoolRule>
             {
@@ -181,6 +189,10 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
                 new CreateMempoolEntryMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, consensusRuleEngine, this.loggerFactory),
                 new CheckSigOpsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new StraxTransactionFeeMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
+                new SmartContractFormatLogicMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory, callDataSerializer.Object),
+                new CanGetSenderMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, senderRetriever.Object, this.loggerFactory),
+                new AllowedCodeHashLogicMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory, callDataSerializer.Object, contractTransactionFullValidationRule.Object),
+                new CheckMinGasLimitSmartContractMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, callDataSerializer.Object, this.loggerFactory),
                 new CheckRateLimitMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new CheckAncestorsMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
                 new CheckReplacementMempoolRule(this.Network, this.txMemPool, this.mempoolSettings, this.chainIndexer, this.loggerFactory),
