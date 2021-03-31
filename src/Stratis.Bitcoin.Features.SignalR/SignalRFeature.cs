@@ -39,6 +39,8 @@ namespace Stratis.Bitcoin.Features.SignalR
             this.eventBroadcasters = eventBroadcasters;
             this.eventsSubscriptionService = eventsSubscriptionService;
             this.logger = loggerFactory.CreateLogger<SignalRFeature>();
+
+            this.InitializeBeforeBase = true;
         }
 
         public override Task InitializeAsync()

@@ -6,7 +6,6 @@ using NBitcoin;
 using Nethereum.RLP;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
 using TracerAttributes;
 
 namespace Stratis.SmartContracts.CLR
@@ -90,9 +89,7 @@ namespace Stratis.SmartContracts.CLR
 
         protected static IList<byte[]> RLPDecode(byte[] remaining)
         {
-            RLPCollection list = RLP.Decode(remaining);
-
-            RLPCollection innerList = (RLPCollection) list[0];
+            RLPCollection innerList = (RLPCollection)RLP.Decode(remaining);
 
             return innerList.Select(x => x.RLPData).ToList();
         }

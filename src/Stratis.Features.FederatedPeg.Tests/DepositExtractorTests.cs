@@ -15,6 +15,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 {
     public class DepositExtractorTests
     {
+        public const string TargetEthereumAddress = "0x4F26FfBe5F04ED43630fdC30A87638d53D0b0876";
+
         private readonly IFederatedPegSettings federationSettings;
         private readonly IOpReturnDataReader opReturnDataReader;
         private readonly DepositExtractor depositExtractor;
@@ -240,7 +242,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Set amount to be exactly the normal threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
-            // Set amount to be equal to thee normal threshold amount.
+            // Set amount to be equal to the normal threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
             // Set amount to be greater than the normal threshold amount.
@@ -255,6 +257,60 @@ namespace Stratis.Features.FederatedPeg.Tests
             {
                 Assert.True(extractedDeposit.Amount > this.federationSettings.NormalDepositThresholdAmount);
             }
+        }
+
+        // Conversion deposits
+        [Fact]
+        public void ExtractLargeConversionDeposits_ReturnDeposits_AboveNormalThreshold()
+        {
+            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
+
+            // Create the target address.
+            BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
+            byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
+
+            // Set amount to be less than deposit minimum
+            CreateDepositTransaction(targetAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
+
+            // Set amount to be less than the small threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
+
+            // Set amount to be exactly the normal threshold amount.
+            CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+
+            // Set amount to be equal to the normal threshold amount.
+            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+
+            // Set amount to be greater than the conversion deposit minimum amount.
+            CreateConversionTransaction(TargetEthereumAddress, block, Money.Coins(DepositExtractor.ConversionTransactionMinimum + 1), opReturnBytes);
+
+            int blockHeight = 12345;
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
+
+            // Should only be 1, with the value just over the withdrawal fee.
+            extractedDeposits.Count.Should().Be(1);
+            foreach (IDeposit extractedDeposit in extractedDeposits)
+            {
+                Assert.True(extractedDeposit.Amount > this.federationSettings.NormalDepositThresholdAmount);
+                Assert.Equal(TargetEthereumAddress, extractedDeposit.TargetAddress);
+            }
+        }
+
+        private Transaction CreateConversionTransaction(string targetEthereumAddress, Block block, Money depositAmount, byte[] opReturnBytes)
+        {
+            // Create the conversion transaction.
+            Transaction conversionTransaction = this.transactionBuilder.BuildOpReturnTransaction(this.addressHelper.SourceChainMultisigAddress, opReturnBytes, depositAmount);
+
+            // Add the conversion transaction to the block.
+            block.AddTransaction(conversionTransaction);
+
+            this.opReturnDataReader.TryGetTargetEthereumAddress(conversionTransaction, out string _).Returns(callInfo =>
+            {
+                callInfo[1] = targetEthereumAddress;
+                return true;
+            });
+
+            return conversionTransaction;
         }
 
         private Transaction CreateDepositTransaction(BitcoinPubKeyAddress targetAddress, Block block, Money depositAmount, byte[] opReturnBytes)

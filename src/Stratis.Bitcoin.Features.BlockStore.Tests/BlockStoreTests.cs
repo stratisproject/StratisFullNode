@@ -46,7 +46,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
         {
             this.network = new StraxMain();
             this.repositoryTipHashAndHeight = new HashHeightPair(this.network.GenesisHash, 0);
-            this.storeSettings = new StoreSettings(NodeSettings.Default(this.network));
+
+            var nodeSettings = new NodeSettings(this.network, args: new [] { $"-datadir={TestBase.GetTestDirectoryPath(this)}" });
+
+            this.storeSettings = new StoreSettings(nodeSettings);
 
             this.random = new Random();
 
@@ -60,6 +63,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Tests
             this.nodeLifetime = new NodeLifetime();
 
             this.blockRepositoryMock = new Mock<IBlockRepository>();
+
+            this.blockRepositoryMock.Setup(x => x.TxIndex).Returns(this.storeSettings.TxIndex);
+
             this.blockRepositoryMock.Setup(x => x.PutBlocks(It.IsAny<HashHeightPair>(), It.IsAny<List<Block>>()))
                 .Callback((HashHeightPair newTip, List<Block> blocks) =>
             {

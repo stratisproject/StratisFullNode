@@ -1,5 +1,4 @@
-﻿using System;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.EventBus;
 
 namespace Stratis.Features.FederatedPeg.Events

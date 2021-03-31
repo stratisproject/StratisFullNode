@@ -20,6 +20,7 @@ using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -46,6 +47,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         protected IFullNode fullNode;
         protected IFederationWalletManager federationWalletManager;
         protected IFederatedPegSettings federatedPegSettings;
+        protected IConversionRequestRepository repository;
         protected IFederationWalletSyncManager federationWalletSyncManager;
         protected IFederationWalletTransactionHandler FederationWalletTransactionHandler;
         protected IWithdrawalTransactionBuilder withdrawalTransactionBuilder;
@@ -106,6 +108,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.ibdState = Substitute.For<IInitialBlockDownloadState>();
             this.wallet = null;
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
+            this.repository = Substitute.For<IConversionRequestRepository>();
             this.ChainIndexer = new ChainIndexer(this.network);
 
             // Generate the keys used by the federation members for our tests.
@@ -162,7 +165,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings.MultiSigAddress.Returns(this.redeemScript.Hash.GetAddress(this.network));
             this.federatedPegSettings.PublicKey.Returns(this.extendedKey.PrivateKey.PubKey.ToHex());
             this.federatedPegSettings.MaximumPartialTransactionThreshold.Returns(CrossChainTransferStore.MaximumPartialTransactions);
-            this.withdrawalExtractor = new WithdrawalExtractor(this.federatedPegSettings, this.opReturnDataReader, this.network);
+            this.withdrawalExtractor = new WithdrawalExtractor(this.federatedPegSettings, this.repository, this.opReturnDataReader, this.network);
         }
 
         protected (Transaction, ChainedHeader) AddFundingTransaction(Money[] amounts)

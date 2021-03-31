@@ -62,6 +62,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             this.logger.LogInformation("Smart Contract Feature Injected.");
             return Task.CompletedTask;
         }
+
+        public override void Dispose()
+        {
+        }
     }
 
     public class SmartContractOptions

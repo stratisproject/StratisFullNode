@@ -776,7 +776,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             for (int i = 0; i < uniqueDepositIds.Length; i++)
                 transferLookup[uniqueDepositIds[i]] = uniqueTransfers[i];
 
-
             // Only create a transaction if there is important work to do.
             using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
             {

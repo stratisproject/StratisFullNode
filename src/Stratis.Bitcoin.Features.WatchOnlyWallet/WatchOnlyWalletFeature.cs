@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Notifications;
-using Stratis.Bitcoin.Features.WatchOnlyWallet.Controllers;
 
 namespace Stratis.Bitcoin.Features.WatchOnlyWallet
 {

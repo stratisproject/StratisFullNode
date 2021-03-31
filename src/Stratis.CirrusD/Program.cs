@@ -85,6 +85,7 @@ namespace Stratis.CirrusD
                 options.EventsToHandle = new[]
                 {
                     (IClientEvent) new BlockConnectedClientEvent(),
+                    new FullNodeClientEvent(),
                     new ReconstructFederationClientEvent(),
                     new TransactionReceivedClientEvent(),
                 };

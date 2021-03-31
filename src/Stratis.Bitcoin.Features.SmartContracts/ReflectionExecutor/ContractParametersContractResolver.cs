@@ -22,6 +22,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
             {
                 contract.Converter = new AddressJsonConverter(this.network);
             }
+            else if (objectType == typeof(UInt128))
+            {
+                contract.Converter = new ToStringJsonConverter<UInt128>();
+            }
+            else if (objectType == typeof(UInt256))
+            {
+                contract.Converter = new ToStringJsonConverter<UInt256>();
+            }
 
             return contract;
         }
