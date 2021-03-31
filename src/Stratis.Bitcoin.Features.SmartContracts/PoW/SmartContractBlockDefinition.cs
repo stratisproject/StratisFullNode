@@ -24,6 +24,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
 {
     public class SmartContractBlockDefinition : BlockDefinition
     {
+        public static uint256 StateRootEmptyTrie = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
         private uint160 coinbaseAddress;
         private readonly ICoinView coinView;
         private readonly IContractExecutorFactory executorFactory;

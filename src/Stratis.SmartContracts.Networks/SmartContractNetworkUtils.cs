@@ -1,5 +1,6 @@
 ﻿using NBitcoin;
 using NBitcoin.DataEncoders;
+using Stratis.Bitcoin.Features.SmartContracts.PoW;
 
 namespace Stratis.SmartContracts.Networks
 {
@@ -45,7 +46,7 @@ namespace Stratis.SmartContracts.Networks
             genesis.Header.HashPrevBlock = uint256.Zero;
             genesis.UpdateMerkleRoot();
 
-            ((ISmartContractBlockHeader)genesis.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+            ((ISmartContractBlockHeader)genesis.Header).HashStateRoot = SmartContractBlockDefinition.StateRootEmptyTrie;
 
             return genesis;
         }
