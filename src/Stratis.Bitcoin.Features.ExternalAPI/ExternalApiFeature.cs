@@ -8,9 +8,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
 {
     public sealed class ExternalApiFeature : FullNodeFeature
     {
-        private readonly ExternalApiPoller externalApiPoller;
+        private readonly IExternalApiPoller externalApiPoller;
         
-        public ExternalApiFeature(ExternalApiPoller externalApiPoller)
+        public ExternalApiFeature(IExternalApiPoller externalApiPoller)
         {
             this.externalApiPoller = externalApiPoller;
         }
@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
                     .AddFeature<ExternalApiFeature>()
                     .FeatureServices(services => services
                     .AddSingleton<ExternalApiSettings>()
-                    .AddSingleton<ExternalApiPoller>()
+                    .AddSingleton<IExternalApiPoller, ExternalApiPoller>()
                     ));
 
             return fullNodeBuilder;

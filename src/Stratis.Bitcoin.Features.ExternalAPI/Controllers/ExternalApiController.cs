@@ -11,11 +11,11 @@ namespace Stratis.Features.ExternalApi.Controllers
     [Route("api/[controller]")]
     public class ExternalApiController : Controller
     {
-        private readonly ExternalApiPoller externalApiPoller;
+        private readonly IExternalApiPoller externalApiPoller;
 
         private readonly ILogger logger;
 
-        public ExternalApiController(ExternalApiPoller externalApiPoller)
+        public ExternalApiController(IExternalApiPoller externalApiPoller)
         {
             this.externalApiPoller = externalApiPoller;
             this.logger = LogManager.GetCurrentClassLogger();

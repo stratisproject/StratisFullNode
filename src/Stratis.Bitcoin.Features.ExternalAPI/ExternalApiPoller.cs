@@ -7,7 +7,22 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.ExternalApi
 {
-    public class ExternalApiPoller : IDisposable
+    public interface IExternalApiPoller : IDisposable
+    {
+        void Initialize();
+
+        decimal GetStratisPrice();
+
+        decimal GetEthereumPrice();
+
+        int GetGasPrice();
+
+        decimal EstimateConversionTransactionGas();
+
+        decimal EstimateConversionTransactionFee();
+    }
+
+    public class ExternalApiPoller : IExternalApiPoller
     {
         // TODO: This should be linked to the setting in the interop feature
         public const int QuorumSize = 6;

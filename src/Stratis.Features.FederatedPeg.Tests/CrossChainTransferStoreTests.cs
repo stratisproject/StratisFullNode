@@ -10,6 +10,7 @@ using NSubstitute;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Tests.Common;
@@ -604,7 +605,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             var transaction = new PosTransaction(model.Hex);
 
             var reader = new OpReturnDataReader(new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet()));
-            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader);
+            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
+            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader, externalApiPoller);
             IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1);
 
             Assert.NotNull(deposit);

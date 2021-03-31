@@ -51,9 +51,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
         private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
-        private readonly ExternalApiPoller externalApiPoller;
+        private readonly IExternalApiPoller externalApiPoller;
 
-        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings, ExternalApiPoller externalApiPoller)
+        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings, IExternalApiPoller externalApiPoller)
         {
             this.consensusManager = consensusManager;
             this.depositExtractor = depositExtractor;
