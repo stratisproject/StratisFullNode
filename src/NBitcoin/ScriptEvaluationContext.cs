@@ -665,7 +665,7 @@ namespace NBitcoin
 
             try
             {
-                Op opcode;
+                Op opcode, lastOpcode = null;
 
                 using (ScriptReader scriptReader = s.CreateReader())
                 {
@@ -1446,12 +1446,21 @@ namespace NBitcoin
                                             return SetError(ScriptError.InvalidStackOperation);
 
                                         int nKeysCount = new CScriptNum(this._stack.Top(-i), fRequireMinimal).getint();
-                                        if(nKeysCount < 0 || nKeysCount > 20)
-                                            return SetError(ScriptError.PubkeyCount);
 
-                                        nOpCount += nKeysCount;
-                                        if(nOpCount > 201)
-                                            return SetError(ScriptError.OpCount);
+                                        if (this.Network.Federations != null && lastOpcode?.Code == OpcodeType.OP_FEDERATION)
+                                        {
+                                            if (nKeysCount < 0 || nKeysCount > 150)
+                                                return SetError(ScriptError.PubkeyCount);
+                                        }
+                                        else
+                                        {
+                                            if (nKeysCount < 0 || nKeysCount > 20)
+                                                return SetError(ScriptError.PubkeyCount);
+
+                                            nOpCount += nKeysCount;
+                                            if (nOpCount > 201)
+                                                return SetError(ScriptError.OpCount);
+                                        }
 
                                         int ikey = ++i;
                                         i += nKeysCount;
@@ -1554,6 +1563,8 @@ namespace NBitcoin
                         // Size limits
                         if(this._stack.Count + altstack.Count > 1000)
                             return SetError(ScriptError.StackSize);
+
+                        lastOpcode = opcode;
                     }
                 }
             }
