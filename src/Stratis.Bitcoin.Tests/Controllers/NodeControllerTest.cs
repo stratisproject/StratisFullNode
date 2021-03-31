@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Tests.Controllers
             this.connectionManager.Setup(c => c.Network).Returns(this.network);
             this.dateTimeProvider = new Mock<IDateTimeProvider>();
             this.fullNode = new Mock<IFullNode>();
-            this.initialBlockDownloadState = new Mock<InitialBlockDownloadState>();
+            this.initialBlockDownloadState = new Mock<InitialBlockDownloadState>(this.chainState.Object, this.network, null, new Checkpoints(), DateTimeProvider.Default);
             this.nodeSettings = new NodeSettings(networksSelector: Networks.Networks.Bitcoin);
             this.peerBanning = new Mock<IPeerBanning>();
 
