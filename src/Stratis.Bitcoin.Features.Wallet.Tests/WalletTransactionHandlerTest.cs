@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using NBitcoin.Policy;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;

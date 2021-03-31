@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
-using Stratis.Bitcoin.Primitives;
-using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
 
 namespace Stratis.Features.FederatedPeg.Interfaces

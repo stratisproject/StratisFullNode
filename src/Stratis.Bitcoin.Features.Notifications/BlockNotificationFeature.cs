@@ -8,7 +8,6 @@ using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.Notifications.Controllers;
 using Stratis.Bitcoin.Features.Notifications.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
 

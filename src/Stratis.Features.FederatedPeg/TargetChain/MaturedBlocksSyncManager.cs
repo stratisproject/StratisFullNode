@@ -7,8 +7,10 @@ using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
+using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Wallet;
 
 namespace Stratis.Features.FederatedPeg.TargetChain
@@ -31,6 +33,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IFederationGatewayClient federationGatewayClient;
         private readonly ILogger logger;
         private readonly INodeLifetime nodeLifetime;
+        private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly ChainIndexer chainIndexer;
 
         private IAsyncLoop requestDepositsTask;
 
@@ -41,12 +45,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <remarks>Needed to give other node some time to start before bombing it with requests.</remarks>
         private const int InitializationDelaySeconds = 10;
 
-        public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, INodeLifetime nodeLifetime)
+        public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient,
+            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository, ChainIndexer chainIndexer)
         {
             this.asyncProvider = asyncProvider;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
             this.nodeLifetime = nodeLifetime;
+            this.conversionRequestRepository = conversionRequestRepository;
+            this.chainIndexer = chainIndexer;
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -107,11 +114,68 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            // Log what we've received.
+            // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDepositsResult.Value)
             {
-                // Order transactions in block deterministically
-                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+                foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d =>
+                    d.RetrievalType == DepositRetrievalType.ConversionSmall ||
+                    d.RetrievalType == DepositRetrievalType.ConversionNormal ||
+                    d.RetrievalType == DepositRetrievalType.ConversionLarge))
+                {
+                    this.logger.Info("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
+
+                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
+                    {
+                        this.logger.Info("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
+
+                        continue;
+                    }
+
+                    // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+                    // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
+                    // TODO: This can probably be made more efficient than looping every time. 
+                    ChainedHeader header = this.chainIndexer.Tip;
+                    bool found = false;
+
+                    while (true)
+                    {
+                        if (header == this.chainIndexer.Genesis)
+                        {
+                            break;
+                        }
+
+                        if (header.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
+                        {
+                            found = true;
+
+                            break;
+                        }
+
+                        header = header.Previous;
+                    }
+
+                    if (!found)
+                    {
+                        continue;
+                    }
+
+                    this.conversionRequestRepository.Save(new ConversionRequest() {
+                        RequestId = conversionTransaction.Id.ToString(),
+                        RequestType = (int)ConversionRequestType.Mint,
+                        Processed = false,
+                        RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                        // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                        Amount = (ulong)conversionTransaction.Amount.Satoshi,
+                        BlockHeight = header.Height,
+                        DestinationAddress = conversionTransaction.TargetAddress
+                    });
+                }
+
+                // Order all other transactions in the block deterministically.
+                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.Where(d =>
+                    d.RetrievalType != DepositRetrievalType.ConversionSmall &&
+                    d.RetrievalType != DepositRetrievalType.ConversionNormal &&
+                    d.RetrievalType != DepositRetrievalType.ConversionLarge).OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
@@ -119,7 +183,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 }
             }
 
-            // If we received a portion of blocks we can ask for new portion without any delay.
+            // If we received a portion of blocks we can ask for a new portion without any delay.
             RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
             return !result.MatureDepositRecorded;
         }

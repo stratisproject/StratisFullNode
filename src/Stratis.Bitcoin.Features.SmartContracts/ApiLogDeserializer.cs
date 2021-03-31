@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         /// <returns>An <see cref="ExpandoObject"/> containing the fields of the Type and its deserialized values.</returns>
         public dynamic DeserializeLogData(byte[] bytes, Type type)
         {
-            RLPCollection collection = (RLPCollection)RLP.Decode(bytes)[0];
+            RLPCollection collection = (RLPCollection)RLP.Decode(bytes);
 
             var instance = new ExpandoObject() as IDictionary<string, object>;
 

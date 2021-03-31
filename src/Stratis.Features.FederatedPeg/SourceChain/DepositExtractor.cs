@@ -7,6 +7,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public sealed class DepositExtractor : IDepositExtractor
     {
+        // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
+        public const decimal ConversionTransactionMinimum = 90_000;
+
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
         /// Deposits will have 2 outputs when there is no change.
@@ -72,20 +75,45 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!depositsToMultisig.Any())
                 return null;
 
+            // Check the common case first.
+            bool conversionTransaction = false;
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
-                return null;
+            {
+                if (!this.opReturnDataReader.TryGetTargetEthereumAddress(transaction, out targetAddress))
+                {
+                    return null;
+                }
+                
+                conversionTransaction = true;
+            }
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
-            if (targetAddress == this.network.CirrusRewardDummyAddress)
-                depositRetrievalType = DepositRetrievalType.Distribution;
-            else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
-                depositRetrievalType = DepositRetrievalType.Large;
-            else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
-                depositRetrievalType = DepositRetrievalType.Normal;
+
+            if (conversionTransaction)
+            {
+                if (amount < Money.Coins(ConversionTransactionMinimum))
+                    return null;
+
+                if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.ConversionLarge;
+                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.ConversionNormal;
+                else
+                    depositRetrievalType = DepositRetrievalType.ConversionSmall;
+            }
             else
-                depositRetrievalType = DepositRetrievalType.Small;
+            {
+                if (targetAddress == this.network.CirrusRewardDummyAddress)
+                    depositRetrievalType = DepositRetrievalType.Distribution;
+                else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.Large;
+                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.Normal;
+                else
+                    depositRetrievalType = DepositRetrievalType.Small;
+            }
 
             return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, blockHeight, blockHash);
         }
