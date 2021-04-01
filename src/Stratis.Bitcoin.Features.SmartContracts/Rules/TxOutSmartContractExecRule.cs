@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
         /// <inheritdoc/>
         public override Task RunAsync(RuleContext context)
         {
-            if (!(this.smartContractActivationProvider?.IsRuleApplicable(context) ?? true))
+            if (this.smartContractActivationProvider?.SkipRule(context) ?? false)
                 return Task.CompletedTask;
 
             Block block = context.ValidationContext.BlockToValidate;

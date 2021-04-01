@@ -60,11 +60,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
         public TestRulesContext()
         {
             this.mockServiceCollection = new MockServiceCollection();
-
-            var mock = new Mock<ISmartContractActivationProvider>();
-            mock.Setup(x => x.IsRuleApplicable(It.IsAny<RuleContext>())).Returns(true);
-
-            this.mockServiceCollection.AddSingleton<ISmartContractActivationProvider>(mock.Object);
+            this.mockServiceCollection.AddMockSingleton<ISmartContractActivationProvider>();
         }
 
         public T CreateRule<T>() where T : ConsensusRuleBase

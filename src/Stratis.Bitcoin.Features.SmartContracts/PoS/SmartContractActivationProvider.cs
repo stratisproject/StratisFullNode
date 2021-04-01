@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// Smart contract rules are not applicable until the feature has been activated.
         /// </summary>
         /// <param name="context">The rule context.</param>
-        bool IsRuleApplicable(RuleContext context);
+        bool SkipRule(RuleContext context);
     }
 
     /// <inheritdoc/>
@@ -62,15 +62,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <inheritdoc/>
-        public bool IsRuleApplicable(RuleContext context)
+        public bool SkipRule(RuleContext context)
         {
             if (!this.IsActive(context.ValidationContext.ChainedHeaderToValidate.Previous))
-                return false;
+                return true;
 
             if (context.ValidationContext.ChainedHeaderToValidate.Header is ISmartContractBlockHeader blockHeader && !blockHeader.HasSmartContractFields)
                 throw new ConsensusErrorException(new ConsensusError("bad-version", "missing smart contract block header"));
 
-            return true;
+            return false;
         }
     }
 }
