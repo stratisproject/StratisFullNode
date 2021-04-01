@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -59,7 +60,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
         public TestRulesContext()
         {
             this.mockServiceCollection = new MockServiceCollection();
-            this.mockServiceCollection.AddMockSingleton<ISmartContractActivationProvider>();
+
+            var mock = new Mock<ISmartContractActivationProvider>();
+            mock.Setup(x => x.IsRuleApplicable(It.IsAny<RuleContext>())).Returns(true);
+
+            this.mockServiceCollection.AddSingleton<ISmartContractActivationProvider>(mock.Object);
         }
 
         public T CreateRule<T>() where T : ConsensusRuleBase
