@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 return new WalletGeneralInfoModel
                 {
                     WalletName = wallet.Name,
-                    Network = wallet.Network,
+                    Network = wallet.Network.Name,
                     CreationTime = wallet.CreationTime,
                     LastBlockSyncedHeight = wallet.AccountsRoot.Single().LastBlockSyncedHeight,
                     ConnectedNodes = this.connectionManager.ConnectedPeers.Count(),

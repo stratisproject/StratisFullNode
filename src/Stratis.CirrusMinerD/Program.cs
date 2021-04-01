@@ -82,7 +82,7 @@ namespace Stratis.CirrusMinerD
                 .UseBlockStore()
                 .AddPoAFeature()
                 .UsePoAConsensus()
-                .AddPoACollateralMiningCapability()
+                .AddPoACollateralMiningCapability<SmartContractPoABlockDefinition>()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())

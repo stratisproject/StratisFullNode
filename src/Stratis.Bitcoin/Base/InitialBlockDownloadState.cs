@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Interfaces;
@@ -22,9 +21,6 @@ namespace Stratis.Bitcoin.Base
         /// <summary>Information about node's chain.</summary>
         private readonly IChainState chainState;
 
-        /// <summary>Instance logger.</summary>
-        private readonly ILogger logger;
-
         /// <summary>Specification of the network the node runs on - regtest/testnet/mainnet.</summary>
         private readonly Network network;
 
@@ -34,7 +30,7 @@ namespace Stratis.Bitcoin.Base
         private int lastCheckpointHeight;
         private uint256 minimumChainWork;
 
-        public InitialBlockDownloadState(IChainState chainState, Network network, ConsensusSettings consensusSettings, ICheckpoints checkpoints, ILoggerFactory loggerFactory, IDateTimeProvider dateTimeProvider)
+        public InitialBlockDownloadState(IChainState chainState, Network network, ConsensusSettings consensusSettings, ICheckpoints checkpoints, IDateTimeProvider dateTimeProvider)
         {
             Guard.NotNull(chainState, nameof(chainState));
 
@@ -46,8 +42,6 @@ namespace Stratis.Bitcoin.Base
 
             this.lastCheckpointHeight = this.checkpoints.GetLastCheckpointHeight();
             this.minimumChainWork = this.network.Consensus.MinimumChainWork ?? uint256.Zero;
-
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <inheritdoc />
