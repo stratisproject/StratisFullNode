@@ -136,7 +136,9 @@ namespace Stratis.Bitcoin.Features.PoA
             if (rebuildFederationHeight)
                 this.reconstructFederationService.Reconstruct();
 
-            this.miner?.InitializeMining();
+            // Initialize mining if the node is started in dev mode and is of role miner.
+            if (this.nodeSettings.DevMode == null || this.nodeSettings.DevMode == DevModeNodeRole.Miner)
+                this.miner?.InitializeMining();
 
             return Task.CompletedTask;
         }

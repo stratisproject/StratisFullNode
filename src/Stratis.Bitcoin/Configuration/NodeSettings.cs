@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Configuration
         /// whilst in a closed (no connections) environment.
         /// </para>
         /// </summary>
-        public bool DevMode { get; private set; }
+        public DevModeNodeRole? DevMode { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the object.
@@ -250,7 +250,16 @@ namespace Stratis.Bitcoin.Configuration
             this.LoadConfiguration();
 
             // Set the devmode flag.
-            this.DevMode = this.ConfigReader.GetOrDefault(DevModeParam, false);
+            var devmode = this.ConfigReader.GetOrDefault<string>(DevModeParam, null);
+            if (devmode != null)
+            {
+                if (devmode == DevModeNodeRole.Default.ToString().ToLowerInvariant())
+                    this.DevMode = DevModeNodeRole.Default;
+                else if (devmode == DevModeNodeRole.Miner.ToString().ToLowerInvariant())
+                    this.DevMode = DevModeNodeRole.Miner;
+                else
+                    throw new ConfigurationException("Invalid devmode option specified (either 'default' or 'miner' permitted.");
+            }
         }
 
         /// <summary>Determines whether to print help and exit.</summary>
@@ -440,5 +449,21 @@ namespace Stratis.Bitcoin.Configuration
         {
             this.LoggerFactory.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Determines the type of node that will be started in developer (dev) mode.
+    /// </summary>
+    public enum DevModeNodeRole
+    {
+        /// <summary>
+        /// This role allows the node to join the dev mode network as a miner (currently only one miner is allowed).
+        /// </summary>
+        Miner,
+
+        /// <summary>
+        /// This role specifies that the node will join the network as a non-miner (normal node).
+        /// </summary>
+        Default
     }
 }

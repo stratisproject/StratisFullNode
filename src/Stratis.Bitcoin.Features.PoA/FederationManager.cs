@@ -139,7 +139,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private bool InitializeFederationMemberKey()
         {
-            if (!this.nodeSettings.DevMode)
+            if (this.nodeSettings.DevMode == null)
             {
                 // Load key.
                 Key key = new KeyTool(this.nodeSettings.DataFolder).LoadPrivateKey();
