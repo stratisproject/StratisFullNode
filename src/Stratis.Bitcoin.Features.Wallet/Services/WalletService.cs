@@ -491,7 +491,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         {
             return await Task.Run(() =>
             {
-                if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
+                if (this.nodeSettings.DevMode == null && !this.connectionManager.ConnectedPeers.Any())
                 {
                     this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
 

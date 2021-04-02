@@ -42,7 +42,7 @@ namespace Stratis.CirrusMinerD
             {
                 bool isMainchainNode = args.FirstOrDefault(a => a.ToLower() == MainchainArgument) != null;
                 bool isSidechainNode = args.FirstOrDefault(a => a.ToLower() == SidechainArgument) != null;
-                bool startInDevMode = args.FirstOrDefault(a => a.ToLower() == $"-{NodeSettings.DevModeParam}") != null;
+                bool startInDevMode = args.Any(a => a.ToLower().Contains($"-{NodeSettings.DevModeParam}"));
 
                 IFullNode fullNode = null;
 
