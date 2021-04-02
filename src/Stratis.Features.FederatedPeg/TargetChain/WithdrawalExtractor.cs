@@ -89,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     // Immediately flag it as processed & persist so that it can't be added again.
                     burnRequest.Processed = true;
-                    burnRequest.RequestStatus = (int)ConversionRequestStatus.Processed;
+                    burnRequest.RequestStatus = ConversionRequestStatus.Processed;
 
                     this.conversionRequestRepository.Save(burnRequest);
                 }

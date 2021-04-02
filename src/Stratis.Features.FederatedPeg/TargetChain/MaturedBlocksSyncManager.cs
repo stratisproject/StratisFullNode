@@ -19,6 +19,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     /// Handles block syncing between gateways on 2 chains. This node will request
     /// blocks from another chain to look for cross chain deposit transactions.
     /// </summary>
+    /// <remarks>Processes matured block deposits from the cirrus chain and creates instances of <see cref="ConversionRequest"/> which are
+    /// saved to <see cref="IConversionRequestRepository"/>.</remarks>
     public interface IMaturedBlocksSyncManager : IDisposable
     {
         /// <summary>Starts requesting blocks from another chain.</summary>
@@ -162,9 +164,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.conversionRequestRepository.Save(new ConversionRequest() {
                         RequestId = conversionTransaction.Id.ToString(),
-                        RequestType = (int)ConversionRequestType.Mint,
+                        RequestType = ConversionRequestType.Mint,
                         Processed = false,
-                        RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                        RequestStatus = ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
                         Amount = (ulong)conversionTransaction.Amount.Satoshi,
                         BlockHeight = header.Height,

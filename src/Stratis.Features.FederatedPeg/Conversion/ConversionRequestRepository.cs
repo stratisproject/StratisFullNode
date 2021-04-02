@@ -53,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
         {
             this.logger.Debug($"Retrieving all mint requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
 
-            return this.KeyValueStore.GetAll((int)ConversionRequestType.Mint, onlyUnprocessed);
+            return this.KeyValueStore.GetAll(ConversionRequestType.Mint, onlyUnprocessed);
         }
 
         /// <inheritdoc />
@@ -61,7 +61,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
         {
             this.logger.Debug($"Retrieving all burn requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
 
-            return this.KeyValueStore.GetAll((int)ConversionRequestType.Burn, onlyUnprocessed);
+            return this.KeyValueStore.GetAll(ConversionRequestType.Burn, onlyUnprocessed);
         }
     }
 }
