@@ -83,27 +83,28 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
         {
-            SerializableResult<List<MaturedBlockDepositsModel>> model = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
+            SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits = 
+                await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
-            if (model == null)
+            if (matureBlockDeposits == null)
             {
                 this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't respond.", this.federationGatewayClient.EndpointUrl);
                 return true;
             }
 
-            if (model.Value == null)
+            if (matureBlockDeposits.Value == null)
             {
-                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, model.Message ?? "none");
+                this.logger.Debug("Failed to fetch normal deposits from counter chain node; {0} didn't reply with any deposits; Message: {1}", this.federationGatewayClient.EndpointUrl, matureBlockDeposits.Message ?? "none");
                 return true;
             }
 
-            return await ProcessMatureBlockDepositsAsync(model);
+            return await ProcessMatureBlockDepositsAsync(matureBlockDeposits);
         }
 
-        private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDepositsResult)
+        private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits)
         {
             // "Value"'s count will be 0 if we are using NewtonSoft's serializer, null if using .Net Core 3's serializer.
-            if (matureBlockDepositsResult.Value.Count == 0)
+            if (matureBlockDeposits.Value.Count == 0)
             {
                 this.logger.Debug("Considering ourselves fully synced since no blocks were received.");
 
@@ -115,7 +116,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
-            foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDepositsResult.Value)
+            foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
             {
                 foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d =>
                     d.RetrievalType == DepositRetrievalType.ConversionSmall ||
@@ -184,7 +185,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // If we received a portion of blocks we can ask for a new portion without any delay.
-            RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDepositsResult.Value).ConfigureAwait(false);
+            RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDeposits.Value).ConfigureAwait(false);
             return !result.MatureDepositRecorded;
         }
 

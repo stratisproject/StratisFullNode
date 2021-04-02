@@ -18,24 +18,32 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public bool Enabled { get; set; }
 
+        /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
         public string InteropContractCirrusAddress { get; set; }
 
+        /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
         public string InteropContractEthereumAddress { get; set; }
 
+        /// <summary>This should be set to the address of the multisig wallet contract deployed on the Ethereum blockchain.</summary>
         public string MultisigWalletAddress { get; set; }
 
+        /// <summary>This should be set to the address of the Wrapped STRAX ERC-20 contract deployed on the Ethereum blockchain.</summary>
         public string WrappedStraxAddress { get; set; }
 
+        /// <summary>This is the RPC address of the geth node running on the local machine. It is normally defaulted to http://localhost:8545</summary>
         public string EthereumClientUrl { get; set; }
 
+        /// <summary>
+        /// Address of the account on your geth node. It is the account that will be used for transaction
+        /// signing and all interactions with the multisig and wrapped STRAX contracts.
+        /// </summary>
         public string EthereumAccount { get; set; }
 
+        /// <summary>Passphras for the ethereum account.</summary>
         public string EthereumPassphrase { get; set; }
 
-        /// <summary>
-        /// The gas limit for Ethereum interoperability transactions.
-        /// </summary>
-        public int EthereumGas { get; set; }
+        /// <summary>The gas limit for Ethereum interoperability transactions.</summary>
+        public int EthereumGasLimit { get; set; }
 
         /// <summary>
         /// The gas price for Ethereum interoperability transactions (denominated in gwei).
@@ -55,7 +63,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.EthereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
             this.EthereumPassphrase = nodeSettings.ConfigReader.GetOrDefault(EthereumPassphraseKey, "");
 
-            this.EthereumGas = nodeSettings.ConfigReader.GetOrDefault(EthereumGasKey, 3_000_000);
+            this.EthereumGasLimit = nodeSettings.ConfigReader.GetOrDefault(EthereumGasKey, 3_000_000);
             this.EthereumGasPrice = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceKey, 100);
 
             if (!this.Enabled)
