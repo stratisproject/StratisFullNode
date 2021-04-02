@@ -57,11 +57,11 @@ namespace Stratis.Bitcoin.Builder
 
                 this.Execute(feature =>
                 {
-                    this.signals.Publish(new FullNodeEvent() { Message = $"Initializing feature '{feature.GetType().Name}' ... " });
+                    this.signals.Publish(new FullNodeEvent() { Message = $"Initializing feature '{feature.GetType().Name}'" });
                     feature.State = FeatureInitializationState.Initializing;
                     feature.InitializeAsync().GetAwaiter().GetResult();
                     feature.State = FeatureInitializationState.Initialized;
-                    this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' initialized ... " });
+                    this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' initialized" });
                 });
             }
             catch
@@ -164,7 +164,7 @@ namespace Stratis.Bitcoin.Builder
             var exceptionText = $"An error occurred {messageText} full node feature '{feature.GetType().Name}': '{exception}'";
 
             this.logger.Error(exceptionText);
-            this.signals.Publish(new FullNodeEvent() { Message = exceptionText });
+            this.signals.Publish(new FullNodeEvent() { Message = exceptionText, State = FullNodeState.Failed.ToString() });
         }
     }
 }
