@@ -9,7 +9,7 @@ using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Util;
 using Nethereum.Web3;
 
-namespace Stratis.Bitcoin.Features.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
     public class WrappedStraxTokenDeployment : ContractDeploymentMessage
     {

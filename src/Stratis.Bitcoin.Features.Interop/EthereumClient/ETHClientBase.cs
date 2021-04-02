@@ -11,9 +11,9 @@ using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts.Managed;
 
-namespace Stratis.Bitcoin.Features.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
-    public class EthereumClientBase : IEthereumClientBase
+    public class ETHClientBase : IETHClientBase
     {
         private readonly InteropSettings interopSettings;
         private readonly Web3 web3;
@@ -23,17 +23,17 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
 
         public const string ZeroAddress = "0x0000000000000000000000000000000000000000";
 
-        public EthereumClientBase(InteropSettings interopSettings)
+        public ETHClientBase(InteropSettings interopSettings)
         {
             this.interopSettings = interopSettings;
 
             if (!this.interopSettings.Enabled)
                 return;
 
-            var account = new ManagedAccount(interopSettings.EthereumAccount, interopSettings.EthereumPassphrase);
+            var account = new ManagedAccount(interopSettings.ETHAccount, interopSettings.ETHPassphrase);
             
             // TODO: Support loading offline accounts from keystore JSON directly?
-            this.web3 = !string.IsNullOrWhiteSpace(interopSettings.EthereumClientUrl) ? new Web3(account, interopSettings.EthereumClientUrl) : new Web3(account);
+            this.web3 = !string.IsNullOrWhiteSpace(interopSettings.ETHClientUrl) ? new Web3(account, interopSettings.ETHClientUrl) : new Web3(account);
         }
 
         /// <inheritdoc />
@@ -79,13 +79,13 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient
         /// <inheritdoc />
         public async Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data)
         {
-            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data, this.interopSettings.EthereumGasLimit, this.interopSettings.EthereumGasPrice).ConfigureAwait(false);
+            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
         {
-            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.EthereumGasLimit, this.interopSettings.EthereumGasPrice).ConfigureAwait(false);
+            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

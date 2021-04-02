@@ -10,7 +10,7 @@ using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Features.Interop.EthereumClient;
+using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.Interop
     public class InteropPoller : IDisposable
     {
         private readonly InteropSettings interopSettings;
-        private readonly IEthereumClientBase ethereumClientBase;
+        private readonly IETHClientBase ETHClientBase;
         private readonly Network network;
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
-            IEthereumClientBase ethereumClientBase,
+            IETHClientBase ethClientBase,
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
             ChainIndexer chainIndexer,
@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Interop
             CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             this.interopSettings = interopSettings;
-            this.ethereumClientBase = ethereumClientBase;
+            this.ETHClientBase = ethClientBase;
             this.network = nodeSettings.Network;
             this.asyncProvider = asyncProvider;
             this.nodeLifetime = nodeLifetime;
@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     try
                     {
-                        await this.CheckEthereumNodeAsync().ConfigureAwait(false);
+                        await this.CheckETHNodeAsync().ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -135,11 +135,11 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>
         /// Retrieves the current Ethereum chain height via the RPC interface to geth.
         /// </summary>
-        private async Task CheckEthereumNodeAsync()
+        private async Task CheckETHNodeAsync()
         {
             try
             {
-                BigInteger blockHeight = await this.ethereumClientBase.GetBlockHeightAsync().ConfigureAwait(false);
+                BigInteger blockHeight = await this.ETHClientBase.GetBlockHeightAsync().ConfigureAwait(false);
 
                 this.logger.LogInformation("Current Ethereum node block height is {0}.", blockHeight);
             }
@@ -158,14 +158,14 @@ namespace Stratis.Bitcoin.Features.Interop
             if (this.firstPoll)
             {
                 // The filter should only be set up once IBD completes.
-                await this.ethereumClientBase.CreateTransferEventFilterAsync().ConfigureAwait(false);
+                await this.ETHClientBase.CreateTransferEventFilterAsync().ConfigureAwait(false);
 
                 this.firstPoll = false;
             }
 
             // Check for all Transfer events against the WrappedStrax contract since the last time we checked.
             // In future this could also poll for other events as the need arises.
-            List<EventLog<TransferEventDTO>> transferEvents = await this.ethereumClientBase.GetTransferEventsForWrappedStraxAsync().ConfigureAwait(false);
+            List<EventLog<TransferEventDTO>> transferEvents = await this.ETHClientBase.GetTransferEventsForWrappedStraxAsync().ConfigureAwait(false);
 
             foreach (EventLog<TransferEventDTO> transferEvent in transferEvents)
             {
@@ -174,11 +174,11 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
 
                 // These could be mints or something else, either way ignore them.
-                if (transferEvent.Event.From == EthereumClientBase.ZeroAddress)
+                if (transferEvent.Event.From == ETHClient.ETHClientBase.ZeroAddress)
                     continue;
 
                 // Transfers can only be burns if they are made with the zero address as the destination.
-                if (transferEvent.Event.To != EthereumClientBase.ZeroAddress)
+                if (transferEvent.Event.To != ETHClient.ETHClientBase.ZeroAddress)
                     continue;
 
                 this.logger.LogInformation("Conversion burn transaction {0} received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.logger.LogInformation("Conversion burn transaction {0} has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
 
                 // Look up the desired destination address for this account.
-                string destinationAddress = await this.ethereumClientBase.GetDestinationAddressAsync(transferEvent.Event.From).ConfigureAwait(false);
+                string destinationAddress = await this.ETHClientBase.GetDestinationAddressAsync(transferEvent.Event.From).ConfigureAwait(false);
 
                 this.logger.LogInformation("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
                 
@@ -320,7 +320,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // transfers. As we don't know precisely what value transactions are expected, the sole determining factor is
                 // whether the reserve has a large enough balance to service the current conversion request. If not, trigger a
                 // mint for a predetermined amount.
-                //BigInteger reserveBalanace = await this.ethereumClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
+                //BigInteger reserveBalanace = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
 
                 // The request is denominated in satoshi and needs to be converted to wei.
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
@@ -339,9 +339,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
 
-                    string mintData = this.ethereumClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
+                    string mintData = this.ETHClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
 
-                    BigInteger mintTransactionId = await this.ethereumClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
+                    BigInteger mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
 
                     // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                     string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(MintPlaceHolderRequestId + ((int)mintTransactionId));
@@ -378,12 +378,12 @@ namespace Stratis.Bitcoin.Features.Interop
                     {
                         // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                         // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                        string abiData = this.ethereumClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
+                        string abiData = this.ETHClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
 
                         // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
                         // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
                         // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                        BigInteger transactionId = await this.ethereumClientBase.SubmitTransactionAsync(this.interopSettings.WrappedStraxAddress, 0, abiData).ConfigureAwait(false);
+                        BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.WrappedStraxAddress, 0, abiData).ConfigureAwait(false);
 
                         this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
 
@@ -430,7 +430,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
                             // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
-                            BigInteger confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
+                            BigInteger confirmationCount = await this.ETHClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
 
                             if (confirmationCount >= 6)
                             {
@@ -473,7 +473,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             // Once a quorum is reached, each node confirms the agreed transactionId.
                             // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
-                            string confirmationHash = await this.ethereumClientBase.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+                            string confirmationHash = await this.ETHClientBase.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
 
                             this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
 

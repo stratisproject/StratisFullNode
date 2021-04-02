@@ -3,9 +3,9 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Nethereum.Contracts;
 
-namespace Stratis.Bitcoin.Features.Interop.EthereumClient
+namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
-    public interface IEthereumClientBase
+    public interface IETHClientBase
     {
         /// <summary>
         /// Creates the filter that the RPC interface uses to listen for events against the desired contract.
