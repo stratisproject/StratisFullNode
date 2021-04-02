@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         {
             this.interopSettings = interopSettings;
 
-            if (!this.interopSettings.Enabled)
+            if (!this.interopSettings.InteropEnabled)
                 return;
 
             var account = new ManagedAccount(interopSettings.ETHAccount, interopSettings.ETHPassphrase);
@@ -39,7 +39,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <inheritdoc />
         public async Task CreateTransferEventFilterAsync()
         {
-            this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(this.interopSettings.WrappedStraxAddress);
+            this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(this.interopSettings.ETHWrappedStraxContractAddress);
             this.filterAllTransferEventsForContract = this.transferEventHandler.CreateFilterInput();
             this.filterId = await this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).ConfigureAwait(false);
         }
@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <inheritdoc />
         public async Task<string> GetDestinationAddressAsync(string address)
         {
-            return await WrappedStrax.GetDestinationAddressAsync(this.web3, this.interopSettings.WrappedStraxAddress, address).ConfigureAwait(false);
+            return await WrappedStrax.GetDestinationAddressAsync(this.web3, this.interopSettings.ETHWrappedStraxContractAddress, address).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
@@ -79,24 +79,24 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <inheritdoc />
         public async Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data)
         {
-            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, destination, value, data, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
+            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, destination, value, data, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
         {
-            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
+            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, transactionId, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
         public async Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId)
         {
-            return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.interopSettings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
+            return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
         public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
         {
-            return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.interopSettings.WrappedStraxAddress, addressToQuery).ConfigureAwait(false);
+            return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.interopSettings.ETHWrappedStraxContractAddress, addressToQuery).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

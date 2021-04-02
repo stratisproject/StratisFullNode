@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public void Initialize()
         {
-            if (!this.interopSettings.Enabled)
+            if (!this.interopSettings.InteropEnabled)
                 return;
 
             if (!this.federationManager.IsFederationMember)
@@ -383,7 +383,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
                         // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
                         // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                        BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.WrappedStraxAddress, 0, abiData).ConfigureAwait(false);
+                        BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData).ConfigureAwait(false);
 
                         this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
 
