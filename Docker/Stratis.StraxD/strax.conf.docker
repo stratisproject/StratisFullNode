@@ -136,7 +136,7 @@ regtest=0
 
 ####API Settings####
 #URI to node's API interface. Defaults to 'http://localhost'.
-#apiuri=http://localhost
+apiuri=http://0.0.0.0
 #Port of node's API interface. Defaults to 17103.
 #apiport=17103
 #Keep Alive interval (set in seconds). Default: 0 (no keep alive).
