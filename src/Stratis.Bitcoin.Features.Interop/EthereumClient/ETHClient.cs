@@ -13,7 +13,7 @@ using Nethereum.Web3.Accounts.Managed;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
-    public class ETHClientBase : IETHClientBase
+    public class ETHClient : IETHClient
     {
         private readonly InteropSettings interopSettings;
         private readonly Web3 web3;
@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         public const string ZeroAddress = "0x0000000000000000000000000000000000000000";
 
-        public ETHClientBase(InteropSettings interopSettings)
+        public ETHClient(InteropSettings interopSettings)
         {
             this.interopSettings = interopSettings;
 

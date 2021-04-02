@@ -24,13 +24,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly IInteropTransactionManager interopTransactionManager;
 
-        private readonly IETHClientBase ETHClientBase;
+        private readonly IETHClient ETHClientBase;
 
         public InteropBehavior(
             Network network,
             IFederationManager federationManager,
             IInteropTransactionManager interopTransactionManager,
-            IETHClientBase ETHClientBase)
+            IETHClient ETHClientBase)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(federationManager, nameof(federationManager));

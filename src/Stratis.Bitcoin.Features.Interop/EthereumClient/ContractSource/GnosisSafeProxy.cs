@@ -152,8 +152,8 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient.ContractSource
                 SafeTxGas = safeTxGas,
                 BaseGas = baseGas,
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei),
-                GasToken = ETHClientBase.ZeroAddress,
-                RefundReceiver = ETHClientBase.ZeroAddress,
+                GasToken = ETHClient.ZeroAddress,
+                RefundReceiver = ETHClient.ZeroAddress,
                 Signatures = signatures
             };
 

@@ -5,7 +5,7 @@ using Nethereum.Contracts;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {
-    public interface IETHClientBase
+    public interface IETHClient
     {
         /// <summary>
         /// Creates the filter that the RPC interface uses to listen for events against the desired contract.

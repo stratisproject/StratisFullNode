@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.Interop
     public class InteropPoller : IDisposable
     {
         private readonly InteropSettings interopSettings;
-        private readonly IETHClientBase ETHClientBase;
+        private readonly IETHClient ETHClientBase;
         private readonly Network network;
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
-            IETHClientBase ethClientBase,
+            IETHClient ethClientBase,
             IAsyncProvider asyncProvider,
             INodeLifetime nodeLifetime,
             ChainIndexer chainIndexer,
@@ -174,11 +174,11 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
 
                 // These could be mints or something else, either way ignore them.
-                if (transferEvent.Event.From == ETHClient.ETHClientBase.ZeroAddress)
+                if (transferEvent.Event.From == ETHClient.ETHClient.ZeroAddress)
                     continue;
 
                 // Transfers can only be burns if they are made with the zero address as the destination.
-                if (transferEvent.Event.To != ETHClient.ETHClientBase.ZeroAddress)
+                if (transferEvent.Event.To != ETHClient.ETHClient.ZeroAddress)
                     continue;
 
                 this.logger.LogInformation("Conversion burn transaction {0} received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);

@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Features.Interop
         
         private readonly IInteropTransactionManager interopTransactionManager;
         
-        private readonly IETHClientBase ethereumClientBase;
+        private readonly IETHClient ethereumClientBase;
 
         public InteropFeature(
             Network network, 
@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
             IInteropTransactionManager interopTransactionManager, 
-            IETHClientBase ethereumClientBase,
+            IETHClient ethereumClientBase,
             IFullNode fullNode)
         {
             this.network = network;
@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     .AddFeature<InteropFeature>()
                     .FeatureServices(services => services
                     .AddSingleton<InteropSettings>()
-                    .AddSingleton<IETHClientBase, ETHClientBase>()
+                    .AddSingleton<IETHClient, ETHClient.ETHClient>()
                     .AddSingleton<IInteropTransactionManager, InteropTransactionManager>()
                     .AddSingleton<InteropPoller>()
                     ));
