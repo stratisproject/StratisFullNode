@@ -136,7 +136,8 @@ namespace Stratis.Bitcoin.Features.PoA
             if (rebuildFederationHeight)
                 this.reconstructFederationService.Reconstruct();
 
-            // Initialize mining if the node is started in dev mode and is of role miner.
+            // If the node is started in devmode, its role must be of miner in order to mine.
+            // If devmode is not specified, initialize mining as per normal.
             if (this.nodeSettings.DevMode == null || this.nodeSettings.DevMode == DevModeNodeRole.Miner)
                 this.miner?.InitializeMining();
 
