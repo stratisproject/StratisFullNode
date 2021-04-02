@@ -187,6 +187,8 @@ namespace Stratis.Bitcoin
 
             this.State = FullNodeState.Initialized;
 
+            this.Signals.Publish(new FullNodeEvent() { Message = $"Full node initialized on {this.Network.Name}.", State = this.State.ToString() });
+
             this.StartTime = this.DateTimeProvider.GetUtcNow();
 
             return this;
