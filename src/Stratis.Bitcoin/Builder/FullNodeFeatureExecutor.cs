@@ -57,11 +57,11 @@ namespace Stratis.Bitcoin.Builder
 
                 this.Execute(feature =>
                 {
-                    this.signals.Publish(new FullNodeEvent() { Message = $"Initializing feature '{feature.GetType().Name}'" });
+                    this.signals.Publish(new FullNodeEvent() { Message = $"Initializing feature '{feature.GetType().Name}'.", State = FullNodeState.Initializing.ToString() });
                     feature.State = FeatureInitializationState.Initializing;
                     feature.InitializeAsync().GetAwaiter().GetResult();
                     feature.State = FeatureInitializationState.Initialized;
-                    this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' initialized" });
+                    this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' initialized.", State = FullNodeState.Initializing.ToString() });
                 });
             }
             catch
