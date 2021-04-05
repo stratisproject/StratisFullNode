@@ -8,7 +8,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
 {
     /// <summary>
     /// Represents a deposit made to a sidechain mutlisig, with the aim of triggering
-    /// a cross chain transfer
+    /// a cross chain transfer.
     /// </summary>
     public interface IDeposit
     {
