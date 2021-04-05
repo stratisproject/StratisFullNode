@@ -21,8 +21,10 @@ namespace Stratis.Features.FederatedPeg.Conversion
         NotOriginator
     }
 
+    /// <summary>Chains supported by InterFlux integration.</summary>
     public enum DestinationChain
     {
+        STRAX = 0, // Stratis
         ETH, // Ethereum
         ETC, // Ethereum classic
         AVAX, // Avalanche

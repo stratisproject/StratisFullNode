@@ -474,6 +474,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     }
 
     /// <summary>
+    /// A class containing the necessary parameters for a InterFlux transaction request.
+    /// </summary>
+    public class BuildInterFluxTransactionRequest : BuildTransactionRequest
+    {
+        /// <summary>Target chain that is supported by InterFlux integration.</summary>
+        /// <remarks>See Stratis.Features.FederatedPeg.Conversion.DestinationChain enum.</remarks>
+        public int DestinationChain { get; set; }
+
+        /// <summary>Address at destination chain at which coins should be deposited.</summary>
+        public string DestinationAddress { get; set; }
+    }
+
+    /// <summary>
     /// A class containing the necessary parameters for a send transaction request.
     /// </summary>
     public class SendTransactionRequest : RequestModel

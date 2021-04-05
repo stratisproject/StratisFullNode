@@ -853,7 +853,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                     await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
 
                 // Create 1 block with all 10 withdrawals inside.
-                ChainedHeader header = this.AppendBlock(recordMatureDepositResult.WithDrawalTransactions.ToArray());
+                ChainedHeader header = this.AppendBlock(recordMatureDepositResult.WithdrawalTransactions.ToArray());
 
                 // Check that CCTS now has 10 withdrawals that are SeenInBlock.
                 ICrossChainTransfer[] seenInBlock =
@@ -889,7 +889,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                     await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
 
                 // We built more transctions with the UTXOs included in a block...
-                Assert.True(recordMatureDepositResult.WithDrawalTransactions.Count > 0);
+                Assert.True(recordMatureDepositResult.WithdrawalTransactions.Count > 0);
 
                 int expectedPartials = crossChainTransferStore.GetTransfersByStatus(new CrossChainTransferStatus[] { CrossChainTransferStatus.Partial }).Length;
                 int expectedSuspends = crossChainTransferStore.GetTransfersByStatus(new CrossChainTransferStatus[] { CrossChainTransferStatus.Suspended }).Length;
@@ -920,7 +920,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                         break;
 
                     // Makes the withdrawals seen and makes their UTXOs spendable.
-                    this.AppendBlock(recordMatureDepositResult.WithDrawalTransactions.ToArray());
+                    this.AppendBlock(recordMatureDepositResult.WithdrawalTransactions.ToArray());
                 }
 
                 // Verify our expectations.
@@ -998,10 +998,10 @@ namespace Stratis.Features.FederatedPeg.Tests
                 RecordLatestMatureDepositsResult recordMatureDepositResult =
                     await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
 
-                Assert.Equal(numDeposits, recordMatureDepositResult.WithDrawalTransactions.Count);
+                Assert.Equal(numDeposits, recordMatureDepositResult.WithdrawalTransactions.Count);
 
                 // Create 1 block with all 10 withdrawals inside.
-                ChainedHeader header = this.AppendBlock(recordMatureDepositResult.WithDrawalTransactions.ToArray());
+                ChainedHeader header = this.AppendBlock(recordMatureDepositResult.WithdrawalTransactions.ToArray());
 
                 // Check that CCTS now has 10 withdrawals that are SeenInBlock.
                 ICrossChainTransfer[] seenInBlock = crossChainTransferStore.GetTransfersByStatus(new CrossChainTransferStatus[] { CrossChainTransferStatus.SeenInBlock });
@@ -1032,7 +1032,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 recordMatureDepositResult = await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
 
                 // We built more transctions with the UTXOs included in a block...
-                Assert.Equal(numDeposits2, recordMatureDepositResult.WithDrawalTransactions.Count);
+                Assert.Equal(numDeposits2, recordMatureDepositResult.WithdrawalTransactions.Count);
 
                 // Now lets rewind.
                 this.ChainIndexer.SetTip(added.header);
@@ -1049,20 +1049,20 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // And then again to actually create the transactions again.
                 recordMatureDepositResult = await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
-                Assert.Equal(numDeposits, recordMatureDepositResult.WithDrawalTransactions.Count);
+                Assert.Equal(numDeposits, recordMatureDepositResult.WithdrawalTransactions.Count);
 
-                recordMatureDepositResult.WithDrawalTransactions.Reverse();
+                recordMatureDepositResult.WithdrawalTransactions.Reverse();
 
                 for (int i = 0; i < numDeposits / 2; i++)
                 {
-                    header = this.AppendBlock(recordMatureDepositResult.WithDrawalTransactions.Skip(i * 2).Take(2).ToArray());
+                    header = this.AppendBlock(recordMatureDepositResult.WithdrawalTransactions.Skip(i * 2).Take(2).ToArray());
                 }
 
                 // Now lets put the second group of 5 transactions into a single block on our new chain.
                 recordMatureDepositResult = await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
-                Assert.Equal(numDeposits2, recordMatureDepositResult.WithDrawalTransactions.Count);
+                Assert.Equal(numDeposits2, recordMatureDepositResult.WithdrawalTransactions.Count);
 
-                header = this.AppendBlock(recordMatureDepositResult.WithDrawalTransactions.ToArray());
+                header = this.AppendBlock(recordMatureDepositResult.WithdrawalTransactions.ToArray());
 
                 // Everything should be confirmed and in a block.
                 seenInBlock = crossChainTransferStore.GetTransfersByStatus(new CrossChainTransferStatus[] { CrossChainTransferStatus.SeenInBlock });
@@ -1130,7 +1130,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 RecordLatestMatureDepositsResult recordMatureDepositResult = await crossChainTransferStore.RecordLatestMatureDepositsAsync(blockDeposits[crossChainTransferStore.NextMatureDepositHeight]);
 
                 // The CCTS won't create any transactions until the InputConsolidator consolidates some inputs
-                Assert.Empty(recordMatureDepositResult.WithDrawalTransactions);
+                Assert.Empty(recordMatureDepositResult.WithdrawalTransactions);
 
                 this.signals.Received().Publish(Arg.Any<WalletNeedsConsolidation>());
             }
