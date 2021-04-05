@@ -2,7 +2,6 @@
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Models;
@@ -28,10 +27,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         /// In a production/live scenario the sidechain and mainnet federation nodes should run on the same machine.
         /// </para>
         /// </summary>
-        public FederationGatewayClient(
-            ILoggerFactory loggerFactory,
-            ICounterChainSettings counterChainSettings,
-            IHttpClientFactory httpClientFactory)
+        public FederationGatewayClient(ICounterChainSettings counterChainSettings, IHttpClientFactory httpClientFactory)
             : base(httpClientFactory, counterChainSettings.CounterChainApiPort, "FederationGateway", $"http://{counterChainSettings.CounterChainApiHost}")
         {
         }

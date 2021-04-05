@@ -124,7 +124,8 @@ namespace Stratis.Features.FederatedPeg
             // Attempt to parse the string. Validates the base58 string.
             try
             {
-                BitcoinAddress bitcoinAddress = this.counterChainNetwork.Parse<BitcoinAddress>(destination);
+                this.counterChainNetwork.Parse<BitcoinAddress>(destination);
+
                 return destination;
             }
             catch (Exception ex)

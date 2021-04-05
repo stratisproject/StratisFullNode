@@ -1,5 +1,6 @@
 ﻿using NBitcoin;
 using Newtonsoft.Json;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
@@ -24,6 +25,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         /// <inheritdoc />
         public string TargetAddress { get; }
+
+        /// <inheritdoc />
+        public DestinationChain TargetChain { get; }
 
         /// <inheritdoc />
         public int BlockNumber { get; }

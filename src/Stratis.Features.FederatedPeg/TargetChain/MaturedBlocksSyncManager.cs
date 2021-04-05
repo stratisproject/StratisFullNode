@@ -170,7 +170,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
                         Amount = (ulong)conversionTransaction.Amount.Satoshi,
                         BlockHeight = header.Height,
-                        DestinationAddress = conversionTransaction.TargetAddress
+                        DestinationAddress = conversionTransaction.TargetAddress,
+                        DestinationChain = conversionTransaction.TargetChain
                     });
                 }
 

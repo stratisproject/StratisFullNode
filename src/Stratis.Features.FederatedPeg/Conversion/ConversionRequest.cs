@@ -25,7 +25,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
     {
         ETH, // Ethereum
         ETC, // Ethereum classic
-        AVAX // Avalanche
+        AVAX, // Avalanche
+        ADA // Cardano
     }
 
     /// <summary>Request to mint or burn wSTRAX.</summary>

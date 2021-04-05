@@ -16,7 +16,7 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropBehavior : NetworkPeerBehavior
     {
-        private readonly NLog.ILogger logger;
+        private readonly ILogger logger;
 
         private readonly Network network;
 
@@ -24,30 +24,26 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly IInteropTransactionManager interopTransactionManager;
 
-        private readonly IETHClient ETHClientBase;
+        private readonly IETHClient ETHClient;
 
-        public InteropBehavior(
-            Network network,
-            IFederationManager federationManager,
-            IInteropTransactionManager interopTransactionManager,
-            IETHClient ETHClientBase)
+        public InteropBehavior(Network network, IFederationManager federationManager, IInteropTransactionManager interopTransactionManager, IETHClient ETHClient)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(federationManager, nameof(federationManager));
             Guard.NotNull(interopTransactionManager, nameof(interopTransactionManager));
-            Guard.NotNull(ETHClientBase, nameof(ETHClientBase));
+            Guard.NotNull(ETHClient, nameof(ETHClient));
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.federationManager = federationManager;
             this.interopTransactionManager = interopTransactionManager;
-            this.ETHClientBase = ETHClientBase;
+            this.ETHClient = ETHClient;
         }
 
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ETHClientBase);
+            return new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ETHClient);
         }
 
         protected override void AttachCore()
@@ -101,7 +97,7 @@ namespace Stratis.Bitcoin.Features.Interop
             try
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ETHClientBase.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                confirmationCount = await this.ETHClient.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
             catch (Exception)
             {

@@ -239,7 +239,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     RequestStatus = ConversionRequestStatus.Unprocessed,
                     Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
                     BlockHeight = (int)blockHeight,
-                    DestinationAddress = destinationAddress
+                    DestinationAddress = destinationAddress,
+                    DestinationChain = DestinationChain.ETH // TODO only ETH supported for now. 
                 });
             }
         }
