@@ -26,12 +26,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly Network network;
 
         private readonly Script cirrusRewardDummyAddressScriptPubKey;
+        private readonly Script conversionTransactionFeeDistributionScriptPubKey;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IFederationWalletTransactionHandler federationWalletTransactionHandler;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ISignals signals;
         private readonly IRewardDistributionManager distributionManager;
         private int previousDistributionHeight;
+        private int previousConversionFeeDistributionHeight;
 
         public WithdrawalTransactionBuilder(
             Network network,
@@ -52,7 +54,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (!this.federatedPegSettings.IsMainChain)
                 this.cirrusRewardDummyAddressScriptPubKey = BitcoinAddress.Create(this.network.CirrusRewardDummyAddress).ScriptPubKey;
 
+            if (!this.federatedPegSettings.IsMainChain)
+                this.conversionTransactionFeeDistributionScriptPubKey = BitcoinAddress.Create(this.network.ConversionTransactionFeeDistributionDummyAddress).ScriptPubKey;
+
             this.previousDistributionHeight = 0;
+            this.previousConversionFeeDistributionHeight = 0;
         }
 
         /// <inheritdoc />
@@ -91,6 +97,17 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         // This can be transient as it is just to stop distribution happening multiple times
                         // on blocks that contain more than one deposit.
                         this.previousDistributionHeight = blockHeight;
+                    }
+                }
+
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
+                {
+                    if (this.previousConversionFeeDistributionHeight != blockHeight)
+                    {
+                        multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
+
+                        // Similarly to the regular distributions, this prevents distribution occurring multiple times in a given block.
+                        this.previousConversionFeeDistributionHeight = blockHeight;
                     }
                 }
 

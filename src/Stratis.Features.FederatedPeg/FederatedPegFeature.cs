@@ -227,6 +227,9 @@ namespace Stratis.Features.FederatedPeg
                     var target = d.deposit.TargetAddress;
                     if (target == this.network.CirrusRewardDummyAddress)
                         target = "Reward Distribution";
+                    if (target == this.network.ConversionTransactionFeeDistributionDummyAddress)
+                        target = "Conversion Fee";
+
                     return $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {target} ({d.deposit.RetrievalType})";
                 }).Take(10)));
 

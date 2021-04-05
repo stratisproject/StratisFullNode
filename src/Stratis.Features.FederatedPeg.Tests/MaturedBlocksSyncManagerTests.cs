@@ -61,7 +61,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         private class TestOnlyMaturedBlocksSyncManager : MaturedBlocksSyncManager
         {
             public TestOnlyMaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, INodeLifetime nodeLifetime)
-                : base(asyncProvider, crossChainTransferStore, federationGatewayClient, nodeLifetime, null, null)
+                : base(asyncProvider, crossChainTransferStore, federationGatewayClient, nodeLifetime, null, null, null, null)
             {
             }
 
