@@ -169,6 +169,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated.
                     decimal conversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
 
+                    if (Money.Coins(conversionFeeAmount) >= conversionTransaction.Amount)
+                    {
+                        this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", conversionTransaction.Id);
+
+                        continue;
+                    }
+
                     // We insert the fee distribution as a deposit to be processed, albeit with a special address.
                     // Deposits with this address as their destination will be distributed between the multisig members.
                     var tempList = new List<IDeposit>
@@ -186,7 +193,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         Processed = false,
                         RequestStatus = (int)ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)conversionTransaction.Amount.Satoshi,
+                        Amount = (ulong)(conversionTransaction.Amount - Money.Coins(conversionFeeAmount)).Satoshi,
                         BlockHeight = header.Height,
                         DestinationAddress = conversionTransaction.TargetAddress
                     });
