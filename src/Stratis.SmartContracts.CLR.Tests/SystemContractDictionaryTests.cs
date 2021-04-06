@@ -160,21 +160,21 @@ namespace Stratis.SmartContracts.CLR.Tests
             IContractInvocationResult resultIsWhiteListed2 = contract.Invoke(callIsWhiteListed2);
             Assert.False((bool)resultIsWhiteListed2.Return);
 
-            Assert.Equal(codeHash, persistentState.GetUInt256($"ByName:{name}"));
+            // These methods don't return anything once the conteact is black-listed.
 
-            // TODO: Should these methods return anything once the conteact is black-listed?
+            Assert.Equal(default(UInt256), persistentState.GetUInt256($"ByName:{name}"));
 
             var callGetCodeHash2 = new MethodCall("GetCodeHash", new object[] { name });
             IContractInvocationResult resultGetCodeHash2 = contract.Invoke(callGetCodeHash2);
-            Assert.Equal(codeHash, (UInt256)resultGetCodeHash2.Return);
+            Assert.Equal(default(UInt256), (UInt256)resultGetCodeHash2.Return);
 
             var callGetContractAddress2 = new MethodCall("GetContractAddress", new object[] { name });
             IContractInvocationResult resultGetContractAddress2 = contract.Invoke(callGetContractAddress2);
-            Assert.Equal(address, (Address)resultGetContractAddress2.Return);
+            Assert.Equal(default(Address), (Address)resultGetContractAddress2.Return);
 
             var callGetContractAddressCH2 = new MethodCall("GetContractAddress", new object[] { codeHash });
             IContractInvocationResult resultGetContractAddressCH2 = contract.Invoke(callGetContractAddressCH2);
-            Assert.Equal(address, (Address)resultGetContractAddressCH2.Return);
+            Assert.Equal(default(Address), (Address)resultGetContractAddressCH2.Return);
         }
     }
 }
