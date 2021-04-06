@@ -10,7 +10,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
 
         public const string PriceUrlKey = "ethereumpriceurl";
 
-        public const string PriceTrackingKey = "ethereumpricetracking";
+        public const string PriceTrackingKey = "pricetracking";
 
         public string EtherscanGasOracleUrl { get; set; }
 
