@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Conversion;
@@ -35,6 +36,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly INodeLifetime nodeLifetime;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly ChainIndexer chainIndexer;
+        private readonly IExternalApiPoller externalApiPoller;
+        private readonly Network network;
 
         private IAsyncLoop requestDepositsTask;
 
@@ -46,7 +49,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private const int InitializationDelaySeconds = 10;
 
         public MaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient,
-            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository, ChainIndexer chainIndexer)
+            INodeLifetime nodeLifetime, IConversionRequestRepository conversionRequestRepository, ChainIndexer chainIndexer, IExternalApiPoller externalApiPoller, Network network)
         {
             this.asyncProvider = asyncProvider;
             this.crossChainTransferStore = crossChainTransferStore;
@@ -54,6 +57,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.nodeLifetime = nodeLifetime;
             this.conversionRequestRepository = conversionRequestRepository;
             this.chainIndexer = chainIndexer;
+            this.externalApiPoller = externalApiPoller;
+            this.network = network;
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -122,11 +127,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     d.RetrievalType == DepositRetrievalType.ConversionNormal ||
                     d.RetrievalType == DepositRetrievalType.ConversionLarge))
                 {
-                    this.logger.Info("Conversion mint transaction " + conversionTransaction + " received in matured blocks.");
+                    this.logger.Info("Conversion transaction " + conversionTransaction.Id + " received in matured blocks.");
 
                     if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
                     {
-                        this.logger.Info("Conversion mint transaction " + conversionTransaction + " already exists, ignoring.");
+                        this.logger.Info("Conversion transaction " + conversionTransaction.Id + " already exists, ignoring.");
 
                         continue;
                     }
@@ -156,8 +161,31 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (!found)
                     {
+                        this.logger.Warn("Unable to determine timestamp for conversion transaction " + conversionTransaction.Id + ", ignoring.");
+
                         continue;
                     }
+
+                    // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated.
+                    decimal conversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
+
+                    if (Money.Coins(conversionFeeAmount) >= conversionTransaction.Amount)
+                    {
+                        this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", conversionTransaction.Id);
+
+                        continue;
+                    }
+
+                    // We insert the fee distribution as a deposit to be processed, albeit with a special address.
+                    // Deposits with this address as their destination will be distributed between the multisig members.
+                    var tempList = new List<IDeposit>
+                    {
+                        new Deposit(conversionTransaction.Id, conversionTransaction.RetrievalType, Money.Coins(conversionFeeAmount), this.network.ConversionTransactionFeeDistributionDummyAddress, conversionTransaction.BlockNumber, conversionTransaction.BlockHash)
+                    };
+
+                    tempList.AddRange(maturedBlockDeposit.Deposits);
+
+                    maturedBlockDeposit.Deposits = tempList.AsReadOnly();
 
                     this.conversionRequestRepository.Save(new ConversionRequest() {
                         RequestId = conversionTransaction.Id.ToString(),
@@ -165,7 +193,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         Processed = false,
                         RequestStatus = (int)ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)conversionTransaction.Amount.Satoshi,
+                        Amount = (ulong)(conversionTransaction.Amount - Money.Coins(conversionFeeAmount)).Satoshi,
                         BlockHeight = header.Height,
                         DestinationAddress = conversionTransaction.TargetAddress
                     });

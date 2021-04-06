@@ -190,6 +190,7 @@ namespace Stratis.Bitcoin
             this.Signals.Publish(new FullNodeEvent() { Message = $"Full node initialized on {this.Network.Name}.", State = this.State.ToString() });
 
             this.StartTime = this.DateTimeProvider.GetUtcNow();
+
             return this;
         }
 
@@ -200,6 +201,8 @@ namespace Stratis.Bitcoin
 
             if (this.State == FullNodeState.Disposing || this.State == FullNodeState.Disposed)
                 throw new ObjectDisposedException(nameof(FullNode));
+
+            this.Signals.Publish(new FullNodeEvent() { Message = $"Full node starting on {this.Network.Name}.", State = this.State.ToString() });
 
             this.nodeRunningLock = new NodeRunningLock(this.DataFolder);
 
@@ -233,6 +236,8 @@ namespace Stratis.Bitcoin
             this.StartPeriodicLog();
 
             this.State = FullNodeState.Started;
+
+            this.Signals.Publish(new FullNodeEvent() { Message = $"Full node started on {this.Network.Name}.", State = this.State.ToString() });
         }
 
         /// <summary>

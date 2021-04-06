@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using NLog;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
@@ -23,13 +25,17 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
+        private readonly IExternalApiPoller externalApiPoller;
+        private readonly ILogger logger;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, IExternalApiPoller externalApiPoller)
         {
             this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
+            this.externalApiPoller = externalApiPoller;
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -93,8 +99,17 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (conversionTransaction)
             {
-                if (amount < Money.Coins(ConversionTransactionMinimum))
+                // Instead of a fixed minimum, check that the deposit size at least covers the fee.
+                decimal minimumDeposit = this.externalApiPoller.EstimateConversionTransactionFee();
+
+                if (amount < Money.Coins(minimumDeposit))
+                {
+                    this.logger.Warn("Received deposit of {0}, but computed minimum deposit fee is {1}. Ignoring deposit.", amount, minimumDeposit);
+
                     return null;
+                }
+
+                this.logger.Info("Received conversion transaction deposit of {0}, subtracting estimated fee of {1}.", amount, minimumDeposit);
 
                 if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.ConversionLarge;

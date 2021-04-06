@@ -4,6 +4,7 @@ using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
 
@@ -24,6 +25,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly int epochWindow;
         private readonly ILogger logger;
         private readonly Network network;
+        private readonly IFederationHistory federationHistory;
 
         private readonly Dictionary<Script, long> blocksMinedEach = new Dictionary<Script, long>();
         private readonly Dictionary<uint256, Transaction> commitmentTransactionByHashDictionary = new Dictionary<uint256, Transaction>();
@@ -35,12 +37,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
         // We pay no attention to whether a miner has been kicked since the last distribution or not.
         // If they produced an accepted block, they get their reward.
 
-        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager)
+        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager, IFederationHistory federationHistory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
             this.consensusManager = consensusManager;
             this.logger = LogManager.GetCurrentClassLogger();
+            this.federationHistory = federationHistory;
 
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
@@ -55,6 +58,37 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (sidechainAdvancement > this.epoch)
                     this.epoch = sidechainAdvancement;
             }
+        }
+
+        public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money totalReward)
+        {
+            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
+
+            var multisigs = new List<CollateralFederationMember>();
+
+            foreach (IFederationMember member in federation)
+            {
+                if (!(member is CollateralFederationMember collateralMember))
+                    continue;
+
+                if (!collateralMember.IsMultisigMember)
+                    continue;
+
+                multisigs.Add(collateralMember);
+            }
+
+            Money reward = totalReward / multisigs.Count;
+
+            var recipients = new List<Recipient>();
+
+            foreach (CollateralFederationMember multisig in multisigs)
+            {
+                Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(multisig.PubKey);
+
+                recipients.Add(new Recipient() { Amount = reward, ScriptPubKey = p2pkh });
+            }
+
+            return recipients;
         }
 
         /// <inheritdoc />

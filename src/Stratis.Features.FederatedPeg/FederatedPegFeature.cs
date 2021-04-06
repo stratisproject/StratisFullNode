@@ -13,7 +13,6 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.P2P.Peer;
@@ -227,6 +226,9 @@ namespace Stratis.Features.FederatedPeg
                     var target = d.deposit.TargetAddress;
                     if (target == this.network.CirrusRewardDummyAddress)
                         target = "Reward Distribution";
+                    if (target == this.network.ConversionTransactionFeeDistributionDummyAddress)
+                        target = "Conversion Fee";
+
                     return $"{d.deposit.Amount} ({d.blocksBeforeMature}) => {target} ({d.deposit.RetrievalType})";
                 }).Take(10)));
 
@@ -289,7 +291,6 @@ namespace Stratis.Features.FederatedPeg
                         {
                             services.AddSingleton<IRewardDistributionManager, RewardDistributionManager>();
                             services.AddSingleton<ICoinbaseSplitter, PremineCoinbaseSplitter>();
-                            services.AddSingleton<BlockDefinition, FederatedPegBlockDefinition>();
                             services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                         }
 

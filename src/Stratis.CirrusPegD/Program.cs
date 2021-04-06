@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
@@ -97,6 +98,7 @@ namespace Stratis.CirrusPegD
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
+                .AddExternalApi()
                 .Build();
 
             return node;
@@ -116,7 +118,7 @@ namespace Stratis.CirrusPegD
                 .AddPoAFeature()
                 .UsePoAConsensus()
                 .AddFederatedPeg()
-                .AddPoACollateralMiningCapability()
+                .AddPoACollateralMiningCapability<FederatedPegBlockDefinition>()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
@@ -132,6 +134,7 @@ namespace Stratis.CirrusPegD
                 .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
+                .AddExternalApi()
                 .Build();
 
             return node;

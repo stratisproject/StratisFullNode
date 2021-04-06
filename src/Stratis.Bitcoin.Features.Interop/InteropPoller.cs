@@ -412,7 +412,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             await this.BroadcastCoordinationAsync(request.RequestId, transactionId2).ConfigureAwait(false);
 
-                            BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+                            BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.MultisigWalletQuorum);
 
                             if (agreedTransactionId != BigInteger.MinusOne)
                             {
@@ -424,7 +424,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                         break;
                     case ((int)ConversionRequestStatus.VoteFinalised):
-                        BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+                        BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.MultisigWalletQuorum);
 
                         if (transactionId3 != BigInteger.MinusOne)
                         {
@@ -463,7 +463,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
                         // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
                         // Each node must only ever confirm a single transactionId for a given conversion transaction.
-                        BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+                        BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.MultisigWalletQuorum);
 
                         if (agreedUponId != BigInteger.MinusOne)
                         {

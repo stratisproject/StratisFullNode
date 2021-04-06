@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Moq;
 using Stratis.Bitcoin.Tests.Common;
 using Xunit;
 
@@ -38,6 +39,25 @@ namespace NBitcoin.Tests
             var scriptSig2 = new Script();
             scriptSig2 = scriptSig2 + OpcodeType.OP_1 + dummy.ToBytes() + dummy.ToBytes() + s2.ToBytes();
             Assert.Equal(3U, p2sh.GetSigOpCount(KnownNetworks.Main, scriptSig2));
+        }
+
+        [Fact]
+        [Trait("Core", "Core")]
+        public void GetSigOpCountForFederation()
+        {
+            PubKey[] keys = Enumerable.Range(0, 3).Select(_ => new Key(true).PubKey).ToArray();
+            var federations = new Federations();
+            federations.RegisterFederation(new Federation(keys.Take(2), 1));
+            var network = KnownNetworks.StraxRegTest;
+            network.SetPrivatePropertyValue("Federations", federations); 
+
+            // Test CScript::GetSigOpCount()
+            var s1 = new Script();
+            s1 = s1 + OpcodeType.OP_1 + OpcodeType.OP_FEDERATION + OpcodeType.OP_CHECKMULTISIG;
+            Assert.Equal(2U, s1.GetSigOpCount(true, network));
+            s1 = s1 + OpcodeType.OP_IF + OpcodeType.OP_CHECKSIG + OpcodeType.OP_ENDIF;
+            Assert.Equal(3U, s1.GetSigOpCount(true, network));
+            Assert.Equal(21U, s1.GetSigOpCount(false, network));
         }
     }
 }
