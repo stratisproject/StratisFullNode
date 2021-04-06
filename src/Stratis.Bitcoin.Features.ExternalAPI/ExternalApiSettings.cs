@@ -23,9 +23,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
         public ExternalApiSettings(NodeSettings nodeSettings)
         {
             this.EtherscanGasOracleUrl = nodeSettings.ConfigReader.GetOrDefault(EtherscanGasOracleUrlKey, "https://api.etherscan.io/api?module=gastracker&action=gasoracle");
-            this.EthereumGasPriceTracking = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceTrackingKey, false);
+            this.EthereumGasPriceTracking = nodeSettings.ConfigReader.GetOrDefault(EthereumGasPriceTrackingKey, true);
             this.PriceUrl = nodeSettings.ConfigReader.GetOrDefault(PriceUrlKey, "https://api.coingecko.com/api/v3/simple/price?ids=stratis,ethereum&vs_currencies=usd");
-            this.PriceTracking = nodeSettings.ConfigReader.GetOrDefault(PriceTrackingKey, false);
+            this.PriceTracking = nodeSettings.ConfigReader.GetOrDefault(PriceTrackingKey, true);
         }
     }
 }
