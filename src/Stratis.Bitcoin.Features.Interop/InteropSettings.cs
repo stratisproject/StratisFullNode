@@ -54,6 +54,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractAddressKey, "");
             this.MultisigWalletQuorum = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractQuorumKey, 6);
+
             this.WrappedStraxAddress = nodeSettings.ConfigReader.GetOrDefault(WrappedStraxContractAddressKey, "");
             this.EthereumClientUrl = nodeSettings.ConfigReader.GetOrDefault(EthereumClientUrlKey, "http://localhost:8545");
             this.EthereumAccount = nodeSettings.ConfigReader.GetOrDefault(EthereumAccountKey, "");
