@@ -517,7 +517,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
             // Ignore this check if the node is running dev mode.
-            if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
+            if (this.nodeSettings.DevMode == null && !this.connectionManager.ConnectedPeers.Any())
             {
                 this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.Forbidden, "Can't send transaction as the node requires at least one connection.", string.Empty);
@@ -570,7 +570,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
             // Ignore this check if the node is running dev mode.
-            if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
+            if (this.nodeSettings.DevMode == null && !this.connectionManager.ConnectedPeers.Any())
             {
                 this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.Forbidden, "Can't send transaction as the node requires at least one connection.", string.Empty);

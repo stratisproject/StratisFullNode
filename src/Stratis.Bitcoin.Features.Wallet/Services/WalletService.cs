@@ -134,7 +134,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 return new WalletGeneralInfoModel
                 {
                     WalletName = wallet.Name,
-                    Network = wallet.Network,
+                    Network = wallet.Network.Name,
                     CreationTime = wallet.CreationTime,
                     LastBlockSyncedHeight = wallet.AccountsRoot.Single().LastBlockSyncedHeight,
                     ConnectedNodes = this.connectionManager.ConnectedPeers.Count(),
@@ -491,7 +491,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         {
             return await Task.Run(() =>
             {
-                if (!this.nodeSettings.DevMode && !this.connectionManager.ConnectedPeers.Any())
+                if (this.nodeSettings.DevMode == null && !this.connectionManager.ConnectedPeers.Any())
                 {
                     this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
 

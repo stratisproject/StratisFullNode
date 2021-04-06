@@ -1066,13 +1066,21 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     TransactionBuilder builder = new TransactionBuilder(this.Wallet.Network).AddCoins(coins);
 
-                    if (builder.Verify(transaction, transaction.GetFee(coins.ToArray()), out TransactionPolicyError[] errors))
+                    var verifyResult = builder.Verify(transaction, transaction.GetFee(coins.ToArray()), out TransactionPolicyError[] errors);
+                    if (verifyResult)
+                        return ValidateTransactionResult.Valid();
+
+                    // Ignore any fee related errors here as the BuildTransaction method in FederationWalletTransactionHandler would have already
+                    // verified the transaction's fee. Fee errors could occur here as the signatures (secrets) aren't added to the builder when calling
+                    // the verify method.
+                    IEnumerable<TransactionPolicyError> filteredErrors = errors.Where(a => a.GetType() != typeof(FeeTooLowPolicyError));
+                    if (!filteredErrors.Any())
                         return ValidateTransactionResult.Valid();
 
                     var errorList = new List<string>();
 
                     // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
-                    foreach (TransactionPolicyError transactionPolicyError in errors)
+                    foreach (TransactionPolicyError transactionPolicyError in filteredErrors)
                     {
                         this.logger.Debug("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
                         errorList.Add(transactionPolicyError.ToString());
