@@ -854,7 +854,7 @@ namespace NBitcoin
             }
         }
 
-        public uint GetSigOpCount(bool fAccurate)
+        public uint GetSigOpCount(bool fAccurate, Network network = null)
         {
             uint n = 0;
             Op lastOpcode = null;
@@ -864,7 +864,9 @@ namespace NBitcoin
                     n++;
                 else if (op.Code == OpcodeType.OP_CHECKMULTISIG || op.Code == OpcodeType.OP_CHECKMULTISIGVERIFY)
                 {
-                    if (fAccurate && lastOpcode != null && lastOpcode.Code >= OpcodeType.OP_1 && lastOpcode.Code <= OpcodeType.OP_16)
+                    if (fAccurate && network?.Federations != null && lastOpcode.Code == OpcodeType.OP_FEDERATION)
+                        n += (uint)network.Federations.GetOnlyFederation().GetFederationDetails().transactionSigningKeys.Length;
+                    else if (fAccurate && lastOpcode != null && lastOpcode.Code >= OpcodeType.OP_1 && lastOpcode.Code <= OpcodeType.OP_16)
                         n += (lastOpcode.PushData == null || lastOpcode.PushData.Length == 0) ? 0U : (uint)lastOpcode.PushData[0];
                     else
                         n += 20;
@@ -913,12 +915,12 @@ namespace NBitcoin
         {
             // TODO: Is the network needed?
             if (!IsPayToScriptHash(network))
-                return GetSigOpCount(true);
+                return GetSigOpCount(true, network);
             // This is a pay-to-script-hash scriptPubKey;
             // get the last item that the scriptSig
             // pushes onto the stack:
             bool validSig = new PayToScriptHashTemplate().CheckScriptSig(network, scriptSig, this);
-            return !validSig ? 0 : new Script(scriptSig.ToOps().Last().PushData).GetSigOpCount(true);
+            return !validSig ? 0 : new Script(scriptSig.ToOps().Last().PushData).GetSigOpCount(true, network);
             // ... and return its opcount:
         }
 

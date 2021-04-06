@@ -365,7 +365,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
                 if (witParams.Program.Length == 32 && witness.PushCount > 0)
                 {
                     Script subscript = Script.FromBytesUnsafe(witness.GetUnsafePush(witness.PushCount - 1));
-                    return subscript.GetSigOpCount(true);
+                    return subscript.GetSigOpCount(true, this.Parent.Network);
                 }
             }
 
