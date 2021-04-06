@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi.ApiClients
                 totalSafe += this.safeSamples[i];
             }
 
-            return (int)Math.Ceiling(((totalFast * fastWeighting) + (totalProposed * proposedWeighting) + (totalSafe * safeWeighting) / this.fastSamples.Length));
+            return (int)Math.Ceiling((((totalFast * fastWeighting) + (totalProposed * proposedWeighting) + (totalSafe * safeWeighting)) / this.fastSamples.Length));
         }
 
         public async Task<EtherscanGasOracleResponse> GasOracle(bool recordSamples)
