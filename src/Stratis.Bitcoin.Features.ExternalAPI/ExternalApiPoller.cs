@@ -26,8 +26,6 @@ namespace Stratis.Bitcoin.Features.ExternalApi
     {
         // TODO: This should be linked to the setting in the interop feature
         public const int QuorumSize = 6;
-        public const decimal OneEther = 1_000_000_000_000_000_000;
-        public const decimal OneGwei = 1_000_000_000;
 
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
@@ -138,8 +136,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
 
             int gasPrice = this.GetGasPrice();
 
-            // Need to convert the integral gas price into its gwei equivalent so that the right amount of gas is computed here.
-            return totalGas * gasPrice * OneGwei;
+            return totalGas * gasPrice;
         }
 
         /// <returns>The estimated conversion transaction fee, converted from the USD total to the equivalent STRAX amount.</returns>
@@ -153,14 +150,14 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             if (ethereumUsdPrice == -1)
                 return -1;
 
-            decimal overallGasUsd = (this.EstimateConversionTransactionGas() / OneEther) * ethereumUsdPrice;
+            decimal overallGasUsd = this.EstimateConversionTransactionGas() * ethereumUsdPrice;
 
             decimal stratisPriceUsd = this.GetStratisPrice();
 
             if (stratisPriceUsd == -1)
                 return -1;
 
-            return (overallGasUsd / stratisPriceUsd) + (ConversionTransactionFee / stratisPriceUsd);
+            return (overallGasUsd / stratisPriceUsd) + ConversionTransactionFee;
         }
 
         public void Dispose()
