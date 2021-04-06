@@ -88,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
                 var model = new WalletGeneralInfoModel
                 {
-                    Network = wallet.Network.Name,
+                    Network = wallet.Network,
                     CreationTime = wallet.CreationTime,
                     LastBlockSyncedHeight = wallet.LastBlockSyncedHeight,
                     ConnectedNodes = this.connectionManager.ConnectedPeers.Count(),

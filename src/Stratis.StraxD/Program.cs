@@ -9,7 +9,6 @@ using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.ColdStaking;
 using Stratis.Bitcoin.Features.Consensus;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.RPC;
@@ -71,8 +70,7 @@ namespace Stratis.StraxD
                                 })
                         };
                     })
-                    .UseDiagnosticFeature()
-                    .AddExternalApi();
+                    .UseDiagnosticFeature();
 
                 IFullNode node = nodeBuilder.Build();
 

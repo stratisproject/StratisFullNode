@@ -42,7 +42,7 @@ namespace Stratis.CirrusMinerD
             {
                 bool isMainchainNode = args.FirstOrDefault(a => a.ToLower() == MainchainArgument) != null;
                 bool isSidechainNode = args.FirstOrDefault(a => a.ToLower() == SidechainArgument) != null;
-                bool startInDevMode = args.Any(a => a.ToLower().Contains($"-{NodeSettings.DevModeParam}"));
+                bool startInDevMode = args.FirstOrDefault(a => a.ToLower() == $"-{NodeSettings.DevModeParam}") != null;
 
                 IFullNode fullNode = null;
 
@@ -82,7 +82,7 @@ namespace Stratis.CirrusMinerD
                 .UseBlockStore()
                 .AddPoAFeature()
                 .UsePoAConsensus()
-                .AddPoACollateralMiningCapability<SmartContractPoABlockDefinition>()
+                .AddPoACollateralMiningCapability()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())

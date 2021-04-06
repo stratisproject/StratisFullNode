@@ -52,7 +52,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .AddPoAFeature()
                 .UsePoAConsensus()
                 .AddFederatedPeg()
-                .AddPoACollateralMiningCapability<FederatedPegBlockDefinition>()
+                .AddPoACollateralMiningCapability()
                 .CheckCollateralCommitment()
                 .UseTransactionNotification()
                 .UseBlockNotification()

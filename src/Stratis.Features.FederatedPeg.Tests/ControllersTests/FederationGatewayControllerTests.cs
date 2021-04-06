@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Networks;
@@ -111,9 +110,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 return blocks;
             });
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-
-            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, externalApiPoller);
+            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings);
         }
 
         [Fact]

@@ -7,7 +7,6 @@ using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -51,9 +50,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
         private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
-        private readonly IExternalApiPoller externalApiPoller;
 
-        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings, IExternalApiPoller externalApiPoller)
+        public MaturedBlocksProvider(IConsensusManager consensusManager, IDepositExtractor depositExtractor, IFederatedPegSettings federatedPegSettings)
         {
             this.consensusManager = consensusManager;
             this.depositExtractor = depositExtractor;
@@ -76,8 +74,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 this.retrievalTypeConfirmations[DepositRetrievalType.ConversionNormal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
                 this.retrievalTypeConfirmations[DepositRetrievalType.ConversionLarge] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
             }
-
-            this.externalApiPoller = externalApiPoller;
         }
 
         /// <inheritdoc />
@@ -85,12 +81,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         {
             if (this.consensusManager.Tip == null)
                 return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Consensus is not ready to provide blocks (it is un-initialized or still starting up).");
-
-            int gasPrice = this.externalApiPoller.GetGasPrice();
-            decimal stratisPrice = this.externalApiPoller.GetStratisPrice();
-
-            if (gasPrice == -1 || stratisPrice == -1)
-                return SerializableResult<List<MaturedBlockDepositsModel>>.Fail("Pricing data not yet available from external API pollers.");
 
             var result = new SerializableResult<List<MaturedBlockDepositsModel>>
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using NBitcoin;
 using Newtonsoft.Json;
 
 namespace Stratis.Bitcoin.Features.PoA.Models
@@ -6,7 +7,7 @@ namespace Stratis.Bitcoin.Features.PoA.Models
     public class FederationMemberModel
     {
         [JsonProperty("pubkey")]
-        public string PubKey { get; set; }
+        public PubKey PubKey { get; set; }
 
         [JsonProperty("collateralAmount")]
         public decimal CollateralAmount { get; set; }

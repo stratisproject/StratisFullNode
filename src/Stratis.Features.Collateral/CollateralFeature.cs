@@ -5,6 +5,7 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Features.Collateral.CounterChain;
 
 namespace Stratis.Features.Collateral
@@ -48,7 +49,7 @@ namespace Stratis.Features.Collateral
         /// <summary>
         /// Adds mining to the side chain node when on a proof-of-authority network with collateral enabled.
         /// </summary>
-        public static IFullNodeBuilder AddPoACollateralMiningCapability<T>(this IFullNodeBuilder fullNodeBuilder) where T : BlockDefinition
+        public static IFullNodeBuilder AddPoACollateralMiningCapability(this IFullNodeBuilder fullNodeBuilder)
         {
             // Inject the CheckCollateralFullValidationRule as the first Full Validation Rule.
             // This is still a bit hacky and we need to properly review the dependencies again between the different side chain nodes.
@@ -64,7 +65,7 @@ namespace Stratis.Features.Collateral
                 {
                     services.AddSingleton<IPoAMiner, CollateralPoAMiner>();
                     services.AddSingleton<MinerSettings>();
-                    services.AddSingleton<BlockDefinition, T>();
+                    services.AddSingleton<BlockDefinition, SmartContractPoABlockDefinition>();
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
 
                     services.AddSingleton<ICollateralChecker, CollateralChecker>();

@@ -7,7 +7,6 @@ using NBitcoin;
 using NSubstitute;
 using NSubstitute.Core;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
@@ -92,8 +91,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, federatedPegSettings, externalApiPoller);
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(0);
 
@@ -139,9 +137,9 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return hashes.Select((hash) => this.blocks.Single(x => x.ChainedHeader.HashBlock == hash && x.ChainedHeader.Height <= this.consensusManager.Tip.Height)).ToArray();
             });
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             int nextMaturedBlockHeight = 1;
             for (int i = 1; i < this.blocks.Count; i++)
@@ -200,9 +198,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
 
@@ -253,10 +251,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
 
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
 
@@ -310,9 +308,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -367,9 +365,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -423,9 +421,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -485,9 +484,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
@@ -548,9 +547,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
-            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings, externalApiPoller);
+            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+
+            var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
 
