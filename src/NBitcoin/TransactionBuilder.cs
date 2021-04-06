@@ -8,6 +8,7 @@ using NBitcoin.OpenAsset;
 using NBitcoin.Policy;
 using NBitcoin.Stealth;
 using Builder = System.Func<NBitcoin.TransactionBuilder.TransactionBuildingContext, NBitcoin.IMoney>;
+using NLog;
 
 namespace NBitcoin
 {
@@ -574,6 +575,9 @@ namespace NBitcoin
             }
         }
 
+        /// <summary>Instance logger.</summary>
+        private readonly ILogger logger;
+
         public TransactionBuilder(Network network)
         {
             this.Network = network;
@@ -582,6 +586,7 @@ namespace NBitcoin
             this.CoinSelector = new DefaultCoinSelector();
             this.StandardTransactionPolicy = new StandardTransactionPolicy(this.Network);
             this.DustPrevention = true;
+            this.logger = LogManager.GetCurrentClassLogger();
             InitExtensions();
         }
 
@@ -1238,6 +1243,7 @@ namespace NBitcoin
             IEnumerable<ICoin> coins,
             IMoney zero)
         {
+            this.logger.Debug("Building transaction");
             TransactionBuildingContext originalCtx = ctx.CreateMemento();
             Money fees = this._TotalFee + ctx.AdditionalFees;
 
@@ -1265,6 +1271,8 @@ namespace NBitcoin
             IEnumerable<ICoin> selection = this.CoinSelector.Select(unconsumed, target);
             if (selection == null)
             {
+                this.logger.Debug("Err: coin selector's selection is null.");
+
                 throw new NotEnoughFundsException("Not enough funds to cover the target",
                     group.Name,
                     target.Sub(unconsumed.Select(u => u.Amount).Sum(zero))
@@ -1275,6 +1283,8 @@ namespace NBitcoin
             IMoney change = total.Sub(target);
             if (change.CompareTo(zero) == -1)
             {
+                this.logger.Debug("Err: insufficent funds");
+
                 throw new NotEnoughFundsException("Not enough funds to cover the target",
                     group.Name,
                     change.Negate()
@@ -1286,7 +1296,11 @@ namespace NBitcoin
                 Script changeScript = group.ChangeScript[(int)ctx.ChangeType];
 
                 if (changeScript == null)
+                {
+                    this.logger.Debug("Err: no change addr.");
+
                     throw new InvalidOperationException("A change address should be specified (" + ctx.ChangeType + ")");
+                }
 
                 if (!(ctx.Dust is Money) || change.CompareTo(GetDust(changeScript)) == 1)
                 {
