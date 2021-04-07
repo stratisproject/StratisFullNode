@@ -201,7 +201,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
         private string[] ReplaceSignatures(string[] parameters, string[] signatures)
         {
-            // If signatures have been included then they replace the SIG# parameter.
+            if (parameters == null)
+                return null;
+
+            // Replace SIG# with any included signatures.
             string encodedSigs = null;
             for (int i = 0; i < parameters.Length; i++)
             {
@@ -209,11 +212,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 {
                     if (encodedSigs == null)
                     {
-                        var sigs = signatures.Select(s => Convert.FromBase64String(s)).ToArray();
+                        var sigs = (signatures ?? new string[0]).Select(s => Convert.FromBase64String(s)).ToArray();
                         if (sigs.Any(s => s.Length != 65 || s[0] < 27 || s[0] > 34))
                             throw new Exception("Invalid signature(s).");
 
-                        var sigbuf = new byte[signatures.Length * 65];
+                        var sigbuf = new byte[sigs.Length * 65];
                         for (int j = 0; j < sigs.Length; j++)
                             Array.Copy(sigs[j], 0, sigbuf, j * 65, 65);
 
