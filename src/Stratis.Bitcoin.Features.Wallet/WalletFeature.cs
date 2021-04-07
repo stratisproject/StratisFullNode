@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -119,9 +118,16 @@ namespace Stratis.Bitcoin.Features.Wallet
                 {
                     string watchOnly = (watchOnlyWalletNames.Contains(walletName)) ? "(W) " : "";
 
-                    foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
+                    try
                     {
-                        log.AppendLine($"{watchOnly}{walletName}/{accountBalance.Account.Name}".PadRight(LoggingConfiguration.ColumnLength) + $": Confirmed balance: {accountBalance.AmountConfirmed}".PadRight(LoggingConfiguration.ColumnLength + 20) + $" Unconfirmed balance: {accountBalance.AmountUnconfirmed}");
+                        foreach (AccountBalance accountBalance in walletManager.GetBalances(walletName))
+                        {
+                            log.AppendLine($"{watchOnly}{walletName}/{accountBalance.Account.Name}".PadRight(LoggingConfiguration.ColumnLength) + $": Confirmed balance: {accountBalance.AmountConfirmed}".PadRight(LoggingConfiguration.ColumnLength + 20) + $" Unconfirmed balance: {accountBalance.AmountUnconfirmed}");
+                        }
+                    }
+                    catch (WalletException)
+                    {
+                        log.AppendLine("Can't access wallet balances, wallet might be in a process of rewinding or deleting.");
                     }
                 }
             }
