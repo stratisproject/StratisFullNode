@@ -271,39 +271,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             }
         }
 
-        private string[] ReplaceSignatures(string[] parameters, string[] signatures, out IActionResult errorResult)
-        {
-            // If signatures have been included then they replace the SIG# parameter.
-            string encodedSigs = null;
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                if (parameters[i] == "SIG#")
-                {
-                    if (encodedSigs == null)
-                    {
-                        var sigs = signatures.Select(s => Convert.FromBase64String(s)).ToArray();
-                        if (sigs.Any(s => s.Length != 65 || s[0] < 27 || s[0] > 34))
-                        {
-                            errorResult = ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid signature.", "Input Exception");
-                            return parameters;
-                        }
-
-                        var sigbuf = new byte[signatures.Length * 65];
-                        for (int j = 0; j < sigs.Length; j++)
-                            Array.Copy(sigs[j], 0, sigbuf, j * 65, 65);
-
-                        encodedSigs = $"10#{Encoders.Hex.EncodeData(sigbuf)}";
-                    }
-
-                    parameters[i] = encodedSigs;
-                }
-            }
-
-            errorResult = null;
-
-            return parameters;
-        }
-
         /// <summary>
         /// Builds a transaction to create a smart contract and then broadcasts the transaction to the network.
         /// If the deployment is successful, methods on the smart contract can be subsequently called.
@@ -323,11 +290,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
-
-            // If signatures have been included then they replace the SIG# parameter.
-            request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures, out IActionResult errorResult);
-            if (errorResult != null)
-                return errorResult;
 
             BuildCreateContractTransactionResponse response = this.smartContractTransactionService.BuildCreateTx(request);
 
@@ -370,11 +332,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
-
-            // If signatures have been included then they replace the SIG# parameter.
-            request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures, out IActionResult errorResult);
-            if (errorResult != null)
-                return errorResult;
 
             BuildCallContractTransactionResponse response = this.smartContractTransactionService.BuildCallTx(request);
 
