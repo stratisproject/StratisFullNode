@@ -260,7 +260,24 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         public void CheckInputs(Transaction transaction, UnspentOutputSet inputs, int spendHeight)
         {
             if (!inputs.HaveInputs(transaction))
+            {
+                this.Logger.LogTrace("Missing inputs. Coins we are trying to spend:");
+
+                IList<UnspentOutput> coins = inputs.GetCoins();
+                foreach (UnspentOutput coin in coins)
+                {
+                    this.Logger.LogTrace(coin.ToString());
+                }
+
+                this.Logger.LogTrace("Missing inputs. Tx inputs are:");
+
+                foreach (TxIn input in transaction.Inputs)
+                {
+                    this.Logger.LogTrace(input.ToString());
+                }
+
                 ConsensusErrors.BadTransactionMissingInput.Throw();
+            }
 
             Money valueIn = Money.Zero;
             Money fees = Money.Zero;
