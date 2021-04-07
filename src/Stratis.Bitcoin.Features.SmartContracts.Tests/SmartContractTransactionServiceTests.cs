@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -974,5 +976,106 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             )));
         }
         */
+
+        [Fact]
+        public void CanPassSignatures()
+        {
+            const int utxoIndex = 0;
+            uint256 utxoId = uint256.Zero;
+            uint256 utxoIdUnused = uint256.One;
+            string senderAddress = uint160.Zero.ToBase58Address(this.network);
+            string contractAddress = uint160.One.ToBase58Address(this.network);
+
+            var key1 = new Key();
+            var key2 = new Key();
+            var msg = "This is a test challenge";
+            var sig1 = key1.SignMessage(msg);
+            var sig2 = key2.SignMessage(msg);
+            
+            var request = new BuildCallContractTransactionRequest
+            {
+                Amount = "0",
+                AccountName = "account 0",
+                ContractAddress = contractAddress,
+                FeeAmount = "0.01",
+                GasLimit = 100_000,
+                GasPrice = 100,
+                MethodName = "TestMethod",
+                WalletName = "wallet",
+                Password = "password",
+                Sender = senderAddress,
+                Outpoints = new List<OutpointRequest>
+                {
+                    new OutpointRequest
+                    {
+                        Index = utxoIndex,
+                        TransactionId = utxoId.ToString()
+                    },
+                },
+                Parameters = new[] { "SIG#" },
+                Signatures = new[] { sig1, sig2 }
+            };
+
+            this.walletManager.Setup(x => x.GetAddressBalance(request.Sender))
+                .Returns(new AddressBalance
+                {
+                    Address = senderAddress,
+                    AmountConfirmed = new Money(100, MoneyUnit.BTC)
+                });
+
+            this.walletManager.Setup(x => x.GetSpendableTransactionsInWallet(It.IsAny<string>(), 0))
+                .Returns(new List<UnspentOutputReference>
+                {
+                    new UnspentOutputReference
+                    {
+                        Address = new HdAddress
+                        {
+                            Address = senderAddress
+                        },
+                        Transaction = new TransactionData
+                        {
+                            Id = utxoId,
+                            Index = utxoIndex,
+                        }
+                    }, new UnspentOutputReference
+                    {
+                        Address = new HdAddress
+                        {
+                            Address = senderAddress
+                        },
+                        Transaction = new TransactionData
+                        {
+                            Id = utxoIdUnused,
+                            Index = utxoIndex,
+                        }
+                    }
+                });
+
+            var wallet = new Features.Wallet.Wallet();
+            wallet.AccountsRoot.Add(new AccountRoot(wallet));
+            var account0 = new HdAccount(wallet.AccountsRoot.First().Accounts) { Name = request.AccountName };
+            account0.ExternalAddresses.Add(new HdAddress() { Address = senderAddress });
+
+            this.walletManager.Setup(x => x.GetWallet(request.WalletName))
+                .Returns(wallet);
+
+            var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
+
+            var service = new SmartContractTransactionService(
+                this.network,
+                this.walletManager.Object,
+                this.walletTransactionHandler.Object,
+                this.stringSerializer.Object,
+                this.callDataSerializer.Object,
+                this.addressGenerator.Object,
+                this.stateRepository.Object,
+                reserveUtxoService);
+
+            BuildCallContractTransactionResponse result = service.BuildCallTx(request);
+
+            string expected = $"10#{Encoders.Hex.EncodeData(Convert.FromBase64String(sig1).Concat(Convert.FromBase64String(sig2)).ToArray())}";
+
+            this.stringSerializer.Verify(x => x.Deserialize(It.Is<string[]>(x => x[0] == expected)));
+        }
     }
 }
