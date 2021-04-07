@@ -208,7 +208,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             string encodedSigs = null;
             for (int i = 0; i < parameters.Length; i++)
             {
-                if (parameters[i] == "SIG#")
+                if (parameters[i].ToUpper() == "SIG#")
                 {
                     if (encodedSigs == null)
                     {
