@@ -47,7 +47,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private const string ETHAccountKey = "ethereumaccount";
 
-        /// <summary>Passphras for the ethereum account.</summary>
+        /// <summary>Passphrase for the ethereum account.</summary>
         public string ETHPassphrase { get; set; }
 
         private const string ETHPassphraseKey = "ethereumpassphrase";
