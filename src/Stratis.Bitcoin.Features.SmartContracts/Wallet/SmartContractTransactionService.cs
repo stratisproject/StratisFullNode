@@ -224,7 +224,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                         for (int j = 0; j < sigs.Length; j++)
                             Array.Copy(sigs[j], 0, sigbuf, j * signatureLength, signatureLength);
 
-                        encodedSigs = $"10#{Encoders.Hex.EncodeData(sigbuf)}";
+                        encodedSigs = $"{(int)MethodParameterDataType.ByteArray}#{Encoders.Hex.EncodeData(sigbuf)}";
                     }
 
                     parameters[i] = encodedSigs;

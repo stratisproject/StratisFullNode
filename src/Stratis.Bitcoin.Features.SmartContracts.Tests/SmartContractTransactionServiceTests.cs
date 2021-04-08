@@ -1073,7 +1073,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
 
-            string expected = $"10#{Encoders.Hex.EncodeData(Convert.FromBase64String(sig1).Concat(Convert.FromBase64String(sig2)).ToArray())}";
+            byte[] buffer = Convert.FromBase64String(sig1).Concat(Convert.FromBase64String(sig2)).ToArray();
+            string expected = $"{(int)MethodParameterDataType.ByteArray}#{Encoders.Hex.EncodeData(buffer)}";
 
             this.stringSerializer.Verify(x => x.Deserialize(It.Is<string[]>(x => x[0] == expected)));
         }
