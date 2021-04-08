@@ -23,7 +23,8 @@ namespace Stratis.SmartContracts.CLR.Validation
             Core,
             typeof(SmartContract).Assembly,
             typeof(Enumerable).Assembly,
-            typeof(IStandardToken).Assembly
+            typeof(IStandardToken).Assembly,
+            typeof(SCL.Base.Operations).Assembly
         };
 
         public static ValidationPolicy Default = new ValidationPolicy()
