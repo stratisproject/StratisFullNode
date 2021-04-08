@@ -21,19 +21,6 @@ namespace Stratis.SCL.Crypto
             return CreateAddress(pubKey.Hash.ToBytes());
         }
 
-        /// <summary>
-        /// Signs a message, returning an ECDSA signature.
-        /// </summary>
-        /// <param name="privateKey">The private key used to sign the message.</param>
-        /// <param name="message">The complete message to be signed.</param>
-        /// <returns>The ECDSA signature prepended with header information specifying the correct value of recId.</returns>
-        public static byte[] SignMessage(Key privateKey, byte[] message)
-        {
-            uint256 hashedUint256 = GetUint256FromMessage(message);
-
-            return privateKey.SignCompact(hashedUint256);
-        }
-
         private static uint256 GetUint256FromMessage(byte[] message)
         {
             return new uint256(SHA3.Keccak256(message));
