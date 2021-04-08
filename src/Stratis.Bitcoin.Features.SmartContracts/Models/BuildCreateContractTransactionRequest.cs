@@ -96,6 +96,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         /// </summary>
         public string[] Parameters { get; set; }
 
+        /// <summary>
+        /// An array of base 64 encoded strings containing the signatures to add.
+        /// </summary>
+        /// <remarks>
+        /// The strings passed here are typically obtained by signatories via the "signmessage" API by signing the "challenge" string returned by a method.
+        /// </remarks>
+
+        public string[] Signatures { get; set; }
+
         public override string ToString()
         {
             var builder = new StringBuilder();

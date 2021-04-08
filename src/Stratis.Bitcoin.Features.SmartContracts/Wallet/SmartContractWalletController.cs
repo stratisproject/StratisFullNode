@@ -7,6 +7,7 @@ using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
