@@ -6,6 +6,7 @@ using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core;
+using Stratis.SmartContracts.Networks;
 using Stratis.SmartContracts.Tests.Common.MockChain;
 using Xunit;
 using EcRecoverProvider = Stratis.SCL.Crypto.ECRecover;
@@ -22,22 +23,40 @@ namespace Stratis.SmartContracts.IntegrationTests
         [Fact]
         public void CanSignAndRetrieveSender()
         {
-            using (PoWMockChain chain = new PoWMockChain(1))
-            {
-                var network = chain.Nodes[0].CoreNode.FullNode.Network;
-                var privateKey = new Key();
-                Address address = privateKey.PubKey.GetAddress(network).ToString().ToAddress(network);
-                byte[] message = new byte[] { 0x69, 0x76, 0xAA };
+            var network = new SmartContractsRegTest();
+            var privateKey = new Key();
+            Address address = privateKey.PubKey.GetAddress(network).ToString().ToAddress(network);
+            byte[] message = new byte[] { 0x69, 0x76, 0xAA };
 
-                // Sign a message
-                byte[] offChainSignature = SignMessage(privateKey, message);
+            // Sign a message
+            byte[] offChainSignature = SignMessage(privateKey, message);
 
-                // Get the address out of the signature
-                Address recoveredAddress = EcRecoverProvider.GetSigner(message, offChainSignature);
+            // Get the address out of the signature
+            EcRecoverProvider.TryGetSigner(message, offChainSignature, out Address recoveredAddress);
 
-                // Check that the address matches that generated from the private key.
-                Assert.Equal(address, recoveredAddress);
-            }
+            // Check that the address matches that generated from the private key.
+            Assert.Equal(address, recoveredAddress);
+        }
+
+        [Fact]
+        public void GetSigner_Returns_Address_Zero_When_Message_Or_Signature_Null()
+        {
+            var network = new SmartContractsRegTest();
+            var privateKey = new Key();
+            Address address = privateKey.PubKey.GetAddress(network).ToString().ToAddress(network);
+            byte[] message = new byte[] { 0x69, 0x76, 0xAA };
+
+            // Sign a message
+            byte[] offChainSignature = SignMessage(privateKey, message);
+
+            // Get the address out of the signature
+            Assert.False(EcRecoverProvider.TryGetSigner(null, offChainSignature, out Address recoveredAddress));
+
+            Assert.Equal(Address.Zero, recoveredAddress);
+
+            Assert.False(EcRecoverProvider.TryGetSigner(message, null, out Address recoveredAddress2));
+
+            Assert.Equal(Address.Zero, recoveredAddress2);
         }
 
         /// <summary>
