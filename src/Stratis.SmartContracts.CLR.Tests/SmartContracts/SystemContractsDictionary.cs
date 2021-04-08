@@ -7,12 +7,6 @@ public struct WhiteListEntry
     public string Name;
 }
 
-public struct Signatory
-{
-    public Address Address;
-    public string Group;
-}
-
 public class SystemContractsDictionary : SmartContract
 {
     const string primaryGroup = "main";
