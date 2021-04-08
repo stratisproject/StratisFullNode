@@ -179,7 +179,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                 // We shouldn't be consolidating transactions if we have less than 50 UTXOs to spend.
                 if (unspentOutputs.Count < FederatedPegSettings.MaxInputs)
                 {
-                    this.logger.Debug("Not enough UTXOs to trigger consolidation transactions.");
+                    this.logger.Info($"Not enough UTXOs '[{unspentOutputs.Count}]' to trigger consolidation transactions.");
                     return null;
                 }
 
@@ -191,17 +191,13 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
 
                 while (oneRound.Count == FederatedPegSettings.MaxInputs)
                 {
-                    // We found a set of 50 that is worth enough so no more consolidation needed.
-                    if (oneRound.Sum(x => x.Transaction.Amount) >= amount + FederatedPegSettings.ConsolidationFee)
-                        break;
-
                     // build a transaction and add it to our list.
                     Transaction transaction = this.BuildConsolidatingTransaction(oneRound);
 
                     // Something went wrong building transaction - start over. We will want to build them all from scratch in case wallet has changed state.
                     if (transaction == null)
                     {
-                        this.logger.Debug("Failure building specific consolidating transaction.");
+                        this.logger.Warn("Failure building specific consolidating transaction.");
                         return null;
                     }
 
@@ -211,7 +207,15 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                         Status = ConsolidationTransactionStatus.Partial
                     });
 
+                    // We found a set of 50 that is worth enough so no more consolidation needed.
+                    if (oneRound.Sum(x => x.Transaction.Amount) >= amount + FederatedPegSettings.ConsolidationFee)
+                    {
+                        this.logger.Info($"Input consolidation threshold reached '{Money.Satoshis(oneRound.Sum(x => x.Transaction.Amount)).ToUnit(MoneyUnit.BTC)}'; consolidation amount '{amount}'.");
+                        break;
+                    }
+
                     roundNumber++;
+
                     oneRound = unspentOutputs
                         .Skip(roundNumber * FederatedPegSettings.MaxInputs)
                         .Take(FederatedPegSettings.MaxInputs).ToList();
@@ -251,7 +255,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
 
                 Transaction transaction = this.transactionHandler.BuildTransaction(multiSigContext);
 
-                this.logger.Debug("Consolidating transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
+                this.logger.Info("Consolidating transaction = {0}", transaction.ToString(this.network, RawFormat.BlockExplorer));
 
                 return transaction;
             }
@@ -284,7 +288,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
 
                     if (inMemoryTransaction != null && inMemoryTransaction.Status == ConsolidationTransactionStatus.Partial)
                     {
-                        this.logger.Debug("Saw consolidating transaction {0} in mempool, updating its status to FullySigned", transaction.GetHash());
+                        this.logger.Info("Saw consolidating transaction {0} in mempool, updating its status to FullySigned", transaction.GetHash());
                         inMemoryTransaction.Status = ConsolidationTransactionStatus.FullySigned;
                         inMemoryTransaction.PartialTransaction = transaction;
                     }
@@ -316,7 +320,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
 
                         if (inMemoryTransaction != null)
                         {
-                            this.logger.Debug("Saw condensing transaction {0}, updating status to SeenInBlock",
+                            this.logger.Info("Saw condensing transaction {0}, updating status to SeenInBlock",
                                 transaction.GetHash());
                             inMemoryTransaction.Status = ConsolidationTransactionStatus.SeenInBlock;
                         }
@@ -335,7 +339,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
                     if (!this.walletManager.ValidateConsolidatingTransaction(cTransaction.PartialTransaction))
                     {
                         // If we find an invalid one, everything will need redoing!
-                        this.logger.Debug(
+                        this.logger.Info(
                             "Consolidation transaction {0} failed validation, resetting InputConsolidator",
                             cTransaction.PartialTransaction.GetHash());
                         this.ConsolidationTransactions = null;
