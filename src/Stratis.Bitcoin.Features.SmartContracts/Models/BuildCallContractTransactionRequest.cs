@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         public string[] Parameters { get; set; }
 
         /// <summary>
-        /// An array of base 64 encoded strings containing the signatures to add if a "system contract" method "create" transaction is being created. 
+        /// An array of base 64 encoded strings containing the signatures to add.
         /// </summary>
         /// <remarks>
         /// The strings passed here are typically obtained by signatories via the "signmessage" API by signing the "challenge" string returned by a method.
