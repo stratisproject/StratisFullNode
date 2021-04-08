@@ -68,7 +68,7 @@ public class SystemContractsDictionary : SmartContract
         signatories[signatories.Length - 1] = address;
 
         this.State.SetArray($"Signatories:{group}", signatories);
-        this.State.SetUInt32($"GroupNone:{group}", nonce + 1);
+        this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
     }
 
     public void RemoveSignatory(string group, Address address)
@@ -98,7 +98,7 @@ public class SystemContractsDictionary : SmartContract
         */
 
         this.State.SetArray($"Signatories:{group}", signatories);
-        this.State.SetUInt32($"GroupNone:{group}", nonce + 1);
+        this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
     }
 
     public bool IsWhiteListed(UInt256 codeHash)
