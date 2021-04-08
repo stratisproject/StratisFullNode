@@ -124,6 +124,45 @@ namespace Stratis.SmartContracts.CLR.Tests
             string name = "Name";
             Address address = new Address(0, 0, 0, 0, 1);
 
+            contract.InvokeConstructor(new object[] { });
+
+            var callGetSignatories = new MethodCall("GetSignatories", new object[] { "main" });
+            IContractInvocationResult resultGetSignatories = contract.Invoke(callGetSignatories);
+            Assert.True(resultGetSignatories.IsSuccess);
+            Assert.Equal(3, ((Address[])resultGetSignatories.Return).Length);
+
+            var callAddSignatory = new MethodCall("AddSignatory", new object[] { "main", new Address(0, 0, 0, 0, 3) });
+            IContractInvocationResult resultAddSignatory = contract.Invoke(callAddSignatory);
+            Assert.True(resultAddSignatory.IsSuccess);
+
+            var callGetSignatories2 = new MethodCall("GetSignatories", new object[] { "main" });
+            IContractInvocationResult resultGetSignatories2 = contract.Invoke(callGetSignatories2);
+            Assert.True(resultGetSignatories2.IsSuccess);
+            Assert.Equal(4, ((Address[])resultGetSignatories2.Return).Length);
+
+            var callRemoveSignatory = new MethodCall("RemoveSignatory", new object[] { "main", new Address(0, 0, 0, 0, 2) });
+            IContractInvocationResult resultRemoveSignatory = contract.Invoke(callRemoveSignatory);
+            Assert.True(resultRemoveSignatory.IsSuccess);
+
+            var callGetSignatories3 = new MethodCall("GetSignatories", new object[] { "main" });
+            IContractInvocationResult resultGetSignatories3 = contract.Invoke(callGetSignatories3);
+            Assert.True(resultGetSignatories3.IsSuccess);
+            Assert.Equal(3, ((Address[])resultGetSignatories3.Return).Length);
+
+            var callGetQuorum = new MethodCall("GetQuorum", new object[] { "main" });
+            IContractInvocationResult resultGetQuorum = contract.Invoke(callGetQuorum);
+            Assert.True(resultGetQuorum.IsSuccess);
+            Assert.Equal((uint)2, (uint)resultGetQuorum.Return);
+
+            var callSetQuorum = new MethodCall("SetQuorum", new object[] { "main", (uint)3 });
+            IContractInvocationResult resultSetQuorum = contract.Invoke(callSetQuorum);
+            Assert.True(resultSetQuorum.IsSuccess);
+
+            var callGetQuorum2 = new MethodCall("GetQuorum", new object[] { "main" });
+            IContractInvocationResult resultGetQuorum2 = contract.Invoke(callGetQuorum2);
+            Assert.True(resultGetQuorum2.IsSuccess);
+            Assert.Equal((uint)3, (uint)resultGetQuorum2.Return);
+
             var callWhiteList = new MethodCall("WhiteList", new object[] { signatures, codeHash, address, name });
             IContractInvocationResult resultWhiteList = contract.Invoke(callWhiteList);
             Assert.True(resultWhiteList.IsSuccess);

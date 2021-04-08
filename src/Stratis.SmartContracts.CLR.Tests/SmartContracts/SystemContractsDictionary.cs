@@ -64,6 +64,9 @@ public class SystemContractsDictionary : SmartContract
             $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
         */
 
+        System.Array.Resize(ref signatories, signatories.Length + 1);
+        signatories[signatories.Length - 1] = address;
+
         this.State.SetArray($"Signatories:{group}", signatories);
         this.State.SetUInt32($"GroupNone:{group}", nonce + 1);
     }

@@ -216,7 +216,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public T[] GetArray<T>(string key)
         {
-            throw new NotImplementedException();
+            return this.GetObject<T[]>(key);
         }
 
         public void SetBytes(byte[] key, byte[] value)
@@ -292,7 +292,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public void SetArray(string key, Array a)
         {
-            throw new NotImplementedException();
+            this.SetObject(key, a);
         }
 
         public void Clear(string key)
