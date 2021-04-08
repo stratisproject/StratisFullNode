@@ -272,11 +272,25 @@ namespace NBitcoin
 
     public interface ISmartContractBlockHeader
     {
+        /// <summary>
+        /// Root of the state trie after execution of this block. 
+        /// </summary>
         uint256 HashStateRoot { get; set; }
 
+        /// <summary>
+        /// Root of the receipt trie after execution of this block.
+        /// </summary>
         uint256 ReceiptRoot { get; set; }
 
+        /// <summary>
+        /// Bitwise-OR of all the blooms generated from all of the smart contract transactions in the block.
+        /// </summary>
         Bloom LogsBloom { get; set; }
+
+        /// <summary>
+        /// Indicates that the header has smart contract fields that are being actively populated and serialized.
+        /// </summary>
+        bool HasSmartContractFields { get; }
     }
 
     /// <summary>
@@ -290,7 +304,7 @@ namespace NBitcoin
         // The first field is a uint "Size" field to indicate the serialized size of additional fields.
         public const int ExtendedHeaderBit = 0x10000000;
 
-        // Determines whether this object should serialize the new fields associated with smart contracts.
+        /// <inheritdoc/>
         public bool HasSmartContractFields => (this.version & ExtendedHeaderBit) != 0;
 
         /// <inheritdoc />
@@ -298,23 +312,17 @@ namespace NBitcoin
 
         private ushort extendedHeaderSize => (ushort)(hashStateRootSize + receiptRootSize + this.logsBloom.GetCompressedSize());
 
-        /// <summary>
-        /// Root of the state trie after execution of this block. 
-        /// </summary>
+        /// <inheritdoc/>
         private uint256 hashStateRoot;
         public uint256 HashStateRoot { get { return this.hashStateRoot; } set { this.hashStateRoot = value; } }
         private static int hashStateRootSize = (new uint256()).GetSerializeSize();
 
-        /// <summary>
-        /// Root of the receipt trie after execution of this block.
-        /// </summary>
+        /// <inheritdoc/>
         private uint256 receiptRoot;
         public uint256 ReceiptRoot { get { return this.receiptRoot; } set { this.receiptRoot = value; } }
         private static int receiptRootSize = (new uint256()).GetSerializeSize();
 
-        /// <summary>
-        /// Bitwise-OR of all the blooms generated from all of the smart contract transactions in the block.
-        /// </summary>
+        /// <inheritdoc/>
         private Bloom logsBloom;
         public Bloom LogsBloom { get { return this.logsBloom; } set { this.logsBloom = value; } }
 

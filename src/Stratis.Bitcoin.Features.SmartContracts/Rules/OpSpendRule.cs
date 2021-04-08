@@ -2,6 +2,7 @@
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Rules
 {
@@ -13,9 +14,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     /// </summary>
     public class OpSpendRule : FullValidationConsensusRule
     {
+        private readonly ISmartContractActivationProvider smartContractActivationProvider;
+
+        public OpSpendRule(ISmartContractActivationProvider smartContractActivationProvider = null)
+        {
+            this.smartContractActivationProvider = smartContractActivationProvider;
+        }
+
         /// <inheritdoc/>
         public override Task RunAsync(RuleContext context)
         {
+            if (this.smartContractActivationProvider?.SkipRule(context) ?? false)
+                return Task.CompletedTask;
+
             Block block = context.ValidationContext.BlockToValidate;
 
             for (int i = 0; i < block.Transactions.Count; i++)

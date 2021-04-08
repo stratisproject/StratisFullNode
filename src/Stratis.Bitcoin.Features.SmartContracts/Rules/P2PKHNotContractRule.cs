@@ -2,6 +2,7 @@
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Rules
@@ -12,15 +13,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     public class P2PKHNotContractRule : FullValidationConsensusRule
     {
         private readonly IStateRepositoryRoot stateRepositoryRoot;
+        private readonly ISmartContractActivationProvider smartContractActivationProvider;
 
-        public P2PKHNotContractRule(IStateRepositoryRoot stateRepositoryRoot)
+        public P2PKHNotContractRule(IStateRepositoryRoot stateRepositoryRoot, ISmartContractActivationProvider smartContractActivationProvider = null)
         {
             this.stateRepositoryRoot = stateRepositoryRoot;
+            this.smartContractActivationProvider = smartContractActivationProvider;
         }
 
         /// <inheritdoc/>
         public override Task RunAsync(RuleContext context)
         {
+            if (this.smartContractActivationProvider?.SkipRule(context) ?? false)
+                return Task.CompletedTask;
+
             Block block = context.ValidationContext.BlockToValidate;
 
             foreach (Transaction transaction in block.Transactions)

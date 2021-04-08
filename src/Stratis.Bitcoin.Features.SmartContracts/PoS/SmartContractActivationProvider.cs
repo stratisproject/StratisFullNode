@@ -1,6 +1,8 @@
 ﻿using System;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
+using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Consensus.Rules;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 {
@@ -14,6 +16,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// </summary>
         /// <returns>Returns the unix-style activation time.</returns>
         Func<ChainedHeader, bool> IsActive { get; set; }
+
+        /// <summary>
+        /// Smart contract rules are not applicable until the feature has been activated.
+        /// </summary>
+        /// <param name="context">The rule context.</param>
+        bool SkipRule(RuleContext context);
     }
 
     /// <inheritdoc/>
@@ -51,6 +59,18 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
                     return this.deployment >= 0 && this.nodeDeployments.BIP9.GetState(prev ?? this.chainIndexer.Tip, this.deployment) == ThresholdState.Active;
                 }
             };
+        }
+
+        /// <inheritdoc/>
+        public bool SkipRule(RuleContext context)
+        {
+            if (!this.IsActive(context.ValidationContext.ChainedHeaderToValidate.Previous))
+                return true;
+
+            if (context.ValidationContext.ChainedHeaderToValidate.Header is ISmartContractBlockHeader blockHeader && !blockHeader.HasSmartContractFields)
+                throw new ConsensusErrorException(new ConsensusError("bad-version", "missing smart contract block header"));
+
+            return false;
         }
     }
 }

@@ -6,6 +6,7 @@ using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Rules;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.SmartContracts.Core.Util;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Rules
@@ -13,15 +14,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Rules
     public class CanGetSenderRule : UtxoStoreConsensusRule
     {
         private readonly ISenderRetriever senderRetriever;
+        private readonly ISmartContractActivationProvider smartContractActivationProvider;
 
-        public CanGetSenderRule(ISenderRetriever senderRetriever)
+        public CanGetSenderRule(ISenderRetriever senderRetriever, ISmartContractActivationProvider smartContractActivationProvider = null)
         {
             this.senderRetriever = senderRetriever;
+            this.smartContractActivationProvider = smartContractActivationProvider;
         }
 
         /// <inheritdoc />
         public override Task RunAsync(RuleContext context)
         {
+            if (this.smartContractActivationProvider?.SkipRule(context) ?? false)
+                return Task.CompletedTask;
+
             Block block = context.ValidationContext.BlockToValidate;
             IList<Transaction> processedTxs = new List<Transaction>();
 

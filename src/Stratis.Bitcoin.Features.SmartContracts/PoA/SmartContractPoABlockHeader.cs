@@ -7,23 +7,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 {
     public class SmartContractPoABlockHeader : PoABlockHeader, ISmartContractBlockHeader
     {
-        /// <summary>
-        /// Root of the state trie after execution of this block. 
-        /// </summary>
-        private uint256 hashStateRoot;
+        /// <inheritdoc/>
         public uint256 HashStateRoot { get { return this.hashStateRoot; } set { this.hashStateRoot = value; } }
+        private uint256 hashStateRoot;
 
-        /// <summary>
-        /// Root of the receipt trie after execution of this block.
-        /// </summary>
-        private uint256 receiptRoot;
+        /// <inheritdoc/>
         public uint256 ReceiptRoot { get { return this.receiptRoot; } set { this.receiptRoot = value; } }
+        private uint256 receiptRoot;
 
-        /// <summary>
-        /// Bitwise-OR of all the blooms generated from all of the smart contract transactions in the block.
-        /// </summary>
-        private Bloom logsBloom;
+        /// <inheritdoc/>
         public Bloom LogsBloom { get { return this.logsBloom; } set { this.logsBloom = value; } }
+        private Bloom logsBloom;
+
+        /// <inheritdoc/>
+        public bool HasSmartContractFields => true;
 
         public SmartContractPoABlockHeader() : base()
         {
