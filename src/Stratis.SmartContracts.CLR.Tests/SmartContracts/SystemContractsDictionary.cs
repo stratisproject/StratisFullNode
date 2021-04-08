@@ -83,7 +83,13 @@ public class SystemContractsDictionary : SmartContract
             authorizationChallenge = $"WhiteList(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
-        //this.VerifySignatures(authorizationChallenge, signatures);
+        /*
+        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, new Address[] {
+            new Address(0, 0, 0, 0, 0),
+            new Address(0, 0, 0, 0, 1),
+            new Address(0, 0, 0, 0, 2)
+            }).Length >= 2, $"Please provide 2 valid signatures for '{authorizationChallenge}'.");
+        */
 
         if (whiteListEntry.CodeHash != default(UInt256))
         {
@@ -116,7 +122,13 @@ public class SystemContractsDictionary : SmartContract
 
         string authorizationChallenge = $"BlackList(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
 
-        //this.VerifySignatures(authorizationChallenge, signatures);
+        /*
+        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, new Address[] {
+            new Address(0, 0, 0, 0, 0),
+            new Address(0, 0, 0, 0, 1),
+            new Address(0, 0, 0, 0, 2)
+            }).Length >= 2, $"Please provide 2 valid signatures for '{authorizationChallenge}'.");
+        */
 
         this.State.Clear(codeHash.ToString());
         this.State.Clear($"ByName:{whiteListEntry.Name}");
