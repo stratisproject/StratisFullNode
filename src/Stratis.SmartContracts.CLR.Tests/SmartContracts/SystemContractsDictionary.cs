@@ -24,7 +24,7 @@ public class SystemContractsDictionary : SmartContract
     private void VerifySignatures(string authorizationChallenge)
     {
         /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum,
+        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories).Length >= this.Quorum,
             $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
         */
     }
