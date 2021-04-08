@@ -22,7 +22,7 @@ public class EcRecoverContract : SmartContract
 
     public bool CheckThirdPartySignature(byte[] message, byte[] signature)
     {
-        Address signerOfMessage = EcRecover.GetSigner(message, signature);
+        EcRecover.TryGetSigner(message, signature, out Address signerOfMessage);
         return (signerOfMessage == this.ThirdPartySigner);
     }
 }

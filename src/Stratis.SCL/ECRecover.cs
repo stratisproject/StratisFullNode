@@ -11,14 +11,30 @@ namespace Stratis.SCL.Crypto
         /// </summary>
         /// <param name="message"></param>
         /// <param name="signature">The ECDSA signature prepended with header information specifying the correct value of recId.</param>
-        /// <returns>The Address for the signer of a signature.</returns>
-        public static Address GetSigner(byte[] message, byte[] signature)
+        /// <param name="address">The Address for the signer of a signature.</param>
+        /// <returns>A bool representing whether or not the signer was retrieved successfully.</returns>
+        public static bool TryGetSigner(byte[] message, byte[] signature, out Address address)
         {
-            uint256 hashedUint256 = GetUint256FromMessage(message);
+            address = Address.Zero;
 
-            PubKey pubKey = PubKey.RecoverCompact(hashedUint256, signature);
+            if (message == null || signature == null)
+                return false;
 
-            return CreateAddress(pubKey.Hash.ToBytes());
+            // NBitcoin is very throwy
+            try
+            {
+                uint256 hashedUint256 = GetUint256FromMessage(message);
+
+                PubKey pubKey = PubKey.RecoverCompact(hashedUint256, signature);
+
+                address = CreateAddress(pubKey.Hash.ToBytes());
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static uint256 GetUint256FromMessage(byte[] message)
