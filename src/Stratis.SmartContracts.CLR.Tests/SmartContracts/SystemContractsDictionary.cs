@@ -21,6 +21,14 @@ public class SystemContractsDictionary : SmartContract
 
     public uint Quorum => GetQuorum(primaryGroup);
 
+    private void VerifySignatures(string authorizationChallenge)
+    {
+        /*
+        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum,
+            $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
+        */
+    }
+
     public Address[] GetSignatories(string group)
     {
         return this.State.GetArray<Address>($"Signatories:{group}");
@@ -41,10 +49,7 @@ public class SystemContractsDictionary : SmartContract
         else
             authorizationChallenge = $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{oldQuorum}=>{quorum})";
 
-        /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum,
-            $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
-        */
+        this.VerifySignatures(authorizationChallenge);
 
         this.State.SetUInt32($"Quorum:{group}", quorum);
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
@@ -59,10 +64,7 @@ public class SystemContractsDictionary : SmartContract
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
         string authorizationChallenge = $"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address})";
 
-        /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum,
-            $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
-        */
+        this.VerifySignatures(authorizationChallenge);
 
         System.Array.Resize(ref signatories, signatories.Length + 1);
         signatories[signatories.Length - 1] = address;
@@ -92,10 +94,7 @@ public class SystemContractsDictionary : SmartContract
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
         string authorizationChallenge = $"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address})";
 
-        /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum,
-            $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
-        */
+        this.VerifySignatures(authorizationChallenge);
 
         this.State.SetArray($"Signatories:{group}", signatories);
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
@@ -171,10 +170,7 @@ public class SystemContractsDictionary : SmartContract
             authorizationChallenge = $"WhiteList(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
-        /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum, 
-            $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
-        */
+        this.VerifySignatures(authorizationChallenge);
 
         if (whiteListEntry.CodeHash != default(UInt256))
         {
@@ -207,10 +203,7 @@ public class SystemContractsDictionary : SmartContract
 
         string authorizationChallenge = $"BlackList(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
 
-        /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories >= this.Quorum,
-            $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
-        */
+        this.VerifySignatures(authorizationChallenge);
 
         this.State.Clear(codeHash.ToString());
         this.State.Clear($"ByName:{whiteListEntry.Name}");
