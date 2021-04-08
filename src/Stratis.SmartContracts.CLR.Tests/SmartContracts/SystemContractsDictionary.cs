@@ -39,41 +39,32 @@ public class SystemContractsDictionary : SmartContract
         return this.State.GetUInt32($"Quorum:{group}");
     }
 
-    public void SetQuorum(string group, uint quorum)
+    public void AddSignatory(string group, Address address, uint newSize, uint newQuorum)
     {
-        uint oldQuorum = this.State.GetUInt32($"Quorum:{group}");
-        uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
+        Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
 
-        Assert(quorum != oldQuorum, "Nothing changed.");
-        Assert(quorum <= GetSignatories(group).Length, "The quorum can't exceed the number of signatories.");
-
-        this.VerifySignatures((oldQuorum == default(uint)) ?
-            $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{quorum})" :
-            $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{oldQuorum}=>{quorum})");
-
-        this.State.SetUInt32($"Quorum:{group}", quorum);
-        this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
-    }
-
-    public void AddSignatory(string group, Address address)
-    {
         Address[] signatories = this.GetSignatories(group);
         for (int i = 0; i < signatories.Length; i++)
             Assert(signatories[i] != address, "The signatory already exists.");
 
+        Assert((signatories.Length + 1) == newSize, "The expected size is incorrect.");
+
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
 
-        this.VerifySignatures($"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address})");
+        this.VerifySignatures($"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         System.Array.Resize(ref signatories, signatories.Length + 1);
         signatories[signatories.Length - 1] = address;
 
         this.State.SetArray($"Signatories:{group}", signatories);
+        this.State.SetUInt32($"Quorum:{group}", newQuorum);
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
     }
 
-    public void RemoveSignatory(string group, Address address)
+    public void RemoveSignatory(string group, Address address, uint newSize, uint newQuorum)
     {
+        Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
+
         bool found = false;
         Address[] signatories = this.GetSignatories(group);
         for (int i = 0; i < signatories.Length; i++)
@@ -89,13 +80,14 @@ public class SystemContractsDictionary : SmartContract
         }
 
         Assert(found, "The signatory does not exist.");
-        Assert(signatories.Length >= GetQuorum(group), "The number of signatories can't be less than the quorum.");
+        Assert(newSize == signatories.Length, "The expected size is incorrect.");
 
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
 
-        this.VerifySignatures($"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address})");
+        this.VerifySignatures($"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         this.State.SetArray($"Signatories:{group}", signatories);
+        this.State.SetUInt32($"Quorum:{group}", newQuorum);
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
     }
 
