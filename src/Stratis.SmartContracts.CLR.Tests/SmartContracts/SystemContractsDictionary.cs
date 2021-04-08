@@ -43,13 +43,13 @@ public class SystemContractsDictionary : SmartContract
     {
         uint oldQuorum = this.State.GetUInt32($"Quorum:{group}");
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
-        string authorizationChallenge;
-        if (oldQuorum == default(uint))
-            authorizationChallenge = $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{quorum})";
-        else
-            authorizationChallenge = $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{oldQuorum}=>{quorum})";
 
-        this.VerifySignatures(authorizationChallenge);
+        Assert(quorum != oldQuorum, "Nothing changed.");
+        Assert(quorum <= GetSignatories(group).Length, "The quorum can't exceed the number of signatories.");
+
+        this.VerifySignatures((oldQuorum == default(uint)) ?
+            $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{quorum})" :
+            $"{nameof(SetQuorum)}(Nonce:{nonce},Group:{group},Quorum:{oldQuorum}=>{quorum})");
 
         this.State.SetUInt32($"Quorum:{group}", quorum);
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
@@ -57,14 +57,13 @@ public class SystemContractsDictionary : SmartContract
 
     public void AddSignatory(string group, Address address)
     {
-        var signatories = this.GetSignatories(group);
+        Address[] signatories = this.GetSignatories(group);
         for (int i = 0; i < signatories.Length; i++)
-            Assert(signatories[i] != address, "Signatory already exists!");
+            Assert(signatories[i] != address, "The signatory already exists.");
 
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
-        string authorizationChallenge = $"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address})";
 
-        this.VerifySignatures(authorizationChallenge);
+        this.VerifySignatures($"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address})");
 
         System.Array.Resize(ref signatories, signatories.Length + 1);
         signatories[signatories.Length - 1] = address;
@@ -89,12 +88,12 @@ public class SystemContractsDictionary : SmartContract
             }
         }
 
-        Assert(found, "Signatory does not exists!");
+        Assert(found, "The signatory does not exist.");
+        Assert(signatories.Length >= GetQuorum(group), "The number of signatories can't be less than the quorum.");
 
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
-        string authorizationChallenge = $"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address})";
 
-        this.VerifySignatures(authorizationChallenge);
+        this.VerifySignatures($"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address})");
 
         this.State.SetArray($"Signatories:{group}", signatories);
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
@@ -162,12 +161,12 @@ public class SystemContractsDictionary : SmartContract
         string authorizationChallenge;
         if (whiteListEntry.CodeHash == default(UInt256))
         {
-            authorizationChallenge = $"WhiteList(Nonce:{nonce},CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
+            authorizationChallenge = $"{nameof(WhiteList)}(Nonce:{nonce},CodeHash:{codeHash},LastAddress:{lastAddress},Name:{name})";
         }
         else
         {
             Assert(whiteListEntry.CodeHash != codeHash || whiteListEntry.LastAddress != lastAddress || whiteListEntry.Name != name, "Nothing changed.");
-            authorizationChallenge = $"WhiteList(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
+            authorizationChallenge = $"{nameof(WhiteList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
         this.VerifySignatures(authorizationChallenge);
@@ -197,13 +196,11 @@ public class SystemContractsDictionary : SmartContract
 
         WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
 
-        Assert(whiteListEntry.CodeHash != default(UInt256));
+        Assert(whiteListEntry.CodeHash != default(UInt256), "The entry does not exist.");
 
         uint nonce = this.State.GetUInt32($"Nonce:{codeHash}");
 
-        string authorizationChallenge = $"BlackList(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})";
-
-        this.VerifySignatures(authorizationChallenge);
+        this.VerifySignatures($"{nameof(BlackList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})");
 
         this.State.Clear(codeHash.ToString());
         this.State.Clear($"ByName:{whiteListEntry.Name}");
