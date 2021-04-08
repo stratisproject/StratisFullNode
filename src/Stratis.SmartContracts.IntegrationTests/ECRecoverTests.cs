@@ -1,5 +1,7 @@
 ﻿using System.Threading.Tasks;
+using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.SCL.Crypto;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -28,7 +30,7 @@ namespace Stratis.SmartContracts.IntegrationTests
                 byte[] message = new byte[] { 0x69, 0x76, 0xAA };
 
                 // Sign a message
-                byte[] offChainSignature = EcRecoverProvider.SignMessage(privateKey, message);
+                byte[] offChainSignature = SignMessage(privateKey, message);
 
                 // Get the address out of the signature
                 Address recoveredAddress = EcRecoverProvider.GetSigner(message, offChainSignature);
@@ -36,6 +38,19 @@ namespace Stratis.SmartContracts.IntegrationTests
                 // Check that the address matches that generated from the private key.
                 Assert.Equal(address, recoveredAddress);
             }
+        }
+
+        /// <summary>
+        /// Signs a message, returning an ECDSA signature.
+        /// </summary>
+        /// <param name="privateKey">The private key used to sign the message.</param>
+        /// <param name="message">The complete message to be signed.</param>
+        /// <returns>The ECDSA signature prepended with header information specifying the correct value of recId.</returns>
+        private static byte[] SignMessage(Key privateKey, byte[] message)
+        {
+            uint256 hashedUint256 = new uint256(SHA3.Keccak256(message));
+
+            return privateKey.SignCompact(hashedUint256);
         }
 
         [Fact]
@@ -52,7 +67,7 @@ namespace Stratis.SmartContracts.IntegrationTests
                 var privateKey = new Key();
                 string address = privateKey.PubKey.GetAddress(network).ToString();
                 byte[] message = new byte[] { 0x69, 0x76, 0xAA };
-                byte[] signature = EcRecoverProvider.SignMessage(privateKey, message);
+                byte[] signature = SignMessage(privateKey, message);
 
                 // TODO: If the incorrect parameters are passed to the constructor, the contract does not get properly created ('Method does not exist on contract'), but a success response is still returned?
 
@@ -103,7 +118,7 @@ namespace Stratis.SmartContracts.IntegrationTests
                 byte[] message = new byte[] { 0x69, 0x76, 0xAA };
 
                 // Make the signature with a key unrelated to the third party signer for the contract.
-                byte[] signature = EcRecoverProvider.SignMessage(new Key(), message);
+                byte[] signature = SignMessage(new Key(), message);
 
                 // TODO: If the incorrect parameters are passed to the constructor, the contract does not get properly created ('Method does not exist on contract'), but a success response is still returned?
 
