@@ -519,7 +519,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                             else
                                             {
                                                 status = CrossChainTransferStatus.Partial;
-                                                recordDepositResult.WithDrawalTransactions.Add(transaction);
+                                                recordDepositResult.WithdrawalTransactions.Add(transaction);
                                             }
                                         }
                                         else

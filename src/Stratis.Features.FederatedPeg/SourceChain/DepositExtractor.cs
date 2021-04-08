@@ -79,7 +79,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             bool conversionTransaction = false;
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
             {
-                if (!this.opReturnDataReader.TryGetTargetEthereumAddress(transaction, out targetAddress))
+                if (!this.opReturnDataReader.TryGetTargetETHAddress(transaction, out targetAddress))
                 {
                     return null;
                 }

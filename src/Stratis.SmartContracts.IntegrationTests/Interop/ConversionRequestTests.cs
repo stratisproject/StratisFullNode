@@ -22,9 +22,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             var request = new ConversionRequest()
             {
                 RequestId = "requestId",
-                RequestType = (int)ConversionRequestType.Mint,
+                RequestType = ConversionRequestType.Mint,
                 Processed = false,
-                RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                RequestStatus = ConversionRequestStatus.Unprocessed,
                 Amount = 100000000,
                 BlockHeight = 123,
                 DestinationAddress = ""
@@ -47,9 +47,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             var request = new ConversionRequest()
             {
                 RequestId = "requestId",
-                RequestType = (int)ConversionRequestType.Mint,
+                RequestType = ConversionRequestType.Mint,
                 Processed = false,
-                RequestStatus = (int)ConversionRequestStatus.Unprocessed,
+                RequestStatus = ConversionRequestStatus.Unprocessed,
                 Amount = 100000000,
                 BlockHeight = 123,
                 DestinationAddress = ""

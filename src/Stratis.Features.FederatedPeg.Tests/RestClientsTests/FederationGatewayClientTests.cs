@@ -25,7 +25,7 @@ namespace Stratis.Features.FederatedPeg.Tests.RestClientsTests
 
             var nodeSettings = new NodeSettings(Sidechains.Networks.CirrusNetwork.NetworksSelector.Regtest(), NBitcoin.Protocol.ProtocolVersion.ALT_PROTOCOL_VERSION, args: args);
 
-            this.client = new FederationGatewayClient(new ExtendedLoggerFactory(), new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest())), new HttpClientFactory());
+            this.client = new FederationGatewayClient(new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(Networks.Strax.Regtest())), new HttpClientFactory());
         }
 
         [Fact]

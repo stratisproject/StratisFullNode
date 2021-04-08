@@ -10,7 +10,7 @@ using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Util;
 using Nethereum.Web3;
 
-namespace Stratis.Bitcoin.Features.Interop.EthereumClient.ContractSource
+namespace Stratis.Bitcoin.Features.Interop.ETHClient.ContractSource
 {
     public class GnosisSafeProxyDeployment : ContractDeploymentMessage
     {
@@ -152,8 +152,8 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient.ContractSource
                 SafeTxGas = safeTxGas,
                 BaseGas = baseGas,
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei),
-                GasToken = EthereumClientBase.ZeroAddress,
-                RefundReceiver = EthereumClientBase.ZeroAddress,
+                GasToken = ETHClient.ZeroAddress,
+                RefundReceiver = ETHClient.ZeroAddress,
                 Signatures = signatures
             };
 
