@@ -31,16 +31,19 @@ public class SystemContractsDictionary : SmartContract
 
     public Address[] GetSignatories(string group)
     {
+        Assert(!string.IsNullOrEmpty(group));
         return this.State.GetArray<Address>($"Signatories:{group}");
     }
 
     public uint GetQuorum(string group)
     {
+        Assert(!string.IsNullOrEmpty(group));
         return this.State.GetUInt32($"Quorum:{group}");
     }
 
     public void AddSignatory(string group, Address address, uint newSize, uint newQuorum)
     {
+        Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
 
         Address[] signatories = this.GetSignatories(group);
@@ -63,6 +66,7 @@ public class SystemContractsDictionary : SmartContract
 
     public void RemoveSignatory(string group, Address address, uint newSize, uint newQuorum)
     {
+        Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
 
         bool found = false;
