@@ -17,7 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Stratis.SCL\Stratis.SCL.csproj" />
     <ProjectReference Include="..\Stratis.SmartContracts.Core\Stratis.SmartContracts.Core.csproj" />
   </ItemGroup>
 
