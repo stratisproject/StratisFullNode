@@ -1,7 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -14,17 +18,30 @@ namespace Stratis.Features.FederatedPeg.Tests
     public class MaturedBlocksSyncManagerTests
     {
         private readonly IAsyncProvider asyncProvider;
+        private readonly ChainIndexer chainIndexer;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
-        private readonly TestOnlyMaturedBlocksSyncManager syncManager;
+        private IFederationWalletManager federationWalletManager;
+        private IInitialBlockDownloadState initialBlockDownloadState;
+        private readonly StraxTest network;
+        private TestOnlyMaturedBlocksSyncManager syncManager;
 
         public MaturedBlocksSyncManagerTests()
         {
+            this.network = new StraxTest();
+
             this.asyncProvider = Substitute.For<IAsyncProvider>();
+            this.chainIndexer = new ChainIndexer(this.network);
             this.crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
 
-            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.crossChainTransferStore, this.federationGatewayClient, new NodeLifetime());
+            this.federationWalletManager = Substitute.For<IFederationWalletManager>();
+            this.federationWalletManager.WalletTipHeight.Returns(0);
+
+            this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
+            this.initialBlockDownloadState.IsInitialBlockDownload().Returns(false);
+
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
         }
 
         [Fact]
@@ -58,10 +75,56 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.True(delayRequired3);
         }
 
+        [Fact]
+        public async Task NodeIsInIBD_DelayRequiredAsync()
+        {
+            this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
+            this.initialBlockDownloadState.IsInitialBlockDownload().Returns(true);
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
+
+            bool delayRequired = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
+            Assert.True(delayRequired);
+        }
+
+        [Fact]
+        public async Task FederationWalletIsSyncing_DelayRequiredAsync()
+        {
+            this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
+            this.initialBlockDownloadState.IsInitialBlockDownload().Returns(false);
+
+            // Create chain of 15 blocks
+            var testbase = new TestBase(this.network);
+            List<Block> blocks = new TestBase(this.network).CreateBlocks(15);
+            testbase.AppendBlocksToChain(this.chainIndexer, blocks);
+
+            this.federationWalletManager = Substitute.For<IFederationWalletManager>();
+            this.federationWalletManager.WalletTipHeight.Returns(0);
+
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.chainIndexer, this.crossChainTransferStore, this.federationGatewayClient, this.federationWalletManager, this.initialBlockDownloadState, new NodeLifetime());
+
+            bool delayRequired = await this.syncManager.ExposedSyncBatchOfBlocksAsync();
+            Assert.True(delayRequired);
+        }
+
         private class TestOnlyMaturedBlocksSyncManager : MaturedBlocksSyncManager
         {
-            public TestOnlyMaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, INodeLifetime nodeLifetime)
-                : base(asyncProvider, crossChainTransferStore, federationGatewayClient, nodeLifetime, null, null)
+            public TestOnlyMaturedBlocksSyncManager(
+                IAsyncProvider asyncProvider,
+                ChainIndexer chainIndexer,
+                ICrossChainTransferStore crossChainTransferStore,
+                IFederationGatewayClient federationGatewayClient,
+                IFederationWalletManager federationWalletManager,
+                IInitialBlockDownloadState initialBlockDownloadState,
+                INodeLifetime nodeLifetime)
+                : base(
+                      asyncProvider,
+                      crossChainTransferStore,
+                      federationGatewayClient,
+                      federationWalletManager,
+                      initialBlockDownloadState,
+                      nodeLifetime,
+                      null,
+                      chainIndexer)
             {
             }
 
