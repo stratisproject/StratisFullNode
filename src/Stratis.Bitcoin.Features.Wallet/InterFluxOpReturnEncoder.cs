@@ -1,4 +1,6 @@
-﻿namespace Stratis.Bitcoin.Features.Wallet
+﻿using System.Text;
+
+namespace Stratis.Bitcoin.Features.Wallet
 {
     /// <summary>Encodes or decodes InterFlux related data to and from OP_RETURN data.</summary>
     public static class InterFluxOpReturnEncoder
@@ -30,6 +32,13 @@
                 return false;
 
             return true;
+        }
+
+        public static bool TryDecode(byte[] opReturnData, out int destinationChain, out string address)
+        {
+            string stringData = Encoding.UTF8.GetString(opReturnData);
+
+            return TryDecode(stringData, out destinationChain, out address);
         }
     }
 }

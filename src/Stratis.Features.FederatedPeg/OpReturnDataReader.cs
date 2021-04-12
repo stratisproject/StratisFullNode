@@ -105,7 +105,7 @@ namespace Stratis.Features.FederatedPeg
             return true;
         }
 
-        private static IEnumerable<byte[]> SelectBytesContentFromOpReturn(Transaction transaction)
+        public static IEnumerable<byte[]> SelectBytesContentFromOpReturn(Transaction transaction)
         {
             return transaction.Outputs
                 .Select(o => o.ScriptPubKey)
