@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using Stratis.SmartContracts;
 
 namespace Stratis.SmartContracts.CLR.Validation
 {
     public static class Primitives
     {
-        public static IEnumerable<Type> Types { get; } = new []
+        public static IEnumerable<Type> Types { get; } = new[]
         {
             typeof(bool),
             typeof(byte),

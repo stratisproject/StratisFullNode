@@ -39,7 +39,7 @@ namespace Stratis.SmartContracts.CLR.Validation
                             .Member(nameof(Array.SetValue), AccessPolicy.Allowed)
                             .Member(nameof(Array.Resize), AccessPolicy.Allowed))
                 .Type(typeof(void).Name, AccessPolicy.Allowed)
-                .Type(typeof(object).Name, AccessPolicy.Denied, 
+                .Type(typeof(object).Name, AccessPolicy.Denied,
                     m => m.Member(nameof(ToString), AccessPolicy.Allowed)
                           .Constructor(AccessPolicy.Allowed));
         }
