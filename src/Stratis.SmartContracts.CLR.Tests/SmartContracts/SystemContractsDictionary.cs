@@ -21,7 +21,7 @@ public class SystemContractsDictionary : SmartContract
 
     public uint Quorum => GetQuorum(primaryGroup);
 
-    private void VerifySignatures(string authorizationChallenge)
+    private void VerifySignatures(byte[] signatures, string authorizationChallenge)
     {
         /*
         Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories).Length >= this.Quorum,
@@ -41,7 +41,7 @@ public class SystemContractsDictionary : SmartContract
         return this.State.GetUInt32($"Quorum:{group}");
     }
 
-    public void AddSignatory(string group, Address address, uint newSize, uint newQuorum)
+    public void AddSignatory(string group, Address address, uint newSize, uint newQuorum, byte[] signatures)
     {
         Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
@@ -54,7 +54,7 @@ public class SystemContractsDictionary : SmartContract
 
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
 
-        this.VerifySignatures($"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
+        this.VerifySignatures(signatures, $"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         System.Array.Resize(ref signatories, signatories.Length + 1);
         signatories[signatories.Length - 1] = address;
@@ -64,7 +64,7 @@ public class SystemContractsDictionary : SmartContract
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
     }
 
-    public void RemoveSignatory(string group, Address address, uint newSize, uint newQuorum)
+    public void RemoveSignatory(string group, Address address, uint newSize, uint newQuorum, byte[] signatures)
     {
         Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
@@ -88,7 +88,7 @@ public class SystemContractsDictionary : SmartContract
 
         uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
 
-        this.VerifySignatures($"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
+        this.VerifySignatures(signatures, $"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         this.State.SetArray($"Signatories:{group}", signatories);
         this.State.SetUInt32($"Quorum:{group}", newQuorum);
@@ -134,7 +134,7 @@ public class SystemContractsDictionary : SmartContract
         return whiteListEntry.LastAddress;
     }
 
-    public void WhiteList(byte[] signatures, UInt256 codeHash, Address lastAddress, string name)
+    public void WhiteList(UInt256 codeHash, Address lastAddress, string name, byte[] signatures)
     {
         Assert(signatures != null);
         Assert(codeHash != default(UInt256));
@@ -165,7 +165,7 @@ public class SystemContractsDictionary : SmartContract
             authorizationChallenge = $"{nameof(WhiteList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
-        this.VerifySignatures(authorizationChallenge);
+        this.VerifySignatures(signatures, authorizationChallenge);
 
         if (whiteListEntry.CodeHash != default(UInt256))
         {
@@ -185,7 +185,7 @@ public class SystemContractsDictionary : SmartContract
         this.State.SetUInt32($"Nonce:{codeHash}", nonce + 1);
     }
 
-    public void BlackList(byte[] signatures, UInt256 codeHash)
+    public void BlackList(UInt256 codeHash, byte[] signatures)
     {
         Assert(signatures != null);
         Assert(codeHash != default(UInt256));
@@ -196,7 +196,7 @@ public class SystemContractsDictionary : SmartContract
 
         uint nonce = this.State.GetUInt32($"Nonce:{codeHash}");
 
-        this.VerifySignatures($"{nameof(BlackList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})");
+        this.VerifySignatures(signatures, $"{nameof(BlackList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})");
 
         this.State.Clear(codeHash.ToString());
         this.State.Clear($"ByName:{whiteListEntry.Name}");
