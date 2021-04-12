@@ -24,14 +24,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly Script depositScript;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
-        private readonly IOpReturnDataReader opReturnDataReader;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network)
         {
             this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
-            this.opReturnDataReader = opReturnDataReader;
         }
 
         /// <inheritdoc />

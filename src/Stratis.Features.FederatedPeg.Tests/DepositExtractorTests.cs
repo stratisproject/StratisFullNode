@@ -38,7 +38,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
-            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network, this.opReturnDataReader);
+            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network);
             this.transactionBuilder = new TestTransactionBuilder();
         }
 
