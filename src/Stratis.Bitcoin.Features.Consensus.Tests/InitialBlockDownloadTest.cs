@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
         public void InIBDIfChainTipIsNull()
         {
             this.chainState.ConsensusTip = null;
-            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, this.loggerFactory.Object, DateTimeProvider.Default);
+            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, DateTimeProvider.Default);
             Assert.True(blockDownloadState.IsInitialBlockDownload());
         }
 
@@ -43,7 +43,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
         {
             BlockHeader blockHeader = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
             this.chainState.ConsensusTip = new ChainedHeader(blockHeader, blockHeader.GetHash(), 1000);
-            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, this.loggerFactory.Object, DateTimeProvider.Default);
+            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, DateTimeProvider.Default);
             Assert.True(blockDownloadState.IsInitialBlockDownload());
         }
 
@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
         {
             BlockHeader blockHeader = this.network.Consensus.ConsensusFactory.CreateBlockHeader();
             this.chainState.ConsensusTip = new ChainedHeader(blockHeader, blockHeader.GetHash(), this.checkpoints.GetLastCheckpointHeight() + 1);
-            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, this.loggerFactory.Object, DateTimeProvider.Default);
+            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, DateTimeProvider.Default);
             Assert.True(blockDownloadState.IsInitialBlockDownload());
         }
 
@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests
             blockHeader.Time = ((uint) DateTimeOffset.Now.ToUnixTimeSeconds()) - (uint) this.network.MaxTipAge - 1;
 
             this.chainState.ConsensusTip = new ChainedHeader(blockHeader, blockHeader.GetHash(), this.checkpoints.GetLastCheckpointHeight() + 1);
-            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, this.loggerFactory.Object, DateTimeProvider.Default);
+            var blockDownloadState = new InitialBlockDownloadState(this.chainState, this.network, this.consensusSettings, this.checkpoints, DateTimeProvider.Default);
             Assert.True(blockDownloadState.IsInitialBlockDownload());
         }
     }

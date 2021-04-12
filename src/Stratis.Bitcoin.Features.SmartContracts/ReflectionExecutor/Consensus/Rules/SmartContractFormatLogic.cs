@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.R
 
         public const ulong GasPriceMaximum = 10_000;
 
-        public void CheckContractTransaction(ContractTxData txData, Money suppliedBudget)
+        public void CheckContractTransaction(ContractTxData txData, Money suppliedBudget, int blockHeight = 0)
         {
             Check(txData, suppliedBudget);
         }

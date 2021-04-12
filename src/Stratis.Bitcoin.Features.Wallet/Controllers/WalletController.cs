@@ -298,11 +298,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// <response code="500">Request is null</response>
         [Route("history")]
         [HttpGet]
-        public async Task<IActionResult> GetHistory([FromQuery] WalletHistoryRequest request,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IActionResult> GetHistoryAsync([FromQuery] WalletHistoryRequest request, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await this.Execute(request, cancellationToken,
-                async (req, token) => this.Json(await this.walletService.GetHistory(req, token)));
+            return await this.Execute(request, cancellationToken, async (req, token) => this.Json(await this.walletService.GetHistory(req, token)));
         }
 
 
@@ -434,6 +432,23 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> BuildTransaction([FromBody] BuildTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+            return await this.Execute(request, cancellationToken,
+                async (req, token) => Json(await this.walletService.BuildTransaction(req, token)));
+        }
+
+        /// <summary>
+        /// Same as <see cref="BuildTransaction"/> but overrides OP_RETURN data and encodes destination chain and address for InterFlux transaction.
+        /// </summary>
+        [Route("build-interflux-transaction")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            request.OpReturnData = InterFluxOpReturnEncoder.Encode(request.DestinationChain, request.DestinationAddress);
+
             return await this.Execute(request, cancellationToken,
                 async (req, token) => Json(await this.walletService.BuildTransaction(req, token)));
         }

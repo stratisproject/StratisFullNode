@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Signals;
 using Xunit;
 
 namespace Stratis.Bitcoin.Tests.Builder
 {
     public class FullNodeFeatureExecutorTest
     {
-        private FullNodeFeatureExecutor executor;
-        private Mock<IFullNodeFeature> feature;
-        private Mock<IFullNodeFeature> feature2;
-        private Mock<IFullNode> fullNode;
-        private Mock<IFullNodeServiceProvider> fullNodeServiceProvider;
+        private readonly FullNodeFeatureExecutor executor;
+        private readonly Mock<IFullNodeFeature> feature;
+        private readonly Mock<IFullNodeFeature> feature2;
+        private readonly Mock<IFullNode> fullNode;
+        private readonly Mock<IFullNodeServiceProvider> fullNodeServiceProvider;
 
         /// <summary>
         /// Property that constructs a node feature executor.
@@ -29,13 +29,11 @@ namespace Stratis.Bitcoin.Tests.Builder
                     .Throws(new MissingDependencyException());
 
                 var fullNodeServiceProvider = new Mock<IFullNodeServiceProvider>();
-                fullNodeServiceProvider.Setup(f => f.Features)
-                    .Returns(new List<IFullNodeFeature> { feature.Object });
+                fullNodeServiceProvider.Setup(f => f.Features).Returns(new List<IFullNodeFeature> { feature.Object });
                 var fullNode = new Mock<IFullNode>();
-                fullNode.Setup(f => f.Services)
-                    .Returns(fullNodeServiceProvider.Object);
+                fullNode.Setup(f => f.Services).Returns(fullNodeServiceProvider.Object);
 
-                return new FullNodeFeatureExecutor(fullNode.Object, new LoggerFactory());
+                return new FullNodeFeatureExecutor(fullNode.Object, new Mock<ISignals>().Object);
             }
         }
 
@@ -53,7 +51,7 @@ namespace Stratis.Bitcoin.Tests.Builder
             this.fullNodeServiceProvider.Setup(f => f.Features)
                 .Returns(new List<IFullNodeFeature> { this.feature.Object, this.feature2.Object });
 
-            this.executor = new FullNodeFeatureExecutor(this.fullNode.Object, new LoggerFactory());
+            this.executor = new FullNodeFeatureExecutor(this.fullNode.Object, new Mock<ISignals>().Object);
         }
 
         [Fact]

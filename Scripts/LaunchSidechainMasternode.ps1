@@ -300,6 +300,31 @@ if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort )
     Shutdown-SidechainNode
 }
 
+Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
+if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
+{
+    Write-Host (Get-TimeStamp) "WARNING: A node is already running, please gracefully close GETH with CTRL+C to avoid forceful shutdown" -ForegroundColor DarkYellow
+    ""
+    While ( $shutdownCounter -le "30" )
+    {
+        if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
+        {
+            Start-Sleep 3
+            Write-Host (Get-TimeStamp) "Waiting for graceful shutdown ( CTRL+C )..."
+            $shutdownCounter++
+        }
+            Else
+            {
+                $shutdownCounter = "31"
+            }
+    }
+    if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
+    {
+        Write-Host (Get-TimeStamp) "WARNING: A node is still running, performing a forced shutdown" -ForegroundColor DarkYellow
+        Stop-Process -ProcessName geth -Force -ErrorAction SilentlyContinue
+    }
+}
+
 #Check for running dashboard
 Write-Host (Get-TimeStamp) "Checking for the Stratis Masternode Dashboard" -ForegroundColor Cyan
 if ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue )
@@ -316,6 +341,76 @@ Check-TimeDifference
 
 if ( $NodeType -eq "50K" ) 
 {
+
+    #Getting ETH Account
+    $gethProcess = Start-Process geth -ArgumentList "account list --datadir=$ethDataDir" -NoNewWindow -PassThru -Wait -RedirectStandardOutput $env:TEMP\accountlist.txt 
+    $gethAccountsOuput = Get-Content $env:TEMP\accountlist.txt
+    $ethAddress = ($gethAccountsOuput.Split('{').Split('}') | Select-Object -Index 1).Insert('0','0x')
+    Write-Host (Get-TimeStamp) "Loaded $ethAddress..." -ForegroundColor Green
+    ""
+    Start-Sleep 10
+
+    #Launching GETH
+    $API = $gethAPIPort
+    Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --rpc --rpccorsdomain=* --rpcapi web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+
+    While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
+    {
+        Write-Host (Get-TimeStamp) "Waiting for API..." -ForegroundColor Yellow  
+        Start-Sleep 3
+        if ( $StartNode.HasExited -eq $true )
+        {
+            Write-Host (Get-TimeStamp) "ERROR: Something went wrong. Please contact support in Discord" -ForegroundColor Red
+            Start-Sleep 30
+            Exit
+        }
+    }
+    <#
+    $gethPeerCountBody = ConvertTo-Json -Compress @{
+        jsonrpc = "2.0"
+        method = "net_peerCount"
+        id = "1"
+    }
+
+    [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
+    While ( $gethPeerCount -lt 1 )
+    {
+        Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
+        Start-Sleep 2
+        [uint32]$gethPeerCount = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethPeerCountBody -ContentType application/json | Select-Object -ExpandProperty result
+    }
+
+    $gethSyncStateBody = ConvertTo-Json -Compress @{
+        jsonrpc = "2.0"
+        method = "eth_syncing"
+        id = "1"
+    }
+
+    $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
+    While ( $syncStatus -eq $false -or $syncStatus.currentBlock -eq $null )
+    {
+        Write-Host (Get-TimeStamp) "Waiting for Blockchain Synchronization to begin" -ForegroundColor Yellow
+        $syncStatus = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json -ErrorAction SilentlyContinue | Select-Object -ExpandProperty result
+        Start-Sleep 2
+    }
+
+    [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
+    [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
+
+    While ( ( $highestBlock ) -gt ( $currentBlock ) ) 
+    {
+        [uint32]$currentBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty currentBlock
+        [uint32]$highestBlock = Invoke-RestMethod -Uri "http://127.0.0.1:$API" -Method Post -Body $gethSyncStateBody -ContentType application/json | Select-Object -ExpandProperty result | Select-Object -ExpandProperty highestBlock
+        $syncProgress = $highestBlock - $currentBlock
+        ""
+        Write-Host (Get-TimeStamp) "The Local Height is $currentBlock" -ForegroundColor Yellow
+        Write-Host (Get-TimeStamp) "The Current Tip is $highestBlock" -ForegroundColor Yellow
+        Write-Host (Get-TimeStamp) "$syncProgress Blocks Require Indexing..." -ForegroundColor Yellow
+        Start-Sleep 10
+    }
+    #>
+   
     #Move to CirrusPegD
     Set-Location -Path $cloneDir/src/Stratis.CirrusPegD
 }
@@ -391,9 +486,16 @@ if ( Get-Variable c -ErrorAction SilentlyContinue ) { Clear-Variable c }
 #Start Sidechain Node
 $API = $sideChainAPIPort
 Write-Host (Get-TimeStamp) "Starting Sidechain Masternode" -ForegroundColor Cyan
-if ( $NodeType -eq "50K" ) 
+if ( $NodeType -eq "50K" )
 {
-    $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs" -PassThru
+    if ( $ethGasPrice )
+    {
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract -ethereumgasprice=$ethGasPrice -ethereumgas=$ethGasLimit" -PassThru
+    }
+        Else
+        {
+            $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
+        }
 }
     Else
     {
@@ -593,11 +695,12 @@ Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -For
 
 Exit
 
+
 # SIG # Begin signature block
 # MIIO+wYJKoZIhvcNAQcCoIIO7DCCDugCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUNjDKWkl5DNclOcReU/bbOt2t
-# 1j2gggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUygfSbIIh67aa4zS8Liyk87Z1
+# MvqgggxDMIIFfzCCBGegAwIBAgIQB+RAO8y2U5CYymWFgvSvNDANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTE4MDcxNzAwMDAwMFoXDTIxMDcyMTEyMDAw
@@ -667,11 +770,11 @@ Exit
 # Y2VydC5jb20xKzApBgNVBAMTIkRpZ2lDZXJ0IEVWIENvZGUgU2lnbmluZyBDQSAo
 # U0hBMikCEAfkQDvMtlOQmMplhYL0rzQwCQYFKw4DAhoFAKB4MBgGCisGAQQBgjcC
 # AQwxCjAIoAKAAKECgAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYB
-# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFLVSB4FSW+DI
-# nvxrRxJ5M8+ETM94MA0GCSqGSIb3DQEBAQUABIIBAGX++n4uElYFjo2HkbFBQllW
-# q6c7Hti09KnDyw75pWPM4CiQ8XE+4W44k3t4OKIe5GcBQW/3BniDoHzZQP6AF31i
-# kmoAazG5IraZuQhj9xiqudD/dzQNfg/gBf60M7RFydpGc/vhIecQR3ZQ8o3JgF5U
-# 5XfXbscPdWgFkaEgFGs+LfAoJopLLjmb1lJlrUUrVHl8wnMry3XrZvDsLB4whwHp
-# QBKMbeYrLbM19Ln8rsHzLuiKwY8H5aGksClJQ2Ip/u3OkYEIBGy1Vp8gkPsq8nIM
-# boWpdBBgeQUsOoWyOSpO2zdSfe9s08n2zEYcuiHarUM2WAc3O70hzwM8NJs8iSA=
+# BAGCNwIBCzEOMAwGCisGAQQBgjcCARUwIwYJKoZIhvcNAQkEMRYEFApMBalGh7Bq
+# 6Lzaql1r51+Tu81XMA0GCSqGSIb3DQEBAQUABIIBAK0Xb6xT8DDw47Pzl/WFLyft
+# O22nOg6uaF9i5M/Iz23GBQ9dqdTza++l6IInX0ivQBpSdb4/MlO0Gn0878pVQZKY
+# NZIc911dAedpJxVOs4NzaaxxRDnYyQtNscCuTc0cEx0OkY63JPsVyYBKC9WXn5OU
+# 71kOvZ8E/7kGE/LwJPHCrcZcgiYI6QXelGOVWjlWF9fu9/ULrkPemZ8QtGXxAH31
+# NqZGgouKR2gOBzuMDvyJ8B09RoNUVgmzOlXS5P6DBpubUQxA+P8RQ5XoBxT+f5tR
+# iiMIgklcXa0j3Oi4ZyWNCkjrHWj101uf2MHYFXNzWsQMTIz2ML5X4HZRDA354sE=
 # SIG # End signature block

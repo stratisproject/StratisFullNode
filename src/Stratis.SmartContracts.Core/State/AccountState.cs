@@ -35,8 +35,8 @@ namespace Stratis.SmartContracts.Core.State
 
         public AccountState(byte[] bytes) : this()
         {
-            RLPCollection list = RLP.Decode(bytes);
-            RLPCollection innerList = (RLPCollection)list[0];
+            RLPCollection innerList = (RLPCollection)RLP.Decode(bytes);
+
             this.CodeHash = innerList[0].RLPData;
             this.StateRoot = innerList[1].RLPData;
             this.UnspentHash = innerList[2].RLPData;

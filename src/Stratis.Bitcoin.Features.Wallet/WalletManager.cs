@@ -8,10 +8,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.BuilderExtensions;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -94,19 +92,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         // <summary>As per RPC method definition this should be the max allowable expiry duration.</summary>
         private const int MaxWalletUnlockDurationInSeconds = 1073741824;
 
-        /// <summary>Quantity of accounts created in a wallet file when a wallet is restored.</summary>
-        private const int WalletRecoveryAccountsCount = 1;
-
         /// <summary>Quantity of accounts created in a wallet file when a wallet is created.</summary>
         private const int WalletCreationAccountsCount = 1;
 
         /// <summary>File extension for wallet files.</summary>
         private const string WalletFileExtension = "wallet.json";
-
-        /// <summary>Timer for saving wallet files to the file system.</summary>
-        private const int WalletSavetimeIntervalInMinutes = 5;
-
-        private const string DownloadChainLoop = "WalletManager.DownloadChain";
 
         /// <summary>
         /// A lock object that protects access to the <see cref="Wallet"/>.
@@ -114,9 +104,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </summary>
         protected readonly object lockObject;
         protected readonly object lockProcess;
-
-        /// <summary>Factory for creating background async loop tasks.</summary>
-        private readonly IAsyncProvider asyncProvider;
 
         public WalletCollection Wallets;
 
@@ -129,26 +116,17 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>The chain of headers.</summary>
         protected readonly ChainIndexer ChainIndexer;
 
-        /// <summary>Global application life cycle control - triggers when application shuts down.</summary>
-        private readonly INodeLifetime nodeLifetime;
-
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
         /// <summary>An object capable of storing <see cref="Wallet"/>s to the file system.</summary>
         private readonly FileStorage<Wallet> fileStorage;
 
-        /// <summary>The broadcast manager.</summary>
-        private readonly IBroadcasterManager broadcasterManager;
-
         /// <summary>Provider of time functions.</summary>
         private readonly IDateTimeProvider dateTimeProvider;
 
         /// <summary>The settings for the wallet feature.</summary>
         private readonly WalletSettings walletSettings;
-
-        /// <summary>The settings for the wallet feature.</summary>
-        private readonly IScriptAddressReader scriptAddressReader;
 
         /// <summary>The private key cache for unlocked wallets.</summary>
         private readonly MemoryCache privateKeyCache;
@@ -170,12 +148,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             WalletSettings walletSettings,
             DataFolder dataFolder,
             IWalletFeePolicy walletFeePolicy,
-            IAsyncProvider asyncProvider,
-            INodeLifetime nodeLifetime,
             IDateTimeProvider dateTimeProvider,
-            IScriptAddressReader scriptAddressReader,
-            IWalletRepository walletRepository,
-            IBroadcasterManager broadcasterManager = null) // no need to know about transactions the node will broadcast to.
+            IWalletRepository walletRepository)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             Guard.NotNull(network, nameof(network));
@@ -183,9 +157,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             Guard.NotNull(walletSettings, nameof(walletSettings));
             Guard.NotNull(dataFolder, nameof(dataFolder));
             Guard.NotNull(walletFeePolicy, nameof(walletFeePolicy));
-            Guard.NotNull(asyncProvider, nameof(asyncProvider));
-            Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
-            Guard.NotNull(scriptAddressReader, nameof(scriptAddressReader));
             Guard.NotNull(walletRepository, nameof(walletRepository));
 
             this.Wallets = new WalletCollection(this);
@@ -198,11 +169,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.network = network;
             this.coinType = (CoinType)network.Consensus.CoinType;
             this.ChainIndexer = chainIndexer;
-            this.asyncProvider = asyncProvider;
-            this.nodeLifetime = nodeLifetime;
             this.fileStorage = new FileStorage<Wallet>(dataFolder.WalletPath);
-            this.broadcasterManager = broadcasterManager;
-            this.scriptAddressReader = scriptAddressReader;
             this.dateTimeProvider = dateTimeProvider;
             this.WalletRepository = walletRepository;
             this.ExcludeTransactionsFromWalletImports = true;
@@ -919,30 +886,66 @@ namespace Stratis.Bitcoin.Features.Wallet
         protected AccountHistory GetHistoryForAccount(HdAccount account, long? prevOutputTxTime = null, int? prevOutputIndex = null, int take = int.MaxValue, string searchQuery = null)
         {
             Guard.NotNull(account, nameof(account));
-            FlatHistory[] items;
+            var historyItems = new List<FlatHistory>();
 
             lock (this.lockObject)
             {
-                // Get transactions contained in the account.
-                var query = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
+                static bool coldStakeUtxoFilter(TransactionData d) => d.IsColdCoinStake == null || d.IsColdCoinStake == false;
 
-                // When the account is a normal one, we want to filter out all cold stake UTXOs.
-                if (account.IsNormalAccount())
+                // If the search query contains a transaction Id, the result needs to be
+                // built differently.
+                if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
                 {
-                    if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
-                        items = query.SelectMany(s => s.Transactions.Where(t => (t.IsColdCoinStake == null || t.IsColdCoinStake == false) && t.Id == parsedTxId).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    // First get the transaction and associated addresses by transaction id.
+                    IEnumerable<(HdAddress address, IEnumerable<TransactionData> transactionData)> result = this.WalletRepository.GetTransactionsById(account.AccountRoot.Wallet.Name, parsedTxId);
+
+                    // When the account is a normal one, filter out all cold stake UTXOs.
+                    if (account.IsNormalAccount())
+                    {
+                        foreach (var (address, transactionData) in result)
+                        {
+                            historyItems.AddRange(transactionData.Where(coldStakeUtxoFilter).Select(t => new FlatHistory { Address = address, Transaction = t }));
+                        }
+                    }
+                    // Else just add the set as is.
                     else
-                        items = query.SelectMany(s => s.Transactions.Where(t => t.IsColdCoinStake == null || t.IsColdCoinStake == false).Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    {
+                        foreach (var (address, transactionData) in result)
+                        {
+                            historyItems.AddRange(transactionData.Select(t => new FlatHistory { Address = address, Transaction = t }));
+                        }
+                    }
+
+                    // Lastly, populate the payment collections.
+                    for (int i = 0; i < historyItems.Count; i++)
+                    {
+                        var toCheck = historyItems[i];
+                        if (toCheck.Transaction.SpendingDetails != null)
+                        {
+                            var paymentDetailsChange = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, historyItems[i].Transaction, true);
+                            toCheck.Transaction.SpendingDetails.Change = new PaymentCollection(toCheck.Transaction.SpendingDetails, paymentDetailsChange.ToList(), true);
+
+                            var paymentDetails = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, historyItems[i].Transaction, false);
+                            toCheck.Transaction.SpendingDetails.Payments = new PaymentCollection(toCheck.Transaction.SpendingDetails, paymentDetails.ToList(), false);
+
+                            historyItems[i] = toCheck;
+                        }
+                    }
                 }
+                // Else query over the transaction set.
                 else
                 {
-                    items = account.GetCombinedAddresses()
-                        .Where(a => a.Transactions.Any())
-                        .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToArray();
+                    // Get transactions contained in the account.
+                    var allAddresses = account.GetCombinedAddresses().Where(a => a.Transactions.Any());
+
+                    if (account.IsNormalAccount())
+                        historyItems = allAddresses.SelectMany(s => s.Transactions.Where(coldStakeUtxoFilter).Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
+                    else
+                        historyItems = account.GetCombinedAddresses().Where(a => a.Transactions.Any()).SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
                 }
             }
 
-            return new AccountHistory { Account = account, History = items };
+            return new AccountHistory { Account = account, History = historyItems };
         }
 
         /// <inheritdoc />

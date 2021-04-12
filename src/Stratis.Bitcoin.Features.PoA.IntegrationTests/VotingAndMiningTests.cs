@@ -261,24 +261,24 @@ namespace Stratis.Bitcoin.Features.PoA.IntegrationTests
             var model = new HashModel() { Hash = NBitcoin.Crypto.Hashes.Hash256(RandomUtils.GetUInt64().ToBytes()).ToString() };
 
             // Node 1 votes to add hash
-            this.node1.FullNode.NodeController<DefaultVotingController>().VoteWhitelistHash(model);
+            this.node1.FullNode.NodeController<VotingController>().VoteWhitelistHash(model);
             await this.node1.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             // Node 2 votes to add hash
-            this.node2.FullNode.NodeController<DefaultVotingController>().VoteWhitelistHash(model);
+            this.node2.FullNode.NodeController<VotingController>().VoteWhitelistHash(model);
             await this.node2.MineBlocksAsync(maxReorg + 2);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             Assert.Single(this.node1.FullNode.NodeService<IWhitelistedHashesRepository>().GetHashes());
 
             // Node 1 votes to remove hash
-            this.node1.FullNode.NodeController<DefaultVotingController>().VoteRemoveHash(model);
+            this.node1.FullNode.NodeController<VotingController>().VoteRemoveHash(model);
             await this.node1.MineBlocksAsync(1);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 
             // Node 2 votes to remove hash
-            this.node2.FullNode.NodeController<DefaultVotingController>().VoteRemoveHash(model);
+            this.node2.FullNode.NodeController<VotingController>().VoteRemoveHash(model);
             await this.node2.MineBlocksAsync(maxReorg + 2);
             CoreNodePoAExtensions.WaitTillSynced(this.node1, this.node2);
 

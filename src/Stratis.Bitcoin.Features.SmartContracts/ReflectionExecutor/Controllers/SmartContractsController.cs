@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
@@ -55,6 +56,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private readonly ILocalExecutor localExecutor;
         private readonly ISmartContractTransactionService smartContractTransactionService;
         private readonly IConnectionManager connectionManager;
+        private readonly NodeSettings nodeSettings;
 
         public SmartContractsController(IBroadcasterManager broadcasterManager,
             IBlockStore blockStore,
@@ -69,7 +71,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             IReceiptRepository receiptRepository,
             ILocalExecutor localExecutor,
             ISmartContractTransactionService smartContractTransactionService,
-            IConnectionManager connectionManager)
+            IConnectionManager connectionManager,
+            NodeSettings nodeSettings)
         {
             this.stateRoot = stateRoot;
             this.contractDecompiler = contractDecompiler;
@@ -85,6 +88,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.localExecutor = localExecutor;
             this.smartContractTransactionService = smartContractTransactionService;
             this.connectionManager = connectionManager;
+            this.nodeSettings = nodeSettings;
         }
 
         /// <summary>
@@ -100,7 +104,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/code")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        public IActionResult GetCode([FromQuery]string address)
+        public IActionResult GetCode([FromQuery] string address)
         {
             uint160 addressNumeric = address.ToUint160(this.network);
             byte[] contractCode = this.stateRoot.GetCode(addressNumeric);
@@ -137,7 +141,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [Route("api/[controller]/balance")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        public IActionResult GetBalance([FromQuery]string address)
+        public IActionResult GetBalance([FromQuery] string address)
         {
             uint160 addressNumeric = address.ToUint160(this.network);
             ulong balance = this.stateRoot.GetCurrentBalance(addressNumeric);
@@ -512,7 +516,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            if (!this.connectionManager.ConnectedPeers.Any())
+            // Ignore this check if the node is running dev mode.
+            if (this.nodeSettings.DevMode == null && !this.connectionManager.ConnectedPeers.Any())
             {
                 this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.Forbidden, "Can't send transaction as the node requires at least one connection.", string.Empty);
@@ -564,7 +569,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             if (!this.ModelState.IsValid)
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
 
-            if (!this.connectionManager.ConnectedPeers.Any())
+            // Ignore this check if the node is running dev mode.
+            if (this.nodeSettings.DevMode == null && !this.connectionManager.ConnectedPeers.Any())
             {
                 this.logger.LogTrace("(-)[NO_CONNECTED_PEERS]");
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.Forbidden, "Can't send transaction as the node requires at least one connection.", string.Empty);

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -18,6 +17,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             public byte[] Datas;
             public bool Truth;
             public Address Address;
+            public UInt128 Value128;
+            public UInt256 Value256;
         }
 
         [Fact]
@@ -33,7 +34,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 Data = 0xAA,
                 Datas = new byte[] { 0xBB, 0xCC, 0xDD },
                 Truth = true,
-                Address = "0x0000000000000000000000000000000000000001".HexToAddress()
+                Address = "0x0000000000000000000000000000000000000001".HexToAddress(),
+                Value128 = 123,
+                Value256 = 456
             };
 
             var testBytes = primitiveSerializer.Serialize(testStruct);
@@ -47,6 +50,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Datas));
             Assert.Equal(testStruct.Truth, deserializedLog.Truth);
             Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Address);
+            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Value128.ToString());
+            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Value256.ToString());
         }
     }
 }

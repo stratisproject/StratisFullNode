@@ -78,6 +78,9 @@ namespace Stratis.Bitcoin.Controllers.Models
 
         /// <summary>Returns the status of the node.</summary>
         public string State { get; set; }
+
+        /// <summary>Returns whether or not the node is in Initial Block Download (syncing).</summary>
+        public bool? InIbd { get; set; }
     }
 
     /// <summary>

@@ -1,5 +1,4 @@
 ﻿using NBitcoin;
-using Stratis.SmartContracts.Core;
 
 namespace Stratis.SmartContracts.CLR
 {
@@ -12,7 +11,7 @@ namespace Stratis.SmartContracts.CLR
         /// Creates a ContractTxData object for a method invocation
         /// </summary>
         public ContractTxData(int vmVersion, ulong gasPrice, RuntimeObserver.Gas gasLimit, uint160 contractAddress,
-            string method, object[] methodParameters = null)
+            string method, object[] methodParameters = null, string[] signatures = null)
         {
             this.OpCodeType = (byte) ScOpcodeType.OP_CALLCONTRACT;
             this.VmVersion = vmVersion;
@@ -22,13 +21,14 @@ namespace Stratis.SmartContracts.CLR
             this.MethodName = method;
             this.MethodParameters = methodParameters;
             this.ContractExecutionCode = new byte[0];
+            this.Signatures = signatures;
         }
 
         /// <summary>
         /// Creates a ContractTxData for contract creation
         /// </summary>
         public ContractTxData(int vmVersion, ulong gasPrice, RuntimeObserver.Gas gasLimit, byte[] code,
-            object[] methodParameters = null)
+            object[] methodParameters = null, string[] signatures = null)
         {
             this.OpCodeType = (byte)ScOpcodeType.OP_CREATECONTRACT;
             this.VmVersion = vmVersion;
@@ -38,6 +38,7 @@ namespace Stratis.SmartContracts.CLR
             this.MethodName = "";
             this.MethodParameters = methodParameters;
             this.ContractAddress = uint160.Zero;
+            this.Signatures = signatures;
         }
 
         /// <summary>The method name of the contract that will be executed.</summary>
@@ -63,6 +64,9 @@ namespace Stratis.SmartContracts.CLR
 
         /// <summary>The contract code that will be executed.</summary>
         public byte[] ContractExecutionCode { get; }
+
+        /// <summary>The signatures (if any) passed as an array of base 64 encoded byte arrays - as returned by <see cref="Key.SignMessage"/>.</summary>
+        public string[] Signatures { get; }
 
         /// <summary>The maximum cost (in satoshi) the contract can spend.</summary>
         public ulong GasCostBudget

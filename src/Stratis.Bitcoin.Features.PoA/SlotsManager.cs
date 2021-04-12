@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>Determines whether timestamp is valid according to the network rules.</summary>
         bool IsValidTimestamp(uint headerUnixTimestamp);
 
-        uint GetRoundLengthSeconds(int? federationMembersCount = null);
+        TimeSpan GetRoundLength(int? federationMembersCount = null);
     }
 
     public class SlotsManager : ISlotsManager
@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Features.PoA
             List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
 
             // Round length in seconds.
-            uint roundTime = this.GetRoundLengthSeconds(federationMembers.Count);
+            uint roundTime = (uint)this.GetRoundLength(federationMembers.Count).TotalSeconds;
 
             // Index of a slot that current node can take in each round.
             uint slotIndex = (uint)federationMembers.FindIndex(x => x.PubKey == this.federationManager.CurrentFederationKey.PubKey);
@@ -79,13 +79,13 @@ namespace Stratis.Bitcoin.Features.PoA
             return (headerUnixTimestamp % this.consensusOptions.TargetSpacingSeconds) == 0;
         }
 
-        public uint GetRoundLengthSeconds(int? federationMembersCount = null)
+        public TimeSpan GetRoundLength(int? federationMembersCount)
         {
             federationMembersCount = federationMembersCount ?? this.federationManager.GetFederationMembers().Count;
 
             uint roundLength = (uint)(federationMembersCount * this.consensusOptions.TargetSpacingSeconds);
 
-            return roundLength;
+            return TimeSpan.FromSeconds(roundLength);
         }
     }
 }
