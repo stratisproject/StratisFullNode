@@ -1306,7 +1306,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             string hash = this.Wallet?.LastBlockSyncedHash == null ? "N/A" : this.Wallet.LastBlockSyncedHash.ToString();
             string height = this.Wallet?.LastBlockSyncedHeight == null ? "N/A" : this.Wallet.LastBlockSyncedHeight.ToString();
 
-            benchLogs.AppendLine("Fed.Wallet.Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height.PadRight(10)} (Hash : {hash})");
+            benchLogs.AppendLine("Fed.Wallet.Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height}".PadRight(10) + $"(Hash: {hash})");
         }
 
         private void AddComponentStats(StringBuilder benchLog)
