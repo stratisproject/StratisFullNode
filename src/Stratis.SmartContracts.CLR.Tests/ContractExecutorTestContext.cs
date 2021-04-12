@@ -51,7 +51,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             this.Vm = new ReflectionVirtualMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache);
             this.StateProcessor = new StateProcessor(this.Vm, this.AddressGenerator);
             this.InternalTxExecutorFactory = new InternalExecutorFactory(this.LoggerFactory, this.StateProcessor);
-            this.EcRecoverProvider = new EcRecoverProvider(this.Network);
+            this.EcRecoverProvider = new EcRecoverProvider();
             this.SmartContractStateFactory = new SmartContractStateFactory(this.ContractPrimitiveSerializer, this.InternalTxExecutorFactory, this.Serializer, this.EcRecoverProvider);
         }
     }

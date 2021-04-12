@@ -29,7 +29,7 @@ namespace Stratis.SmartContracts.IntegrationTests
                 // Sign a message
                 byte[] offChainSignature = EcRecoverProvider.SignMessage(privateKey, message);
 
-                var ecRecover = new EcRecoverProvider(network);
+                var ecRecover = new EcRecoverProvider();
                 // Get the address out of the signature
                 Address recoveredAddress = ecRecover.GetSigner(message, offChainSignature);
 
