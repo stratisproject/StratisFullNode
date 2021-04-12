@@ -11,13 +11,6 @@ namespace Stratis.SmartContracts.CLR
     /// </summary>
     public class EcRecoverProvider : IEcRecoverProvider
     {
-        private readonly Network network;
-
-        public EcRecoverProvider(Network network)
-        {
-            this.network = network;
-        }
-
         private static uint256 GetUint256FromMessage(byte[] message)
         {
             return new uint256(HashHelper.Keccak256(message));
@@ -36,7 +29,7 @@ namespace Stratis.SmartContracts.CLR
             uint256 hashedUint256 = GetUint256FromMessage(message);
             PubKey pubKey = PubKey.RecoverCompact(hashedUint256, signature);
 
-            return pubKey.GetAddress(this.network).ToString().ToAddress(this.network);
+            return pubKey.Hash.ToBytes().ToAddress();
         }
 
         /// <summary>
