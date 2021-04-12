@@ -41,7 +41,7 @@ public class SystemContractsDictionary : SmartContract
         return this.State.GetUInt32($"Quorum:{group}");
     }
 
-    public void AddSignatory(string group, Address address, uint newSize, uint newQuorum, byte[] signatures)
+    public void AddSignatory(byte[] signatures, string group, Address address, uint newSize, uint newQuorum)
     {
         Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
@@ -64,7 +64,7 @@ public class SystemContractsDictionary : SmartContract
         this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
     }
 
-    public void RemoveSignatory(string group, Address address, uint newSize, uint newQuorum, byte[] signatures)
+    public void RemoveSignatory(byte[] signatures, string group, Address address, uint newSize, uint newQuorum)
     {
         Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
@@ -134,7 +134,7 @@ public class SystemContractsDictionary : SmartContract
         return whiteListEntry.LastAddress;
     }
 
-    public void WhiteList(UInt256 codeHash, Address lastAddress, string name, byte[] signatures)
+    public void WhiteList(byte[] signatures, UInt256 codeHash, Address lastAddress, string name)
     {
         Assert(signatures != null);
         Assert(codeHash != default(UInt256));
@@ -185,7 +185,7 @@ public class SystemContractsDictionary : SmartContract
         this.State.SetUInt32($"Nonce:{codeHash}", nonce + 1);
     }
 
-    public void BlackList(UInt256 codeHash, byte[] signatures)
+    public void BlackList(byte[] signatures, UInt256 codeHash)
     {
         Assert(signatures != null);
         Assert(codeHash != default(UInt256));
