@@ -13,14 +13,14 @@ namespace Stratis.SCL.Crypto
     {
         private static Address[] VerifySignatures(byte[] signatures, byte[] message, Address[] addresses)
         {
+            const int signatureLength = 65;
+            const int minHeaderByte = 27;
+            const int maxHeaderByte = 34;
+
             try
             { 
                 if (message == null || signatures == null)
                     return null;
-
-                const int signatureLength = 65;
-                const int minHeaderByte = 27;
-                const int maxHeaderByte = 34;
 
                 byte[][] sigArray = Operations.UnflattenArray(signatures, signatureLength);
                 if (sigArray == null)
