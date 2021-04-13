@@ -1,4 +1,5 @@
 ﻿using Stratis.SmartContracts;
+// using ECRecover=Stratis.SCL.Crypto.ECRecover;
 
 public struct WhiteListEntry
 {
@@ -24,7 +25,7 @@ public class SystemContractsDictionary : SmartContract
     private void VerifySignatures(byte[] signatures, string authorizationChallenge)
     {
         /*
-        Assert(this.VerifySignatures(System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), signatures, this.Signatories).Length >= this.Quorum,
+        Assert(ECRecover.VerifySignatures(signatures, System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), this.Signatories).Length >= this.Quorum,
             $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
         */
     }
