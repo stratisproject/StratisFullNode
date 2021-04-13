@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR.Validation;
 using Stratis.SmartContracts.CLR.Validation.Validators.Method;
 using Stratis.SmartContracts.CLR.Validation.Validators.Module;
 using Stratis.SmartContracts.CLR.Validation.Validators.Type;
@@ -23,7 +25,8 @@ namespace Stratis.SmartContracts.CLR.Validation
             Core,
             typeof(SmartContract).Assembly,
             typeof(Enumerable).Assembly,
-            typeof(IStandardToken).Assembly
+            typeof(IStandardToken).Assembly,
+            typeof(SCL.Base.Operations).Assembly
         };
 
         public static ValidationPolicy Default = new ValidationPolicy()
@@ -46,5 +49,5 @@ namespace Stratis.SmartContracts.CLR.Validation
             .MethodDefValidator(new PInvokeValidator())
             .InstructionValidator(new MultiDimensionalArrayValidator())
             .InstructionValidator(new NewObjValidator());
-    }   
+    }
 }

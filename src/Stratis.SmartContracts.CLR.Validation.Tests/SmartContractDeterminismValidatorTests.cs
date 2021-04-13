@@ -834,6 +834,44 @@ public class Test : SmartContract
             Assert.False(result.IsValid);
             Assert.NotEmpty(result.Errors);
             Assert.True(result.Errors.All(e => e is ModuleDefinitionValidationResult));
-        }        
+        }
+
+        [Fact]
+        public void SmartContractValidator_Allows_SCL()
+        {
+            var adjustedSource = @"
+using Stratis.SmartContracts;
+using Base = Stratis.SCL.Base;
+
+[Deploy]
+public class LibraryTest : SmartContract
+{
+    public LibraryTest(ISmartContractState state) : base(state)
+    {
+        Base.Operations.Noop();
+    }
+
+    public void Exists()
+    {
+        State.SetBool(""Exists"", true);
+    }
+}";
+            ContractCompilationResult compilationResult = ContractCompiler.Compile(adjustedSource);
+            Assert.True(compilationResult.Success);
+
+            byte[] assemblyBytes = compilationResult.Compilation;
+            IContractModuleDefinition decompilation = ContractDecompiler.GetModuleDefinition(assemblyBytes).Value;
+
+            // Add a module reference
+            decompilation.ModuleDefinition.ModuleReferences.Add(new ModuleReference("Test.dll"));
+
+            var moduleDefinition = decompilation.ModuleDefinition;
+
+            SmartContractValidationResult result = new SmartContractValidator().Validate(moduleDefinition);
+
+            Assert.False(result.IsValid);
+            Assert.NotEmpty(result.Errors);
+            Assert.True(result.Errors.All(e => e is ModuleDefinitionValidationResult));
+        }
     }
 }
