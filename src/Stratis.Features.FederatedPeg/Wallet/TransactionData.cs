@@ -131,11 +131,18 @@ namespace Stratis.Features.FederatedPeg.Wallet
             return this.BlockHeight != null;
         }
 
+        public bool HasSpendingTransaction => this.SpendingDetails != null && this.SpendingDetails.TransactionId != default(uint256);
+
+        public void Unspend()
+        {
+            this.SpendingDetails.TransactionId = default(uint256);
+        }
+
         [NoTrace]
         public bool IsSpendable()
         {
             // TODO: Coinbase maturity check?
-            return this.SpendingDetails == null;
+            return !this.HasSpendingTransaction;
         }
 
         [NoTrace]

@@ -84,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
         private void RemoveSpentTransactionByHeight(TransactionData transactionData)
         {
-            if (transactionData.SpendingDetails?.BlockHeight == null)
+            if (!transactionData.HasSpendingTransaction || transactionData.SpendingDetails?.BlockHeight == null)
                 return;
 
             if (this.spentTransactionsByHeightDict.TryGetValue((int)transactionData.SpendingDetails.BlockHeight, out List<TransactionData> txList))

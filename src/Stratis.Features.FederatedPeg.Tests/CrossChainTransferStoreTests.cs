@@ -1069,7 +1069,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 Assert.Equal(numDeposits + numDeposits2, seenInBlock.Length);
 
                 // Everything is in a block - we shouldn't have any lingering unconfirmed transactions.
-                var unconfirmedTransactions = this.wallet.MultiSigAddress.Transactions.Where(x => x.SpendingDetails == null && x.BlockHeight == null).ToList();
+                var unconfirmedTransactions = this.wallet.MultiSigAddress.Transactions.Where(x => x.IsSpendable() && x.BlockHeight == null).ToList();
                 Assert.Empty(unconfirmedTransactions);
             }
         }

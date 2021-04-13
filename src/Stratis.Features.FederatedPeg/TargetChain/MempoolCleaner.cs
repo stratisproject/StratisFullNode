@@ -90,7 +90,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (walletTxs.TryGetTransaction(txIn.PrevOut.Hash, (int)txIn.PrevOut.N, out TransactionData tData2))
                         {
                             // Check if the input's UTXO is being spent by another confirmed transaction.
-                            if (tData2.SpendingDetails?.BlockHeight > 0 && tData2.SpendingDetails?.TransactionId != hash)
+                            if (tData2.HasSpendingTransaction && tData2.SpendingDetails?.BlockHeight > 0 && tData2.SpendingDetails?.TransactionId != hash)
                             {
                                 bDone = true;
                                 break;
