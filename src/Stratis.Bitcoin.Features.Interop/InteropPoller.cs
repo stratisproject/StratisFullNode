@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.Interop
     public class InteropPoller : IDisposable
     {
         private readonly InteropSettings interopSettings;
-        private readonly IETHClient ETHClientBase;
+        private readonly IETHClient ETHClient;
         private readonly Network network;
         private readonly IAsyncProvider asyncProvider;
         private readonly INodeLifetime nodeLifetime;
@@ -42,13 +42,28 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private Dictionary<DestinationChain, bool> eventFilterCreationRequired;
 
-        public InteropPoller(NodeSettings nodeSettings, InteropSettings interopSettings, IETHClient ethClientBase, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
+        private List<PubKey> multisigPubKeys = new List<PubKey>()
+        {
+            new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
+            new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
+            new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
+            new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
+            new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
+            new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
+            new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92"),
+            new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
+            new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
+            new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),
+            new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e")
+        };
+
+        public InteropPoller(NodeSettings nodeSettings, InteropSettings interopSettings, IETHClient ethClient, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
             ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState, IFederationManager federationManager, IFederationHistory federationHistory,
             IFederatedPegBroadcaster federatedPegBroadcaster, IConversionRequestRepository conversionRequestRepository, IInteropTransactionManager interopTransactionManager,
             CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             this.interopSettings = interopSettings;
-            this.ETHClientBase = ethClientBase;
+            this.ETHClient = ethClient;
             this.network = nodeSettings.Network;
             this.asyncProvider = asyncProvider;
             this.nodeLifetime = nodeLifetime;
@@ -138,7 +153,7 @@ namespace Stratis.Bitcoin.Features.Interop
             // Retrieves the current Ethereum chain height via the RPC interface to geth.
             try
             {
-                BigInteger blockHeight = await this.ETHClientBase.GetBlockHeightAsync().ConfigureAwait(false);
+                BigInteger blockHeight = await this.ETHClient.GetBlockHeightAsync().ConfigureAwait(false);
 
                 this.logger.LogInformation("Current Ethereum node block height is {0}.", blockHeight);
             }
@@ -160,7 +175,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             // Check for all Transfer events against the WrappedStrax contract since the last time we checked.
             // In future this could also poll for other events as the need arises.
-            List<EventLog<TransferEventDTO>> transferEvents = await this.ETHClientBase.GetTransferEventsForWrappedStraxAsync().ConfigureAwait(false);
+            List<EventLog<TransferEventDTO>> transferEvents = await this.ETHClient.GetTransferEventsForWrappedStraxAsync().ConfigureAwait(false);
 
             foreach (EventLog<TransferEventDTO> transferEvent in transferEvents)
             {
@@ -169,11 +184,11 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
 
                 // These could be mints or something else, either way ignore them.
-                if (transferEvent.Event.From == ETHClient.ETHClient.ZeroAddress)
+                if (transferEvent.Event.From == Interop.ETHClient.ETHClient.ZeroAddress)
                     continue;
 
                 // Transfers can only be burns if they are made with the zero address as the destination.
-                if (transferEvent.Event.To != ETHClient.ETHClient.ZeroAddress)
+                if (transferEvent.Event.To != Interop.ETHClient.ETHClient.ZeroAddress)
                     continue;
 
                 this.logger.LogInformation("Conversion burn transaction {0} received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
@@ -202,7 +217,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.logger.LogInformation("Conversion burn transaction {0} has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
 
                 // Look up the desired destination address for this account.
-                string destinationAddress = await this.ETHClientBase.GetDestinationAddressAsync(transferEvent.Event.From).ConfigureAwait(false);
+                string destinationAddress = await this.ETHClient.GetDestinationAddressAsync(transferEvent.Event.From).ConfigureAwait(false);
 
                 this.logger.LogInformation("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
                 
@@ -250,7 +265,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (this.eventFilterCreationRequired[DestinationChain.ETH])
             {
                 // The filter should only be set up once IBD completes.
-                await this.ETHClientBase.CreateTransferEventFilterAsync().ConfigureAwait(false);
+                await this.ETHClient.CreateTransferEventFilterAsync().ConfigureAwait(false);
 
                 this.eventFilterCreationRequired[DestinationChain.ETH] = false;
             }
@@ -279,7 +294,11 @@ namespace Stratis.Bitcoin.Features.Interop
             List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true);
 
             if (mintRequests == null)
+            {
+                this.logger.LogDebug("No requests.");
+
                 return;
+            }
 
             this.logger.LogInformation("There are {0} unprocessed conversion mint requests.", mintRequests.Count);
 
@@ -292,21 +311,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 var multisig = new List<CollateralFederationMember>();
 
-                var filtered = new List<PubKey>()
-                {
-                    new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
-                    new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
-                    new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
-                    new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
-                    new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
-                    new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
-                    new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92"),
-                    new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
-                    new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
-                    new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),
-                    new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e")
-                };
-
                 foreach (IFederationMember member in federation)
                 {
                     if (!(member is CollateralFederationMember collateralMember))
@@ -315,7 +319,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     if (!collateralMember.IsMultisigMember)
                         continue;
 
-                    if (this.network.NetworkType == NetworkType.Mainnet && !filtered.Contains(collateralMember.PubKey))
+                    if (this.network.NetworkType == NetworkType.Mainnet && !this.multisigPubKeys.Contains(collateralMember.PubKey))
                         continue;
 
                     multisig.Add(collateralMember);
@@ -323,7 +327,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // This should be impossible.
                 if (multisig.Count == 0)
+                {
+                    this.logger.LogError("Sanity check failed, there are no multisig members!");
+
                     return;
+                }
 
                 IFederationMember designatedMember = multisig[request.BlockHeight % multisig.Count];
 
@@ -334,7 +342,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // transfers. As we don't know precisely what value transactions are expected, the sole determining factor is
                 // whether the reserve has a large enough balance to service the current conversion request. If not, trigger a
                 // mint for a predetermined amount.
-                // BigInteger reserveBalanace = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
+                // BigInteger reserveBalanace = await this.ETHClient.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
 
                 // The request is denominated in satoshi and needs to be converted to wei.
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
@@ -353,9 +361,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
 
-                    string mintData = this.ETHClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
+                    string mintData = this.ETHClient.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
 
-                    BigInteger mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
+                    BigInteger mintTransactionId = await this.ETHClient.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
 
                     // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                     string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(MintPlaceHolderRequestId + ((int)mintTransactionId));
@@ -392,12 +400,12 @@ namespace Stratis.Bitcoin.Features.Interop
                     {
                         // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                         // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                        string abiData = this.ETHClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
+                        string abiData = this.ETHClient.EncodeTransferParams(request.DestinationAddress, amountInWei);
 
                         // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
                         // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
                         // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                        BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData).ConfigureAwait(false);
+                        BigInteger transactionId = await this.ETHClient.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData).ConfigureAwait(false);
 
                         this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
 
@@ -444,7 +452,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
                             // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
-                            BigInteger confirmationCount = await this.ETHClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
+                            BigInteger confirmationCount = await this.ETHClient.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
 
                             if (confirmationCount >= 6)
                             {
@@ -487,7 +495,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             // Once a quorum is reached, each node confirms the agreed transactionId.
                             // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
-                            string confirmationHash = await this.ETHClientBase.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+                            string confirmationHash = await this.ETHClient.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
 
                             this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
 
