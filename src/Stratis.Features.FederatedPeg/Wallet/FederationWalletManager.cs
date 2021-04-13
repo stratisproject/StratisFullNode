@@ -179,7 +179,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             {
                 SpendingDetails spendingDetail = transactionData.SpendingDetails;
 
-                if (transactionData.HasSpendingTransaction || spendingDetail.Transaction != null)
+                if (!transactionData.HasSpendingTransaction || spendingDetail.Transaction != null)
                 {
                     res.Add(transactionData, spendingDetail?.Transaction);
                     continue;
