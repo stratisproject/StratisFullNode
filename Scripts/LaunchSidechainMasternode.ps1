@@ -154,14 +154,14 @@ function Check-TimeDifference
     Write-Host "Checking UTC Time Difference (unixtime.co.za)" -ForegroundColor Cyan
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content)
-    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $RemoteTime0 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue| Select-Object -ExpandProperty content).replace('"','')
+    $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
+    $RemoteTime1 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
-    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content)
-    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $RemoteTime2 = (Invoke-WebRequest https://showcase.api.linx.twenty57.net/UnixTime/tounix?date=now -ErrorAction SilentlyContinue | Select-Object -ExpandProperty content).replace('"','')
+    $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
     if ( $timeDif -gt 2 -or $timeDif -lt 2 )
@@ -182,13 +182,13 @@ function Check-TimeDifference2
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
     $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
     $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
     $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://unixtimestamp.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
     if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
@@ -209,13 +209,13 @@ function Check-TimeDifference3
     $timeDifSamples = @([int16]::MaxValue,[int16]::MaxValue,[int16]::MaxValue)
     $SystemTime0 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
     $RemoteTime0 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[0] = $RemoteTime1 - $SystemTime1
+    $timeDifSamples[0] = $RemoteTime0 - $SystemTime0
     $SystemTime1 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
     $RemoteTime1 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
     $timeDifSamples[1] = $RemoteTime1 - $SystemTime1
     $SystemTime2 = ((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date).ToUniversalTime()).TotalSeconds)
     $RemoteTime2 = (New-Timespan -Start (Get-Date "01/01/1970") -End ([datetime]::Parse((Invoke-WebRequest http://google.com/ -UseBasicParsing -ErrorAction SilentlyContinue| Select-Object -ExpandProperty Headers).Date).ToUniversalTime())).TotalSeconds
-    $timeDifSamples[2] = $RemoteTime1 - $SystemTime1
+    $timeDifSamples[2] = $RemoteTime2 - $SystemTime2
     $timeDif = Get-Median -numberSeries $timeDifSamples
 
     if ( $timeDif -gt 2 -or $timeDif -lt -2 -or $timeDif -eq $null)
