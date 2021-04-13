@@ -22,7 +22,7 @@ namespace Stratis.SCL.Crypto
                 const int minHeaderByte = 27;
                 const int maxHeaderByte = 34;
 
-                byte[][] sigArray = Operations.DeflattenByteArray(signatures, signatureLength);
+                byte[][] sigArray = Operations.UnflattenArray(signatures, signatureLength);
                 if (sigArray == null)
                     return null;
 
