@@ -40,7 +40,6 @@ namespace Stratis.SCL.Crypto
             {
                 return null;
             }
-
         }
 
         /// <summary>
