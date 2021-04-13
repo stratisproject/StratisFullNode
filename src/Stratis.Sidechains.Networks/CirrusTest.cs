@@ -44,6 +44,8 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "tGXZrZiU44fx3SQj8tAQ3Zexy2VuELZtoh";
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "tUAzRBe1CaKaZnrxWPLVv7F4owHHKXAtbj";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
