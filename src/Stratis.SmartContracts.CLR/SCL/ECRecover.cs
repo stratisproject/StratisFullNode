@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -12,26 +13,34 @@ namespace Stratis.SCL.Crypto
     {
         private static Address[] VerifySignatures(byte[] signatures, byte[] message, Address[] addresses)
         {
-            if (message == null || signatures == null)
+            try
+            { 
+                if (message == null || signatures == null)
+                    return null;
+
+                const int signatureLength = 65;
+                const int minHeaderByte = 27;
+                const int maxHeaderByte = 34;
+
+                byte[][] sigArray = Operations.DeflattenByteArray(signatures, signatureLength);
+                if (sigArray == null)
+                    return null;
+
+                if (sigArray.Any(s => s.Length == 0 || s[0] < minHeaderByte || s[0] > maxHeaderByte))
+                    return null;
+
+                IEnumerable<KeyId> keyIds = sigArray.Select(s => PubKey.RecoverFromMessage(message, Encoders.Base64.EncodeData(s)).Hash);
+
+                if (addresses != null)
+                    keyIds = keyIds.Intersect(addresses.Select(a => new KeyId(a.ToBytes())));
+
+                return keyIds.Select(s => s.ToBytes().ToAddress()).ToArray();
+            }
+            catch (Exception)
+            {
                 return null;
+            }
 
-            const int signatureLength = 65;
-            const int minHeaderByte = 27;
-            const int maxHeaderByte = 34;
-
-            byte[][] sigArray = Operations.DeflattenByteArray(signatures, signatureLength);
-            if (sigArray == null)
-                return null;
-
-            if (sigArray.Any(s => s.Length == 0 || s[0] < minHeaderByte || s[0] > maxHeaderByte))
-                return null;
-
-            IEnumerable<KeyId> keyIds = sigArray.Select(s => PubKey.RecoverFromMessage(message, Encoders.Base64.EncodeData(s)).Hash);
-
-            if (addresses != null)
-                keyIds = keyIds.Intersect(addresses.Select(a => new KeyId(a.ToBytes())));
-
-            return keyIds.Select(s => s.ToBytes().ToAddress()).ToArray();
         }
 
         /// <summary>
