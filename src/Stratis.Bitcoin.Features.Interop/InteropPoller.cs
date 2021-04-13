@@ -40,20 +40,11 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
 
-        private bool firstPoll;
+        private Dictionary<DestinationChain, bool> eventFilterCreationRequired;
 
-        public InteropPoller(NodeSettings nodeSettings,
-            InteropSettings interopSettings,
-            IETHClient ethClientBase,
-            IAsyncProvider asyncProvider,
-            INodeLifetime nodeLifetime,
-            ChainIndexer chainIndexer,
-            IInitialBlockDownloadState initialBlockDownloadState,
-            IFederationManager federationManager,
-            IFederationHistory federationHistory,
-            IFederatedPegBroadcaster federatedPegBroadcaster,
-            IConversionRequestRepository conversionRequestRepository,
-            IInteropTransactionManager interopTransactionManager,
+        public InteropPoller(NodeSettings nodeSettings, InteropSettings interopSettings, IETHClient ethClientBase, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
+            ChainIndexer chainIndexer, IInitialBlockDownloadState initialBlockDownloadState, IFederationManager federationManager, IFederationHistory federationHistory,
+            IFederatedPegBroadcaster federatedPegBroadcaster, IConversionRequestRepository conversionRequestRepository, IInteropTransactionManager interopTransactionManager,
             CounterChainNetworkWrapper counterChainNetworkWrapper)
         {
             this.interopSettings = interopSettings;
@@ -71,16 +62,25 @@ namespace Stratis.Bitcoin.Features.Interop
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
             
-            this.firstPoll = true;
+            this.eventFilterCreationRequired = new Dictionary<DestinationChain, bool>()
+            {
+                {DestinationChain.ETH, true}
+            };
         }
 
         public void Initialize()
         {
             if (!this.interopSettings.InteropEnabled)
+            {
+                this.logger.LogDebug("Interop disabled.");
                 return;
+            }
 
             if (!this.federationManager.IsFederationMember)
+            {
+                this.logger.LogDebug("Not a federation member.");
                 return;
+            }
 
             this.logger.LogInformation($"Interoperability enabled, initializing periodic loop.");
 
@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     try
                     {
-                        await this.CheckETHNodeAsync().ConfigureAwait(false);
+                        await this.CheckInteropNodesAsync().ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -132,11 +132,10 @@ namespace Stratis.Bitcoin.Features.Interop
                 startAfter: TimeSpans.Second);
         }
 
-        /// <summary>
-        /// Retrieves the current Ethereum chain height via the RPC interface to geth.
-        /// </summary>
-        private async Task CheckETHNodeAsync()
+        /// <summary>Retrieves the current chain heights of interop enabled chains via the RPC interface.</summary>
+        private async Task CheckInteropNodesAsync()
         {
+            // Retrieves the current Ethereum chain height via the RPC interface to geth.
             try
             {
                 BigInteger blockHeight = await this.ETHClientBase.GetBlockHeightAsync().ConfigureAwait(false);
@@ -147,6 +146,8 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 this.logger.LogError("Error checking Ethereum node status: {0}", e);
             }
+
+            // TODO add height check of other chains here
         }
 
         /// <summary>
@@ -155,13 +156,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         private async Task CheckForContractEventsAsync()
         {
-            if (this.firstPoll)
-            {
-                // The filter should only be set up once IBD completes.
-                await this.ETHClientBase.CreateTransferEventFilterAsync().ConfigureAwait(false);
-
-                this.firstPoll = false;
-            }
+            await this.CreateEventFiltersIfRequired().ConfigureAwait(false);
 
             // Check for all Transfer events against the WrappedStrax contract since the last time we checked.
             // In future this could also poll for other events as the need arises.
@@ -245,6 +240,24 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <summary>
+        /// Creates filters that the RPC interfaces uses to listen for events against the desired contract.
+        /// In this case the filter is specifically listening for Transfer events emitted by the wrapped strax
+        /// contracts deployed on supported chains.
+        /// </summary>
+        private async Task CreateEventFiltersIfRequired()
+        {
+            if (this.eventFilterCreationRequired[DestinationChain.ETH])
+            {
+                // The filter should only be set up once IBD completes.
+                await this.ETHClientBase.CreateTransferEventFilterAsync().ConfigureAwait(false);
+
+                this.eventFilterCreationRequired[DestinationChain.ETH] = false;
+            }
+
+            // TODO setup event filters for other chains here
+        }
+
         /// <summary>Converting from wei to satoshi will result in a loss of precision past the 8th decimal place.</summary>
         /// <param name="wei">The number of wei to convert.</param>
         /// <returns>The equivalent number of satoshi corresponding to the number of wei.</returns>
@@ -321,7 +334,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // transfers. As we don't know precisely what value transactions are expected, the sole determining factor is
                 // whether the reserve has a large enough balance to service the current conversion request. If not, trigger a
                 // mint for a predetermined amount.
-                //BigInteger reserveBalanace = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
+                // BigInteger reserveBalanace = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
 
                 // The request is denominated in satoshi and needs to be converted to wei.
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
