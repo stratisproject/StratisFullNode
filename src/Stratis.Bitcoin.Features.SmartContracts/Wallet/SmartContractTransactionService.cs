@@ -201,10 +201,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
         private string[] ReplaceSignatures(string[] parameters, string[] signatures)
         {
-            const int signatureLength = 65;
-            const int minHeaderByte = 27;
-            const int maxHeaderByte = 34;
-
             if (parameters == null)
                 return null;
 
@@ -216,15 +212,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 {
                     if (encodedSigs == null)
                     {
-                        var sigs = (signatures ?? new string[0]).Select(s => Convert.FromBase64String(s)).ToArray();
-                        if (sigs.Any(s => s.Length != signatureLength || s[0] < minHeaderByte || s[0] > maxHeaderByte))
-                            throw new Exception("Invalid signature(s).");
-
-                        var sigbuf = new byte[sigs.Length * signatureLength];
-                        for (int j = 0; j < sigs.Length; j++)
-                            Array.Copy(sigs[j], 0, sigbuf, j * signatureLength, signatureLength);
-
-                        encodedSigs = $"{(int)MethodParameterDataType.ByteArray}#{Encoders.Hex.EncodeData(sigbuf)}";
+                        var serializer = new ContractPrimitiveSerializer(this.network);
+                        var sigbuf = serializer.Serialize(signatures ?? new string[0]);
+                        encodedSigs = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-","")}";
                     }
 
                     parameters[i] = encodedSigs;
