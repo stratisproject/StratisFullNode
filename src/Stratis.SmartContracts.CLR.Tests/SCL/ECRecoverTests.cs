@@ -15,10 +15,9 @@ namespace Stratis.SmartContracts.CLR.Tests.SCL
             string authorizationChallenge = "This is a test";
             Key[] keys = new[] { new Key(), new Key(), new Key() };
             Address[] addresses = keys.Select(k => k.PubKey.Hash.ToBytes().ToAddress()).ToArray();
-            byte[][] sigs = keys.Select(k => Convert.FromBase64String(k.SignMessage(authorizationChallenge))).ToArray();
-            byte[] flatSigs = Operations.FlattenArray(sigs, sigs[0].Length);
+            string[] sigs = keys.Select(k => k.SignMessage(authorizationChallenge)).ToArray();
 
-            Assert.True(ECRecover.TryVerifySignatures(flatSigs, System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), addresses, out Address[] verifiedAddresses));
+            Assert.True(ECRecover.TryVerifySignatures(sigs, System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), addresses, out Address[] verifiedAddresses));
             Assert.Equal(addresses, verifiedAddresses);
         }
     }
