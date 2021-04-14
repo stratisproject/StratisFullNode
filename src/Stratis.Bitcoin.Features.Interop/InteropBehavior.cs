@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
-using Stratis.Bitcoin.Features.Interop.EthereumClient;
+using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
@@ -16,7 +16,7 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropBehavior : NetworkPeerBehavior
     {
-        private readonly NLog.ILogger logger;
+        private readonly ILogger logger;
 
         private readonly Network network;
 
@@ -24,30 +24,26 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly IInteropTransactionManager interopTransactionManager;
 
-        private readonly IEthereumClientBase ethereumClientBase;
+        private readonly IETHClient ETHClient;
 
-        public InteropBehavior(
-            Network network,
-            IFederationManager federationManager,
-            IInteropTransactionManager interopTransactionManager,
-            IEthereumClientBase ethereumClientBase)
+        public InteropBehavior(Network network, IFederationManager federationManager, IInteropTransactionManager interopTransactionManager, IETHClient ETHClient)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(federationManager, nameof(federationManager));
             Guard.NotNull(interopTransactionManager, nameof(interopTransactionManager));
-            Guard.NotNull(ethereumClientBase, nameof(ethereumClientBase));
+            Guard.NotNull(ETHClient, nameof(ETHClient));
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.federationManager = federationManager;
             this.interopTransactionManager = interopTransactionManager;
-            this.ethereumClientBase = ethereumClientBase;
+            this.ETHClient = ETHClient;
         }
 
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase);
+            return new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ETHClient);
         }
 
         protected override void AttachCore()
@@ -101,7 +97,7 @@ namespace Stratis.Bitcoin.Features.Interop
             try
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ethereumClientBase.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                confirmationCount = await this.ETHClient.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
             catch (Exception)
             {

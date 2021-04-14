@@ -27,7 +27,7 @@ namespace Stratis.Features.FederatedPeg
         /// <returns><c>true</c> if address was extracted; <c>false</c> otherwise.</returns>
         bool TryGetTargetAddress(Transaction transaction, out string address);
 
-        bool TryGetTargetEthereumAddress(Transaction transaction, out string address);
+        bool TryGetTargetETHAddress(Transaction transaction, out string address);
 
         /// <summary>
         /// Tries to find a single OP_RETURN output that can be interpreted as a transaction id.
@@ -69,10 +69,10 @@ namespace Stratis.Features.FederatedPeg
             return true;
         }
 
-        public bool TryGetTargetEthereumAddress(Transaction transaction, out string address)
+        public bool TryGetTargetETHAddress(Transaction transaction, out string address)
         {
             var opReturnAddresses = SelectBytesContentFromOpReturn(transaction)
-                .Select(this.TryConvertValidOpReturnDataToEthereumAddress)
+                .Select(this.TryConvertValidOpReturnDataToETHAddress)
                 .Where(s => s != null)
                 .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
 
@@ -124,7 +124,8 @@ namespace Stratis.Features.FederatedPeg
             // Attempt to parse the string. Validates the base58 string.
             try
             {
-                BitcoinAddress bitcoinAddress = this.counterChainNetwork.Parse<BitcoinAddress>(destination);
+                this.counterChainNetwork.Parse<BitcoinAddress>(destination);
+
                 return destination;
             }
             catch (Exception ex)
@@ -134,7 +135,7 @@ namespace Stratis.Features.FederatedPeg
             }
         }
 
-        private string TryConvertValidOpReturnDataToEthereumAddress(byte[] data)
+        private string TryConvertValidOpReturnDataToETHAddress(byte[] data)
         {
             // After removing the RETURN operator, convert the remaining bytes to our candidate address.
             string destination = Encoding.UTF8.GetString(data);

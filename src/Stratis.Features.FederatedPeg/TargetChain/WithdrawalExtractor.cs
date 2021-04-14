@@ -29,9 +29,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// </summary>
         private const int ExpectedNumberOfOutputsNoChange = 2;
 
-        /// <summary>
-        /// Withdrawals will have 3 outputs when there is change to be sent.
-        /// </summary>
+        /// <summary>Withdrawals will have 3 outputs when there is change to be sent.</summary>
         private const int ExpectedNumberOfOutputsChange = 3;
 
         private readonly IConversionRequestRepository conversionRequestRepository;
@@ -69,16 +67,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 {
                     // So that we don't get stuck if we miss one inadvertently, don't break out of the loop if the height is less.
                     if (burnRequest.BlockHeight < blockHeight)
-                    {
                         continue;
-                    }
-
+                    
                     // We expect them to be ordered, so as soon as they exceed the current height, ignore the rest.
                     if (burnRequest.BlockHeight > blockHeight)
-                    {
                         break;
-                    }
-
+                    
                     // We use the transaction ID from the Ethereum chain as the request ID for the withdrawal.
                     // To parse it into a uint256 we need to trim the leading hex marker from the string.
                     uint256 requestId;
@@ -95,7 +89,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     // Immediately flag it as processed & persist so that it can't be added again.
                     burnRequest.Processed = true;
-                    burnRequest.RequestStatus = (int)ConversionRequestStatus.Processed;
+                    burnRequest.RequestStatus = ConversionRequestStatus.Processed;
 
                     this.conversionRequestRepository.Save(burnRequest);
                 }
@@ -154,13 +148,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 targetAddress = this.network.CirrusRewardDummyAddress;
             }
 
-            var withdrawal = new Withdrawal(
-                uint256.Parse(depositId),
-                transaction.GetHash(),
-                withdrawalAmount,
-                targetAddress,
-                blockHeight,
-                blockHash);
+            var withdrawal = new Withdrawal(uint256.Parse(depositId), transaction.GetHash(), withdrawalAmount, targetAddress, blockHeight, blockHash);
 
             return withdrawal;
         }

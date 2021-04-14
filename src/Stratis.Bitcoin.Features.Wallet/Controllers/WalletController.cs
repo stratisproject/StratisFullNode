@@ -437,6 +437,23 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         }
 
         /// <summary>
+        /// Same as <see cref="BuildTransaction"/> but overrides OP_RETURN data and encodes destination chain and address for InterFlux transaction.
+        /// </summary>
+        [Route("build-interflux-transaction")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            request.OpReturnData = InterFluxOpReturnEncoder.Encode(request.DestinationChain, request.DestinationAddress);
+
+            return await this.Execute(request, cancellationToken,
+                async (req, token) => Json(await this.walletService.BuildTransaction(req, token)));
+        }
+
+        /// <summary>
         /// Sends a transaction that has already been built.
         /// Use the /api/Wallet/build-transaction call to create transactions.
         /// </summary>

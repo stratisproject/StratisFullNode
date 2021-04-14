@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop.Models
 {
@@ -8,10 +9,10 @@ namespace Stratis.Bitcoin.Features.Interop.Models
         public string RequestId { get; set; }
 
         [JsonProperty(PropertyName = "requestType")]
-        public int RequestType { get; set; }
+        public ConversionRequestType RequestType { get; set; }
 
         [JsonProperty(PropertyName = "requestStatus")]
-        public int RequestStatus { get; set; }
+        public ConversionRequestStatus RequestStatus { get; set; }
 
         [JsonProperty(PropertyName = "blockHeight")]
         public int BlockHeight { get; set; }

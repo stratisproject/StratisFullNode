@@ -7,11 +7,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
     {
         public RecordLatestMatureDepositsResult()
         {
-            this.WithDrawalTransactions = new List<Transaction>();
+            this.WithdrawalTransactions = new List<Transaction>();
         }
 
         public bool MatureDepositRecorded { get; private set; }
-        public List<Transaction> WithDrawalTransactions { get; private set; }
+
+        public List<Transaction> WithdrawalTransactions { get; }
 
         public RecordLatestMatureDepositsResult Succeeded()
         {

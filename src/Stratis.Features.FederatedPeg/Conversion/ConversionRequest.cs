@@ -21,7 +21,17 @@ namespace Stratis.Features.FederatedPeg.Conversion
         NotOriginator
     }
 
-    /// <summary>Request to mint or burn wSTRAX on ETH chain.</summary>
+    /// <summary>Chains supported by InterFlux integration.</summary>
+    public enum DestinationChain
+    {
+        STRAX = 0, // Stratis
+        ETH, // Ethereum
+        ETC, // Ethereum classic
+        AVAX, // Avalanche
+        ADA // Cardano
+    }
+
+    /// <summary>Request to mint or burn wSTRAX.</summary>
     /// <remarks>
     /// When wSTRAX coins are minted and sent to <see cref="DestinationAddress"/> on ETH chain same amount of STRAX coins should be received by the multisig address.
     /// When wSTRAX coins are burned on ETH chain same amount of STRAX coins should be sent to <see cref="DestinationAddress"/>.
@@ -39,12 +49,12 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// The type of the conversion request, mint or burn.
         /// <see cref="ConversionRequestType"/>
         /// </summary>
-        public int RequestType { get { return this.requestType; } set { this.requestType = value; } }
+        public ConversionRequestType RequestType { get { return (ConversionRequestType)this.requestType; } set { this.requestType = (int)value; } }
 
         /// <summary>
         /// The status of the request, from unprocessed to processed.
         /// </summary>
-        public int RequestStatus { get { return this.requestStatus; } set { this.requestStatus = value; } }
+        public ConversionRequestStatus RequestStatus { get { return (ConversionRequestStatus)this.requestStatus; } set { this.requestStatus = (int)value; } }
 
         /// <summary>
         /// For a mint request this is needed to coordinate which multisig member is considered the transaction originator on the wallet contract.
@@ -57,6 +67,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// Either the Ethereum address to send the minted funds to, or the STRAX address to send unwrapped wSTRAX funds to.
         /// </summary>
         public string DestinationAddress { get { return this.destinationAddress; } set { this.destinationAddress = value; } }
+
+        /// <summary>Chain on which STRAX minting or burning should occur.</summary>
+        public DestinationChain DestinationChain { get { return (DestinationChain)this.destinationChain; } set { this.destinationChain = (int)value; } }
 
         /// <summary>
         /// Amount of the conversion, this is always denominated in satoshi. This needs to be converted to wei for submitting mint transactions.
@@ -80,6 +93,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         private string destinationAddress;
 
+        private int destinationChain;
+
         private ulong amount;
 
         private bool processed;
@@ -91,6 +106,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             s.ReadWrite(ref this.requestStatus);
             s.ReadWrite(ref this.blockHeight);
             s.ReadWrite(ref this.destinationAddress);
+            s.ReadWrite(ref this.destinationChain);
             s.ReadWrite(ref this.amount);
             s.ReadWrite(ref this.processed);
         }

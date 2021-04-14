@@ -11,7 +11,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
 {
     public interface IConversionRequestKeyValueStore : IKeyValueRepository
     {
-        List<ConversionRequest> GetAll(int type, bool onlyUnprocessed);
+        List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed);
     }
 
     public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
@@ -35,7 +35,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.leveldb = new DB(options, folder);
         }
 
-        public List<ConversionRequest> GetAll(int type, bool onlyUnprocessed)
+        public List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed)
         {
             var values = new List<ConversionRequest>();
             IEnumerator<KeyValuePair<byte[], byte[]>> enumerator = this.leveldb.GetEnumerator();

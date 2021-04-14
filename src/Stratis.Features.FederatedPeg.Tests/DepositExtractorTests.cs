@@ -16,7 +16,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 {
     public class DepositExtractorTests
     {
-        public const string TargetEthereumAddress = "0x4F26FfBe5F04ED43630fdC30A87638d53D0b0876";
+        public const string TargetETHAddress = "0x4F26FfBe5F04ED43630fdC30A87638d53D0b0876";
 
         private readonly IFederatedPegSettings federationSettings;
         private readonly IOpReturnDataReader opReturnDataReader;
@@ -166,10 +166,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
 
             // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
 
             // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionNormal });
@@ -263,19 +263,19 @@ namespace Stratis.Features.FederatedPeg.Tests
             byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
 
             // Set amount to be less than deposit minimum
-            CreateConversionTransaction(TargetEthereumAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
 
             // Set amount to be less than the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
 
             // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
 
             // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
 
             // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionSmall });
@@ -344,10 +344,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
             // Set amount to be equal to the normal threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
             // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(TargetEthereumAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
@@ -357,11 +357,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             foreach (IDeposit extractedDeposit in extractedDeposits)
             {
                 Assert.True(extractedDeposit.Amount > this.federationSettings.NormalDepositThresholdAmount);
-                Assert.Equal(TargetEthereumAddress, extractedDeposit.TargetAddress);
+                Assert.Equal(TargetETHAddress, extractedDeposit.TargetAddress);
             }
         }
 
-        private Transaction CreateConversionTransaction(string targetEthereumAddress, Block block, Money depositAmount, byte[] opReturnBytes)
+        private Transaction CreateConversionTransaction(string targetETHAddress, Block block, Money depositAmount, byte[] opReturnBytes)
         {
             // Create the conversion transaction.
             Transaction conversionTransaction = this.transactionBuilder.BuildOpReturnTransaction(this.addressHelper.SourceChainMultisigAddress, opReturnBytes, depositAmount);
@@ -369,9 +369,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Add the conversion transaction to the block.
             block.AddTransaction(conversionTransaction);
 
-            this.opReturnDataReader.TryGetTargetEthereumAddress(conversionTransaction, out string _).Returns(callInfo =>
+            this.opReturnDataReader.TryGetTargetETHAddress(conversionTransaction, out string _).Returns(callInfo =>
             {
-                callInfo[1] = targetEthereumAddress;
+                callInfo[1] = targetETHAddress;
                 return true;
             });
 
