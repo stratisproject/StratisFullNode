@@ -566,6 +566,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     break;
             }
 
+            this.logger.Debug("Cleaned {0} transactions older than the CCTS tip less max reorg of {1}.", transactionsPastMaxReorg.Count, crossChainTransferStoreTip);
+
             return walletUpdated;
         }
 
