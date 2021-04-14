@@ -1,4 +1,6 @@
-﻿namespace Stratis.SCL.Base
+﻿using System;
+
+namespace Stratis.SCL.Base
 {
     public static class Operations
     {
