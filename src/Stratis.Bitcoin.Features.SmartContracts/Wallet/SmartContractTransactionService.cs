@@ -4,6 +4,7 @@ using System.Linq;
 using CSharpFunctionalExtensions;
 using NBitcoin;
 using NBitcoin.DataEncoders;
+using Nethereum.RLP;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -199,26 +200,81 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return BuildContractTransactionResult.Success(model);
         }
 
-        private string[] ReplaceSignatures(string[] parameters, string[] signatures)
+        /// <summary>
+        /// Replaces parameters of the form "N1[element1,element2,element3,...]" with byte arrays of the form "N2#byte-array-in-hex",
+        /// where N1 and N2 are the integer values of the <see cref="MethodParameterDataType"/>, with N2 being 10 (byte array).
+        /// </summary>
+        /// <param name="network">The network.</param>
+        /// <param name="parameters">A list of parameters that may contain arrays.</param>
+        /// <returns>The input parameters with arrays replaced with byte arrays.</returns>
+        /// <remarks>The encoded byte arrays are suitable for deserializing as arrays of the specified type (N1 in this example)
+        /// by using <see cref="ContractPrimitiveSerializer.Deserialize{T}(byte[])"></see>.</remarks>
+        public static string[] ReplaceArraysWithByteArrays(Network network, string[] parameters)
         {
             if (parameters == null)
                 return null;
 
-            // Replace SIG# with any included signatures.
-            string encodedSigs = null;
+            var cpSerializer = new ContractPrimitiveSerializer(network);
+            var mpSerializer = new MethodParameterStringSerializer(network);
+
+            // Replace arrays with byte arrays.
             for (int i = 0; i < parameters.Length; i++)
             {
-                if (parameters[i].ToUpper() == "SIG#")
-                {
-                    if (encodedSigs == null)
-                    {
-                        var serializer = new ContractPrimitiveSerializer(this.network);
-                        var sigbuf = serializer.Serialize(signatures ?? new string[0]);
-                        encodedSigs = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-","")}";
-                    }
+                string param = parameters[i];
+                int type = 0;
+                int ndx = 0;
+                while (param[ndx] >= '0' && param[ndx] <= '9')
+                    type = type * 10 + param[ndx++] - '0';
 
-                    parameters[i] = encodedSigs;
+                if (param[ndx++] != '[')
+                    continue;
+
+                if (type == 0)
+                    type = 4;
+
+                var elements = new List<string>();
+                int elementStart = ndx;
+                int elementEnd = elementStart;
+                bool quoted = false;
+
+                for (; ndx < param.Length; ndx++)
+                {
+                    if (!quoted)
+                    {
+                        if (param[ndx] == ',' || param[ndx] == ']' || (param[ndx] == ' ' && elementEnd > elementStart))
+                        {
+                            string element = param.Substring(elementStart, elementEnd - elementStart);
+                            elements.Add(element);
+                            if (param[ndx] == ']')
+                                break;
+                        }
+                        else if (param[ndx] == '\'')
+                        {
+                            quoted = true;
+                        }
+                        else if (param[ndx] != ' ')
+                        {
+                            elementEnd = ndx + 1;
+                            continue;
+                        }
+
+                        elementStart = ndx + 1;
+                        elementEnd = elementStart;
+                    }
+                    else
+                    {
+                        if (param[ndx] == '\'' && ((ndx + 1) >= param.Length || param[ndx + 1] != '\''))
+                            quoted = false;
+                        else
+                            elementEnd = ndx + 1;
+                    }
                 }
+
+                object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
+
+                var sigbuf = cpSerializer.Serialize(values);
+
+                parameters[i] = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-","")}";
             }
 
             return parameters;
@@ -240,8 +296,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
-                    // If signatures have been included then they replace the SIG# parameter.
-                    request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures);
+                    request.Parameters = ReplaceArraysWithByteArrays(this.network, request.Parameters);
 
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, methodParameters);
@@ -304,8 +359,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
-                    // If signatures have been included then they replace the SIG# parameter.
-                    request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures);
+                    request.Parameters = ReplaceArraysWithByteArrays(this.network, request.Parameters);
 
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), methodParameters);

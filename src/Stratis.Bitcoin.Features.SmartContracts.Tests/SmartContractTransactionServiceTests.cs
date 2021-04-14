@@ -1012,8 +1012,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                         TransactionId = utxoId.ToString()
                     },
                 },
-                Parameters = new[] { "SIG#" },
-                Signatures = new[] { sig1, sig2 }
+                Parameters = new[] { $"['{sig1}','{sig2}']" }
             };
 
             this.walletManager.Setup(x => x.GetAddressBalance(request.Sender))
