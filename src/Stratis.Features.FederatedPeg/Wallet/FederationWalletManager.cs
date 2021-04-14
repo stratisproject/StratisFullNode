@@ -683,8 +683,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             // New UTXOs are added, existing ones are updated.
             int index = transaction.Outputs.IndexOf(utxo);
             Money amount = utxo.Value;
-            TransactionData foundTransaction = this.Wallet.MultiSigAddress.Transactions.FirstOrDefault(t => (t.Id == transactionHash) && (t.Index == index));
-            if (foundTransaction == null)
+            if (!this.Wallet.MultiSigAddress.Transactions.TryGetTransaction(transactionHash, index, out TransactionData foundTransaction))
             {
                 this.logger.Debug("Transaction '{0}-{1}' not found, creating. BlockHeight={2}, BlockHash={3}", transactionHash, index, blockHeight, blockHash);
 
