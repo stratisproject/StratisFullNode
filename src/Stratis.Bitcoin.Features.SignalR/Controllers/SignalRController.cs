@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Controllers
         /// <summary>
         /// Returns SignalR Connection Info.
         /// </summary>
-        /// <returns>Returns SignalR Connection Info as Json {SignalRUri,SignalPort}</returns>
+        /// <returns>Returns SignalR Connection Info as Json {SignalRUri,SignalRPort}</returns>
         /// <response code="200">Returns connection info</response>
         [Route("getConnectionInfo")]
         [HttpGet]
@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.SignalR.Controllers
             return this.Json(new
             {
                 this.signalRSettings.SignalRUri,
-                this.signalRSettings.SignalPort
+                this.signalRSettings.SignalRPort
             });
         }
     }
