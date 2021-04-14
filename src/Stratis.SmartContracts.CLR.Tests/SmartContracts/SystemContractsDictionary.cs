@@ -24,8 +24,9 @@ public class SystemContractsDictionary : SmartContract
 
     private void VerifySignatures(byte[] signatures, string authorizationChallenge)
     {
+        string[] sigs = this.Serializer.ToArray<string>(signatures);
         /*
-        Assert(ECRecover.VerifySignatures(signatures, System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), this.Signatories).Length >= this.Quorum,
+        Assert(ECRecover.VerifySignatures(sigs, System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), this.Signatories).Length >= this.Quorum,
             $"Please provide {this.Quorum} valid signatures for '{authorizationChallenge}'.");
         */
     }
