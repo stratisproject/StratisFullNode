@@ -962,14 +962,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     return false;
                 }
 
-                // As the CCTS syncs from the federation wallet, it needs to be
-                // responsible for cleaning transaciton past max reorg.
-                // Doing this from the federatrion wallet manager could mean transactions
-                // are cleaned before they are processed by the CCTS (which means they will
-                // be wrongly added back.
-                if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
-                    this.federationWalletManager.SaveWallet();
-
                 // If the federation wallet tip matches the store's tip, exit.
                 if (federationWalletTip.Hash == this.TipHashAndHeight.HashBlock)
                 {
@@ -1007,6 +999,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                 dbreezeTransaction.Commit();
                             }
+
+                            // As the CCTS syncs from the federation wallet, it needs to be
+                            // responsible for cleaning transaciton past max reorg.
+                            // Doing this from the federatrion wallet manager could mean transactions
+                            // are cleaned before they are processed by the CCTS (which means they will
+                            // be wrongly added back.
+                            if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
+                                this.federationWalletManager.SaveWallet();
 
                             return true;
                         }
