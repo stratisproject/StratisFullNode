@@ -675,29 +675,23 @@ namespace Stratis.Features.FederatedPeg.Wallet
             Guard.NotNull(utxo, nameof(utxo));
             Guard.Assert(blockHash == (blockHash ?? block?.GetHash()));
 
-            uint256 transactionHash = transaction.GetHash();
-
-            // Get the collection of transactions to add to.
-            Script script = utxo.ScriptPubKey;
-
             // Check if a similar UTXO exists or not (same transaction ID and same index).
             // New UTXOs are added, existing ones are updated.
+            uint256 transactionHash = transaction.GetHash();
             int index = transaction.Outputs.IndexOf(utxo);
-            Money amount = utxo.Value;
-            TransactionData foundTransaction = this.Wallet.MultiSigAddress.Transactions.FirstOrDefault(t => (t.Id == transactionHash) && (t.Index == index));
-            if (foundTransaction == null)
+            if (!this.Wallet.MultiSigAddress.Transactions.TryGetTransaction(transactionHash, index, out TransactionData foundTransaction))
             {
                 this.logger.Debug("Transaction '{0}-{1}' not found, creating. BlockHeight={2}, BlockHash={3}", transactionHash, index, blockHeight, blockHash);
 
                 TransactionData newTransaction = new TransactionData
                 {
-                    Amount = amount,
+                    Amount = utxo.Value,
                     BlockHeight = blockHeight,
                     BlockHash = blockHash,
                     Id = transactionHash,
                     CreationTime = DateTimeOffset.FromUnixTimeSeconds(block?.Header.Time ?? this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp()),
                     Index = index,
-                    ScriptPubKey = script
+                    ScriptPubKey = utxo.ScriptPubKey
                 };
 
                 this.Wallet.MultiSigAddress.Transactions.Add(newTransaction);
