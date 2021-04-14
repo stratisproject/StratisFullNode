@@ -5,92 +5,128 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public class InteropSettings
     {
+        public ETHInteropSettings ETHSettings { get; set; }
+
+        public BNBInteropSettings BNBSettings { get; set; }
+
         public bool InteropEnabled { get; set; }
 
         private const string InteropEnabledKey = "interop";
-
-        #region unused
-
-        /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
-        public string InteropContractCirrusAddress { get; set; }
-
-        private const string InteropContractCirrusAddressKey = "interopcontractcirrusaddress";
         
-        /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
-        public string InteropContractETHAddress { get; set; }
+        public InteropSettings(NodeSettings nodeSettings)
+        {
+            this.InteropEnabled = nodeSettings.ConfigReader.GetOrDefault(InteropEnabledKey, false);
 
-        private const string InteropContractETHAddressKey = "interopcontractethereumaddress";
-        #endregion
+            if (!this.InteropEnabled)
+                return;
 
-        #region ETH settings
+            this.ETHSettings = new ETHInteropSettings(nodeSettings);
+            this.BNBSettings = new BNBInteropSettings(nodeSettings);
+        }
+    }
 
+    public class ETHInteropSettings
+    {
         /// <summary>This should be set to the address of the multisig wallet contract deployed on the Ethereum blockchain.</summary>
-        public string ETHMultisigWalletAddress { get; set; }
-
-        private const string MultisigWalletContractAddressKey = "multisigwalletcontractaddress";
+        public string MultisigWalletAddress { get; set; }
 
         /// <summary>This should be set to the address of the Wrapped STRAX ERC-20 contract deployed on the Ethereum blockchain.</summary>
-        public string ETHWrappedStraxContractAddress { get; set; }
-
-        private const string WrappedStraxContractAddressKey = "wrappedstraxcontractaddress";
+        public string WrappedStraxContractAddress { get; set; }
 
         /// <summary>This is the RPC address of the geth node running on the local machine. It is normally defaulted to http://localhost:8545</summary>
-        public string ETHClientUrl { get; set; }
-
-        private const string ETHClientUrlKey = "ethereumclienturl";
+        public string ClientUrl { get; set; }
 
         /// <summary>
         /// Address of the account on your geth node. It is the account that will be used for transaction
         /// signing and all interactions with the multisig and wrapped STRAX contracts.
         /// </summary>
-        public string ETHAccount { get; set; }
-
-        private const string ETHAccountKey = "ethereumaccount";
+        public string Account { get; set; }
 
         /// <summary>Passphrase for the ethereum account.</summary>
-        public string ETHPassphrase { get; set; }
-
-        private const string ETHPassphraseKey = "ethereumpassphrase";
-
+        public string Passphrase { get; set; }
+        
         /// <summary>The gas limit for Ethereum interoperability transactions.</summary>
-        public int ETHGasLimit { get; set; }
-
-        private const string ETHGasKey = "ethereumgas";
+        public int GasLimit { get; set; }
 
         /// <summary>The gas price for Ethereum interoperability transactions (denominated in gwei).</summary>
-        public int ETHGasPrice { get; set; }
+        public int GasPrice { get; set; }
 
-        private const string ETHGasPriceKey = "ethereumgasprice";
+        #region unused
+
+        /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
+        public string InteropContractCirrusAddress { get; set; }
+        
+        /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
+        public string InteropContractAddress { get; set; }
+        
         #endregion
 
-        public InteropSettings(NodeSettings nodeSettings)
+        public ETHInteropSettings(NodeSettings nodeSettings)
         {
-            this.InteropEnabled = nodeSettings.ConfigReader.GetOrDefault(InteropEnabledKey, false);
+            this.InitializeSettings(nodeSettings);
+        }
 
-            // ETH
-            this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault(InteropContractCirrusAddressKey, "");
-            this.InteropContractETHAddress = nodeSettings.ConfigReader.GetOrDefault(InteropContractETHAddressKey, "");
+        protected virtual void InitializeSettings(NodeSettings nodeSettings)
+        {
+            string clientUrlKey = "eth_clienturl";
+            string wrappedStraxContractAddressKey = "eth_wrappedstraxcontractaddress";
+            string multisigWalletContractAddressKey = "eth_multisigwalletcontractaddress";
 
-            this.ETHMultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(MultisigWalletContractAddressKey, "");
-            this.ETHWrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault(WrappedStraxContractAddressKey, "");
-            this.ETHClientUrl = nodeSettings.ConfigReader.GetOrDefault(ETHClientUrlKey, "http://localhost:8545");
-            this.ETHAccount = nodeSettings.ConfigReader.GetOrDefault(ETHAccountKey, "");
-            this.ETHPassphrase = nodeSettings.ConfigReader.GetOrDefault(ETHPassphraseKey, "");
+            this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault("eth_interopcontractcirrusaddress", "");
+            this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault("eth_interopcontractaddress", "");
 
-            this.ETHGasLimit = nodeSettings.ConfigReader.GetOrDefault(ETHGasKey, 3_000_000);
-            this.ETHGasPrice = nodeSettings.ConfigReader.GetOrDefault(ETHGasPriceKey, 100);
+            this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(multisigWalletContractAddressKey, "");
+            this.WrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault(wrappedStraxContractAddressKey, "");
+            this.ClientUrl = nodeSettings.ConfigReader.GetOrDefault(clientUrlKey, "http://localhost:8545");
+            this.Account = nodeSettings.ConfigReader.GetOrDefault("eth_account", "");
+            this.Passphrase = nodeSettings.ConfigReader.GetOrDefault("eth_passphrase", "");
 
-            if (!this.InteropEnabled)
-                return;
+            this.GasLimit = nodeSettings.ConfigReader.GetOrDefault("eth_gas", 3_000_000);
+            this.GasPrice = nodeSettings.ConfigReader.GetOrDefault("eth_gasprice", 100);
 
-            if (string.IsNullOrWhiteSpace(this.ETHMultisigWalletAddress))
-                throw new Exception($"Cannot initialize interoperability feature without -{MultisigWalletContractAddressKey} specified.");
+            if (string.IsNullOrWhiteSpace(this.MultisigWalletAddress))
+                throw new Exception($"Cannot initialize interoperability feature without -{multisigWalletContractAddressKey} specified.");
 
-            if (string.IsNullOrWhiteSpace(this.ETHWrappedStraxContractAddress))
-                throw new Exception($"Cannot initialize interoperability feature without -{WrappedStraxContractAddressKey} specified.");
+            if (string.IsNullOrWhiteSpace(this.WrappedStraxContractAddress))
+                throw new Exception($"Cannot initialize interoperability feature without -{wrappedStraxContractAddressKey} specified.");
 
-            if (string.IsNullOrWhiteSpace(this.ETHClientUrl))
-                throw new Exception($"Cannot initialize interoperability feature without -{ETHClientUrlKey} specified.");
+            if (string.IsNullOrWhiteSpace(this.ClientUrl))
+                throw new Exception($"Cannot initialize interoperability feature without -{clientUrlKey} specified.");
+        }
+    }
+
+    public class BNBInteropSettings : ETHInteropSettings
+    {
+        public BNBInteropSettings(NodeSettings nodeSettings) : base(nodeSettings)
+        {
+        }
+
+        protected override void InitializeSettings(NodeSettings nodeSettings)
+        {
+            string clientUrlKey = "bnb_clienturl";
+            string wrappedStraxContractAddressKey = "bnb_wrappedstraxcontractaddress";
+            string multisigWalletContractAddressKey = "bnb_multisigwalletcontractaddress";
+
+            this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault("bnb_interopcontractcirrusaddress", "");
+            this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault("bnb_interopcontractaddress", "");
+
+            this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(multisigWalletContractAddressKey, "");
+            this.WrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault(wrappedStraxContractAddressKey, "");
+            this.ClientUrl = nodeSettings.ConfigReader.GetOrDefault(clientUrlKey, "http://localhost:8545");
+            this.Account = nodeSettings.ConfigReader.GetOrDefault("bnb_account", "");
+            this.Passphrase = nodeSettings.ConfigReader.GetOrDefault("bnb_passphrase", "");
+
+            this.GasLimit = nodeSettings.ConfigReader.GetOrDefault("bnb_gas", 3_000_000);
+            this.GasPrice = nodeSettings.ConfigReader.GetOrDefault("bnb_gasprice", 100);
+
+            if (string.IsNullOrWhiteSpace(this.MultisigWalletAddress))
+                throw new Exception($"Cannot initialize interoperability feature without -{multisigWalletContractAddressKey} specified.");
+
+            if (string.IsNullOrWhiteSpace(this.WrappedStraxContractAddress))
+                throw new Exception($"Cannot initialize interoperability feature without -{wrappedStraxContractAddressKey} specified.");
+
+            if (string.IsNullOrWhiteSpace(this.ClientUrl))
+                throw new Exception($"Cannot initialize interoperability feature without -{clientUrlKey} specified.");
         }
     }
 }
