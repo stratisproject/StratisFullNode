@@ -282,18 +282,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// Replaces parameters of the form "N1[element1,element2,element3,...]" with byte arrays of the form "N2#byte-array-in-hex",
         /// where N1 and N2 are the integer values of the <see cref="MethodParameterDataType"/>, with N2 being 10 (byte array).
         /// </summary>
-        /// <param name="network">The network.</param>
         /// <param name="parameters">A list of parameters that may contain arrays.</param>
         /// <returns>The input parameters with arrays replaced with byte arrays.</returns>
         /// <remarks>The encoded byte arrays are suitable for deserializing as arrays of the specified type (N1 in this example)
         /// by using <see cref="ContractPrimitiveSerializer.Deserialize{T}(byte[])"></see>.</remarks>
-        private static string[] ReplaceArraysWithByteArrays(Network network, string[] parameters)
+        private string[] ReplaceArraysWithByteArrays(string[] parameters)
         {
             if (parameters == null)
                 return null;
 
-            var cpSerializer = new ContractPrimitiveSerializer(network);
-            var mpSerializer = new MethodParameterStringSerializer(network);
+            var cpSerializer = new ContractPrimitiveSerializer(this.network);
+            var mpSerializer = new MethodParameterStringSerializer(this.network);
 
             // Replace arrays with byte arrays.
             for (int i = 0; i < parameters.Length; i++)
@@ -318,7 +317,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
-                    request.Parameters = ReplaceArraysWithByteArrays(this.network, request.Parameters);
+                    request.Parameters = ReplaceArraysWithByteArrays(request.Parameters);
 
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, methodParameters);
@@ -381,7 +380,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
-                    request.Parameters = ReplaceArraysWithByteArrays(this.network, request.Parameters);
+                    request.Parameters = ReplaceArraysWithByteArrays(request.Parameters);
 
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), methodParameters);
