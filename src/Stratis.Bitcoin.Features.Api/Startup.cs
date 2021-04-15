@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -77,7 +78,10 @@ namespace Stratis.Bitcoin.Features.Api
                     }
                 })
                 // add serializers for NBitcoin objects
-                .AddNewtonsoftJson(options => Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings))
+                .AddNewtonsoftJson(options => {
+                    Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
+                    options.SerializerSettings.Converters.Add(new StringEnumConverter());
+                })
                 .AddControllers(this.fullNode.Services.Features, services);
 
             // Enable API versioning.
