@@ -236,6 +236,45 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return null;
         }
 
+        public static string ConvertParameter(ContractPrimitiveSerializer cpSerializer, MethodParameterStringSerializer mpSerializer, string param)
+        {
+            // Parse the type.
+            int type = 0;
+            int ndx = 0;
+            for (; ndx < param.Length && param[ndx] >= '0' && param[ndx] <= '9'; ndx++)
+                type = type * 10 + param[ndx] - '0';
+
+            try
+            {
+                // If this parameter is not an array then ignore it.
+                if (ndx >= param.Length || param[ndx++] != '[')
+                    return param;
+
+                // If the type is omitted assume its a string.
+                if (type == 0)
+                    type = 4;
+
+                // Validate type.
+                var dummy = (MethodParameterDataType)type;
+
+                // Parse the array.
+                var elements = ParseArray(param, ref ndx);
+                if (elements != null && param.Substring(ndx).Trim() == "]")
+                {
+                    object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
+
+                    var sigbuf = cpSerializer.Serialize(values);
+
+                    return $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-", "")}";
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            throw new Exception($"Parameter '{param}' has an invalid array syntax at character {ndx}.");
+        }
+
         /// <summary>
         /// Replaces parameters of the form "N1[element1,element2,element3,...]" with byte arrays of the form "N2#byte-array-in-hex",
         /// where N1 and N2 are the integer values of the <see cref="MethodParameterDataType"/>, with N2 being 10 (byte array).
@@ -255,47 +294,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             // Replace arrays with byte arrays.
             for (int i = 0; i < parameters.Length; i++)
-            {
-                string param = parameters[i];
-
-                // Parse the type.
-                int type = 0;
-                int ndx = 0;
-                for (;  ndx < param.Length && param[ndx] >= '0' && param[ndx] <= '9'; ndx++)
-                    type = type * 10 + param[ndx] - '0';
-
-                try
-                {
-                    // If this parameter is not an array then ignore it.
-                    if (ndx >= param.Length || param[ndx++] != '[')
-                        continue;
-
-                    // If the type is omitted assume its a string.
-                    if (type == 0)
-                        type = 4;
-
-                    // Validate type.
-                    var dummy = (MethodParameterDataType)type;
-
-                    // Parse the array.
-                    var elements = ParseArray(param, ref ndx);
-                    if (elements != null && param.Substring(ndx).Trim() == "]")
-                    {
-                        object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
-
-                        var sigbuf = cpSerializer.Serialize(values);
-
-                        parameters[i] = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-", "")}";
-
-                        continue;
-                    }
-                }
-                catch (Exception)
-                {
-                }
-
-                throw new Exception($"Parameter '{param}' has an invalid array syntax at character {ndx}.");
-            }
+                parameters[i] = ConvertParameter(cpSerializer, mpSerializer, parameters[i]);
 
             return parameters;
         }
