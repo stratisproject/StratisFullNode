@@ -201,7 +201,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         }
 
         /// <summary>
-        /// Parses comma-separated elements until the ']' character is encountered.
+        /// Parses elements until the ',' (separation) or ']' (ending) special character is encountered.
+        /// Quotes are used to preserve whitespace either side of elements or to make ']' or ',' non-special.
         /// </summary>
         /// <param name="param">The string to parse.</param>
         /// <param name="ndx">The position in the string following the '[' character.</param>
