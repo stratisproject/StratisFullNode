@@ -982,8 +982,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         {
             // ['This is an 'element, this' 'is' 'an' 'element ,This' 'is' 'John''''s' 'element, 'This is an element']
             int ndx = 1;
-            var res = SmartContractTransactionService.ParseArray("['This is an 'element, This is an ele','ment ,This is John''s element, 'This is an element']", ref ndx);
-            Assert.Equal(new[] { "This is an element", "This is an ele,ment", "This is John's element", "This is an element" }, res);
+            var res = SmartContractTransactionService.ParseArray("['This is an 'element, This is an ele','ment ,This is John''s element, 'This is an element ']", ref ndx);
+            Assert.Equal(new[] { "This is an element", "This is an ele,ment", "This is John's element", "This is an element " }, res);
         }
 
         [Fact]

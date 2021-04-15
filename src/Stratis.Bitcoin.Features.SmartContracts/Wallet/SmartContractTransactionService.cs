@@ -220,6 +220,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 if (param[ndx] == '\'')
                 {
+                    // Include closing quote with quoted elements to preserve whitespace on trim operation.
+                    if (quoted)
+                        elementEnd = ndx + 1;
+
                     quoted = !quoted;
                     continue;
                 }
