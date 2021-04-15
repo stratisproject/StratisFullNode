@@ -201,6 +201,49 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         }
 
         /// <summary>
+        /// Parses comma-separated elements until the ']' character is encountered.
+        /// </summary>
+        /// <param name="param">The string to parse.</param>
+        /// <param name="ndx">The position in the string following the '[' character.</param>
+        /// <returns>The elements as a string array.</returns>
+        /// <remarks>
+        /// ['This is an 'element, this' 'is' 'an' 'element ,This' 'is' 'John''''s' 'element, 'This is an element']
+        /// </remarks>
+        public static string[] ParseArray(string param, ref int ndx)
+        {
+            var elements = new List<string>();
+            int elementStart = ndx;
+            int elementEnd = elementStart;
+            bool quoted = false;
+
+            for (; ndx < param.Length; ndx++)
+            {
+                if (param[ndx] == '\'')
+                {
+                    quoted = !quoted;
+                    continue;
+                }
+
+                // Outside of quotes.
+                // Check for element termination characters. 
+                if (!quoted && (param[ndx] == ',' || param[ndx] == ']'))
+                {
+                    string element = param.Substring(elementStart, elementEnd - elementStart).Trim().Replace("''", "\x0").Replace("'", "").Replace("\x0", "'");
+                    elements.Add(element);
+                    if (param[ndx] == ']')
+                        return elements.ToArray();
+                    elementStart = ndx + 1;
+                    elementEnd = elementStart;
+                    continue;
+                }
+
+                elementEnd = ndx + 1;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Replaces parameters of the form "N1[element1,element2,element3,...]" with byte arrays of the form "N2#byte-array-in-hex",
         /// where N1 and N2 are the integer values of the <see cref="MethodParameterDataType"/>, with N2 being 10 (byte array).
         /// </summary>
@@ -209,7 +252,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <returns>The input parameters with arrays replaced with byte arrays.</returns>
         /// <remarks>The encoded byte arrays are suitable for deserializing as arrays of the specified type (N1 in this example)
         /// by using <see cref="ContractPrimitiveSerializer.Deserialize{T}(byte[])"></see>.</remarks>
-        public static string[] ReplaceArraysWithByteArrays(Network network, string[] parameters)
+        private static string[] ReplaceArraysWithByteArrays(Network network, string[] parameters)
         {
             if (parameters == null)
                 return null;
@@ -221,60 +264,44 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             for (int i = 0; i < parameters.Length; i++)
             {
                 string param = parameters[i];
+
+                // Parse the type.
                 int type = 0;
                 int ndx = 0;
                 while (param[ndx] >= '0' && param[ndx] <= '9')
                     type = type * 10 + param[ndx++] - '0';
 
-                if (param[ndx++] != '[')
-                    continue;
-
-                if (type == 0)
-                    type = 4;
-
-                var elements = new List<string>();
-                int elementStart = ndx;
-                int elementEnd = elementStart;
-                bool quoted = false;
-
-                for (; ndx < param.Length; ndx++)
+                try
                 {
-                    if (!quoted)
-                    {
-                        if (param[ndx] == ',' || param[ndx] == ']' || (param[ndx] == ' ' && elementEnd > elementStart))
-                        {
-                            string element = param.Substring(elementStart, elementEnd - elementStart);
-                            elements.Add(element);
-                            if (param[ndx] == ']')
-                                break;
-                        }
-                        else if (param[ndx] == '\'')
-                        {
-                            quoted = true;
-                        }
-                        else if (param[ndx] != ' ')
-                        {
-                            elementEnd = ndx + 1;
-                            continue;
-                        }
+                    // If this parameter is not an array then ignore it.
+                    if (param[ndx++] != '[')
+                        continue;
 
-                        elementStart = ndx + 1;
-                        elementEnd = elementStart;
-                    }
-                    else
+                    // If the type is omitted assume its a string.
+                    if (type == 0)
+                        type = 4;
+
+                    // Validate type.
+                    var dummy = (MethodParameterDataType)type;
+
+                    // Parse the array.
+                    var elements = ParseArray(param, ref ndx);
+                    if (elements != null && param.Substring(ndx + 1).Trim() == "")
                     {
-                        if (param[ndx] == '\'' && ((ndx + 1) >= param.Length || param[ndx + 1] != '\''))
-                            quoted = false;
-                        else
-                            elementEnd = ndx + 1;
+                        object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
+
+                        var sigbuf = cpSerializer.Serialize(values);
+
+                        parameters[i] = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-", "")}";
+
+                        continue;
                     }
                 }
+                catch (Exception)
+                {
+                }
 
-                object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
-
-                var sigbuf = cpSerializer.Serialize(values);
-
-                parameters[i] = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-","")}";
+                throw new Exception($"Parameter '{param}' has an invalid array syntax at character {ndx}.");
             }
 
             return parameters;
