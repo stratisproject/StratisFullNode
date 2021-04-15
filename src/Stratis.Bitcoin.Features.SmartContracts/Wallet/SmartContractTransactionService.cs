@@ -213,35 +213,23 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         {
             var elements = new List<string>();
             int elementStart = ndx;
-            int elementEnd = elementStart;
             bool quoted = false;
 
             for (; ndx < param.Length; ndx++)
             {
                 if (param[ndx] == '\'')
                 {
-                    // Include closing quote with quoted elements to preserve whitespace on trim operation.
-                    if (quoted)
-                        elementEnd = ndx + 1;
-
                     quoted = !quoted;
-                    continue;
                 }
-
-                // Outside of quotes.
-                // Check for element termination characters. 
-                if (!quoted && (param[ndx] == ',' || param[ndx] == ']'))
+                else if (!quoted && (param[ndx] == ',' || param[ndx] == ']'))
                 {
-                    string element = param.Substring(elementStart, elementEnd - elementStart).Trim().Replace("''", "\x0").Replace("'", "").Replace("\x0", "'");
+                    // Check for element termination characters. 
+                    string element = param.Substring(elementStart, ndx - elementStart).Trim().Replace("''", "\x0").Replace("'", "").Replace("\x0", "'");
                     elements.Add(element);
                     if (param[ndx] == ']')
                         return elements.ToArray();
                     elementStart = ndx + 1;
-                    elementEnd = elementStart;
-                    continue;
                 }
-
-                elementEnd = ndx + 1;
             }
 
             return null;
