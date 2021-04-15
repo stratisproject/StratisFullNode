@@ -2,7 +2,6 @@
 {
     public interface IBNBClient : IETHClient
     {
-
     }
 
     public class BNBClient : ETHClient, IBNBClient

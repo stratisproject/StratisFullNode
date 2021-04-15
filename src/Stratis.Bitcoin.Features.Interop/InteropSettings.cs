@@ -63,26 +63,21 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public ETHInteropSettings(NodeSettings nodeSettings)
         {
-            this.InitializeSettings(nodeSettings);
-        }
+            string clientUrlKey = this.GetSettingsPrefix() + "clienturl";
+            string wrappedStraxContractAddressKey = this.GetSettingsPrefix() + "wrappedstraxcontractaddress";
+            string multisigWalletContractAddressKey = this.GetSettingsPrefix() + "multisigwalletcontractaddress";
 
-        protected virtual void InitializeSettings(NodeSettings nodeSettings)
-        {
-            string clientUrlKey = "eth_clienturl";
-            string wrappedStraxContractAddressKey = "eth_wrappedstraxcontractaddress";
-            string multisigWalletContractAddressKey = "eth_multisigwalletcontractaddress";
-
-            this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault("eth_interopcontractcirrusaddress", "");
-            this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault("eth_interopcontractaddress", "");
+            this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractcirrusaddress", "");
+            this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopcontractaddress", "");
 
             this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(multisigWalletContractAddressKey, "");
             this.WrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault(wrappedStraxContractAddressKey, "");
             this.ClientUrl = nodeSettings.ConfigReader.GetOrDefault(clientUrlKey, "http://localhost:8545");
-            this.Account = nodeSettings.ConfigReader.GetOrDefault("eth_account", "");
-            this.Passphrase = nodeSettings.ConfigReader.GetOrDefault("eth_passphrase", "");
+            this.Account = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "account", "");
+            this.Passphrase = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "passphrase", "");
 
-            this.GasLimit = nodeSettings.ConfigReader.GetOrDefault("eth_gas", 3_000_000);
-            this.GasPrice = nodeSettings.ConfigReader.GetOrDefault("eth_gasprice", 100);
+            this.GasLimit = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "gas", 3_000_000);
+            this.GasPrice = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "gasprice", 100);
 
             if (string.IsNullOrWhiteSpace(this.MultisigWalletAddress))
                 throw new Exception($"Cannot initialize interoperability feature without -{multisigWalletContractAddressKey} specified.");
@@ -92,6 +87,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
             if (string.IsNullOrWhiteSpace(this.ClientUrl))
                 throw new Exception($"Cannot initialize interoperability feature without -{clientUrlKey} specified.");
+        }
+        
+        protected virtual string GetSettingsPrefix()
+        {
+            return "eth_";
         }
     }
 
@@ -101,32 +101,9 @@ namespace Stratis.Bitcoin.Features.Interop
         {
         }
 
-        protected override void InitializeSettings(NodeSettings nodeSettings)
+        protected override string GetSettingsPrefix()
         {
-            string clientUrlKey = "bnb_clienturl";
-            string wrappedStraxContractAddressKey = "bnb_wrappedstraxcontractaddress";
-            string multisigWalletContractAddressKey = "bnb_multisigwalletcontractaddress";
-
-            this.InteropContractCirrusAddress = nodeSettings.ConfigReader.GetOrDefault("bnb_interopcontractcirrusaddress", "");
-            this.InteropContractAddress = nodeSettings.ConfigReader.GetOrDefault("bnb_interopcontractaddress", "");
-
-            this.MultisigWalletAddress = nodeSettings.ConfigReader.GetOrDefault(multisigWalletContractAddressKey, "");
-            this.WrappedStraxContractAddress = nodeSettings.ConfigReader.GetOrDefault(wrappedStraxContractAddressKey, "");
-            this.ClientUrl = nodeSettings.ConfigReader.GetOrDefault(clientUrlKey, "http://localhost:8545");
-            this.Account = nodeSettings.ConfigReader.GetOrDefault("bnb_account", "");
-            this.Passphrase = nodeSettings.ConfigReader.GetOrDefault("bnb_passphrase", "");
-
-            this.GasLimit = nodeSettings.ConfigReader.GetOrDefault("bnb_gas", 3_000_000);
-            this.GasPrice = nodeSettings.ConfigReader.GetOrDefault("bnb_gasprice", 100);
-
-            if (string.IsNullOrWhiteSpace(this.MultisigWalletAddress))
-                throw new Exception($"Cannot initialize interoperability feature without -{multisigWalletContractAddressKey} specified.");
-
-            if (string.IsNullOrWhiteSpace(this.WrappedStraxContractAddress))
-                throw new Exception($"Cannot initialize interoperability feature without -{wrappedStraxContractAddressKey} specified.");
-
-            if (string.IsNullOrWhiteSpace(this.ClientUrl))
-                throw new Exception($"Cannot initialize interoperability feature without -{clientUrlKey} specified.");
+            return "bnb_";
         }
     }
 }
