@@ -16,7 +16,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 {
     public class LevelDbBlockRepository : IBlockRepository
     {
-        private readonly string dataFolder;
         private readonly Options dbOptions;
         private readonly DB leveldb;
         private readonly object locker;
@@ -38,10 +37,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
 
-        public LevelDbBlockRepository(
-            Network network,
-            DataFolder dataFolder,
-            DBreezeSerializer dBreezeSerializer)
+        public LevelDbBlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer)
             : this(network, dataFolder.BlockPath, dBreezeSerializer)
         {
         }
@@ -50,7 +46,6 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         {
             Directory.CreateDirectory(folder);
 
-            this.dataFolder = folder;
             this.dbOptions = new Options { CreateIfMissing = true };
             this.leveldb = new DB(this.dbOptions, folder);
             this.locker = new object();
