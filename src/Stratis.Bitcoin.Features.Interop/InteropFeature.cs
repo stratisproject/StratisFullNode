@@ -25,7 +25,9 @@ namespace Stratis.Bitcoin.Features.Interop
         
         private readonly IInteropTransactionManager interopTransactionManager;
         
-        private readonly IETHClient ethereumClientBase;
+        private readonly IETHClient ETHClient;
+
+        private readonly IBNBClient BNBClient;
 
         public InteropFeature(
             Network network, 
@@ -33,7 +35,8 @@ namespace Stratis.Bitcoin.Features.Interop
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
             IInteropTransactionManager interopTransactionManager, 
-            IETHClient ethereumClientBase,
+            IETHClient ethClient,
+            IBNBClient bnbClient,
             IFullNode fullNode)
         {
             this.network = network;
@@ -41,7 +44,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.connectionManager = connectionManager;
             this.interopPoller = interopPoller;
             this.interopTransactionManager = interopTransactionManager;
-            this.ethereumClientBase = ethereumClientBase;
+            this.ETHClient = ethClient;
+            this.BNBClient = bnbClient;
 
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
@@ -52,7 +56,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ETHClient));
 
             return Task.CompletedTask;
         }
@@ -75,6 +79,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     .FeatureServices(services => services
                     .AddSingleton<InteropSettings>()
                     .AddSingleton<IETHClient, ETHClient.ETHClient>()
+                    .AddSingleton<IBNBClient, BNBClient>()
                     .AddSingleton<IInteropTransactionManager, InteropTransactionManager>()
                     .AddSingleton<InteropPoller>()
                     ));
