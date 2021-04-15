@@ -80,7 +80,6 @@ namespace Stratis.Bitcoin.Features.Api
                 // add serializers for NBitcoin objects
                 .AddNewtonsoftJson(options => {
                     Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
-                    options.SerializerSettings.Converters.Add(new StringEnumConverter());
                 })
                 .AddControllers(this.fullNode.Services.Features, services);
 
