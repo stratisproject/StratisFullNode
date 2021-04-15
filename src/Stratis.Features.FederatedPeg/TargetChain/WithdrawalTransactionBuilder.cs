@@ -6,7 +6,6 @@ using NLog;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
 using Stratis.Features.FederatedPeg.Distribution;
-using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Wallet;
 using Recipient = Stratis.Features.FederatedPeg.Wallet.Recipient;
@@ -97,13 +96,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 // TODO: Amend this so we're not picking coins twice.
                 (List<Coin> coins, List<Wallet.UnspentOutputReference> unspentOutputs) = FederationWalletTransactionHandler.DetermineCoins(this.federationWalletManager, this.network, multiSigContext, this.federatedPegSettings);
 
-                if (coins.Count > FederatedPegSettings.MaxInputs)
-                {
-                    this.logger.Debug("Too many inputs. Triggering the consolidation process.");
-                    this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
-                    this.logger.Trace("(-)[CONSOLIDATING_INPUTS]");
-                    return null;
-                }
+                //if (coins.Count > FederatedPegSettings.MaxInputs)
+                //{
+                //    this.logger.Debug("Too many inputs. Triggering the consolidation process.");
+                //    this.signals.Publish(new WalletNeedsConsolidation(recipient.Amount));
+                //    this.logger.Trace("(-)[CONSOLIDATING_INPUTS]");
+                //    return null;
+                //}
 
                 multiSigContext.SelectedInputs = unspentOutputs.Select(u => u.ToOutPoint()).ToList();
                 multiSigContext.AllowOtherInputs = false;
