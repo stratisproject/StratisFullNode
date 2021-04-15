@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -12,10 +13,12 @@ using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.Consensus.Rules;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
+using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
@@ -52,9 +55,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Consensus.Rules
 
         public ICallDataSerializer CallDataSerializer { get; set; }
 
-        public T CreateRule<T>() where T : ConsensusRuleBase, new()
+        public MockServiceCollection mockServiceCollection;
+
+        public TestRulesContext()
         {
-            T rule = new T();
+            this.mockServiceCollection = new MockServiceCollection();
+            this.mockServiceCollection.AddMockSingleton<ISmartContractActivationProvider>();
+        }
+
+        public T CreateRule<T>() where T : ConsensusRuleBase
+        {
+            T rule = this.mockServiceCollection.GetService<T>();
             rule.Parent = this.Consensus;
             rule.Logger = this.LoggerFactory.CreateLogger(rule.GetType().FullName);
             rule.Initialize();

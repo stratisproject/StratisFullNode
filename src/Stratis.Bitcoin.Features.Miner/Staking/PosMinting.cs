@@ -193,7 +193,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// sense to try timestamps earlier than this value.
         /// </para>
         /// </summary>
-        private long lastCoinStakeSearchTime;
+        protected long lastCoinStakeSearchTime;
 
         /// <summary>
         /// Hash of the block headers of the block that was at the tip of the chain during our last
@@ -208,7 +208,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
         /// <summary>
         /// A cancellation token source that can cancel the staking processes and is linked to the <see cref="INodeLifetime.ApplicationStopping"/>.
         /// </summary>
-        private CancellationTokenSource stakeCancellationTokenSource;
+        protected CancellationTokenSource stakeCancellationTokenSource;
 
         /// <summary>Provider of IBD state.</summary>
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
@@ -365,7 +365,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 if (this.timeSyncBehaviorState.IsSystemTimeOutOfSync)
                 {
                     this.logger.LogError("Staking cannot start, your system time does not match that of other nodes on the network." + Environment.NewLine
-                                         + "Please adjust your system time and restart the node.");
+                                            + "Please adjust your system time and restart the node.");
                     await Task.Delay(TimeSpan.FromMilliseconds(this.systemTimeOutOfSyncSleep), cancellationToken).ConfigureAwait(false);
                     continue;
                 }

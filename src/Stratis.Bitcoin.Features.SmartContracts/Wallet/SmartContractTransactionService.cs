@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CSharpFunctionalExtensions;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -198,6 +199,41 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return BuildContractTransactionResult.Success(model);
         }
 
+        private string[] ReplaceSignatures(string[] parameters, string[] signatures)
+        {
+            const int signatureLength = 65;
+            const int minHeaderByte = 27;
+            const int maxHeaderByte = 34;
+
+            if (parameters == null)
+                return null;
+
+            // Replace SIG# with any included signatures.
+            string encodedSigs = null;
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                if (parameters[i].ToUpper() == "SIG#")
+                {
+                    if (encodedSigs == null)
+                    {
+                        var sigs = (signatures ?? new string[0]).Select(s => Convert.FromBase64String(s)).ToArray();
+                        if (sigs.Any(s => s.Length != signatureLength || s[0] < minHeaderByte || s[0] > maxHeaderByte))
+                            throw new Exception("Invalid signature(s).");
+
+                        var sigbuf = new byte[sigs.Length * signatureLength];
+                        for (int j = 0; j < sigs.Length; j++)
+                            Array.Copy(sigs[j], 0, sigbuf, j * signatureLength, signatureLength);
+
+                        encodedSigs = $"{(int)MethodParameterDataType.ByteArray}#{Encoders.Hex.EncodeData(sigbuf)}";
+                    }
+
+                    parameters[i] = encodedSigs;
+                }
+            }
+
+            return parameters;
+        }
+
         public BuildCallContractTransactionResponse BuildCallTx(BuildCallContractTransactionRequest request)
         {
             if (!this.CheckBalance(request.Sender))
@@ -214,6 +250,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
+                    // If signatures have been included then they replace the SIG# parameter.
+                    request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures);
+
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, methodParameters);
                 }
@@ -275,6 +314,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
+                    // If signatures have been included then they replace the SIG# parameter.
+                    request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures);
+
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), methodParameters);
                 }

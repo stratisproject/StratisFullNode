@@ -7,10 +7,11 @@ using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.MemoryPool;
-using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.RPC;
-using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.Runners;
 using Stratis.Features.Collateral.CounterChain;
@@ -47,9 +48,14 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .UseMempool()
                 .AddRPC()
                 .UsePosConsensus()
-                .UseWallet()
+                .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
-                .AddPowPosMining(false)
+                .UseSmartContractPosPowMining()
+                .AddSmartContracts(options =>
+                {
+                    options.UseReflectionExecutor();
+                    options.UsePoSWhitelistedContracts();
+                })
                 .MockIBD()
                 .Build();
         }

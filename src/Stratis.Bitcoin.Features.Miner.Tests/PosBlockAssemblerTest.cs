@@ -451,7 +451,7 @@ namespace Stratis.Bitcoin.Features.Miner.Tests
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.PartialValidationRules)
                 consensusRulesContainer.PartialValidationRules.Add(Activator.CreateInstance(ruleType) as PartialValidationConsensusRule);
             foreach (var ruleType in this.Network.Consensus.ConsensusRules.FullValidationRules)
-                consensusRulesContainer.FullValidationRules.Add(Activator.CreateInstance(ruleType) as FullValidationConsensusRule);
+                consensusRulesContainer.FullValidationRules.Add(this.MockServiceCollection.GetService(ruleType) as FullValidationConsensusRule);
 
             var posConsensusRules = new PosConsensusRuleEngine(
                 this.Network,

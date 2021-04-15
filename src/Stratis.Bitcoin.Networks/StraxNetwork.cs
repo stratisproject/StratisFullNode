@@ -5,6 +5,8 @@ using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Consensus.Rules.ProvenHeaderRules;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
+using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
+using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
 namespace Stratis.Bitcoin.Networks
 {
@@ -63,6 +65,14 @@ namespace Stratis.Bitcoin.Networks
                 // rules that require the store to be loaded (coinview)
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>()
+
+                // Smart contract specific
+                .Register<ContractTransactionFullValidationRule>()
+                .Register<TxOutSmartContractExecRule>()
+                .Register<OpSpendRule>()
+                .Register<CanGetSenderRule>()
+                .Register<P2PKHNotContractRule>()
+
                 .Register<StraxCoinviewRule>() // implements BIP68, MaxSigOps and BlockReward calculation
                                                // Place the PosColdStakingRule after the PosCoinviewRule to ensure that all input scripts have been evaluated
                                                // and that the "IsColdCoinStake" flag would have been set by the OP_CHECKCOLDSTAKEVERIFY opcode if applicable.
@@ -79,6 +89,14 @@ namespace Stratis.Bitcoin.Networks
                 typeof(CreateMempoolEntryMempoolRule),
                 typeof(CheckSigOpsMempoolRule),
                 typeof(StraxTransactionFeeMempoolRule),
+
+                // The smart contract mempool needs to do more fee checks than its counterpart, so include extra rules.
+                // These rules occur directly after the fee check rule in the non- smart contract mempool.
+                typeof(SmartContractFormatLogicMempoolRule),
+                typeof(CanGetSenderMempoolRule),
+                typeof(AllowedCodeHashLogicMempoolRule),
+                typeof(CheckMinGasLimitSmartContractMempoolRule),
+
                 typeof(CheckRateLimitMempoolRule),
                 typeof(CheckAncestorsMempoolRule),
                 typeof(CheckReplacementMempoolRule),

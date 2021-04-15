@@ -58,7 +58,7 @@ namespace Stratis.Features.SQLiteWalletRepository.External
                             yield return new KeyId(txDestination.ToBytes());
                         break;
                     default:
-                        if (this.scriptAddressReader is ScriptDestinationReader scriptDestinationReader)
+                        if (this.scriptAddressReader is IScriptDestinationReader scriptDestinationReader)
                         {
                             foreach (TxDestination destination in scriptDestinationReader.GetDestinationFromScriptPubKey(this.network, redeemScript))
                             {

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Utilities;
@@ -24,9 +23,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.asyncProvider = Substitute.For<IAsyncProvider>();
             this.crossChainTransferStore = Substitute.For<ICrossChainTransferStore>();
             this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
-            ILoggerFactory loggerFactory = Substitute.For<ILoggerFactory>();
 
-            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.crossChainTransferStore, this.federationGatewayClient, loggerFactory, new NodeLifetime());
+            this.syncManager = new TestOnlyMaturedBlocksSyncManager(this.asyncProvider, this.crossChainTransferStore, this.federationGatewayClient, new NodeLifetime());
         }
 
         [Fact]
@@ -62,8 +60,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         private class TestOnlyMaturedBlocksSyncManager : MaturedBlocksSyncManager
         {
-            public TestOnlyMaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, ILoggerFactory loggerFactory, INodeLifetime nodeLifetime)
-                : base(asyncProvider, crossChainTransferStore, federationGatewayClient, nodeLifetime)
+            public TestOnlyMaturedBlocksSyncManager(IAsyncProvider asyncProvider, ICrossChainTransferStore crossChainTransferStore, IFederationGatewayClient federationGatewayClient, INodeLifetime nodeLifetime)
+                : base(asyncProvider, crossChainTransferStore, federationGatewayClient, nodeLifetime, null, null)
             {
             }
 

@@ -176,19 +176,25 @@ namespace Stratis.Bitcoin.Features.Miner
         /// </summary>
         private void Configure()
         {
-            this.BlockSize = 1000;
             this.BlockTemplate = new BlockTemplate(this.Network);
-            this.BlockTx = 0;
+
+            // Reserve space for the coinbase transaction, bitcoind miner.cpp void BlockAssembler::resetBlock()
+            this.BlockSize = 1000;
             this.BlockWeight = 1000 * this.Network.Consensus.Options.WitnessScaleFactor;
             this.BlockSigOpsCost = 400;
-            this.fees = 0;
-            this.inBlock = new TxMempool.SetEntries();
             this.IncludeWitness = false;
+
+            // These counters do not include the coinbase transaction
+            this.BlockTx = 0;
+            this.fees = 0;
+
+            this.inBlock = new TxMempool.SetEntries();
         }
 
         /// <summary>
         /// Constructs a block template which will be passed to consensus.
         /// </summary>
+        /// <remarks>bitcoind miner.cpp BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)</remarks>
         /// <param name="chainTip">Tip of the chain that this instance will work with without touching any shared chain resources.</param>
         /// <param name="scriptPubKey">Script that explains what conditions must be met to claim ownership of a coin.</param>
         protected void OnBuild(ChainedHeader chainTip, Script scriptPubKey)
@@ -230,10 +236,10 @@ namespace Stratis.Bitcoin.Features.Miner
                 this.AddOrUpdateCoinbaseCommitmentToBlock(this.block);
             }
 
+            this.UpdateHeaders();
+
             int nSerializeSize = this.block.GetSerializedSize();
             this.logger.LogDebug("Serialized size is {0} bytes, block weight is {1}, number of txs is {2}, tx fees are {3}, number of sigops is {4}.", nSerializeSize, this.block.GetBlockWeight(this.Network.Consensus), this.BlockTx, this.fees, this.BlockSigOpsCost);
-
-            this.UpdateHeaders();
         }
 
         /// <summary>

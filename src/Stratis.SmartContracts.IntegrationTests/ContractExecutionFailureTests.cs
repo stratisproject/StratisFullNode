@@ -7,12 +7,12 @@ using Mono.Cecil;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Util;
 using Stratis.SmartContracts.RuntimeObserver;
 using Stratis.SmartContracts.Tests.Common.MockChain;
@@ -27,12 +27,44 @@ namespace Stratis.SmartContracts.IntegrationTests
         private readonly MockChainNode node2;
         private readonly ISenderRetriever senderRetriever;
 
+        private uint? activationTime = null;
+
         protected ContractExecutionFailureTests(T fixture)
         {
             this.mockChain = fixture.Chain;
             this.node1 = this.mockChain.Nodes[0];
             this.node2 = this.mockChain.Nodes[1];
             this.senderRetriever = new SenderRetriever();
+        }
+
+        protected void SkipPOWPhase()
+        {            
+            // Mine enough blocks for staking maturity.
+            this.mockChain.MineBlocks(20);
+
+            var fullNode1 = this.node1.CoreNode.FullNode;
+            var chainIndexer1 = fullNode1.NodeService<ChainIndexer>();
+            fullNode1.Network.Consensus.LastPOWBlock = chainIndexer1.Tip.Height;
+            fullNode1.Network.Consensus.Options = new TestPosConsensusOptions(fullNode1.Network.Consensus.Options as PosConsensusOptions);
+
+            var fullNode2 = this.node2.CoreNode.FullNode;
+            var chainIndexer2 = fullNode2.NodeService<ChainIndexer>();
+            fullNode2.Network.Consensus.LastPOWBlock = chainIndexer2.Tip.Height;
+            fullNode2.Network.Consensus.Options = new TestPosConsensusOptions(fullNode2.Network.Consensus.Options as PosConsensusOptions);
+
+            Assert.Equal(chainIndexer1.Tip.Header.GetHash(), chainIndexer2.Tip.Header.GetHash());
+
+            this.activationTime = chainIndexer1.Tip.Header.Time;
+
+            fullNode1.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
+            {
+                return (prev ?? chainIndexer1.Tip).Header.Time >= this.activationTime;
+            };
+
+            fullNode2.NodeService<ISmartContractActivationProvider>().IsActive = (prev) =>
+            {
+                return (prev ?? chainIndexer2.Tip).Header.Time >= this.activationTime;
+            };
         }
 
         [Fact]
@@ -131,8 +163,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Null(this.node1.GetCode(response.NewContractAddress));
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
             Assert.Equal(new Money((long)amount, MoneyUnit.BTC), refundTransaction.Outputs[0].Value);
@@ -174,8 +207,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Null(this.node2.GetCode(response.NewContractAddress));
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
             Assert.Equal(new Money((long)amount, MoneyUnit.BTC), refundTransaction.Outputs[0].Value);
@@ -222,8 +256,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Equal(new Bloom(), ((ISmartContractBlockHeader)lastBlock.Header).LogsBloom);
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -274,8 +309,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Equal(new Bloom(), ((ISmartContractBlockHeader)lastBlock.Header).LogsBloom);
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -316,8 +352,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -362,8 +399,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -414,8 +452,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Equal(new Bloom(), ((ISmartContractBlockHeader)lastBlock.Header).LogsBloom);
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -464,8 +503,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Equal(new Bloom(), ((ISmartContractBlockHeader)lastBlock.Header).LogsBloom);
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -519,8 +559,10 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Null(this.node2.GetCode(response.NewContractAddress));
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
             Assert.Equal(new Money((long)amount, MoneyUnit.BTC), refundTransaction.Outputs[0].Value);
@@ -562,8 +604,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.Null(this.node2.GetCode(response.NewContractAddress));
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
             Assert.Equal(new Money((long)amount, MoneyUnit.BTC), refundTransaction.Outputs[0].Value);
@@ -608,8 +651,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -652,8 +696,9 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block contains a refund transaction
-            Assert.Equal(3, lastBlock.Transactions.Count);
-            Transaction refundTransaction = lastBlock.Transactions[2];
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 2, lastBlock.Transactions.Count);
+            Transaction refundTransaction = lastBlock.Transactions[stdTxs + 1];
             Assert.Single(refundTransaction.Outputs); // No transfers persisted
             uint160 refundReceiver = this.senderRetriever.GetAddressFromScript(refundTransaction.Outputs[0].ScriptPubKey).Sender;
             Assert.Equal(this.node1.MinerAddress.Address, refundReceiver.ToBase58Address(this.node1.CoreNode.FullNode.Network));
@@ -702,7 +747,8 @@ namespace Stratis.SmartContracts.IntegrationTests
             Assert.NotEqual(currentHash, lastBlock.GetHash());
 
             // Block does not contain a refund transaction
-            Assert.Equal(2, lastBlock.Transactions.Count);
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            Assert.Equal(stdTxs + 1, lastBlock.Transactions.Count);
 
             // Receipt is correct
             ReceiptResponse receipt = this.node1.GetReceipt(response.TransactionId.ToString());
@@ -756,11 +802,12 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             // There should be 20 transactions in the last block as that is when the block gas expenditure limit was reached.
             // 19 included transactions plus 1 coinbase.
-            int expectedTxCount_21 = Convert.ToInt32(txGasPerBlockLimit_1_000_000 / gasLimit_50_000) + 1; // +1 for coinbase
+            int stdTxs = lastBlock.Transactions[1].IsCoinStake ? 2 : 1;
+            int expectedTxCount_21 = Convert.ToInt32(txGasPerBlockLimit_1_000_000 / gasLimit_50_000) + stdTxs; // +1 for coinbase
             Assert.Equal(expectedTxCount_21, lastBlock.Transactions.Count);
 
             // Ensure that all the transactions that were added is in the last block created.
-            foreach (Transaction transaction in lastBlock.Transactions.Where(tx => !tx.IsCoinBase))
+            foreach (Transaction transaction in lastBlock.Transactions.Where(tx => !tx.IsCoinBase && !tx.IsCoinStake))
             {
                 Assert.Contains(transaction.GetHash(), contractTransactionIds);
             }
@@ -768,7 +815,7 @@ namespace Stratis.SmartContracts.IntegrationTests
             // Mine the remaining 5 transactions (tx #21 to #25)
             this.mockChain.MineBlocks(1);
 
-            int restOfTx = txCount_25 - Convert.ToInt32(txGasPerBlockLimit_1_000_000 / gasLimit_50_000) + 1; // +1 for coinbase
+            int restOfTx = txCount_25 - Convert.ToInt32(txGasPerBlockLimit_1_000_000 / gasLimit_50_000) + stdTxs; // +1 for coinbase
             lastBlock = this.node1.GetLastBlock();
             Assert.Equal(restOfTx, lastBlock.Transactions.Count);
         }
@@ -785,6 +832,27 @@ namespace Stratis.SmartContracts.IntegrationTests
     {
         public PoWContractExecutionFailureTests(PoWMockChainFixture fixture) : base(fixture)
         {
+        }
+    }
+
+    public class TestPosConsensusOptions : PosConsensusOptions
+    {
+        public TestPosConsensusOptions(PosConsensusOptions options) : base(options.MaxBlockBaseSize, options.MaxStandardVersion, options.MaxStandardTxWeight, options.MaxBlockSigopsCost, options.MaxStandardTxSigopsCost, options.WitnessScaleFactor)
+        {
+        }
+
+        public override int GetStakeMinConfirmations(int height, Network network)
+        {
+            // Allow continuous staking.
+            return 0;
+        }
+    }
+
+    public class PoSContractExecutionFailureTests : ContractExecutionFailureTests<PoSMockChainFixture>
+    {
+        public PoSContractExecutionFailureTests(PoSMockChainFixture fixture) : base(fixture)
+        {
+            SkipPOWPhase();
         }
     }
 }

@@ -3,7 +3,6 @@ using System.Text;
 using NBitcoin;
 using Stratis.Sidechains.Networks;
 using Stratis.SmartContracts.Core.Receipts;
-using Stratis.SmartContracts.Networks;
 using Xunit;
 
 namespace Stratis.SmartContracts.Core.Tests.Receipts
