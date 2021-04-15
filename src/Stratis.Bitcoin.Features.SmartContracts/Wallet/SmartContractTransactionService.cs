@@ -201,14 +201,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         }
 
         /// <summary>
-        /// Parses elements until the ',' (separation) or ']' (ending) special character is encountered.
+        /// Parses elements until the ',' (separator) or ']' (ending) special character is encountered.
         /// Quotes are used to preserve whitespace either side of elements or to make ']' or ',' non-special.
         /// </summary>
         /// <param name="param">The string to parse.</param>
         /// <param name="ndx">The position in the string following the '[' character.</param>
         /// <returns>The elements as a string array.</returns>
         /// <remarks>
-        /// ['This is an 'element, This is a comma: ',' ,This is John''s element, 'This is an element ']
+        /// Single quotes are removed from elements and double single quotes are converted to single quotes.
         /// </remarks>
         public static string[] ParseArray(string param, ref int ndx)
         {
