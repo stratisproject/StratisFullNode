@@ -248,45 +248,38 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <returns>The converted (or unconverted) parameter.</returns>
         public static string ConvertParameter(ContractPrimitiveSerializer cpSerializer, MethodParameterStringSerializer mpSerializer, string parameter)
         {
-            const char firstNumericDigit = '0';
-            const char lastNumericDigit = '9';
-            const int base10Multiplier = 10;
-            const int dataTypeNotSupplied = 0;
+            IEnumerable<char> typeDigits = parameter.TakeWhile(c => char.IsDigit(c));
 
-            // Parse the method parameter data type that determines the type of array to create.
-            int methodParameterDataType = dataTypeNotSupplied;
-            int position = 0;
-            for (; position < parameter.Length && parameter[position] >= firstNumericDigit && parameter[position] <= lastNumericDigit; position++)
+            var prefixNumber = string.Join(string.Empty, typeDigits);
+            if (!Enum.TryParse(prefixNumber, out MethodParameterDataType dataType))
             {
-                int digitValue = parameter[position] - firstNumericDigit;
-                methodParameterDataType = methodParameterDataType * base10Multiplier + digitValue;
+                if (prefixNumber.Length != 0)
+                    return parameter;
+
+                // Default is string if data type not supplied.
+                dataType = MethodParameterDataType.String;
             }
+
+            int position = prefixNumber.Length;
 
             try
             {
                 // If this parameter is not an array then ignore it.
-                if (position >= parameter.Length || parameter[position++] != '[')
+                if (parameter.ElementAtOrDefault(position++) != '[')
                     return parameter;
-
-                // The 'position' should now be set to the first character following '['.
-
-                // If the type is omitted assume its a string.
-                if (methodParameterDataType == dataTypeNotSupplied)
-                    methodParameterDataType = (int)MethodParameterDataType.String;
-
-                // Validate type.
-                var dummy = (MethodParameterDataType)methodParameterDataType;
 
                 // Parse the array.
                 // The 'position' should now be set to the first character following '['.
                 var elements = ParseArray(parameter, ref position);
                 if (elements != null && parameter.Substring(position).Trim() == "]")
                 {
-                    object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{methodParameterDataType}#{e}").ToArray());
+                    object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{(int)dataType}#{e}").ToArray());
 
                     var serializedArray = cpSerializer.Serialize(arrayElements);
 
-                    return $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(serializedArray).Replace("-", "")}";
+                    var hex = BitConverter.ToString(serializedArray).Replace("-", "");
+
+                    return $"{(int)MethodParameterDataType.ByteArray}#{hex}";
                 }
             }
             catch (Exception)
@@ -294,7 +287,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             }
 
             throw new Exception($"Parameter '{parameter}' has an invalid array syntax at character {position}.");
-        }
+        }    
 
         /// <summary>
         /// Replaces parameters of the form "N1[element1,element2,element3,...]" with byte arrays of the form "N2#byte-array-in-hex",
