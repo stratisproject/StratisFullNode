@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// <param name="ndx">The position in the string following the '[' character.</param>
         /// <returns>The elements as a string array.</returns>
         /// <remarks>
-        /// ['This is an 'element, this' 'is' 'an' 'element ,This' 'is' 'John''''s' 'element, 'This is an element']
+        /// ['This is an 'element, This is a comma: ',' ,This is John''s element, 'This is an element ']
         /// </remarks>
         public static string[] ParseArray(string param, ref int ndx)
         {
