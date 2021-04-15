@@ -239,7 +239,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return null;
         }
 
-        public static string ConvertParameter(ContractPrimitiveSerializer cpSerializer, MethodParameterStringSerializer mpSerializer, string param)
+        /// <summary>
+        /// If the parameter contains an array it is converted to a byte array.
+        /// </summary>
+        /// <param name="cpSerializer">Contract primitive serializer.</param>
+        /// <param name="mpSerializer">Method parameter string serializer.</param>
+        /// <param name="parameter">The paramter to convert (if required).</param>
+        /// <returns>The converted (or unconverted) parameter.</returns>
+        public static string ConvertParameter(ContractPrimitiveSerializer cpSerializer, MethodParameterStringSerializer mpSerializer, string parameter)
         {
             const char firstNumericDigit = '0';
             const char lastNumericDigit = '9';
@@ -249,17 +256,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             // Parse the method parameter data type that determines the type of array to create.
             int methodParameterDataType = dataTypeNotSupplied;
             int position = 0;
-            for (; position < param.Length && param[position] >= firstNumericDigit && param[position] <= lastNumericDigit; position++)
+            for (; position < parameter.Length && parameter[position] >= firstNumericDigit && parameter[position] <= lastNumericDigit; position++)
             {
-                int digitValue = param[position] - firstNumericDigit;
+                int digitValue = parameter[position] - firstNumericDigit;
                 methodParameterDataType = methodParameterDataType * base10Multiplier + digitValue;
             }
 
             try
             {
                 // If this parameter is not an array then ignore it.
-                if (position >= param.Length || param[position++] != '[')
-                    return param;
+                if (position >= parameter.Length || parameter[position++] != '[')
+                    return parameter;
 
                 // The 'position' should now be set to the first character following '['.
 
@@ -272,8 +279,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
                 // Parse the array.
                 // The 'position' should now be set to the first character following '['.
-                var elements = ParseArray(param, ref position);
-                if (elements != null && param.Substring(position).Trim() == "]")
+                var elements = ParseArray(parameter, ref position);
+                if (elements != null && parameter.Substring(position).Trim() == "]")
                 {
                     object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{methodParameterDataType}#{e}").ToArray());
 
@@ -286,7 +293,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
             }
 
-            throw new Exception($"Parameter '{param}' has an invalid array syntax at character {position}.");
+            throw new Exception($"Parameter '{parameter}' has an invalid array syntax at character {position}.");
         }
 
         /// <summary>
