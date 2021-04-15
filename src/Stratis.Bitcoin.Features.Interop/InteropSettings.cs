@@ -1,5 +1,6 @@
 ﻿using System;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -9,24 +10,35 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public BNBInteropSettings BNBSettings { get; set; }
 
-        public bool InteropEnabled { get; set; }
-
-        private const string InteropEnabledKey = "interop";
         
         public InteropSettings(NodeSettings nodeSettings)
         {
-            this.InteropEnabled = nodeSettings.ConfigReader.GetOrDefault(InteropEnabledKey, false);
-
-            if (!this.InteropEnabled)
-                return;
-
             this.ETHSettings = new ETHInteropSettings(nodeSettings);
             this.BNBSettings = new BNBInteropSettings(nodeSettings);
+        }
+
+        public ETHInteropSettings GetSettingsByChain(DestinationChain chain)
+        {
+            switch (chain)
+            {
+                case DestinationChain.ETH:
+                {
+                    return this.ETHSettings;
+                }
+                case DestinationChain.BNB:
+                {
+                    return this.BNBSettings;
+                }
+            }
+
+            throw new NotImplementedException("Provided chain type not supported: " + chain);
         }
     }
 
     public class ETHInteropSettings
     {
+        public bool InteropEnabled { get; set; }
+
         /// <summary>This should be set to the address of the multisig wallet contract deployed on the Ethereum blockchain.</summary>
         public string MultisigWalletAddress { get; set; }
 
@@ -63,6 +75,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public ETHInteropSettings(NodeSettings nodeSettings)
         {
+            this.InteropEnabled = nodeSettings.ConfigReader.GetOrDefault(this.GetSettingsPrefix() + "interopenabled", false);
+
+            if (!this.InteropEnabled)
+                return;
+
             string clientUrlKey = this.GetSettingsPrefix() + "clienturl";
             string wrappedStraxContractAddressKey = this.GetSettingsPrefix() + "wrappedstraxcontractaddress";
             string multisigWalletContractAddressKey = this.GetSettingsPrefix() + "multisigwalletcontractaddress";

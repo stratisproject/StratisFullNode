@@ -109,10 +109,10 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         public ETHClient(InteropSettings interopSettings)
         {
-            if (!interopSettings.InteropEnabled)
-                return;
-
             this.SetupConfiguration(interopSettings);
+            
+            if (!this.settings.InteropEnabled)
+                return;
 
             var account = new ManagedAccount(this.settings.Account, this.settings.Passphrase);
 
