@@ -216,7 +216,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public T[] GetArray<T>(string key)
         {
-            return this.GetObject<T[]>(key);
+            return (T[])this.GetObject<T[]>(key).Clone();
         }
 
         public void SetBytes(byte[] key, byte[] value)

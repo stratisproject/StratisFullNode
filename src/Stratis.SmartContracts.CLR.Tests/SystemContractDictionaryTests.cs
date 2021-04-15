@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -107,33 +108,49 @@ namespace Stratis.SmartContracts.CLR.Tests
             var message = new Mock<IMessage>();
             Func<ulong> getBalance = () => 1;
 
+            var contractPrimitiveSerializer = new ContractPrimitiveSerializer(this.network);
+            var serializer = new Serializer(contractPrimitiveSerializer);
+
             ISmartContractState state = Mock.Of<ISmartContractState>(
                 g => g.InternalTransactionExecutor == internalTxExecutor.Object
                      && g.InternalHashHelper == internalHashHelper.Object
                      && g.PersistentState == persistentState
                      && g.Block == block.Object
                      && g.Message == message.Object
-                     && g.GetBalance == getBalance);
+                     && g.GetBalance == getBalance
+                     && g.Serializer == serializer);
 
             IContract contract = Contract.CreateUninitialized(typeof(SystemContractsDictionary), state, new uint160(2));
             var instance = (SystemContractsDictionary)contract.GetPrivateFieldValue("instance");
 
-            // TODO: Verify signatures.
-            byte[] signatures = new byte[] { 0 };
-            UInt256 codeHash = 1;
-            string name = "Name";
-            Address address = new Address(0, 0, 0, 0, 1);
+            var keys = new[] { new Key(), new Key(), new Key(), new Key() };
+            var keyIds = keys.Select(k => k.PubKey.Hash).ToArray();
+            var addresses = keyIds.Select(id => id.ToBytes().ToAddress()).ToArray();
 
-            contract.InvokeConstructor(new object[] { });
+            // Initialize state.
+            persistentState.SetArray("Signatories:main", addresses.Take(3).ToArray());
+            persistentState.SetUInt32("Quorum:main", 2);
 
             var callGetSignatories = new MethodCall("GetSignatories", new object[] { "main" });
             IContractInvocationResult resultGetSignatories = contract.Invoke(callGetSignatories);
             Assert.True(resultGetSignatories.IsSuccess);
             Assert.Equal(3, ((Address[])resultGetSignatories.Return).Length);
 
-            var callAddSignatory = new MethodCall("AddSignatory", new object[] { "main", new Address(0, 0, 0, 0, 3), (uint)4, (uint)3 });
+            byte[] noSignatures = contractPrimitiveSerializer.Serialize(new string[] { });
+
+            // First call the method without the sigatures.
+            string addSignatoryChallenge = $"AddSignatory(Nonce:0,Group:main,Address:{addresses[3]},NewSize:4,NewQuorum:3)";
+            string expectedAddSignatoryError = $"Please provide 2 valid signatures for '{addSignatoryChallenge}'.";
+            var callAddSignatory = new MethodCall("AddSignatory", new object[] { noSignatures, "main", addresses[3], (uint)4, (uint)3 });
             IContractInvocationResult resultAddSignatory = contract.Invoke(callAddSignatory);
-            Assert.True(resultAddSignatory.IsSuccess);
+            Assert.False(resultAddSignatory.IsSuccess);
+            Assert.Contains(expectedAddSignatoryError, resultAddSignatory.ErrorMessage);
+
+            // Now add the requested signatures.
+            byte[] signatures = contractPrimitiveSerializer.Serialize(keys.Select(k => k.SignMessage(addSignatoryChallenge)).ToArray());
+            var callAddSignatory2 = new MethodCall("AddSignatory", new object[] { signatures, "main", addresses[3], (uint)4, (uint)3 });
+            IContractInvocationResult resultAddSignatory2 = contract.Invoke(callAddSignatory2);
+            Assert.True(resultAddSignatory2.IsSuccess);
 
             var callGetSignatories2 = new MethodCall("GetSignatories", new object[] { "main" });
             IContractInvocationResult resultGetSignatories2 = contract.Invoke(callGetSignatories2);
@@ -145,9 +162,18 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.True(resultGetQuorum.IsSuccess);
             Assert.Equal((uint)3, (uint)resultGetQuorum.Return);
 
-            var callRemoveSignatory = new MethodCall("RemoveSignatory", new object[] { "main", new Address(0, 0, 0, 0, 2), (uint)3, (uint)2 });
+            // First call the method without the sigatures.
+            string removeSignatoryChallenge = $"RemoveSignatory(Nonce:1,Group:main,Address:{addresses[2]},NewSize:3,NewQuorum:2)";
+            string expectedRemoveSignatoryError = $"Please provide 3 valid signatures for '{removeSignatoryChallenge}'.";
+            var callRemoveSignatory = new MethodCall("RemoveSignatory", new object[] { noSignatures, "main", addresses[2], (uint)3, (uint)2 });
             IContractInvocationResult resultRemoveSignatory = contract.Invoke(callRemoveSignatory);
-            Assert.True(resultRemoveSignatory.IsSuccess);
+            Assert.False(resultRemoveSignatory.IsSuccess);
+            Assert.Contains(expectedRemoveSignatoryError, resultRemoveSignatory.ErrorMessage);
+
+            signatures = contractPrimitiveSerializer.Serialize(keys.Select(k => k.SignMessage(removeSignatoryChallenge)).ToArray());
+            var callRemoveSignatory2 = new MethodCall("RemoveSignatory", new object[] { signatures, "main", addresses[2], (uint)3, (uint)2 });
+            IContractInvocationResult resultRemoveSignatory2 = contract.Invoke(callRemoveSignatory2);
+            Assert.True(resultRemoveSignatory2.IsSuccess);
 
             var callGetSignatories3 = new MethodCall("GetSignatories", new object[] { "main" });
             IContractInvocationResult resultGetSignatories3 = contract.Invoke(callGetSignatories3);
@@ -159,9 +185,21 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.True(resultGetQuorum2.IsSuccess);
             Assert.Equal((uint)2, (uint)resultGetQuorum2.Return);
 
-            var callWhiteList = new MethodCall("WhiteList", new object[] { signatures, codeHash, address, name });
+            UInt256 codeHash = 1;
+            string name = "Name";
+            Address address = new Address(0, 0, 0, 0, 1);
+
+            string whiteListChallenge = $"WhiteList(Nonce:0,CodeHash:{codeHash},LastAddress:{address},Name:Name)";
+            string expectedWhiteListError = $"Please provide 2 valid signatures for '{whiteListChallenge}'.";
+            var callWhiteList = new MethodCall("WhiteList", new object[] { noSignatures, codeHash, address, name });
             IContractInvocationResult resultWhiteList = contract.Invoke(callWhiteList);
-            Assert.True(resultWhiteList.IsSuccess);
+            Assert.False(resultWhiteList.IsSuccess);
+            Assert.Contains(expectedWhiteListError, resultWhiteList.ErrorMessage);
+
+            signatures = contractPrimitiveSerializer.Serialize(keys.Select(k => k.SignMessage(whiteListChallenge)).ToArray());
+            var callWhiteList2 = new MethodCall("WhiteList", new object[] { signatures, codeHash, address, name });
+            IContractInvocationResult resultWhiteList2 = contract.Invoke(callWhiteList2);
+            Assert.True(resultWhiteList2.IsSuccess);
 
             WhiteListEntry whiteListEntry = persistentState.GetStruct<WhiteListEntry>(codeHash.ToString());
 
@@ -187,9 +225,17 @@ namespace Stratis.SmartContracts.CLR.Tests
             IContractInvocationResult resultGetContractAddressCH = contract.Invoke(callGetContractAddressCH);
             Assert.Equal(address, (Address)resultGetContractAddressCH.Return);
 
-            var callBlackList = new MethodCall("BlackList", new object[] { signatures, codeHash });
+            string blackListChallenge = $"BlackList(Nonce:1,CodeHash:{codeHash},LastAddress:{address},Name:Name)";
+            string expectedBlackListError = $"Please provide 2 valid signatures for '{blackListChallenge}'.";
+            var callBlackList = new MethodCall("BlackList", new object[] { noSignatures, codeHash });
             IContractInvocationResult resultBlackList = contract.Invoke(callBlackList);
-            Assert.True(resultBlackList.IsSuccess);
+            Assert.False(resultBlackList.IsSuccess);
+            Assert.Contains(expectedBlackListError, resultBlackList.ErrorMessage);
+
+            signatures = contractPrimitiveSerializer.Serialize(keys.Select(k => k.SignMessage(blackListChallenge)).ToArray());
+            var callBlackList2 = new MethodCall("BlackList", new object[] { signatures, codeHash });
+            IContractInvocationResult resultBlackList2 = contract.Invoke(callBlackList2);
+            Assert.True(resultBlackList2.IsSuccess);
 
             var callIsWhiteListed2 = new MethodCall("IsWhiteListed", new object[] { codeHash });
             IContractInvocationResult resultIsWhiteListed2 = contract.Invoke(callIsWhiteListed2);
