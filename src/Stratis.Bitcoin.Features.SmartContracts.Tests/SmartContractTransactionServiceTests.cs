@@ -986,6 +986,22 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         }
 
         [Fact]
+        public void CanConvertStringArrayParameter()
+        {
+            var cpSerializer = new ContractPrimitiveSerializer(this.network);
+            var mpSerializer = new MethodParameterStringSerializer(this.network);
+
+            string orginalParameter = "4['This is an 'element, This is a comma: ',' ,This is John''s element, 'This is an element ']";
+
+            string convertedParameter = SmartContractTransactionService.ConvertParameter(cpSerializer, mpSerializer, orginalParameter);
+            Assert.Equal("10#F851925468697320697320616E20656C656D656E749254686973206973206120636F6D6D613A202C9654686973206973204A6F686E277320656C656D656E74935468697320697320616E20656C656D656E7420", convertedParameter);
+
+            var recoveredBytes = (byte[])mpSerializer.Deserialize(new[] { convertedParameter })[0];
+            var recoveredArray = cpSerializer.Deserialize<string[]>(recoveredBytes);
+            Assert.Equal(new[] { "This is an element", "This is a comma: ,", "This is John's element", "This is an element " }, recoveredArray);
+        }
+
+        [Fact]
         public void CanPassSignatures()
         {
             const int utxoIndex = 0;
