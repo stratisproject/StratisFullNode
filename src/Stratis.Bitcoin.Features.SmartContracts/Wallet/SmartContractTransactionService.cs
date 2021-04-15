@@ -205,31 +205,34 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// Single quotes are used to enclose text regions to preserve whitespace or to make ']' or ',' non-special.
         /// </summary>
         /// <param name="param">The string to parse.</param>
-        /// <param name="ndx">The position in the string following the '[' character.</param>
+        /// <param name="position">The position in the string following the '[' character.</param>
         /// <returns>The elements as a string array.</returns>
         /// <remarks>
         /// Single quotes are removed from elements and double single quotes are converted to literal single quotes.
         /// </remarks>
-        public static string[] ParseArray(string param, ref int ndx)
+        public static string[] ParseArray(string param, ref int position)
         {
             var elements = new List<string>();
-            int elementStart = ndx;
+            int elementStart = position;
             bool quoted = false;
 
-            for (; ndx < param.Length; ndx++)
+            for (; position < param.Length; position++)
             {
-                if (param[ndx] == '\'')
+                if (param[position] == '\'')
                 {
                     quoted = !quoted;
                 }
-                else if (!quoted && (param[ndx] == ',' || param[ndx] == ']'))
+                else if (!quoted && (param[position] == ',' || param[position] == ']'))
                 {
-                    // Check for element termination characters. 
-                    string element = param.Substring(elementStart, ndx - elementStart).Trim().Replace("''", "\x0").Replace("'", "").Replace("\x0", "'");
+                    string placeHolder = "\x0";
+
+                    // Extract the element.
+                    // Replace double-single-quotes with a placeholder. Remove single-quotes. Replace the placeholder with a single-quote.
+                    string element = param.Substring(elementStart, position - elementStart).Trim().Replace("''", placeHolder).Replace("'", "").Replace(placeHolder, "'");
                     elements.Add(element);
-                    if (param[ndx] == ']')
+                    if (param[position] == ']')
                         return elements.ToArray();
-                    elementStart = ndx + 1;
+                    elementStart = position + 1;
                 }
             }
 
@@ -238,41 +241,52 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
         public static string ConvertParameter(ContractPrimitiveSerializer cpSerializer, MethodParameterStringSerializer mpSerializer, string param)
         {
-            // Parse the type.
-            int type = 0;
-            int ndx = 0;
-            for (; ndx < param.Length && param[ndx] >= '0' && param[ndx] <= '9'; ndx++)
-                type = type * 10 + param[ndx] - '0';
+            const char firstNumericDigit = '0';
+            const char lastNumericDigit = '9';
+            const int base10Multiplier = 10;
+            const int dataTypeNotSupplied = 0;
+
+            // Parse the method parameter data type that determines the type of array to create.
+            int methodParameterDataType = dataTypeNotSupplied;
+            int position = 0;
+            for (; position < param.Length && param[position] >= firstNumericDigit && param[position] <= lastNumericDigit; position++)
+            {
+                int digitValue = param[position] - firstNumericDigit;
+                methodParameterDataType = methodParameterDataType * base10Multiplier + digitValue;
+            }
 
             try
             {
                 // If this parameter is not an array then ignore it.
-                if (ndx >= param.Length || param[ndx++] != '[')
+                if (position >= param.Length || param[position++] != '[')
                     return param;
 
+                // The 'position' should now be set to the first character following '['.
+
                 // If the type is omitted assume its a string.
-                if (type == 0)
-                    type = 4;
+                if (methodParameterDataType == dataTypeNotSupplied)
+                    methodParameterDataType = (int)MethodParameterDataType.String;
 
                 // Validate type.
-                var dummy = (MethodParameterDataType)type;
+                var dummy = (MethodParameterDataType)methodParameterDataType;
 
                 // Parse the array.
-                var elements = ParseArray(param, ref ndx);
-                if (elements != null && param.Substring(ndx).Trim() == "]")
+                // The 'position' should now be set to the first character following '['.
+                var elements = ParseArray(param, ref position);
+                if (elements != null && param.Substring(position).Trim() == "]")
                 {
-                    object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
+                    object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{methodParameterDataType}#{e}").ToArray());
 
-                    var sigbuf = cpSerializer.Serialize(values);
+                    var serializedArray = cpSerializer.Serialize(arrayElements);
 
-                    return $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(sigbuf).Replace("-", "")}";
+                    return $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(serializedArray).Replace("-", "")}";
                 }
             }
             catch (Exception)
             {
             }
 
-            throw new Exception($"Parameter '{param}' has an invalid array syntax at character {ndx}.");
+            throw new Exception($"Parameter '{param}' has an invalid array syntax at character {position}.");
         }
 
         /// <summary>
