@@ -107,6 +107,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             // Register the Swagger generator. This will use the options we injected just above.
             services.AddSwaggerGen();
+            services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
