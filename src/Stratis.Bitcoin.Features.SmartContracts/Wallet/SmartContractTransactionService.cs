@@ -261,13 +261,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 // Parse the type.
                 int type = 0;
                 int ndx = 0;
-                while (param[ndx] >= '0' && param[ndx] <= '9')
-                    type = type * 10 + param[ndx++] - '0';
+                for (;  ndx < param.Length && param[ndx] >= '0' && param[ndx] <= '9'; ndx++)
+                    type = type * 10 + param[ndx] - '0';
 
                 try
                 {
                     // If this parameter is not an array then ignore it.
-                    if (param[ndx++] != '[')
+                    if (ndx >= param.Length || param[ndx++] != '[')
                         continue;
 
                     // If the type is omitted assume its a string.
@@ -279,7 +279,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
                     // Parse the array.
                     var elements = ParseArray(param, ref ndx);
-                    if (elements != null && param.Substring(ndx + 1).Trim() == "")
+                    if (elements != null && param.Substring(ndx).Trim() == "]")
                     {
                         object[] values = mpSerializer.Deserialize(elements.Select(e => $"{type}#{e}").ToArray());
 
