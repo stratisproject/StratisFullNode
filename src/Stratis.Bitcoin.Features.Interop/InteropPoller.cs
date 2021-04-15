@@ -434,7 +434,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                         if (transactionId2 != BigInteger.MinusOne)
                         {
-                            await this.BroadcastCoordinationAsync(request.RequestId, transactionId2).ConfigureAwait(false);
+                            await this.BroadcastCoordinationAsync(request.RequestId, transactionId2, request.DestinationChain).ConfigureAwait(false);
 
                             BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
 
@@ -477,7 +477,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
                                 // Nodes will simply ignore the messages if they are not relevant.
 
-                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId3).ConfigureAwait(false);
+                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId3, request.DestinationChain).ConfigureAwait(false);
 
                                 // No state transition here, we are waiting for sufficient confirmations.
                             }
@@ -516,7 +516,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                                 this.interopTransactionManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
 
-                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId4).ConfigureAwait(false);
+                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId4, request.DestinationChain).ConfigureAwait(false);
                             }
 
                             // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
@@ -540,11 +540,11 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task BroadcastCoordinationAsync(string requestId, BigInteger transactionId)
+        private async Task BroadcastCoordinationAsync(string requestId, BigInteger transactionId, DestinationChain targetChain)
         {
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + ((int)transactionId));
 
-            await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(requestId, (int)transactionId, signature)).ConfigureAwait(false);
+            await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(requestId, (int)transactionId, signature, targetChain)).ConfigureAwait(false);
         }
 
         private BigInteger CoinsToWei(Money coins)

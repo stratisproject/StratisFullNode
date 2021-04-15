@@ -97,9 +97,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             try
             {
-                // TODO dont hardcode chain
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.clientProvider.GetClientForChain(DestinationChain.ETH)
+                confirmationCount = await this.clientProvider.GetClientForChain(payload.DestinationChain)
                     .GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
             catch (Exception)
