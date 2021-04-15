@@ -24,12 +24,14 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly Script depositScript;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
+        private readonly IOpReturnDataReader opReturnDataReader;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
         {
             this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
+            this.opReturnDataReader = opReturnDataReader;
         }
 
         /// <inheritdoc />
@@ -74,34 +76,30 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (!depositsToMultisig.Any())
                 return null;
-            
-            DestinationChain targetChain;
-            
-            byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 
-            if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out string targetAddress))
+            // Check the common case first.
+            bool conversionTransaction = false;
+            DestinationChain targetChain = DestinationChain.STRAX;
+
+            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
             {
-                targetChain = (DestinationChain) destinationChain;
+                byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
+
+                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
+                {
+                    targetChain = (DestinationChain)destinationChain;
+                }
+                else
+                    return null;
+                
+                conversionTransaction = true;
             }
-            else
-                return null;
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
 
-            if (targetChain == DestinationChain.STRAX)
-            {
-                if (targetAddress == this.network.CirrusRewardDummyAddress)
-                    depositRetrievalType = DepositRetrievalType.Distribution;
-                else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
-                    depositRetrievalType = DepositRetrievalType.Large;
-                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
-                    depositRetrievalType = DepositRetrievalType.Normal;
-                else
-                    depositRetrievalType = DepositRetrievalType.Small;
-            }
-            else
+            if (conversionTransaction)
             {
                 if (amount < Money.Coins(ConversionTransactionMinimum))
                     return null;
@@ -112,6 +110,17 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     depositRetrievalType = DepositRetrievalType.ConversionNormal;
                 else
                     depositRetrievalType = DepositRetrievalType.ConversionSmall;
+            }
+            else
+            {
+                if (targetAddress == this.network.CirrusRewardDummyAddress)
+                    depositRetrievalType = DepositRetrievalType.Distribution;
+                else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.Large;
+                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.Normal;
+                else
+                    depositRetrievalType = DepositRetrievalType.Small;
             }
 
             return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, targetChain, blockHeight, blockHash);
