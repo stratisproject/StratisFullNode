@@ -236,7 +236,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 }
             }
 
-            return null;
+            throw new Exception($"Parameter '{parameter}' has no end of array indicator.");
         }
 
         /// <summary>
@@ -262,31 +262,20 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             int position = prefixNumber.Length;
 
-            try
-            {
-                // If this parameter is not an array then ignore it.
-                if (parameter.ElementAtOrDefault(position++) != '[')
-                    return parameter;
+            // If this parameter is not an array then ignore it.
+            if (parameter.ElementAtOrDefault(position++) != '[')
+                return parameter;
 
-                // Parse the array.
-                // The 'position' should now be set to the first character following '['.
-                var elements = ParseArray(parameter, ref position);
-                if (elements != null && parameter.Substring(position).Trim() == "]")
-                {
-                    object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{(int)dataType}#{e}").ToArray());
+            // Parse the array.
+            // The 'position' should now be set to the first character following '['.
+            var elements = ParseArray(parameter, ref position);
+            object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{(int)dataType}#{e}").ToArray());
 
-                    var serializedArray = cpSerializer.Serialize(arrayElements);
+            var serializedArray = cpSerializer.Serialize(arrayElements);
 
-                    var hex = BitConverter.ToString(serializedArray).Replace("-", "");
+            var hex = BitConverter.ToString(serializedArray).Replace("-", "");
 
-                    return $"{(int)MethodParameterDataType.ByteArray}#{hex}";
-                }
-            }
-            catch (Exception)
-            {
-            }
-
-            throw new Exception($"Parameter '{parameter}' has an invalid array syntax at character {position}.");
+            return $"{(int)MethodParameterDataType.ByteArray}#{hex}";
         }    
 
         /// <summary>
