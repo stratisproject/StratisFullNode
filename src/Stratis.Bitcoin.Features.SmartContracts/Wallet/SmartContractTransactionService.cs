@@ -204,33 +204,33 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
         /// Parses elements until the ',' (separator) or ']' (ending) special character is encountered.
         /// Single quotes are used to enclose text regions to preserve whitespace or to make ']' or ',' non-special.
         /// </summary>
-        /// <param name="param">The string to parse.</param>
-        /// <param name="position">The position in the string following the '[' character.</param>
+        /// <param name="parameter">The parameter to parse.</param>
+        /// <param name="position">Initally the position in the string following the '[' character. This gets incremented as we traverse the parameter.</param>
         /// <returns>The elements as a string array.</returns>
         /// <remarks>
         /// Single quotes are removed from elements and double single quotes are converted to literal single quotes.
         /// </remarks>
-        public static string[] ParseArray(string param, ref int position)
+        public static string[] ParseArray(string parameter, ref int position)
         {
             var elements = new List<string>();
             int elementStart = position;
             bool quoted = false;
 
-            for (; position < param.Length; position++)
+            for (; position < parameter.Length; position++)
             {
-                if (param[position] == '\'')
+                if (parameter[position] == '\'')
                 {
                     quoted = !quoted;
                 }
-                else if (!quoted && (param[position] == ',' || param[position] == ']'))
+                else if (!quoted && (parameter[position] == ',' || parameter[position] == ']'))
                 {
                     string placeHolder = "\x0";
 
                     // Extract the element.
                     // Replace double-single-quotes with a placeholder. Remove single-quotes. Replace the placeholder with a single-quote.
-                    string element = param.Substring(elementStart, position - elementStart).Trim().Replace("''", placeHolder).Replace("'", "").Replace(placeHolder, "'");
+                    string element = parameter.Substring(elementStart, position - elementStart).Trim().Replace("''", placeHolder).Replace("'", "").Replace(placeHolder, "'");
                     elements.Add(element);
-                    if (param[position] == ']')
+                    if (parameter[position] == ']')
                         return elements.ToArray();
                     elementStart = position + 1;
                 }
