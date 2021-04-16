@@ -218,7 +218,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <returns>The coins and unspent outputs that will be used.</returns>
         public static (List<Coin>, List<UnspentOutputReference>) DetermineCoins(IFederationWalletManager walletManager, Network network, TransactionBuildContext context, IFederatedPegSettings settings)
         {
-            List<UnspentOutputReference> unspentOutputs = walletManager.GetSpendableTransactionsInWallet(context.MinConfirmations).ToList();
+            List<UnspentOutputReference> unspentOutputs = walletManager.GetSpendableTransactionsInWallet(context.MinConfirmations).Where(x => x.Transaction.Amount > Money.Coins(0.001m)).ToList();
 
             // Get total spendable balance in the account.
             long balance = unspentOutputs.Sum(t => t.Transaction.Amount);
