@@ -117,7 +117,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// </summary>
         private Dictionary<OutPoint, TransactionData> outpointLookup => this.Wallet.MultiSigAddress.Transactions.GetOutpointLookup();
 
-        // Gateway settings picked up from the node config.
+        /// <summary>
+        /// Gateway settings picked up from the node config.
+        /// </summary>
         private readonly IFederatedPegSettings federatedPegSettings;
 
         public FederationWalletManager(
@@ -322,16 +324,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             lock (this.lockObject)
             {
-
                 if (this.Wallet == null)
                 {
                     return Enumerable.Empty<UnspentOutputReference>();
                 }
 
-                UnspentOutputReference[] res;
-                res = this.GetSpendableTransactions(this.chainIndexer.Tip.Height, confirmations).ToArray();
-
-                return res;
+                return this.GetSpendableTransactions(this.chainIndexer.Tip.Height, confirmations).ToArray();
             }
         }
 
@@ -1047,7 +1045,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 // Verify that there are no earlier unspent UTXOs.
                 var comparer = Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData);
-                TransactionData earliestUnspent = this.Wallet.MultiSigAddress.Transactions.GetUnspentTransactions().Where(x => x.Amount > Money.Coins(0.001m)).FirstOrDefault();
+                TransactionData earliestUnspent = this.Wallet.MultiSigAddress.Transactions.GetUnspentTransactions().FirstOrDefault();
                 if (earliestUnspent != null)
                 {
                     TransactionData oldestInput = transaction.Inputs

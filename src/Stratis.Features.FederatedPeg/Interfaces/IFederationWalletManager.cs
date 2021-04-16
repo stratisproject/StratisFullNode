@@ -44,6 +44,7 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// <summary>
         /// Lists all spendable transactions from all accounts in the wallet.
         /// </summary>
+        /// <param name="confirmations">The minimum confirmations to filter by.</param>
         /// <returns>A collection of spendable outputs</returns>
         IEnumerable<UnspentOutputReference> GetSpendableTransactionsInWallet(int confirmations = 0);
 

@@ -70,6 +70,8 @@ namespace Stratis.Features.FederatedPeg
 
             TextFileConfiguration configReader = nodeSettings.ConfigReader;
 
+            this.DustThreshold = Money.Coins(0.001m);
+
             this.IsMainChain = configReader.GetOrDefault("mainchain", false);
             if (!this.IsMainChain && !configReader.GetOrDefault("sidechain", false))
                 throw new ConfigurationException("Either -mainchain or -sidechain must be specified");
@@ -142,6 +144,9 @@ namespace Stratis.Features.FederatedPeg
             this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
+
+        /// <inheritdoc/>
+        public Money DustThreshold { get; }
 
         /// <inheritdoc/>
         public bool IsMainChain { get; }

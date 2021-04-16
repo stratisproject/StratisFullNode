@@ -10,6 +10,11 @@ namespace Stratis.Features.FederatedPeg.Interfaces
     public interface IFederatedPegSettings
     {
         /// <summary>
+        /// The amount to filter dust inputs by.
+        /// </summary>
+        public Money DustThreshold { get; }
+
+        /// <summary>
         /// Indicates whether this is the main chain. Set if the "-mainchain" switch was used.
         /// </summary>
         bool IsMainChain { get; }
