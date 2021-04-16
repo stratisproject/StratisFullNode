@@ -15,6 +15,9 @@ namespace Stratis.Features.FederatedPeg
     /// <inheritdoc />
     public sealed class FederatedPegSettings : IFederatedPegSettings
     {
+        /// <summary>The amount to filter dust inputs by.</summary>
+        public const decimal DustThreshold = 0.001m;
+
         public const string WalletSyncFromHeightParam = "walletsyncfromheight";
 
         public const string RedeemScriptParam = "redeemscript";
@@ -69,8 +72,6 @@ namespace Stratis.Features.FederatedPeg
             Guard.NotNull(nodeSettings, nameof(nodeSettings));
 
             TextFileConfiguration configReader = nodeSettings.ConfigReader;
-
-            this.DustThreshold = Money.Coins(0.001m);
 
             this.IsMainChain = configReader.GetOrDefault("mainchain", false);
             if (!this.IsMainChain && !configReader.GetOrDefault("sidechain", false))
@@ -144,9 +145,6 @@ namespace Stratis.Features.FederatedPeg
             this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
         }
-
-        /// <inheritdoc/>
-        public Money DustThreshold { get; }
 
         /// <inheritdoc/>
         public bool IsMainChain { get; }

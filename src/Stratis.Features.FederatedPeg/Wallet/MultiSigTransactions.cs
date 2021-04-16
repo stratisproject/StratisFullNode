@@ -303,7 +303,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 IList<TransactionData> result = this.spendableTransactionList.Keys;
 
                 if (filterDustTransactions)
-                    result = result.Where(x => x.Amount > Money.Coins(0.001m)).ToArray();
+                    result = result.Where(x => x.Amount > Money.Coins(FederatedPegSettings.DustThreshold)).ToArray();
 
                 return result.ToArray();
             }
