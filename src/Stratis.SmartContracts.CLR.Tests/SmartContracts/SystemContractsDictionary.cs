@@ -14,8 +14,8 @@ public class SystemContractsDictionary : SmartContract
 
     public SystemContractsDictionary(ISmartContractState state) : base(state)
     {
-        this.State.SetArray($"Signatories:{primaryGroup}", new[] { new Address(0, 0, 0, 0, 0), new Address(0, 0, 0, 0, 1), new Address(0, 0, 0, 0, 2) });
-        this.State.SetUInt32($"Quorum:{primaryGroup}", 2);
+        this.SetSignatories(primaryGroup, new[] { new Address(0, 0, 0, 0, 0), new Address(0, 0, 0, 0, 1), new Address(0, 0, 0, 0, 2) });
+        this.SetQuorum(primaryGroup, 2);
     }
 
     private Address[] Signatories => GetSignatories(primaryGroup);
@@ -120,7 +120,7 @@ public class SystemContractsDictionary : SmartContract
     {
         Assert(codeHash != default(UInt256));
 
-        WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+        WhiteListEntry whiteListEntry = this.GetWhiteListEntry(codeHash);
 
         return whiteListEntry.CodeHash != default(UInt256);
     }
@@ -149,7 +149,7 @@ public class SystemContractsDictionary : SmartContract
         if (codeHash == default(UInt256))
             return default(Address);
 
-        WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+        WhiteListEntry whiteListEntry = this.GetWhiteListEntry(codeHash);
 
         return whiteListEntry.LastAddress;
     }
@@ -222,7 +222,7 @@ public class SystemContractsDictionary : SmartContract
         if (whiteListEntry.CodeHash != default(UInt256))
         {
             if (codeHash != whiteListEntry.CodeHash)
-                this.State.Clear(whiteListEntry.CodeHash.ToString());
+                this.ClearWhiteListEntry(whiteListEntry.CodeHash);
 
             if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(whiteListEntry.Name))
                 this.ClearCodeHash(whiteListEntry.Name);
@@ -242,7 +242,7 @@ public class SystemContractsDictionary : SmartContract
         Assert(signatures != null);
         Assert(codeHash != default(UInt256));
 
-        WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+        WhiteListEntry whiteListEntry = this.GetWhiteListEntry(codeHash);
 
         Assert(whiteListEntry.CodeHash != default(UInt256), "The entry does not exist.");
 
