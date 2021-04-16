@@ -201,7 +201,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             IContractInvocationResult resultWhiteList2 = contract.Invoke(callWhiteList2);
             Assert.True(resultWhiteList2.IsSuccess);
 
-            WhiteListEntry whiteListEntry = persistentState.GetStruct<WhiteListEntry>(codeHash.ToString());
+            WhiteListEntry whiteListEntry = persistentState.GetStruct<WhiteListEntry>($"CodeHash:{codeHash}");
 
             Assert.Equal(name, whiteListEntry.Name);
             Assert.Equal(codeHash, whiteListEntry.CodeHash);
