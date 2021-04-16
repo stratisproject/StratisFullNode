@@ -156,17 +156,17 @@ public class SystemContractsDictionary : SmartContract
 
     private WhiteListEntry GetWhiteListEntry(UInt256 codeHash)
     {
-        return this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+        return this.State.GetStruct<WhiteListEntry>($"CodeHash:{codeHash}");
     }
 
     private void SetWhiteListEntry(UInt256 codeHash, WhiteListEntry whiteListEntry)
     {
-        this.State.SetStruct<WhiteListEntry>(codeHash.ToString(), whiteListEntry);
+        this.State.SetStruct<WhiteListEntry>($"CodeHash:{codeHash}", whiteListEntry);
     }
 
     private void ClearWhiteListEntry(UInt256 codeHash)
     {
-        this.State.Clear(codeHash.ToString());
+        this.State.Clear($"CodeHash:{codeHash}");
     }
 
     public Address GetContractAddress(UInt256 codeHash)
