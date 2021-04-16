@@ -85,9 +85,11 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
                 if (!hasSpendingDetails)
                     return null;
 
-                return new SpendingDetails() {
-                    WithdrawalDetails = hasWithdrawalDetails ? new WithdrawalDetails() {
-                         MatchingDepositId = spendingDepositId
+                return new SpendingDetails()
+                {
+                    WithdrawalDetails = hasWithdrawalDetails ? new WithdrawalDetails()
+                    {
+                        MatchingDepositId = spendingDepositId
                     } : null,
                     BlockHeight = spendingBlockHeight(),
                     TransactionId = spendingTransactionId
@@ -107,6 +109,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             var transactionData = new TransactionData()
             {
                 Id = transactionId,
+                Amount = Money.Coins(1),
                 Index = transactionIndex,
                 BlockHeight = blockHeight(),
                 SpendingDetails = spendingDetails()

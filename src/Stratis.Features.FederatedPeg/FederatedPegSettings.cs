@@ -15,6 +15,9 @@ namespace Stratis.Features.FederatedPeg
     /// <inheritdoc />
     public sealed class FederatedPegSettings : IFederatedPegSettings
     {
+        /// <summary>The amount to filter dust inputs by.</summary>
+        public const decimal DustThreshold = 0.001m;
+
         public const string WalletSyncFromHeightParam = "walletsyncfromheight";
 
         public const string RedeemScriptParam = "redeemscript";
