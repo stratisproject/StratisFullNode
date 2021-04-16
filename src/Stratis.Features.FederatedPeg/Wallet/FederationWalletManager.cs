@@ -117,7 +117,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// </summary>
         private Dictionary<OutPoint, TransactionData> outpointLookup => this.Wallet.MultiSigAddress.Transactions.GetOutpointLookup();
 
-        // Gateway settings picked up from the node config.
+        /// <summary>
+        /// Gateway settings picked up from the node config.
+        /// </summary>
         private readonly IFederatedPegSettings federatedPegSettings;
 
         public FederationWalletManager(
@@ -322,16 +324,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             lock (this.lockObject)
             {
-
                 if (this.Wallet == null)
                 {
                     return Enumerable.Empty<UnspentOutputReference>();
                 }
 
-                UnspentOutputReference[] res;
-                res = this.GetSpendableTransactions(this.chainIndexer.Tip.Height, confirmations).ToArray();
-
-                return res;
+                return this.GetSpendableTransactions(this.chainIndexer.Tip.Height, confirmations).ToArray();
             }
         }
 
@@ -1041,7 +1039,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 // Verify that the transaction has valid UTXOs.
                 if (!this.TransactionHasValidUTXOs(transaction, coins))
                 {
-                    this.logger.Debug("Transaction does not have valid UTXOs.");
+                    this.logger.Error($"Transaction '{transaction.GetHash()}' does not have valid UTXOs.");
                     return ValidateTransactionResult.Failed("Transaction does not have valid UTXOs.");
                 }
 
@@ -1057,7 +1055,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                                                              .FirstOrDefault();
                     if (oldestInput != null && DeterministicCoinOrdering.CompareTransactionData(earliestUnspent, oldestInput) < 0)
                     {
-                        this.logger.Debug($"Earlier unspent UTXOs exist; [Oldest {oldestInput.Amount} {oldestInput.CreationTime}] [Earliest {earliestUnspent.Amount} {earliestUnspent.CreationTime}]");
+                        this.logger.Error($"Earlier unspent UTXOs exist for tx '{transaction.GetHash()}'");
                         return ValidateTransactionResult.Failed("Earlier unspent UTXOs exist.");
                     }
                 }
