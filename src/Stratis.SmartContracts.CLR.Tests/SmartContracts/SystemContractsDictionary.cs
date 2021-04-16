@@ -35,10 +35,30 @@ public class SystemContractsDictionary : SmartContract
         return this.State.GetArray<Address>($"Signatories:{group}");
     }
 
+    private void SetSignatories(string group, Address[] values)
+    {
+        this.State.SetArray($"Signatories:{group}", values);
+    }
+
     public uint GetQuorum(string group)
     {
         Assert(!string.IsNullOrEmpty(group));
         return this.State.GetUInt32($"Quorum:{group}");
+    }
+
+    private void SetQuorum(string group, uint value)
+    {
+        this.State.SetUInt32($"Quorum:{group}", value);
+    }
+
+    private uint GetGroupNonce(string group)
+    {
+        return this.State.GetUInt32($"GroupNonce:{group}");
+    }
+
+    private void SetGroupNonce(string group, uint value)
+    {
+        this.State.SetUInt32($"GroupNonce:{group}", value);
     }
 
     public void AddSignatory(byte[] signatures, string group, Address address, uint newSize, uint newQuorum)
@@ -52,16 +72,16 @@ public class SystemContractsDictionary : SmartContract
 
         Assert((signatories.Length + 1) == newSize, "The expected size is incorrect.");
 
-        uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
+        uint nonce = this.GetGroupNonce(group);
 
         this.VerifySignatures(signatures, $"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         System.Array.Resize(ref signatories, signatories.Length + 1);
         signatories[signatories.Length - 1] = address;
 
-        this.State.SetArray($"Signatories:{group}", signatories);
-        this.State.SetUInt32($"Quorum:{group}", newQuorum);
-        this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
+        this.SetSignatories(group, signatories);
+        this.SetQuorum(group, newQuorum);
+        this.SetGroupNonce(group, nonce + 1);
     }
 
     public void RemoveSignatory(byte[] signatures, string group, Address address, uint newSize, uint newQuorum)
@@ -86,13 +106,13 @@ public class SystemContractsDictionary : SmartContract
         Assert(found, "The signatory does not exist.");
         Assert(newSize == signatories.Length, "The expected size is incorrect.");
 
-        uint nonce = this.State.GetUInt32($"GroupNonce:{group}");
+        uint nonce = this.GetGroupNonce(group);
 
         this.VerifySignatures(signatures, $"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
-        this.State.SetArray($"Signatories:{group}", signatories);
-        this.State.SetUInt32($"Quorum:{group}", newQuorum);
-        this.State.SetUInt32($"GroupNonce:{group}", nonce + 1);
+        this.SetSignatories(group, signatories);
+        this.SetQuorum(group, newQuorum);
+        this.SetGroupNonce(group, nonce + 1);
     }
 
     public bool IsWhiteListed(UInt256 codeHash)
@@ -111,11 +131,19 @@ public class SystemContractsDictionary : SmartContract
         return this.State.GetUInt256($"ByName:{name}");
     }
 
+    private void SetCodeHash(string name, UInt256 codeHash)
+    {
+        this.State.SetUInt256($"ByName:{name}", codeHash);
+    }
+
+    private void ClearCodeHash(string name)
+    {
+        this.State.Clear($"ByName:{name}");
+    }
+
     public Address GetContractAddress(string name)
     {
-        Assert(!string.IsNullOrEmpty(name));
-
-        UInt256 codeHash = this.State.GetUInt256($"ByName:{name}");
+        UInt256 codeHash = GetCodeHash(name);
 
         if (codeHash == default(UInt256))
             return default(Address);
@@ -125,13 +153,36 @@ public class SystemContractsDictionary : SmartContract
         return whiteListEntry.LastAddress;
     }
 
+    private WhiteListEntry GetWhiteListEntry(UInt256 codeHash)
+    {
+        return this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+    }
+
+    private void SetWhiteListEntry(UInt256 codeHash, WhiteListEntry whiteListEntry)
+    {
+        this.State.SetStruct<WhiteListEntry>(codeHash.ToString(), whiteListEntry);
+    }
+
+    private void ClearWhiteListEntry(UInt256 codeHash)
+    {
+        this.State.Clear(codeHash.ToString());
+    }
+
     public Address GetContractAddress(UInt256 codeHash)
     {
         Assert(codeHash != default(UInt256));
 
-        WhiteListEntry whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHash.ToString());
+        return this.GetWhiteListEntry(codeHash).LastAddress;
+    }
 
-        return whiteListEntry.LastAddress;
+    private uint GetCodeNonce(UInt256 codeHash)
+    {
+        return this.State.GetUInt32($"Nonce:{codeHash}");
+    }
+
+    private void SetCodeNonce(UInt256 codeHash, uint nonce)
+    {
+        this.State.SetUInt32($"Nonce:{codeHash}", nonce);
     }
 
     public void WhiteList(byte[] signatures, UInt256 codeHash, Address lastAddress, string name)
@@ -144,15 +195,15 @@ public class SystemContractsDictionary : SmartContract
 
         if (!string.IsNullOrEmpty(name))
         {
-            codeHashKey = this.State.GetUInt256($"ByName:{name}");
+            codeHashKey = this.GetCodeHash(name);
 
             if (codeHashKey == default(UInt256))
                 codeHashKey = codeHash;
         }
 
-        whiteListEntry = this.State.GetStruct<WhiteListEntry>(codeHashKey.ToString());
+        whiteListEntry = this.GetWhiteListEntry(codeHashKey);
 
-        uint nonce = this.State.GetUInt32($"Nonce:{codeHash}");
+        uint nonce = this.GetCodeNonce(codeHash);
 
         string authorizationChallenge;
         if (whiteListEntry.CodeHash == default(UInt256))
@@ -173,16 +224,16 @@ public class SystemContractsDictionary : SmartContract
                 this.State.Clear(whiteListEntry.CodeHash.ToString());
 
             if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(whiteListEntry.Name))
-                this.State.Clear($"ByName:{whiteListEntry.Name}");
+                this.ClearCodeHash(whiteListEntry.Name);
         }
 
         whiteListEntry.CodeHash = codeHash;
         whiteListEntry.LastAddress = lastAddress;
         whiteListEntry.Name = name;
 
-        this.State.SetStruct<WhiteListEntry>(codeHash.ToString(), whiteListEntry);
-        this.State.SetUInt256($"ByName:{name}", codeHash);
-        this.State.SetUInt32($"Nonce:{codeHash}", nonce + 1);
+        this.SetWhiteListEntry(codeHash, whiteListEntry);
+        this.SetCodeHash(name, codeHash);
+        this.SetCodeNonce(codeHash, nonce + 1);
     }
 
     public void BlackList(byte[] signatures, UInt256 codeHash)
@@ -194,12 +245,12 @@ public class SystemContractsDictionary : SmartContract
 
         Assert(whiteListEntry.CodeHash != default(UInt256), "The entry does not exist.");
 
-        uint nonce = this.State.GetUInt32($"Nonce:{codeHash}");
+        uint nonce = this.GetCodeNonce(codeHash);
 
         this.VerifySignatures(signatures, $"{nameof(BlackList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})");
 
-        this.State.Clear(codeHash.ToString());
-        this.State.Clear($"ByName:{whiteListEntry.Name}");
-        this.State.SetUInt32($"Nonce:{codeHash}", nonce + 1);
+        this.ClearWhiteListEntry(codeHash);
+        this.ClearCodeHash(whiteListEntry.Name);
+        this.SetCodeNonce(codeHash, nonce + 1);
     }
 }
