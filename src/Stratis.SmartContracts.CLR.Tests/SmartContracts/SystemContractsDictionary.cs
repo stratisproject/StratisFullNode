@@ -18,9 +18,9 @@ public class SystemContractsDictionary : SmartContract
         this.State.SetUInt32($"Quorum:{primaryGroup}", 2);
     }
 
-    public Address[] Signatories => GetSignatories(primaryGroup);
+    private Address[] Signatories => GetSignatories(primaryGroup);
 
-    public uint Quorum => GetQuorum(primaryGroup);
+    private uint Quorum => GetQuorum(primaryGroup);
 
     private void VerifySignatures(byte[] signatures, string authorizationChallenge)
     {
@@ -89,21 +89,22 @@ public class SystemContractsDictionary : SmartContract
         Assert(!string.IsNullOrEmpty(group));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
 
-        bool found = false;
-        Address[] signatories = this.GetSignatories(group);
-        for (int i = 0; i < signatories.Length; i++)
-        {
-            if (signatories[i] == address)
-            {
-                found = true;
-                for (int j = i + 1; j < signatories.Length; j++)
-                    signatories[j - 1] = signatories[j];
+        Address[] prevSignatories = this.GetSignatories(group);
+        Address[] signatories = new Address[prevSignatories.Length - 1];
 
-                System.Array.Resize(ref signatories, signatories.Length - 1);
+        int i = 0;
+        foreach (Address item in prevSignatories)
+        {
+            if (item == address)
+            {
+                continue;
             }
+
+            Assert(signatories.Length != i, "The signatory does not exist.");
+
+            signatories[i++] = item;
         }
 
-        Assert(found, "The signatory does not exist.");
         Assert(newSize == signatories.Length, "The expected size is incorrect.");
 
         uint nonce = this.GetGroupNonce(group);
