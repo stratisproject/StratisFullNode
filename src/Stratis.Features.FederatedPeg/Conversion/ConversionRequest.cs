@@ -106,7 +106,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
             s.ReadWrite(ref this.requestStatus);
             s.ReadWrite(ref this.blockHeight);
             s.ReadWrite(ref this.destinationAddress);
-            s.ReadWrite(ref this.destinationChain);
+            // Temporarily disabled until migration is implemented
+            //s.ReadWrite(ref this.destinationChain);
             s.ReadWrite(ref this.amount);
             s.ReadWrite(ref this.processed);
         }
