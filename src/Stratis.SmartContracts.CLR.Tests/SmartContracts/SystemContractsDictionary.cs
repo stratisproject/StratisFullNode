@@ -67,8 +67,8 @@ public class SystemContractsDictionary : SmartContract
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
 
         Address[] signatories = this.GetSignatories(group);
-        for (int i = 0; i < signatories.Length; i++)
-            Assert(signatories[i] != address, "The signatory already exists.");
+        foreach (Address signatory in signatories)
+            Assert(signatory != address, "The signatory already exists.");
 
         Assert((signatories.Length + 1) == newSize, "The expected size is incorrect.");
 
