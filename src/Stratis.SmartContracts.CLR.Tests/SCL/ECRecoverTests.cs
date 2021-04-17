@@ -15,7 +15,8 @@ namespace Stratis.SmartContracts.CLR.Tests.SCL
             Address[] addresses = keys.Select(k => k.PubKey.Hash.ToBytes().ToAddress()).ToArray();
             string[] sigs = keys.Select(k => k.SignMessage(authorizationChallenge)).ToArray();
 
-            Assert.Equal(addresses, ECRecover.GetVerifiedSignatures(sigs, authorizationChallenge, addresses));
+            Assert.True(ECRecover.TryGetVerifiedSignatures(sigs, authorizationChallenge, addresses, out Address[] verifiedAddresses));
+            Assert.Equal(addresses, verifiedAddresses);
         }
     }
 }
