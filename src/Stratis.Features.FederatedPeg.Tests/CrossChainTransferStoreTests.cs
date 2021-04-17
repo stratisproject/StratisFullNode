@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
@@ -123,8 +124,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address1 = (new Key()).PubKey.Hash.GetAddress(this.network);
                 BitcoinAddress address2 = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit1 = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
-                var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit1 = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel()
@@ -221,8 +222,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address1 = (new Key()).PubKey.Hash.GetAddress(this.network);
                 BitcoinAddress address2 = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit1 = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
-                var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit1 = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -276,8 +277,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address1 = (new Key()).PubKey.Hash.GetAddress(this.network);
                 BitcoinAddress address2 = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit1 = new Deposit(txId1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
-                var deposit2 = new Deposit(txId2, DepositRetrievalType.Normal, new Money(100m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
+                var deposit1 = new Deposit(txId1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, blockHash);
+                var deposit2 = new Deposit(txId2, DepositRetrievalType.Normal, new Money(100m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, blockHash);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -397,9 +398,9 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address2 = (new Key()).PubKey.Hash.GetAddress(this.network);
                 BitcoinAddress address3 = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit1 = new Deposit(txId1, DepositRetrievalType.Normal, new Money(1m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
-                var deposit2 = new Deposit(txId2, DepositRetrievalType.Normal, new Money(2m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
-                var deposit3 = new Deposit(txId3, DepositRetrievalType.Normal, new Money(3m, MoneyUnit.BTC), address3.ToString(), crossChainTransferStore.NextMatureDepositHeight, blockHash);
+                var deposit1 = new Deposit(txId1, DepositRetrievalType.Normal, new Money(1m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, blockHash);
+                var deposit2 = new Deposit(txId2, DepositRetrievalType.Normal, new Money(2m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, blockHash);
+                var deposit3 = new Deposit(txId3, DepositRetrievalType.Normal, new Money(3m, MoneyUnit.BTC), address3.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, blockHash);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[]
                 {
@@ -453,7 +454,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 BitcoinAddress address = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit = new Deposit(1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address.ToString(), cctsInstanceOne.NextMatureDepositHeight, 1);
+                var deposit = new Deposit(1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address.ToString(), DestinationChain.STRAX, cctsInstanceOne.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -552,8 +553,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address1 = (new Key()).PubKey.Hash.GetAddress(this.network);
                 BitcoinAddress address2 = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit1 = new Deposit(1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
-                var deposit2 = new Deposit(2, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit1 = new Deposit(1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit2 = new Deposit(2, DepositRetrievalType.Normal, new Money(60m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -653,7 +654,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 BitcoinAddress address = (new Key()).PubKey.Hash.GetAddress(this.network);
 
-                var deposit = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -735,7 +736,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address2 = (new Key()).PubKey.Hash.GetAddress(this.network);
 
                 // First deposit.
-                var deposit1 = new Deposit(1, DepositRetrievalType.Normal, new Money(100m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit1 = new Deposit(1, DepositRetrievalType.Normal, new Money(100m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposit1 = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -750,7 +751,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 Assert.Equal(CrossChainTransferStatus.Partial, transfer1?.Status);
 
                 // Second deposit.
-                var deposit2 = new Deposit(2, DepositRetrievalType.Normal, new Money(100m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, 2);
+                var deposit2 = new Deposit(2, DepositRetrievalType.Normal, new Money(100m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 2);
 
                 MaturedBlockDepositsModel[] blockDeposit2 = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {
@@ -827,7 +828,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 for (int i = 0; i < numDeposits; i++)
                 {
                     deposits[i] = new Deposit((ulong)i, DepositRetrievalType.Normal, new Money(depositSend, MoneyUnit.BTC), address.ToString(),
-                        crossChainTransferStore.NextMatureDepositHeight, 1);
+                        DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
                 }
 
                 Money[] funding = new Money[numDeposits - this.fundingTransactions.Count];
@@ -875,7 +876,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 {
                     ulong newId = (ulong)numDeposits + (ulong)i; // to get a unique ID.
                     moreDeposits[i] = new Deposit(newId, DepositRetrievalType.Normal, new Money(depositSend, MoneyUnit.BTC), address.ToString(),
-                        crossChainTransferStore.NextMatureDepositHeight, 2);
+                        DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 2);
                 }
 
                 blockDeposits[crossChainTransferStore.NextMatureDepositHeight] = new[]
@@ -980,7 +981,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 for (int i = 0; i < numDeposits; i++)
                 {
-                    deposits[i] = new Deposit((ulong)i, DepositRetrievalType.Normal, new Money(depositAmount, MoneyUnit.BTC), address.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                    deposits[i] = new Deposit((ulong)i, DepositRetrievalType.Normal, new Money(depositAmount, MoneyUnit.BTC), address.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
                 }
 
                 (Transaction, ChainedHeader header) added = this.AddFundingTransaction(funding);
@@ -1019,7 +1020,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 for (int i = 0; i < numDeposits2; i++)
                 {
                     ulong newId = (ulong)numDeposits + (ulong)i; // to get a unique ID.
-                    moreDeposits[i] = new Deposit(newId, DepositRetrievalType.Normal, new Money(depositAmount, MoneyUnit.BTC), address.ToString(), crossChainTransferStore.NextMatureDepositHeight, 2);
+                    moreDeposits[i] = new Deposit(newId, DepositRetrievalType.Normal, new Money(depositAmount, MoneyUnit.BTC), address.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 2);
                 }
 
                 blockDeposits[crossChainTransferStore.NextMatureDepositHeight] = new[]
@@ -1115,7 +1116,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 this.AddFundingTransaction(funding);
 
-                var deposit = new Deposit(1uL, DepositRetrievalType.Normal, new Money(depositAmount, MoneyUnit.BTC), address.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit = new Deposit(1uL, DepositRetrievalType.Normal, new Money(depositAmount, MoneyUnit.BTC), address.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 var blockDeposits = new Dictionary<int, MaturedBlockDepositsModel[]>
                 {
@@ -1217,8 +1218,8 @@ namespace Stratis.Features.FederatedPeg.Tests
                 BitcoinAddress address1 = multiSigAddress.RedeemScript.Hash.GetAddress(this.network);
                 BitcoinAddress address2 = new Script("").Hash.GetAddress(this.network);
 
-                var deposit1 = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
-                var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address2.ToString(), crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit1 = new Deposit(0, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address1.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
+                var deposit2 = new Deposit(1, DepositRetrievalType.Normal, new Money(160m, MoneyUnit.BTC), address2.ToString(), DestinationChain.STRAX, crossChainTransferStore.NextMatureDepositHeight, 1);
 
                 MaturedBlockDepositsModel[] blockDeposits = new[] { new MaturedBlockDepositsModel(
                     new MaturedBlockInfoModel() {

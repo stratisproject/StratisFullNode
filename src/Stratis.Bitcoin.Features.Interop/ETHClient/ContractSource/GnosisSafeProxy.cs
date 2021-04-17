@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient.ContractSource
 
         [Parameter("uint256", "value", 2)]
         public BigInteger Value { get; set; }
-        
+
         [Parameter("bytes", "data", 3)]
         public byte[] Data { get; set; }
 
@@ -152,13 +152,13 @@ namespace Stratis.Bitcoin.Features.Interop.EthereumClient.ContractSource
                 SafeTxGas = safeTxGas,
                 BaseGas = baseGas,
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei),
-                GasToken = EthereumClientBase.ZeroAddress,
-                RefundReceiver = EthereumClientBase.ZeroAddress,
+                GasToken = ETHClient.ETHClient.ZeroAddress,
+                RefundReceiver = ETHClient.ETHClient.ZeroAddress,
                 Signatures = signatures
             };
 
             TransactionReceipt execTransactionReceipt = await execHandler.SendRequestAndWaitForReceiptAsync(proxyContract, execTransactionFunctionMessage).ConfigureAwait(false);
-            
+
             return execTransactionReceipt.TransactionHash;
         }
 

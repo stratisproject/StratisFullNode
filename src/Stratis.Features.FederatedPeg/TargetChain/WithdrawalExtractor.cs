@@ -41,11 +41,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private readonly BitcoinAddress multisigAddress;
 
-        public WithdrawalExtractor(
-            IFederatedPegSettings federatedPegSettings,
-            IConversionRequestRepository conversionRequestRepository,
-            IOpReturnDataReader opReturnDataReader,
-            Network network)
+        public WithdrawalExtractor(IFederatedPegSettings federatedPegSettings, IConversionRequestRepository conversionRequestRepository, IOpReturnDataReader opReturnDataReader, Network network)
         {
             this.multisigAddress = federatedPegSettings.MultiSigAddress;
             this.conversionRequestRepository = conversionRequestRepository;

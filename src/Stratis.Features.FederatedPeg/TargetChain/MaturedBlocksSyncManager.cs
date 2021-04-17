@@ -256,6 +256,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         depositType,
                         Money.Satoshis(interopConversionRequestFee.Amount),
                         this.network.ConversionTransactionFeeDistributionDummyAddress,
+                        potentialConversionTransaction.TargetChain,
                         potentialConversionTransaction.BlockNumber,
                         potentialConversionTransaction.BlockHash));
 

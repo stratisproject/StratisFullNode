@@ -8,6 +8,7 @@ using NSubstitute;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
@@ -335,13 +336,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Create the target address.
             BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
-
+            
             // Set amount to be less than deposit minimum
             CreateDepositTransaction(targetAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
-
+            
             // Set amount to be less than the small threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
-
+            
             // Set amount to be exactly the normal threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
