@@ -9,6 +9,7 @@ using Nethereum.Util;
 using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
@@ -41,6 +42,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IInteropTransactionManager interopTransactionManager;
         private readonly Network counterChainNetwork;
+        private readonly IExternalApiPoller externalApiPoller;
 
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
@@ -60,7 +62,8 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IConversionRequestRepository conversionRequestRepository,
             IInteropTransactionManager interopTransactionManager,
-            CounterChainNetworkWrapper counterChainNetworkWrapper)
+            CounterChainNetworkWrapper counterChainNetworkWrapper,
+            IExternalApiPoller externalApiPoller)
         {
             this.interopSettings = interopSettings;
             this.ETHClientBase = ethClientBase;
@@ -75,6 +78,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.conversionRequestRepository = conversionRequestRepository;
             this.interopTransactionManager = interopTransactionManager;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
+            this.externalApiPoller = externalApiPoller;
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
             
             this.firstPoll = true;
@@ -388,10 +392,18 @@ namespace Stratis.Bitcoin.Features.Interop
                         // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
                         string abiData = this.ETHClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
 
+                        int gasPrice = this.externalApiPoller.GetGasPrice();
+
+                        // If a gas price is not currently available then fall back to the value specified on the command line.
+                        if (gasPrice == -1)
+                            gasPrice = this.interopSettings.ETHGasPrice;
+
+                        this.logger.LogInformation("Originator will use a gas price of {0} to submit the transaction.", gasPrice);
+
                         // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
                         // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
                         // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                        BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData).ConfigureAwait(false);
+                        BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData, gasPrice).ConfigureAwait(false);
 
                         this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
 
@@ -452,7 +464,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             }
                             else
                             {
-                                this.logger.LogInformation("Transaction {0} has finished voting but does not yet have 8 confirmations, re-broadcasting votes to peers.", transactionId3);
+                                this.logger.LogInformation("Transaction {0} has finished voting but does not yet have {1} confirmations, re-broadcasting votes to peers.", transactionId3, this.interopSettings.ETHMultisigWalletQuorum);
 
                                 // There are not enough confirmations yet.
                                 // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
@@ -479,9 +491,17 @@ namespace Stratis.Bitcoin.Features.Interop
                         {
                             this.logger.LogInformation("Quorum reached for conversion transaction {0} with transactionId {1}, submitting confirmation to contract.", request.RequestId, agreedUponId);
 
+                            int gasPrice = this.externalApiPoller.GetGasPrice();
+
+                            // If a gas price is not currently available then fall back to the value specified on the command line.
+                            if (gasPrice == -1)
+                                gasPrice = this.interopSettings.ETHGasPrice;
+
+                            this.logger.LogInformation("The non-originator will use a gas price of {0} to confirm the transaction.", gasPrice);
+
                             // Once a quorum is reached, each node confirms the agreed transactionId.
                             // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
-                            string confirmationHash = await this.ETHClientBase.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+                            string confirmationHash = await this.ETHClientBase.ConfirmTransactionAsync(agreedUponId, gasPrice).ConfigureAwait(false);
 
                             this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
 

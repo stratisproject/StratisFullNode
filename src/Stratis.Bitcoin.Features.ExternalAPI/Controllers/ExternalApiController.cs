@@ -11,6 +11,12 @@ namespace Stratis.Features.ExternalApi.Controllers
     [Route("api/[controller]")]
     public class ExternalApiController : Controller
     {
+        public const string EstimateConversionGasEndpoint = "estimateconversiongas";
+        public const string EstimateConversionFeeEndpoint = "estimateconversionfee";
+        public const string GasPriceEndpoint = "gasprice";
+        public const string StratisPriceEndpoint = "stratisprice";
+        public const string EthereumPriceEndpoint = "ethereumprice";
+
         private readonly IExternalApiPoller externalApiPoller;
 
         private readonly ILogger logger;
@@ -21,7 +27,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
-        [Route("estimateconversiongas")]
+        [Route(EstimateConversionGasEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -39,7 +45,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
         }
 
-        [Route("estimateconversionfee")]
+        [Route(EstimateConversionFeeEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -57,7 +63,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
         }
 
-        [Route("gasprice")]
+        [Route(GasPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -75,7 +81,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
         }
 
-        [Route("stratisprice")]
+        [Route(StratisPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -93,7 +99,7 @@ namespace Stratis.Features.ExternalApi.Controllers
             }
         }
 
-        [Route("ethereumprice")]
+        [Route(EthereumPriceEndpoint)]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]

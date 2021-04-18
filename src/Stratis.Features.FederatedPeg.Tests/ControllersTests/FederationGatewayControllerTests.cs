@@ -113,7 +113,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
 
-            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings, externalApiPoller);
+            return new MaturedBlocksProvider(this.consensusManager, this.depositExtractor, federatedPegSettings);
         }
 
         [Fact]

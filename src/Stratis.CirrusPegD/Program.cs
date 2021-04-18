@@ -98,7 +98,6 @@ namespace Stratis.CirrusPegD
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
-                .AddExternalApi()
                 .Build();
 
             return node;

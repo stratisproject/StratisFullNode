@@ -48,16 +48,18 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <param name="destination">The account that the transaction is being sent to after confirmation. For wSTRAX operations this will typically be the wSTRAX ERC20 contract address.</param>
         /// <param name="value">The amount that is being sent. For wSTRAX operations this is typically zero, as the balance changes are encoded within the additional data.</param>
         /// <param name="data">Additional transaction data. This is encoded in accordance with the applicable contract's ABI.</param>
+        /// <param name="gasPrice">The gas price to be used for the transaction, in gwei.</param>
         /// <returns>Returns the transactionId of the transaction</returns>
-        Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data);
+        Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data, int gasPrice);
 
         /// <summary>
         /// Confirms a multisig wallet transaction.
         /// </summary>
         /// <remarks>Once a sufficient threshold of confirmations is reached, the contract will automatically execute the saved transaction.</remarks>
         /// <param name="transactionId">The transactionId of an existing transaction stored in the multisig wallet contract.</param>
+        /// <param name="gasPrice">The gas price to be used for the transaction, in gwei.</param>
         /// <returns>The hash of the confirmation transaction.</returns>
-        Task<string> ConfirmTransactionAsync(BigInteger transactionId);
+        Task<string> ConfirmTransactionAsync(BigInteger transactionId, int gasPrice);
 
         /// <summary>
         /// Retrieve the number of confirmations a given transaction currently has in the multisig wallet contract.
@@ -161,15 +163,15 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         }
 
         /// <inheritdoc />
-        public async Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data)
+        public async Task<BigInteger> SubmitTransactionAsync(string destination, BigInteger value, string data, int gasPrice)
         {
-            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, destination, value, data, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
+            return await MultisigWallet.SubmitTransactionAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, destination, value, data, this.interopSettings.ETHGasLimit, gasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />
-        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId)
+        public async Task<string> ConfirmTransactionAsync(BigInteger transactionId, int gasPrice)
         {
-            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, transactionId, this.interopSettings.ETHGasLimit, this.interopSettings.ETHGasPrice).ConfigureAwait(false);
+            return await MultisigWallet.ConfirmTransactionAsync(this.web3, this.interopSettings.ETHMultisigWalletAddress, transactionId, this.interopSettings.ETHGasLimit, gasPrice).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

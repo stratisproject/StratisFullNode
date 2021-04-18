@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
@@ -22,6 +23,7 @@ using Stratis.Features.FederatedPeg.Payloads;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
+using Stratis.Features.PoA.Collateral.CounterChain;
 using Stratis.Sidechains.Networks;
 using Stratis.SmartContracts.Core.State;
 using Xunit;
@@ -603,10 +605,9 @@ namespace Stratis.Features.FederatedPeg.Tests
                 "http://127.0.0.1:38221/api/wallet/build-transaction", transactionRequest);
 
             var transaction = new PosTransaction(model.Hex);
-
-            var reader = new OpReturnDataReader(new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet()));
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader, externalApiPoller);
+            var counterChainNetwork = new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet());
+            var reader = new OpReturnDataReader(counterChainNetwork);
+            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1);
 
             Assert.NotNull(deposit);

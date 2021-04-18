@@ -1,17 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Features.ExternalApi;
+using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public sealed class DepositExtractor : IDepositExtractor
     {
-        // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
-        public const decimal ConversionTransactionMinimum = 90_000;
-
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
         /// Deposits will have 2 outputs when there is no change.
@@ -25,16 +26,20 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
-        private readonly IExternalApiPoller externalApiPoller;
+        private readonly ICounterChainSettings counterChainSettings;
+        private readonly IHttpClientFactory httpClientFactory;
+        private readonly ExternalApiClient externalApiClient;
         private readonly ILogger logger;
 
-        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, IExternalApiPoller externalApiPoller)
+        public DepositExtractor(IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, ICounterChainSettings counterChainSettings, IHttpClientFactory httpClientFactory)
         {
             this.depositScript = federatedPegSettings.MultiSigRedeemScript.PaymentScript;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
-            this.externalApiPoller = externalApiPoller;
+            this.counterChainSettings = counterChainSettings;
+            this.httpClientFactory = httpClientFactory;
+            this.externalApiClient = new ExternalApiClient(this.counterChainSettings.CounterChainApiHost, this.counterChainSettings.CounterChainApiPort, this.httpClientFactory);
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -100,7 +105,32 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (conversionTransaction)
             {
                 // Instead of a fixed minimum, check that the deposit size at least covers the fee.
-                decimal minimumDeposit = this.externalApiPoller.EstimateConversionTransactionFee();
+                // It will be checked again when the interop poller processes the resulting conversion request.
+                string feeString;
+                try
+                {
+                    feeString = this.externalApiClient.EstimateConversionTransactionFeeAsync().GetAwaiter().GetResult().Value;
+                }
+                catch (Exception e)
+                {
+                    this.logger.Error(e, "Error accessing fee API.");
+
+                    return null;
+                }
+
+                if (!decimal.TryParse(feeString, out decimal minimumDeposit))
+                {
+                    this.logger.Warn("Failed to retrieve estimated fee from API. Ignoring deposit.");
+
+                    return null;
+                }
+
+                if (minimumDeposit == decimal.MinusOne)
+                {
+                    this.logger.Warn("Estimated fee information currently unavailable. Ignoring deposit.");
+
+                    return null;
+                }
 
                 if (amount < Money.Coins(minimumDeposit))
                 {

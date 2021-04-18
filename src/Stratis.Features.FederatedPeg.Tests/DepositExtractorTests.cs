@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using FluentAssertions;
 using NBitcoin;
@@ -9,6 +10,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
+using Stratis.Features.PoA.Collateral.CounterChain;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
@@ -39,8 +41,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
-            IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network, this.opReturnDataReader, externalApiPoller);
+            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             this.transactionBuilder = new TestTransactionBuilder();
         }
 

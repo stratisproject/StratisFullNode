@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net.Http;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
@@ -18,6 +19,7 @@ using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
+using Stratis.Features.PoA.Collateral.CounterChain;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
@@ -87,8 +89,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
             using (var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.initialBlockDownloadState, keyValueRepository, this.network, this.signals))
             {
-                IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-                var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
+                var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
 
                 // Add 5 distribution deposits from block 11 through to 15.
                 for (int i = 11; i <= 15; i++)
@@ -124,8 +125,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
                 Assert.Equal(2, rewardTransaction.Outputs.Count);
                 Assert.Equal(Money.Coins(90), rewardTransaction.TotalOut);
 
-                IExternalApiPoller externalApiPoller = Substitute.For<IExternalApiPoller>();
-                var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, externalApiPoller);
+                var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
                 IDeposit deposit = depositExtractor.ExtractDepositFromTransaction(rewardTransaction, 30, this.blocks[30].Block.GetHash());
                 Assert.Equal(Money.Coins(90), deposit.Amount);
             }
