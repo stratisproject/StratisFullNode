@@ -287,6 +287,12 @@ namespace Stratis.Bitcoin.Features.Interop
                 if ((this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
                 {
                     this.logger.LogInformation("Ignoring conversion mint request {0} with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
+
+                    request.Processed = true;
+
+                    this.conversionRequestRepository.Save(request);
+
+                    continue;
                 }
 
                 this.logger.LogInformation("Processing conversion mint request {0}, status {1}.", request.RequestId, request.RequestStatus);
