@@ -93,7 +93,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi.ApiClients
 
                 this.samplePointer++;
 
-                if (this.samplePointer > this.fastSamples.Length)
+                if (this.samplePointer >= this.fastSamples.Length)
                 {
                     this.samplePointer = 0;
                 }
