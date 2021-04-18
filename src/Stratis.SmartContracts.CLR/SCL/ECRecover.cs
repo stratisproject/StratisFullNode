@@ -16,7 +16,7 @@ namespace Stratis.SCL.Crypto
         /// <param name="message">The message that was signed.</param>
         /// <param name="addresses">The addresses returned are intersected with these addresses (if not <c>null</c>).</param>
         /// <returns>The list of addresses that produced the signatures and constrained to the list provided in <paramref name="addresses"/>.</returns>
-        public static Address[] GetVerifiedSignatures(string[] signatures, byte[] message, Address[] addresses)
+        private static Address[] VerifySignatures(string[] signatures, byte[] message, Address[] addresses)
         {
             try
             { 
@@ -41,11 +41,20 @@ namespace Stratis.SCL.Crypto
         /// </summary>
         /// <param name="signatures">The list of signatures of the message.</param>
         /// <param name="message">The message that was signed.</param>
-        /// <param name="addresses">The addresses returned are intersected with these addresses (if not <c>null</c>).</param>
-        /// <returns>The list of addresses that produced the signatures and constrained to the list provided in <paramref name="addresses"/>.</returns>
-        public static Address[] GetVerifiedSignatures(string[] signatures, string message, Address[] addresses)
+        /// <param name="addresses">The addresses returned are intersected with these addresses.</param>
+        /// <param name="verifiedAddresses">The list of addresses that produced the signatures and constrained to the list provided in <paramref name="addresses"/>.</param>
+        /// <returns>The boolean value returned only indicates whether the operation could be performed. The number of verified addresses should still be checked.</returns>
+        public static bool TryGetVerifiedSignatures(string[] signatures, string message, Address[] addresses, out Address[] verifiedAddresses)
         {
-            return GetVerifiedSignatures(signatures, System.Text.Encoding.ASCII.GetBytes(message), addresses);
+            if (addresses == null)
+            {
+                verifiedAddresses = null;
+                return false;
+            }
+
+            verifiedAddresses = VerifySignatures(signatures, System.Text.Encoding.ASCII.GetBytes(message), addresses);
+
+            return verifiedAddresses != null;
         }
     }
 }
