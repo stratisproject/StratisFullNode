@@ -283,7 +283,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in mintRequests)
             {
-                this.logger.LogInformation("Processing conversion mint request {0}.", request.RequestId);
+                // Ignore old conversion requests for the time being.
+                if ((this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                {
+                    this.logger.LogInformation("Ignoring conversion mint request {0} with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
+                }
+
+                this.logger.LogInformation("Processing conversion mint request {0}, status {1}.", request.RequestId, request.RequestStatus);
 
                 // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
                 List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(request.BlockHeight));
@@ -388,6 +394,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     case (ConversionRequestStatus.OriginatorNotSubmitted):
                     {
+                        this.logger.LogInformation("Conversion not yet submitted, checking which gas price to use.");
+
                         // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                         // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
                         string abiData = this.ETHClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
@@ -454,7 +462,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             if (confirmationCount >= this.interopSettings.ETHMultisigWalletQuorum)
                             {
-                                this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
+                                this.logger.LogInformation("Transaction {0} has received at least {1} confirmations, it will be automatically executed by the multisig contract.", transactionId3, this.interopSettings.ETHMultisigWalletQuorum);
 
                                 request.RequestStatus = ConversionRequestStatus.Processed;
                                 request.Processed = true;
