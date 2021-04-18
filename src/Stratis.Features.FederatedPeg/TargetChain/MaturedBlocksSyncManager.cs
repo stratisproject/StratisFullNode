@@ -67,8 +67,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             INodeLifetime nodeLifetime,
             IConversionRequestRepository conversionRequestRepository,
             ChainIndexer chainIndexer,
-            IExternalApiPoller externalApiPoller,
-            Network network)
+            Network network,
+            IExternalApiPoller externalApiPoller = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -164,11 +164,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     d.RetrievalType == DepositRetrievalType.ConversionNormal ||
                     d.RetrievalType == DepositRetrievalType.ConversionLarge))
                 {
-                    this.logger.Info("Conversion transaction " + conversionTransaction.Id + " received in matured blocks.");
+                    if (this.externalApiPoller == null)
+                    {
+                        this.logger.Warn("Conversion transactions do not get actioned by the main chain.");
+
+                        continue;
+                    }
+
+                    this.logger.Info("Conversion transaction {0} received in matured blocks.", conversionTransaction.Id);
 
                     if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
                     {
-                        this.logger.Info("Conversion transaction " + conversionTransaction.Id + " already exists, ignoring.");
+                        this.logger.Info("Conversion transaction {0} already exists, ignoring.", conversionTransaction.Id);
 
                         continue;
                     }
@@ -198,7 +205,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (!found)
                     {
-                        this.logger.Warn("Unable to determine timestamp for conversion transaction " + conversionTransaction.Id + ", ignoring.");
+                        this.logger.Warn("Unable to determine timestamp for conversion transaction {0}, ignoring.", conversionTransaction.Id);
 
                         continue;
                     }
