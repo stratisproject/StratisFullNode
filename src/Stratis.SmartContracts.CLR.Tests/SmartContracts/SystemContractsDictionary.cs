@@ -8,10 +8,24 @@ public struct WhiteListEntry
     public string Name;
 }
 
+/// <summary>
+/// The primary purpose is to provide a mechanism by which smart contracts are whitelisted
+/// and secondly to maintain the list of authenticators (signatories) required to do so.
+/// </summary>
+/// <remarks>
+/// All method calls that change the whitelist or signatories require multiple signatories
+/// as specified by the current list of defined signatories and the quorum requirement.
+/// </remarks>
 public class SystemContractsDictionary : SmartContract
 {
     const string primaryGroup = "main";
 
+    /// <summary>
+    /// Initializes the contract with the default (or initial) set of signatories which are required when calling some of the methods.
+    /// </summary>
+    /// <remarks>
+    /// The default list has to be peovided before validating and deploying this contract.
+    /// </remarks>
     public SystemContractsDictionary(ISmartContractState state) : base(state)
     {
         this.SetSignatories(primaryGroup, new[] { new Address(0, 0, 0, 0, 0), new Address(0, 0, 0, 0, 1), new Address(0, 0, 0, 0, 2) });
@@ -74,8 +88,11 @@ public class SystemContractsDictionary : SmartContract
 
         Assert((signatories.Length + 1) == newSize, "The expected size is incorrect.");
 
+        // The nonce is used to prevent replay attacks.
         uint nonce = this.GetGroupNonce(group);
 
+        // Validate or provide a unique challenge to the signatories that depends on the exact action being performed.
+        // If the signatures are missing or fail validation contract execution will stop here.
         this.VerifySignatures(signatures, $"{nameof(AddSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         System.Array.Resize(ref signatories, signatories.Length + 1);
@@ -109,8 +126,11 @@ public class SystemContractsDictionary : SmartContract
 
         Assert(newSize == signatories.Length, "The expected size is incorrect.");
 
+        // The nonce is used to prevent replay attacks.
         uint nonce = this.GetGroupNonce(group);
 
+        // Validate or provide a unique challenge to the signatories that depends on the exact action being performed.
+        // If the signatures are missing or fail validation contract execution will stop here.
         this.VerifySignatures(signatures, $"{nameof(RemoveSignatory)}(Nonce:{nonce},Group:{group},Address:{address},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         this.SetSignatories(group, signatories);
@@ -196,6 +216,7 @@ public class SystemContractsDictionary : SmartContract
         UInt256 codeHashKey = codeHash;
         WhiteListEntry whiteListEntry;
 
+        // If the name already exists then use it to locate the whitelist entry to update.
         if (!string.IsNullOrEmpty(name))
         {
             codeHashKey = this.GetCodeHash(name);
@@ -206,8 +227,10 @@ public class SystemContractsDictionary : SmartContract
 
         whiteListEntry = this.GetWhiteListEntry(codeHashKey);
 
+        // The nonce is used to prevent replay attacks.
         uint nonce = this.GetCodeNonce(codeHash);
 
+        // Validate or provide a unique challenge to the signatories that depends on the exact action being performed.
         string authorizationChallenge;
         if (whiteListEntry.CodeHash == default(UInt256))
         {
@@ -219,6 +242,7 @@ public class SystemContractsDictionary : SmartContract
             authorizationChallenge = $"{nameof(WhiteList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash}=>{codeHash},LastAddress:{whiteListEntry.LastAddress}=>{lastAddress},Name:{whiteListEntry.Name}=>{name})";
         }
 
+        // If the signatures are missing or fail validation contract execution will stop here.
         this.VerifySignatures(signatures, authorizationChallenge);
 
         if (whiteListEntry.CodeHash != default(UInt256))
@@ -248,12 +272,17 @@ public class SystemContractsDictionary : SmartContract
 
         Assert(whiteListEntry.CodeHash != default(UInt256), "The entry does not exist.");
 
+        // The nonce is used to prevent replay attacks.
         uint nonce = this.GetCodeNonce(codeHash);
 
+        // Validate or provide a unique challenge to the signatories that depends on the exact action being performed.
+        // If the signatures are missing or fail validation contract execution will stop here.
         this.VerifySignatures(signatures, $"{nameof(BlackList)}(Nonce:{nonce},CodeHash:{whiteListEntry.CodeHash},LastAddress:{whiteListEntry.LastAddress},Name:{whiteListEntry.Name})");
 
         this.ClearWhiteListEntry(codeHash);
         this.ClearCodeHash(whiteListEntry.Name);
+
+        // Don't remove the nonce. Just increment it.
         this.SetCodeNonce(codeHash, nonce + 1);
     }
 }
