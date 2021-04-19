@@ -28,6 +28,8 @@ public class SystemContractsDictionary : SmartContract
     /// </remarks>
     public SystemContractsDictionary(ISmartContractState state) : base(state)
     {
+        // TODO: Update this list prior to contract validation or deployment.
+        //       This is the only system contract that has its contract's code hash hard coded in the full node source for the purpose of white-listing it.
         this.SetSignatories(primaryGroup, new[] { new Address(0, 0, 0, 0, 0), new Address(0, 0, 0, 0, 1), new Address(0, 0, 0, 0, 2) });
         this.SetQuorum(primaryGroup, 2);
     }
