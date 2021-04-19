@@ -113,7 +113,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 }
                 catch (Exception e)
                 {
-                    this.logger.Error(e, "Error accessing fee API.");
+                    this.logger.Error("Error accessing fee API: " + e);
 
                     return null;
                 }
