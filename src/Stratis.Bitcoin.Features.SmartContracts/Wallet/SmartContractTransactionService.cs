@@ -4,6 +4,7 @@ using System.Linq;
 using CSharpFunctionalExtensions;
 using NBitcoin;
 using NBitcoin.DataEncoders;
+using Nethereum.RLP;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -199,37 +200,103 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             return BuildContractTransactionResult.Success(model);
         }
 
-        private string[] ReplaceSignatures(string[] parameters, string[] signatures)
+        /// <summary>
+        /// Parses elements until the ',' (separator) or ']' (ending) special character is encountered.
+        /// Single quotes are used to enclose text regions to preserve whitespace or to make ']' or ',' non-special.
+        /// </summary>
+        /// <param name="parameter">The parameter to parse.</param>
+        /// <param name="position">Initally the position in the string following the '[' character. This gets incremented as we traverse the parameter.</param>
+        /// <returns>The elements as a string array.</returns>
+        /// <remarks>
+        /// Single quotes are removed from elements and double single quotes are converted to literal single quotes.
+        /// </remarks>
+        public static string[] ParseArray(string parameter, ref int position)
         {
-            const int signatureLength = 65;
-            const int minHeaderByte = 27;
-            const int maxHeaderByte = 34;
+            var elements = new List<string>();
+            int elementStart = position;
+            bool quoted = false;
 
+            for (; position < parameter.Length; position++)
+            {
+                if (parameter[position] == '\'')
+                {
+                    quoted = !quoted;
+                }
+                else if (!quoted && (parameter[position] == ',' || parameter[position] == ']'))
+                {
+                    string placeHolder = "\x0";
+
+                    // Extract the element.
+                    // Replace double-single-quotes with a placeholder. Remove single-quotes. Replace the placeholder with a single-quote.
+                    string element = parameter.Substring(elementStart, position - elementStart).Trim().Replace("''", placeHolder).Replace("'", "").Replace(placeHolder, "'");
+                    elements.Add(element);
+                    if (parameter[position] == ']')
+                        return elements.ToArray();
+                    elementStart = position + 1;
+                }
+            }
+
+            throw new Exception($"Parameter '{parameter}' has no end of array indicator.");
+        }
+
+        /// <summary>
+        /// If the parameter contains an array it is converted to a byte array.
+        /// </summary>
+        /// <param name="cpSerializer">Contract primitive serializer.</param>
+        /// <param name="mpSerializer">Method parameter string serializer.</param>
+        /// <param name="parameter">The paramter to convert (if required).</param>
+        /// <returns>The converted (or unconverted) parameter.</returns>
+        public static string ConvertParameter(ContractPrimitiveSerializer cpSerializer, MethodParameterStringSerializer mpSerializer, string parameter)
+        {
+            IEnumerable<char> typeDigits = parameter.TakeWhile(c => char.IsDigit(c));
+
+            var prefixNumber = string.Join(string.Empty, typeDigits);
+            if (!Enum.TryParse(prefixNumber, out MethodParameterDataType dataType))
+            {
+                if (prefixNumber.Length != 0)
+                    return parameter;
+
+                // Default is string if data type not supplied.
+                dataType = MethodParameterDataType.String;
+            }
+
+            int position = prefixNumber.Length;
+
+            // If this parameter is not an array then ignore it.
+            if (parameter.ElementAtOrDefault(position++) != '[')
+                return parameter;
+
+            // Parse the array.
+            // The 'position' should now be set to the first character following '['.
+            var elements = ParseArray(parameter, ref position);
+            object[] arrayElements = mpSerializer.Deserialize(elements.Select(e => $"{(int)dataType}#{e}").ToArray());
+
+            var serializedArray = cpSerializer.Serialize(arrayElements);
+
+            var hex = BitConverter.ToString(serializedArray).Replace("-", "");
+
+            return $"{(int)MethodParameterDataType.ByteArray}#{hex}";
+        }    
+
+        /// <summary>
+        /// Replaces parameters of the form "N1[element1,element2,element3,...]" with byte arrays of the form "N2#byte-array-in-hex",
+        /// where N1 and N2 are the integer values of the <see cref="MethodParameterDataType"/>, with N2 being 10 (byte array).
+        /// </summary>
+        /// <param name="parameters">A list of parameters that may contain arrays.</param>
+        /// <returns>The input parameters with arrays replaced with byte arrays.</returns>
+        /// <remarks>The encoded byte arrays are suitable for deserializing as arrays of the specified type (N1 in this example)
+        /// by using <see cref="ContractPrimitiveSerializer.Deserialize{T}(byte[])"></see>.</remarks>
+        private string[] ReplaceArraysWithByteArrays(string[] parameters)
+        {
             if (parameters == null)
                 return null;
 
-            // Replace SIG# with any included signatures.
-            string encodedSigs = null;
+            var cpSerializer = new ContractPrimitiveSerializer(this.network);
+            var mpSerializer = new MethodParameterStringSerializer(this.network);
+
+            // Replace arrays with byte arrays.
             for (int i = 0; i < parameters.Length; i++)
-            {
-                if (parameters[i].ToUpper() == "SIG#")
-                {
-                    if (encodedSigs == null)
-                    {
-                        var sigs = (signatures ?? new string[0]).Select(s => Convert.FromBase64String(s)).ToArray();
-                        if (sigs.Any(s => s.Length != signatureLength || s[0] < minHeaderByte || s[0] > maxHeaderByte))
-                            throw new Exception("Invalid signature(s).");
-
-                        var sigbuf = new byte[sigs.Length * signatureLength];
-                        for (int j = 0; j < sigs.Length; j++)
-                            Array.Copy(sigs[j], 0, sigbuf, j * signatureLength, signatureLength);
-
-                        encodedSigs = $"{(int)MethodParameterDataType.ByteArray}#{Encoders.Hex.EncodeData(sigbuf)}";
-                    }
-
-                    parameters[i] = encodedSigs;
-                }
-            }
+                parameters[i] = ConvertParameter(cpSerializer, mpSerializer, parameters[i]);
 
             return parameters;
         }
@@ -250,8 +317,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
-                    // If signatures have been included then they replace the SIG# parameter.
-                    request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures);
+                    request.Parameters = ReplaceArraysWithByteArrays(request.Parameters);
 
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, addressNumeric, request.MethodName, methodParameters);
@@ -314,8 +380,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             {
                 try
                 {
-                    // If signatures have been included then they replace the SIG# parameter.
-                    request.Parameters = ReplaceSignatures(request.Parameters, request.Signatures);
+                    request.Parameters = ReplaceArraysWithByteArrays(request.Parameters);
 
                     object[] methodParameters = this.methodParameterStringSerializer.Deserialize(request.Parameters);
                     txData = new ContractTxData(ReflectionVirtualMachine.VmVersion, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasPrice, (Stratis.SmartContracts.RuntimeObserver.Gas)request.GasLimit, request.ContractCode.HexToByteArray(), methodParameters);

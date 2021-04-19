@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
 using Stratis.Bitcoin.Signals;
+using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.State;
@@ -978,6 +979,53 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         */
 
         [Fact]
+        public void CanCorrectlyParseArrays()
+        {
+            int ndx = 1;
+            var res = SmartContractTransactionService.ParseArray("['This is an 'element, This is a comma: ',' ,This is John''s element, 'This is an element ']", ref ndx);
+            Assert.Equal(new[] { "This is an element", "This is a comma: ,", "This is John's element", "This is an element " }, res);
+        }
+
+        [Fact]
+        public void CanConvertStringArrayParameter()
+        {
+            var cpSerializer = new ContractPrimitiveSerializer(this.network);
+            var mpSerializer = new MethodParameterStringSerializer(this.network);
+
+            string orginalParameter = "4['This is an 'element, This is a comma: ',' ,This is John''s element, 'This is an element ']";
+
+            string convertedParameter = SmartContractTransactionService.ConvertParameter(cpSerializer, mpSerializer, orginalParameter);
+            Assert.Equal("10#F851925468697320697320616E20656C656D656E749254686973206973206120636F6D6D613A202C9654686973206973204A6F686E277320656C656D656E74935468697320697320616E20656C656D656E7420", convertedParameter);
+
+            var recoveredBytes = (byte[])mpSerializer.Deserialize(new[] { convertedParameter })[0];
+            var recoveredArray = cpSerializer.Deserialize<string[]>(recoveredBytes);
+            Assert.Equal(new[] { "This is an element", "This is a comma: ,", "This is John's element", "This is an element " }, recoveredArray);
+        }
+
+        [Fact]
+        public void CanConvertAddressArrayParameter()
+        {
+            var cpSerializer = new ContractPrimitiveSerializer(this.network);
+            var mpSerializer = new MethodParameterStringSerializer(this.network);
+
+            KeyId keyId1 = new Key().PubKey.Hash;
+            KeyId keyId2 = new Key().PubKey.Hash;
+            KeyId keyId3 = new Key().PubKey.Hash;
+
+            string address1 = keyId1.GetAddress(this.network).ToString();
+            string address2 = keyId2.GetAddress(this.network).ToString();
+            string address3 = keyId3.GetAddress(this.network).ToString();
+
+            string orginalParameter = $"9[{address1},{address2},{address3}]";
+
+            string convertedParameter = SmartContractTransactionService.ConvertParameter(cpSerializer, mpSerializer, orginalParameter);
+
+            var recoveredBytes = (byte[])mpSerializer.Deserialize(new[] { convertedParameter })[0];
+            var recoveredArray = cpSerializer.Deserialize<Address[]>(recoveredBytes);
+            Assert.Equal(new[] { keyId1.ToBytes().ToAddress(), keyId2.ToBytes().ToAddress(), keyId3.ToBytes().ToAddress() }, recoveredArray);
+        }
+
+        [Fact]
         public void CanPassSignatures()
         {
             const int utxoIndex = 0;
@@ -1012,8 +1060,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                         TransactionId = utxoId.ToString()
                     },
                 },
-                Parameters = new[] { "SIG#" },
-                Signatures = new[] { sig1, sig2 }
+                Parameters = new[] { $"[{sig1},{sig2}]" }
             };
 
             this.walletManager.Setup(x => x.GetAddressBalance(request.Sender))
@@ -1073,8 +1120,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
 
-            byte[] buffer = Convert.FromBase64String(sig1).Concat(Convert.FromBase64String(sig2)).ToArray();
-            string expected = $"{(int)MethodParameterDataType.ByteArray}#{Encoders.Hex.EncodeData(buffer)}";
+            var serializer = new ContractPrimitiveSerializer(this.network);
+            byte[] buffer = serializer.Serialize(new[] { sig1, sig2 });
+            string expected = $"{(int)MethodParameterDataType.ByteArray}#{BitConverter.ToString(buffer).Replace("-", "")}";
 
             this.stringSerializer.Verify(x => x.Deserialize(It.Is<string[]>(x => x[0] == expected)));
         }
