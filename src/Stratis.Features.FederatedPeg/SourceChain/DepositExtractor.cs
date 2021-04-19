@@ -109,7 +109,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 string feeString;
                 try
                 {
-                    feeString = this.externalApiClient.EstimateConversionTransactionFeeAsync().GetAwaiter().GetResult().Value;
+                    feeString = this.externalApiClient.EstimateConversionTransactionFeeAsync().GetAwaiter().GetResult();
                 }
                 catch (Exception e)
                 {

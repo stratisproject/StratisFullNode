@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Stratis.Bitcoin.Controllers;
-using Stratis.Bitcoin.Utilities;
 using Stratis.Features.ExternalApi.Controllers;
 
 namespace Stratis.Bitcoin.Features.ExternalApi
@@ -21,9 +17,9 @@ namespace Stratis.Bitcoin.Features.ExternalApi
         {
         }
 
-        public Task<SerializableResult<string>> EstimateConversionTransactionFeeAsync(CancellationToken cancellation = default)
+        public Task<string> EstimateConversionTransactionFeeAsync(CancellationToken cancellation = default)
         {
-            return this.SendGetRequestAsync<SerializableResult<string>>(ExternalApiController.EstimateConversionFeeEndpoint, cancellation: cancellation);
+            return this.SendGetRequestAsync<string>(ExternalApiController.EstimateConversionFeeEndpoint, cancellation: cancellation);
         }
     }
 }
