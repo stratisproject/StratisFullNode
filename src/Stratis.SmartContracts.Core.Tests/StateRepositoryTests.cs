@@ -259,7 +259,7 @@ namespace Stratis.SmartContracts.Core.Tests
         }
 
         [Fact]
-        public void Repository_Bytes0VsNull()
+        public void Repository_Bytes_Is_Stored_As_Null()
         {
             // Demonstrates that our repository treats byte[0] and null as the same.
 
@@ -273,6 +273,42 @@ namespace Stratis.SmartContracts.Core.Tests
             // We have pushed byte[0] to the kv store. Should come back as byte[0] right?
             StateRepositoryRoot repository2 = new StateRepositoryRoot(stateDB, repository.Root);
             // Nope, comes back null...
+            Assert.Null(repository2.GetStorageValue(testAddress, dog));
+        }
+
+        [Fact]
+        public void Repository_Null_Is_Stored_As_Null()
+        {
+            // Demonstrates that our repository stores null and returns null
+
+            ISource<byte[], byte[]> stateDB = new NoDeleteSource<byte[], byte[]>(new MemoryDictionarySource());
+            StateRepositoryRoot repository = new StateRepositoryRoot(stateDB);
+            repository.CreateAccount(testAddress);
+            repository.SetStorageValue(testAddress, dog, null);
+            Assert.Null(repository.GetStorageValue(testAddress, dog));
+            repository.Commit();
+
+            // We have pushed null to the kv store. Should come back as null
+            StateRepositoryRoot repository2 = new StateRepositoryRoot(stateDB, repository.Root);            
+            Assert.Null(repository2.GetStorageValue(testAddress, dog));
+        }
+
+        [Fact]
+        public void Repository_Empty_String_Is_Stored_As_Null()
+        {
+            // Demonstrates that our repository stores null and returns null
+
+            ISource<byte[], byte[]> stateDB = new NoDeleteSource<byte[], byte[]>(new MemoryDictionarySource());
+            StateRepositoryRoot repository = new StateRepositoryRoot(stateDB);
+            repository.CreateAccount(testAddress);
+            var emptyString = Encoding.UTF8.GetBytes(string.Empty);
+            Assert.Empty(empty); // Empty string is empty byte array
+            repository.SetStorageValue(testAddress, dog, emptyString);
+            Assert.Equal(emptyString, repository.GetStorageValue(testAddress, dog));
+            repository.Commit();
+            
+            // We have pushed null to the kv store. Should come back as null
+            StateRepositoryRoot repository2 = new StateRepositoryRoot(stateDB, repository.Root);
             Assert.Null(repository2.GetStorageValue(testAddress, dog));
         }
     }
