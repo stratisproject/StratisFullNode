@@ -165,6 +165,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
         /// <summary>
         /// Builds a list of consolidation transactions that will need to pass before the next withdrawal transaction can come through.
         /// </summary>
+        /// <returns>A list of consolidation transactions.</returns>
         public List<ConsolidationTransaction> CreateRequiredConsolidationTransactions(Money amount)
         {
             // TODO: This method doesn't need to be public.
@@ -172,9 +173,7 @@ namespace Stratis.Features.FederatedPeg.InputConsolidation
             lock (this.txLock)
             {
                 // Get all of the inputs
-                List<UnspentOutputReference> unspentOutputs = this.walletManager
-                    .GetSpendableTransactionsInWallet(WithdrawalTransactionBuilder.MinConfirmations)
-                    .Where(x => x.Transaction.Amount > Money.Coins(0.001m)).ToList();
+                List<UnspentOutputReference> unspentOutputs = this.walletManager.GetSpendableTransactionsInWallet(WithdrawalTransactionBuilder.MinConfirmations).ToList();
 
                 // We shouldn't be consolidating transactions if we have less than 50 UTXOs to spend.
                 if (unspentOutputs.Count < FederatedPegSettings.MaxInputs)

@@ -66,8 +66,6 @@ namespace Stratis.Bitcoin.Features.Api
                     options.IncludeXmlComments(xmlPath);
                 }
             }
-
-            options.DescribeAllEnumsAsStrings();
         }
 
         static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)

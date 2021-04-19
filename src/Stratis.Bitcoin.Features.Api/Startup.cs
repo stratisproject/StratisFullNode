@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -77,7 +78,9 @@ namespace Stratis.Bitcoin.Features.Api
                     }
                 })
                 // add serializers for NBitcoin objects
-                .AddNewtonsoftJson(options => Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings))
+                .AddNewtonsoftJson(options => {
+                    Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
+                })
                 .AddControllers(this.fullNode.Services.Features, services);
 
             // Enable API versioning.
@@ -107,6 +110,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             // Register the Swagger generator. This will use the options we injected just above.
             services.AddSwaggerGen();
+            services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

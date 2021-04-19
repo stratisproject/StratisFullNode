@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
@@ -77,12 +79,18 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             // Check the common case first.
             bool conversionTransaction = false;
+            DestinationChain targetChain = DestinationChain.STRAX;
+
             if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
             {
-                if (!this.opReturnDataReader.TryGetTargetETHAddress(transaction, out targetAddress))
+                byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
+
+                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
                 {
-                    return null;
+                    targetChain = (DestinationChain)destinationChain;
                 }
+                else
+                    return null;
                 
                 conversionTransaction = true;
             }
@@ -115,7 +123,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     depositRetrievalType = DepositRetrievalType.Small;
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, blockHeight, blockHash);
+            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, targetChain, blockHeight, blockHash);
         }
     }
 }

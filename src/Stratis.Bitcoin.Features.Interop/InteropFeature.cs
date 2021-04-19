@@ -24,24 +24,24 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly InteropPoller interopPoller;
         
         private readonly IInteropTransactionManager interopTransactionManager;
-        
-        private readonly IETHClient ethereumClientBase;
+
+        private readonly IETHCompatibleClientProvider clientProvider;
 
         public InteropFeature(
             Network network, 
             IFederationManager federationManager,
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
-            IInteropTransactionManager interopTransactionManager, 
-            IETHClient ethereumClientBase,
-            IFullNode fullNode)
+            IInteropTransactionManager interopTransactionManager,
+            IFullNode fullNode,
+            IETHCompatibleClientProvider ethCompatibleClientProvider)
         {
             this.network = network;
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
             this.interopPoller = interopPoller;
             this.interopTransactionManager = interopTransactionManager;
-            this.ethereumClientBase = ethereumClientBase;
+            this.clientProvider = ethCompatibleClientProvider;
 
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.clientProvider));
 
             return Task.CompletedTask;
         }
@@ -75,6 +75,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     .FeatureServices(services => services
                     .AddSingleton<InteropSettings>()
                     .AddSingleton<IETHClient, ETHClient.ETHClient>()
+                    .AddSingleton<IBNBClient, BNBClient>()
+                    .AddSingleton<IETHCompatibleClientProvider, ETHCompatibleClientProvider>()
                     .AddSingleton<IInteropTransactionManager, InteropTransactionManager>()
                     .AddSingleton<InteropPoller>()
                     ));
