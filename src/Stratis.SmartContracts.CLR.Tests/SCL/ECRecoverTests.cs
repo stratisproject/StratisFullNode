@@ -1,9 +1,7 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using NBitcoin;
 using Xunit;
 using ECRecover = Stratis.SCL.Crypto.ECRecover;
-using Operations = Stratis.SCL.Base.Operations;
 
 namespace Stratis.SmartContracts.CLR.Tests.SCL
 {
@@ -17,7 +15,7 @@ namespace Stratis.SmartContracts.CLR.Tests.SCL
             Address[] addresses = keys.Select(k => k.PubKey.Hash.ToBytes().ToAddress()).ToArray();
             string[] sigs = keys.Select(k => k.SignMessage(authorizationChallenge)).ToArray();
 
-            Assert.True(ECRecover.TryVerifySignatures(sigs, System.Text.Encoding.ASCII.GetBytes(authorizationChallenge), addresses, out Address[] verifiedAddresses));
+            Assert.True(ECRecover.TryGetVerifiedSignatures(sigs, authorizationChallenge, addresses, out Address[] verifiedAddresses));
             Assert.Equal(addresses, verifiedAddresses);
         }
     }
