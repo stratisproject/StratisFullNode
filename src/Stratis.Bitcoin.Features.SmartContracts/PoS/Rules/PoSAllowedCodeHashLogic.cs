@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
@@ -13,6 +11,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
     /// </summary>
     public class PoSAllowedCodeHashLogic : IContractTransactionFullValidationRule
     {
+        private static uint256 dictionaryCodeHash = new uint256("");
+
         private readonly Network network;
         private readonly IContractCodeHashingStrategy hashingStrategy;
 
@@ -21,50 +21,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             this.network = network;
             this.hashingStrategy = hashingStrategy;
         }
-
+       
         /// <summary>
-        /// Provides a message to sign to allow code via a code hash.
-        /// </summary>
-        /// <param name="hashedCode">The code hash of the code to allow.</param>
-        /// <returns>Message to sign to allow code via a code hash</returns>
-        public static string MessageToAllowCode(byte[] hashedCode)
-        {
-            return $"Allow code {(new uint256(hashedCode))}";
-        }
-
-        /// <summary>
-        /// Verifies that a list of signatures provided with a message meets the current network requirements
-        /// for attaining the post-deployment configuration privilege described by the message.
-        /// </summary>
-        /// <param name="message">The message to test the signatures against.</param>
-        /// <param name="signatures">The signatures provided.</param>
-        /// <param name="blockHeight">The block height that helps determine the current signature requirements.</param>
-        public void VerifySignatures(string message, string[] signatures, int blockHeight)
-        {
-            if (this.network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory factory)
-            {
-                // Check the hashed code against all required signatures.
-                try
-                {
-                   // TODO
-                   //PubKey[] pubKeysPresented = signatures.Select(s => PubKey.RecoverFromMessage(message, s)).ToArray();
-                   // PubKey[] pubKeysRequired = factory.GetSignatureRequirements(blockHeight).ToArray();
-                   // if (!pubKeysRequired.All(r => pubKeysPresented.Contains(r)))
-                   //     ThrowInvalidCode();
-
-                    return;
-                }
-                catch (Exception)
-                {
-                    ThrowInvalidCode();
-                }
-            }
-
-            ThrowInvalidCode();
-        }
-
-        /// <summary>
-        /// Checks that "create" constract transactions meet the current signature requirements.
+        /// Checks that "create" contract transactions meet the allowed code hash requirements.
         /// </summary>
         /// <param name="txData">Defines the contract being created.</param>
         /// <param name="suppliedBudget">The supplied budget.</param>
@@ -74,9 +33,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             if (!txData.IsCreateContract)
                 return;
 
-            byte[] hashedCode = this.hashingStrategy.Hash(txData.ContractExecutionCode);
+            uint256 hashedCode = new uint256(this.hashingStrategy.Hash(txData.ContractExecutionCode));
 
-            this.VerifySignatures(MessageToAllowCode(hashedCode), txData.Signatures, blockHeight);
+            if (hashedCode == dictionaryCodeHash)
+                return;
+
+            // TODO: If the contract is white-listed in the dictionary contract the exit without throwing an error.
+
+            ThrowInvalidCode();
         }
 
         private static void ThrowInvalidCode()
