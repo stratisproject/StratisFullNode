@@ -11,15 +11,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
     /// </summary>
     public class PoSAllowedCodeHashLogic : IContractTransactionFullValidationRule
     {
-        private static uint256 dictionaryCodeHash = new uint256("");
+        private static uint256 dictionaryCodeHash = uint256.Zero; // TODO: Replace this with the actual hash.
 
         private readonly Network network;
         private readonly IContractCodeHashingStrategy hashingStrategy;
+        private readonly ISystemContractExecutor systemContractExecutor;
 
-        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy)
+        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy, ISystemContractExecutor systemContractExecutor)
         {
             this.network = network;
             this.hashingStrategy = hashingStrategy;
+            this.systemContractExecutor = systemContractExecutor;
         }
        
         /// <summary>
@@ -39,6 +41,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
                 return;
 
             // TODO: If the contract is white-listed in the dictionary contract then exit without throwing an error.
+            SystemContractExecutionResult systemContractExecutionResult = Execute(new SystemContractContext()
+            {
+                blockHeight = blockHeight
+                // TODO
+            });
+
+            if ((bool)(systemContractExecutionResult.Result))
+                return;
 
             ThrowInvalidCode();
         }
