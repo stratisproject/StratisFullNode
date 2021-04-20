@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             if (hashedCode == dictionaryCodeHash)
                 return;
 
-            // TODO: If the contract is white-listed in the dictionary contract the exit without throwing an error.
+            // TODO: If the contract is white-listed in the dictionary contract then exit without throwing an error.
 
             ThrowInvalidCode();
         }
