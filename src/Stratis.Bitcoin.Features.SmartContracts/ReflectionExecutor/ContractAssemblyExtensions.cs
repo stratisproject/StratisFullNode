@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
         /// Gets the public methods defined by the contract, ignoring property getters/setters.
         /// </summary>
         /// <returns></returns>
-        public static IEnumerable<MethodInfo> GetPublicMethods(this ContractAssembly contractAssembly)
+        public static IEnumerable<MethodInfo> GetPublicMethods(this IContractAssembly contractAssembly)
         {
             Type deployedType = contractAssembly.DeployedType;
 
@@ -24,7 +24,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor
                 .Where(m => !m.IsSpecialName); // Ignore property setters/getters
         }
 
-        public static IEnumerable<PropertyInfo> GetPublicGetterProperties(this ContractAssembly contractAssembly)
+        public static IEnumerable<PropertyInfo> GetPublicGetterProperties(this IContractAssembly contractAssembly)
         {
             Type deployedType = contractAssembly.DeployedType;
 

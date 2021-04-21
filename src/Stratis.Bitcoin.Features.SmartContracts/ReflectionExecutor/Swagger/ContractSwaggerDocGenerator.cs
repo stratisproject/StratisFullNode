@@ -30,6 +30,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
             this.defaultSenderAddress = defaultSenderAddress;
         }
 
+        private IDictionary<string, OpenApiSchema> CreateDefinitions()
+        {
+            // Creates schema for each of the methods in the contract.
+            var schemaFactory = new ContractSchemaFactory();
+
+            return schemaFactory.Map(this.assembly);
+        }
+
         /// <summary>
         /// Generates a swagger document for an assembly. Adds a path per public method, with a request body
         /// that contains the parameters of the method. Transaction-related metadata is added to header fields
