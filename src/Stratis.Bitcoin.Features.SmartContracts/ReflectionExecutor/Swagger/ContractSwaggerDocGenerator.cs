@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Microsoft.OpenApi.Models;
 using Stratis.SmartContracts.CLR.Loader;
 using Swashbuckle.AspNetCore.Swagger;
@@ -38,6 +39,92 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
             return schemaFactory.Map(this.assembly);
         }
 
+        private IDictionary<string, OpenApiPathItem> CreatePathItems(IDictionary<string, OpenApiSchema> schema)
+        {
+            // Creates path items for each of the methods & properties in the contract + their schema.O
+
+            IEnumerable<MethodInfo> methods = this.assembly.GetPublicMethods();
+
+            var methodPaths = methods
+                .ToDictionary(k => $"/api/contract/{this.address}/method/{k.Name}", v => this.CreatePathItem(v, schema));
+
+            IEnumerable<PropertyInfo> properties = this.assembly.GetPublicGetterProperties();
+
+            var propertyPaths = properties
+                .ToDictionary(k => $"/api/contract/{this.address}/property/{k.Name}", v => this.CreatePathItem(v));
+
+            foreach (KeyValuePair<string, OpenApiPathItem> item in propertyPaths)
+            {
+                methodPaths[item.Key] = item.Value;
+            }
+
+            return methodPaths;
+        }
+
+        private OpenApiPathItem CreatePathItem(PropertyInfo propertyInfo)
+        {
+            var operation = new OpenApiOperation
+            {
+                Tags = new List<OpenApiTag> { new OpenApiTag { Name = propertyInfo.Name } },
+                OperationId = propertyInfo.Name,
+                Parameters = this.GetLocalCallMetadataHeaderParams(),
+                Responses = new OpenApiResponses { { "200", new OpenApiResponse { Description = "Success" } } }
+            };
+
+            var pathItem = new OpenApiPathItem
+            {
+                Operations = new Dictionary<OperationType, OpenApiOperation> { { OperationType.Get, operation } }
+            };
+
+            return pathItem;
+        }
+
+        private OpenApiPathItem CreatePathItem(MethodInfo methodInfo, IDictionary<string, OpenApiSchema> schema)
+        {
+            var operation = new OpenApiOperation
+            {
+                Tags = new List<OpenApiTag> { new OpenApiTag { Name = methodInfo.Name } },
+                OperationId = methodInfo.Name,
+                Parameters = this.GetCallMetadataHeaderParams(),
+                Responses = new OpenApiResponses { { "200", new OpenApiResponse { Description = "Success" } } }
+            };
+
+            operation.RequestBody = new OpenApiRequestBody
+            {
+                Description = $"{methodInfo.Name}",
+                Required = true,
+                Content = new Dictionary<string, OpenApiMediaType>
+                {
+                    { "application/json", new OpenApiMediaType
+                        {
+                            Schema = schema[methodInfo.Name]
+                        }
+                    }
+                },
+            };
+
+            var pathItem = new OpenApiPathItem
+            {
+                Operations = new Dictionary<OperationType, OpenApiOperation> { { OperationType.Post, operation } }
+            };
+
+            return pathItem;
+        }
+
+        private List<OpenApiParameter> GetLocalCallMetadataHeaderParams()
+        {
+            return new List<OpenApiParameter>
+            {
+            };
+        }
+
+        private List<OpenApiParameter> GetCallMetadataHeaderParams()
+        {
+            return new List<OpenApiParameter>
+            {
+            };
+        }
+
         /// <summary>
         /// Generates a swagger document for an assembly. Adds a path per public method, with a request body
         /// that contains the parameters of the method. Transaction-related metadata is added to header fields
@@ -55,13 +142,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
 
             SetInfo(info);
 
-            var schemaRepository = new SchemaRepository(documentName);
+            IDictionary<string, OpenApiSchema> definitions = this.CreateDefinitions();
 
             var swaggerDoc = new OpenApiDocument
             {
                 Info = info,
                 Servers = GenerateServers(host, basePath),
-                Paths = GeneratePaths(null, schemaRepository),
+                Paths = GeneratePaths(definitions),
                 Components = new OpenApiComponents
                 {
                     Schemas = null,
@@ -91,9 +178,18 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
                 : new List<OpenApiServer> { new OpenApiServer { Url = $"{host}{basePath}" } };
         }
 
-        private OpenApiPaths GeneratePaths(object applicableApiDescriptions, SchemaRepository schemaRepository)
+        private OpenApiPaths GeneratePaths(IDictionary<string, OpenApiSchema> definitions)
         {
-            throw new NotImplementedException();
+            IDictionary<string, OpenApiPathItem> paths = this.CreatePathItems(definitions);
+
+            OpenApiPaths pathsObject = new OpenApiPaths();
+
+            foreach (KeyValuePair<string, OpenApiPathItem> path in paths)
+            {
+                pathsObject.Add(path.Key, path.Value);
+            }
+
+            return pathsObject;
         }
     }
 }
