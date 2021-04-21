@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Consensus.Rules;
 using Stratis.SmartContracts.CLR.Loader;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -115,6 +117,56 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
         {
             return new List<OpenApiParameter>
             {
+                new OpenApiParameter
+                {
+                    Name = "GasPrice",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "number",
+                        Format = "int64",
+                        Minimum = SmartContractFormatLogic.GasPriceMinimum,
+                        Maximum = SmartContractFormatLogic.GasPriceMaximum,
+                        Default = new OpenApiLong((long)SmartContractMempoolValidator.MinGasPrice) // Long not ideal but there's no OpenApiUlong
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "GasLimit",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "number",
+                        Format = "int64",
+                        Minimum = SmartContractFormatLogic.GasLimitCallMinimum,
+                        Maximum = SmartContractFormatLogic.GasLimitMaximum,
+                        Default = new OpenApiLong((long)SmartContractFormatLogic.GasLimitMaximum) // Long not ideal but there's no OpenApiUlong
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "Amount",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string",
+                        Default = new OpenApiString("0")
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "Sender",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string",
+                        Default = new OpenApiString(this.defaultSenderAddress)
+                    },
+                }
             };
         }
 
@@ -122,6 +174,88 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
         {
             return new List<OpenApiParameter>
             {
+                new OpenApiParameter
+                {
+                    Name = "GasPrice",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "number",
+                        Format = "int64",
+                        Minimum = SmartContractFormatLogic.GasPriceMinimum,
+                        Maximum = SmartContractFormatLogic.GasPriceMaximum,
+                        Default = new OpenApiLong((long)SmartContractMempoolValidator.MinGasPrice) // Long not ideal but there's no OpenApiUlong
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "GasLimit",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "number",
+                        Format = "int64",
+                        Minimum = SmartContractFormatLogic.GasLimitCallMinimum,
+                        Maximum = SmartContractFormatLogic.GasLimitMaximum,
+                        Default = new OpenApiLong((long)SmartContractMempoolValidator.MinGasPrice) // Long not ideal but there's no OpenApiUlong
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "Amount",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string",
+                        Default = new OpenApiString("0")
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "FeeAmount",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string",
+                        Default = new OpenApiString("0.01")
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "WalletName",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string",
+                        Default = new OpenApiString(this.defaultWalletName)
+                    },
+                },
+                new OpenApiParameter
+                {
+                    Name = "WalletPassword",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string"
+                    }
+                },
+                new OpenApiParameter
+                {
+                    Name = "Sender",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "string",
+                        Default = new OpenApiString(this.defaultSenderAddress)
+                    },
+                }
             };
         }
 
