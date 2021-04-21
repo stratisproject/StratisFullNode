@@ -199,7 +199,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Swagger
                         Format = "int64",
                         Minimum = SmartContractFormatLogic.GasLimitCallMinimum,
                         Maximum = SmartContractFormatLogic.GasLimitMaximum,
-                        Default = new OpenApiLong((long)SmartContractMempoolValidator.MinGasPrice) // Long not ideal but there's no OpenApiUlong
+                        Default = new OpenApiLong((long)SmartContractFormatLogic.GasLimitCallMinimum) // Long not ideal but there's no OpenApiUlong
                     },
                 },
                 new OpenApiParameter
