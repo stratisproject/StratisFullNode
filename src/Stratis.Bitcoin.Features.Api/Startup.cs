@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
@@ -109,7 +110,10 @@ namespace Stratis.Bitcoin.Features.Api
             services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
             // Register the Swagger generator. This will use the options we injected just above.
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("contracts", new OpenApiInfo { Title = "Contract API", Version = "1" });
+            });
             services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
         }
 
