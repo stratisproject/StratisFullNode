@@ -29,6 +29,7 @@ namespace Stratis.Bitcoin.Features.Api
         }
 
         private IFullNode fullNode;
+        private SwaggerUIOptions uiOptions;
 
         public IConfigurationRoot Configuration { get; }
 
@@ -113,8 +114,12 @@ namespace Stratis.Bitcoin.Features.Api
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("contracts", new OpenApiInfo { Title = "Contract API", Version = "1" });
+
             });
             services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
+
+            // Hack to be able to access and modify the options object
+            services.AddSingleton(_ => this.uiOptions);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -145,6 +150,9 @@ namespace Stratis.Bitcoin.Features.Api
                 {
                     c.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
                 }
+
+                // Hack to be able to access and modify the options object configured here
+                this.uiOptions = c;
             });
         }
     }

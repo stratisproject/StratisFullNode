@@ -16,6 +16,7 @@ using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.Core.State;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Swashbuckle.AspNetCore.SwaggerUI;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 {
@@ -30,15 +31,18 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private readonly IWalletManager walletmanager;
         private readonly IStateRepositoryRoot stateRepository;
         private readonly Network network;
+        private SwaggerUIOptions uiOptions;
 
         public ContractSwaggerController(
             SwaggerGeneratorOptions options,
+            SwaggerUIOptions uiOptions,
             ILoader loader,
             IWalletManager walletmanager,
             IStateRepositoryRoot stateRepository,
             Network network)
         {
             this.options = options;
+            this.uiOptions = uiOptions;
             this.loader = loader;
             this.walletmanager = walletmanager;
             this.stateRepository = stateRepository;
@@ -82,6 +86,33 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             var outputString = doc.Serialize(OpenApiSpecVersion.OpenApi3_0, OpenApiFormat.Json);
 
             return Ok(outputString);
+        }
+
+        /// <summary>
+        /// Add the contract address to the Swagger dropdown
+        /// </summary>
+        /// <param name="address">The contract's address.</param>
+        /// <returns>A success response.</returns>
+        [HttpPost]
+        public async Task<IActionResult> AddContractToSwagger(string address)
+        {
+            // Check that the contract exists
+            var code = this.stateRepository.GetCode(address.ToUint160(this.network));
+
+            if (code == null)
+                throw new Exception("Contract does not exist");
+
+            var newUrls = new List<UrlDescriptor>(this.uiOptions.ConfigObject.Urls);
+
+            newUrls.Add(new UrlDescriptor
+            {
+                Name = $"Contract {address}",
+                Url = $"/swagger/contracts/{address}"
+            });
+
+            this.uiOptions.ConfigObject.Urls = newUrls;
+
+            return Ok();
         }
     }
 }
