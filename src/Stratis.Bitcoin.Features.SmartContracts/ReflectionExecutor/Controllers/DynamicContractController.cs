@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -61,12 +62,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <exception cref="Exception"></exception>
         [Route("api/contract/{address}/method/{method}")]
         [HttpPost]
-        public IActionResult CallMethod([FromRoute] string address, [FromRoute] string method)
+        public async Task<IActionResult> CallMethod([FromRoute] string address, [FromRoute] string method)
         {
+            this.Request.EnableBuffering();
+
+            this.Request.Body.Position = 0;
+
             string requestBody;
             using (StreamReader reader = new StreamReader(this.Request.Body, Encoding.UTF8))
             {
-                requestBody = reader.ReadToEnd();
+                requestBody = await reader.ReadToEndAsync();
             }
 
             JObject requestData;
