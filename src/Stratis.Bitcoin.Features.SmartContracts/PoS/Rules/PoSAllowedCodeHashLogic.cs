@@ -16,14 +16,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
         private readonly Network network;
         private readonly IContractCodeHashingStrategy hashingStrategy;
         private readonly IWhitelistedHashChecker whitelistedHashChecker;
-        private readonly ISystemContractExecutor systemContractExecutor;
 
-        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy, IWhitelistedHashChecker whitelistedHashChecker, ISystemContractExecutor systemContractExecutor)
+        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy, IWhitelistedHashChecker whitelistedHashChecker)
         {
             this.network = network;
             this.hashingStrategy = hashingStrategy;
             this.whitelistedHashChecker = whitelistedHashChecker;
-            this.systemContractExecutor = systemContractExecutor;
         }
 
         public bool ContractIsWhitelisted(ContractTxData txData)
@@ -45,16 +43,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
                 return;
 
             if (!ContractIsWhitelisted(txData))
-                return;
-
-            // TODO: If the contract is white-listed in the dictionary contract then exit without throwing an error.
-            SystemContractExecutionResult systemContractExecutionResult = Execute(new SystemContractContext()
-            {
-                blockHeight = blockHeight
-                // TODO
-            });
-
-            if ((bool)(systemContractExecutionResult.Result))
                 return;
 
             ThrowInvalidCode();
