@@ -19,14 +19,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             { uint256.Zero, new (int, int?)[] { (0, 0) } }
         };
 
-        // Contracts to white-list later when the specified BIP 9 goes active.
-        private static Dictionary<uint256, string> contractWhitelistingBIP9s = new Dictionary<uint256, string>() {
-            { uint256.Zero, "SystemContracts" }
-        };
-
-        // Contracts to black-list later when the specified BIP 9 goes active.
-        private static Dictionary<uint256, string> contractBlacklistingBIP9s = new Dictionary<uint256, string>() {
-            { uint256.Zero, "SystemContracts" }
+        // Contracts to white (or black)-list later when the specified BIP 9 goes active.
+        private static Dictionary<uint256, (string, bool)> contractWhitelistingBIP9s = new Dictionary<uint256, (string, bool)>() {
+            { uint256.Zero, ("SystemContracts", true) }
         };
 
         private readonly Network network;
@@ -66,25 +61,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
                     isWhiteListed = true;
             }
 
-            if (!isWhiteListed && contractWhitelistingBIP9s.TryGetValue(hash, out string deploymentName))
+            if (!isWhiteListed && contractWhitelistingBIP9s.TryGetValue(hash, out (string deploymentName, bool whiteList) action))
             {
-                // Found.
-            }
-            else if (isWhiteListed && contractBlacklistingBIP9s.TryGetValue(hash, out deploymentName))
-            {
-                // Found.
-            }
-            else
-            {
-                return isWhiteListed;
-            }
+                int deployment = this.network.Consensus.BIP9Deployments.FindDeploymentIndexByName(action.deploymentName);
+                if (deployment < 0)
+                    return isWhiteListed;
 
-            int deployment = this.network.Consensus.BIP9Deployments.FindDeploymentIndexByName(deploymentName);
-            if (deployment < 0)
-                return isWhiteListed;
-
-            if (this.nodeDeployments.BIP9.GetState(previousHeader, deployment) == ThresholdState.Active)
-                isWhiteListed = !isWhiteListed;
+                if (this.nodeDeployments.BIP9.GetState(previousHeader, deployment) == ThresholdState.Active)
+                    isWhiteListed = action.whiteList;
+            }
 
             return isWhiteListed;
         }
