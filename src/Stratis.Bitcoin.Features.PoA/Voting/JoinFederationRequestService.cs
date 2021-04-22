@@ -72,11 +72,21 @@ namespace Stratis.Features.PoA.Voting
                 throw new Exception($"The call to sign the join federation request failed: '{err.Message}'.");
             }
 
+            if (!VerifyCounterChainSignature(joinRequest))
+            {
+                throw new Exception($"The signature from the collateral address {joinRequest.CollateralMainchainAddress} is invalid");
+            }
+
             return await BroadcastSignedJoinRequestAsync(joinRequest, request.WalletName, request.WalletPassword, request.WalletAccount, cancellationToken);
         }
 
         public async Task<PubKey> BroadcastSignedJoinRequestAsync(JoinFederationRequest request, string walletName, string walletPassword, string walletAccount, CancellationToken cancellationToken)
         {
+            if(!VerifyCounterChainSignature(request))
+            {
+                throw new Exception($"The signature from the collateral address {request.CollateralMainchainAddress} is invalid");
+            }
+
             IWalletTransactionHandler walletTransactionHandler = this.fullNode.NodeService<IWalletTransactionHandler>();
             var encoder = new JoinFederationRequestEncoder();
             JoinFederationRequestResult result = JoinFederationRequestBuilder.BuildTransaction(walletTransactionHandler, this.network, request, encoder, walletName, walletAccount, walletPassword);
@@ -121,6 +131,17 @@ namespace Stratis.Features.PoA.Voting
             if (minerKey == null)
                 throw new Exception($"The private key file ({KeyTool.KeyFileDefaultName}) has not been configured or is not present.");
             return minerKey;
+        }
+
+        /// <summary>
+        /// Returns true if the join request message is signed by the given collateral address.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        public bool VerifyCounterChainSignature(JoinFederationRequest request)
+        {
+            BitcoinPubKeyAddress bitcoinPubKeyAddress = new BitcoinPubKeyAddress(request.CollateralMainchainAddress, this.counterChainSettings.CounterChainNetwork);
+            return bitcoinPubKeyAddress.VerifyMessage(request.SignatureMessage, request.Signature);
         }
     }
 }
