@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
@@ -10,10 +11,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// </summary>
     public class PoSWhitelistedHashChecker : IWhitelistedHashChecker
     {
+        // TODO: Move these variables to the respective main, test / regtest network classes.
+
         // Currently white-listed contracts.
-        private static HashSet<uint256> currentWhiteListedHashes = new HashSet<uint256>()
+        private static Dictionary<uint256, (int start, int? end)[]> contractActivationHistory = new Dictionary<uint256, (int, int?)[]>()
         {
-            uint256.Zero
+            { uint256.Zero, new (int, int?)[] { (0, 0) } }
         };
 
         // Contracts to white-list later when the specified BIP 9 goes active.
@@ -56,7 +59,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 
             var hash = new uint256(hashBytes);
 
-            bool isWhiteListed = currentWhiteListedHashes.Contains(hash);
+            bool isWhiteListed = false;
+            if (contractActivationHistory.TryGetValue(hash, out (int start, int? end)[] ranges))
+            {
+                if (ranges.Any(r => (previousHeader.Height + 1) <= r.start && (previousHeader.Height + 1) <= r.end))
+                    isWhiteListed = true;
+            }
 
             if (!isWhiteListed && contractWhitelistingBIP9s.TryGetValue(hash, out string deploymentName))
             {
