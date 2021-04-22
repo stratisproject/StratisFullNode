@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
 
                 List<Poll> polls = GetAllPolls();
-                this.highestPollId = polls.Max(a => a.Id);
+                this.highestPollId = (polls.Count == 0) ? -1 : polls.Max(a => a.Id);
                 using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     SaveHighestPollId(transaction);
