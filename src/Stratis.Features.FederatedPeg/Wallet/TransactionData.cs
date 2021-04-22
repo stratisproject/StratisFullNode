@@ -152,7 +152,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         [NoTrace]
         public bool IsSpendable()
         {
-            if (this.Amount < Money.Coins(FederatedPegSettings.DustThreshold))
+            if (this.Amount < Money.Coins(FederatedPegSettings.UtxoAmountThreshold))
                 return false;
 
             // TODO: Coinbase maturity check?

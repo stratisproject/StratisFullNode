@@ -293,7 +293,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <summary>
         /// List all spendable transactions in a multisig address.
         /// </summary>
-        /// <param name="filterDustTransactions">Filter spendable inputs below <see cref="FederatedPegSettings.DustThreshold"/>.</param>
+        /// <param name="filterDustTransactions">Filter spendable inputs below <see cref="FederatedPegSettings.UtxoAmountThreshold"/>.</param>
         /// <returns>Returns all the unspent <see cref="TransactionData"/> objects.</returns>
         [NoTrace]
         public TransactionData[] GetUnspentTransactions(bool filterDustTransactions = true)
@@ -303,7 +303,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 IList<TransactionData> result = this.spendableTransactionList.Keys;
 
                 if (filterDustTransactions)
-                    result = result.Where(x => x.Amount > Money.Coins(FederatedPegSettings.DustThreshold)).ToArray();
+                    result = result.Where(x => x.Amount > Money.Coins(FederatedPegSettings.UtxoAmountThreshold)).ToArray();
 
                 return result.ToArray();
             }
