@@ -72,7 +72,7 @@ namespace Stratis.Features.PoA.Voting
                 throw new Exception($"The call to sign the join federation request failed: '{err.Message}'.");
             }
 
-            if (!VerifyCounterChainSignature(joinRequest))
+            if (!VerifyCollateralSignature(joinRequest))
             {
                 throw new Exception($"The signature from the collateral address {joinRequest.CollateralMainchainAddress} is invalid");
             }
@@ -82,7 +82,7 @@ namespace Stratis.Features.PoA.Voting
 
         public async Task<PubKey> BroadcastSignedJoinRequestAsync(JoinFederationRequest request, string walletName, string walletPassword, string walletAccount, CancellationToken cancellationToken)
         {
-            if(!VerifyCounterChainSignature(request))
+            if(!VerifyCollateralSignature(request))
             {
                 throw new Exception($"The signature from the collateral address {request.CollateralMainchainAddress} is invalid");
             }
@@ -138,7 +138,7 @@ namespace Stratis.Features.PoA.Voting
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        public bool VerifyCounterChainSignature(JoinFederationRequest request)
+        public bool VerifyCollateralSignature(JoinFederationRequest request)
         {
             BitcoinPubKeyAddress bitcoinPubKeyAddress = new BitcoinPubKeyAddress(request.CollateralMainchainAddress, this.counterChainSettings.CounterChainNetwork);
             return bitcoinPubKeyAddress.VerifyMessage(request.SignatureMessage, request.Signature);
