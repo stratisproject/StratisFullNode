@@ -15,15 +15,24 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
 
         private readonly Network network;
         private readonly IContractCodeHashingStrategy hashingStrategy;
+        private readonly IWhitelistedHashChecker whitelistedHashChecker;
         private readonly ISystemContractExecutor systemContractExecutor;
 
-        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy, ISystemContractExecutor systemContractExecutor)
+        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy, IWhitelistedHashChecker whitelistedHashChecker, ISystemContractExecutor systemContractExecutor)
         {
             this.network = network;
             this.hashingStrategy = hashingStrategy;
+            this.whitelistedHashChecker = whitelistedHashChecker;
             this.systemContractExecutor = systemContractExecutor;
         }
-       
+
+        public bool ContractIsWhitelisted(ContractTxData txData)
+        {
+            byte[] hashBytes = this.hashingStrategy.Hash(txData.ContractExecutionCode);
+
+            return this.whitelistedHashChecker.CheckHashWhitelisted(hashBytes);
+        }
+
         /// <summary>
         /// Checks that "create" contract transactions meet the allowed code hash requirements.
         /// </summary>
@@ -35,9 +44,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             if (!txData.IsCreateContract)
                 return;
 
-            uint256 hashedCode = new uint256(this.hashingStrategy.Hash(txData.ContractExecutionCode));
-
-            if (hashedCode == dictionaryCodeHash)
+            if (!ContractIsWhitelisted(txData))
                 return;
 
             // TODO: If the contract is white-listed in the dictionary contract then exit without throwing an error.
