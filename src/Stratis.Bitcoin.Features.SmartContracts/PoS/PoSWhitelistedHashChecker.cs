@@ -13,7 +13,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     {
         // TODO: Move these variables to the respective main, test / regtest network classes.
 
-        // Currently white-listed contracts.
+        // History of block ranges over which the contracts was active.
+        // The BIP9 Deployments array is sometimes cleaned up and the information therein has to be transferred here.
         private static Dictionary<uint256, (int start, int? end)[]> contractActivationHistory = new Dictionary<uint256, (int, int?)[]>()
         {
             { uint256.Zero, new (int, int?)[] { (0, 0) } }
