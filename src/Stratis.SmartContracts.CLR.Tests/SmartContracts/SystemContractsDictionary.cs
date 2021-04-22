@@ -23,15 +23,13 @@ public class SystemContractsDictionary : SmartContract
     /// <summary>
     /// Initializes the contract with the default (or initial) set of signatories which are required when calling some of the methods.
     /// </summary>
-    /// <remarks>
-    /// The default list has to be peovided before validating and deploying this contract.
-    /// </remarks>
-    public SystemContractsDictionary(ISmartContractState state) : base(state)
+    /// <param name="state">Contract state.</param>
+    /// <param name="signatories">Initial set of signatories.</param>
+    /// <param name="quorum">Initial quorum requirement/</param>
+    public SystemContractsDictionary(ISmartContractState state, Address[] signatories, uint quorum) : base(state)
     {
-        // TODO: Update this list prior to contract validation or deployment.
-        //       This is the only system contract that has its contract's code hash hard coded in the full node source for the purpose of white-listing it.
-        this.SetSignatories(primaryGroup, new[] { new Address(0, 0, 0, 0, 0), new Address(0, 0, 0, 0, 1), new Address(0, 0, 0, 0, 2) });
-        this.SetQuorum(primaryGroup, 2);
+        this.SetSignatories(primaryGroup, signatories);
+        this.SetQuorum(primaryGroup, quorum);
     }
 
     private Address[] Signatories => GetSignatories(primaryGroup);
