@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             bool isWhiteListed = false;
             if (contractActivationHistory.TryGetValue(hash, out (int start, int? end)[] ranges))
             {
-                if (ranges.Any(r => (previousHeader.Height + 1) <= r.start && (r.end == null || (previousHeader.Height + 1) <= r.end)))
+                if (ranges.Any(r => (previousHeader.Height + 1) >= r.start && (r.end == null || (previousHeader.Height + 1) <= r.end)))
                     isWhiteListed = true;
             }
 
