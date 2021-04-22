@@ -43,6 +43,13 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         Task<BigInteger> GetBlockHeightAsync();
 
         /// <summary>
+        /// Retrieves the balance for an Ethereum account.
+        /// </summary>
+        /// <param name="address">The Ethereum account to retrieve the destination balance for.</param>
+        /// <returns>The balance of the account in wei.</returns>
+        Task<BigInteger> GetBalanceAsync(string address);
+
+        /// <summary>
         /// Submits a transaction to the multisig wallet contract, to enable it to be separately confirmed by a quorum of the multisig wallet owners.
         /// </summary>
         /// <param name="destination">The account that the transaction is being sent to after confirmation. For wSTRAX operations this will typically be the wSTRAX ERC20 contract address.</param>
@@ -160,6 +167,15 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             HexBigInteger block = await blockNumberHandler.SendRequestAsync().ConfigureAwait(false);
             
             return block.Value;
+        }
+
+        /// <inheritdoc />
+        public async Task<BigInteger> GetBalanceAsync(string address)
+        {
+            
+            HexBigInteger balance = await this.web3.Eth.GetBalance.SendRequestAsync(address).ConfigureAwait(false);
+
+            return balance.Value;
         }
 
         /// <inheritdoc />

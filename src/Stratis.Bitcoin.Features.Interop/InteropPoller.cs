@@ -143,15 +143,16 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Retrieves the current Ethereum chain height via the RPC interface to geth.
+        /// Retrieves the current Ethereum chain height and account balance via the RPC interface to geth.
         /// </summary>
         private async Task CheckETHNodeAsync()
         {
             try
             {
                 BigInteger blockHeight = await this.ETHClientBase.GetBlockHeightAsync().ConfigureAwait(false);
+                BigInteger balance = await this.ETHClientBase.GetBalanceAsync(this.interopSettings.ETHAccount).ConfigureAwait(false);
 
-                this.logger.LogInformation("Current Ethereum node block height is {0}.", blockHeight);
+                this.logger.LogInformation("Current Ethereum node block height is {0}. Balance for {1} is {2}", blockHeight, this.interopSettings.ETHAccount, balance);
             }
             catch (Exception e)
             {
