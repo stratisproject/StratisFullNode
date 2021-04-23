@@ -180,6 +180,32 @@ namespace NBitcoin
         }
     }
 
+    public interface ISystemContractContainer
+    {
+        /// <summary>
+        /// Determines if the contract with the specified hash should be active.
+        /// </summary>
+        /// <param name="hash">Hash identifying the contract.</param>
+        /// <param name="previousHeader">Previous header of block to check the activation state at.</param>
+        /// <param name="deploymentCondition">Function that determines if the contract is active based block and deployment number.</param>
+        /// <returns><c>True</c> if the contract is active and <c>false</c> otherwise.</returns>        
+        bool IsActive(uint256 hash, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition);
+
+        /// <summary>
+        /// Returns the hashes of all defined contracts, whether active or inactive.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<uint256> ContractHashes();
+
+        /// <summary>
+        /// Retrieves the contract type from the predefined key id to contract type mapping.
+        /// </summary>
+        /// <param name="keyId">Key id to retrieve the contract type for.</param>
+        /// <param name="contractType">Retrieved contract type (if available).</param>
+        /// <returns><c>True</c> if a mapping exists and <c>false</c> otherwise.</returns>
+        bool TryGetContractTypeFromKeyId(KeyId keyId, out Type contractType);
+    }
+
     public interface IFederations
     {
         /// <summary>
@@ -450,6 +476,8 @@ namespace NBitcoin
         public IStandardScriptsRegistry StandardScriptsRegistry { get; protected set; }
 
         public IFederations Federations { get; protected set; }
+
+        public ISystemContractContainer SystemContractContainer { get; protected set; }
 
         /// <summary>
         /// This is used for reward distribution transactions.

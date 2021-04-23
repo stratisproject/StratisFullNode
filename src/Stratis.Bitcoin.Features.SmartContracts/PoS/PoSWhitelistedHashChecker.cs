@@ -66,27 +66,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
                 // For this implementation, only 32 byte wide hashes are accepted.
                 return false;
             }
-            
+
             var hash = new uint256(hashBytes);
 
-            bool isWhiteListed = false;
-            if (contractActivationHistory.TryGetValue(hash, out (int start, int? end)[] ranges))
-            {
-                if (ranges.Any(r => (previousHeader.Height + 1) >= r.start && (r.end == null || (previousHeader.Height + 1) <= r.end)))
-                    isWhiteListed = true;
-            }
-
-            if (!isWhiteListed && contractWhitelistingBIP9s.TryGetValue(hash, out (string deploymentName, bool whiteList) action))
-            {
-                int deployment = this.network.Consensus.BIP9Deployments.FindDeploymentIndexByName(action.deploymentName);
-                if (deployment < 0)
-                    return isWhiteListed;
-
-                if (this.nodeDeployments.BIP9.GetState(previousHeader, deployment) == ThresholdState.Active)
-                    isWhiteListed = action.whiteList;
-            }
-
-            return isWhiteListed;
+            return this.network.SystemContractContainer.IsActive(hash, previousHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active);
         }
 
         /// <inheritdoc />

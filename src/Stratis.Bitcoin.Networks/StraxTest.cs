@@ -78,6 +78,12 @@ namespace Stratis.Bitcoin.Networks
                 [StraxBIP9Deployments.SystemContracts] = new BIP9DeploymentsParameters("SystemContracts", 3, DateTime.Parse("2021-02-25 06:20:00 GMT"), DateTime.Parse("2031-02-20 00:00:00 GMT"), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
+            this.SystemContractContainer = new SystemContractContainer(
+                this,
+                new Dictionary<KeyId, Type> { },
+                new Dictionary<uint256, (int start, int? end)[]> { },
+                new Dictionary<uint256, (string, bool)> { });
+
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
 
