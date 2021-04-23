@@ -186,11 +186,11 @@ namespace NBitcoin
     public interface ISystemContractContainer
     {
         /// <summary>
-        /// Determines if the contract with the specified hash should be active.
+        /// Determines if the contract with the specified hash is active.
         /// </summary>
         /// <param name="hash">Hash identifying the contract.</param>
         /// <param name="previousHeader">Previous header of block to check the activation state at.</param>
-        /// <param name="deploymentCondition">Function that determines if the contract is active based previous header and deployment number.</param>
+        /// <param name="deploymentCondition">Function that determines if the contract is active based on previous header and deployment number.</param>
         /// <returns><c>True</c> if the contract is active and <c>false</c> otherwise.</returns>        
         bool IsActive(uint256 hash, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition);
 
