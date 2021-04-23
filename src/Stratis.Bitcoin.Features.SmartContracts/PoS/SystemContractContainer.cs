@@ -40,14 +40,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <summary>
-        ///  Pseudo-hash consisting of 8 "signature", 20 "address" + 4 "version" bytes.
+        ///  Pseudo-hash consisting of 8 "signature", 20 "contractTypeId" + 4 "version" bytes.
         /// </summary>
-        /// <param name="address"><see cref="KeyId"/> that will be mapped to a contract class.</param>
+        /// <param name="contractTypeId"><see cref="KeyId"/> that will be mapped to a contract class.</param>
         /// <param name="version">Version that will be passed to contract constructor.</param>
         /// <returns>Pseudo-hash identifying the system contract type and version.</returns>
-        public static uint256 PseudoHash(KeyId address, uint version)
+        public static uint256 PseudoHash(KeyId contractTypeId, uint version)
         {
-            byte[] hashBytes = pseudoHashSignature.Concat(address.ToBytes()).Concat(BitConverter.GetBytes(version)).ToArray();
+            byte[] hashBytes = pseudoHashSignature.Concat(contractTypeId.ToBytes()).Concat(BitConverter.GetBytes(version)).ToArray();
             return new uint256(hashBytes);
         }
 
@@ -66,7 +66,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// </summary>
         /// <param name="hash">The hash to extract the key id and version of.</param>
         /// <returns>The key id and version.</returns>
-        public static (KeyId keyId, uint version) GetKeyIdAndVersion(uint256 hash)
+        public (Type contractType, uint version) GetContractTypeAndVersion(uint256 hash)
         {
             Guard.Assert(IsPseudoHash(hash));
 
@@ -75,13 +75,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             var keyIdBytes = new byte[20];
             Array.Copy(hashBytes, 8, keyIdBytes, 0, 20);
 
-            return (new KeyId(keyIdBytes), BitConverter.ToUInt32(hashBytes, 28));
-        }
-
-        /// <inheritdoc/>
-        public bool TryGetContractTypeFromKeyId(KeyId keyId, out Type contractType)
-        {
-            return this.contractTypes.TryGetValue(keyId, out contractType);
+            return (this.contractTypes[new KeyId(keyIdBytes)], BitConverter.ToUInt32(hashBytes, 28));
         }
 
         /// <inheritdoc/>

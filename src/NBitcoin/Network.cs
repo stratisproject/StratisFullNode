@@ -198,12 +198,11 @@ namespace NBitcoin
         IEnumerable<uint256> ContractHashes();
 
         /// <summary>
-        /// Retrieves the contract type from the predefined key id to contract type mapping.
+        /// Extracts the contract type and version from a contract hash.
         /// </summary>
-        /// <param name="keyId">Key id to retrieve the contract type for.</param>
-        /// <param name="contractType">Retrieved contract type (if available).</param>
-        /// <returns><c>True</c> if a mapping exists and <c>false</c> otherwise.</returns>
-        bool TryGetContractTypeFromKeyId(KeyId keyId, out Type contractType);
+        /// <param name="hash">The hash to extract the key id and version of.</param>
+        /// <returns>The key id and version.</returns>
+        (Type contractType, uint version) GetContractTypeAndVersion(uint256 hash);
     }
 
     public interface IFederations
