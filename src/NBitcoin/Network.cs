@@ -180,6 +180,9 @@ namespace NBitcoin
         }
     }
 
+    /// <summary>
+    /// Holds the information and logic to determines whether an embedded system contract should be active.
+    /// </summary>
     public interface ISystemContractContainer
     {
         /// <summary>

@@ -7,7 +7,7 @@ using Stratis.Bitcoin.Utilities;
 namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 {
     /// <summary>
-    /// Holds the information and logic to determines whether a system contract should be active.
+    /// Holds the information and logic to determines whether an embedded system contract should be active.
     /// </summary>
     public class SystemContractContainer : ISystemContractContainer
     {
