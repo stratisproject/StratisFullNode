@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
         private void AddSpentTransactionByHeight(TransactionData transactionData)
         {
-            if (transactionData.IsSpendable() || transactionData.SpendingDetails.BlockHeight == null)
+            if (!transactionData.IsSpentAndConfirmed())
                 return;
 
             if (!this.spentTransactionsByHeightDict.TryGetValue((int)transactionData.SpendingDetails.BlockHeight, out List<TransactionData> txList))
@@ -84,7 +84,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
         private void RemoveSpentTransactionByHeight(TransactionData transactionData)
         {
-            if (transactionData.SpendingDetails?.BlockHeight == null)
+            if (!transactionData.IsSpentAndConfirmed())
                 return;
 
             if (this.spentTransactionsByHeightDict.TryGetValue((int)transactionData.SpendingDetails.BlockHeight, out List<TransactionData> txList))
@@ -120,7 +120,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 }
                 catch (Exception err)
                 {
-                    throw new System.Exception("An error occurred during transaction data addition.", err);
+                    throw new Exception("An error occurred during transaction data addition.", err);
                 }
             }
         }
@@ -293,19 +293,13 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <summary>
         /// List all spendable transactions in a multisig address.
         /// </summary>
-        /// <param name="filterDustTransactions">Filter spendable inputs below <see cref="FederatedPegSettings.DustThreshold"/>.</param>
         /// <returns>Returns all the unspent <see cref="TransactionData"/> objects.</returns>
         [NoTrace]
-        public TransactionData[] GetUnspentTransactions(bool filterDustTransactions = true)
+        public TransactionData[] GetUnspentTransactions()
         {
             lock (this.lockObject)
             {
-                IList<TransactionData> result = this.spendableTransactionList.Keys;
-
-                if (filterDustTransactions)
-                    result = result.Where(x => x.Amount > Money.Coins(FederatedPegSettings.DustThreshold)).ToArray();
-
-                return result.ToArray();
+                return this.spendableTransactionList.Keys.ToArray();
             }
         }
 
