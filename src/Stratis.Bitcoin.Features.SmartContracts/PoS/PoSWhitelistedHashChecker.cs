@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
@@ -12,33 +9,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// </summary>
     public class PoSWhitelistedHashChecker : IWhitelistedHashChecker
     {
-        // TODO: Move these variables to the respective main, test / regtest network classes.
-
-        private static byte[] pseudoHashSignature = new byte[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
-
-        // Pseudo-hash consisting of 8 "signature", 20 "address" + 4 "version" bytes.
-        private static uint256 PseudoHash(KeyId address, uint version)
-        {
-            byte[] hashBytes = pseudoHashSignature.Concat(address.ToBytes()).Concat(BitConverter.GetBytes(version)).ToArray();
-            return new uint256(hashBytes);
-        }
-
-        // History of block ranges over which contracts were active.
-        // The BIP9 Deployments array is sometimes cleaned up and the information therein has to be transferred here.
-        private static Dictionary<uint256, (int start, int? end)[]> contractActivationHistory = new Dictionary<uint256, (int, int?)[]>()
-        {
-            { PseudoHash(new KeyId(1), 0), new (int, int?)[] { (0, 0) } }
-        };
-
-        // Contracts to white (or black)-list later when the specified BIP 9 goes active.
-        private static Dictionary<uint256, (string, bool)> contractWhitelistingBIP9s = new Dictionary<uint256, (string, bool)>() {
-            { PseudoHash(new KeyId(1), 0), ("SystemContracts", true) }
-        };
-
-        private static Dictionary<uint160, Type> contractTypes = new Dictionary<uint160, Type>() {
-            // { new KeyId(1), typeof(SystemContractDictionary) }
-        };
-
         private readonly Network network;
         private readonly NodeDeployments nodeDeployments;
         private readonly ChainIndexer chainIndexer;
