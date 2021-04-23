@@ -31,14 +31,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <returns>True if the hash was found in the whitelisted hashes repository.</returns>
         public bool CheckHashWhitelisted(byte[] hashBytes, ChainedHeader previousHeader)
         {
-            if (hashBytes.Length != 32)
-            {
-                // For this implementation, only 32 byte wide hashes are accepted.
-                return false;
-            }
+            return CheckHashWhitelisted(new uint256(hashBytes), previousHeader);
+        }
 
-            var hash = new uint256(hashBytes);
-
+        /// <summary>
+        /// Checks that a supplied hash is present in the whitelisted hashes repository.
+        /// </summary>
+        /// <param name="hash">The hash to check.</param>
+        /// <param name="previousHeader">The block before the block to check.</param>
+        /// <returns>True if the hash was found in the whitelisted hashes repository.</returns>
+        public bool CheckHashWhitelisted(uint256 hash, ChainedHeader previousHeader)
+        {
             return this.network.SystemContractContainer.IsActive(hash, previousHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active);
         }
 
