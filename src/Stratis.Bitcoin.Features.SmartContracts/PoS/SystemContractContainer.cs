@@ -52,13 +52,23 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <summary>
+        /// Determines whether the hash is a "pseudo hash".
+        /// </summary>
+        /// <param name="hash">Hash to evaluate.</param>
+        /// <returns><c>True</c> if its a pseudo-hash and <c>flase</c> otherwise.</returns>
+        public static bool IsPseudoHash(uint256 hash)
+        {
+            return hash.GetLow64() == BitConverter.ToUInt64(pseudoHashSignature);
+        }
+
+        /// <summary>
         /// Extracts the key id and version from a pseudo-hash.
         /// </summary>
         /// <param name="hash">The hash to extract the key id and version of.</param>
         /// <returns>The key id and version.</returns>
-        public static (KeyId, uint) GetKeyIdAndVersion(uint256 hash)
+        public static (KeyId keyId, uint version) GetKeyIdAndVersion(uint256 hash)
         {
-            Guard.Assert(hash.GetLow64() == BitConverter.ToUInt64(pseudoHashSignature));
+            Guard.Assert(IsPseudoHash(hash));
 
             var hashBytes = hash.ToBytes();
 
