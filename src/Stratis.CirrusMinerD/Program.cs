@@ -77,11 +77,13 @@ namespace Stratis.CirrusMinerD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
+            DbType dbType = nodeSettings.GetDbType();
+
             IFullNode node = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
                 .AddPoAFeature()
-                .UsePoAConsensus()
+                .UsePoAConsensus(dbType)
                 .AddPoACollateralMiningCapability<SmartContractPoABlockDefinition>()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
@@ -150,15 +152,17 @@ namespace Stratis.CirrusMinerD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
+            DbType dbType = nodeSettings.GetDbType();
+
             IFullNode node = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
                 .UseTransactionNotification()
                 .UseBlockNotification()
                 .UseApi()
                 .UseMempool()
                 .AddRPC()
-                .UsePosConsensus()
+                .UsePosConsensus(dbType)
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
