@@ -45,6 +45,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             var transactionData1 = new TransactionData()
             {
                 Id = 1,
+                Amount = Money.Coins(1),
                 Index = 1,
                 BlockHeight = null,
                 SpendingDetails = null
@@ -53,14 +54,17 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             var transactionData2 = new TransactionData()
             {
                 Id = 2,
+                Amount = Money.Coins(1),
                 Index = 0,
                 BlockHeight = null,
                 SpendingDetails = null
             };
 
-            var transactions = new MultiSigTransactions();
-            transactions.Add(transactionData2);
-            transactions.Add(transactionData1);
+            var transactions = new MultiSigTransactions
+            {
+                transactionData2,
+                transactionData1
+            };
 
             transactionData2.BlockHeight = 1;
 
@@ -69,6 +73,37 @@ namespace Stratis.Features.FederatedPeg.Tests.Wallet
             transactionData2.BlockHeight = null;
 
             transactions.Add(transactionData2);
+        }
+
+        [Fact]
+        public void DustInputsNotAddedToMultiSigWallet()
+        {
+            var transactionData1 = new TransactionData()
+            {
+                Id = 1,
+                Amount = Money.Coins(1),
+                Index = 1,
+                BlockHeight = null,
+                SpendingDetails = null
+            };
+
+            var transactionData2 = new TransactionData()
+            {
+                Id = 2,
+                Amount = Money.Coins(0.0001m),
+                Index = 0,
+                BlockHeight = null,
+                SpendingDetails = null
+            };
+
+            var transactions = new MultiSigTransactions
+            {
+                transactionData2,
+                transactionData1
+            };
+
+            Assert.Equal(2, transactions.Count);
+            Assert.Single(transactions.GetUnspentTransactions());
         }
 
         [Theory]
