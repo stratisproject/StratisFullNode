@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <param name="contractTypeId"><see cref="KeyId"/> that will be mapped to a contract class.</param>
         /// <param name="version">Version that will be passed to contract constructor.</param>
         /// <returns>Pseudo-hash identifying the system contract type and version.</returns>
-        public static uint256 PseudoHash(KeyId contractTypeId, uint version)
+        public static uint256 GetPseudoHash(KeyId contractTypeId, uint version)
         {
             byte[] hashBytes = pseudoHashSignature.Concat(contractTypeId.ToBytes()).Concat(BitConverter.GetBytes(version)).ToArray();
             return new uint256(hashBytes);
