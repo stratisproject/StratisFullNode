@@ -188,14 +188,14 @@ namespace NBitcoin
         /// <summary>
         /// Determines if the contract with the specified hash is active.
         /// </summary>
-        /// <param name="hash">Hash identifying the contract.</param>
+        /// <param name="hash">Pseudo "transaction hash" identifying the contract.</param>
         /// <param name="previousHeader">Previous header of block to check the activation state at.</param>
         /// <param name="deploymentCondition">Function that determines if the contract is active based on previous header and deployment number.</param>
         /// <returns><c>True</c> if the contract is active and <c>false</c> otherwise.</returns>        
         bool IsActive(uint256 hash, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition);
 
         /// <summary>
-        /// Returns the hashes of all defined contracts, whether active or inactive.
+        /// Returns the pseudo "transaction hashes" of all defined contracts, whether active or inactive.
         /// </summary>
         /// <returns></returns>
         IEnumerable<uint256> ContractHashes();
@@ -203,8 +203,8 @@ namespace NBitcoin
         /// <summary>
         /// Extracts the contract type and version from a contract hash.
         /// </summary>
-        /// <param name="hash">The hash to extract the key id and version of.</param>
-        /// <returns>The key id and version.</returns>
+        /// <param name="hash">The hash to extract the contract type and version of.</param>
+        /// <returns>The contract type and version.</returns>
         (Type contractType, uint version) GetContractTypeAndVersion(uint256 hash);
     }
 
