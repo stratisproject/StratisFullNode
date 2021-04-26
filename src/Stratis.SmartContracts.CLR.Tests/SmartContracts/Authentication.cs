@@ -1,14 +1,21 @@
-﻿using Stratis.SmartContracts;
+﻿using System.Linq;
+using NBitcoin;
+using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR;
 using ECRecover = Stratis.SCL.Crypto.ECRecover;
 
 public class Authentication : SmartContract
 {
     const string primaryGroup = "main";
 
-    public Authentication(ISmartContractState state, byte[] signatories, uint quorum) : base(state)
+    public Authentication(ISmartContractState state, Network network) : base(state)
     {
-        this.SetSignatories(primaryGroup, this.Serializer.ToArray<Address>(signatories));
-        this.SetQuorum(primaryGroup, quorum);
+        PrimaryAuthenticators primaryAuthenticators = network.SystemContractContainer.PrimaryAuthenticators;
+
+        Assert(primaryAuthenticators != null && primaryAuthenticators.Signatories.Length >= 1 && primaryAuthenticators.Quorum >= 1);
+
+        this.SetSignatories(primaryGroup, primaryAuthenticators.Signatories.Select(k => BitcoinAddress.Create(k, network).GetScriptAddress().Hash.ToBytes().ToAddress()).ToArray());
+        this.SetQuorum(primaryGroup, primaryAuthenticators.Quorum);
     }
 
     public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
