@@ -11,8 +11,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// </summary>
     public class SystemContractContainer : ISystemContractContainer
     {
-        // TODO: Move these variables to the respective main, test / regtest network classes.
-
         private static byte[] pseudoHashSignature = new byte[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
         private readonly Network network;
