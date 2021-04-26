@@ -62,30 +62,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <exception cref="Exception"></exception>
         [Route("api/contract/{address}/method/{method}")]
         [HttpPost]
-        public async Task<IActionResult> CallMethod([FromRoute] string address, [FromRoute] string method)
+        public async Task<IActionResult> CallMethod([FromRoute] string address, [FromRoute] string method, [FromBody] JObject requestData)
         {
-            this.Request.EnableBuffering();
-
-            this.Request.Body.Position = 0;
-
-            string requestBody;
-            using (StreamReader reader = new StreamReader(this.Request.Body, Encoding.UTF8))
-            {
-                requestBody = await reader.ReadToEndAsync();
-            }
-
-            JObject requestData;
-
-            try
-            {
-                requestData = JObject.Parse(requestBody);
-
-            }
-            catch (JsonReaderException e)
-            {
-                return this.BadRequest(e.Message);
-            }
-
             var contractCode = this.stateRoot.GetCode(address.ToUint160(this.network));
 
             Result<IContractAssembly> loadResult = this.loader.Load((ContractByteCode)contractCode);
