@@ -22,11 +22,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
         {
             var network = new StraxMain();
             KeyId contractId = new Key().PubKey.Hash;
+            uint256 contractHash = SystemContractContainer.GetPseudoHash(contractId, 1);
             var container = new SystemContractContainer(
                 network,
                 new Dictionary<KeyId, Type> { { contractId, typeof(TestSystemContract) }},
-                new Dictionary<uint256, (int start, int? end)[]> { { SystemContractContainer.GetPseudoHash(contractId, 1), new[] { (1, (int?)10) } } },
-                new Dictionary<uint256, (string, bool)> { });
+                new Dictionary<uint256, (int start, int? end)[]> { { contractHash, new[] { (1, (int?)10) } } },
+                new Dictionary<uint256, (string, bool)> { { contractHash, ("SystemContracts", true) } });
 
             uint256 hash = container.GetContractHashes().First();
 
@@ -45,11 +46,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             // Active if previous header is at height 9.
             chainedHeader.SetPrivatePropertyValue("Height", 9);
-            Assert.True(container.IsActive(hash, chainedHeader, (h, d) => true));
+            Assert.True(container.IsActive(hash, chainedHeader, (h, d) => false));
 
             // Inactive if previous header is at height 10.
             chainedHeader.SetPrivatePropertyValue("Height", 10);
-            Assert.False(container.IsActive(hash, chainedHeader, (h, d) => true));
+            Assert.False(container.IsActive(hash, chainedHeader, (h, d) => false));
+
+            // Inactive if previous header is at height 10 unless activated by BIP 9.
+            chainedHeader.SetPrivatePropertyValue("Height", 10);
+            Assert.True(container.IsActive(hash, chainedHeader, (h, d) => true));
         }
     }
 }
