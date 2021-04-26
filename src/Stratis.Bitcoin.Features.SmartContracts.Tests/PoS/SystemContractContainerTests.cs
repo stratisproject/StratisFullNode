@@ -56,5 +56,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
             chainedHeader.SetPrivatePropertyValue("Height", 10);
             Assert.True(container.IsActive(hash, chainedHeader, (h, d) => true));
         }
+
+        [Fact]
+        public void CanDereferenceContractTypes()
+        {
+            foreach (Network network in new Network[] { new StraxMain(), new StraxTest(), new StraxRegTest() })
+            {
+                foreach (uint256 hash in network.SystemContractContainer.GetContractHashes())
+                {
+                    (string typeName, uint version) = network.SystemContractContainer.GetContractTypeAndVersion(hash);
+
+                    Assert.NotNull(Type.GetType(typeName));
+                }
+            }
+        }
     }
 }
