@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The contract's address.</param>
         /// <returns>A success response.</returns>
         [HttpPost]
-        public async Task<IActionResult> AddContractToSwagger(string address)
+        public async Task<IActionResult> AddContractToSwagger([FromBody] string address)
         {
             // Check that the contract exists
             var code = this.stateRepository.GetCode(address.ToUint160(this.network));
