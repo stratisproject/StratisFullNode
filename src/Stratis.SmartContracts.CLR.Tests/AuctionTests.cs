@@ -135,7 +135,11 @@ namespace Stratis.SmartContracts.CLR.Tests
         private T GetObject<T>(string key)
         {
             if (this.objects.ContainsKey(key))
-                return (T)this.objects[key];
+            {
+                object value = this.objects[key];
+                if (value != null)
+                    return (T)value;
+            }
 
             return default(T);
         }
@@ -212,7 +216,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public T[] GetArray<T>(string key)
         {
-            throw new NotImplementedException();
+            return (T[])this.GetObject<T[]>(key).Clone();
         }
 
         public void SetBytes(byte[] key, byte[] value)
@@ -288,12 +292,12 @@ namespace Stratis.SmartContracts.CLR.Tests
 
         public void SetArray(string key, Array a)
         {
-            throw new NotImplementedException();
+            this.SetObject(key, a);
         }
 
         public void Clear(string key)
         {
-            throw new NotImplementedException();
+            this.SetBytes(key, null);
         }
     }
 }
