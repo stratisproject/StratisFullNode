@@ -100,7 +100,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <inheritdoc/>
-        public IEnumerable<uint256> ContractHashes()
+        public IEnumerable<uint256> GetContractHashes()
         {
             return this.contractActivationHistory.Keys.Concat(this.contractWhitelistingBIP9s.Keys).Distinct();
         }

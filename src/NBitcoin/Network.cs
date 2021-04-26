@@ -198,7 +198,7 @@ namespace NBitcoin
         /// Returns the pseudo "transaction hashes" of all defined contracts, whether active or inactive.
         /// </summary>
         /// <returns></returns>
-        IEnumerable<uint256> ContractHashes();
+        IEnumerable<uint256> GetContractHashes();
 
         /// <summary>
         /// Extracts the contract type and version from a contract hash.
