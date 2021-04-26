@@ -87,6 +87,7 @@ namespace Stratis.Bitcoin.Networks
                 new Dictionary<uint256, (int start, int? end)[]> { },
                 new Dictionary<uint256, (string, bool)> { });
 
+            // The first address in each regtest wallet.
             this.SystemContractContainer.PrimaryAuthenticators = new PrimaryAuthenticators(this, new[]
             {
                 "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",
