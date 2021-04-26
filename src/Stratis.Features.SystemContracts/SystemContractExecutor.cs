@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using CSharpFunctionalExtensions;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core;
+using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts
@@ -13,21 +16,40 @@ namespace Stratis.Features.SystemContracts
     {
         private readonly IStateRepository stateRoot;
         private readonly ICallDataSerializer serializer;
-        private readonly IStateProcessor stateProcessor;
 
         public SystemContractExecutor(
             ICallDataSerializer serializer,
-            IStateRepository stateRoot,
-            IStateProcessor stateProcessor)
+            IStateRepository stateRoot)
         {
             this.stateRoot = stateRoot;
             this.serializer = serializer;
-            this.stateProcessor = stateProcessor;
         }
 
         public IContractExecutionResult Execute(IContractTransactionContext transactionContext)
-        {
-            throw new NotImplementedException();
+        {            
+            // Deserialization can't fail because this has already been through SmartContractFormatRule.
+            Result<ContractTxData> callDataDeserializationResult = this.serializer.Deserialize(transactionContext.Data);
+            ContractTxData callData = callDataDeserializationResult.Value;
+
+            // TODO assert this in a consensus rule before we ever get here.
+            if (callData.IsCreateContract)
+                throw new InvalidOperationException("Contract creation transactions are not permitted");
+
+
+            var executionResult = new SmartContractExecutionResult
+            {
+                To = !callData.IsCreateContract ? callData.ContractAddress : null,
+                NewContractAddress = null,
+                ErrorMessage = null,
+                Revert = false,
+                Return = null, // TODO
+                InternalTransaction = null,
+                Fee = 0,
+                Refund = null,
+                Logs = new List<Log>()
+            };
+
+            return executionResult;
         }
     }
 }

@@ -11,6 +11,8 @@
     /// - State root is the same
     /// - Contracts are not accessed by "addresses"
     /// - Transferring funds is currently blocked
+    /// - No concept of gas, contracts are assumed to be halting within a specific time period
+    /// - No receipts
     /// - Whitelisting is done by BIP9 activations
     /// - We don't need to use ISmartContractState within a contract if we don't want to. 
     ///   Can use some other way of getting an instance of a contract that has the dependencies it needs. 
