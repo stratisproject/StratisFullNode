@@ -161,10 +161,10 @@ namespace Stratis.Bitcoin.Builder
             exceptions.Add(exception);
 
             var messageText = disposing ? "disposing" : "starting";
-            var exceptionText = $"An error occurred {messageText} full node feature '{feature.GetType().Name}': '{exception}'";
+            var exceptionText = "An error occurred {0} full node feature '{1}' : '{2}'";
 
-            this.logger.Error(exceptionText);
-            this.signals.Publish(new FullNodeEvent() { Message = exceptionText, State = FullNodeState.Failed.ToString() });
+            this.logger.Error(exceptionText, messageText, feature.GetType().Name, exception);
+            this.signals.Publish(new FullNodeEvent() { Message = string.Format(exceptionText, messageText, feature.GetType().Name, exception.Message), State = FullNodeState.Failed.ToString() });
         }
     }
 }
