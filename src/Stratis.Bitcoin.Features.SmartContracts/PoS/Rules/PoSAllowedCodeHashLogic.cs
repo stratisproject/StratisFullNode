@@ -42,7 +42,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
             if (!txData.IsCreateContract)
                 return;
 
-            if (!ContractIsWhitelisted(txData))
+            if (ContractIsWhitelisted(txData))
                 return;
 
             ThrowInvalidCode();
