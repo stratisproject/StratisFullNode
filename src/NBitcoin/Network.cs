@@ -180,6 +180,34 @@ namespace NBitcoin
         }
     }
 
+    /// <summary>
+    /// Holds the information and logic to determines whether an embedded system contract should be active.
+    /// </summary>
+    public interface ISystemContractContainer
+    {
+        /// <summary>
+        /// Determines if the contract with the specified hash is active.
+        /// </summary>
+        /// <param name="hash">Pseudo "transaction hash" identifying the contract.</param>
+        /// <param name="previousHeader">Previous header of block to check the activation state at.</param>
+        /// <param name="deploymentCondition">Function that determines if the contract is active based on previous header and deployment number.</param>
+        /// <returns><c>True</c> if the contract is active and <c>false</c> otherwise.</returns>        
+        bool IsActive(uint256 hash, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition);
+
+        /// <summary>
+        /// Returns the pseudo "transaction hashes" of all defined contracts, whether active or inactive.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<uint256> GetContractHashes();
+
+        /// <summary>
+        /// Extracts the contract type and version from a contract hash.
+        /// </summary>
+        /// <param name="hash">The hash to extract the contract type and version of.</param>
+        /// <returns>The contract type and version.</returns>
+        (string contractType, uint version) GetContractTypeAndVersion(uint256 hash);
+    }
+
     public interface IFederations
     {
         /// <summary>
@@ -450,6 +478,8 @@ namespace NBitcoin
         public IStandardScriptsRegistry StandardScriptsRegistry { get; protected set; }
 
         public IFederations Federations { get; protected set; }
+
+        public ISystemContractContainer SystemContractContainer { get; protected set; }
 
         /// <summary>
         /// This is used for reward distribution transactions.

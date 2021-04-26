@@ -30,7 +30,7 @@ namespace Stratis.SmartContracts.CLR.Tests
                 }"
             );
 
-            var contractTxData = new ContractTxData(1, 1, (RuntimeObserver.Gas)5000, contractExecutionCode, signatures: new[] { Convert.ToBase64String(new byte[] { 1, 2, 3 }), Convert.ToBase64String(new byte[] { 7, 8, 9 }) });
+            var contractTxData = new ContractTxData(1, 1, (RuntimeObserver.Gas)5000, contractExecutionCode);
             var callDataResult = this.Serializer.Deserialize(this.Serializer.Serialize(contractTxData));
             var callData = callDataResult.Value;
 
@@ -40,8 +40,6 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.Equal<byte[]>(contractExecutionCode, callData.ContractExecutionCode);
             Assert.Equal((RuntimeObserver.Gas)1, callData.GasPrice);
             Assert.Equal((RuntimeObserver.Gas)5000, callData.GasLimit);
-            Assert.Equal(new byte[] { 1, 2, 3 }, Convert.FromBase64String(callData.Signatures[0]));
-            Assert.Equal(new byte[] { 7, 8, 9 }, Convert.FromBase64String(callData.Signatures[1]));
         }
 
         [Fact]

@@ -37,6 +37,12 @@ namespace Stratis.Bitcoin.Networks
             this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka"; // Cirrus main address
             this.RewardClaimerBatchActivationHeight = 119_200; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
             this.RewardClaimerBlockInterval = 100;
+            
+            this.SystemContractContainer = new SystemContractContainer(
+                this,
+                new Dictionary<KeyId, string> { },
+                new Dictionary<uint256, (int start, int? end)[]> { },
+                new Dictionary<uint256, (string, bool)> { });
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
