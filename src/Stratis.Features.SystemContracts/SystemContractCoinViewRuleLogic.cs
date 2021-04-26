@@ -28,16 +28,23 @@ namespace Stratis.Features.SystemContracts
         private readonly ICoinView coinView;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
         private readonly ISenderRetriever senderRetriever;
+        private readonly SystemContractExecutor systemContractExecutor;
         private readonly List<Transaction> blockTxsProcessed;
         private ILogger<SystemContractCoinViewRuleLogic> logger;
         private IStateRepositoryRoot mutableStateRepository;
 
-        public SystemContractCoinViewRuleLogic(ILoggerFactory loggerFactory, ICoinView coinView, IStateRepositoryRoot stateRepositoryRoot, ISenderRetriever senderRetriever)
+        public SystemContractCoinViewRuleLogic(
+            ILoggerFactory loggerFactory, 
+            ICoinView coinView, 
+            IStateRepositoryRoot stateRepositoryRoot, 
+            ISenderRetriever senderRetriever,
+            SystemContractExecutor systemContractExecutor)
         {
             this.logger = loggerFactory.CreateLogger<SystemContractCoinViewRuleLogic>();
             this.coinView = coinView;
             this.stateRepositoryRoot = stateRepositoryRoot;
             this.senderRetriever = senderRetriever;
+            this.systemContractExecutor = systemContractExecutor;
             this.blockTxsProcessed = new List<Transaction>();
         }
 
@@ -49,6 +56,10 @@ namespace Stratis.Features.SystemContracts
         /// <returns></returns>
         public async Task RunAsync(Func<RuleContext, Task> baseRunAsync, RuleContext context)
         {
+            // Reset the fields that are hackily being used to pass values between methods.
+            this.blockTxsProcessed.Clear();
+            this.mutableStateRepository = null;
+
             Block block = context.ValidationContext.BlockToValidate;
             this.logger.LogDebug("Block to validate '{0}'", block.GetHash());
 
@@ -65,6 +76,7 @@ namespace Stratis.Features.SystemContracts
             this.mutableStateRepository = this.stateRepositoryRoot.GetSnapshotTo(blockRoot.ToBytes());
 
             // Call chain base->CheckInput->UpdateCoinView->ExecuteContract.
+            // Once this is completed we expect this.mutableStateRepositoryRoot to be updated
             await baseRunAsync(context);
 
             var blockHeader = (ISmartContractBlockHeader)block.Header;
@@ -124,6 +136,8 @@ namespace Stratis.Features.SystemContracts
             }
 
             this.mutableStateRepository = this.ExecuteContractTransaction(context, transaction);
+
+            // Currently anything to do with transferring funds is not allowed, but this would be added here in the future.
         }
 
 
@@ -135,11 +149,9 @@ namespace Stratis.Features.SystemContracts
             IContractTransactionContext txContext = this.GetSmartContractTransactionContext(context, transaction);
 
             // TODO execute
-            //IContractExecutor executor = this.executorFactory.CreateExecutor(this.mutableStateRepository, txContext);
-            //Result<ContractTxData> deserializedCallData = this.callDataSerializer.Deserialize(txContext.Data);
+            var result = this.systemContractExecutor.Execute(txContext);
 
-            //IContractExecutionResult result = executor.Execute(txContext);
-            return null;
+            return result.NewState;
         }
 
         /// <summary>

@@ -11,7 +11,7 @@ namespace Stratis.Features.SystemContracts.Tests
         [Fact]
         public void Executor_Not_Null()
         {
-            var factory = new TypeExecutorFactory();
+            var factory = new SystemContractExecutorFactory();
 
             Assert.NotNull(factory.CreateExecutor(Mock.Of<IStateRepositoryRoot>(), Mock.Of<IContractTransactionContext>()));
         }
