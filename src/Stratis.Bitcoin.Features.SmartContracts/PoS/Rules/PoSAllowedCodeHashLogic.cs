@@ -11,15 +11,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS.Rules
     /// </summary>
     public class PoSAllowedCodeHashLogic : IContractTransactionFullValidationRule
     {
-        private static uint256 dictionaryCodeHash = uint256.Zero; // TODO: Replace this with the actual hash.
-
-        private readonly Network network;
         private readonly IContractCodeHashingStrategy hashingStrategy;
         private readonly IWhitelistedHashChecker whitelistedHashChecker;
 
-        public PoSAllowedCodeHashLogic(Network network, IContractCodeHashingStrategy hashingStrategy, IWhitelistedHashChecker whitelistedHashChecker)
+        public PoSAllowedCodeHashLogic(IContractCodeHashingStrategy hashingStrategy, IWhitelistedHashChecker whitelistedHashChecker)
         {
-            this.network = network;
             this.hashingStrategy = hashingStrategy;
             this.whitelistedHashChecker = whitelistedHashChecker;
         }
