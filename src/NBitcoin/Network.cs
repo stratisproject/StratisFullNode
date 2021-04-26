@@ -205,7 +205,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="hash">The hash to extract the contract type and version of.</param>
         /// <returns>The contract type and version.</returns>
-        (Type contractType, uint version) GetContractTypeAndVersion(uint256 hash);
+        (string contractType, uint version) GetContractTypeAndVersion(uint256 hash);
     }
 
     public interface IFederations

@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
             uint256 contractHash = SystemContractContainer.GetPseudoHash(contractId, 1);
             var container = new SystemContractContainer(
                 network,
-                new Dictionary<KeyId, Type> { { contractId, typeof(TestSystemContract) }},
+                new Dictionary<KeyId, string> { { contractId, typeof(TestSystemContract).ToString() }},
                 new Dictionary<uint256, (int start, int? end)[]> { { contractHash, new[] { (1, (int?)10) } } },
                 new Dictionary<uint256, (string, bool)> { { contractHash, ("SystemContracts", true) } });
 
@@ -33,9 +33,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             Assert.True(SystemContractContainer.IsPseudoHash(hash));
 
-            (Type contractType, uint version) typeAndVersion = container.GetContractTypeAndVersion(hash);
+            (string contractType, uint version) typeAndVersion = container.GetContractTypeAndVersion(hash);
 
-            Assert.Equal(typeof(TestSystemContract), typeAndVersion.contractType);
+            Assert.Equal(typeof(TestSystemContract).ToString(), typeAndVersion.contractType);
             Assert.Equal((uint)1, typeAndVersion.version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };

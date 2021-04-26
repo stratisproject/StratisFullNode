@@ -23,11 +23,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         private Dictionary<uint256, (string, bool)> contractWhitelistingBIP9s;
 
         // Map key id's to contract types.
-        private Dictionary<KeyId, Type> contractTypes;
+        private Dictionary<KeyId, string> contractTypes;
 
         public SystemContractContainer(
             Network network,
-            Dictionary<KeyId, Type> contractTypes,
+            Dictionary<KeyId, string> contractTypes,
             Dictionary<uint256, (int start, int? end)[]> contractActivationHistory,
             Dictionary<uint256, (string, bool)> contractWhitelistingBIP9s)
         {
@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// </summary>
         /// <param name="hash">The hash to extract the key id and version of.</param>
         /// <returns>The key id and version.</returns>
-        public (Type contractType, uint version) GetContractTypeAndVersion(uint256 hash)
+        public (string contractType, uint version) GetContractTypeAndVersion(uint256 hash)
         {
             Guard.Assert(IsPseudoHash(hash));
 
