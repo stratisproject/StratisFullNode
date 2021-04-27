@@ -223,7 +223,7 @@ namespace NBitcoin
         /// <summary>
         /// The default primary authenticators (administrators) for managing system contract authentication.
         /// </summary>
-        PrimaryAuthenticators PrimaryAuthenticators { get; set; }
+        PrimaryAuthenticators PrimaryAuthenticators { get; }
     }
 
     public interface IFederations

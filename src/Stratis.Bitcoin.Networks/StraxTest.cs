@@ -82,15 +82,13 @@ namespace Stratis.Bitcoin.Networks
                 this,
                 new Dictionary<KeyId, string> { },
                 new Dictionary<uint256, (int start, int? end)[]> { },
-                new Dictionary<uint256, (string, bool)> { });
-
-            // TODO: Use addresses from the test wallets.
-            this.SystemContractContainer.PrimaryAuthenticators = new PrimaryAuthenticators(this, new[]
-            {
-                "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",
-                "qeEpNUPeRU4f2U9uWDoukbhqKyVrDt8Pn2",
-                "qPwZeTFkTG4kYueCjxQ532EpUYYBFSevzH"
-            }, 2);
+                new Dictionary<uint256, (string, bool)> { },
+                new PrimaryAuthenticators(this, new[]
+                {
+                    "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",
+                    "qeEpNUPeRU4f2U9uWDoukbhqKyVrDt8Pn2",
+                    "qPwZeTFkTG4kYueCjxQ532EpUYYBFSevzH"
+                }, 2));
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
