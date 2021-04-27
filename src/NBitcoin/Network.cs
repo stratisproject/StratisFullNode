@@ -223,6 +223,8 @@ namespace NBitcoin
         IFederation GetFederationAtHeight(byte[] federationId, ulong blockHeight, uint256 blockHash);
 
         IFederation GetOnlyFederation();
+
+        IEnumerable<IFederation> GetFederations();
     }
 
     public class Federations : IFederations
@@ -232,6 +234,11 @@ namespace NBitcoin
         public Federations()
         {
             this.federations = new Dictionary<FederationId, IFederation>();
+        }
+
+        public IEnumerable<IFederation> GetFederations()
+        {
+            return this.federations.Values.AsEnumerable();
         }
 
         public IFederation GetFederation(FederationId federationId)
