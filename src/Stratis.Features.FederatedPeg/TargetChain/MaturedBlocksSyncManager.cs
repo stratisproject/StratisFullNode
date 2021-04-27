@@ -159,11 +159,21 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
             {
-                foreach (IDeposit conversionTransaction in maturedBlockDeposit.Deposits.Where(d =>
-                    d.RetrievalType == DepositRetrievalType.ConversionSmall ||
-                    d.RetrievalType == DepositRetrievalType.ConversionNormal ||
-                    d.RetrievalType == DepositRetrievalType.ConversionLarge))
+                var tempDepositList = new List<IDeposit>();
+
+                this.logger.Info("Matured deposit count: {0}.", maturedBlockDeposit.Deposits);
+
+                foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
+                    if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
+                        potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
+                        potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionLarge)
+                    {
+                        tempDepositList.Add(potentialConversionTransaction);
+
+                        continue;
+                    }
+
                     if (this.externalApiPoller == null)
                     {
                         this.logger.Warn("Conversion transactions do not get actioned by the main chain.");
@@ -171,11 +181,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    this.logger.Info("Conversion transaction {0} received in matured blocks.", conversionTransaction.Id);
+                    this.logger.Info("Conversion transaction {0} received in matured blocks.", potentialConversionTransaction.Id);
 
-                    if (this.conversionRequestRepository.Get(conversionTransaction.Id.ToString()) != null)
+                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
                     {
-                        this.logger.Info("Conversion transaction {0} already exists, ignoring.", conversionTransaction.Id);
+                        this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
 
                         continue;
                     }
@@ -205,7 +215,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (!found)
                     {
-                        this.logger.Warn("Unable to determine timestamp for conversion transaction {0}, ignoring.", conversionTransaction.Id);
+                        this.logger.Warn("Unable to determine timestamp for conversion transaction {0}, ignoring.", potentialConversionTransaction.Id);
 
                         continue;
                     }
@@ -213,46 +223,55 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated.
                     decimal conversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
 
-                    if (Money.Coins(conversionFeeAmount) >= conversionTransaction.Amount)
+                    if (conversionFeeAmount == decimal.MinusOne)
                     {
-                        this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", conversionTransaction.Id);
+                        this.logger.Warn("Unable to determine actual fee for conversion transaction {0}, ignoring.", potentialConversionTransaction.Id);
+
+                        continue;
+                    }
+
+                    if (Money.Coins(conversionFeeAmount) >= potentialConversionTransaction.Amount)
+                    {
+                        this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
 
                         continue;
                     }
 
                     // We insert the fee distribution as a deposit to be processed, albeit with a special address.
                     // Deposits with this address as their destination will be distributed between the multisig members.
-                    var tempList = new List<IDeposit>
-                    {
-                        new Deposit(conversionTransaction.Id, conversionTransaction.RetrievalType, Money.Coins(conversionFeeAmount), this.network.ConversionTransactionFeeDistributionDummyAddress, conversionTransaction.BlockNumber, conversionTransaction.BlockHash)
-                    };
+                    // Note that it will be actioned immediately as a matured deposit.
+                    this.logger.Info("Adding conversion fee distribution for transaction {0} to deposit list.", potentialConversionTransaction.Id);
 
-                    tempList.AddRange(maturedBlockDeposit.Deposits);
+                    tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
+                        potentialConversionTransaction.RetrievalType,
+                        Money.Coins(conversionFeeAmount),
+                        this.network.ConversionTransactionFeeDistributionDummyAddress,
+                        potentialConversionTransaction.BlockNumber,
+                        potentialConversionTransaction.BlockHash));
 
-                    maturedBlockDeposit.Deposits = tempList.AsReadOnly();
+                    this.logger.Info("Adding conversion request for transaction {0} to repository.", potentialConversionTransaction.Id);
 
                     this.conversionRequestRepository.Save(new ConversionRequest() {
-                        RequestId = conversionTransaction.Id.ToString(),
+                        RequestId = potentialConversionTransaction.Id.ToString(),
                         RequestType = ConversionRequestType.Mint,
                         Processed = false,
                         RequestStatus = ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)(conversionTransaction.Amount - Money.Coins(conversionFeeAmount)).Satoshi,
+                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Coins(conversionFeeAmount)).Satoshi,
                         BlockHeight = header.Height,
-                        DestinationAddress = conversionTransaction.TargetAddress,
-                        DestinationChain = conversionTransaction.TargetChain
+                        DestinationAddress = potentialConversionTransaction.TargetAddress,
+                        DestinationChain = potentialConversionTransaction.TargetChain
                     });
                 }
 
-                // Order all other transactions in the block deterministically.
-                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.Where(d =>
-                    d.RetrievalType != DepositRetrievalType.ConversionSmall &&
-                    d.RetrievalType != DepositRetrievalType.ConversionNormal &&
-                    d.RetrievalType != DepositRetrievalType.ConversionLarge).OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
+                maturedBlockDeposit.Deposits = tempDepositList.AsReadOnly();
+
+                // Order all non-conversion deposit transactions in the block deterministically.
+                maturedBlockDeposit.Deposits = maturedBlockDeposit.Deposits.OrderBy(x => x.Id, Comparer<uint256>.Create(DeterministicCoinOrdering.CompareUint256)).ToList();
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.Trace(deposit.ToString());
+                    this.logger.Info("Deposit matured: {0}", deposit.ToString());
                 }
             }
 
