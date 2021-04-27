@@ -10,8 +10,4 @@
     <ProjectReference Include="..\Stratis.SmartContracts.Core\Stratis.SmartContracts.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Local\" />
-  </ItemGroup>
-
 </Project>

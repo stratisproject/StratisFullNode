@@ -19,7 +19,8 @@ namespace Stratis.Features.SystemContracts
             uint160 coinbaseAddress,
             Money mempoolFee,
             uint160 sender,
-            Transaction transaction)
+            Transaction transaction,
+            NBitcoin.Block block)
         {
             this.blockHeight = blockHeight;
             this.coinbaseAddress = coinbaseAddress;
@@ -29,7 +30,10 @@ namespace Stratis.Features.SystemContracts
 
             this.sender = sender;
             this.mempoolFee = mempoolFee;
+            this.Block = block;
         }
+
+        public NBitcoin.Block Block { get; }
 
         /// <summary>
         /// System contracts can not have value.
