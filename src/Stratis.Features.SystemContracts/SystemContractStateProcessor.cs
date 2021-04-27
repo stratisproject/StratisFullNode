@@ -1,4 +1,5 @@
 ﻿using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.RuntimeObserver;
 
 namespace Stratis.Features.SystemContracts
 {
@@ -30,27 +31,52 @@ namespace Stratis.Features.SystemContracts
     {
         public StateTransitionResult Apply(IState state, ExternalCreateMessage message)
         {
-            throw new System.NotImplementedException();
+            // Return VmError to indicate a failure.
+            return StateTransitionResult.Fail((Gas)0, StateTransitionErrorKind.VmError);
         }
 
         public StateTransitionResult Apply(IState state, InternalCreateMessage message)
         {
-            throw new System.NotImplementedException();
+            return StateTransitionResult.Fail((Gas)0, StateTransitionErrorKind.VmError);
         }
 
         public StateTransitionResult Apply(IState state, InternalCallMessage message)
         {
-            throw new System.NotImplementedException();
+            return StateTransitionResult.Fail((Gas)0, StateTransitionErrorKind.VmError);
         }
 
         public StateTransitionResult Apply(IState state, ExternalCallMessage message)
         {
-            throw new System.NotImplementedException();
+            // This needs to happen after the base fee is charged, which is why it's in here.
+
+            if (message.Method.Name == null)
+            {
+                return StateTransitionResult.Fail((Gas)0, StateTransitionErrorKind.NoMethodName);
+            }
+
+            string type = state.ContractState.GetContractType(message.To);
+
+            VmExecutionResult result = null; // TODO invoke contract here
+
+            bool revert = !result.IsSuccess;
+
+            if (revert)
+            {
+                return StateTransitionResult.Fail(
+                    (Gas)0,
+                    result.Error);
+            }
+
+            return StateTransitionResult.Ok(
+                (Gas)0,
+                message.To,
+                result.Success.Result
+            );
         }
 
         public StateTransitionResult Apply(IState state, ContractTransferMessage message)
         {
-            throw new System.NotImplementedException();
+            return StateTransitionResult.Fail((Gas)0, StateTransitionErrorKind.VmError);
         }
     }
 }
