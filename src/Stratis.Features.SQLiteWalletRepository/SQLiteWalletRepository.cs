@@ -11,8 +11,10 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Events;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SQLiteWalletRepository.External;
 using Stratis.Features.SQLiteWalletRepository.Tables;
@@ -60,6 +62,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         private readonly IDateTimeProvider dateTimeProvider;
         private ProcessBlocksInfo processBlocksInfo;
         private object lockObj;
+        private readonly ISignals signals;
         internal const int MaxBatchDurationSeconds = 10;
         internal const int MaxDataRowsProcessed = 10000;
 
@@ -68,7 +71,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         public Func<string, string> Bech32AddressFunc { get; set; } = null;
 
-        public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader)
+        public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader, ISignals signals = null)
         {
             this.TestMode = false;
             this.Network = network;
@@ -78,6 +81,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             this.WriteMetricsToFile = false;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.lockObj = new object();
+            this.signals = signals;
 
             Reset();
         }
@@ -998,7 +1002,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                     // Determine the scripts for creating temporary tables and inserting the block's information into them.
                     ITransactionsToLists transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, round, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(block.Transactions, new HashHeightPair(chainedHeader), blockTime: block.Header.BlockTime.ToUnixTimeSeconds()))
+                    {
+                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                        // was processed.
+                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
+
                         this.Metrics.ProcessCount++;
+                    }
 
                     this.Metrics.BlockTime += (DateTime.Now.Ticks - flagFall2);
 
@@ -1204,7 +1214,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                 IEnumerable<IEnumerable<string>> txToScript;
                 {
                     var transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, processBlocksInfo, this.dateTimeProvider);
-                    transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId);
+                    if (transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId))
+                    {
+                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                        // was processed.
+                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
+                    }
+
                     txToScript = (new[] { processBlocksInfo.Outputs, processBlocksInfo.PrevOuts }).Select(list => list.CreateScript());
                 }
 

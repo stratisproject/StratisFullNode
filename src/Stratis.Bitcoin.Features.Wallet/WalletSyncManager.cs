@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             this.logger.LogInformation("WalletSyncManager starting synchronisation loop.");
 
             // Start sync job for wallets
-            this.walletSynchronisationLoop = this.asyncProvider.CreateAndRunAsyncLoop("WalletSyncManager.OrchestrateWalletSync",
+            this.walletSynchronisationLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(WalletSyncManager.OrchestrateWalletSync),
                 token =>
                 {
                     this.OrchestrateWalletSync();
@@ -110,8 +110,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         private void OnTransactionRemoved(TransactionRemovedFromMemoryPool transactionRemovedFromMempool)
         {
-            this.logger.LogDebug("Transaction '{0}' was removed from the mempool. RemovedForBlock={1}",
-                transactionRemovedFromMempool.RemovedTransaction.GetHash(), transactionRemovedFromMempool.RemovedForBlock);
+            this.logger.LogDebug("Transaction '{0}' was removed from the mempool. RemovedForBlock={1}", transactionRemovedFromMempool.RemovedTransaction.GetHash(), transactionRemovedFromMempool.RemovedForBlock);
 
             // If the transaction was removed from the mempool because it's part of a block, we don't want to remove it.
             // It makes more sense to keep the current entry in the database and update it with the confirmation details
@@ -168,7 +167,6 @@ namespace Stratis.Bitcoin.Features.Wallet
                 this.SyncFromHeight(syncFromHeight, walletName);
             }
         }
-
 
         /// <inheritdoc />
         public virtual void SyncFromHeight(int height, string walletName = null)
