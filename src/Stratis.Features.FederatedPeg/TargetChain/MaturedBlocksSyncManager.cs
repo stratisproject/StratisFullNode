@@ -242,8 +242,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     // Note that it will be actioned immediately as a matured deposit.
                     this.logger.Info("Adding conversion fee distribution for transaction {0} to deposit list.", potentialConversionTransaction.Id);
 
+                    // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
+                    DepositRetrievalType depositType = DepositRetrievalType.Small;
+
+                    switch (potentialConversionTransaction.RetrievalType)
+                    {
+                        case DepositRetrievalType.ConversionSmall:
+                            depositType = DepositRetrievalType.Small;
+                            break;
+                        case DepositRetrievalType.ConversionNormal:
+                            depositType = DepositRetrievalType.Normal;
+                            break;
+                        case DepositRetrievalType.ConversionLarge:
+                            depositType = DepositRetrievalType.Large;
+                            break;
+                    }
+
                     tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
-                        potentialConversionTransaction.RetrievalType,
+                        depositType,
                         Money.Coins(conversionFeeAmount),
                         this.network.ConversionTransactionFeeDistributionDummyAddress,
                         potentialConversionTransaction.BlockNumber,
