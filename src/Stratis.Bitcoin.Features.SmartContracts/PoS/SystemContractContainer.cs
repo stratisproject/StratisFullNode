@@ -25,6 +25,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         // Map key id's to contract types.
         private Dictionary<KeyId, string> contractTypes;
 
+        public PrimaryAuthenticators PrimaryAuthenticators { get; set; }
+
         public SystemContractContainer(
             Network network,
             Dictionary<KeyId, string> contractTypes,
@@ -35,6 +37,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             this.contractTypes = contractTypes;
             this.contractActivationHistory = contractActivationHistory;
             this.contractWhitelistingBIP9s = contractWhitelistingBIP9s;
+            this.PrimaryAuthenticators = null;
         }
 
         /// <summary>

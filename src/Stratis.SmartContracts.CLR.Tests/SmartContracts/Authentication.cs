@@ -10,12 +10,24 @@ public class Authentication : SmartContract
 
     public Authentication(ISmartContractState state, Network network) : base(state)
     {
+        // Exit if already initialized.
+        if (this.Initialized)
+            return;
+
         PrimaryAuthenticators primaryAuthenticators = network.SystemContractContainer.PrimaryAuthenticators;
 
-        Assert(primaryAuthenticators != null && primaryAuthenticators.Signatories.Length >= 1 && primaryAuthenticators.Quorum >= 1);
+        Assert(primaryAuthenticators != null && primaryAuthenticators.Signatories.Length >= primaryAuthenticators.Quorum && primaryAuthenticators.Quorum >= 1);
 
         this.SetSignatories(primaryGroup, primaryAuthenticators.Signatories.Select(k => BitcoinAddress.Create(k, network).GetScriptAddress().Hash.ToBytes().ToAddress()).ToArray());
         this.SetQuorum(primaryGroup, primaryAuthenticators.Quorum);
+
+        this.Initialized = true;
+    }
+
+    public bool Initialized 
+    {
+        get => this.State.GetBool("Initialized");
+        set => this.State.SetBool("Initialized", value);
     }
 
     public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
