@@ -180,6 +180,19 @@ namespace NBitcoin
         }
     }
 
+    public class PrimaryAuthenticators
+    {
+        public string[] Signatories { get; private set; }
+
+        public uint Quorum { get; private set; }
+
+        public PrimaryAuthenticators(Network network, string[] base58Addresses, uint quorum)
+        {
+            this.Signatories = base58Addresses;
+            this.Quorum = quorum;
+        }
+    }
+
     /// <summary>
     /// Holds the information and logic to determines whether an embedded system contract should be active.
     /// </summary>
@@ -206,6 +219,11 @@ namespace NBitcoin
         /// <param name="hash">The hash to extract the contract type and version of.</param>
         /// <returns>The contract type and version.</returns>
         (string contractType, uint version) GetContractTypeAndVersion(uint256 hash);
+
+        /// <summary>
+        /// The default primary authenticators (administrators) for managing system contract authentication.
+        /// </summary>
+        PrimaryAuthenticators PrimaryAuthenticators { get; }
     }
 
     public interface IFederations

@@ -27,7 +27,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
                 network,
                 new Dictionary<KeyId, string> { { contractId, typeof(TestSystemContract).ToString() }},
                 new Dictionary<uint256, (int start, int? end)[]> { { contractHash, new[] { (1, (int?)10) } } },
-                new Dictionary<uint256, (string, bool)> { { contractHash, ("SystemContracts", true) } });
+                new Dictionary<uint256, (string, bool)> { { contractHash, ("SystemContracts", true) } },
+                null);
 
             uint256 hash = container.GetContractHashes().First();
 
