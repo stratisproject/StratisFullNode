@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using NBitcoin;
-using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts.Contracts
