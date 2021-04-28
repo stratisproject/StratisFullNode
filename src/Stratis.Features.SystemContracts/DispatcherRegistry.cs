@@ -4,12 +4,21 @@ using Stratis.Features.SystemContracts.Contracts;
 
 namespace Stratis.Features.SystemContracts
 {
-    public class Dispatchers
+    public interface IDispatcherRegistry
+    {
+        IDispatcher GetDispatcher(uint160 identifier);
+        bool HasDispatcher(uint160 identifier);
+    }
+
+    /// <summary>
+    /// Keeps track of the system contract dispatchers required for dynamic invocation.
+    /// </summary>
+    public class DispatcherRegistry : IDispatcherRegistry
     {
         private readonly Dictionary<uint160, IDispatcher> dispatchers;
 
         // AuthDispatcher and DataDispatcher are registered with the DI container.
-        public Dispatchers(AuthContract.Dispatcher authDispatcher, DataStorageContract.Dispatcher dataDispatcher)
+        public DispatcherRegistry(AuthContract.Dispatcher authDispatcher, DataStorageContract.Dispatcher dataDispatcher)
         {
             this.dispatchers = new Dictionary<uint160, IDispatcher>
             {

@@ -54,7 +54,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                 this.systemContractContainer = systemContractContainer;
             }
 
-            public Result Dispatch(SystemContractTransactionContext context)
+            public Result Dispatch(ISystemContractTransactionContext context)
             {
                 AuthContract instance = GetInstance(context);
 
@@ -68,7 +68,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                 }
             }
 
-            public AuthContract GetInstance(SystemContractTransactionContext context)
+            public AuthContract GetInstance(ISystemContractTransactionContext context)
             {
                 return new AuthContract(context.State, this.systemContractContainer);
             }

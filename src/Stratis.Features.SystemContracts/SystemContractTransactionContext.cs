@@ -3,7 +3,15 @@ using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts
 {
-    public class SystemContractTransactionContext
+    public interface ISystemContractTransactionContext
+    {
+        Block Block { get; }
+        SystemContractCall CallData { get; }
+        IStateRepositoryRoot State { get; }
+        Transaction Transaction { get; }
+    }
+
+    public class SystemContractTransactionContext : ISystemContractTransactionContext
     {
         public SystemContractTransactionContext(
             IStateRepositoryRoot state,

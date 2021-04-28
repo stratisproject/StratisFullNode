@@ -75,7 +75,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                 this.authContract = authContract;
             }
 
-            public DataStorageContract GetInstance(SystemContractTransactionContext context)
+            public DataStorageContract GetInstance(ISystemContractTransactionContext context)
             {
                 return new DataStorageContract(context.State, this.network, this.authContract.GetInstance(context));
             }
@@ -85,7 +85,7 @@ namespace Stratis.Features.SystemContracts.Contracts
             /// </summary>
             /// <param name="context"></param>
             /// <returns>A result indicating whether or not the execution was successful.</returns>
-            public Result Dispatch(SystemContractTransactionContext context)
+            public Result Dispatch(ISystemContractTransactionContext context)
             {
                 DataStorageContract instance = GetInstance(context);
 
