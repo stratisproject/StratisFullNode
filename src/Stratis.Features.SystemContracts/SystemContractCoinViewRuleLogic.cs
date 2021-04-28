@@ -5,17 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base.Deployments;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
-using Stratis.Bitcoin.Features.Consensus;
-using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.SmartContracts.CLR;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.State;
-using Stratis.SmartContracts.Core.Util;
 
 namespace Stratis.Features.SystemContracts
 {
@@ -26,29 +22,26 @@ namespace Stratis.Features.SystemContracts
     /// </summary>
     public class SystemContractCoinViewRuleLogic : ISmartContractCoinViewRuleLogic
     {
-        private readonly ICoinView coinView;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
-        private readonly ISenderRetriever senderRetriever;
         private readonly ICallDataSerializer callDataSerializer;
         private readonly ISystemContractRunner systemContractRunner;
+        private readonly IWhitelistedHashChecker whitelistedHashChecker;
         private readonly List<Transaction> blockTxsProcessed;
         private ILogger<SystemContractCoinViewRuleLogic> logger;
         private IStateRepositoryRoot mutableStateRepository;
 
         public SystemContractCoinViewRuleLogic(
-            ILoggerFactory loggerFactory, 
-            ICoinView coinView, 
-            IStateRepositoryRoot stateRepositoryRoot, 
-            ISenderRetriever senderRetriever,
+            ILoggerFactory loggerFactory,
+            IStateRepositoryRoot stateRepositoryRoot,
             ICallDataSerializer callDataSerializer,
-            ISystemContractRunner systemContractRunner)
+            ISystemContractRunner systemContractRunner,
+            IWhitelistedHashChecker whitelistedHashChecker)
         {
             this.logger = loggerFactory.CreateLogger<SystemContractCoinViewRuleLogic>();
-            this.coinView = coinView;
             this.stateRepositoryRoot = stateRepositoryRoot;
-            this.senderRetriever = senderRetriever;
             this.callDataSerializer = callDataSerializer;
             this.systemContractRunner = systemContractRunner;
+            this.whitelistedHashChecker = whitelistedHashChecker;
             this.blockTxsProcessed = new List<Transaction>();
         }
 
@@ -93,7 +86,7 @@ namespace Stratis.Features.SystemContracts
             if (mutableStateRepositoryRoot != blockHeaderHashStateRoot)
                 SmartContractConsensusErrors.UnequalStateRoots.Throw();
 
-            // Push to underlying database
+            // Push state changes to underlying database.
             this.mutableStateRepository.Commit();
 
             // Update the globally injected state so all services receive the updates.
@@ -113,6 +106,7 @@ namespace Stratis.Features.SystemContracts
         /// <returns></returns>
         public bool CheckInput(Func<Transaction, int, TxOut, PrecomputedTransactionData, TxIn, DeploymentFlags, bool> baseCheckInput, Transaction tx, int inputIndexCopy, TxOut txout, PrecomputedTransactionData txData, TxIn input, DeploymentFlags flags)
         {
+            // Only calls are allowed in the system contracts environment.
             if (txout.ScriptPubKey.IsSmartContractCall())
             {
                 return input.ScriptSig.IsSmartContractSpend();
@@ -155,6 +149,15 @@ namespace Stratis.Features.SystemContracts
             ContractTxData callData = this.callDataSerializer.Deserialize(serializedCallData).Value;
 
             var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
+
+            // TODO is it correct to check the whitelist with the "identifier" here?
+            if (!this.whitelistedHashChecker.CheckHashWhitelisted(systemContractCall.Identifier.ToBytes()))
+            {
+                this.logger.LogDebug("Contract is not whitelisted '{0}'.", systemContractCall.Identifier);
+
+                // State doesn't change.
+                return this.mutableStateRepository;
+            }
 
             var systemContractContext = new SystemContractTransactionContext(this.mutableStateRepository, context.ValidationContext.BlockToValidate, transaction, systemContractCall);
 

@@ -23,8 +23,6 @@ namespace Stratis.Features.SystemContracts
             this.Block = block;
             this.Transaction = transaction;
             this.CallData = callData;
-            this.contractTxOut = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec());
-
         }
 
         public Block Block { get; }
@@ -34,13 +32,5 @@ namespace Stratis.Features.SystemContracts
         public SystemContractCall CallData { get; }
 
         public IStateRepositoryRoot State { get; }
-
-        /// <inheritdoc />
-        public byte[] Data
-        {
-            get { return this.contractTxOut.ScriptPubKey.ToBytes(); }
-        }
-
-
     }
 }
