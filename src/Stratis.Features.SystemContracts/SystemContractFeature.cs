@@ -19,6 +19,7 @@ using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.SystemContracts;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Caching;
@@ -148,6 +149,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         // with SmartContractScriptAddressReader, which depends on the ScriptAddressReader concrete type.
                         services.AddSingleton<ScriptAddressReader>();
                         services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(SmartContractScriptAddressReader), ServiceLifetime.Singleton));
+
+                        // System Contracts. We need to register both types here?
+                        services.AddSingleton<DataStorageContract.Dispatcher>();
+                        services.AddSingleton<IDispatcher<DataStorageContract>, DataStorageContract.Dispatcher>();
+                        services.AddSingleton<AuthContract.Dispatcher>();
+                        services.AddSingleton<IDispatcher<AuthContract>, AuthContract.Dispatcher>();
 
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SystemContractOptions(services, fullNodeBuilder.Network));
