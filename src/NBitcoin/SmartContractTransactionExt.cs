@@ -57,5 +57,17 @@ namespace NBitcoin
             TxOut smartContractTxOut = transaction.Outputs.FirstOrDefault(txOut => txOut.ScriptPubKey.IsSmartContractExec());
             return smartContractTxOut;
         }
+
+        /// <summary>
+        /// Return the <see cref="TxOut"/> of the transaction that contains smart contract.
+        /// <para>
+        /// There is only allowed to be 1 per transaction .
+        /// </para>
+        /// </summary>
+        public static TxOut TryGetSmartContractCallTxOut(this Transaction transaction)
+        {
+            TxOut smartContractTxOut = transaction.Outputs.FirstOrDefault(txOut => txOut.ScriptPubKey.IsSmartContractCall());
+            return smartContractTxOut;
+        }
     }
 }
