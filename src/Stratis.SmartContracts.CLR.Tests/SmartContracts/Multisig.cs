@@ -5,9 +5,12 @@ using Stratis.SmartContracts;
 public class MultiSig : SmartContract
 {
     const string primaryGroup = "main";
+    private readonly Authentication authentication;
 
     public MultiSig(ISmartContractState state, Network network) : base(state)
     {
+        this.authentication = new Authentication(state, network);
+
         // Exit if already initialized.
         if (this.Initialized)
             return;
@@ -29,7 +32,7 @@ public class MultiSig : SmartContract
 
     public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
     {
-        // TODO: Delegate to "Authentication" contract.
+        this.authentication.VerifySignatures(group, signatures, authorizationChallenge);
     }
 
     private void AddFederation(string federationId, uint quorum, string[] pubKeys)
