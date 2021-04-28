@@ -11,9 +11,10 @@ using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SystemContracts;
+using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core.State;
 
-namespace Stratis.Features.SmartContracts
+namespace Stratis.Features.SystemContracts
 {
     /// <summary>
     /// Derives from <see cref="PosBlockDefinition"/>. Amends a few things for system contracts.
