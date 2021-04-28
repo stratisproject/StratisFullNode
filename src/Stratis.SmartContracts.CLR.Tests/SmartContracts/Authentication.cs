@@ -32,7 +32,7 @@ public class Authentication : SmartContract
     public bool Initialized 
     {
         get => this.State.GetBool("Initialized");
-        set => this.State.SetBool("Initialized", value);
+        private set => this.State.SetBool("Initialized", value);
     }
 
     public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
