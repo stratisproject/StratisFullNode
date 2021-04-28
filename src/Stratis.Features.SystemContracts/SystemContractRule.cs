@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
@@ -15,11 +16,13 @@ namespace Stratis.Features.SystemContracts
     {
         private readonly ILogger logger;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
+        private readonly ISystemContractRunner runner;
 
-        public SystemContractRule(ILogger logger, IStateRepositoryRoot stateRepositoryRoot)
+        public SystemContractRule(ILogger logger, IStateRepositoryRoot stateRepositoryRoot, ISystemContractRunner runner)
         {
             this.logger = logger;
             this.stateRepositoryRoot = stateRepositoryRoot;
+            this.runner = runner;
         }
 
         public override async Task RunAsync(RuleContext context)
@@ -39,23 +42,34 @@ namespace Stratis.Features.SystemContracts
 
             var blockHeader = (ISmartContractBlockHeader)block.Header;
 
-            // TODO get the new (uncommitted) state repository returned by the execution
-            IStateRepositoryRoot mutableStateRepository = null;
+            // TODO verify - ordering is important here.
+            foreach (Transaction transaction in context.ValidationContext.BlockToValidate.Transactions)
+            {
+                this.logger.LogDebug("Validating transaction '{0}'.", transaction);
 
-            // CONSENSUS - Check that the execution resulted in an identical hashstateroot to the block header
-            var mutableStateRepositoryRoot = new uint256(mutableStateRepository.Root);
-            uint256 blockHeaderHashStateRoot = blockHeader.HashStateRoot;
+                // This should never be null because it's checked in a consensus rule.
+                var serializedCallData = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec())?.ScriptPubKey.ToBytes();
 
-            this.logger.LogDebug("Compare state roots '{0}' and '{1}'", mutableStateRepositoryRoot, blockHeaderHashStateRoot);
+                // TODO get the new (uncommitted) state repository returned by the execution
+                ISystemContractExecutionResult executionResult = this.runner.Execute(null);
 
-            if (mutableStateRepositoryRoot != blockHeaderHashStateRoot)
-                SmartContractConsensusErrors.UnequalStateRoots.Throw();
+                IStateRepositoryRoot newState = executionResult.NewState;
 
-            // Push to underlying database
-            mutableStateRepository.Commit();
+                // CONSENSUS - Check that the execution resulted in an identical hashstateroot to the block header
+                var mutableStateRepositoryRoot = new uint256(newState.Root);
+                uint256 blockHeaderHashStateRoot = blockHeader.HashStateRoot;
 
-            // Update the globally injected state so all services receive the updates.
-            this.stateRepositoryRoot.SyncToRoot(mutableStateRepository.Root);
+                this.logger.LogDebug("Compare state roots '{0}' and '{1}'", mutableStateRepositoryRoot, blockHeaderHashStateRoot);
+
+                if (mutableStateRepositoryRoot != blockHeaderHashStateRoot)
+                    SmartContractConsensusErrors.UnequalStateRoots.Throw();
+
+                // Push to underlying database
+                newState.Commit();
+
+                // Update the globally injected state so all services receive the updates.
+                this.stateRepositoryRoot.SyncToRoot(newState.Root);
+            }
         }
     }
 }
