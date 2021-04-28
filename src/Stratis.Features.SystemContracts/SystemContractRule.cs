@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
+using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts
@@ -16,12 +18,21 @@ namespace Stratis.Features.SystemContracts
     {
         private readonly ILogger logger;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
+        private readonly ICallDataSerializer callDataSerializer;
+        private readonly IWhitelistedHashChecker whitelistedHashChecker;
         private readonly ISystemContractRunner runner;
 
-        public SystemContractRule(ILogger logger, IStateRepositoryRoot stateRepositoryRoot, ISystemContractRunner runner)
+        public SystemContractRule(
+            ILogger logger,
+            IStateRepositoryRoot stateRepositoryRoot,
+            ICallDataSerializer callDataSerializer,
+            IWhitelistedHashChecker whitelistedHashChecker,
+            ISystemContractRunner runner)
         {
             this.logger = logger;
             this.stateRepositoryRoot = stateRepositoryRoot;
+            this.callDataSerializer = callDataSerializer;
+            this.whitelistedHashChecker = whitelistedHashChecker;
             this.runner = runner;
         }
 
@@ -42,6 +53,9 @@ namespace Stratis.Features.SystemContracts
 
             var blockHeader = (ISmartContractBlockHeader)block.Header;
 
+            // Get the snapshot to which we will apply all our block changes.
+            IStateRepositoryRoot state = this.stateRepositoryRoot.GetSnapshotTo(blockRoot.ToBytes());
+
             // TODO verify - ordering is important here.
             foreach (Transaction transaction in context.ValidationContext.BlockToValidate.Transactions)
             {
@@ -50,8 +64,25 @@ namespace Stratis.Features.SystemContracts
                 // This should never be null because it's checked in a consensus rule.
                 var serializedCallData = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec())?.ScriptPubKey.ToBytes();
 
+                // This should always be successful because it's checked in a consensus rule.
+                // TODO we can consider changing the call data serialization scheme to something that suits our needs better?
+                ContractTxData callData = this.callDataSerializer.Deserialize(serializedCallData).Value;
+
+                var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
+
+                // TODO is it correct to check the whitelist with the "identifier" here?
+                if (!this.whitelistedHashChecker.CheckHashWhitelisted(systemContractCall.Identifier.ToBytes()))
+                {
+                    this.logger.LogDebug("Contract is not whitelisted '{0}'.", systemContractCall.Identifier);
+
+                    // Continue to next transaction.
+                    continue;
+                }
+
+                var systemContractContext = new SystemContractTransactionContext(state, context.ValidationContext.BlockToValidate, transaction, systemContractCall);
+
                 // TODO get the new (uncommitted) state repository returned by the execution
-                ISystemContractExecutionResult executionResult = this.runner.Execute(null);
+                ISystemContractExecutionResult executionResult = this.runner.Execute(systemContractContext);
 
                 IStateRepositoryRoot newState = executionResult.NewState;
 
@@ -61,15 +92,20 @@ namespace Stratis.Features.SystemContracts
 
                 this.logger.LogDebug("Compare state roots '{0}' and '{1}'", mutableStateRepositoryRoot, blockHeaderHashStateRoot);
 
+                // TODO - this will prevent validation of all remaining transactions in the block?
                 if (mutableStateRepositoryRoot != blockHeaderHashStateRoot)
                     SmartContractConsensusErrors.UnequalStateRoots.Throw();
 
                 // Push to underlying database
+                // TODO is this necessary before the block is done?
                 newState.Commit();
 
-                // Update the globally injected state so all services receive the updates.
-                this.stateRepositoryRoot.SyncToRoot(newState.Root);
+                // Update the state root for the next transaction.
+                state.SyncToRoot(newState.Root);
             }
+
+            // Commit the block.
+            state.Commit();
         }
     }
 }
