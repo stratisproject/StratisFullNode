@@ -7,9 +7,9 @@ public class MultiSig : SmartContract
     const string primaryGroup = "main";
     private readonly Authentication authentication;
 
-    public MultiSig(ISmartContractState state, Network network) : base(state)
+    public MultiSig(ISmartContractState state, Network network, uint version) : base(state)
     {
-        this.authentication = new Authentication(state, network);
+        this.authentication = new Authentication(state, network, 1);
 
         // Exit if already initialized.
         if (this.Initialized)
