@@ -75,7 +75,6 @@ namespace Stratis.SmartContracts.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-
             this.SystemContractContainer = new SystemContractContainer(
                 this,
                 new Dictionary<KeyId, string> { },
