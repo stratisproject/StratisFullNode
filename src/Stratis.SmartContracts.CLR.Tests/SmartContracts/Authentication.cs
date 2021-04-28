@@ -8,8 +8,10 @@ public class Authentication : SmartContract
 {
     const string primaryGroup = "main";
 
-    public Authentication(ISmartContractState state, Network network) : base(state)
+    public Authentication(ISmartContractState state, Network network, uint version) : base(state)
     {
+        Assert(version == 1, "Only a version of 1 is supported.");
+
         // Exit if already initialized.
         if (this.Initialized)
             return;
