@@ -52,11 +52,7 @@ namespace Stratis.StraxD
                     .UseSmartContractPosPowMining()
                     .UseApi()
                     .AddRPC()
-                    .AddSmartContracts(options =>
-                    {
-                        options.UseReflectionExecutor();
-                        options.UsePoSWhitelistedContracts();
-                    })
+                    .AddSystemContracts()
                     .AddSignalR(options =>
                     {
                         options.EventsToHandle = new[]

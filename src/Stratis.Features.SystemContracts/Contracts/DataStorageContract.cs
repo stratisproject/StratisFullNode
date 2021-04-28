@@ -66,10 +66,10 @@ namespace Stratis.Features.SystemContracts.Contracts
         public class Dispatcher : IDispatcher<DataStorageContract>
         {
             private readonly Network network;
-            private readonly SystemContractContainer systemContractContainer;
+            private readonly ISystemContractContainer systemContractContainer;
             private readonly IDispatcher<AuthContract> authContract;
 
-            public Dispatcher(Network network, SystemContractContainer systemContractContainer, IDispatcher<AuthContract> authContract)
+            public Dispatcher(Network network, ISystemContractContainer systemContractContainer, IDispatcher<AuthContract> authContract)
             {
                 this.network = network;
                 this.systemContractContainer = systemContractContainer;

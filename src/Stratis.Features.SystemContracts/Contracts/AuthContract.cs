@@ -10,7 +10,7 @@ namespace Stratis.Features.SystemContracts.Contracts
 {
     public class AuthContract
     {
-        public AuthContract(IStateRepositoryRoot state, SystemContractContainer systemContractContainer)
+        public AuthContract(IStateRepositoryRoot state, ISystemContractContainer systemContractContainer)
         {
             this.State = state;
             this.SystemContractContainer = systemContractContainer;
@@ -31,7 +31,7 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public IStateRepositoryRoot State { get; }
 
-        public SystemContractContainer SystemContractContainer { get; }
+        public ISystemContractContainer SystemContractContainer { get; }
 
         public Network Network { get; }
 
@@ -47,9 +47,9 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public class Dispatcher : IDispatcher<AuthContract>
         {
-            private readonly SystemContractContainer systemContractContainer;
+            private readonly ISystemContractContainer systemContractContainer;
 
-            public Dispatcher(SystemContractContainer systemContractContainer)
+            public Dispatcher(ISystemContractContainer systemContractContainer)
             {
                 this.systemContractContainer = systemContractContainer;
             }

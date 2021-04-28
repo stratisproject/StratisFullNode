@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
+using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
@@ -127,6 +128,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<ISmartContractStateFactory, SmartContractStateFactory>();
                         services.AddSingleton<ILocalExecutor, LocalExecutor>();
                         services.AddSingleton<IBlockExecutionResultCache, BlockExecutionResultCache>();
+                        services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
 
                         // RECEIPTS -------------------------------------------------------------------------
                         services.AddSingleton<IReceiptRepository, PersistentReceiptRepository>();
@@ -153,6 +155,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
                         services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
                         services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
+                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SystemContractCoinViewRuleLogic>();
+                        services.AddSingleton<ISystemContractContainer, SystemContractContainer>();
+                        services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
 
                         // System contracts. TBD do we need to register both types here?
                         services.AddSingleton<IDispatcher, DataStorageContract.Dispatcher>();
