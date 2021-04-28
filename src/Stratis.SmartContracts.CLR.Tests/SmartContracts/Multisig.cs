@@ -9,6 +9,8 @@ public class MultiSig : SmartContract
 
     public MultiSig(ISmartContractState state, Network network, uint version) : base(state)
     {
+        Assert(version == 1, "Only a version of 1 is supported.");
+
         this.authentication = new Authentication(state, network, 1);
 
         // Exit if already initialized.
