@@ -2,7 +2,6 @@
 
 namespace Stratis.Features.SystemContracts
 {
-
     public interface ISystemContractExecutionResult
     {
         IStateRepositoryRoot NewState { get; }

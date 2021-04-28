@@ -12,7 +12,7 @@ namespace Stratis.Features.SystemContracts
     {
         public VmExecutionResult ExecuteMethod(string methodName, string typeName)
         {
-            
+            return null;
         }
     }
 }

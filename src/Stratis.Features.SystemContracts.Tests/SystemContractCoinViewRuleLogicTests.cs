@@ -1,4 +1,7 @@
-﻿using Xunit;
+﻿using System.Linq;
+using System.Text;
+using NBitcoin;
+using Xunit;
 
 namespace Stratis.Features.SystemContracts.Tests
 {
@@ -7,7 +10,6 @@ namespace Stratis.Features.SystemContracts.Tests
         [Fact]
         public void Test()
         {
-
         }
     }
 }

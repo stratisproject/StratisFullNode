@@ -9,7 +9,7 @@ namespace Stratis.Features.SystemContracts
     {
         public IState Create(IStateRepository stateRoot, SmartContracts.IBlock block, ulong txOutValue, uint256 transactionHash)
         {
-            return new SystemContractState(stateRoot, new List<SmartContracts.Core.State.AccountAbstractionLayer.TransferInfo>, block, transactionHash);
+            return new SystemContractState(stateRoot, new List<SmartContracts.Core.State.AccountAbstractionLayer.TransferInfo>(), block, transactionHash);
         }
     }
 }

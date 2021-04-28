@@ -151,7 +151,7 @@ namespace Stratis.Features.SystemContracts
             // TODO execute
             var result = this.systemContractExecutor.Execute(txContext);
 
-            return result.NewState;
+            return null; // result.NewState;
         }
 
         /// <summary>

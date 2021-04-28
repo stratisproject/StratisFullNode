@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using CSharpFunctionalExtensions;
 using NBitcoin;
+using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.ResultProcessors;
 using Stratis.SmartContracts.Core;

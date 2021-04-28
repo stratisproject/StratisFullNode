@@ -1,87 +1,28 @@
-﻿using System.Linq;
-using NBitcoin;
-using Stratis.Bitcoin.Utilities;
-using Stratis.SmartContracts.Core;
+﻿using NBitcoin;
+using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts
 {
-    public class SystemContractTransactionContext : IContractTransactionContext
+    public class SystemContractTransactionContext
     {
-        private readonly ulong blockHeight;
-        private readonly uint160 coinbaseAddress;
-        private readonly Transaction transaction;
-        private readonly TxOut contractTxOut;
-        private readonly uint160 sender;
-        private readonly Money mempoolFee;
-
         public SystemContractTransactionContext(
-            ulong blockHeight,
-            uint160 coinbaseAddress,
-            Money mempoolFee,
-            uint160 sender,
+            IStateRepositoryRoot state,
+            Block block,
             Transaction transaction,
-            NBitcoin.Block block)
+            SystemContractCall callData)
         {
-            this.blockHeight = blockHeight;
-            this.coinbaseAddress = coinbaseAddress;
-            this.transaction = transaction;
-            this.contractTxOut = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec());
-            Guard.NotNull(this.contractTxOut, nameof(this.contractTxOut));
-
-            this.sender = sender;
-            this.mempoolFee = mempoolFee;
+            this.State = state;
             this.Block = block;
+            this.Transaction = transaction;
+            this.CallData = callData;
         }
 
-        public NBitcoin.Block Block { get; }
+        public Block Block { get; }
 
-        /// <summary>
-        /// System contracts can not have value.
-        /// </summary>
-        public ulong TxOutValue => 0;
+        public Transaction Transaction { get; }
 
-        public Transaction Transaction => this.transaction;
+        public SystemContractCall CallData { get; }
 
-        /// <inheritdoc />
-        public uint256 TransactionHash
-        {
-            get { return this.transaction.GetHash(); }
-        }
-
-        /// <inheritdoc />
-        public uint160 Sender
-        {
-            get { return this.sender; }
-        }
-
-        /// <inheritdoc />
-        public uint Nvout
-        {
-            get { return (uint)this.transaction.Outputs.IndexOf(this.contractTxOut); }
-        }
-
-        /// <inheritdoc />
-        public byte[] Data
-        {
-            get { return this.contractTxOut.ScriptPubKey.ToBytes(); }
-        }
-
-        /// <inheritdoc />
-        public Money MempoolFee
-        {
-            get { return this.mempoolFee; }
-        }
-
-        /// <inheritdoc />
-        public uint160 CoinbaseAddress
-        {
-            get { return this.coinbaseAddress; }
-        }
-
-        /// <inheritdoc />
-        public ulong BlockHeight
-        {
-            get { return this.blockHeight; }
-        }
+        public IStateRepositoryRoot State { get; }
     }
 }
