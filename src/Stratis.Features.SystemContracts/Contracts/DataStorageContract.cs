@@ -76,6 +76,8 @@ namespace Stratis.Features.SystemContracts.Contracts
                 this.authContract = authContract;
             }
 
+            public uint160 Identifier => DataStorageContract.Identifier;
+
             public DataStorageContract GetInstance(ISystemContractTransactionContext context)
             {
                 return new DataStorageContract(context.State, this.network, this.authContract.GetInstance(context));

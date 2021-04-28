@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using NBitcoin;
 
 namespace Stratis.Features.SystemContracts
 {
@@ -10,5 +11,6 @@ namespace Stratis.Features.SystemContracts
     public interface IDispatcher
     {
         Result Dispatch(ISystemContractTransactionContext context);
+        uint160 Identifier { get; }
     }
 }

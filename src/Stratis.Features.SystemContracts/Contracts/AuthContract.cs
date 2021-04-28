@@ -54,6 +54,8 @@ namespace Stratis.Features.SystemContracts.Contracts
                 this.systemContractContainer = systemContractContainer;
             }
 
+            public uint160 Identifier => AuthContract.Identifier;
+
             public Result Dispatch(ISystemContractTransactionContext context)
             {
                 AuthContract instance = GetInstance(context);

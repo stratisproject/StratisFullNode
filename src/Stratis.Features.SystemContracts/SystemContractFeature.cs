@@ -155,9 +155,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
 
                         // System contracts. TBD do we need to register both types here?
-                        services.AddSingleton<DataStorageContract.Dispatcher>();
+                        services.AddSingleton<IDispatcher, DataStorageContract.Dispatcher>();
                         services.AddSingleton<IDispatcher<DataStorageContract>, DataStorageContract.Dispatcher>();
-                        services.AddSingleton<AuthContract.Dispatcher>();
+                        services.AddSingleton<IDispatcher, AuthContract.Dispatcher>();
                         services.AddSingleton<IDispatcher<AuthContract>, AuthContract.Dispatcher>();
 
                         // After setting up, invoke any additional options which can replace services as required.
