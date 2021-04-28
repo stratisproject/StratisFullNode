@@ -4,7 +4,6 @@ using System.Text;
 using CSharpFunctionalExtensions;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
-using Stratis.Features.SystemContracts.Contracts;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts.Contracts
@@ -56,7 +55,9 @@ namespace Stratis.Features.SystemContracts.Contracts
         /// Why is this necessary?
         /// For system contracts, call data is received from a transaction and deserialized to strings.
         /// Use reflection to attempt to find a matching method overload for these strings is slow and complicated.
-        /// It's much easier to define how to dispatch the method call here. This also allows us to
+        /// It's much easier to define how to dispatch the method call here.
+        /// 
+        /// Using a concrete type (rather than just a Dispatch method) also allows us to
         /// use the dependency injection framework to pass in any dependencies needed when instantiating the
         /// contract, because we can register SimpleContract.Dispatcher with the DI container.
         /// 
