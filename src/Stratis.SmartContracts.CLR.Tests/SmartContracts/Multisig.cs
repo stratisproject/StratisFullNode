@@ -30,7 +30,7 @@ public class MultiSig : SmartContract
         set => this.State.SetBool("Initialized", value);
     }
 
-    public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
+    private void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
     {
         this.authentication.VerifySignatures(group, signatures, authorizationChallenge);
     }
