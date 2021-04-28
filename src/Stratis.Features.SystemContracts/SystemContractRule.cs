@@ -23,13 +23,13 @@ namespace Stratis.Features.SystemContracts
         private readonly ISystemContractRunner runner;
 
         public SystemContractRule(
-            ILogger logger,
+            ILoggerFactory loggerFactory,
             IStateRepositoryRoot stateRepositoryRoot,
             ICallDataSerializer callDataSerializer,
             IWhitelistedHashChecker whitelistedHashChecker,
             ISystemContractRunner runner)
         {
-            this.logger = logger;
+            this.logger = loggerFactory.CreateLogger(typeof(SystemContractRule).FullName);
             this.stateRepositoryRoot = stateRepositoryRoot;
             this.callDataSerializer = callDataSerializer;
             this.whitelistedHashChecker = whitelistedHashChecker;
