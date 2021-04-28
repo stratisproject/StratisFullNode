@@ -42,7 +42,8 @@ namespace Stratis.Bitcoin.Networks
                 this,
                 new Dictionary<KeyId, string> { },
                 new Dictionary<uint256, (int start, int? end)[]> { },
-                new Dictionary<uint256, (string, bool)> { });
+                new Dictionary<uint256, (string, bool)> { },
+                null /* TODO */);
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();

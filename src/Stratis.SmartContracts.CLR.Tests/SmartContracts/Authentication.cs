@@ -1,14 +1,38 @@
-﻿using Stratis.SmartContracts;
+﻿using System.Linq;
+using NBitcoin;
+using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR;
 using ECRecover = Stratis.SCL.Crypto.ECRecover;
 
 public class Authentication : SmartContract
 {
     const string primaryGroup = "main";
+    private readonly uint version;
 
-    public Authentication(ISmartContractState state, byte[] signatories, uint quorum) : base(state)
+    public Authentication(ISmartContractState state, Network network, uint version) : base(state)
     {
-        this.SetSignatories(primaryGroup, this.Serializer.ToArray<Address>(signatories));
-        this.SetQuorum(primaryGroup, quorum);
+        Assert(version == 1, "Only a version of 1 is supported.");
+
+        this.version = version;
+
+        // Exit if already initialized.
+        if (this.Initialized)
+            return;
+
+        PrimaryAuthenticators primaryAuthenticators = network.SystemContractContainer.PrimaryAuthenticators;
+
+        Assert(primaryAuthenticators != null && primaryAuthenticators.Signatories.Length >= primaryAuthenticators.Quorum && primaryAuthenticators.Quorum >= 1);
+
+        this.SetSignatories(primaryGroup, primaryAuthenticators.Signatories.Select(k => ((BitcoinPubKeyAddress)BitcoinAddress.Create(k, network)).Hash.ToBytes().ToAddress()).ToArray());
+        this.SetQuorum(primaryGroup, primaryAuthenticators.Quorum);
+
+        this.Initialized = true;
+    }
+
+    public bool Initialized 
+    {
+        get => this.State.GetBool("Initialized");
+        private set => this.State.SetBool("Initialized", value);
     }
 
     public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
