@@ -19,16 +19,16 @@ namespace Stratis.Features.SystemContracts
 
         public ISystemContractExecutionResult Execute(ISystemContractTransactionContext context)
         {
-            // Create a new copy of the initial state that we can return if we need to ignore the changes made.
-            var initialRoot = context.State.Root;
-
             IStateRepositoryRoot state = context.State;
+
+            // Create a new copy of the initial state that we can return if we need to ignore the changes made.
+            var initialRoot = state.Root;
 
             // Find the dispatcher.
             if (!this.dispatcherRegistry.HasDispatcher(context.CallData.Identifier))
             {
                 // Return the same state.
-                return new SystemContractExecutionResult(context.State);
+                return new SystemContractExecutionResult(state);
             }
 
             IDispatcher dispatcher = this.dispatcherRegistry.GetDispatcher(context.CallData.Identifier);
@@ -39,9 +39,9 @@ namespace Stratis.Features.SystemContracts
             if (executionResult.IsFailure)
             {
                 // Return to the root state.
-                context.State.SyncToRoot(initialRoot);
+                state.SyncToRoot(initialRoot);
 
-                return new SystemContractExecutionResult(context.State);
+                return new SystemContractExecutionResult(state);
             }
 
             // Return new state.

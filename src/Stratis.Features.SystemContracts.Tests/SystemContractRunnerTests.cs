@@ -28,10 +28,10 @@ namespace Stratis.Features.SystemContracts.Tests
 
             ISystemContractExecutionResult result = runner.Execute(contextMock.Object);
 
-            stateMock.Verify(m => m.StartTracking(), Times.Once);
+            stateMock.Verify(m => m.SyncToRoot(It.IsAny<byte[]>()), Times.Never);
 
             // The state returned should be the same as what's returned after StartTracking is called
-            Assert.Equal(initialStateMock.Object, result.NewState);
+            Assert.Equal(stateMock.Object, result.NewState);
         }
 
         [Fact]
@@ -41,8 +41,9 @@ namespace Stratis.Features.SystemContracts.Tests
 
             var stateMock = new Mock<IStateRepositoryRoot>();
             var initialStateMock = new Mock<IStateRepository>();
-
+            var root = new byte[] { };
             stateMock.Setup(s => s.StartTracking()).Returns(initialStateMock.Object);
+            stateMock.Setup(s => s.Root).Returns(root);
             var contextMock = new Mock<ISystemContractTransactionContext>();
             contextMock.SetupGet(p => p.State).Returns(stateMock.Object);
             contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(uint160.Zero, "", null));
@@ -58,12 +59,13 @@ namespace Stratis.Features.SystemContracts.Tests
 
             ISystemContractExecutionResult result = runner.Execute(contextMock.Object);
 
-            stateMock.Verify(m => m.StartTracking(), Times.Once);
+            // Check that we sync to the initial root
+            stateMock.Verify(m => m.SyncToRoot(root), Times.Once);
 
             dispatcherMock.Verify(d => d.Dispatch(contextMock.Object), Times.Once);
 
-            // The state returned should be the same as what's returned after StartTracking is called
-            Assert.Equal(initialStateMock.Object, result.NewState);
+            // Check that we return the same object
+            Assert.Equal(stateMock.Object, result.NewState);
         }
 
         [Fact]
@@ -92,7 +94,7 @@ namespace Stratis.Features.SystemContracts.Tests
 
             ISystemContractExecutionResult result = runner.Execute(contextMock.Object);
 
-            stateMock.Verify(m => m.StartTracking(), Times.Once);
+            stateMock.Verify(m => m.SyncToRoot(It.IsAny<byte[]>()), Times.Never);
 
             dispatcherMock.Verify(d => d.Dispatch(contextMock.Object), Times.Once);
 
