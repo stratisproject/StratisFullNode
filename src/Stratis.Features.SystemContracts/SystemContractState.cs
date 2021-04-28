@@ -30,8 +30,16 @@ namespace Stratis.Features.SystemContracts
             this.TransactionHash = state.TransactionHash;
         }
 
-        public SystemContractState()
+        public SystemContractState(IStateRepository repository,
+            List<TransferInfo> internalTransfers,
+            IBlock block,
+            uint256 transactionHash)
         {
+            this.ContractState = repository;
+            this.internalTransfers = internalTransfers;
+            this.BalanceState = new BalanceState(this.ContractState, this.InternalTransfers);
+            this.Block = block;
+            this.TransactionHash = transactionHash;
         }
 
         public IBlock Block { get; }
