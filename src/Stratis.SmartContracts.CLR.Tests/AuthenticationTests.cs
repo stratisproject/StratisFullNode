@@ -158,5 +158,42 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.True(resultGetQuorum2.IsSuccess);
             Assert.Equal((uint)2, (uint)resultGetQuorum2.Return);
         }
+
+
+        [Fact]
+        public void AuthenticationInitializesAsExpected()
+        {
+            var internalTxExecutor = new Mock<IInternalTransactionExecutor>();
+            var internalHashHelper = new Mock<IInternalHashHelper>();
+            var persistentState = new TestPersistentState();
+            var block = new Mock<IBlock>();
+            var message = new Mock<IMessage>();
+            Func<ulong> getBalance = () => 1;
+
+            var contractPrimitiveSerializer = new ContractPrimitiveSerializer(this.network);
+            var serializer = new Serializer(contractPrimitiveSerializer);
+
+            ISmartContractState state = Mock.Of<ISmartContractState>(
+                g => g.InternalTransactionExecutor == internalTxExecutor.Object
+                     && g.InternalHashHelper == internalHashHelper.Object
+                     && g.PersistentState == persistentState
+                     && g.Block == block.Object
+                     && g.Message == message.Object
+                     && g.GetBalance == getBalance
+                     && g.Serializer == serializer);
+
+            Network network = new SmartContractsPoSRegTest();
+
+            Authentication authentication = new Authentication(state, network, 1);
+
+            Assert.True(persistentState.GetBool("Initialized"));
+            
+            var signatories = persistentState.GetArray<Address>("Signatories:main");
+
+            string[] actual = signatories.Select(s => new KeyId(s.ToBytes()).GetAddress(network).ToString()).ToArray();
+
+            Assert.Equal(network.SystemContractContainer.PrimaryAuthenticators.Signatories, actual);
+            Assert.Equal(network.SystemContractContainer.PrimaryAuthenticators.Quorum, persistentState.GetUInt32("Quorum:main"));
+        }
     }
 }

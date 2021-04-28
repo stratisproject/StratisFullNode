@@ -23,7 +23,7 @@ public class Authentication : SmartContract
 
         Assert(primaryAuthenticators != null && primaryAuthenticators.Signatories.Length >= primaryAuthenticators.Quorum && primaryAuthenticators.Quorum >= 1);
 
-        this.SetSignatories(primaryGroup, primaryAuthenticators.Signatories.Select(k => BitcoinAddress.Create(k, network).GetScriptAddress().Hash.ToBytes().ToAddress()).ToArray());
+        this.SetSignatories(primaryGroup, primaryAuthenticators.Signatories.Select(k => ((BitcoinPubKeyAddress)BitcoinAddress.Create(k, network)).Hash.ToBytes().ToAddress()).ToArray());
         this.SetQuorum(primaryGroup, primaryAuthenticators.Quorum);
 
         this.Initialized = true;
