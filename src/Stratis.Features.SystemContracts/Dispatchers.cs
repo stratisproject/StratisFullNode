@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Features.SystemContracts.Contracts;
 
 namespace Stratis.Features.SystemContracts
 {
