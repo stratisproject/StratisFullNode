@@ -12,6 +12,7 @@ using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
+using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Core.Util;
@@ -28,7 +29,8 @@ namespace Stratis.Features.SystemContracts
         private readonly ICoinView coinView;
         private readonly IStateRepositoryRoot stateRepositoryRoot;
         private readonly ISenderRetriever senderRetriever;
-        private readonly SystemContractExecutor systemContractExecutor;
+        private readonly ICallDataSerializer callDataSerializer;
+        private readonly ISystemContractRunner systemContractRunner;
         private readonly List<Transaction> blockTxsProcessed;
         private ILogger<SystemContractCoinViewRuleLogic> logger;
         private IStateRepositoryRoot mutableStateRepository;
@@ -38,13 +40,15 @@ namespace Stratis.Features.SystemContracts
             ICoinView coinView, 
             IStateRepositoryRoot stateRepositoryRoot, 
             ISenderRetriever senderRetriever,
-            SystemContractExecutor systemContractExecutor)
+            ICallDataSerializer callDataSerializer,
+            ISystemContractRunner systemContractRunner)
         {
             this.logger = loggerFactory.CreateLogger<SystemContractCoinViewRuleLogic>();
             this.coinView = coinView;
             this.stateRepositoryRoot = stateRepositoryRoot;
             this.senderRetriever = senderRetriever;
-            this.systemContractExecutor = systemContractExecutor;
+            this.callDataSerializer = callDataSerializer;
+            this.systemContractRunner = systemContractRunner;
             this.blockTxsProcessed = new List<Transaction>();
         }
 
@@ -75,6 +79,7 @@ namespace Stratis.Features.SystemContracts
 
             this.mutableStateRepository = this.stateRepositoryRoot.GetSnapshotTo(blockRoot.ToBytes());
 
+            // CONTRACT EXECUTION
             // Call chain base->CheckInput->UpdateCoinView->ExecuteContract.
             // Once this is completed we expect this.mutableStateRepositoryRoot to be updated
             await baseRunAsync(context);
@@ -140,41 +145,22 @@ namespace Stratis.Features.SystemContracts
             // Currently anything to do with transferring funds is not allowed, but this would be added here in the future.
         }
 
-
-        /// <summary>
-        /// Executes the smart contract part of a transaction and returns the state repository after execution.
-        /// </summary>
         private IStateRepositoryRoot ExecuteContractTransaction(RuleContext context, Transaction transaction)
         {
-            IContractTransactionContext txContext = this.GetSmartContractTransactionContext(context, transaction);
+            // This should never be null because it's checked in a consensus rule.
+            var serializedCallData = transaction.Outputs.FirstOrDefault(x => x.ScriptPubKey.IsSmartContractExec())?.ScriptPubKey.ToBytes();
 
-            // TODO execute
-            var result = this.systemContractExecutor.Execute(txContext);
+            // This should always be successful because it's checked in a consensus rule.
+            // TODO we can consider changing the call data serialization scheme to something that suits our needs better?
+            ContractTxData callData = this.callDataSerializer.Deserialize(serializedCallData).Value;
 
-            return null; // result.NewState;
-        }
+            var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
 
-        /// <summary>
-        /// Retrieves the context object to be given to the contract executor.
-        /// </summary>
-        public IContractTransactionContext GetSmartContractTransactionContext(RuleContext context, Transaction transaction)
-        {
-            ulong blockHeight = Convert.ToUInt64(context.ValidationContext.ChainedHeaderToValidate.Height);
+            var systemContractContext = new SystemContractTransactionContext(this.mutableStateRepository, context.ValidationContext.BlockToValidate, transaction, systemContractCall);
 
-            GetSenderResult getSenderResult = this.senderRetriever.GetSender(transaction, this.coinView, this.blockTxsProcessed);
+            ISystemContractExecutionResult executionResult = this.systemContractRunner.Execute(systemContractContext);
 
-            if (!getSenderResult.Success)
-                throw new ConsensusErrorException(new ConsensusError("sc-consensusvalidator-executecontracttransaction-sender", getSenderResult.Error));
-
-            Script coinbaseScriptPubKey = context.ValidationContext.BlockToValidate.Transactions[0].Outputs[0].ScriptPubKey;
-
-            GetSenderResult getCoinbaseResult = this.senderRetriever.GetAddressFromScript(coinbaseScriptPubKey);
-
-            uint160 coinbaseAddress = (getCoinbaseResult.Success) ? getCoinbaseResult.Sender : uint160.Zero;
-
-            Money mempoolFee = transaction.GetFee(((UtxoRuleContext)context).UnspentOutputSet);
-
-            return new ContractTransactionContext(blockHeight, coinbaseAddress, mempoolFee, getSenderResult.Sender, transaction);
+            return executionResult.NewState;
         }
     }
 }

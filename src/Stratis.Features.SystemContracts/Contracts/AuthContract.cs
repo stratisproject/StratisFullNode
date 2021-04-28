@@ -64,7 +64,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                         instance.IsAuthorised(context.CallData.Parameters[0] as string[]);
                         return Result.Ok();
                     default:
-                        return Result.Fail($"Method {context.CallData.MethodName} does not exist on type {context.CallData.Type} v{context.CallData.Version}");
+                        return Result.Fail($"Method {context.CallData.MethodName} does not exist on type {nameof(AuthContract)} v{context.CallData.Version}");
                 }
             }
 

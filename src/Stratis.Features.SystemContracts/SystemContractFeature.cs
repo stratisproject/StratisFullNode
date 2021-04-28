@@ -152,6 +152,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(SmartContractScriptAddressReader), ServiceLifetime.Singleton));
 
                         services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
+                        services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
 
                         // System contracts. TBD do we need to register both types here?
                         services.AddSingleton<DataStorageContract.Dispatcher>();

@@ -4,16 +4,16 @@ namespace Stratis.Features.SystemContracts
 {
     public interface ISystemContractExecutionResult
     {
-        IStateRepository NewState { get; }
+        IStateRepositoryRoot NewState { get; }
     }
 
     public class SystemContractExecutionResult : ISystemContractExecutionResult
     {
-        public SystemContractExecutionResult(IStateRepository newState)
+        public SystemContractExecutionResult(IStateRepositoryRoot newState)
         {
             this.NewState = newState;
         }
 
-        public IStateRepository NewState { get; }
+        public IStateRepositoryRoot NewState { get; }
     }
 }

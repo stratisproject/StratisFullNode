@@ -96,7 +96,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                         instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
                         return Result.Ok();
                     default:
-                        return Result.Fail($"Method {context.CallData.MethodName} does not exist on type {context.CallData.Type} v{context.CallData.Version}");
+                        return Result.Fail($"Method {context.CallData.MethodName} does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
                 }
             }
         }
