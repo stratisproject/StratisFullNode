@@ -59,7 +59,7 @@ namespace NBitcoin
         }
 
         /// <summary>
-        /// Return the <see cref="TxOut"/> of the transaction that contains smart contract.
+        /// Return the <see cref="TxOut"/> of the transaction that contains a smart contract call.
         /// <para>
         /// There is only allowed to be 1 per transaction .
         /// </para>
