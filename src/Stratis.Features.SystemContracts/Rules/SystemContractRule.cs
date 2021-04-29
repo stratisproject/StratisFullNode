@@ -4,16 +4,16 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
-using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
-using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core.State;
 
-namespace Stratis.Features.SystemContracts
+namespace Stratis.Features.SystemContracts.Rules
 {
     /// <summary>
     /// Consensus rule for executing system contracts. Executes the contract and checks that the state repository root is the same as what's in the block header.
+    /// 
+    /// Currently unused but demonstrates what's possible if we don't need to transfer funds or use receipts.
     /// </summary>
     public class SystemContractRule : FullValidationConsensusRule
     {

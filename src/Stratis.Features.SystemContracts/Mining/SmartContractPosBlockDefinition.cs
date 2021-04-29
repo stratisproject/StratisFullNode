@@ -17,6 +17,8 @@ namespace Stratis.Features.SystemContracts
 {
     /// <summary>
     /// Derives from <see cref="PosBlockDefinition"/>. Amends a few things for system contracts.
+    /// 
+    /// Currently unused but demonstrates the execution flow for SC block building.
     /// </summary>
     public class SmartContractPosBlockDefinition : PosBlockDefinition
     {
