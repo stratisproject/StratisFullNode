@@ -24,8 +24,16 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public bool Initialized
         {
-            get { return BitConverter.ToBoolean(this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"))); }
-            set { this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value)); }
+            get
+            {
+                var data = this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"));
+                return data == null ? false : BitConverter.ToBoolean(data);
+            }
+
+            set
+            {
+                this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value));
+            }
         }
 
         /// <summary>
@@ -39,12 +47,14 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public AuthContract Auth { get; }
 
-        public void AddData(string[] signatories, string key, string value)
+        public bool AddData(string[] signatories, string key, string value)
         {
             if (!this.Auth.IsAuthorised(signatories))
-                return;
+                return false;
 
             this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(value));
+
+            return true;
         }
 
         /// <summary>
@@ -65,13 +75,11 @@ namespace Stratis.Features.SystemContracts.Contracts
         public class Dispatcher : IDispatcher<DataStorageContract>
         {
             private readonly Network network;
-            private readonly ISystemContractContainer systemContractContainer;
             private readonly IDispatcher<AuthContract> authContract;
 
-            public Dispatcher(Network network, ISystemContractContainer systemContractContainer, IDispatcher<AuthContract> authContract)
+            public Dispatcher(Network network, IDispatcher<AuthContract> authContract)
             {
                 this.network = network;
-                this.systemContractContainer = systemContractContainer;
                 this.authContract = authContract;
             }
 
@@ -94,8 +102,8 @@ namespace Stratis.Features.SystemContracts.Contracts
                 switch (context.CallData.MethodName)
                 {
                     case nameof(DataStorageContract.AddData):
-                        instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
-                        return Result.Ok(DispatchResult.Void);
+                        var result = instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
+                        return Result.Ok<object>(result);
                     default:
                         return Result.Fail<object>($"Method {context.CallData.MethodName} does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
                 }

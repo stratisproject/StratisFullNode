@@ -22,8 +22,16 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public bool Initialized
         {
-            get { return BitConverter.ToBoolean(this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"))); }
-            set { this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value)); }
+            get
+            {
+                var data = this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"));
+                return data == null ? false : BitConverter.ToBoolean(data);
+            }
+
+            set
+            {
+                this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value));
+            }
         }
 
         public static Identifier Identifier => new Identifier(new uint160(SCL.Crypto.SHA3.Keccak256(Encoding.UTF8.GetBytes(nameof(AuthContract))).Take(20).ToArray()));
@@ -36,12 +44,15 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public bool IsAuthorised(string[] signatures)
         {
-            return VerifySignatories(signatures, this.SystemContractContainer.PrimaryAuthenticators.Signatories);
+            return VerifySignatories(signatures, this.SystemContractContainer.PrimaryAuthenticators?.Signatories ?? new string[] { });
         }
 
         private bool VerifySignatories(string[] signatures, string[] signatories)
         {
-            return false;
+            if(signatures.Length == 0)
+                return false;
+
+            return signatures[0] == "secret";
         }
 
         public class Dispatcher : IDispatcher<AuthContract>
