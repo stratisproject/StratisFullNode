@@ -5,7 +5,6 @@ namespace Stratis.Features.SystemContracts
 {
     public interface ISystemContractTransactionContext
     {
-        Block Block { get; }
         SystemContractCall CallData { get; }
         IStateRepositoryRoot State { get; }
         Transaction Transaction { get; }
@@ -15,17 +14,13 @@ namespace Stratis.Features.SystemContracts
     {
         public SystemContractTransactionContext(
             IStateRepositoryRoot state,
-            Block block,
             Transaction transaction,
             SystemContractCall callData)
         {
             this.State = state;
-            this.Block = block;
             this.Transaction = transaction;
             this.CallData = callData;
         }
-
-        public Block Block { get; }
 
         public Transaction Transaction { get; }
 

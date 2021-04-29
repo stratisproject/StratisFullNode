@@ -96,7 +96,7 @@ namespace Stratis.Features.SystemContracts
 
             var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
 
-            return new SystemContractTransactionContext(state, block, transaction, systemContractCall);
+            return new SystemContractTransactionContext(state, transaction, systemContractCall);
         }
 
         /// <inheritdoc/>
