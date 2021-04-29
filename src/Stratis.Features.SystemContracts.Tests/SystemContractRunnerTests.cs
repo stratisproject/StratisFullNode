@@ -26,7 +26,7 @@ namespace Stratis.Features.SystemContracts.Tests
 
             var runner = new SystemContractRunner(dispatchersMock.Object);
 
-            ISystemContractExecutionResult result = runner.Execute(contextMock.Object);
+            ISystemContractRunnerResult result = runner.Execute(contextMock.Object);
 
             stateMock.Verify(m => m.SyncToRoot(It.IsAny<byte[]>()), Times.Never);
 
@@ -57,7 +57,7 @@ namespace Stratis.Features.SystemContracts.Tests
 
             var runner = new SystemContractRunner(dispatchersMock.Object);
 
-            ISystemContractExecutionResult result = runner.Execute(contextMock.Object);
+            ISystemContractRunnerResult result = runner.Execute(contextMock.Object);
 
             // Check that we sync to the initial root
             stateMock.Verify(m => m.SyncToRoot(root), Times.Once);
@@ -92,7 +92,7 @@ namespace Stratis.Features.SystemContracts.Tests
 
             var runner = new SystemContractRunner(dispatchersMock.Object);
 
-            ISystemContractExecutionResult result = runner.Execute(contextMock.Object);
+            ISystemContractRunnerResult result = runner.Execute(contextMock.Object);
 
             stateMock.Verify(m => m.SyncToRoot(It.IsAny<byte[]>()), Times.Never);
 

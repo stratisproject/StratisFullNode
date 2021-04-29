@@ -2,14 +2,14 @@
 
 namespace Stratis.Features.SystemContracts
 {
-    public interface ISystemContractExecutionResult
+    public interface ISystemContractRunnerResult
     {
         IStateRepositoryRoot NewState { get; }
     }
 
-    public class SystemContractExecutionResult : ISystemContractExecutionResult
+    public class SystemContractRunnerResult : ISystemContractRunnerResult
     {
-        public SystemContractExecutionResult(IStateRepositoryRoot newState)
+        public SystemContractRunnerResult(IStateRepositoryRoot newState)
         {
             this.NewState = newState;
         }

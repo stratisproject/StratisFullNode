@@ -82,7 +82,7 @@ namespace Stratis.Features.SystemContracts
                 var systemContractContext = new SystemContractTransactionContext(state, context.ValidationContext.BlockToValidate, transaction, systemContractCall);
 
                 // TODO get the new (uncommitted) state repository returned by the execution
-                ISystemContractExecutionResult executionResult = this.runner.Execute(systemContractContext);
+                ISystemContractRunnerResult executionResult = this.runner.Execute(systemContractContext);
 
                 IStateRepositoryRoot newState = executionResult.NewState;
 

@@ -161,7 +161,7 @@ namespace Stratis.Features.SystemContracts
 
             var systemContractContext = new SystemContractTransactionContext(this.mutableStateRepository, context.ValidationContext.BlockToValidate, transaction, systemContractCall);
 
-            ISystemContractExecutionResult executionResult = this.systemContractRunner.Execute(systemContractContext);
+            ISystemContractRunnerResult executionResult = this.systemContractRunner.Execute(systemContractContext);
 
             return executionResult.NewState;
         }

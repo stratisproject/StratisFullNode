@@ -5,7 +5,7 @@ namespace Stratis.Features.SystemContracts
 {
     public interface ISystemContractRunner
     {
-        ISystemContractExecutionResult Execute(ISystemContractTransactionContext context);
+        ISystemContractRunnerResult Execute(ISystemContractTransactionContext context);
     }
 
     public class SystemContractRunner : ISystemContractRunner
@@ -17,7 +17,7 @@ namespace Stratis.Features.SystemContracts
             this.dispatcherRegistry = dispatchers;
         }
 
-        public ISystemContractExecutionResult Execute(ISystemContractTransactionContext context)
+        public ISystemContractRunnerResult Execute(ISystemContractTransactionContext context)
         {
             IStateRepositoryRoot state = context.State;
 
@@ -28,7 +28,7 @@ namespace Stratis.Features.SystemContracts
             if (!this.dispatcherRegistry.HasDispatcher(context.CallData.Identifier))
             {
                 // Return the same state.
-                return new SystemContractExecutionResult(state);
+                return new SystemContractRunnerResult(state);
             }
 
             IDispatcher dispatcher = this.dispatcherRegistry.GetDispatcher(context.CallData.Identifier);
@@ -41,11 +41,11 @@ namespace Stratis.Features.SystemContracts
                 // Return to the root state.
                 state.SyncToRoot(initialRoot);
 
-                return new SystemContractExecutionResult(state);
+                return new SystemContractRunnerResult(state);
             }
 
             // Return new state.
-            return new SystemContractExecutionResult(state);
+            return new SystemContractRunnerResult(state);
         }
     }
 }

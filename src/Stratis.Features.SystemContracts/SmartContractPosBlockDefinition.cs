@@ -72,7 +72,7 @@ namespace Stratis.Features.SystemContracts
                 SystemContractTransactionContext systemContractContext = GetContext(this.block, mempoolEntry.Transaction, this.blockStateSnapshot);
 
                 // Execute contract
-                ISystemContractExecutionResult result = this.runner.Execute(systemContractContext);
+                ISystemContractRunnerResult result = this.runner.Execute(systemContractContext);
 
                 // Update the block state snapshot.
                 this.blockStateSnapshot.SyncToRoot(result.NewState.Root);
