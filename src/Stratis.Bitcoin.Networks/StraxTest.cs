@@ -83,7 +83,7 @@ namespace Stratis.Bitcoin.Networks
                 new Dictionary<KeyId, string> { },
                 new Dictionary<uint256, (int start, int? end)[]> { },
                 new Dictionary<uint256, (string, bool)> { },
-                new PrimaryAuthenticators(this, new[]
+                new PrimaryAuthenticators(new[]
                 {
                     "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",
                     "qeEpNUPeRU4f2U9uWDoukbhqKyVrDt8Pn2",

@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
             this.contractTypes = new Dictionary<KeyId, string> { };
             this.contractActivationHistory = new Dictionary<uint256, (int start, int? end)[]> { };
             this.contractWhitelistingBIP9s = new Dictionary<uint256, (string, bool)> { };
-            this.PrimaryAuthenticators = new PrimaryAuthenticators(network, new[]
+            this.PrimaryAuthenticators = new PrimaryAuthenticators(new[]
                 {
                     "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",
                     "qeEpNUPeRU4f2U9uWDoukbhqKyVrDt8Pn2",

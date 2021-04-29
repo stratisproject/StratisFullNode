@@ -186,7 +186,7 @@ namespace NBitcoin
 
         public uint Quorum { get; private set; }
 
-        public PrimaryAuthenticators(Network network, string[] base58Addresses, uint quorum)
+        public PrimaryAuthenticators(string[] base58Addresses, uint quorum)
         {
             this.Signatories = base58Addresses;
             this.Quorum = quorum;
