@@ -3,7 +3,7 @@ using NBitcoin;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Receipts;
 
-namespace Stratis.Features.SystemContracts.Comaptibility
+namespace Stratis.Features.SystemContracts.Compatibility
 {
     public class SystemContractExecutionResult : IContractExecutionResult
     {

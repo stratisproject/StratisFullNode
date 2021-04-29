@@ -3,7 +3,7 @@ using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.State;
 
-namespace Stratis.Features.SystemContracts.Comaptibility
+namespace Stratis.Features.SystemContracts.Compatibility
 {
     /// <summary>
     /// Wrapper around the system contract runner for compatibility.
