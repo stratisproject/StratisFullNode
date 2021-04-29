@@ -4,9 +4,9 @@ namespace Stratis.Features.SystemContracts
 {
     public class SystemContractCall
     {
-        public SystemContractCall(uint160 idenfitier, string methodName, object[] parameters, int version = 1)
+        public SystemContractCall(uint160 identifier, string methodName, object[] parameters, int version = 1)
         {
-            this.Identifier = idenfitier;
+            this.Identifier = identifier;
             this.MethodName = methodName;
             this.Parameters = parameters;
             this.Version = version;
