@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using CSharpFunctionalExtensions;
+using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.State;
@@ -14,12 +15,14 @@ namespace Stratis.Features.SystemContracts.Compatibility
     {
         private readonly ISystemContractRunner runner;
         private readonly IStateRepositoryRoot stateRepository;
+        private readonly IWhitelistedHashChecker whitelistedHashChecker;
         private readonly ICallDataSerializer callDataSerializer;
 
-        public SystemContractExecutor(ISystemContractRunner runner, ICallDataSerializer callDataSerializer, IStateRepositoryRoot stateRepository)
+        public SystemContractExecutor(ISystemContractRunner runner, ICallDataSerializer callDataSerializer, IWhitelistedHashChecker whitelistedHashChecker, IStateRepositoryRoot stateRepository)
         {
             this.runner = runner;
             this.stateRepository = stateRepository;
+            this.whitelistedHashChecker = whitelistedHashChecker;
             this.callDataSerializer = callDataSerializer;
         }
 
@@ -31,6 +34,16 @@ namespace Stratis.Features.SystemContracts.Compatibility
             var initialStateRoot = this.stateRepository.Root.ToArray(); // Use ToArray to make a copy
 
             var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
+
+            // TODO is it correct to check the whitelist with the "identifier" here?
+            if (!this.whitelistedHashChecker.CheckHashWhitelisted(systemContractCall.Identifier.ToBytes()))
+            {
+                //this.logger.LogDebug("Contract is not whitelisted '{0}'.", systemContractCall.Identifier);
+
+                // Continue to next transaction.
+                return new SystemContractExecutionResult(callData.ContractAddress);
+            }
+
             var context = new SystemContractTransactionContext(this.stateRepository, transactionContext.Transaction, systemContractCall);
             ISystemContractRunnerResult result = this.runner.Execute(context);
 
