@@ -38,8 +38,8 @@ namespace Stratis.Features.SystemContracts.Compatibility
 
             var systemContractCall = new SystemContractCall(new Identifier(callData.ContractAddress), callData.MethodName, callData.MethodParameters, callData.VmVersion);
 
-            // TODO is it correct to check the whitelist with the "identifier" here?
-            if (!this.whitelistedHashChecker.CheckHashWhitelisted(systemContractCall.Identifier.ToBytes()))
+            // TODO currently need to call this with the padded identifier because the identifier is a uint160 while the whitelist is uint256
+            if (!this.whitelistedHashChecker.CheckHashWhitelisted(systemContractCall.Identifier.Padded().ToBytes()))
             {
                 this.logger.LogDebug("Contract is not whitelisted '{0}'.", systemContractCall.Identifier);
 
