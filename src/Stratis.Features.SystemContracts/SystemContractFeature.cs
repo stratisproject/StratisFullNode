@@ -155,25 +155,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<IContractRefundProcessor, ContractRefundProcessor>();
                         services.AddSingleton<IContractTransferProcessor, ContractTransferProcessor>();
                         services.AddSingleton<IBlockExecutionResultCache, BlockExecutionResultCache>();
-
-                        /* LEGACY SC
-                         * For compatibility with SC wallet and local executor, these are required but don't work.
-                         */
-                        services.AddSingleton<ISmartContractValidator, SmartContractValidator>();
                         services.AddSingleton<IKeyEncodingStrategy, BasicKeyEncodingStrategy>();
-                        services.AddSingleton<ISerializer, Serializer>();
-                        services.AddSingleton<CSharpContractDecompiler>();
-                        services.AddSingleton<IInternalExecutorFactory, InternalExecutorFactory>();
-                        services.AddSingleton<IContractAssemblyCache, ContractAssemblyCache>();
-                        services.AddSingleton<IVirtualMachine, ReflectionVirtualMachine>();
                         services.AddSingleton<IAddressGenerator, AddressGenerator>();
-                        services.AddSingleton<ILoader, ContractAssemblyLoader>();
-                        services.AddSingleton<IContractModuleDefinitionReader, ContractModuleDefinitionReader>();
-                        services.AddSingleton<IStateFactory, StateFactory>();
                         services.AddSingleton<SmartContractTransactionPolicy>();
-                        services.AddSingleton<IStateProcessor, StateProcessor>();
-                        services.AddSingleton<ISmartContractStateFactory, SmartContractStateFactory>();
-                        services.AddSingleton<ILocalExecutor, LocalExecutor>();
+                        services.AddSingleton<ILocalExecutor, SystemContractLocalExecutor>();
 
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SystemContractOptions(services, fullNodeBuilder.Network));
