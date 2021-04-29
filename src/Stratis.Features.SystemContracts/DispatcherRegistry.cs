@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using NBitcoin;
 
 namespace Stratis.Features.SystemContracts
 {
@@ -17,7 +16,7 @@ namespace Stratis.Features.SystemContracts
     {
         private readonly Dictionary<Identifier, IDispatcher> dispatchers;
 
-        // AuthDispatcher and DataDispatcher are registered with the DI container.
+        // DI will inject all registered IDispatcher instances as an IEnumerable.
         public DispatcherRegistry(IEnumerable<IDispatcher> dispatchers)
         {
             this.dispatchers = dispatchers.ToDictionary(k => k.Identifier, v => v);

@@ -7,6 +7,9 @@ using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts.Contracts
 {
+    /// <summary>
+    /// Sample auth contract.
+    /// </summary>
     public class AuthContract
     {
         public AuthContract(IStateRepositoryRoot state, ISystemContractContainer systemContractContainer)
@@ -24,6 +27,8 @@ namespace Stratis.Features.SystemContracts.Contracts
         {
             get
             {
+                // We're doing this the hard way for demonstration purposes,
+                // but we could inject the SC PersistentState here to avoid this if we wanted.
                 var data = this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"));
                 return data == null ? false : BitConverter.ToBoolean(data);
             }
@@ -55,6 +60,21 @@ namespace Stratis.Features.SystemContracts.Contracts
             return signatures[0] == "secret";
         }
 
+        /// <summary>
+        /// Dynamic method resolution and dependency injection for the <see cref="AuthContract"/> type
+        /// to allow it to be invoked on-chain.
+        /// 
+        /// Why is this necessary?
+        /// For system contracts, call data is received from a transaction and deserialized to strings.
+        /// Using reflection to attempt to find a matching method overload for these strings is slow and complicated.
+        /// It's much easier to define how to dispatch the method call here.
+        /// 
+        /// Using a concrete type (rather than just a Dispatch method) also allows us to
+        /// use the dependency injection framework to pass in any dependencies needed when instantiating the
+        /// contract, because we can register AuthContract.Dispatcher with the DI container.
+        /// 
+        /// We only need to implement this class if the system contract is called on-chain. Otherwise it's not needed.
+        /// </summary>
         public class Dispatcher : IDispatcher<AuthContract>
         {
             private readonly ISystemContractContainer systemContractContainer;

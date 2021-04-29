@@ -9,6 +9,9 @@ using Stratis.SmartContracts.RuntimeObserver;
 
 namespace Stratis.Features.SystemContracts.Compatibility
 {
+    /// <summary>
+    /// Used to run a call against a system contract at a particular height without changing the state.
+    /// </summary>
     public class SystemContractLocalExecutor : ILocalExecutor
     {
         private readonly IStateRepositoryRoot state;

@@ -1,5 +1,4 @@
 ﻿using CSharpFunctionalExtensions;
-using NBitcoin;
 
 namespace Stratis.Features.SystemContracts
 {

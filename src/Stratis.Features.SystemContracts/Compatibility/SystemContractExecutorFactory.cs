@@ -8,7 +8,7 @@ using Stratis.SmartContracts.Core.State;
 namespace Stratis.Features.SystemContracts.Compatibility
 {
     /// <summary>
-    /// Wrapper around the system contract runner for compatibility.
+    /// Wrapper around the system contract executor for compatibility with existing SC execution model.
     /// </summary>
     public class SystemContractExecutorFactory : IContractExecutorFactory
     {

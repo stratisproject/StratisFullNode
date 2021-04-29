@@ -7,6 +7,9 @@ using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts.Contracts
 {
+    /// <summary>
+    /// Sample contract that uses auth and stores data in the state.
+    /// </summary>
     public class DataStorageContract
     {
         public DataStorageContract(IStateRepositoryRoot state, Network network, AuthContract auth)
@@ -57,21 +60,6 @@ namespace Stratis.Features.SystemContracts.Contracts
             return true;
         }
 
-        /// <summary>
-        /// Dynamic method resolution and dependency injection for the <see cref="DataStorageContract"/> type
-        /// to allow it to be invoked on-chain.
-        /// 
-        /// Why is this necessary?
-        /// For system contracts, call data is received from a transaction and deserialized to strings.
-        /// Use reflection to attempt to find a matching method overload for these strings is slow and complicated.
-        /// It's much easier to define how to dispatch the method call here.
-        /// 
-        /// Using a concrete type (rather than just a Dispatch method) also allows us to
-        /// use the dependency injection framework to pass in any dependencies needed when instantiating the
-        /// contract, because we can register SimpleContract.Dispatcher with the DI container.
-        /// 
-        /// We only need to implement this class if the system contract is called on-chain. Otherwise it's not needed.
-        /// </summary>
         public class Dispatcher : IDispatcher<DataStorageContract>
         {
             private readonly Network network;

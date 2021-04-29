@@ -10,6 +10,12 @@ namespace Stratis.Features.SystemContracts
         Transaction Transaction { get; }
     }
 
+    /// <summary>
+    /// The context for the system contract call. Includes the method call data and the current state.
+    /// 
+    /// The <see cref="Transaction"/> in which the call is being executed is also included (though currently unused)
+    /// as an example of passing block-specific context to the call.
+    /// </summary>
     public class SystemContractTransactionContext : ISystemContractTransactionContext
     {
         public SystemContractTransactionContext(
