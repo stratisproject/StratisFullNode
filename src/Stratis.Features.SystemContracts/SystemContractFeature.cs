@@ -21,6 +21,7 @@ using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SystemContracts;
+using Stratis.Features.SystemContracts.Compatibility;
 using Stratis.Features.SystemContracts.Contracts;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
@@ -92,7 +93,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         /// </summary>
         public static IFullNodeBuilder AddSystemContracts(this IFullNodeBuilder fullNodeBuilder, Action<SystemContractOptions> options = null, Action<SystemContractOptions> preOptions = null)
         {
-            LoggingConfiguration.RegisterFeatureNamespace<SmartContractFeature>("systemcontracts");
+            LoggingConfiguration.RegisterFeatureNamespace<SystemContractFeature>("systemcontracts");
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -155,7 +156,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
                         services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
                         services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
-                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
                         services.AddSingleton<ISystemContractContainer, SystemContractContainer>();
                         services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
 
@@ -164,6 +164,24 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<IDispatcher<DataStorageContract>, DataStorageContract.Dispatcher>();
                         services.AddSingleton<IDispatcher, AuthContract.Dispatcher>();
                         services.AddSingleton<IDispatcher<AuthContract>, AuthContract.Dispatcher>();
+
+                        // LEGACY SC
+                        // Validator
+                        services.AddSingleton<ISmartContractValidator, SmartContractValidator>();
+
+                        // Executor et al.
+                        services.AddSingleton<IContractExecutorFactory, SystemContractExecutorFactory>();
+
+                        services.AddSingleton<IContractRefundProcessor, ContractRefundProcessor>();
+                        services.AddSingleton<IContractTransferProcessor, ContractTransferProcessor>();
+                        services.AddSingleton<IKeyEncodingStrategy, BasicKeyEncodingStrategy>();
+                        services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
+                        services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
+                        services.AddSingleton<ISerializer, Serializer>();
+                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
+
+                        // Controllers + utils
+                        services.AddSingleton<CSharpContractDecompiler>();
 
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SystemContractOptions(services, fullNodeBuilder.Network));
@@ -179,25 +197,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         /// Should we require another executor, we will need to create a separate daemon and network.
         /// </para>
         /// </summary>
-        public static SystemContractOptions UseReflectionExecutor(this SystemContractOptions options)
+        public static SystemContractOptions UseSystemContractExecutor(this SystemContractOptions options)
         {
             IServiceCollection services = options.Services;
 
-            // Validator
-            services.AddSingleton<ISmartContractValidator, SmartContractValidator>();
 
-            // Executor et al.
-            services.AddSingleton<IContractRefundProcessor, ContractRefundProcessor>();
-            services.AddSingleton<IContractTransferProcessor, ContractTransferProcessor>();
-            services.AddSingleton<IKeyEncodingStrategy, BasicKeyEncodingStrategy>();
-            services.AddSingleton<IContractExecutorFactory, ReflectionExecutorFactory>();
-            services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
-            services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
-            services.AddSingleton<ISerializer, Serializer>();
-            services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
-
-            // Controllers + utils
-            services.AddSingleton<CSharpContractDecompiler>();
 
             return options;
         }
