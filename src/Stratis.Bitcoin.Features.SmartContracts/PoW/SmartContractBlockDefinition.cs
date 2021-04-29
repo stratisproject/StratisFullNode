@@ -92,6 +92,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoW
             if (smartContractTxOut == null)
             {
                 this.logger.LogDebug("Transaction does not contain smart contract information.");
+
                 base.AddTransactionToBlock(mempoolEntry.Transaction);
                 base.UpdateBlockStatistics(mempoolEntry);
                 base.UpdateTotalFees(mempoolEntry.Fee);
