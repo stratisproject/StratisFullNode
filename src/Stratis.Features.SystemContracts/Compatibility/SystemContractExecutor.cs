@@ -43,7 +43,7 @@ namespace Stratis.Features.SystemContracts.Compatibility
             {
                 this.logger.LogDebug("Contract is not whitelisted '{0}'.", systemContractCall.Identifier);
 
-                return new SystemContractExecutionResult(callData.ContractAddress);
+                return new SystemContractExecutionResult(callData.ContractAddress, null);
             }
 
             var context = new SystemContractTransactionContext(this.stateRepository, transactionContext.Transaction, systemContractCall);
@@ -55,7 +55,7 @@ namespace Stratis.Features.SystemContracts.Compatibility
                 this.stateRepository.SyncToRoot(result.NewState.Root);
             }
 
-            return new SystemContractExecutionResult(callData.ContractAddress);
+            return new SystemContractExecutionResult(callData.ContractAddress, result.Result);
         }
     }
 }

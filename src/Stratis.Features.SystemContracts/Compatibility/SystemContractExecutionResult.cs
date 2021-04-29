@@ -5,11 +5,17 @@ using Stratis.SmartContracts.Core.Receipts;
 
 namespace Stratis.Features.SystemContracts.Compatibility
 {
+    /// <summary>
+    /// Wrapper around <see cref="IContractExecutionResult"/> for system contracts.
+    ///
+    /// Uses defaults most values that are currently unused for system contracts.
+    /// </summary>
     public class SystemContractExecutionResult : IContractExecutionResult
     {
-        public SystemContractExecutionResult(uint160 to)
+        public SystemContractExecutionResult(uint160 to, object @return)
         {
             this.To = to;
+            this.Return = @return;
         }
 
         public uint160 To { get; set; }
@@ -28,11 +34,7 @@ namespace Stratis.Features.SystemContracts.Compatibility
             set { }
         }
 
-        public object Return
-        {
-            get { return null; }
-            set { }
-        }
+        public object Return { get; set; }
 
         public bool Revert => false;
 
