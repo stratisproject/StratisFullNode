@@ -54,9 +54,8 @@ namespace Stratis.Features.SystemContracts
             set { }
         }
 
-        public IList<Log> Logs
-        {
-            get { return null; }
+        public IList<Log> Logs { 
+            get { return new List<Log>(); }
             set { }
         }
     }
