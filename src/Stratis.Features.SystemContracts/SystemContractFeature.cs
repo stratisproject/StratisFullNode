@@ -108,7 +108,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<DBreezeContractStateStore>();
                         services.AddSingleton<NoDeleteContractStateSource>();
                         services.AddSingleton<IStateRepositoryRoot, StateRepositoryRoot>();
-                        services.AddSingleton<ISmartContractActivationProvider, SmartContractPosActivationProvider>();
 
                         // CONSENSUS ------------------------------------------------------------------------
 
@@ -116,30 +115,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.Replace(ServiceDescriptor.Singleton<IMempoolValidator, SmartContractMempoolValidator>());
                         services.AddSingleton<StandardTransactionPolicy, SmartContractTransactionPolicy>();
 
-                        // CONTRACT EXECUTION ---------------------------------------------------------------
-                        services.AddSingleton<IInternalExecutorFactory, InternalExecutorFactory>();
-                        services.AddSingleton<IContractAssemblyCache, ContractAssemblyCache>();
-                        services.AddSingleton<IVirtualMachine, ReflectionVirtualMachine>();
-                        services.AddSingleton<IAddressGenerator, AddressGenerator>();
-                        services.AddSingleton<ILoader, ContractAssemblyLoader>();
-                        services.AddSingleton<IContractModuleDefinitionReader, ContractModuleDefinitionReader>();
-                        services.AddSingleton<IStateFactory, StateFactory>();
-                        services.AddSingleton<SmartContractTransactionPolicy>();
-                        services.AddSingleton<IStateProcessor, StateProcessor>();
-                        services.AddSingleton<ISmartContractStateFactory, SmartContractStateFactory>();
-                        services.AddSingleton<ILocalExecutor, LocalExecutor>();
-                        services.AddSingleton<IBlockExecutionResultCache, BlockExecutionResultCache>();
-                        services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
-
                         // RECEIPTS -------------------------------------------------------------------------
                         services.AddSingleton<IReceiptRepository, PersistentReceiptRepository>();
 
                         // UTILS ----------------------------------------------------------------------------
                         services.AddSingleton<ISenderRetriever, SenderRetriever>();
-
-                        services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
-                        services.AddSingleton<IMethodParameterStringSerializer, MethodParameterStringSerializer>();
-                        services.AddSingleton<ICallDataSerializer, CallDataSerializer>();
 
                         // MINING ---------------------------------------------------------------------------
                         if (fullNodeBuilder.Network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
@@ -154,34 +134,46 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<ScriptAddressReader>();
                         services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(SmartContractScriptAddressReader), ServiceLifetime.Singleton));
 
-                        services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
-                        services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
-                        services.AddSingleton<ISystemContractContainer, SystemContractContainer>();
-                        services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
-
-                        // System contracts. TBD do we need to register both types here?
+                        // System contracts instances. TBD do we need to register both types here?
                         services.AddSingleton<IDispatcher, DataStorageContract.Dispatcher>();
                         services.AddSingleton<IDispatcher<DataStorageContract>, DataStorageContract.Dispatcher>();
                         services.AddSingleton<IDispatcher, AuthContract.Dispatcher>();
                         services.AddSingleton<IDispatcher<AuthContract>, AuthContract.Dispatcher>();
 
-                        // LEGACY SC
-                        // Validator
-                        services.AddSingleton<ISmartContractValidator, SmartContractValidator>();
-
-                        // Executor et al.
+                        // System contracts infrastructure.
+                        services.AddSingleton<ISmartContractActivationProvider, SmartContractPosActivationProvider>();
+                        services.AddSingleton<ICallDataSerializer, CallDataSerializer>();
                         services.AddSingleton<IContractExecutorFactory, SystemContractExecutorFactory>();
-
+                        services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
+                        services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
+                        services.AddSingleton<ISystemContractContainer, SystemContractContainer>();
+                        services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
+                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
+                        services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
+                        services.AddSingleton<IMethodParameterStringSerializer, MethodParameterStringSerializer>();
+                        services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
                         services.AddSingleton<IContractRefundProcessor, ContractRefundProcessor>();
                         services.AddSingleton<IContractTransferProcessor, ContractTransferProcessor>();
-                        services.AddSingleton<IKeyEncodingStrategy, BasicKeyEncodingStrategy>();
-                        services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
-                        services.AddSingleton<IContractPrimitiveSerializer, ContractPrimitiveSerializer>();
-                        services.AddSingleton<ISerializer, Serializer>();
-                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
+                        services.AddSingleton<IBlockExecutionResultCache, BlockExecutionResultCache>();
 
-                        // Controllers + utils
+                        /* LEGACY SC
+                         * For compatibility with SC wallet and local executor, these are required but don't work.
+                         */
+                        services.AddSingleton<ISmartContractValidator, SmartContractValidator>();
+                        services.AddSingleton<IKeyEncodingStrategy, BasicKeyEncodingStrategy>();
+                        services.AddSingleton<ISerializer, Serializer>();
                         services.AddSingleton<CSharpContractDecompiler>();
+                        services.AddSingleton<IInternalExecutorFactory, InternalExecutorFactory>();
+                        services.AddSingleton<IContractAssemblyCache, ContractAssemblyCache>();
+                        services.AddSingleton<IVirtualMachine, ReflectionVirtualMachine>();
+                        services.AddSingleton<IAddressGenerator, AddressGenerator>();
+                        services.AddSingleton<ILoader, ContractAssemblyLoader>();
+                        services.AddSingleton<IContractModuleDefinitionReader, ContractModuleDefinitionReader>();
+                        services.AddSingleton<IStateFactory, StateFactory>();
+                        services.AddSingleton<SmartContractTransactionPolicy>();
+                        services.AddSingleton<IStateProcessor, StateProcessor>();
+                        services.AddSingleton<ISmartContractStateFactory, SmartContractStateFactory>();
+                        services.AddSingleton<ILocalExecutor, LocalExecutor>();
 
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SystemContractOptions(services, fullNodeBuilder.Network));
