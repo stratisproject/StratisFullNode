@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
@@ -47,7 +48,7 @@ namespace Stratis.Features.SystemContracts
             if (!(prevHeader is PosBlockHeader posHeader) || posHeader.HasSmartContractFields)
                 blockRoot = ((ISmartContractBlockHeader)prevHeader).HashStateRoot;
             else
-                blockRoot = SmartContractBlockDefinition.StateRootEmptyTrie;
+                blockRoot = SmartContractPosBlockDefinition.StateRootEmptyTrie;
 
             this.logger.LogDebug("Block hash state root '{0}'.", blockRoot);
 
@@ -94,7 +95,7 @@ namespace Stratis.Features.SystemContracts
 
                 // TODO - this will prevent validation of all remaining transactions in the block?
                 if (mutableStateRepositoryRoot != blockHeaderHashStateRoot)
-                    SmartContractConsensusErrors.UnequalStateRoots.Throw();
+                    new ConsensusError("invalid-state-roots", "contract state root not matching after block execution").Throw();
 
                 // Push to underlying database
                 // TODO is this necessary before the block is done?
