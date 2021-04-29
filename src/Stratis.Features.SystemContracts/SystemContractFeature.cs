@@ -10,7 +10,6 @@ using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.Interfaces;
-using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
@@ -20,9 +19,7 @@ using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.Bitcoin.Mining;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.SmartContracts;
 using Stratis.Features.SystemContracts;
 using Stratis.Features.SystemContracts.Contracts;
 using Stratis.SmartContracts;
@@ -147,7 +144,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         if (fullNodeBuilder.Network.Consensus.ConsensusFactory is SmartContractPoSConsensusFactory)
                         {
                             services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
-                            services.AddSingleton<BlockDefinition, SmartContractPosBlockDefinition>();
+                            services.AddSingleton<BlockDefinition, PoS.SmartContractPosBlockDefinition>();
                             services.AddSingleton<BlockDefinition, PosBlockDefinition>();
                         }
 
@@ -158,7 +155,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
                         services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
                         services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
-                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SystemContractCoinViewRuleLogic>();
+                        services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
                         services.AddSingleton<ISystemContractContainer, SystemContractContainer>();
                         services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
 
