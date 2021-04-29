@@ -34,7 +34,7 @@ namespace Stratis.Features.SystemContracts
             IDispatcher dispatcher = this.dispatcherRegistry.GetDispatcher(context.CallData.Identifier);
 
             // Invoke the contract.
-            Result executionResult = dispatcher.Dispatch(context);
+            Result<object> executionResult = dispatcher.Dispatch(context);
 
             if (executionResult.IsFailure)
             {
@@ -45,7 +45,7 @@ namespace Stratis.Features.SystemContracts
             }
 
             // Return new state.
-            return new SystemContractRunnerResult(state);
+            return new SystemContractRunnerResult(state, executionResult.Value);
         }
     }
 }

@@ -23,6 +23,14 @@ namespace Stratis.Features.SystemContracts.Compatibility
             this.chainIndexer = chainIndexer;
         }
 
+        /// <summary>
+        /// Execute a query on the system contract at the given block height.
+        /// </summary>
+        /// <param name="blockHeight"></param>
+        /// <param name="sender"></param>
+        /// <param name="txOutValue"></param>
+        /// <param name="callData"></param>
+        /// <returns></returns>
         public ILocalExecutionResult Execute(ulong blockHeight, uint160 sender, Money txOutValue, ContractTxData callData)
         {
             ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
@@ -60,7 +68,7 @@ namespace Stratis.Features.SystemContracts.Compatibility
                 InternalTransfers = null,
                 ErrorMessage = null,
                 Logs = new List<Log>(),
-                Return = null,
+                Return = result.Result,
                 Revert = false
             };
         }

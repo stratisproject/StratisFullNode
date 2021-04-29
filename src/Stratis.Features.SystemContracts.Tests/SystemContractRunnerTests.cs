@@ -49,7 +49,7 @@ namespace Stratis.Features.SystemContracts.Tests
             contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(uint160.Zero, "", null));
 
             var dispatcherMock = new Mock<IDispatcher>();
-            dispatcherMock.Setup(m => m.Dispatch(It.IsAny<ISystemContractTransactionContext>())).Returns(Result.Fail("Error"));
+            dispatcherMock.Setup(m => m.Dispatch(It.IsAny<ISystemContractTransactionContext>())).Returns(Result.Fail<object>("Error"));
 
             // We don't have the dispatcher.
             dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<uint160>())).Returns(true);
@@ -84,7 +84,7 @@ namespace Stratis.Features.SystemContracts.Tests
             var dispatcherMock = new Mock<IDispatcher>();
 
             // Dispatching successful
-            dispatcherMock.Setup(m => m.Dispatch(It.IsAny<ISystemContractTransactionContext>())).Returns(Result.Ok());
+            dispatcherMock.Setup(m => m.Dispatch(It.IsAny<ISystemContractTransactionContext>())).Returns(Result.Ok(DispatchResult.Void));
 
             // We don't have the dispatcher.
             dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<uint160>())).Returns(true);

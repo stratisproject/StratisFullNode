@@ -55,17 +55,17 @@ namespace Stratis.Features.SystemContracts.Contracts
 
             public uint160 Identifier => AuthContract.Identifier;
 
-            public Result Dispatch(ISystemContractTransactionContext context)
+            public Result<object> Dispatch(ISystemContractTransactionContext context)
             {
                 AuthContract instance = GetInstance(context);
 
                 switch (context.CallData.MethodName)
                 {
                     case nameof(AuthContract.IsAuthorised):
-                        instance.IsAuthorised(context.CallData.Parameters[0] as string[]);
-                        return Result.Ok();
+                        var result = instance.IsAuthorised(context.CallData.Parameters[0] as string[]);
+                        return Result.Ok<object>(result);
                     default:
-                        return Result.Fail($"Method {context.CallData.MethodName} does not exist on type {nameof(AuthContract)} v{context.CallData.Version}");
+                        return Result.Fail<object>($"Method {context.CallData.MethodName} does not exist on type {nameof(AuthContract)} v{context.CallData.Version}");
                 }
             }
 

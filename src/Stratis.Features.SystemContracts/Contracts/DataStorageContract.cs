@@ -87,17 +87,17 @@ namespace Stratis.Features.SystemContracts.Contracts
             /// </summary>
             /// <param name="context"></param>
             /// <returns>A result indicating whether or not the execution was successful.</returns>
-            public Result Dispatch(ISystemContractTransactionContext context)
+            public Result<object> Dispatch(ISystemContractTransactionContext context)
             {
                 DataStorageContract instance = GetInstance(context);
-
+                
                 switch (context.CallData.MethodName)
                 {
                     case nameof(DataStorageContract.AddData):
                         instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
-                        return Result.Ok();
+                        return Result.Ok(DispatchResult.Void);
                     default:
-                        return Result.Fail($"Method {context.CallData.MethodName} does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
+                        return Result.Fail<object>($"Method {context.CallData.MethodName} does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
                 }
             }
         }
