@@ -43,7 +43,6 @@ namespace Stratis.Features.SystemContracts.Compatibility
             {
                 this.logger.LogDebug("Contract is not whitelisted '{0}'.", systemContractCall.Identifier);
 
-                // Continue to next transaction.
                 return new SystemContractExecutionResult(callData.ContractAddress);
             }
 

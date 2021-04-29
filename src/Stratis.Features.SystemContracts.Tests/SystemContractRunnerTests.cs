@@ -1,22 +1,11 @@
 ﻿using CSharpFunctionalExtensions;
 using Moq;
 using NBitcoin;
-using Stratis.Features.SystemContracts.Compatibility;
 using Stratis.SmartContracts.Core.State;
 using Xunit;
 
 namespace Stratis.Features.SystemContracts.Tests
 {
-    public class SytemContractExecutorTests
-    {
-        [Fact]
-        public void Should_Check_Whitelist()
-        {
-            var executor = new SystemContractExecutor(null, null, null, null, null);
-
-
-        }
-    }
     public class SystemContractRunnerTests
     {
         [Fact]
