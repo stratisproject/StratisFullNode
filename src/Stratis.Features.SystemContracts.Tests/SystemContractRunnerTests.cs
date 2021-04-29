@@ -100,6 +100,7 @@ namespace Stratis.Features.SystemContracts.Tests
 
             // The state returned should be the same as what was on the context (now changed)
             Assert.Equal(stateMock.Object, result.NewState);
+            Assert.Equal(DispatchResult.Void, result.Result);
         }
     }
 }
