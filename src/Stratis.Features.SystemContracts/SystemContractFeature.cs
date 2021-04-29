@@ -141,12 +141,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<IDispatcher<AuthContract>, AuthContract.Dispatcher>();
 
                         // System contracts infrastructure.
+                        services.AddSingleton(x => x.GetService<Network>().SystemContractContainer); // Pull the system contract container off the network
                         services.AddSingleton<ISmartContractActivationProvider, SmartContractPosActivationProvider>();
                         services.AddSingleton<ICallDataSerializer, CallDataSerializer>();
                         services.AddSingleton<IContractExecutorFactory, SystemContractExecutorFactory>();
                         services.AddSingleton<IDispatcherRegistry, DispatcherRegistry>();
                         services.AddSingleton<ISystemContractRunner, SystemContractRunner>();
-                        services.AddSingleton<ISystemContractContainer, SystemContractContainer>();
                         services.AddSingleton<IWhitelistedHashChecker, PoSWhitelistedHashChecker>();
                         services.AddSingleton<ISmartContractCoinViewRuleLogic, SmartContractCoinViewRuleLogic>();
                         services.AddSingleton<IMethodParameterSerializer, MethodParameterByteSerializer>();
