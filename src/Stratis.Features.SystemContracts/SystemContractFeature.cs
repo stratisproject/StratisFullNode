@@ -182,20 +182,5 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
             return fullNodeBuilder;
         }
-
-        /// <summary>
-        /// This node will be configured with the reflection contract executor.
-        /// <para>
-        /// Should we require another executor, we will need to create a separate daemon and network.
-        /// </para>
-        /// </summary>
-        public static SystemContractOptions UseSystemContractExecutor(this SystemContractOptions options)
-        {
-            IServiceCollection services = options.Services;
-
-
-
-            return options;
-        }
     }
 }
