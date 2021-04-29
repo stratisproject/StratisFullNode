@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using NBitcoin;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Local;
+using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.RuntimeObserver;
@@ -45,7 +44,7 @@ namespace Stratis.Features.SystemContracts.Compatibility
                 {
                     GasConsumed = (Gas)0,
                     InternalTransfers = null,
-                    ErrorMessage = null,
+                    ErrorMessage = (ContractErrorMessage)$"Header at height {blockHeight} has no contract information",
                     Logs = new List<Log>(),
                     Return = null,
                     Revert = false
