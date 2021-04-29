@@ -95,7 +95,7 @@ namespace Stratis.Features.SystemContracts
             // TODO we can consider changing the call data serialization scheme to something that suits our needs better?
             ContractTxData callData = this.callDataSerializer.Deserialize(serializedCallData).Value;
 
-            var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
+            var systemContractCall = new SystemContractCall(new Identifier(callData.ContractAddress), callData.MethodName, callData.MethodParameters, callData.VmVersion);
 
             return new SystemContractTransactionContext(state, transaction, systemContractCall);
         }

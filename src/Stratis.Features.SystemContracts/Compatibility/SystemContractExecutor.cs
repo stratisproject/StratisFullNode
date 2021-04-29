@@ -36,7 +36,7 @@ namespace Stratis.Features.SystemContracts.Compatibility
 
             var initialStateRoot = this.stateRepository.Root.ToArray(); // Use ToArray to make a copy
 
-            var systemContractCall = new SystemContractCall(callData.ContractAddress, callData.MethodName, callData.MethodParameters, callData.VmVersion);
+            var systemContractCall = new SystemContractCall(new Identifier(callData.ContractAddress), callData.MethodName, callData.MethodParameters, callData.VmVersion);
 
             // TODO is it correct to check the whitelist with the "identifier" here?
             if (!this.whitelistedHashChecker.CheckHashWhitelisted(systemContractCall.Identifier.ToBytes()))

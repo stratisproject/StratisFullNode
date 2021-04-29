@@ -11,7 +11,7 @@ namespace Stratis.Features.SystemContracts
     public interface IDispatcher
     {
         Result<object> Dispatch(ISystemContractTransactionContext context);
-        uint160 Identifier { get; }
+        Identifier Identifier { get; }
     }
 
     public static class DispatchResult

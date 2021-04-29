@@ -17,21 +17,21 @@ namespace Stratis.Features.SystemContracts.Contracts
 
             if (!this.Initialized)
             {
-                this.State.SetStorageValue(Identifier, Encoding.UTF8.GetBytes("Network"), Encoding.UTF8.GetBytes(network.Name));
+                this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Network"), Encoding.UTF8.GetBytes(network.Name));
                 this.Initialized = true;
             }
         }
 
         public bool Initialized
         {
-            get { return BitConverter.ToBoolean(this.State.GetStorageValue(DataStorageContract.Identifier, Encoding.UTF8.GetBytes("Initialized"))); }
-            set { this.State.SetStorageValue(Identifier, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value)); }
+            get { return BitConverter.ToBoolean(this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"))); }
+            set { this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value)); }
         }
 
         /// <summary>
         /// Example of a unique identifier, which we need to fit in a uint160 somehow. We can change this.
         /// </summary>
-        public static uint160 Identifier => new uint160(SCL.Crypto.SHA3.Keccak256(Encoding.UTF8.GetBytes(nameof(DataStorageContract))).Take(20).ToArray());
+        public static Identifier Identifier => new Identifier(new uint160(SCL.Crypto.SHA3.Keccak256(Encoding.UTF8.GetBytes(nameof(DataStorageContract))).Take(20).ToArray()));
 
         public IStateRepositoryRoot State { get; }
 
@@ -44,7 +44,7 @@ namespace Stratis.Features.SystemContracts.Contracts
             if (!this.Auth.IsAuthorised(signatories))
                 return;
 
-            this.State.SetStorageValue(Identifier, Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(value));
+            this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                 this.authContract = authContract;
             }
 
-            public uint160 Identifier => DataStorageContract.Identifier;
+            public Identifier Identifier => DataStorageContract.Identifier;
 
             public DataStorageContract GetInstance(ISystemContractTransactionContext context)
             {

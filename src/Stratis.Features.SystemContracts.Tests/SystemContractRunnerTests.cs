@@ -1,11 +1,22 @@
 ﻿using CSharpFunctionalExtensions;
 using Moq;
 using NBitcoin;
+using Stratis.Features.SystemContracts.Compatibility;
 using Stratis.SmartContracts.Core.State;
 using Xunit;
 
 namespace Stratis.Features.SystemContracts.Tests
 {
+    public class SytemContractExecutorTests
+    {
+        [Fact]
+        public void Should_Check_Whitelist()
+        {
+            var executor = new SystemContractExecutor(null, null, null, null, null);
+
+
+        }
+    }
     public class SystemContractRunnerTests
     {
         [Fact]
@@ -19,10 +30,10 @@ namespace Stratis.Features.SystemContracts.Tests
             stateMock.Setup(s => s.StartTracking()).Returns(initialStateMock.Object);
             var contextMock = new Mock<ISystemContractTransactionContext>();
             contextMock.SetupGet(p => p.State).Returns(stateMock.Object);
-            contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(uint160.Zero, "", null));
+            contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(new Identifier(uint160.Zero), "", null));
 
             // We don't have the dispatcher.
-            dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<uint160>())).Returns(false);
+            dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<Identifier>())).Returns(false);
 
             var runner = new SystemContractRunner(dispatchersMock.Object);
 
@@ -46,14 +57,14 @@ namespace Stratis.Features.SystemContracts.Tests
             stateMock.Setup(s => s.Root).Returns(root);
             var contextMock = new Mock<ISystemContractTransactionContext>();
             contextMock.SetupGet(p => p.State).Returns(stateMock.Object);
-            contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(uint160.Zero, "", null));
+            contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(new Identifier(uint160.Zero), "", null));
 
             var dispatcherMock = new Mock<IDispatcher>();
             dispatcherMock.Setup(m => m.Dispatch(It.IsAny<ISystemContractTransactionContext>())).Returns(Result.Fail<object>("Error"));
 
             // We don't have the dispatcher.
-            dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<uint160>())).Returns(true);
-            dispatchersMock.Setup(d => d.GetDispatcher(It.IsAny<uint160>())).Returns(dispatcherMock.Object);
+            dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<Identifier>())).Returns(true);
+            dispatchersMock.Setup(d => d.GetDispatcher(It.IsAny<Identifier>())).Returns(dispatcherMock.Object);
 
             var runner = new SystemContractRunner(dispatchersMock.Object);
 
@@ -79,7 +90,7 @@ namespace Stratis.Features.SystemContracts.Tests
             stateMock.Setup(s => s.StartTracking()).Returns(initialStateMock.Object);
             var contextMock = new Mock<ISystemContractTransactionContext>();
             contextMock.SetupGet(p => p.State).Returns(stateMock.Object);
-            contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(uint160.Zero, "", null));
+            contextMock.SetupGet(p => p.CallData).Returns(new SystemContractCall(new Identifier(uint160.Zero), "", null));
 
             var dispatcherMock = new Mock<IDispatcher>();
 
@@ -87,8 +98,8 @@ namespace Stratis.Features.SystemContracts.Tests
             dispatcherMock.Setup(m => m.Dispatch(It.IsAny<ISystemContractTransactionContext>())).Returns(Result.Ok(DispatchResult.Void));
 
             // We don't have the dispatcher.
-            dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<uint160>())).Returns(true);
-            dispatchersMock.Setup(d => d.GetDispatcher(It.IsAny<uint160>())).Returns(dispatcherMock.Object);
+            dispatchersMock.Setup(d => d.HasDispatcher(It.IsAny<Identifier>())).Returns(true);
+            dispatchersMock.Setup(d => d.GetDispatcher(It.IsAny<Identifier>())).Returns(dispatcherMock.Object);
 
             var runner = new SystemContractRunner(dispatchersMock.Object);
 

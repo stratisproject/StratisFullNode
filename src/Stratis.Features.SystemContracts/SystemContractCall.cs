@@ -1,10 +1,8 @@
-﻿using NBitcoin;
-
-namespace Stratis.Features.SystemContracts
+﻿namespace Stratis.Features.SystemContracts
 {
     public class SystemContractCall
     {
-        public SystemContractCall(uint160 identifier, string methodName, object[] parameters, int version = 1)
+        public SystemContractCall(Identifier identifier, string methodName, object[] parameters, int version = 1)
         {
             this.Identifier = identifier;
             this.MethodName = methodName;
@@ -12,7 +10,7 @@ namespace Stratis.Features.SystemContracts
             this.Version = version;
         }
 
-        public uint160 Identifier { get; }
+        public Identifier Identifier { get; }
         public string MethodName { get; }
         public object[] Parameters { get; }
         public int Version { get; }

@@ -22,11 +22,11 @@ namespace Stratis.Features.SystemContracts.Contracts
 
         public bool Initialized
         {
-            get { return BitConverter.ToBoolean(this.State.GetStorageValue(Identifier, Encoding.UTF8.GetBytes("Initialized"))); }
-            set { this.State.SetStorageValue(Identifier, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value)); }
+            get { return BitConverter.ToBoolean(this.State.GetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"))); }
+            set { this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Initialized"), BitConverter.GetBytes(value)); }
         }
 
-        public static uint160 Identifier => new uint160(SCL.Crypto.SHA3.Keccak256(Encoding.UTF8.GetBytes(nameof(AuthContract))).Take(20).ToArray());
+        public static Identifier Identifier => new Identifier(new uint160(SCL.Crypto.SHA3.Keccak256(Encoding.UTF8.GetBytes(nameof(AuthContract))).Take(20).ToArray()));
 
         public IStateRepositoryRoot State { get; }
 
@@ -53,7 +53,7 @@ namespace Stratis.Features.SystemContracts.Contracts
                 this.systemContractContainer = systemContractContainer;
             }
 
-            public uint160 Identifier => AuthContract.Identifier;
+            public Identifier Identifier => AuthContract.Identifier;
 
             public Result<object> Dispatch(ISystemContractTransactionContext context)
             {
