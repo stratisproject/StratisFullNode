@@ -4,6 +4,10 @@ using NBitcoin;
 
 namespace Stratis.Features.SystemContracts
 {
+    /// <summary>
+    /// Defines the identity of a system contract. Allows the identity scheme to be flexible.
+    /// Using a ValueType is desirable here because it be used as a dictionary key.
+    /// </summary>
     public struct Identifier
     {
         private const int Uint256Width = 32;
@@ -21,7 +25,7 @@ namespace Stratis.Features.SystemContracts
             return new uint256(LeftPad(this.Data.ToBytes(), Uint256Width));
         }
 
-        public static byte[] LeftPad(byte[] input, int len)
+        private static byte[] LeftPad(byte[] input, int len)
         {
             if (input.Length > len)
                 return null;
