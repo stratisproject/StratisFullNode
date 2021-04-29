@@ -5,7 +5,7 @@ using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.State;
 
-namespace Stratis.Features.SystemContracts
+namespace Stratis.Features.SystemContracts.Comaptibility
 {
     /// <summary>
     /// Wrapper around the system contract runner for compatibility with existing SC execution model.

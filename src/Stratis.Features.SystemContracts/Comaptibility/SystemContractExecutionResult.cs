@@ -3,7 +3,7 @@ using NBitcoin;
 using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Receipts;
 
-namespace Stratis.Features.SystemContracts
+namespace Stratis.Features.SystemContracts.Comaptibility
 {
     public class SystemContractExecutionResult : IContractExecutionResult
     {
@@ -28,8 +28,8 @@ namespace Stratis.Features.SystemContracts
             set { }
         }
 
-        public object Return 
-        { 
+        public object Return
+        {
             get { return null; }
             set { }
         }
@@ -48,13 +48,14 @@ namespace Stratis.Features.SystemContracts
             set { }
         }
 
-        public TxOut Refund 
+        public TxOut Refund
         {
             get { return null; }
             set { }
         }
 
-        public IList<Log> Logs { 
+        public IList<Log> Logs
+        {
             get { return new List<Log>(); }
             set { }
         }
