@@ -60,6 +60,18 @@ namespace Stratis.Features.SystemContracts.Contracts
             return true;
         }
 
+        public bool AddData(string[] signatories, string key, string value, bool appendPrefix = true)
+        {
+            if (!this.Auth.IsAuthorised(signatories))
+                return false;
+
+            value = appendPrefix ? "prefix-" + value : value;
+
+            this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes(key), Encoding.UTF8.GetBytes(value));
+
+            return true;
+        }
+
         public class Dispatcher : IDispatcher<DataStorageContract>
         {
             private readonly Network network;
@@ -90,8 +102,20 @@ namespace Stratis.Features.SystemContracts.Contracts
                 switch (context.CallData.MethodName)
                 {
                     case nameof(DataStorageContract.AddData):
-                        var result = instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
-                        return Result.Ok<object>(result);
+                        if (context.CallData.Parameters.Length == 3)
+                        { 
+                            var result = instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
+                            return Result.Ok<object>(result);
+                        }
+
+                        if (context.CallData.Parameters.Length == 4)
+                        {
+                            var result = instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string, (bool)context.CallData.Parameters[3]);
+                            return Result.Ok<object>(result);
+                        }
+
+                        return Result.Fail<object>($"Method {context.CallData.MethodName} overload with {context.CallData.Parameters.Length} params does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
+
                     default:
                         return Result.Fail<object>($"Method {context.CallData.MethodName} does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
                 }
