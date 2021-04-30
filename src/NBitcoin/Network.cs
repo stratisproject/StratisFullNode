@@ -218,7 +218,7 @@ namespace NBitcoin
         /// </summary>
         /// <param name="hash">The hash to extract the contract type and version of.</param>
         /// <returns>The contract type and version.</returns>
-        (string contractType, uint version) GetContractTypeAndVersion(uint160 hash);
+        bool TryGetContractTypeAndVersion(uint160 id160, out string contractType, out uint version);
 
         /// <summary>
         /// The default primary authenticators (administrators) for managing system contract authentication.

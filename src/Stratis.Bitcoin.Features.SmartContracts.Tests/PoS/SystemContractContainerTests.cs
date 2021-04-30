@@ -34,10 +34,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             Assert.True(EmbeddedContractIdentifier.IsEmbedded(contractId));
 
-            (string contractType, uint version) typeAndVersion = container.GetContractTypeAndVersion(id);
+            Assert.True(container.TryGetContractTypeAndVersion(id, out string contractType, out uint version));
 
-            Assert.Equal(typeof(TestSystemContract).ToString(), typeAndVersion.contractType);
-            Assert.Equal((uint)1, typeAndVersion.version);
+            Assert.Equal(typeof(TestSystemContract).ToString(), contractType);
+            Assert.Equal((uint)1, version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };
             var mockChainStore = new Mock<IChainStore>();
@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
             {
                 foreach (uint160 id in network.SystemContractContainer.GetContractIdentifiers())
                 {
-                    (string typeName, uint version) = network.SystemContractContainer.GetContractTypeAndVersion(id);
+                    Assert.True(network.SystemContractContainer.TryGetContractTypeAndVersion(id, out string typeName, out uint version));
 
                     Assert.NotNull(Type.GetType(typeName));
                 }

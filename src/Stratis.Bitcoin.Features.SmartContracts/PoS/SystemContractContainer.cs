@@ -43,15 +43,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <summary>
         /// Extracts the contract type and version from a contract identifier.
         /// </summary>
-        /// <param name="id160">The contract identifier to extract the contract type and version of.</param>
+        /// <param name="id160">Contract identifier to extract the contract type and version of.</param>
+        /// <param name="contractType">Contract type as a full assembly qualified name.</param>
+        /// <param name="version">Contract version.</param>
         /// <returns>The contract type and version.</returns>
-        public (string contractType, uint version) GetContractTypeAndVersion(uint160 id160)
+        public bool TryGetContractTypeAndVersion(uint160 id160, out string contractType, out uint version)
         {
             Guard.Assert(EmbeddedContractIdentifier.IsEmbedded(id160));
 
             var id = new EmbeddedContractIdentifier(id160);
 
-            return (this.contractTypes[id.ContractTypeId], id.Version);
+            version = id.Version;
+
+            return this.contractTypes.TryGetValue(id.ContractTypeId, out contractType);
         }
 
         /// <inheritdoc/>
