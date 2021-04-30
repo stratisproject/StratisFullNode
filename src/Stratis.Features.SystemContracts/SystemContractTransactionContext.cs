@@ -1,4 +1,5 @@
 ﻿using NBitcoin;
+using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.SystemContracts
@@ -8,6 +9,9 @@ namespace Stratis.Features.SystemContracts
         SystemContractCall CallData { get; }
         IStateRepositoryRoot State { get; }
         Transaction Transaction { get; }
+        ulong BlockHeight { get; }
+        uint160 Coinbase { get; }
+        BaseMessage Message { get; }
     }
 
     /// <summary>
@@ -33,5 +37,11 @@ namespace Stratis.Features.SystemContracts
         public SystemContractCall CallData { get; }
 
         public IStateRepositoryRoot State { get; }
+
+        public ulong BlockHeight { get; }
+
+        public uint160 Coinbase { get; }
+
+        public BaseMessage Message { get; }
     }
 }
