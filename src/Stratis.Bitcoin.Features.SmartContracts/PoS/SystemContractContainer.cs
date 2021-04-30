@@ -41,9 +41,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
         
         /// <summary>
-        /// Extracts the contract type and version from a pseudo-hash.
+        /// Extracts the contract type and version from a contract identifier.
         /// </summary>
-        /// <param name="hash">The hash to extract the contract type and version of.</param>
+        /// <param name="id160">The contract identifier to extract the contract type and version of.</param>
         /// <returns>The contract type and version.</returns>
         public (string contractType, uint version) GetContractTypeAndVersion(uint160 id160)
         {
