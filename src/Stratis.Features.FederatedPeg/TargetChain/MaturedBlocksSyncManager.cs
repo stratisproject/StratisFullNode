@@ -68,7 +68,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IConversionRequestRepository conversionRequestRepository,
             ChainIndexer chainIndexer,
             Network network,
-            IExternalApiPoller externalApiPoller = null)
+            IExternalApiPoller externalApiPoller = null,
+            IInteropTransactionManager interopTransactionManager = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -220,8 +221,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated.
+                    // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated on the other chain.
+                    // Note that this may not be precisely the fee that will be used; the multisig members need to agree on the actual amount.
                     decimal conversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
+
+                    this.
 
                     if (conversionFeeAmount == decimal.MinusOne)
                     {

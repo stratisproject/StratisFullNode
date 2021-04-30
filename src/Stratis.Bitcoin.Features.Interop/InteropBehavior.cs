@@ -60,9 +60,45 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private async Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
         {
-            if (!(message.Message.Payload is InteropCoordinationPayload payload))
+            try
+            {
+                await this.ProcessMessageAsync(peer, message).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                this.logger.Trace("(-)[CANCELED_EXCEPTION]");
                 return;
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error("Exception occurred: {0}", ex.ToString());
+                throw;
+            }
+        }
 
+        private async Task ProcessMessageAsync(INetworkPeer peer, IncomingMessage message)
+        {
+            try
+            {
+                switch (message.Message.Payload)
+                {
+                    case InteropCoordinationPayload interopCoordinationPayload:
+                        await this.ProcessInteropCoordinationAsync(peer, interopCoordinationPayload).ConfigureAwait(false);
+                        break;
+
+                    case FeeCoordinationPayload feeCoordinationPayload:
+                        await this.ProcessFeeCoordinationAsync(peer, feeCoordinationPayload).ConfigureAwait(false);
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                this.logger.Trace("(-)[CANCELED_EXCEPTION]");
+            }
+        }
+
+        private async Task ProcessInteropCoordinationAsync(INetworkPeer peer, InteropCoordinationPayload payload)
+        {
             if (!this.federationManager.IsFederationMember)
                 return;
 
@@ -108,9 +144,44 @@ namespace Stratis.Bitcoin.Features.Interop
             if (confirmationCount < 1)
             {
                 this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
-                
+
                 return;
             }
+
+            this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
+
+            this.interopTransactionManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+        }
+
+        private async Task ProcessFeeCoordinationAsync(INetworkPeer peer, FeeCoordinationPayload payload)
+        {
+            if (!this.federationManager.IsFederationMember)
+                return;
+
+            this.logger.Info("{0} received from '{1}':'{2}'. Request {3} proposing fee distribution of {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.FeeAmount);
+
+            // Check that the payload is signed by a federation member.
+            PubKey pubKey;
+
+            try
+            {
+                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
+
+                if (!this.federationManager.IsMultisigMember(pubKey))
+                {
+                    this.logger.Warn("Received unverified fee coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                this.logger.Warn("Received malformed fee coordination payload for {0}.", payload.RequestId);
+
+                return;
+            }
+
+            BigInteger confirmationCount;
 
             this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
