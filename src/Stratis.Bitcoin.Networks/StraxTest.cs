@@ -80,9 +80,9 @@ namespace Stratis.Bitcoin.Networks
 
             this.SystemContractContainer = new SystemContractContainer(
                 this,
-                new Dictionary<KeyId, string> { },
-                new Dictionary<uint256, (int start, int? end)[]> { },
-                new Dictionary<uint256, (string, bool)> { },
+                new Dictionary<ulong, string> { },
+                new Dictionary<uint160, (int start, int? end)[]> { },
+                new Dictionary<uint160, (string, bool)> { },
                 new PrimaryAuthenticators(this, new[]
                 {
                     "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",

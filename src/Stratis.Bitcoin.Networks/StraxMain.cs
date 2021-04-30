@@ -40,9 +40,9 @@ namespace Stratis.Bitcoin.Networks
             
             this.SystemContractContainer = new SystemContractContainer(
                 this,
-                new Dictionary<KeyId, string> { },
-                new Dictionary<uint256, (int start, int? end)[]> { },
-                new Dictionary<uint256, (string, bool)> { },
+                new Dictionary<ulong, string> { },
+                new Dictionary<uint160, (int start, int? end)[]> { },
+                new Dictionary<uint160, (string, bool)> { },
                 null /* TODO */);
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
