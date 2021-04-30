@@ -72,6 +72,11 @@ namespace Stratis.Features.SystemContracts.Contracts
             return true;
         }
 
+        public void PersistComplexType(Transaction tx)
+        {
+            this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Tx"), tx.ToBytes());
+        }
+
         public class Dispatcher : IDispatcher<DataStorageContract>
         {
             private readonly Network network;
@@ -115,6 +120,15 @@ namespace Stratis.Features.SystemContracts.Contracts
                         }
 
                         return Result.Fail<object>($"Method {context.CallData.MethodName} overload with {context.CallData.Parameters.Length} params does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
+
+                    case nameof(DataStorageContract.PersistComplexType):
+                        var txRawHex = context.CallData.Parameters[0] as string;
+
+                        var tx = Transaction.Parse(txRawHex, RawFormat.Satoshi);
+
+                        instance.PersistComplexType(tx);
+
+                        return Result.Ok<object>(DispatchResult.Void);
 
                     default:
                         return Result.Fail<object>($"Method {context.CallData.MethodName} does not exist on type {nameof(DataStorageContract)} v{context.CallData.Version}");
