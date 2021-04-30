@@ -154,7 +154,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             });
 
             // Stake to block height 40
-            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40), waitTimeSeconds: 120);
+            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40, 120), waitTimeSeconds: 120);
 
             // Stop staking.
             minter.StopStake();
