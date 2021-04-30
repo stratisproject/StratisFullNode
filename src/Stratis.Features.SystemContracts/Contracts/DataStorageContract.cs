@@ -77,6 +77,13 @@ namespace Stratis.Features.SystemContracts.Contracts
             this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Tx"), tx.ToBytes());
         }
 
+        public void PersistComplexTypeButDoSerializationInTheParentClassInsteadOfTheDispatcher(string txRawHex)
+        {
+            var tx = Transaction.Parse(txRawHex, RawFormat.Satoshi);
+
+            this.State.SetStorageValue(Identifier.Data, Encoding.UTF8.GetBytes("Tx"), tx.ToBytes());
+        }
+
         public class Dispatcher : IDispatcher<DataStorageContract>
         {
             private readonly Network network;
@@ -103,12 +110,12 @@ namespace Stratis.Features.SystemContracts.Contracts
             public Result<object> Dispatch(ISystemContractTransactionContext context)
             {
                 DataStorageContract instance = GetInstance(context);
-                
+
                 switch (context.CallData.MethodName)
                 {
                     case nameof(DataStorageContract.AddData):
                         if (context.CallData.Parameters.Length == 3)
-                        { 
+                        {
                             var result = instance.AddData(context.CallData.Parameters[0] as string[], context.CallData.Parameters[1] as string, context.CallData.Parameters[2] as string);
                             return Result.Ok<object>(result);
                         }
@@ -128,6 +135,10 @@ namespace Stratis.Features.SystemContracts.Contracts
 
                         instance.PersistComplexType(tx);
 
+                        return Result.Ok<object>(DispatchResult.Void);
+
+                    case nameof(DataStorageContract.PersistComplexTypeButDoSerializationInTheParentClassInsteadOfTheDispatcher):
+                        instance.PersistComplexTypeButDoSerializationInTheParentClassInsteadOfTheDispatcher(context.CallData.Parameters[0] as string);
                         return Result.Ok<object>(DispatchResult.Void);
 
                     default:
