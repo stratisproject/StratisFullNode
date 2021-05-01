@@ -9,8 +9,10 @@ public class Authentication : SmartContract
     const string primaryGroup = "main";
     private readonly uint version;
 
-    public Authentication(ISmartContractState state, Network network, uint version) : base(state)
+    public Authentication(ISmartContractState state, Network network) : base(state)
     {
+        uint version = new EmbeddedContractIdentifier(state.Message.ContractAddress.ToUint160()).Version;
+
         Assert(version == 1, "Only a version of 1 is supported.");
 
         this.version = version;
