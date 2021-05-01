@@ -75,7 +75,7 @@ namespace Stratis.SmartContracts.Networks
                 [BuriedDeployments.BIP66] = 0
             };
 
-            this.SystemContractContainer = new EmbeddedContractContainer(
+            this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
                 new Dictionary<uint160, EmbeddedContractDescriptor> { },
                 new PrimaryAuthenticators(this, new[]

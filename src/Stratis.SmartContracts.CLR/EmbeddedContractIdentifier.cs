@@ -24,9 +24,9 @@ namespace Stratis.SmartContracts.CLR
 
         public uint Version { get => BitConverter.ToUInt32(this.value.ToBytes(), 16); }
 
-        public static implicit operator uint160(EmbeddedContractIdentifier systemContractIdentifier)
+        public static implicit operator uint160(EmbeddedContractIdentifier embeddedContractIdentifier)
         {
-            return systemContractIdentifier.value;
+            return embeddedContractIdentifier.value;
         }
 
         public static bool IsEmbedded(uint160 id)

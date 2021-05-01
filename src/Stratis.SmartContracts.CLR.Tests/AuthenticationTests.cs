@@ -194,8 +194,8 @@ namespace Stratis.SmartContracts.CLR.Tests
 
             string[] actual = signatories.Select(s => new KeyId(s.ToBytes()).GetAddress(network).ToString()).ToArray();
 
-            Assert.Equal(network.SystemContractContainer.PrimaryAuthenticators.Signatories, actual);
-            Assert.Equal(network.SystemContractContainer.PrimaryAuthenticators.Quorum, persistentState.GetUInt32("Quorum:main"));
+            Assert.Equal(network.EmbeddedContractContainer.PrimaryAuthenticators.Signatories, actual);
+            Assert.Equal(network.EmbeddedContractContainer.PrimaryAuthenticators.Quorum, persistentState.GetUInt32("Quorum:main"));
         }
     }
 }

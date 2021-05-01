@@ -44,7 +44,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         public bool CheckHashWhitelisted(uint256 codeHash, ChainedHeader previousHeader)
         {
             uint160 id = (new EmbeddedCodeHash(codeHash)).Id;
-            return this.network.SystemContractContainer.IsActive(id, previousHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active);
+            return this.network.EmbeddedContractContainer.IsActive(id, previousHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active);
         }
 
         /// <inheritdoc />

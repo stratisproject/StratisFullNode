@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 {
-    public class TestSystemContract
+    public class TestEmbeddedContract
     {
 
     }
@@ -19,14 +19,14 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
     public class EmbeddedContractContainerTests
     {
         [Fact]
-        public void CanUseSystemContractContainer()
+        public void CanUseEmbeddedContractContainer()
         {
             var network = new StraxMain();
             EmbeddedContractIdentifier contractId = new EmbeddedContractIdentifier(1, 1);
             var container = new EmbeddedContractContainer(
                 network,
                 new Dictionary<uint160, EmbeddedContractDescriptor> {
-                    { contractId, new EmbeddedContractDescriptor(typeof(TestSystemContract).AssemblyQualifiedName,new[] { (1, (int?)10) }, "SystemContracts", true) } },
+                    { contractId, new EmbeddedContractDescriptor(typeof(TestEmbeddedContract).AssemblyQualifiedName,new[] { (1, (int?)10) }, "SystemContracts", true) } },
                 null);
 
             uint160 id = container.GetContractIdentifiers().First();
@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             Assert.True(container.TryGetContractTypeAndVersion(id, out string contractType, out uint version));
 
-            Assert.Equal(typeof(TestSystemContract).AssemblyQualifiedName, contractType);
+            Assert.Equal(typeof(TestEmbeddedContract).AssemblyQualifiedName, contractType);
             Assert.Equal(contractId.Version, version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };
@@ -62,9 +62,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
         {
             foreach (Network network in new Network[] { new StraxMain(), new StraxTest(), new StraxRegTest() })
             {
-                foreach (uint160 id in network.SystemContractContainer.GetContractIdentifiers())
+                foreach (uint160 id in network.EmbeddedContractContainer.GetContractIdentifiers())
                 {
-                    Assert.True(network.SystemContractContainer.TryGetContractTypeAndVersion(id, out string typeName, out uint version));
+                    Assert.True(network.EmbeddedContractContainer.TryGetContractTypeAndVersion(id, out string typeName, out uint version));
 
                     Assert.NotNull(Type.GetType(typeName));
                 }

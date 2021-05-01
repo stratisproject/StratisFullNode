@@ -21,7 +21,7 @@ public class Authentication : SmartContract
         if (this.Initialized)
             return;
 
-        PrimaryAuthenticators primaryAuthenticators = network.SystemContractContainer.PrimaryAuthenticators;
+        PrimaryAuthenticators primaryAuthenticators = network.EmbeddedContractContainer.PrimaryAuthenticators;
 
         Assert(primaryAuthenticators != null && primaryAuthenticators.Signatories.Length >= primaryAuthenticators.Quorum && primaryAuthenticators.Quorum >= 1);
 

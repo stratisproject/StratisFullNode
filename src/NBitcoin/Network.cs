@@ -497,7 +497,7 @@ namespace NBitcoin
 
         public IFederations Federations { get; protected set; }
 
-        public IEmbeddedContractContainer SystemContractContainer { get; protected set; }
+        public IEmbeddedContractContainer EmbeddedContractContainer { get; protected set; }
 
         /// <summary>
         /// This is used for reward distribution transactions.

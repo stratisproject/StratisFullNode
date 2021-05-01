@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 119_200; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
             this.RewardClaimerBlockInterval = 100;
             
-            this.SystemContractContainer = new EmbeddedContractContainer(
+            this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
                 new Dictionary<uint160, EmbeddedContractDescriptor> { },
                 null /* TODO */);
