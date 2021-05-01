@@ -16,18 +16,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
     }
 
-    public class SystemContractContainerTests
+    public class EmbeddedContractContainerTests
     {
         [Fact]
         public void CanUseSystemContractContainer()
         {
             var network = new StraxMain();
             EmbeddedContractIdentifier contractId = new EmbeddedContractIdentifier(1, 1);
-            var container = new SystemContractContainer(
+            var container = new EmbeddedContractContainer(
                 network,
-                new Dictionary<ulong, string> { { contractId.ContractTypeId, typeof(TestSystemContract).ToString() }},
-                new Dictionary<uint160, (int start, int? end)[]> { { contractId, new[] { (1, (int?)10) } } },
-                new Dictionary<uint160, (string, bool)> { { contractId, ("SystemContracts", true) } },
+                new Dictionary<uint160, EmbeddedContractDescriptor> {
+                    { contractId, new EmbeddedContractDescriptor(typeof(TestSystemContract).AssemblyQualifiedName,new[] { (1, (int?)10) }, "SystemContracts", true) } },
                 null);
 
             uint160 id = container.GetContractIdentifiers().First();
@@ -36,8 +35,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             Assert.True(container.TryGetContractTypeAndVersion(id, out string contractType, out uint version));
 
-            Assert.Equal(typeof(TestSystemContract).ToString(), contractType);
-            Assert.Equal((uint)1, version);
+            Assert.Equal(typeof(TestSystemContract).AssemblyQualifiedName, contractType);
+            Assert.Equal(contractId.Version, version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };
             var mockChainStore = new Mock<IChainStore>();

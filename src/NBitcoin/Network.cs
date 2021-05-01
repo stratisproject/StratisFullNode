@@ -196,7 +196,7 @@ namespace NBitcoin
     /// <summary>
     /// Holds the information and logic to determines whether an embedded system contract should be active.
     /// </summary>
-    public interface ISystemContractContainer
+    public interface IEmbeddedContractContainer
     {
         /// <summary>
         /// Determines if the contract with the specified identifier is active.
@@ -497,7 +497,7 @@ namespace NBitcoin
 
         public IFederations Federations { get; protected set; }
 
-        public ISystemContractContainer SystemContractContainer { get; protected set; }
+        public IEmbeddedContractContainer SystemContractContainer { get; protected set; }
 
         /// <summary>
         /// This is used for reward distribution transactions.
