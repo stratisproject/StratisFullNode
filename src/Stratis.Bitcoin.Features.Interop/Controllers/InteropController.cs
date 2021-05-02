@@ -7,6 +7,7 @@ using NLog;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 
 namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
@@ -18,15 +19,15 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
         private readonly IConversionRequestRepository conversionRequestRepository;
 
-        private readonly IInteropTransactionManager interopTransactionManager;
+        private readonly ICoordinationManager coordinationManager;
 
         private readonly ILogger logger;
 
-        public InteropController(Network network, IConversionRequestRepository conversionRequestRepository, IInteropTransactionManager interopTransactionManager)
+        public InteropController(Network network, IConversionRequestRepository conversionRequestRepository, ICoordinationManager coordinationManager)
         {
             this.network = network;
             this.conversionRequestRepository = conversionRequestRepository;
-            this.interopTransactionManager = interopTransactionManager;
+            this.coordinationManager = coordinationManager;
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -79,7 +80,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 var receivedVotes = new Dictionary<string, List<string>>();
 
-                foreach ((string requestId, HashSet<PubKey> pubKeys) in this.interopTransactionManager.GetStatus())
+                foreach ((string requestId, HashSet<PubKey> pubKeys) in this.coordinationManager.GetStatus())
                 {
                     var pubKeyList = new List<string>();
 

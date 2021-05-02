@@ -10,6 +10,7 @@ using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Coordination;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Interop
@@ -22,28 +23,32 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private readonly IFederationManager federationManager;
 
-        private readonly IInteropTransactionManager interopTransactionManager;
+        private readonly ICoordinationManager coordinationManager;
 
         private readonly IETHClient ETHClient;
 
-        public InteropBehavior(Network network, IFederationManager federationManager, IInteropTransactionManager interopTransactionManager, IETHClient ETHClient)
+        private readonly InteropSettings interopSettings;
+
+        public InteropBehavior(Network network, IFederationManager federationManager, ICoordinationManager coordinationManager, IETHClient ETHClient, InteropSettings interopSettings)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(federationManager, nameof(federationManager));
-            Guard.NotNull(interopTransactionManager, nameof(interopTransactionManager));
+            Guard.NotNull(coordinationManager, nameof(coordinationManager));
             Guard.NotNull(ETHClient, nameof(ETHClient));
+            Guard.NotNull(interopSettings, nameof(interopSettings));
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.federationManager = federationManager;
-            this.interopTransactionManager = interopTransactionManager;
+            this.coordinationManager = coordinationManager;
             this.ETHClient = ETHClient;
+            this.interopSettings = interopSettings;
         }
 
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ETHClient);
+            return new InteropBehavior(this.network, this.federationManager, this.coordinationManager, this.ETHClient, this.interopSettings);
         }
 
         protected override void AttachCore()
@@ -107,7 +112,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
 
-            // Check that the payload is signed by a federation member.
+            // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;
 
             try
@@ -150,7 +155,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
-            this.interopTransactionManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+            this.coordinationManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
         }
 
         private async Task ProcessFeeCoordinationAsync(INetworkPeer peer, FeeCoordinationPayload payload)
@@ -160,7 +165,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("{0} received from '{1}':'{2}'. Request {3} proposing fee distribution of {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.FeeAmount);
 
-            // Check that the payload is signed by a federation member.
+            // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;
 
             try
@@ -180,12 +185,13 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 return;
             }
+            
+            this.coordinationManager.AddFeeVote(payload.RequestId, payload.FeeAmount, pubKey);
 
-            BigInteger confirmationCount;
+            if (this.coordinationManager.GetAgreedTransactionFee(payload.RequestId, this.interopSettings.ETHMultisigWalletQuorum) == 0)
+            {
 
-            this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
-
-            this.interopTransactionManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+            }
         }
     }
 }

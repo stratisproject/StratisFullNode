@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -42,6 +43,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly ChainIndexer chainIndexer;
         private readonly IExternalApiPoller externalApiPoller;
+        private readonly ICoordinationManager coordinationManager;
         private readonly Network network;
 
         private IAsyncLoop requestDepositsTask;
@@ -69,7 +71,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             ChainIndexer chainIndexer,
             Network network,
             IExternalApiPoller externalApiPoller = null,
-            IInteropTransactionManager interopTransactionManager = null)
+            ICoordinationManager coordinationManager = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -82,6 +84,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestRepository = conversionRequestRepository;
             this.chainIndexer = chainIndexer;
             this.externalApiPoller = externalApiPoller;
+            this.coordinationManager = coordinationManager;
             this.network = network;
 
             this.logger = LogManager.GetCurrentClassLogger();
@@ -223,9 +226,27 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated on the other chain.
                     // Note that this may not be precisely the fee that will be used; the multisig members need to agree on the actual amount.
-                    decimal conversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
+                    decimal tempConversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
+                    ulong tempConversionFeeAmountSatoshi = (ulong)(tempConversionFeeAmount * 100_000_000m);
 
-                    this.
+                    // First check if the other nodes have started proposing fees, in which case compare it against what we think the fee should be.
+                    ulong candidateFee = this.coordinationManager.GetCandidateTransactionFee(potentialConversionTransaction.Id.ToString());
+
+                    if (candidateFee == 0UL)
+                    {
+                        candidateFee = tempConversionFeeAmountSatoshi;
+                    }
+
+                    if ((Math.Abs(candidateFee - tempConversionFeeAmount) / tempConversionFeeAmount * 100) <= 10)
+                    {
+                        // The candidate fee
+                    }
+
+                    this.coordinationManager.AddFeeVote(potentialConversionTransaction.Id.ToString(), candidateFee, );
+
+                    ulong conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.interopSettings.);
+
+                    decimal conversionFeeAmount;
 
                     if (conversionFeeAmount == decimal.MinusOne)
                     {

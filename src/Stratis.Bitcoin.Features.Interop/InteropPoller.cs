@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Interop
@@ -40,7 +41,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IFederationHistory federationHistory;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
         private readonly IConversionRequestRepository conversionRequestRepository;
-        private readonly IInteropTransactionManager interopTransactionManager;
+        private readonly ICoordinationManager coordinationManager;
         private readonly Network counterChainNetwork;
         private readonly IExternalApiPoller externalApiPoller;
 
@@ -61,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederationHistory federationHistory,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IConversionRequestRepository conversionRequestRepository,
-            IInteropTransactionManager interopTransactionManager,
+            ICoordinationManager coordinationManager,
             CounterChainNetworkWrapper counterChainNetworkWrapper,
             IExternalApiPoller externalApiPoller)
         {
@@ -76,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federationHistory = federationHistory;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.conversionRequestRepository = conversionRequestRepository;
-            this.interopTransactionManager = interopTransactionManager;
+            this.coordinationManager = coordinationManager;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.externalApiPoller = externalApiPoller;
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
@@ -422,8 +423,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                         this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
 
-                        // TODO: Need to persist vote storage across node shutdowns
-                        this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
+                        this.coordinationManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                         request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
 
@@ -438,13 +438,13 @@ namespace Stratis.Bitcoin.Features.Interop
                         // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
                         // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
 
-                        BigInteger transactionId2 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+                        BigInteger transactionId2 = this.coordinationManager.GetCandidateTransactionId(request.RequestId);
 
                         if (transactionId2 != BigInteger.MinusOne)
                         {
                             await this.BroadcastCoordinationAsync(request.RequestId, transactionId2).ConfigureAwait(false);
 
-                            BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.ETHMultisigWalletQuorum);
+                            BigInteger agreedTransactionId = this.coordinationManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.ETHMultisigWalletQuorum);
 
                             if (agreedTransactionId != BigInteger.MinusOne)
                             {
@@ -459,7 +459,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     case (ConversionRequestStatus.VoteFinalised):
                     {
-                        BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.ETHMultisigWalletQuorum);
+                        BigInteger transactionId3 = this.coordinationManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.ETHMultisigWalletQuorum);
 
                         if (transactionId3 != BigInteger.MinusOne)
                         {
@@ -475,7 +475,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 request.Processed = true;
 
                                 // We no longer need to track votes for this transaction.
-                                this.interopTransactionManager.RemoveTransaction(request.RequestId);
+                                this.coordinationManager.RemoveTransaction(request.RequestId);
                             }
                             else
                             {
@@ -500,7 +500,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
                         // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
                         // Each node must only ever confirm a single transactionId for a given conversion transaction.
-                        BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.ETHMultisigWalletQuorum);
+                        BigInteger agreedUponId = this.coordinationManager.GetAgreedTransactionId(request.RequestId, this.interopSettings.ETHMultisigWalletQuorum);
 
                         if (agreedUponId != BigInteger.MinusOne)
                         {
@@ -524,13 +524,13 @@ namespace Stratis.Bitcoin.Features.Interop
                         }
                         else
                         {
-                            BigInteger transactionId4 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+                            BigInteger transactionId4 = this.coordinationManager.GetCandidateTransactionId(request.RequestId);
 
                             if (transactionId4 != BigInteger.MinusOne)
                             {
                                 this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId4, request.RequestId);
 
-                                this.interopTransactionManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
+                                this.coordinationManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
 
                                 await this.BroadcastCoordinationAsync(request.RequestId, transactionId4).ConfigureAwait(false);
                             }

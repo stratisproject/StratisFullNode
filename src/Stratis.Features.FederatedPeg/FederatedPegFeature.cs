@@ -22,6 +22,7 @@ using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.InputConsolidation;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -278,6 +279,12 @@ namespace Stratis.Features.FederatedPeg
 
                         services.AddSingleton<IConversionRequestKeyValueStore, ConversionRequestKeyValueStore>();
                         services.AddSingleton<IConversionRequestRepository, ConversionRequestRepository>();
+
+                        // The coordination manager only runs on the side chain.
+                        if (!isMainChain)
+                        {
+                            services.AddSingleton<ICoordinationManager, CoordinationManager>();
+                        }
 
                         services.AddSingleton<IMaturedBlocksSyncManager, MaturedBlocksSyncManager>();
                         services.AddSingleton<IWithdrawalHistoryProvider, WithdrawalHistoryProvider>();

@@ -10,6 +10,7 @@ using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
+using Stratis.Features.FederatedPeg.Coordination;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -23,7 +24,7 @@ namespace Stratis.Bitcoin.Features.Interop
         
         private readonly InteropPoller interopPoller;
         
-        private readonly IInteropTransactionManager interopTransactionManager;
+        private readonly ICoordinationManager coordinationManager;
         
         private readonly IETHClient ethereumClientBase;
 
@@ -32,7 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederationManager federationManager,
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
-            IInteropTransactionManager interopTransactionManager, 
+            ICoordinationManager coordinationManager, 
             IETHClient ethereumClientBase,
             IFullNode fullNode)
         {
@@ -40,11 +41,12 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
             this.interopPoller = interopPoller;
-            this.interopTransactionManager = interopTransactionManager;
+            this.coordinationManager = coordinationManager;
             this.ethereumClientBase = ethereumClientBase;
 
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
+            payloadProvider.AddPayload(typeof(FeeCoordinationPayload));
         }
 
         public override Task InitializeAsync()
@@ -52,7 +54,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.interopTransactionManager, this.ethereumClientBase));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.coordinationManager, this.ethereumClientBase));
 
             return Task.CompletedTask;
         }
@@ -75,7 +77,6 @@ namespace Stratis.Bitcoin.Features.Interop
                     .FeatureServices(services => services
                     .AddSingleton<InteropSettings>()
                     .AddSingleton<IETHClient, ETHClient.ETHClient>()
-                    .AddSingleton<IInteropTransactionManager, InteropTransactionManager>()
                     .AddSingleton<InteropPoller>()
                     ));
 

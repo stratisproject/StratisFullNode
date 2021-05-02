@@ -4,9 +4,9 @@ using NBitcoin;
 using NLog;
 using Stratis.Features.FederatedPeg.Conversion;
 
-namespace Stratis.Bitcoin.Features.Interop
+namespace Stratis.Features.FederatedPeg.Coordination
 {
-    public interface IInteropTransactionManager
+    public interface ICoordinationManager
     {
         /// <summary>
         /// Records a vote for a particular transactionId to be associated with the request.
@@ -41,21 +41,38 @@ namespace Stratis.Bitcoin.Features.Interop
 
         /// <summary>Provides mapping of all request ids to pubkeys that have voted for them.</summary>
         Dictionary<string, HashSet<PubKey>> GetStatus();
+
+        void AddFeeVote(string requestId, ulong proposedFee, PubKey pubKey);
+
+        ulong GetAgreedTransactionFee(string requestId, int quroum);
+
+        ulong GetCandidateTransactionFee(string requestId);
     }
 
-    public class InteropTransactionManager : IInteropTransactionManager
+    public class CoordinationManager : ICoordinationManager
     {
         private readonly ILogger logger;
 
+        // Interflux transaction ID votes
         private Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
         private Dictionary<string, HashSet<PubKey>> receivedVotes;
 
+        // Interflux conversion fee votes
+        private Dictionary<string, Dictionary<ulong, int>> activeFeeVotes;
+        private Dictionary<string, HashSet<PubKey>> receivedFeeVotes;
+
         private readonly object lockObject = new object();
 
-        public InteropTransactionManager()
+        public CoordinationManager()
         {
             this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
             this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
+
+            this.activeFeeVotes = new Dictionary<string, Dictionary<ulong, int>>();
+            this.receivedFeeVotes = new Dictionary<string, HashSet<PubKey>>();
+
+            // TODO: Need to persist vote storage across node shutdowns
+
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -65,9 +82,7 @@ namespace Stratis.Bitcoin.Features.Interop
             lock (this.lockObject)
             {
                 if (!this.receivedVotes.TryGetValue(requestId, out HashSet<PubKey> voted))
-                {
                     voted = new HashSet<PubKey>();
-                }
 
                 // Ignore the vote if the pubkey has already submitted a vote.
                 if (voted.Contains(pubKey))
@@ -167,6 +182,78 @@ namespace Stratis.Bitcoin.Features.Interop
             lock (this.lockObject)
             {
                 return this.receivedVotes;
+            }
+        }
+
+        public void AddFeeVote(string requestId, ulong proposedFee, PubKey pubKey)
+        {
+            lock (this.lockObject)
+            {
+                if (!this.receivedFeeVotes.TryGetValue(requestId, out HashSet<PubKey> voted))
+                    voted = new HashSet<PubKey>();
+
+                // Ignore the vote if the pubkey has already submitted a vote.
+                if (voted.Contains(pubKey))
+                    return;
+
+                this.logger.Info("Pubkey {0} adding vote for request {1}, fee {2}.", pubKey.ToHex(), requestId, proposedFee);
+
+                voted.Add(pubKey);
+
+                if (!this.activeFeeVotes.TryGetValue(requestId, out Dictionary<ulong, int> feeVotes))
+                    feeVotes = new Dictionary<ulong, int>();
+
+                if (!feeVotes.ContainsKey(proposedFee))
+                    feeVotes[proposedFee] = 1;
+                else
+                    feeVotes[proposedFee]++;
+
+                this.activeFeeVotes[requestId] = feeVotes;
+                this.receivedFeeVotes[requestId] = voted;
+            }
+        }
+
+        public ulong GetAgreedTransactionFee(string requestId, int quorum)
+        {
+            lock (this.lockObject)
+            {
+                if (!this.activeFeeVotes.ContainsKey(requestId))
+                    return 0UL;
+
+                ulong highestVoted = 0UL;
+                int voteCount = 0;
+                foreach (KeyValuePair<ulong, int> vote in this.activeFeeVotes[requestId])
+                {
+                    if (vote.Value > voteCount && vote.Value >= quorum)
+                    {
+                        highestVoted = vote.Key;
+                        voteCount = vote.Value;
+                    }
+                }
+
+                return highestVoted;
+            }
+        }
+
+        public ulong GetCandidateTransactionFee(string requestId)
+        {
+            lock (this.lockObject)
+            {
+                if (!this.activeFeeVotes.ContainsKey(requestId))
+                    return 0UL;
+
+                ulong highestVoted = 0UL;
+                int voteCount = 0;
+                foreach (KeyValuePair<ulong, int> vote in this.activeFeeVotes[requestId])
+                {
+                    if (vote.Value > voteCount)
+                    {
+                        highestVoted = vote.Key;
+                        voteCount = vote.Value;
+                    }
+                }
+
+                return highestVoted;
             }
         }
     }
