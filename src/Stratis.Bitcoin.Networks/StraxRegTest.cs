@@ -81,11 +81,9 @@ namespace Stratis.Bitcoin.Networks
                 [StraxBIP9Deployments.SystemContracts] = new BIP9DeploymentsParameters("SystemContracts", 3, DateTime.Parse("2021-02-25 06:20:00 GMT"), DateTime.Parse("2031-02-20 00:00:00 GMT"), BIP9DeploymentsParameters.DefaultRegTestThreshold)
             };
 
-            this.SystemContractContainer = new SystemContractContainer(
+            this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
-                new Dictionary<KeyId, string> { },
-                new Dictionary<uint256, (int start, int? end)[]> { },
-                new Dictionary<uint256, (string, bool)> { },
+                new Dictionary<uint160, EmbeddedContractDescriptor> { },
                 new PrimaryAuthenticators(this, new[]
                 {
                     "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",

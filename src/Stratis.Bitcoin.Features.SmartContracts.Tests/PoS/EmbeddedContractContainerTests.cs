@@ -6,38 +6,37 @@ using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.SmartContracts.CLR;
 using Xunit;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 {
-    public class TestSystemContract
+    public class TestEmbeddedContract
     {
 
     }
 
-    public class SystemContractContainerTests
+    public class EmbeddedContractContainerTests
     {
         [Fact]
-        public void CanUseSystemContractContainer()
+        public void CanUseEmbeddedContractContainer()
         {
             var network = new StraxMain();
-            KeyId contractId = new Key().PubKey.Hash;
-            uint256 contractHash = SystemContractContainer.GetPseudoHash(contractId, 1);
-            var container = new SystemContractContainer(
+            EmbeddedContractIdentifier contractId = new EmbeddedContractIdentifier(1, 1);
+            var container = new EmbeddedContractContainer(
                 network,
-                new Dictionary<KeyId, string> { { contractId, typeof(TestSystemContract).ToString() }},
-                new Dictionary<uint256, (int start, int? end)[]> { { contractHash, new[] { (1, (int?)10) } } },
-                new Dictionary<uint256, (string, bool)> { { contractHash, ("SystemContracts", true) } },
+                new Dictionary<uint160, EmbeddedContractDescriptor> {
+                    { contractId, new EmbeddedContractDescriptor(typeof(TestEmbeddedContract).AssemblyQualifiedName,new[] { (1, (int?)10) }, "SystemContracts", true) } },
                 null);
 
-            uint256 hash = container.GetContractHashes().First();
+            uint160 id = container.GetContractIdentifiers().First();
 
-            Assert.True(SystemContractContainer.IsPseudoHash(hash));
+            Assert.True(EmbeddedContractIdentifier.IsEmbedded(contractId));
 
-            (string contractType, uint version) typeAndVersion = container.GetContractTypeAndVersion(hash);
+            Assert.True(container.TryGetContractTypeAndVersion(id, out string contractType, out uint version));
 
-            Assert.Equal(typeof(TestSystemContract).ToString(), typeAndVersion.contractType);
-            Assert.Equal((uint)1, typeAndVersion.version);
+            Assert.Equal(typeof(TestEmbeddedContract).AssemblyQualifiedName, contractType);
+            Assert.Equal(contractId.Version, version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };
             var mockChainStore = new Mock<IChainStore>();
@@ -47,15 +46,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             // Active if previous header is at height 9.
             chainedHeader.SetPrivatePropertyValue("Height", 9);
-            Assert.True(container.IsActive(hash, chainedHeader, (h, d) => false));
+            Assert.True(container.IsActive(id, chainedHeader, (h, d) => false));
 
             // Inactive if previous header is at height 10.
             chainedHeader.SetPrivatePropertyValue("Height", 10);
-            Assert.False(container.IsActive(hash, chainedHeader, (h, d) => false));
+            Assert.False(container.IsActive(id, chainedHeader, (h, d) => false));
 
             // Inactive if previous header is at height 10 unless activated by BIP 9.
             chainedHeader.SetPrivatePropertyValue("Height", 10);
-            Assert.True(container.IsActive(hash, chainedHeader, (h, d) => true));
+            Assert.True(container.IsActive(id, chainedHeader, (h, d) => true));
         }
 
         [Fact]
@@ -63,9 +62,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
         {
             foreach (Network network in new Network[] { new StraxMain(), new StraxTest(), new StraxRegTest() })
             {
-                foreach (uint256 hash in network.SystemContractContainer.GetContractHashes())
+                foreach (uint160 id in network.EmbeddedContractContainer.GetContractIdentifiers())
                 {
-                    (string typeName, uint version) = network.SystemContractContainer.GetContractTypeAndVersion(hash);
+                    Assert.True(network.EmbeddedContractContainer.TryGetContractTypeAndVersion(id, out string typeName, out uint version));
 
                     Assert.NotNull(Type.GetType(typeName));
                 }

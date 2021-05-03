@@ -38,11 +38,9 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 119_200; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
             this.RewardClaimerBlockInterval = 100;
             
-            this.SystemContractContainer = new SystemContractContainer(
+            this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
-                new Dictionary<KeyId, string> { },
-                new Dictionary<uint256, (int start, int? end)[]> { },
-                new Dictionary<uint256, (string, bool)> { },
+                new Dictionary<uint160, EmbeddedContractDescriptor> { },
                 null /* TODO */);
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
