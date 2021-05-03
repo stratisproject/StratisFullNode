@@ -51,100 +51,104 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void CanAddAndRemoveMembers()
         {
+            var context = new ContractExecutorTestContext(new SmartContractsPoSRegTest());
             var internalTxExecutor = new Mock<IInternalTransactionExecutor>();
             var internalHashHelper = new Mock<IInternalHashHelper>();
-            var persistentState = new TestPersistentState();
-            var block = new Mock<IBlock>();
-            var message = new Mock<IMessage>();
+            var testAddress = ((uint160)new EmbeddedContractIdentifier(2, 1)).ToAddress();
+            var persistentState = new PersistentState(
+                context.PersistenceStrategy,
+                context.Serializer, testAddress.ToUint160());
+            IBlock block = new Block(1, testAddress);
+            IMessage message = new Message(testAddress, testAddress, 0);
             Func<ulong> getBalance = () => 1;
-
-            var contractPrimitiveSerializer = new ContractPrimitiveSerializer(this.network);
-            var serializer = new Serializer(contractPrimitiveSerializer);
 
             ISmartContractState state = Mock.Of<ISmartContractState>(
                 g => g.InternalTransactionExecutor == internalTxExecutor.Object
                      && g.InternalHashHelper == internalHashHelper.Object
                      && g.PersistentState == persistentState
-                     && g.Block == block.Object
-                     && g.Message == message.Object
+                     && g.Block == block
+                     && g.Message == message
                      && g.GetBalance == getBalance
-                     && g.Serializer == serializer);
+                     && g.Serializer == context.Serializer);
 
             IContract contract = Contract.CreateUninitialized(typeof(MultiSig), state, new uint160(3));
             var instance = (MultiSig)contract.GetPrivateFieldValue("instance");
 
-            contract.InvokeConstructor(new object[] { this.network, (uint)1 });
+            var result = contract.InvokeConstructor(new object[] { context.PersistenceStrategy, this.network });
 
             Assert.True(persistentState.GetBool("Initialized"));
 
+            var authPersistentState = new PersistentState(context.PersistenceStrategy, context.Serializer, new EmbeddedContractIdentifier(1, 1));
+
             var federationDetails = this.network.Federations.GetOnlyFederation().GetFederationDetails();
-            var federationId = this.network.Federations.GetFederations().Single().Id;
+            var federationId = this.network.Federations.GetFederations().Single().Id.ToHex(this.network);
 
             var signatories = persistentState.GetArray<string>($"Members:{federationId}");
 
             PubKey[] actual = signatories.Select(s => new PubKey(s)).ToArray();
 
             Assert.Equal(federationDetails.transactionSigningKeys, actual);
-            Assert.Equal((uint)federationDetails.signaturesRequired, persistentState.GetUInt32($"Members:{federationId}"));
+            Assert.Equal((uint)federationDetails.signaturesRequired, persistentState.GetUInt32($"Quorum:{federationId}"));
 
             var keys = new[] { new Key(), new Key(), new Key(), new Key() };
             var keyIds = keys.Select(k => k.PubKey.Hash).ToArray();
+            var pubKeys = keys.Select(k => k.PubKey.ToHex(this.network)).ToArray();
             var addresses = keyIds.Select(id => id.ToBytes().ToAddress()).ToArray();
 
             // Initialize state.
-            persistentState.SetArray("Signatories:main", addresses.Take(3).ToArray());
-            persistentState.SetUInt32("Quorum:main", 2);
+            authPersistentState.SetArray("Signatories:main", addresses.Take(3).ToArray());
+            authPersistentState.SetUInt32("Quorum:main", 2);
 
-            var callGetSignatories = new MethodCall("GetSignatories", new object[] { "main" });
+            var callGetSignatories = new MethodCall("GetFederationMembers", new object[] { federationId });
             IContractInvocationResult resultGetSignatories = contract.Invoke(callGetSignatories);
             Assert.True(resultGetSignatories.IsSuccess);
-            Assert.Equal(3, ((Address[])resultGetSignatories.Return).Length);
+            Assert.Equal(3, ((string[])resultGetSignatories.Return).Length);
 
             byte[] noSignatures = contractPrimitiveSerializer.Serialize(new string[] { });
 
             // First call the method without the sigatures.
-            string addSignatoryChallenge = $"AddSignatory(Nonce:0,Group:main,Address:{addresses[3]},NewSize:4,NewQuorum:3)";
+            string addSignatoryChallenge = $"AddMember(Nonce:0,FederationId:{federationId},PubKey:{pubKeys[3]},NewSize:4,NewQuorum:3)";
             string expectedAddSignatoryError = $"Please provide 2 valid signatures for '{addSignatoryChallenge}' from 'main'.";
-            var callAddSignatory = new MethodCall("AddSignatory", new object[] { noSignatures, "main", addresses[3], (uint)4, (uint)3 });
+            var callAddSignatory = new MethodCall("AddMember", new object[] { noSignatures, federationId, pubKeys[3], (uint)4, (uint)3 });
             IContractInvocationResult resultAddSignatory = contract.Invoke(callAddSignatory);
             Assert.False(resultAddSignatory.IsSuccess);
             Assert.Contains(expectedAddSignatoryError, resultAddSignatory.ErrorMessage);
 
             // Now add the requested signatures.
             byte[] signatures = contractPrimitiveSerializer.Serialize(keys.Select(k => k.SignMessage(addSignatoryChallenge)).ToArray());
-            var callAddSignatory2 = new MethodCall("AddSignatory", new object[] { signatures, "main", addresses[3], (uint)4, (uint)3 });
+            var callAddSignatory2 = new MethodCall("AddMember", new object[] { signatures, federationId, pubKeys[3], (uint)4, (uint)3 });
             IContractInvocationResult resultAddSignatory2 = contract.Invoke(callAddSignatory2);
             Assert.True(resultAddSignatory2.IsSuccess);
 
-            var callGetSignatories2 = new MethodCall("GetSignatories", new object[] { "main" });
+            var callGetSignatories2 = new MethodCall("GetFederationMembers", new object[] { federationId });
             IContractInvocationResult resultGetSignatories2 = contract.Invoke(callGetSignatories2);
             Assert.True(resultGetSignatories2.IsSuccess);
-            Assert.Equal(4, ((Address[])resultGetSignatories2.Return).Length);
+            Assert.Equal(4, ((string[])resultGetSignatories2.Return).Length);
 
-            var callGetQuorum = new MethodCall("GetQuorum", new object[] { "main" });
+            var callGetQuorum = new MethodCall("GetFederationQuorum", new object[] { federationId });
             IContractInvocationResult resultGetQuorum = contract.Invoke(callGetQuorum);
             Assert.True(resultGetQuorum.IsSuccess);
             Assert.Equal((uint)3, (uint)resultGetQuorum.Return);
 
-            // First call the method without the sigatures.
-            string removeSignatoryChallenge = $"RemoveSignatory(Nonce:1,Group:main,Address:{addresses[2]},NewSize:3,NewQuorum:2)";
-            string expectedRemoveSignatoryError = $"Please provide 3 valid signatures for '{removeSignatoryChallenge}' from 'main'.";
-            var callRemoveSignatory = new MethodCall("RemoveSignatory", new object[] { noSignatures, "main", addresses[2], (uint)3, (uint)2 });
+            // First call the method without the signatures.
+            string removeSignatoryChallenge = $"RemoveMember(Nonce:1,FederationId:{federationId},PubKey:{pubKeys[3]},NewSize:3,NewQuorum:2)";
+            string expectedRemoveSignatoryError = $"Please provide 2 valid signatures for '{removeSignatoryChallenge}' from 'main'.";
+            var callRemoveSignatory = new MethodCall("RemoveMember", new object[] { noSignatures, federationId, pubKeys[3], (uint)3, (uint)2 });
             IContractInvocationResult resultRemoveSignatory = contract.Invoke(callRemoveSignatory);
             Assert.False(resultRemoveSignatory.IsSuccess);
             Assert.Contains(expectedRemoveSignatoryError, resultRemoveSignatory.ErrorMessage);
 
             signatures = contractPrimitiveSerializer.Serialize(keys.Select(k => k.SignMessage(removeSignatoryChallenge)).ToArray());
-            var callRemoveSignatory2 = new MethodCall("RemoveSignatory", new object[] { signatures, "main", addresses[2], (uint)3, (uint)2 });
+            var callRemoveSignatory2 = new MethodCall("RemoveMember", new object[] { signatures, federationId, pubKeys[3], (uint)3, (uint)2 });
             IContractInvocationResult resultRemoveSignatory2 = contract.Invoke(callRemoveSignatory2);
             Assert.True(resultRemoveSignatory2.IsSuccess);
 
-            var callGetSignatories3 = new MethodCall("GetSignatories", new object[] { "main" });
+            var callGetSignatories3 = new MethodCall("GetFederationMembers", new object[] { federationId });
             IContractInvocationResult resultGetSignatories3 = contract.Invoke(callGetSignatories3);
             Assert.True(resultGetSignatories3.IsSuccess);
-            Assert.Equal(3, ((Address[])resultGetSignatories3.Return).Length);
+            Assert.Equal(3, ((string[])resultGetSignatories3.Return).Length);
 
-            var callGetQuorum2 = new MethodCall("GetQuorum", new object[] { "main" });
+            var callGetQuorum2 = new MethodCall("GetFederationQuorum", new object[] { federationId });
             IContractInvocationResult resultGetQuorum2 = contract.Invoke(callGetQuorum2);
             Assert.True(resultGetQuorum2.IsSuccess);
             Assert.Equal((uint)2, (uint)resultGetQuorum2.Return);

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using NBitcoin;
 using Stratis.SmartContracts;
+using Stratis.SmartContracts.CLR;
 
 public class MultiSig : SmartContract
 {
@@ -8,12 +9,14 @@ public class MultiSig : SmartContract
     private readonly uint version;
     private readonly Authentication authentication;
 
-    public MultiSig(ISmartContractState state, Network network, uint version) : base(state)
+    public MultiSig(ISmartContractState state, IPersistenceStrategy persistenceStrategy, Network network) : base(state)
     {
+        uint version = new EmbeddedContractIdentifier(state.Message.ContractAddress.ToUint160()).Version;
+
         Assert(version == 1, "Only a version of 1 is supported.");
 
         this.version = version;
-        this.authentication = new Authentication(state, network, 1);
+        this.authentication = new Authentication(GetState(state, persistenceStrategy, new EmbeddedContractIdentifier(1, 1)), network);
 
         // Exit if already initialized.
         if (this.Initialized)
@@ -26,6 +29,12 @@ public class MultiSig : SmartContract
         }
 
         this.Initialized = true;
+    }
+
+    private ISmartContractState GetState(ISmartContractState state, IPersistenceStrategy persistenceStrategy, uint160 address)
+    {
+        return new SmartContractState(state.Block, state.Message, new PersistentState(persistenceStrategy, state.Serializer, address),
+            state.Serializer, state.ContractLogger, state.InternalTransactionExecutor, state.InternalHashHelper, state.GetBalance);
     }
 
     public bool Initialized
