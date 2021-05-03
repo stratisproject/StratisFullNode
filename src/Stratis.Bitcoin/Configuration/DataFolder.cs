@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Configuration
         /// <summary>Path to the folder for <see cref="ProvenBlockHeader"/> items database files.</summary>
         public string ProvenBlockHeaderPath { get; set; }
 
-        /// <summary></summary>
+        /// <summary>True if the chain state directories are scheduled for deletion on the next graceful shutdown.</summary>
         public bool ScheduledChainDeletion { get; private set; }
 
         /// <summary>
