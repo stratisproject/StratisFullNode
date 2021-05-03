@@ -32,7 +32,7 @@ namespace Stratis.SmartContracts.CLR
         /// <returns><c>True</c> if its an embedded code hash and <c>false</c> otherwise.</returns>
         public static bool IsEmbeddedCodeHash(uint256 hash)
         {
-            return hash.GetLow64() == 0 && (hash >> 8).GetLow32() == 0 && EmbeddedContractIdentifier.IsEmbedded(new EmbeddedCodeHash(hash).Id);
+            return hash.GetLow64() == 0 && (hash >> 64).GetLow32() == 0 && EmbeddedContractIdentifier.IsEmbedded(new EmbeddedCodeHash(hash).Id);
         }
     }
 }
