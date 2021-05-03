@@ -505,11 +505,17 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             return total == amount;
         }
 
-        public static void SendCoins(CoreNode sender, CoreNode receiver, Money amount, int? confirmations = null)
+        public static void SendCoins(CoreNode sender, CoreNode receiver, Money amount, int? utxoCount = 1)
         {
             var receivingAddress = receiver.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(Name, AccountName));
 
-            var context = CreateContext(sender.FullNode.Network, new WalletAccountReference(Name, AccountName), Password, receivingAddress.ScriptPubKey, amount, FeeType.Medium, (int)sender.FullNode.Network.Consensus.CoinbaseMaturity);
+            Money singleUtxoAmount = amount / utxoCount;
+
+            var recipients = new List<Recipient>(utxoCount.Value);
+            for (int i = 0; i < utxoCount; i++)
+                recipients.Add(new Recipient { ScriptPubKey = receivingAddress.ScriptPubKey, Amount = singleUtxoAmount });
+
+            var context = CreateContext(sender.FullNode.Network, new WalletAccountReference(Name, AccountName), Password, recipients, FeeType.Medium, (int)sender.FullNode.Network.Consensus.CoinbaseMaturity);
 
             var transaction = sender.FullNode.WalletTransactionHandler().BuildTransaction(context);
 
@@ -521,7 +527,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));
         }
 
-        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, Script destinationScript, Money amount, FeeType feeType, int minConfirmations)
+        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations)
         {
             return new TransactionBuildContext(network)
             {
@@ -529,7 +535,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
                 MinConfirmations = minConfirmations,
                 FeeType = feeType,
                 WalletPassword = password,
-                Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destinationScript } }.ToList()
+                Recipients = recipients
             };
         }
     }

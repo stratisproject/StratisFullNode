@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     byte[] row = this.leveldb.Get(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
                     Coins outputs = row != null ? this.dBreezeSerializer.Deserialize<Coins>(row) : null;
 
-                    this.logger.LogTrace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
+                    this.logger.LogDebug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
                     res.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, outputs));
                 }
@@ -196,9 +196,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height)).ToArray());
 
                 if (row == null)
-                {
                     throw new InvalidOperationException($"No rewind data found for block `{current}`");
-                }
 
                 batch.Delete(BitConverter.GetBytes(current.Height));
 

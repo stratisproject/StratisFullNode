@@ -4,6 +4,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
@@ -32,10 +33,12 @@ namespace Stratis.StraxDnsD
         {
             try
             {
-                var nodeSettings = new NodeSettings(networksSelector:Networks.Strax, protocolVersion:ProtocolVersion.PROVEN_HEADER_VERSION, args:args)
+                var nodeSettings = new NodeSettings(networksSelector: Networks.Strax, protocolVersion: ProtocolVersion.PROVEN_HEADER_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.PROVEN_HEADER_VERSION
                 };
+
+                DbType dbType = nodeSettings.GetDbType();
 
                 var dnsSettings = new DnsSettings(nodeSettings);
 
@@ -48,9 +51,9 @@ namespace Stratis.StraxDnsD
                 {
                     // Build the Dns full node.
                     node = new FullNodeBuilder()
-                        .UseNodeSettings(nodeSettings)
-                        .UseBlockStore()
-                        .UsePosConsensus()
+                        .UseNodeSettings(nodeSettings, dbType)
+                        .UseBlockStore(dbType)
+                        .UsePosConsensus(dbType)
                         .UseMempool()
                         .UseWallet()
                         .AddSQLiteWalletRepository()
@@ -64,8 +67,8 @@ namespace Stratis.StraxDnsD
                 {
                     // Build the Dns node.
                     node = new FullNodeBuilder()
-                        .UseNodeSettings(nodeSettings)
-                        .UsePosConsensus()
+                        .UseNodeSettings(nodeSettings, dbType)
+                        .UsePosConsensus(dbType)
                         .UseApi()
                         .AddRPC()
                         .UseDns()

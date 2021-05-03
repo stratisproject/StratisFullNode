@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using NBitcoin;
+using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.Consensus.Rules.CommonRules;
 using Stratis.Bitcoin.Features.Miner.Interfaces;
 using Stratis.Bitcoin.Features.Miner.Staking;
 using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.FederatedPeg.Distribution;
 using Xunit;
 
 namespace Stratis.Features.FederatedPeg.IntegrationTests
@@ -83,7 +86,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
 
             // The first staked block would have been 21 and as min confs is 1, the first eligible blocks
-            // for rewards would have been 22 and the first tx woul dhave ony been included in block 23.
+            // for rewards would have been 22 and the first tx would have ony been included in block 23.
             // Check that blocks 23 to 30 each contains only 1 reward transaction.
             for (int height = 23; height <= 30; height++)
             {
@@ -122,6 +125,53 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             Assert.Equal(StraxCoinstakeRule.CirrusTransactionTag(network.CirrusRewardDummyAddress), cirrusDummy.ScriptPubKey);
             TxOut multiSigAddress = block41.Transactions[2].Outputs[1];
             Assert.Equal(network.Federations.GetOnlyFederation().MultisigScript.PaymentScript, multiSigAddress.ScriptPubKey);
+        }
+
+        [Fact]
+        public void RewardsToSideChainCanHandleReorgs()
+        {
+            using var builder = NodeBuilder.Create(this);
+
+            var configParameters = new NodeConfigParameters { { "txindex", "1" } };
+            var network = new StraxRegTestAdjusedCoinbaseMaturity();
+
+            // Start 2 nodes
+            CoreNode nodeA = builder.CreateStratisPosNode(network, "rewards-1-nodeA", configParameters: configParameters).AddRewardClaimer().OverrideDateTimeProvider().WithWallet().Start();
+            CoreNode nodeB = builder.CreateStratisPosNode(network, "rewards-1-nodeB", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
+
+            TestHelper.ConnectAndSync(nodeA, nodeB);
+
+            // Mine some blocks to mature the premine.
+            TestHelper.MineBlocks(nodeA, 20);
+
+            // Start staking on the node.
+            IPosMinting minter = nodeA.FullNode.NodeService<IPosMinting>();
+            minter.Stake(new List<WalletSecret>() {
+                new WalletSecret()
+                {
+                    WalletName = "mywallet", WalletPassword = "password"
+                }
+            });
+
+            // Stake to block height 40
+            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 40, 120), waitTimeSeconds: 120);
+
+            // Stop staking.
+            minter.StopStake();
+
+            // Ensure nodes are synced.
+            TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
+
+            // Call the block connected again on block 40.
+            // This is to simulate that a rewind occurred to block 39 and block 40 was reconnected.
+            // The reward claimer should disregard this block connected event and just wait
+            // for the next reward claiming height.
+            // The test passes if no exception is thrown.
+            ChainedHeader chainedHeader40 = nodeB.FullNode.ChainIndexer.GetHeader(40);
+            Block block40 = nodeB.FullNode.BlockStore().GetBlock(chainedHeader40.HashBlock);
+            ChainedHeaderBlock chainedHeaderBlock = new ChainedHeaderBlock(block40, chainedHeader40);
+            RewardClaimer rewardClaimer = nodeA.FullNode.NodeService<RewardClaimer>();
+            rewardClaimer.InvokeMethod("OnBlockConnected", new BlockConnected(chainedHeaderBlock));
         }
     }
 }
