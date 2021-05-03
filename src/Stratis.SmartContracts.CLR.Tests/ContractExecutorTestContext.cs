@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Patricia;
@@ -33,13 +35,17 @@ namespace Stratis.SmartContracts.CLR.Tests
         public ISmartContractStateFactory SmartContractStateFactory { get; }
         public StateProcessor StateProcessor { get; }
         public Serializer Serializer { get; }
+        public Mock<IEmbeddedContractContainer> mockEmbeddedContractContainer { get; }
+        public Mock<IServiceProvider> mockServiceProvider { get; }
+        public IPersistenceStrategy PersistenceStrategy { get; }
 
-        public ContractExecutorTestContext()
+        public ContractExecutorTestContext(Network network = null)
         {
-            this.Network = new SmartContractsRegTest();
+            this.Network = network ?? new SmartContractsRegTest();
             this.KeyEncodingStrategy = BasicKeyEncodingStrategy.Default;
             this.LoggerFactory = ExtendedLoggerFactory.Create();
             this.State = new StateRepositoryRoot(new NoDeleteSource<byte[], byte[]>(new MemoryDictionarySource()));
+            this.PersistenceStrategy = new TestPersistenceStrategy(this.State);
             this.ContractPrimitiveSerializer = new ContractPrimitiveSerializer(this.Network);
             this.Serializer = new Serializer(this.ContractPrimitiveSerializer);
             this.AddressGenerator = new AddressGenerator();
@@ -47,7 +53,28 @@ namespace Stratis.SmartContracts.CLR.Tests
             this.AssemblyLoader = new ContractAssemblyLoader();
             this.ModuleDefinitionReader = new ContractModuleDefinitionReader();
             this.ContractCache = new ContractAssemblyCache();
-            this.Vm = new ReflectionVirtualMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache);
+            this.mockEmbeddedContractContainer = new Mock<IEmbeddedContractContainer>();
+            this.mockServiceProvider = new Mock<IServiceProvider>();
+            
+            {
+                var outputType = typeof(Authentication).AssemblyQualifiedName;
+                var version = (uint)1;
+                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractIdentifier(1, 1), out outputType, out version)).Returns(true);
+            }
+
+            {
+                var outputType = typeof(MultiSig).AssemblyQualifiedName;
+                var version = (uint)1;
+                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractIdentifier(2, 1), out outputType, out version)).Returns(true);
+            }
+
+            this.mockEmbeddedContractContainer.Setup(x => x.GetContractIdentifiers()).Returns(new[] { 
+                (uint160)new EmbeddedContractIdentifier(1, 1),
+                (uint160)new EmbeddedContractIdentifier(2, 1)
+            });
+            this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(Network)))).Returns(this.Network);
+            this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IPersistenceStrategy)))).Returns(this.PersistenceStrategy);
+            this.Vm = new ReflectionVirtualMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache, this.mockServiceProvider.Object, this.mockEmbeddedContractContainer.Object);
             this.StateProcessor = new StateProcessor(this.Vm, this.AddressGenerator);
             this.InternalTxExecutorFactory = new InternalExecutorFactory(this.LoggerFactory, this.StateProcessor);
             this.SmartContractStateFactory = new SmartContractStateFactory(this.ContractPrimitiveSerializer, this.InternalTxExecutorFactory, this.Serializer);

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
@@ -25,6 +27,8 @@ namespace Stratis.SmartContracts.CLR
         private readonly ILoader assemblyLoader;
         private readonly IContractModuleDefinitionReader moduleDefinitionReader;
         private readonly IContractAssemblyCache assemblyCache;
+        private readonly IServiceProvider serviceProvider;
+        private readonly IEmbeddedContractContainer embeddedContractContainer;
         public const int VmVersion = 1;
         public const long MemoryUnitLimit = 100_000;
 
@@ -32,13 +36,17 @@ namespace Stratis.SmartContracts.CLR
             ILoggerFactory loggerFactory,
             ILoader assemblyLoader,
             IContractModuleDefinitionReader moduleDefinitionReader,
-            IContractAssemblyCache assemblyCache)
+            IContractAssemblyCache assemblyCache,
+            IServiceProvider serviceProvider = null,
+            IEmbeddedContractContainer embeddedContractContainer = null)
         {
             this.validator = validator;
             this.logger = loggerFactory.CreateLogger(this.GetType());
             this.assemblyLoader = assemblyLoader;
             this.moduleDefinitionReader = moduleDefinitionReader;
             this.assemblyCache = assemblyCache;
+            this.serviceProvider = serviceProvider;
+            this.embeddedContractContainer = embeddedContractContainer;
         }
 
         /// <summary>
@@ -179,78 +187,109 @@ namespace Stratis.SmartContracts.CLR
         {
             IContract contract;
             Observer previousObserver = null;
+            CachedAssemblyPackage assemblyPackage = null;
 
-            // Hash the code
-            byte[] codeHash = HashHelper.Keccak256(contractCode);
-            uint256 codeHashUint256 = new uint256(codeHash);
+            uint160 address = contractState.Message.ContractAddress.ToUint160();
+            bool isEmbeddedContract = EmbeddedContractIdentifier.IsEmbedded(address);
+            uint256 codeHashUint256 = isEmbeddedContract ? new EmbeddedCodeHash(address) : new uint256(HashHelper.Keccak256(contractCode));
+            uint version;
 
-            // Lets see if we already have an assembly
-            CachedAssemblyPackage assemblyPackage = this.assemblyCache.Retrieve(codeHashUint256);
-
-            if (assemblyPackage != null)
+            if (isEmbeddedContract && this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out version))
             {
-                // If the assembly is in the cache, keep a reference to its observer around.
-                // We might be in a nested execution for the same assembly,
-                // in which case we need to restore the previous observer later.
-                previousObserver = assemblyPackage.Assembly.GetObserver();
+                // TODO: Verify that the contract is white-listed.
 
-                Type type = assemblyPackage.Assembly.GetType(typeName);
-
-                uint160 address = contractState.Message.ContractAddress.ToUint160();
+                Type type = Type.GetType(typeName);
                 contract = Contract.CreateUninitialized(type, contractState, address);
+
+                // Invoke the constructor of the provided contract code
+                Result<object[]> result = GetEmbeddedConstructorParameters(type, version);
+                if (result.IsFailure)
+                {
+                    this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
+                    return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, result.Error);
+                }
+
+                IContractInvocationResult invocationResult2 = contract.InvokeConstructor(result.Value);
+
+                if (!invocationResult2.IsSuccess)
+                {
+                    this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
+                    return GetInvocationVmErrorResult(invocationResult2);
+                }
+
+                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_SUCCEEDED");
             }
             else
             {
-                // Rewrite from scratch.
-                using (IContractModuleDefinition moduleDefinition = this.moduleDefinitionReader.Read(contractCode).Value)
+                // Lets see if we already have an assembly
+                assemblyPackage = this.assemblyCache.Retrieve(codeHashUint256);
+
+                if (assemblyPackage != null)
                 {
-                    var rewriter = new ObserverInstanceRewriter();
+                    // If the assembly is in the cache, keep a reference to its observer around.
+                    // We might be in a nested execution for the same assembly,
+                    // in which case we need to restore the previous observer later.
+                    previousObserver = assemblyPackage.Assembly.GetObserver();
 
-                    if (!this.Rewrite(moduleDefinition, rewriter))
-                        return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Rewrite module failed");
+                    Type type = assemblyPackage.Assembly.GetType(typeName);
 
-                    Result<ContractByteCode> getCodeResult = this.GetByteCode(moduleDefinition);
-
-                    if (!getCodeResult.IsSuccess)
-                        return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Serialize module failed");
-
-                    // Everything worked. Assign the code that will be executed.
-                    ContractByteCode code = getCodeResult.Value;
-
-                    // Creating a new observer instance here is necessary due to nesting.
-                    // If a nested call takes place it will use a new gas meter instance,
-                    // due to the fact that the nested call's gas limit may be specified by the user.
-                    // Because of that we can't reuse the same observer for a single execution.
-
-                    Result<IContract> contractLoadResult = this.Load(
-                        code,
-                        typeName,
-                        contractState.Message.ContractAddress.ToUint160(),
-                        contractState);
-
-                    if (!contractLoadResult.IsSuccess)
+                    contract = Contract.CreateUninitialized(type, contractState, address);
+                }
+                else
+                {
+                    // Rewrite from scratch.
+                    using (IContractModuleDefinition moduleDefinition = this.moduleDefinitionReader.Read(contractCode).Value)
                     {
-                        return VmExecutionResult.Fail(VmExecutionErrorKind.LoadFailed, contractLoadResult.Error);
+                        var rewriter = new ObserverInstanceRewriter();
+
+                        if (!this.Rewrite(moduleDefinition, rewriter))
+                            return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Rewrite module failed");
+
+                        Result<ContractByteCode> getCodeResult = this.GetByteCode(moduleDefinition);
+
+                        if (!getCodeResult.IsSuccess)
+                            return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Serialize module failed");
+
+                        // Everything worked. Assign the code that will be executed.
+                        ContractByteCode code = getCodeResult.Value;
+
+                        // Creating a new observer instance here is necessary due to nesting.
+                        // If a nested call takes place it will use a new gas meter instance,
+                        // due to the fact that the nested call's gas limit may be specified by the user.
+                        // Because of that we can't reuse the same observer for a single execution.
+
+                        Result<IContract> contractLoadResult = this.Load(
+                            code,
+                            typeName,
+                            contractState.Message.ContractAddress.ToUint160(),
+                            contractState);
+
+                        if (!contractLoadResult.IsSuccess)
+                        {
+                            return VmExecutionResult.Fail(VmExecutionErrorKind.LoadFailed, contractLoadResult.Error);
+                        }
+
+                        contract = contractLoadResult.Value;
+
+                        assemblyPackage = new CachedAssemblyPackage(new ContractAssembly(contract.Type.Assembly));
+
+                        // Cache this completely validated and rewritten contract to reuse later.
+                        this.assemblyCache.Store(codeHashUint256, assemblyPackage);
                     }
-
-                    contract = contractLoadResult.Value;
-
-                    assemblyPackage = new CachedAssemblyPackage(new ContractAssembly(contract.Type.Assembly));
-
-                    // Cache this completely validated and rewritten contract to reuse later.
-                    this.assemblyCache.Store(codeHashUint256, assemblyPackage);
                 }
             }
 
             this.LogExecutionContext(contract.State.Block, contract.State.Message, contract.Address);
 
             // Set new Observer and load and execute.
-            assemblyPackage.Assembly.SetObserver(executionContext.Observer);
+            if (!isEmbeddedContract)
+                assemblyPackage.Assembly.SetObserver(executionContext.Observer);
 
             IContractInvocationResult invocationResult = contract.Invoke(methodCall);
 
             // Always reset the observer, even if the previous was null.
-            assemblyPackage.Assembly.SetObserver(previousObserver);
+            if (!isEmbeddedContract)
+                assemblyPackage.Assembly.SetObserver(previousObserver);
 
             if (!invocationResult.IsSuccess)
             {
@@ -277,6 +316,32 @@ namespace Stratis.SmartContracts.CLR
             }
 
             return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, invocationResult.ErrorMessage);
+        }
+
+        private Result<object[]> GetEmbeddedConstructorParameters(Type type, uint version)
+        {
+            // If its an embedded contract then we feed the constructor anything it wants including other contracts.
+            // Note: Only one (backwards-compatible) contructor is allowed.
+            ConstructorInfo info = type.GetConstructors().Single();
+            ParameterInfo[] parameterTypes = info.GetParameters().ToArray();
+            if (parameterTypes[0].ParameterType != typeof(ISmartContractState))
+            {
+                const string typeNotFoundError = "Invalid constructor!";
+
+                this.logger.LogDebug(typeNotFoundError);
+
+                return Result.Fail<object[]>($"Constructor should contain a first argument of type {nameof(ISmartContractState)}.");
+            }
+
+            parameterTypes = parameterTypes.Skip(1).ToArray();
+            var parameters = new object[parameterTypes.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {                
+                Type parameterType = parameterTypes[i].ParameterType;
+                parameters[i] = this.serviceProvider.GetService(parameterType);
+            }
+
+            return Result.Ok(parameters);
         }
 
         /// <summary>
