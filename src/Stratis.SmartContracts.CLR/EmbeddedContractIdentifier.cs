@@ -6,8 +6,7 @@ namespace Stratis.SmartContracts.CLR
 {
     public struct EmbeddedContractIdentifier
     {
-        private const string signature = "Embedded";
-        private static byte[] embeddedContractSignature = System.Text.Encoding.ASCII.GetBytes(signature);
+        private static byte[] embeddedContractSignature = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0 };
         private uint160 value;
 
         public EmbeddedContractIdentifier(uint160 id)
@@ -31,7 +30,7 @@ namespace Stratis.SmartContracts.CLR
 
         public static bool IsEmbedded(uint160 id)
         {
-            return System.Text.Encoding.ASCII.GetString(id.ToBytes(), 0, embeddedContractSignature.Length) == signature;
+            return id.GetLow64() == BitConverter.ToUInt64(embeddedContractSignature);
         }
     }
 
