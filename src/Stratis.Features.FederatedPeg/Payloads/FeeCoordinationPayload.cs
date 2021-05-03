@@ -1,7 +1,7 @@
 ﻿using NBitcoin;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
-namespace Stratis.Bitcoin.Features.Interop.Payloads
+namespace Stratis.Features.FederatedPeg.Payloads
 {
     [Payload("feecoord")]
     public class FeeCoordinationPayload : Payload

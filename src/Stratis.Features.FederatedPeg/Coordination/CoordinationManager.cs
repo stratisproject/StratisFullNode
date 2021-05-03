@@ -1,8 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
+using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Features.FederatedPeg.Payloads;
 
 namespace Stratis.Features.FederatedPeg.Coordination
 {
@@ -44,14 +47,21 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         void AddFeeVote(string requestId, ulong proposedFee, PubKey pubKey);
 
-        ulong GetAgreedTransactionFee(string requestId, int quroum);
+        ulong GetAgreedTransactionFee(string requestId, int quorum);
 
         ulong GetCandidateTransactionFee(string requestId);
+
+        void RegisterQuorumSize(int quorum);
+
+        int GetQuorum();
+
+        Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee);
     }
 
     public class CoordinationManager : ICoordinationManager
     {
         private readonly ILogger logger;
+        private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
 
         // Interflux transaction ID votes
         private Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
@@ -61,9 +71,11 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private Dictionary<string, Dictionary<ulong, int>> activeFeeVotes;
         private Dictionary<string, HashSet<PubKey>> receivedFeeVotes;
 
+        private int quorum;
+
         private readonly object lockObject = new object();
 
-        public CoordinationManager()
+        public CoordinationManager(IFederatedPegBroadcaster federatedPegBroadcaster)
         {
             this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
             this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
@@ -73,6 +85,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             // TODO: Need to persist vote storage across node shutdowns
 
+            this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -255,6 +268,23 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                 return highestVoted;
             }
+        }
+
+        public void RegisterQuorumSize(int quorum)
+        {
+            this.quorum = quorum;
+        }
+
+        public int GetQuorum()
+        {
+            return this.quorum;
+        }
+
+        public async Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee)
+        {
+            string signature = federationKey.SignMessage(requestId + fee);
+
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeCoordinationPayload(requestId, fee, signature)).ConfigureAwait(false);
         }
     }
 }
