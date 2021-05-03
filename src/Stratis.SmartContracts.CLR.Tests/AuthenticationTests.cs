@@ -182,9 +182,11 @@ namespace Stratis.SmartContracts.CLR.Tests
                      && g.GetBalance == getBalance
                      && g.Serializer == serializer);
 
+            message.Setup(x => x.ContractAddress).Returns((((uint160)new EmbeddedContractIdentifier(1, 1)).ToAddress()));
+
             Network network = new SmartContractsPoSRegTest();
 
-            Authentication authentication = new Authentication(state, network, 1);
+            Authentication authentication = new Authentication(state, network);
 
             Assert.True(persistentState.GetBool("Initialized"));
             
@@ -192,8 +194,8 @@ namespace Stratis.SmartContracts.CLR.Tests
 
             string[] actual = signatories.Select(s => new KeyId(s.ToBytes()).GetAddress(network).ToString()).ToArray();
 
-            Assert.Equal(network.SystemContractContainer.PrimaryAuthenticators.Signatories, actual);
-            Assert.Equal(network.SystemContractContainer.PrimaryAuthenticators.Quorum, persistentState.GetUInt32("Quorum:main"));
+            Assert.Equal(network.EmbeddedContractContainer.PrimaryAuthenticators.Signatories, actual);
+            Assert.Equal(network.EmbeddedContractContainer.PrimaryAuthenticators.Quorum, persistentState.GetUInt32("Quorum:main"));
         }
     }
 }
