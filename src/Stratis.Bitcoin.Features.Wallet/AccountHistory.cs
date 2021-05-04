@@ -12,6 +12,6 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// The collection of history items.
         /// </summary>
-        public IEnumerable<FlatHistory> History { get; set; }
+        public IEnumerable<FlattenedHistoryItem> History { get; set; }
     }
 }

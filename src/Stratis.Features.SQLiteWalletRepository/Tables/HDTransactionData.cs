@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using SQLite;
+using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Features.SQLiteWalletRepository.Tables
 {
@@ -221,6 +223,72 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 AND     AccountIndex IN (SELECT AccountIndex FROM HDAccount WHERE WalletId = {strWalletId})")} { ((transactionTime == null) ? "" : $@"
                 AND     OutputTxTime = {strTransactionTime}")}
                 AND     OutputTxId = {strTransactionId}");
+        }
+
+        /// <summary>
+        /// Return an unpaged set of wallet transaction history items.
+        /// </summary>
+        /// <param name="conn">Connection to the database engine.</param>
+        /// <param name="walletId">The wallet we are retrieving history for.</param>
+        /// <param name="accountIndex">The account index in question.</param>
+        /// <returns>An unpaged set of wallet transaction history items</returns>
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex)
+        {
+            string strWalletId = DBParameter.Create(walletId);
+            string strAccountIndex = DBParameter.Create(accountIndex);
+
+            var coinbaseRelated = conn.Query<FlattenedHistoryItem>($@"
+                    SELECT 
+                        t.OutputTxId as Id, 
+                        CASE 
+                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
+                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2
+                        END Type,                    
+                        t.OutputTxTime as TimeStamp,
+                        CASE
+                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value
+                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN(SUM(t.Value) -
+                            (
+                                SELECT tt.Value
+                                FROM HDPayment p
+                                INNER JOIN HDTransactionData tt ON tt.OutputTxId = p.OutputTxId AND tt.OutputIndex = p.OutputIndex
+                                WHERE p.SpendTxId = t.OutputTxId AND p.SpendIsChange = 0
+                                LIMIT 1
+                            ))
+                        END Amount,
+                        0,
+                        null,
+                        t.OutputBlockHeight as BlockHeight
+                    FROM 
+                        HDTransactionData AS t
+                    WHERE 
+                        t.OutputTxIsCoinbase = 1 AND t.WalletId = {strWalletId} AND AccountIndex = {strAccountIndex}
+                    GROUP BY t.OutputTxId
+                    ORDER BY t.OutputTxTime DESC");
+
+            var sendReceive = conn.Query<FlattenedHistoryItem>($@"
+                    SELECT 
+                        t.OutputTxId as Id, 
+                        CASE 
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN 1
+                        END Type,
+                        t.OutputTxTime as TimeStamp,
+                        CASE
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - SUM(t.Value))
+                        END Amount,
+                        0,
+                        null,
+                        t.OutputBlockHeight as BlockHeight
+                    FROM
+                        HDTransactionData AS t
+                    WHERE
+                        t.OutputTxIsCoinbase = 0 AND t.WalletId = {strWalletId} AND AccountIndex = {strAccountIndex}
+                    GROUP BY t.OutputTxId
+                    ORDER BY t.OutputTxTime DESC");
+
+            return sendReceive.Concat(coinbaseRelated).OrderByDescending(t => t.Timestamp);
         }
     }
 }

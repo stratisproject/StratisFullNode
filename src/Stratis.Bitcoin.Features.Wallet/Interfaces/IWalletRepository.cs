@@ -184,10 +184,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <summary>
         /// Returns a history of all transactions in the wallet.
         /// </summary>
-        /// <param name="walletName">The name of the wallet to return the transactions of.</param>
-        /// <param name="accountName">An optional account name to limit the results to a particular account.</param>
+        /// <param name="account">An optional account name to limit the results to a particular account.</param>
         /// <returns>A history of all transactions in the wallet.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null);
+        AccountHistory GetHistory(HdAccount account);
+        //IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null);
 
         /// <summary>
         /// Allows an unconfirmed transaction to be removed.

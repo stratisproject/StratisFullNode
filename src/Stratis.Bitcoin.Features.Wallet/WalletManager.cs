@@ -878,6 +878,26 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
+        public IEnumerable<AccountHistory> GetHistoryOptimized(string walletName, string accountName, long? prevOutputTxTime = null, int? prevOutputIndex = null, int? take = int.MaxValue, string searchQuery = null)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            // In order to calculate the fee properly we need to retrieve all the transactions with spending details.
+            Wallet wallet = this.GetWallet(walletName);
+
+            var accountsHistory = new List<AccountHistory>();
+
+            lock (this.lockObject)
+            {
+                HdAccount account = wallet.GetAccount(accountName);
+                var accountHistory = this.WalletRepository.GetHistory(account);
+                accountsHistory.Add(accountHistory);
+            }
+
+            return accountsHistory;
+        }
+
+        /// <inheritdoc />
         public AccountHistory GetHistory(HdAccount account)
         {
             return this.GetHistoryForAccount(account, null, null, int.MaxValue);
@@ -945,7 +965,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 }
             }
 
-            return new AccountHistory { Account = account, History = historyItems };
+            return new AccountHistory { Account = account, /*History = historyItems*/ };
         }
 
         /// <inheritdoc />

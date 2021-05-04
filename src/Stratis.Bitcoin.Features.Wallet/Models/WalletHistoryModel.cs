@@ -40,6 +40,18 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
     public class TransactionItemModel
     {
+        public TransactionItemModel(FlattenedHistoryItem historyItem)
+        {
+            this.Id = new uint256(historyItem.Id);
+            this.Type = (TransactionItemType)historyItem.Type;
+            this.Amount = new Money(historyItem.Amount);
+            this.Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp);
+
+            this.ToAddress = historyItem.ToAddress;
+            this.ConfirmedInBlock = historyItem.BlockHeight;
+            //this.BlockIndex = historyItem.ou;
+        }
+
         public TransactionItemModel()
         {
             this.Payments = new List<PaymentDetailModel>();
@@ -82,8 +94,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public DateTimeOffset Timestamp { get; set; }
 
         [JsonProperty(PropertyName = "txOutputTime")]
-        public long TxOutputTime => Timestamp.ToUnixTimeSeconds();
-        
+        public long TxOutputTime => this.Timestamp.ToUnixTimeSeconds();
+
         [JsonProperty(PropertyName = "txOutputIndex")]
         public int TxOutputIndex { get; set; }
 
@@ -114,6 +126,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     {
         Received,
         Send,
-        Staked
+        Staked,
+        Mined
     }
 }
