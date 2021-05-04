@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Events;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -1463,13 +1464,29 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account)
+        public AccountHistory GetHistory(HdAccount account, int limit, int offset)
         {
             Wallet wallet = account.AccountRoot.Wallet;
             WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index);
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset);
+
+            var lookup = new Dictionary<string, string>();
+
+            // Update sent to addresses.
+            foreach (var item in result.Where(i => i.Type == (int)TransactionItemType.Send))
+            {
+                // Cache the address.
+                if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
+                {
+                    var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
+                    address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+                    lookup.Add(item.SendToScriptPubkey, address);
+                }
+
+                item.SendToAddress = address;
+            }
 
             return new AccountHistory()
             {

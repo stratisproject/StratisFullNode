@@ -190,7 +190,13 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
         public WalletHistoryModel GetHistory(WalletHistoryRequest request)
         {
-            IEnumerable<AccountHistory> accountsHistory = this.walletManager.GetHistoryOptimized(request.WalletName, request.AccountName);
+            IEnumerable<AccountHistory> accountsHistory;
+
+            if (request.Take.HasValue && request.Skip.HasValue)
+                accountsHistory = this.walletManager.GetHistoryOptimized(request.WalletName, request.AccountName, request.Take, request.Skip);
+            else
+                accountsHistory = this.walletManager.GetHistoryOptimized(request.WalletName, request.AccountName);
+
             var model = new WalletHistoryModel();
 
             foreach (AccountHistory accountHistory in accountsHistory)

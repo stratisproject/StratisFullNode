@@ -878,7 +878,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        public IEnumerable<AccountHistory> GetHistoryOptimized(string walletName, string accountName, long? prevOutputTxTime = null, int? prevOutputIndex = null, int? take = int.MaxValue, string searchQuery = null)
+        public IEnumerable<AccountHistory> GetHistoryOptimized(string walletName, string accountName, int? limit = int.MaxValue, int? offset = 0)
         {
             Guard.NotEmpty(walletName, nameof(walletName));
 
@@ -890,7 +890,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             lock (this.lockObject)
             {
                 HdAccount account = wallet.GetAccount(accountName);
-                var accountHistory = this.WalletRepository.GetHistory(account);
+                var accountHistory = this.WalletRepository.GetHistory(account, limit.Value, offset.Value);
                 accountsHistory.Add(accountHistory);
             }
 

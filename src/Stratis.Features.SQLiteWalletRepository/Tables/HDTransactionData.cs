@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using SQLite;
 using Stratis.Bitcoin.Features.Wallet;
 
@@ -232,22 +231,28 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
-        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex)
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset)
         {
+            string strLimit = DBParameter.Create(limit);
+            string strOffset = DBParameter.Create(offset);
             string strWalletId = DBParameter.Create(walletId);
             string strAccountIndex = DBParameter.Create(accountIndex);
 
-            var coinbaseRelated = conn.Query<FlattenedHistoryItem>($@"
+            var result = conn.Query<FlattenedHistoryItem>($@"
                     SELECT 
                         t.OutputTxId as Id, 
                         CASE 
-                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN 1
                             WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2
+                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
                         END Type,                    
                         t.OutputTxTime as TimeStamp,
                         CASE
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value
+                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN ((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - t.Value)
                             WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value
-                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN(SUM(t.Value) -
+                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN (SUM(t.Value) -
                             (
                                 SELECT tt.Value
                                 FROM HDPayment p
@@ -256,39 +261,22 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                                 LIMIT 1
                             ))
                         END Amount,
-                        0,
-                        null,
+                        sends.SpendValue as SendValue,
+                        sends.SpendScriptPubkey as SendToScriptPubkey,
                         t.OutputBlockHeight as BlockHeight
                     FROM 
                         HDTransactionData AS t
+                    LEFT OUTER JOIN HDPayment sends on sends.SpendTxId = t.OutputTxId AND sends.SpendIsChange = 0 AND t.OutputTxIsCoinbase = 0 AND t.AddressType = 1
+                    LEFT OUTER JOIN HDAddress a on a.Pubkey = sends.SpendScriptPubkey
                     WHERE 
-                        t.OutputTxIsCoinbase = 1 AND t.WalletId = {strWalletId} AND AccountIndex = {strAccountIndex}
-                    GROUP BY t.OutputTxId
-                    ORDER BY t.OutputTxTime DESC");
+                        t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}
+                    GROUP BY 
+                        t.OutputTxId
+                    ORDER BY
+                        t.OutputTxTime DESC
+                    LIMIT {strLimit} OFFSET {strOffset}");
 
-            var sendReceive = conn.Query<FlattenedHistoryItem>($@"
-                    SELECT 
-                        t.OutputTxId as Id, 
-                        CASE 
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN 1
-                        END Type,
-                        t.OutputTxTime as TimeStamp,
-                        CASE
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - SUM(t.Value))
-                        END Amount,
-                        0,
-                        null,
-                        t.OutputBlockHeight as BlockHeight
-                    FROM
-                        HDTransactionData AS t
-                    WHERE
-                        t.OutputTxIsCoinbase = 0 AND t.WalletId = {strWalletId} AND AccountIndex = {strAccountIndex}
-                    GROUP BY t.OutputTxId
-                    ORDER BY t.OutputTxTime DESC");
-
-            return sendReceive.Concat(coinbaseRelated).OrderByDescending(t => t.Timestamp);
+            return result;
         }
     }
 }

@@ -186,7 +186,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// </summary>
         /// <param name="account">An optional account name to limit the results to a particular account.</param>
         /// <returns>A history of all transactions in the wallet.</returns>
-        AccountHistory GetHistory(HdAccount account);
+        AccountHistory GetHistory(HdAccount account, int limit, int offset);
+
         //IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null);
 
         /// <summary>

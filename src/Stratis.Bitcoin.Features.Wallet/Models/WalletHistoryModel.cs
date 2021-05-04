@@ -46,9 +46,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             this.Type = (TransactionItemType)historyItem.Type;
             this.Amount = new Money(historyItem.Amount);
             this.Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp);
-
-            this.ToAddress = historyItem.ToAddress;
             this.ConfirmedInBlock = historyItem.BlockHeight;
+            this.ToAddress = historyItem.SendToAddress;
+
+            if (this.Type == TransactionItemType.Send)
+                this.Fee = historyItem.Amount - historyItem.SendValue;
+
             //this.BlockIndex = historyItem.ou;
         }
 
@@ -94,7 +97,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public DateTimeOffset Timestamp { get; set; }
 
         [JsonProperty(PropertyName = "txOutputTime")]
-        public long TxOutputTime => this.Timestamp.ToUnixTimeSeconds();
+        public long TxOutputTime => Timestamp.ToUnixTimeSeconds();
 
         [JsonProperty(PropertyName = "txOutputIndex")]
         public int TxOutputIndex { get; set; }

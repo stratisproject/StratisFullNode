@@ -25,16 +25,15 @@
 
         public int Type { get; set; }
 
-        public long Amount { get; set; }
-
-        public long Fee { get; set; }
-
         public long Timestamp { get; set; }
 
-        /// <summary>
-        /// The Base58 representation of this address.
-        /// </summary>
-        public string ToAddress { get; set; }
+        public long Amount { get; set; }
+
+        public long SendValue { get; set; }
+
+        public string SendToScriptPubkey { get; set; }
+
+        public string SendToAddress { get; set; }
 
         /// <summary>
         /// The height of the block in which this transaction was confirmed.
