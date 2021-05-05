@@ -225,73 +225,79 @@ namespace Stratis.SmartContracts.CLR
             IContract contract;
             Observer previousObserver = null;
             CachedAssemblyPackage assemblyPackage = null;
+            uint256 codeHashUint256;
 
-            uint160 address = contractState.Message.ContractAddress.ToUint160();
+            bool isEmbedded = IsEmbedded(contractState, contractState.Message.ContractAddress.ToUint160(), ref typeName, out contract, out VmExecutionResult executionResult);
 
-            if (!IsEmbedded(contractState, address, ref typeName, out contract, out VmExecutionResult executionResult))
+            if (isEmbedded)
             {
-                uint256 codeHashUint256 = new uint256(HashHelper.Keccak256(contractCode));
+                if (!executionResult.IsSuccess)
+                {
+                    return executionResult;
+                }
+
+                codeHashUint256 = uint256.Zero; // Not used.
+            }
+            else
+            {
+                codeHashUint256 = new uint256(HashHelper.Keccak256(contractCode));
 
                 // Lets see if we already have an assembly
                 assemblyPackage = this.assemblyCache.Retrieve(codeHashUint256);
-
-                if (assemblyPackage != null)
-                {
-                    // If the assembly is in the cache, keep a reference to its observer around.
-                    // We might be in a nested execution for the same assembly,
-                    // in which case we need to restore the previous observer later.
-                    previousObserver = assemblyPackage.Assembly.GetObserver();
-
-                    Type type = assemblyPackage.Assembly.GetType(typeName);
-
-                    contract = Contract.CreateUninitialized(type, contractState, address);
-                }
-                else
-                {
-                    // Rewrite from scratch.
-                    using (IContractModuleDefinition moduleDefinition = this.moduleDefinitionReader.Read(contractCode).Value)
-                    {
-                        var rewriter = new ObserverInstanceRewriter();
-
-                        if (!this.Rewrite(moduleDefinition, rewriter))
-                            return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Rewrite module failed");
-
-                        Result<ContractByteCode> getCodeResult = this.GetByteCode(moduleDefinition);
-
-                        if (!getCodeResult.IsSuccess)
-                            return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Serialize module failed");
-
-                        // Everything worked. Assign the code that will be executed.
-                        ContractByteCode code = getCodeResult.Value;
-
-                        // Creating a new observer instance here is necessary due to nesting.
-                        // If a nested call takes place it will use a new gas meter instance,
-                        // due to the fact that the nested call's gas limit may be specified by the user.
-                        // Because of that we can't reuse the same observer for a single execution.
-
-                        Result<IContract> contractLoadResult = this.Load(
-                            code,
-                            typeName,
-                            contractState.Message.ContractAddress.ToUint160(),
-                            contractState);
-
-                        if (!contractLoadResult.IsSuccess)
-                        {
-                            return VmExecutionResult.Fail(VmExecutionErrorKind.LoadFailed, contractLoadResult.Error);
-                        }
-
-                        contract = contractLoadResult.Value;
-
-                        assemblyPackage = new CachedAssemblyPackage(new ContractAssembly(contract.Type.Assembly));
-
-                        // Cache this completely validated and rewritten contract to reuse later.
-                        this.assemblyCache.Store(codeHashUint256, assemblyPackage);
-                    }
-                }
             }
-            else if (!executionResult.IsSuccess)
+
+            if (assemblyPackage != null)
             {
-                return executionResult;
+                // If the assembly is in the cache, keep a reference to its observer around.
+                // We might be in a nested execution for the same assembly,
+                // in which case we need to restore the previous observer later.
+                previousObserver = assemblyPackage.Assembly.GetObserver();
+
+                Type type = assemblyPackage.Assembly.GetType(typeName);
+
+                contract = Contract.CreateUninitialized(type, contractState, contractState.Message.ContractAddress.ToUint160());
+            }
+            else if (!isEmbedded)
+            {
+                // Rewrite from scratch.
+                using (IContractModuleDefinition moduleDefinition = this.moduleDefinitionReader.Read(contractCode).Value)
+                {
+                    var rewriter = new ObserverInstanceRewriter();
+
+                    if (!this.Rewrite(moduleDefinition, rewriter))
+                        return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Rewrite module failed");
+
+                    Result<ContractByteCode> getCodeResult = this.GetByteCode(moduleDefinition);
+
+                    if (!getCodeResult.IsSuccess)
+                        return VmExecutionResult.Fail(VmExecutionErrorKind.RewriteFailed, "Serialize module failed");
+
+                    // Everything worked. Assign the code that will be executed.
+                    ContractByteCode code = getCodeResult.Value;
+
+                    // Creating a new observer instance here is necessary due to nesting.
+                    // If a nested call takes place it will use a new gas meter instance,
+                    // due to the fact that the nested call's gas limit may be specified by the user.
+                    // Because of that we can't reuse the same observer for a single execution.
+
+                    Result<IContract> contractLoadResult = this.Load(
+                        code,
+                        typeName,
+                        contractState.Message.ContractAddress.ToUint160(),
+                        contractState);
+
+                    if (!contractLoadResult.IsSuccess)
+                    {
+                        return VmExecutionResult.Fail(VmExecutionErrorKind.LoadFailed, contractLoadResult.Error);
+                    }
+
+                    contract = contractLoadResult.Value;
+
+                    assemblyPackage = new CachedAssemblyPackage(new ContractAssembly(contract.Type.Assembly));
+
+                    // Cache this completely validated and rewritten contract to reuse later.
+                    this.assemblyCache.Store(codeHashUint256, assemblyPackage);
+                }
             }
 
             this.LogExecutionContext(contract.State.Block, contract.State.Message, contract.Address);
