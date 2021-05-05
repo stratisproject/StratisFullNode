@@ -630,8 +630,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             {
                 ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
 
+                var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height);
+
                 ILocalExecutionResult result = this.localExecutor.Execute(
-                    (ulong)this.chainIndexer.Height,
+                    height,
                     request.Sender?.ToUint160(this.network) ?? new uint160(),
                     string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
                     txData);
