@@ -194,7 +194,7 @@ namespace Stratis.SmartContracts.CLR
 
             this.EnsureInitialized();
 
-            return this.InvokeInternal(this.CallHandler, parameters);
+            return this.InvokeInternal(this.CallHandler, new object[] { methodName, parameters });
         }
 
         /// <summary>
