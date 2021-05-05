@@ -187,8 +187,7 @@ namespace Stratis.SmartContracts.CLR
 
         private IContractInvocationResult InvokeCallHandler(string methodName, object[] parameters)
         {
-            // Handles the scenario where no receive was defined, but it is attempted to be invoked anyway.
-            // This could occur if a method invocation is directly made to the receive via a transaction.
+            // Handles the scenario where no call handler was defined, but it is attempted to be invoked anyway.
             if (this.CallHandler == null)
                 return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
 
