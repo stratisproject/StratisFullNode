@@ -193,9 +193,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             IEnumerable<AccountHistory> accountsHistory;
 
             if (request.Take.HasValue && request.Skip.HasValue)
-                accountsHistory = this.walletManager.GetHistoryOptimized(request.WalletName, request.AccountName, request.Take, request.Skip);
+                accountsHistory = this.walletManager.GetHistory(request.WalletName, request.AccountName, request.SearchQuery, request.Take, request.Skip);
             else
-                accountsHistory = this.walletManager.GetHistoryOptimized(request.WalletName, request.AccountName);
+                accountsHistory = this.walletManager.GetHistory(request.WalletName, request.AccountName, request.SearchQuery);
 
             var model = new WalletHistoryModel();
 
