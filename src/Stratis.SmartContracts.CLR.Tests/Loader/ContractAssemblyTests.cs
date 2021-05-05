@@ -104,5 +104,29 @@ public class TypeTwo : SmartContract
             Assert.NotNull(type);
             Assert.Equal("TypeOne", type.Name);
         }
+
+        [Fact]
+        public void GetDeployedType_NoAttribute_Returns_Correct_Type()
+        {
+            var code = @"
+namespace Stratis.SmartContracts.CLR.Tests.Loader
+{
+    public class Test : SmartContract
+    {
+        public Test(ISmartContractState state)
+            : base(state)
+        { }
+    }
+}
+";
+            var assemblyLoadResult = this.loader.Load((ContractByteCode)ContractCompiler.Compile(code).Compilation);
+
+            var contractAssembly = assemblyLoadResult.Value;
+
+            var type = contractAssembly.DeployedType;
+
+            Assert.NotNull(type);
+            Assert.Equal("Test", type.Name);
+        }
     }
 }
