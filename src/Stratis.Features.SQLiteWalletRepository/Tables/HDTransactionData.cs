@@ -225,7 +225,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         }
 
         /// <summary>
-        /// Return an unpaged set of wallet transaction history items.
+        /// Returns a wallet transaction history items (paged or full).
         /// </summary>
         /// <param name="conn">Connection to the database engine.</param>
         /// <param name="walletId">The wallet we are retrieving history for.</param>
