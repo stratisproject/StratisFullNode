@@ -53,22 +53,7 @@ namespace Stratis.SmartContracts.CLR.Local
 
             var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
 
-            var isScHeader = scHeader != null;
-
-            if(!isScHeader)
-            {
-                return new LocalExecutionResult
-                {
-                    GasConsumed = (Gas)0,
-                    InternalTransfers = null,
-                    ErrorMessage = (ContractErrorMessage)$"Header at height {blockHeight} has no contract information",
-                    Logs = new List<Log>(),
-                    Return = null,
-                    Revert = false
-                };
-            }
-
-            uint256 hashStateRoot = scHeader.HashStateRoot;
+            uint256 hashStateRoot = scHeader?.HashStateRoot ?? new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856"); // StateRootEmptyTrie
 
             IStateRepositoryRoot stateAtHeight = this.stateRoot.GetSnapshotTo(hashStateRoot.ToBytes());
 

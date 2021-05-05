@@ -29,7 +29,9 @@ namespace Stratis.SmartContracts.CLR.Tests
                 .Returns(stateTransitionResult);
 
             IStateRepository trackedMock = Mock.Of<IStateRepository>();
-            fixture.ContractStateRoot.Setup(s => s.StartTracking()).Returns(trackedMock);
+            var snapshotAtHeight = new Mock<IStateRepositoryRoot>();
+            snapshotAtHeight.Setup(s => s.StartTracking()).Returns(trackedMock);
+            fixture.ContractStateRoot.Setup(s => s.GetSnapshotTo(It.IsAny<byte[]>())).Returns(snapshotAtHeight.Object);
 
             var sut = new LocalExecutor(
                 fixture.LoggerFactory,
@@ -37,7 +39,8 @@ namespace Stratis.SmartContracts.CLR.Tests
                 fixture.ContractStateRoot.Object,
                 fixture.StateFactory.Object,
                 fixture.StateProcessor.Object,
-                fixture.ContractPrimitiveSerializer.Object);
+                fixture.ContractPrimitiveSerializer.Object,
+                Mock.Of<ChainIndexer>());
 
             ILocalExecutionResult result = sut.Execute(fixture.ContractTransactionContext.BlockHeight,
                 fixture.ContractTransactionContext.Sender,
@@ -91,7 +94,9 @@ namespace Stratis.SmartContracts.CLR.Tests
                 .Returns(stateTransitionResult);
 
             IStateRepository trackedMock = Mock.Of<IStateRepository>();
-            fixture.ContractStateRoot.Setup(s => s.StartTracking()).Returns(trackedMock);
+            var snapshotAtHeight = new Mock<IStateRepositoryRoot>();
+            snapshotAtHeight.Setup(s => s.StartTracking()).Returns(trackedMock);
+            fixture.ContractStateRoot.Setup(s => s.GetSnapshotTo(It.IsAny<byte[]>())).Returns(snapshotAtHeight.Object);
         
             var sut = new LocalExecutor(
                 fixture.LoggerFactory,
@@ -99,7 +104,8 @@ namespace Stratis.SmartContracts.CLR.Tests
                 fixture.ContractStateRoot.Object,
                 fixture.StateFactory.Object,
                 fixture.StateProcessor.Object,
-                fixture.ContractPrimitiveSerializer.Object);
+                fixture.ContractPrimitiveSerializer.Object,
+                Mock.Of<ChainIndexer>());
 
             ILocalExecutionResult result = sut.Execute(fixture.ContractTransactionContext.BlockHeight,
                 fixture.ContractTransactionContext.Sender,
