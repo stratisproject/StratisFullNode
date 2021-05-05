@@ -125,12 +125,21 @@ namespace Stratis.SmartContracts.CLR
                 return ContractInvocationResult.Failure(ContractInvocationErrorType.ParameterTypesDontMatch);
             }
 
-            Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
+            // Allow the contract to implement custom method resolution.
+            MethodInfo methodToInvoke = this.Type.GetMethod("InvokeByName", new Type[] { typeof(string), typeof(object[])});
+            if (methodToInvoke != null)
+            {
+                invokeParams = new object[] { call.Name, invokeParams };
+            }
+            else
+            {
+                Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
 
-            MethodInfo methodToInvoke = this.Type.GetMethod(call.Name, types);
+                methodToInvoke = this.Type.GetMethod(call.Name, types);
 
-            if (methodToInvoke == null)
-                return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
+                if (methodToInvoke == null)
+                    return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
+            }
 
             // This should not happen without setting the appropriate binding flags
             if (methodToInvoke.IsConstructor)
