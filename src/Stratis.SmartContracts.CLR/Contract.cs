@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using CSharpFunctionalExtensions;
 using NBitcoin;
 using Stratis.SmartContracts.CLR.Exceptions;
 using Stratis.SmartContracts.RuntimeObserver;
@@ -18,6 +19,11 @@ namespace Stratis.SmartContracts.CLR
         /// The default binding flags for matching the receive method. Matches public instance methods declared on the contract type only.
         /// </summary>
         private const BindingFlags DefaultReceiveLookup = BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public;
+
+        /// <summary>
+        /// The default binding flags for matching the receive method. Matches public instance methods declared on the contract type only.
+        /// </summary>
+        private const BindingFlags DefaultCallHandlerLookup = BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public;
 
         private const BindingFlags DefaultBindingFlags = BindingFlags.Instance | BindingFlags.NonPublic;
 
@@ -39,6 +45,8 @@ namespace Stratis.SmartContracts.CLR
 
         private MethodInfo receive;
 
+        private MethodInfo call;
+
         /// <summary>
         /// Returns the receive handler method defined on the inherited contract type. If no receive handler was defined, returns null.
         /// </summary>
@@ -52,6 +60,22 @@ namespace Stratis.SmartContracts.CLR
                 }
 
                 return this.receive;
+            }
+        }
+
+        /// <summary>
+        /// Returns the call handler method defined on the inherited contract type. If no receive handler was defined, returns null.
+        /// </summary>
+        public MethodInfo CallHandler
+        {
+            get
+            {
+                if (this.call == null)
+                {
+                    this.call = this.Type.GetMethod(MethodCall.CallHandlerName, DefaultCallHandlerLookup);
+                }
+
+                return this.call;
             }
         }
 
@@ -126,20 +150,14 @@ namespace Stratis.SmartContracts.CLR
             }
 
             // Allow the contract to implement custom method resolution.
-            MethodInfo methodToInvoke = this.Type.GetMethod("InvokeByName", new Type[] { typeof(string), typeof(object[])});
-            if (methodToInvoke != null)
-            {
-                invokeParams = new object[] { call.Name, invokeParams };
-            }
-            else
-            {
-                Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
+            if (this.CallHandler != null)
+                return this.InvokeCallHandler(call.Name, invokeParams);
+            Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
 
-                methodToInvoke = this.Type.GetMethod(call.Name, types);
+            MethodInfo methodToInvoke = this.Type.GetMethod(call.Name, types);
 
-                if (methodToInvoke == null)
-                    return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
-            }
+            if (methodToInvoke == null)
+                return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
 
             // This should not happen without setting the appropriate binding flags
             if (methodToInvoke.IsConstructor)
@@ -166,6 +184,18 @@ namespace Stratis.SmartContracts.CLR
             return this.InvokeInternal(this.ReceiveHandler, null);
         }
 
+        private IContractInvocationResult InvokeCallHandler(string methodName, object[] parameters)
+        {
+            // Handles the scenario where no receive was defined, but it is attempted to be invoked anyway.
+            // This could occur if a method invocation is directly made to the receive via a transaction.
+            if (this.CallHandler == null)
+                return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
+
+            this.EnsureInitialized();
+
+            return this.InvokeInternal(this.CallHandler, parameters);
+        }
+
         /// <summary>
         /// Ensures the contract is initialized by setting its state fields.
         /// </summary>
@@ -187,6 +217,10 @@ namespace Stratis.SmartContracts.CLR
                 object result = method.Invoke(this.instance, parameters);
 
                 return ContractInvocationResult.Success(result);
+            }
+            catch (MissingMethodException)
+            {
+                return ContractInvocationResult.Failure(ContractInvocationErrorType.MethodDoesNotExist);
             }
             catch (TargetParameterCountException)
             {
