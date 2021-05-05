@@ -21,7 +21,7 @@ namespace Stratis.SmartContracts.CLR
         private const BindingFlags DefaultReceiveLookup = BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public;
 
         /// <summary>
-        /// The default binding flags for matching the receive method. Matches public instance methods declared on the contract type only.
+        /// The default binding flags for matching the call method. Matches public instance methods declared on the contract type only.
         /// </summary>
         private const BindingFlags DefaultCallHandlerLookup = BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public;
 
