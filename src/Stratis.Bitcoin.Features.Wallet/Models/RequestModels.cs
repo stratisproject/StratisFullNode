@@ -158,7 +158,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     {
         public WalletTransactionCountRequest()
         {
-            this.AccountName = "account 0";
+            this.AccountName = WalletManager.DefaultAccount;
         }
 
         /// <summary>
