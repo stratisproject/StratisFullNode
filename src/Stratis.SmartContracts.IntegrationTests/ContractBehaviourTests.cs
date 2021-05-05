@@ -3,6 +3,7 @@ using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.Core.Util;
+using Stratis.SmartContracts.RuntimeObserver;
 using Stratis.SmartContracts.Tests.Common.MockChain;
 using Xunit;
 
@@ -127,6 +128,61 @@ namespace Stratis.SmartContracts.IntegrationTests
 
             receipt = this.node1.GetReceipt(response.TransactionId.ToString());
             Assert.True(receipt.Success);
+        }
+
+        [Fact]
+        public void Local_Call_At_Height()
+        {
+            // Demonstrates some potentially unusual behaviour when saving contract state.
+            var localExecutor = this.mockChain.Nodes[0].CoreNode.FullNode.NodeService<ILocalExecutor>();
+
+            // Ensure fixture is funded.
+            this.mockChain.MineBlocks(1);
+
+            // Deploy contract
+            ContractCompilationResult compilationResult = ContractCompiler.CompileFile("SmartContracts/StorageDemo.cs");
+
+            Assert.True(compilationResult.Success);
+            BuildCreateContractTransactionResponse preResponse = this.node1.SendCreateContractTransaction(compilationResult.Compilation, 0);
+            this.mockChain.WaitAllMempoolCount(1);
+            this.mockChain.MineBlocks(1);
+            Assert.NotNull(this.node1.GetCode(preResponse.NewContractAddress));
+
+            uint256 currentHash = this.node1.GetLastBlock().GetHash();
+
+            NBitcoin.Block lastBlock = this.node1.GetLastBlock();
+
+            ReceiptResponse receipt = this.node1.GetReceipt(preResponse.TransactionId.ToString());
+            Assert.True(receipt.Success);
+
+            // Get initial state at height
+            var call = new ContractTxData(1, 100, (Gas)250000, preResponse.NewContractAddress.ToUint160(this.node1.CoreNode.FullNode.Network), nameof(StorageDemo.GetCounterValue));
+            var initialState = localExecutor.Execute((ulong)this.node1.CoreNode.FullNode.ChainIndexer.Height, this.mockChain.Nodes[0].MinerAddress.Address.ToUint160(this.node1.CoreNode.FullNode.Network), 0, call);
+            
+            Assert.Equal(12345, (int)initialState.Return);
+
+            // Call Counter() and confirm that it succeeds
+            BuildCallContractTransactionResponse response = this.node1.SendCallContractTransaction(
+                nameof(StorageDemo.Increment),
+                preResponse.NewContractAddress,
+                0);
+            this.mockChain.WaitAllMempoolCount(1);
+            this.mockChain.MineBlocks(1);
+
+            lastBlock = this.node1.GetLastBlock();
+
+            // Blocks progressed
+            Assert.NotEqual(currentHash, lastBlock.GetHash());
+
+            // Get local state at height 2 after calling counter
+            initialState = localExecutor.Execute((ulong)this.node1.CoreNode.FullNode.ChainIndexer.Height, this.mockChain.Nodes[0].MinerAddress.Address.ToUint160(this.node1.CoreNode.FullNode.Network), 0, call);
+
+            Assert.Equal(12346, (int)initialState.Return);
+
+            // Get local state at previous height before calling counter
+            initialState = localExecutor.Execute((ulong)this.node1.CoreNode.FullNode.ChainIndexer.Height - 1, this.mockChain.Nodes[0].MinerAddress.Address.ToUint160(this.node1.CoreNode.FullNode.Network), 0, call);
+
+            Assert.Equal(12345, (int)initialState.Return);
         }
     }
 
