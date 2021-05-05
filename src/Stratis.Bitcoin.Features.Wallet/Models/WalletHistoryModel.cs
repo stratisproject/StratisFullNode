@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -50,9 +51,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             this.ToAddress = historyItem.SendToAddress;
 
             if (this.Type == TransactionItemType.Send)
+            {
                 this.Fee = historyItem.Amount - historyItem.SendValue;
-
-            this.TxOutputIndex = historyItem.TxOutputIndex;
+                this.Payments = historyItem.Payments.Select(p => new PaymentDetailModel() { Amount = p.Amount, DestinationAddress = p.DestinationAddress }).ToList();
+            }
         }
 
         public TransactionItemModel()

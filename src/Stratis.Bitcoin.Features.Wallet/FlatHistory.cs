@@ -1,4 +1,7 @@
-﻿namespace Stratis.Bitcoin.Features.Wallet
+﻿using System.Collections.Generic;
+using NBitcoin;
+
+namespace Stratis.Bitcoin.Features.Wallet
 {
     /// <summary>
     /// A class that represents a flat view of the wallets history.
@@ -21,6 +24,11 @@
     /// </summary>
     public sealed class FlattenedHistoryItem
     {
+        public FlattenedHistoryItem()
+        {
+            this.Payments = new List<FlattenedHistoryItemPayment>();
+        }
+
         public string Id { get; set; }
 
         public int Type { get; set; }
@@ -39,5 +47,14 @@
         /// The height of the block in which this transaction was confirmed.
         /// </summary>
         public int? BlockHeight { get; set; }
+
+        public List<FlattenedHistoryItemPayment> Payments { get; set; }
+    }
+
+    public sealed class FlattenedHistoryItemPayment
+    {
+        public string DestinationAddress { get; set; }
+
+        public Money Amount { get; set; }
     }
 }

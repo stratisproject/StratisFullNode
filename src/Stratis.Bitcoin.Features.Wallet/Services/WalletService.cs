@@ -201,14 +201,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
             foreach (AccountHistory accountHistory in accountsHistory)
             {
-                var transactions = accountHistory.History;
-                model.AccountsHistoryModel.Add(new AccountHistoryModel
+                var accountHistoryModel = new AccountHistoryModel
                 {
                     TransactionsHistory = accountHistory.History.Select(h => new TransactionItemModel(h)).ToList(),
                     Name = accountHistory.Account.Name,
                     CoinType = this.coinType,
                     HdPath = accountHistory.Account.HdPath
-                });
+                };
+
+                model.AccountsHistoryModel.Add(accountHistoryModel);
             }
 
             return model;

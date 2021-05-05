@@ -936,7 +936,31 @@ namespace Stratis.Bitcoin.Features.Wallet
                         }
                     }
 
-                    accountHistory = new AccountHistory() { Account = account, History = historyItems };
+                    var grouped = historyItems.GroupBy(h => h.Transaction.Id);
+
+                    var flattenedHistoryItem = new FlattenedHistoryItem()
+                    {
+                        Id = grouped.First().Key.ToString(),
+                        Amount = grouped.First().Sum(g => g.Transaction.Amount),
+                        BlockHeight = grouped.First().First().Transaction.BlockHeight,
+                        Timestamp = grouped.First().First().Transaction.CreationTime.ToUnixTimeSeconds(),
+                    };
+
+                    var transactions = grouped.First().Select(x => x.Transaction);
+                    var spendingDetails = transactions.Where(x => x.SpendingDetails != null);
+                    if (spendingDetails.Any())
+                    {
+                        foreach (var spendingDetail in spendingDetails)
+                        {
+                            flattenedHistoryItem.Payments.Add(new FlattenedHistoryItemPayment() { Amount = spendingDetail.Amount, DestinationAddress = spendingDetail.AddressScriptPubKey.ToString() });
+                        }
+
+                        //flattenedHistoryItem.SendToAddress = grouped.First().First().Address.Address;
+                        //flattenedHistoryItem.SendToScriptPubkey = grouped.First().First().Address.ScriptPubKey.ToHex();
+                        //flattenedHistoryItem.SendValue = ;
+                    }
+
+                    accountHistory = new AccountHistory() { Account = account, History = new[] { flattenedHistoryItem } };
                 }
                 // Else query over the transaction set.
                 else
