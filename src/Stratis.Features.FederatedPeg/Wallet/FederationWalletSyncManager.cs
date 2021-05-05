@@ -258,7 +258,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// <inheritdoc />
         public virtual void SyncFromHeight(int height)
         {
-            ChainedHeader chainedBlock = this.chain.GetHeader(height);
+            ChainedHeader chainedBlock = this.chain.GetHeaderByHeight(height);
             this.walletTip = chainedBlock ?? throw new WalletException("Invalid block height");
             this.federationWalletManager.WalletTipHash = chainedBlock.HashBlock;
         }

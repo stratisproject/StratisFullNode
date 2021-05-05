@@ -146,7 +146,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 do
                 {
-                    ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
+                    ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(currentHeight);
                     if (chainedHeader == null)
                         break;
 

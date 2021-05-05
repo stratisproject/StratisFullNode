@@ -288,9 +288,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             this.SetupMockObjects(WalletTestsHelpers.GenerateChainWithHeight(5, new StraxMain()));
 
-            this.walletSyncManager.SyncFromDate(this.chainIndexer.GetHeader(3).Header.BlockTime.DateTime.AddSeconds(1));
+            this.walletSyncManager.SyncFromDate(this.chainIndexer.GetHeaderByHeight(3).Header.BlockTime.DateTime.AddSeconds(1));
 
-            uint256 expectedHash = this.chainIndexer.GetHeader(3).HashBlock;
+            uint256 expectedHash = this.chainIndexer.GetHeaderByHeight(3).HashBlock;
             Assert.Equal(this.walletTip.HashBlock, expectedHash);
         }
 
@@ -304,7 +304,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             this.walletSyncManager.SyncFromDate(new DateTime(1900, 1, 1)); // date before any block.
 
-            uint256 expectedHash = this.chainIndexer.GetHeader(0).HashBlock;
+            uint256 expectedHash = this.chainIndexer.GetHeaderByHeight(0).HashBlock;
             Assert.Equal(this.walletTip.HashBlock, expectedHash);
         }
 
@@ -331,7 +331,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             this.walletSyncManager.SyncFromHeight(2);
 
-            uint256 expectedHash = this.chainIndexer.GetHeader(1).HashBlock;
+            uint256 expectedHash = this.chainIndexer.GetHeaderByHeight(1).HashBlock;
             Assert.Equal(this.walletTip.HashBlock, expectedHash);
         }
 
@@ -399,7 +399,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
         private uint256 AssertTipBlockHash(IWalletSyncManager walletSyncManager, int blockHeight)
         {
-            uint256 expectedBlockHash = this.chainIndexer.GetHeader(blockHeight).Header.GetHash();
+            uint256 expectedBlockHash = this.chainIndexer.GetHeaderByHeight(blockHeight).Header.GetHash();
 
             WaitLoop(() => expectedBlockHash == walletSyncManager.WalletTip.Header.GetHash(),
                 $"Expected block {expectedBlockHash} does not match tip {walletSyncManager.WalletTip.Header.GetHash()}.");

@@ -28,7 +28,7 @@ namespace NBitcoin
         /// The tip height of the best known validated chain.
         /// </summary>
         public int Height => this.Tip.Height;
-        public ChainedHeader Genesis => this.GetHeader(0);
+        public ChainedHeader Genesis => this.GetHeaderByHeight(0);
 
         public ChainIndexer()
         {
@@ -168,7 +168,7 @@ namespace NBitcoin
 
             while (true)
             {
-                ChainedHeader b = this.GetHeader(i);
+                ChainedHeader b = this.GetHeaderByHeight(i);
                 if ((b == null) || (b.Previous != prev))
                     yield break;
 
@@ -228,7 +228,7 @@ namespace NBitcoin
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's height.
         /// </summary>
-        public virtual ChainedHeader GetHeader(int height)
+        public virtual ChainedHeader GetHeaderByHeight(int height)
         {
             lock (this.lockObject)
             {
@@ -241,7 +241,7 @@ namespace NBitcoin
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's height.
         /// </summary>
-        public ChainedHeader this[int key] => this.GetHeader(key);
+        public ChainedHeader this[int key] => this.GetHeaderByHeight(key);
 
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's hash.

@@ -91,7 +91,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             for (int height = 23; height <= 30; height++)
             {
                 // Check that only block 31 contains a batched reward transaction to the multisig.
-                ChainedHeader chainedHeader = nodeB.FullNode.ChainIndexer.GetHeader(height);
+                ChainedHeader chainedHeader = nodeB.FullNode.ChainIndexer.GetHeaderByHeight(height);
                 Block block = nodeB.FullNode.BlockStore().GetBlock(chainedHeader.HashBlock);
                 Assert.Equal(3, block.Transactions.Count);
 
@@ -108,13 +108,13 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             // Check that blocks 31 to 40 does not contain reward transactions.
             for (int height = 31; height <= 40; height++)
             {
-                ChainedHeader chainedHeader = nodeB.FullNode.ChainIndexer.GetHeader(height);
+                ChainedHeader chainedHeader = nodeB.FullNode.ChainIndexer.GetHeaderByHeight(height);
                 Block block = nodeB.FullNode.BlockStore().GetBlock(chainedHeader.HashBlock);
                 Assert.Equal(2, block.Transactions.Count);
             }
 
             // Check that only block 41 contains a batched reward transaction to the multisig.
-            ChainedHeader chainedHeader41 = nodeB.FullNode.ChainIndexer.GetHeader(41);
+            ChainedHeader chainedHeader41 = nodeB.FullNode.ChainIndexer.GetHeaderByHeight(41);
             Block block41 = nodeB.FullNode.BlockStore().GetBlock(chainedHeader41.HashBlock);
             Assert.Equal(3, block41.Transactions.Count);
             Assert.Equal(2, block41.Transactions[2].Outputs.Count);
@@ -167,7 +167,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             // The reward claimer should disregard this block connected event and just wait
             // for the next reward claiming height.
             // The test passes if no exception is thrown.
-            ChainedHeader chainedHeader40 = nodeB.FullNode.ChainIndexer.GetHeader(40);
+            ChainedHeader chainedHeader40 = nodeB.FullNode.ChainIndexer.GetHeaderByHeight(40);
             Block block40 = nodeB.FullNode.BlockStore().GetBlock(chainedHeader40.HashBlock);
             ChainedHeaderBlock chainedHeaderBlock = new ChainedHeaderBlock(block40, chainedHeader40);
             RewardClaimer rewardClaimer = nodeA.FullNode.NodeService<RewardClaimer>();
