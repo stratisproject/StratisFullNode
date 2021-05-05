@@ -1398,9 +1398,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = this.GetConnection(walletName);
 
-            HDAccount account = conn.GetAccountByName(walletName, accountName);
+            HDAccount account = (accountName == null) ?  null : conn.GetAccountByName(walletName, accountName);
 
-            return HDTransactionData.GetTransactionCount(conn, walletId, account.AccountIndex);
+            return HDTransactionData.GetTransactionCount(conn, walletId, account?.AccountIndex);
         }
 
         /// <inheritdoc />
