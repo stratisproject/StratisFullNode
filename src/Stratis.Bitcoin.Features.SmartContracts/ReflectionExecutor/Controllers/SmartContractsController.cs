@@ -176,8 +176,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
             }
 
+            var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeader((int)height);
+
+            var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
+
+            IStateRepositoryRoot stateAtHeight = this.stateRoot.GetSnapshotTo(scHeader.HashStateRoot.ToBytes());
+
             uint160 addressNumeric = request.ContractAddress.ToUint160(this.network);
-            byte[] storageValue = this.stateRoot.GetStorageValue(addressNumeric, Encoding.UTF8.GetBytes(request.StorageKey));
+            byte[] storageValue = stateAtHeight.GetStorageValue(addressNumeric, Encoding.UTF8.GetBytes(request.StorageKey));
 
             if (storageValue == null)
             {
