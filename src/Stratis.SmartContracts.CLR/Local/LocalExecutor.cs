@@ -49,7 +49,7 @@ namespace Stratis.SmartContracts.CLR.Local
                 Address.Zero
             );
 
-            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeader((int)blockHeight);
 
             var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
 
