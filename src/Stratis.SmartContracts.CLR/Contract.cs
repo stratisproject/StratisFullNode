@@ -152,6 +152,7 @@ namespace Stratis.SmartContracts.CLR
             // Allow the contract to implement custom method resolution.
             if (this.CallHandler != null)
                 return this.InvokeCallHandler(call.Name, invokeParams);
+
             Type[] types = invokeParams.Select(p => p.GetType()).ToArray();
 
             MethodInfo methodToInvoke = this.Type.GetMethod(call.Name, types);
