@@ -179,7 +179,7 @@ namespace Stratis.SmartContracts.CLR
             return VmExecutionResult.Ok(invocationResult.Return, typeToInstantiate);
         }
 
-        private bool IsEmbedded(ISmartContractState contractState, uint160 address, ref string typeName, out IContract contract, out VmExecutionResult executionResult)
+        private bool TryConstructEmbedded(ISmartContractState contractState, uint160 address, ref string typeName, out IContract contract, out VmExecutionResult executionResult)
         {
             if (!EmbeddedContractIdentifier.IsEmbedded(address) || this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out uint version))
             {
@@ -227,7 +227,7 @@ namespace Stratis.SmartContracts.CLR
             CachedAssemblyPackage assemblyPackage = null;
             uint256 codeHashUint256;
 
-            bool isEmbedded = IsEmbedded(contractState, contractState.Message.ContractAddress.ToUint160(), ref typeName, out contract, out VmExecutionResult executionResult);
+            bool isEmbedded = TryConstructEmbedded(contractState, contractState.Message.ContractAddress.ToUint160(), ref typeName, out contract, out VmExecutionResult executionResult);
 
             if (isEmbedded)
             {
