@@ -231,12 +231,13 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
-        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset)
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId)
         {
             string strLimit = DBParameter.Create(limit);
             string strOffset = DBParameter.Create(offset);
             string strWalletId = DBParameter.Create(walletId);
             string strAccountIndex = DBParameter.Create(accountIndex);
+            string strTransactionId = DBParameter.Create(txId);
 
             var result = conn.Query<FlattenedHistoryItem>($@"
                     SELECT 
@@ -269,7 +270,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     LEFT OUTER JOIN HDPayment sends on sends.SpendTxId = t.OutputTxId AND sends.SpendIsChange = 0 AND t.OutputTxIsCoinbase = 0 AND t.AddressType = 1
                     LEFT OUTER JOIN HDAddress a on a.Pubkey = sends.SpendScriptPubkey
                     WHERE 
-                        t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}
+                        t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex} {((txId == null) ? "" : $@" AND t.OutputTxId = {strTransactionId}")}
                     GROUP BY 
                         t.OutputTxId
                     ORDER BY

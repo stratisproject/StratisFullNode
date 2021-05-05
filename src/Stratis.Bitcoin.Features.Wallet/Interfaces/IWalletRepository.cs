@@ -186,7 +186,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// </summary>
         /// <param name="account">An optional account name to limit the results to a particular account.</param>
         /// <returns>A history of all transactions in the wallet.</returns>
-        AccountHistory GetHistory(HdAccount account, int limit, int offset);
+        AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null);
 
         //IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null);
 
@@ -324,6 +324,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="isChange">Whether to get payment or change details.</param>
         /// <returns>Returns the payment or change details.</returns>
         IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, TransactionData transactionData, bool isChange);
+
+        IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, string transactionId);
 
         /// <summary>
         /// Adds watch-only addresses.

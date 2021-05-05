@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             if (this.Type == TransactionItemType.Send)
             {
                 this.Fee = historyItem.Amount - historyItem.SendValue;
-                this.Payments = historyItem.Payments.Select(p => new PaymentDetailModel() { Amount = p.Amount, DestinationAddress = p.DestinationAddress }).ToList();
+                this.Payments = historyItem.Payments.Select(p => new PaymentDetailModel() { Amount = p.Amount, DestinationAddress = p.DestinationAddress, IsChange = p.IsChange }).ToList();
             }
         }
 
@@ -125,6 +125,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         [JsonProperty(PropertyName = "amount")]
         [JsonConverter(typeof(MoneyJsonConverter))]
         public Money Amount { get; set; }
+
+        /// <summary>
+        /// Flag indicating that this amount was change.
+        /// </summary>
+        [JsonProperty(PropertyName = "isChange")]
+        public bool IsChange { get; set; }
     }
 
     public enum TransactionItemType

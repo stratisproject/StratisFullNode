@@ -1345,18 +1345,46 @@ namespace Stratis.Features.SQLiteWalletRepository
             SpendingDetails spendingDetails = transactionData.SpendingDetails;
 
             var res = HDPayment.GetAllPayments(conn,
-                spendingDetails.TransactionId.ToString(),
-                transactionData.Id.ToString(),
-                transactionData.Index,
-                transactionData.AddressScriptPubKey.ToHex())
-                .Where(p => p.SpendIsChange == (isChange ? 1 : 0)).Select(p => new PaymentDetails()
-                {
-                    Amount = new Money(p.SpendValue),
-                    DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
-                    OutputIndex = p.SpendIndex
-                }).ToList();
+                 transactionData.SpendingDetails.TransactionId.ToString(),
+                 transactionData.Id.ToString(),
+                 transactionData.Index,
+                 transactionData.AddressScriptPubKey.ToHex())
+                 .Where(p => p.SpendIsChange == (isChange ? 1 : 0)).Select(p => new PaymentDetails()
+                 {
+                     Amount = new Money(p.SpendValue),
+                     DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
+                     OutputIndex = p.SpendIndex
+                 }).ToList();
 
-            if (transactionData.SpendingDetails == null || this.ScriptAddressReader == null)
+            if (spendingDetails != null || this.ScriptAddressReader == null)
+                return res;
+
+            var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
+            foreach (Script script in lookup.Keys.ToList())
+                lookup[script] = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+
+            foreach (PaymentDetails paymentDetails in res)
+                paymentDetails.DestinationAddress = lookup[paymentDetails.DestinationScriptPubKey];
+
+            return res;
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, string transactionId)
+        {
+            WalletContainer walletContainer = this.GetWalletContainer(walletName);
+
+            DBConnection conn = walletContainer.Conn;
+
+            var res = HDPayment.GetPaymentsForTransactionId(conn, transactionId).ToList().Select(p => new PaymentDetails()
+            {
+                Amount = new Money(p.SpendValue),
+                DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
+                OutputIndex = p.SpendIndex,
+                IsChange = p.SpendIsChange == 1 ? true : false
+            }).ToList();
+
+            if (this.ScriptAddressReader == null)
                 return res;
 
             var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
@@ -1464,13 +1492,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account, int limit, int offset)
+        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null)
         {
             Wallet wallet = account.AccountRoot.Wallet;
             WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset);
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
 
             var lookup = new Dictionary<string, string>();
 

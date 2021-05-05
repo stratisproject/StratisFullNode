@@ -10,6 +10,7 @@ using NBitcoin;
 using NBitcoin.BuilderExtensions;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -894,77 +895,26 @@ namespace Stratis.Bitcoin.Features.Wallet
             {
                 static bool coldStakeUtxoFilter(TransactionData d) => d.IsColdCoinStake == null || d.IsColdCoinStake == false;
 
-                // If the search query contains a transaction Id, the result needs to be
-                // built differently.
-                if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 parsedTxId))
+                if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 _))
                 {
-                    var historyItems = new List<FlatHistory>();
+                    // TODO coldStakeUtxoFilter
+                    accountHistory = this.WalletRepository.GetHistory(account, limit, offset, searchQuery);
 
-                    // First get the transaction and associated addresses by transaction id.
-                    IEnumerable<(HdAddress address, IEnumerable<TransactionData> transactionData)> result = this.WalletRepository.GetTransactionsById(account.AccountRoot.Wallet.Name, parsedTxId);
-
-                    // When the account is a normal one, filter out all cold stake UTXOs.
-                    if (account.IsNormalAccount())
+                    var result = accountHistory.History.FirstOrDefault();
+                    if (result != null && result.Type == (int)TransactionItemType.Send)
                     {
-                        foreach (var (address, transactionData) in result)
+                        var payments = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, result.Id);
+                        var grouped = payments.GroupBy(p => p.DestinationScriptPubKey);
+
+                        foreach (var group in grouped)
                         {
-                            historyItems.AddRange(transactionData.Where(coldStakeUtxoFilter).Select(t => new FlatHistory { Address = address, Transaction = t }));
+                            result.Payments.Add(new FlattenedHistoryItemPayment() { Amount = group.First().Amount, DestinationAddress = group.First().DestinationAddress, IsChange = group.First().IsChange });
                         }
                     }
-                    // Else just add the set as is.
-                    else
-                    {
-                        foreach (var (address, transactionData) in result)
-                        {
-                            historyItems.AddRange(transactionData.Select(t => new FlatHistory { Address = address, Transaction = t }));
-                        }
-                    }
-
-                    // Lastly, populate the payment collections.
-                    for (int i = 0; i < historyItems.Count; i++)
-                    {
-                        var toCheck = historyItems[i];
-                        if (toCheck.Transaction.SpendingDetails != null)
-                        {
-                            var paymentDetailsChange = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, historyItems[i].Transaction, true);
-                            toCheck.Transaction.SpendingDetails.Change = new PaymentCollection(toCheck.Transaction.SpendingDetails, paymentDetailsChange.ToList(), true);
-
-                            var paymentDetails = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, historyItems[i].Transaction, false);
-                            toCheck.Transaction.SpendingDetails.Payments = new PaymentCollection(toCheck.Transaction.SpendingDetails, paymentDetails.ToList(), false);
-
-                            historyItems[i] = toCheck;
-                        }
-                    }
-
-                    var grouped = historyItems.GroupBy(h => h.Transaction.Id);
-
-                    var flattenedHistoryItem = new FlattenedHistoryItem()
-                    {
-                        Id = grouped.First().Key.ToString(),
-                        Amount = grouped.First().Sum(g => g.Transaction.Amount),
-                        BlockHeight = grouped.First().First().Transaction.BlockHeight,
-                        Timestamp = grouped.First().First().Transaction.CreationTime.ToUnixTimeSeconds(),
-                    };
-
-                    var transactions = grouped.First().Select(x => x.Transaction);
-                    var spendingDetails = transactions.Where(x => x.SpendingDetails != null);
-                    if (spendingDetails.Any())
-                    {
-                        foreach (var spendingDetail in spendingDetails)
-                        {
-                            flattenedHistoryItem.Payments.Add(new FlattenedHistoryItemPayment() { Amount = spendingDetail.Amount, DestinationAddress = spendingDetail.AddressScriptPubKey.ToString() });
-                        }
-
-                        //flattenedHistoryItem.SendToAddress = grouped.First().First().Address.Address;
-                        //flattenedHistoryItem.SendToScriptPubkey = grouped.First().First().Address.ScriptPubKey.ToHex();
-                        //flattenedHistoryItem.SendValue = ;
-                    }
-
-                    accountHistory = new AccountHistory() { Account = account, History = new[] { flattenedHistoryItem } };
                 }
-                // Else query over the transaction set.
                 else
                 {
+                    // TODO coldStakeUtxoFilter
                     accountHistory = this.WalletRepository.GetHistory(account, limit, offset);
                 }
             }

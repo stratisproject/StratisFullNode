@@ -56,5 +56,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         public string DestinationAddress { get; set; }
 
         public Money Amount { get; set; }
+
+        public bool IsChange { get; set; }
     }
 }
