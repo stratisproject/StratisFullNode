@@ -1,8 +1,12 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.SmartContracts.CLR.Serialization;
+using Stratis.SmartContracts.Core;
+using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.RuntimeObserver;
 
 namespace Stratis.SmartContracts.CLR.Local
 {
@@ -17,13 +21,15 @@ namespace Stratis.SmartContracts.CLR.Local
         private readonly IStateFactory stateFactory;
         private readonly IStateProcessor stateProcessor;
         private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
+        private readonly ChainIndexer chainIndexer;
 
         public LocalExecutor(ILoggerFactory loggerFactory,
             ICallDataSerializer serializer,
             IStateRepositoryRoot stateRoot,
             IStateFactory stateFactory,
             IStateProcessor stateProcessor,
-            IContractPrimitiveSerializer contractPrimitiveSerializer)
+            IContractPrimitiveSerializer contractPrimitiveSerializer,
+            ChainIndexer chainIndexer)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType());
             this.stateRoot = stateRoot;
@@ -31,6 +37,7 @@ namespace Stratis.SmartContracts.CLR.Local
             this.stateFactory = stateFactory;
             this.stateProcessor = stateProcessor;
             this.contractPrimitiveSerializer = contractPrimitiveSerializer;
+            this.chainIndexer = chainIndexer;
         }
 
         public ILocalExecutionResult Execute(ulong blockHeight, uint160 sender, Money txOutValue, ContractTxData callData)
@@ -42,8 +49,31 @@ namespace Stratis.SmartContracts.CLR.Local
                 Address.Zero
             );
 
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+
+            var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
+
+            var isScHeader = scHeader != null;
+
+            if(!isScHeader)
+            {
+                return new LocalExecutionResult
+                {
+                    GasConsumed = (Gas)0,
+                    InternalTransfers = null,
+                    ErrorMessage = (ContractErrorMessage)$"Header at height {blockHeight} has no contract information",
+                    Logs = new List<Log>(),
+                    Return = null,
+                    Revert = false
+                };
+            }
+
+            uint256 hashStateRoot = scHeader.HashStateRoot;
+
+            IStateRepositoryRoot stateAtHeight = this.stateRoot.GetSnapshotTo(hashStateRoot.ToBytes());
+
             IState state = this.stateFactory.Create(
-                this.stateRoot.StartTracking(),
+                stateAtHeight.StartTracking(),
                 block,
                 txOutValue,
                 new uint256());
