@@ -179,6 +179,43 @@ namespace Stratis.SmartContracts.CLR
             return VmExecutionResult.Ok(invocationResult.Return, typeToInstantiate);
         }
 
+        private bool IsEmbedded(ISmartContractState contractState, uint160 address, ref string typeName, out IContract contract, out VmExecutionResult executionResult)
+        {
+            if (!EmbeddedContractIdentifier.IsEmbedded(address) || this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out uint version))
+            {
+                contract = null;
+                executionResult = null;
+
+                return false;
+            }
+
+            // TODO: Verify that the contract is white-listed by IWhitelistedHashChecker.                
+            Type type = Type.GetType(typeName);
+            contract = Contract.CreateUninitialized(type, contractState, address);
+
+            // Invoke the constructor of the provided contract code
+            Result<object[]> result = GetEmbeddedConstructorParameters(type, version);
+            if (result.IsFailure)
+            {
+                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
+                executionResult = VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, result.Error);
+            }
+
+            IContractInvocationResult invocationResult = contract.InvokeConstructor(result.Value);
+
+            if (!invocationResult.IsSuccess)
+            {
+                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
+                executionResult = GetInvocationVmErrorResult(invocationResult);
+            }
+
+            this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_SUCCEEDED");
+
+            executionResult = VmExecutionResult.Ok(null, typeName);
+
+            return true;
+        }
+
         /// <summary>
         /// Invokes a method on an existing smart contract
         /// </summary>
@@ -191,32 +228,7 @@ namespace Stratis.SmartContracts.CLR
 
             uint160 address = contractState.Message.ContractAddress.ToUint160();
 
-            if (EmbeddedContractIdentifier.IsEmbedded(address) && this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out uint version))
-            {
-                // TODO: Verify that the contract is white-listed.
-
-                Type type = Type.GetType(typeName);
-                contract = Contract.CreateUninitialized(type, contractState, address);
-
-                // Invoke the constructor of the provided contract code
-                Result<object[]> result = GetEmbeddedConstructorParameters(type, version);
-                if (result.IsFailure)
-                {
-                    this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
-                    return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, result.Error);
-                }
-
-                IContractInvocationResult invocationResult2 = contract.InvokeConstructor(result.Value);
-
-                if (!invocationResult2.IsSuccess)
-                {
-                    this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
-                    return GetInvocationVmErrorResult(invocationResult2);
-                }
-
-                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_SUCCEEDED");
-            }
-            else
+            if (!IsEmbedded(contractState, address, ref typeName, out contract, out VmExecutionResult executionResult))
             {
                 uint256 codeHashUint256 = new uint256(HashHelper.Keccak256(contractCode));
 
@@ -276,6 +288,10 @@ namespace Stratis.SmartContracts.CLR
                         this.assemblyCache.Store(codeHashUint256, assemblyPackage);
                     }
                 }
+            }
+            else if (!executionResult.IsSuccess)
+            {
+                return executionResult;
             }
 
             this.LogExecutionContext(contract.State.Block, contract.State.Message, contract.Address);
