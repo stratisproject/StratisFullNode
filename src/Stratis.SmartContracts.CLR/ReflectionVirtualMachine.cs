@@ -190,11 +190,8 @@ namespace Stratis.SmartContracts.CLR
             CachedAssemblyPackage assemblyPackage = null;
 
             uint160 address = contractState.Message.ContractAddress.ToUint160();
-            bool isEmbeddedContract = EmbeddedContractIdentifier.IsEmbedded(address);
-            uint256 codeHashUint256 = isEmbeddedContract ? new EmbeddedCodeHash(address) : new uint256(HashHelper.Keccak256(contractCode));
-            uint version;
 
-            if (isEmbeddedContract && this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out version))
+            if (EmbeddedContractIdentifier.IsEmbedded(address) && this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out uint version))
             {
                 // TODO: Verify that the contract is white-listed.
 
@@ -221,6 +218,8 @@ namespace Stratis.SmartContracts.CLR
             }
             else
             {
+                uint256 codeHashUint256 = new uint256(HashHelper.Keccak256(contractCode));
+
                 // Lets see if we already have an assembly
                 assemblyPackage = this.assemblyCache.Retrieve(codeHashUint256);
 
@@ -282,14 +281,12 @@ namespace Stratis.SmartContracts.CLR
             this.LogExecutionContext(contract.State.Block, contract.State.Message, contract.Address);
 
             // Set new Observer and load and execute.
-            if (!isEmbeddedContract)
-                assemblyPackage.Assembly.SetObserver(executionContext.Observer);
+            assemblyPackage.Assembly?.SetObserver(executionContext.Observer);
 
             IContractInvocationResult invocationResult = contract.Invoke(methodCall);
 
             // Always reset the observer, even if the previous was null.
-            if (!isEmbeddedContract)
-                assemblyPackage.Assembly.SetObserver(previousObserver);
+            assemblyPackage.Assembly?.SetObserver(previousObserver);
 
             if (!invocationResult.IsSuccess)
             {
