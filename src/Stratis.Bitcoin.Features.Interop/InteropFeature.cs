@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.Features.FederatedPeg.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
