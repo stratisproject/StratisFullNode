@@ -135,7 +135,7 @@ namespace Stratis.Features.Collateral
 
                 foreach (Poll poll in pendingAddFederationMemberPolls)
                 {
-                    ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
+                    ChainedHeader pollStartHeader = this.chainIndexer.GetHeaderByHash(poll.PollStartBlockData.Hash);
                     ChainedHeader votingRequestHeader = pollStartHeader.Previous;
 
                     // Already checked?

@@ -1250,7 +1250,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 return;
             }
 
-            chainedHeader = chainedHeader ?? this.ChainIndexer.GetHeader(block.GetHash());
+            chainedHeader = chainedHeader ?? this.ChainIndexer.GetHeaderByHash(block.GetHash());
 
             this.ProcessBlocks((previousBlock) => (previousBlock.HashBlock == chainedHeader.Previous.HashBlock) ? new[] { (chainedHeader, block) } : new (ChainedHeader, Block)[] { });
         }

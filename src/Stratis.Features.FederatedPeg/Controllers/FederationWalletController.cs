@@ -199,7 +199,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 return BuildErrorResponse(this.ModelState);
             }
 
-            ChainedHeader block = this.chainIndexer.GetHeader(uint256.Parse(model.Hash));
+            ChainedHeader block = this.chainIndexer.GetHeaderByHash(uint256.Parse(model.Hash));
 
             if (block == null)
             {

@@ -303,7 +303,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 1, int.MaxValue);
 
                 // Retrieve mined block.
-                Block block = node.FullNode.ChainIndexer.GetHeader(res.First()).Block;
+                Block block = node.FullNode.ChainIndexer.GetHeaderByHash(res.First()).Block;
 
                 // Confirm that the mined block is Segwit-ted.
                 Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
@@ -432,7 +432,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var script = new Key().PubKey.WitHash.ScriptPubKey;
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 1, int.MaxValue);
-                Block block = node.FullNode.ChainIndexer.GetHeader(res.First()).Block;
+                Block block = node.FullNode.ChainIndexer.GetHeaderByHash(res.First()).Block;
                 Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
                 Assert.NotNull(commitment);
 
@@ -498,7 +498,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 var script = new Key().PubKey.WitHash.ScriptPubKey;
                 var miner = node.FullNode.NodeService<IPowMining>() as PowMining;
                 List<uint256> res = miner.GenerateBlocks(new ReserveScript(script), 1, int.MaxValue);
-                Block block = node.FullNode.ChainIndexer.GetHeader(res.First()).Block;
+                Block block = node.FullNode.ChainIndexer.GetHeaderByHash(res.First()).Block;
                 Script commitment = WitnessCommitmentsRule.GetWitnessCommitment(node.FullNode.Network, block);
                 Assert.NotNull(commitment);
 

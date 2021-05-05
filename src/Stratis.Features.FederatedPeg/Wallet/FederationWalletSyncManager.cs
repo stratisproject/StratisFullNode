@@ -75,7 +75,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
             this.logger.Info("WalletSyncManager initialized. Wallet at block {0}.", this.federationWalletManager.LastBlockSyncedHashHeight().Height);
 
-            this.walletTip = this.chain.GetHeader(this.federationWalletManager.WalletTipHash);
+            this.walletTip = this.chain.GetHeaderByHash(this.federationWalletManager.WalletTipHash);
             if (this.walletTip == null)
             {
                 // The wallet tip was not found in the main chain.
@@ -117,7 +117,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             Guard.NotNull(block, nameof(block));
 
-            ChainedHeader newTip = this.chain.GetHeader(block.GetHash());
+            ChainedHeader newTip = this.chain.GetHeaderByHash(block.GetHash());
             if (newTip == null)
             {
                 this.logger.Trace("(-)[NEW_TIP_REORG]");
@@ -130,7 +130,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             {
                 // If previous block does not match there might have
                 // been a reorg, check if the wallet is still on the main chain.
-                ChainedHeader inBestChain = this.chain.GetHeader(this.walletTip.HashBlock);
+                ChainedHeader inBestChain = this.chain.GetHeaderByHash(this.walletTip.HashBlock);
                 if (inBestChain == null)
                 {
                     // The current wallet hash was not found on the main chain.
@@ -138,7 +138,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     ChainedHeader fork = this.walletTip;
 
                     // We walk back the chained block object to find the fork.
-                    while (this.chain.GetHeader(fork.HashBlock) == null)
+                    while (this.chain.GetHeaderByHash(fork.HashBlock) == null)
                         fork = fork.Previous;
 
                     this.logger.Info("Reorg detected, going back from '{0}' to '{1}'.", this.walletTip, fork);

@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Controllers
             else
             {
                 uint256 hashToSyncFrom = uint256.Parse(from);
-                ChainedHeader block = this.chainIndexer.GetHeader(hashToSyncFrom);
+                ChainedHeader block = this.chainIndexer.GetHeaderByHash(hashToSyncFrom);
                 if (block == null)
                 {
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Block with hash {from} was not found on the blockchain.", string.Empty);

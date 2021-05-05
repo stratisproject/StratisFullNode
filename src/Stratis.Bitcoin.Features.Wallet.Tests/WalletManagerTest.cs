@@ -1816,7 +1816,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             Block block = WalletTestsHelpers.AppendTransactionInNewBlockToChain(chain, transaction);
 
-            int blockHeight = chain.GetHeader(block.GetHash()).Height;
+            int blockHeight = chain.GetHeaderByHash(block.GetHash()).Height;
             // TODO: What was this commented for?
             //walletManager.ProcessTransaction(transaction, blockHeight);
 
@@ -2402,7 +2402,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             walletManager.ProcessBlock(chainInfo.block);
 
-            ChainedHeader chainedBlock = chain.GetHeader(block.GetHash());
+            ChainedHeader chainedBlock = chain.GetHeaderByHash(block.GetHash());
 
             walletManager.ProcessBlock(block);
 
