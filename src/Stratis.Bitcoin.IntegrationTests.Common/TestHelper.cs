@@ -508,7 +508,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
         public static void SendCoins(CoreNode sender, CoreNode receiver, Money amount, int? utxoCount = 1)
         {
             var receivingAddress = receiver.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(Name, AccountName));
-
             Money singleUtxoAmount = amount / utxoCount;
 
             var recipients = new List<Recipient>(utxoCount.Value);
@@ -519,12 +518,14 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
             var transaction = sender.FullNode.WalletTransactionHandler().BuildTransaction(context);
 
-            sender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction.ToHex()));
+            sender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(transaction.ToHex())).GetAwaiter().GetResult();
 
-            TestBase.WaitLoop(() => receiver.CreateRPCClient().GetRawMempool().Length > 0);
+            MineBlocks(sender, 1);
+
             TestBase.WaitLoop(() => receiver.FullNode.WalletManager().GetSpendableTransactionsInWallet(Name).Any());
 
-            TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));
+            if (sender != receiver)
+                TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));
         }
 
         private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations)

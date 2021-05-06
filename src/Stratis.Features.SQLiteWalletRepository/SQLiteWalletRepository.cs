@@ -1356,7 +1356,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                      OutputIndex = p.SpendIndex
                  }).ToList();
 
-            if (spendingDetails != null || this.ScriptAddressReader == null)
+            if (transactionData.SpendingDetails == null || this.ScriptAddressReader == null)
                 return res;
 
             var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
@@ -1502,18 +1502,26 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             var lookup = new Dictionary<string, string>();
 
-            // Update sent to addresses.
-            foreach (var item in result.Where(i => i.Type == (int)TransactionItemType.Send))
+            // Update sent to and mine/stake addresses.
+            foreach (var item in result)
             {
-                // Cache the address.
-                if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
+                if (item.Type == (int)TransactionItemType.Send)
                 {
-                    var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
-                    address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
-                    lookup.Add(item.SendToScriptPubkey, address);
+                    // Cache the address.
+                    if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
+                    {
+                        var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
+                        address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+                        lookup.Add(item.SendToScriptPubkey, address);
+                    }
+
+                    item.SendToAddress = address;
                 }
 
-                item.SendToAddress = address;
+                if (item.Type == (int)TransactionItemType.Mined || item.Type == (int)TransactionItemType.Staked)
+                {
+                    item.SendToAddress = item.MineStakeReceiveAddress;
+                }
             }
 
             return new AccountHistory()

@@ -264,6 +264,9 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                         END Amount,
                         sends.SpendValue as SendValue,
                         sends.SpendScriptPubkey as SendToScriptPubkey,
+                        CASE 
+                            WHEN t.OutputTxIsCoinbase = 1 THEN t.Address
+                        END MineStakeReceiveAddress,
                         t.OutputBlockHeight as BlockHeight
                     FROM 
                         HDTransactionData AS t

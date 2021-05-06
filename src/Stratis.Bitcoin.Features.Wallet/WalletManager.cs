@@ -361,13 +361,13 @@ namespace Stratis.Bitcoin.Features.Wallet
             // Locate the address based on its base58 string representation.
             // Check external addresses first.
             HdAddress hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
-                new WalletAccountReference(walletName, a.Name), 0, Int32.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
+                new WalletAccountReference(walletName, a.Name), 0, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
 
             // Then check change addresses if needed.
             if (hdAddress == null)
             {
                 hdAddress = this.WalletRepository.GetAccounts(wallet).SelectMany(a => this.WalletRepository.GetAccountAddresses(
-                    new WalletAccountReference(walletName, a.Name), 1, Int32.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
+                    new WalletAccountReference(walletName, a.Name), 1, int.MaxValue)).Select(a => a).FirstOrDefault(addr => addr.Address.ToString() == address);
             }
 
             ISecret privateKey = wallet.GetExtendedPrivateKeyForAddress(password, hdAddress).PrivateKey.GetWif(this.network);
@@ -838,17 +838,11 @@ namespace Stratis.Bitcoin.Features.Wallet
             return this.WalletRepository.GetUsedAddresses(accountReference, isChange);
         }
 
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null)
-        {
-            return this.GetHistory(walletName, accountName, searchQuery, int.MaxValue, null);
-        }
-
         /// <inheritdoc />
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int? limit = int.MaxValue, int? offset = 0)
+        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int limit = int.MaxValue, int offset = 0)
         {
             Guard.NotEmpty(walletName, nameof(walletName));
 
-            // In order to calculate the fee properly we need to retrieve all the transactions with spending details.
             Wallet wallet = this.GetWallet(walletName);
 
             var accountsHistory = new List<AccountHistory>();
@@ -872,17 +866,11 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 foreach (HdAccount account in accounts)
                 {
-                    accountsHistory.Add(this.GetHistoryForAccount(account, limit.GetValueOrDefault(), 0, searchQuery));
+                    accountsHistory.Add(this.GetHistoryForAccount(account, limit, offset, searchQuery));
                 }
             }
 
             return accountsHistory;
-        }
-
-        /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account)
-        {
-            return this.GetHistoryForAccount(account, int.MaxValue, 0, null);
         }
 
         protected AccountHistory GetHistoryForAccount(HdAccount account, int limit, int offset, string searchQuery = null)
