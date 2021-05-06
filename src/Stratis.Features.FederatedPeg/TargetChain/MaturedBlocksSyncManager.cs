@@ -6,6 +6,7 @@ using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Features.ExternalApi;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Controllers;
@@ -45,7 +46,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IExternalApiPoller externalApiPoller;
         private readonly ICoordinationManager coordinationManager;
         private readonly Network network;
-
+        private readonly IFederationManager federationManager;
+        
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>
@@ -70,6 +72,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IConversionRequestRepository conversionRequestRepository,
             ChainIndexer chainIndexer,
             Network network,
+            IFederationManager federationManager,
             IExternalApiPoller externalApiPoller = null,
             ICoordinationManager coordinationManager = null)
         {
@@ -86,7 +89,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.externalApiPoller = externalApiPoller;
             this.coordinationManager = coordinationManager;
             this.network = network;
-
+            this.federationManager = federationManager;
+            
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -239,23 +243,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if ((Math.Abs(candidateFee - tempConversionFeeAmount) / tempConversionFeeAmount * 100) <= 10)
                     {
-                        // The candidate fee
+                        // The candidate fee has diverged too far from the estimated fee.
+                        this.logger.Warn("Estimated conversion fee for transaction {0} ({1}) significantly differs from fee received from peers: {1}.", potentialConversionTransaction.Id, tempConversionFeeAmountSatoshi, candidateFee);
                     }
 
-                    this.coordinationManager.AddFeeVote(potentialConversionTransaction.Id.ToString(), candidateFee, );
+                    this.coordinationManager.AddFeeVote(potentialConversionTransaction.Id.ToString(), candidateFee, this.federationManager.GetCurrentFederationMember().PubKey);
 
-                    ulong conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.interopSettings.);
+                    this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, potentialConversionTransaction.Id.ToString(), candidateFee).GetAwaiter().GetResult();
 
-                    decimal conversionFeeAmount;
+                    ulong conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.coordinationManager.GetQuorum());
 
-                    if (conversionFeeAmount == decimal.MinusOne)
+                    if (conversionFeeAmountSatoshi == 0UL)
                     {
                         this.logger.Warn("Unable to determine actual fee for conversion transaction {0}, ignoring.", potentialConversionTransaction.Id);
 
                         continue;
                     }
 
-                    if (Money.Coins(conversionFeeAmount) >= potentialConversionTransaction.Amount)
+                    if (Money.Satoshis(conversionFeeAmountSatoshi) >= potentialConversionTransaction.Amount)
                     {
                         this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
 
@@ -285,7 +290,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
                         depositType,
-                        Money.Coins(conversionFeeAmount),
+                        Money.Satoshis(conversionFeeAmountSatoshi),
                         this.network.ConversionTransactionFeeDistributionDummyAddress,
                         potentialConversionTransaction.BlockNumber,
                         potentialConversionTransaction.BlockHash));
@@ -298,7 +303,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         Processed = false,
                         RequestStatus = ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Coins(conversionFeeAmount)).Satoshi,
+                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(conversionFeeAmountSatoshi)).Satoshi,
                         BlockHeight = header.Height,
                         DestinationAddress = potentialConversionTransaction.TargetAddress,
                         DestinationChain = potentialConversionTransaction.TargetChain

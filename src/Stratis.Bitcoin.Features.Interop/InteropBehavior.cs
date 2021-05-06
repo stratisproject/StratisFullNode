@@ -11,6 +11,7 @@ using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.Features.FederatedPeg.Payloads;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Interop

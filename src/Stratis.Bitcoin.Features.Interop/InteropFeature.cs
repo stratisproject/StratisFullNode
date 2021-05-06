@@ -11,6 +11,7 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Features.FederatedPeg.Coordination;
+using Stratis.Features.FederatedPeg.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -28,6 +29,8 @@ namespace Stratis.Bitcoin.Features.Interop
         
         private readonly IETHClient ethereumClientBase;
 
+        private readonly InteropSettings interopSettings;
+
         public InteropFeature(
             Network network, 
             IFederationManager federationManager,
@@ -35,6 +38,7 @@ namespace Stratis.Bitcoin.Features.Interop
             InteropPoller interopPoller,
             ICoordinationManager coordinationManager, 
             IETHClient ethereumClientBase,
+            InteropSettings interopSettings,
             IFullNode fullNode)
         {
             this.network = network;
@@ -43,6 +47,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopPoller = interopPoller;
             this.coordinationManager = coordinationManager;
             this.ethereumClientBase = ethereumClientBase;
+            this.interopSettings = interopSettings;
 
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
@@ -51,10 +56,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public override Task InitializeAsync()
         {
+            this.coordinationManager.RegisterQuorumSize(this.interopSettings.ETHMultisigWalletQuorum);
+
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.coordinationManager, this.ethereumClientBase));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.coordinationManager, this.ethereumClientBase, this.interopSettings));
 
             return Task.CompletedTask;
         }
