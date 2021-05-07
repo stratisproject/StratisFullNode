@@ -839,27 +839,31 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 // Get the wallet history for the sender.
                 WalletHistoryModel walletHistory = await $"http://localhost:{senderNode.ApiPort}/api".AppendPathSegment("wallet/history").SetQueryParams(new { walletName = "mywallet", accountName = "account 0" }).GetJsonAsync<WalletHistoryModel>();
                 ICollection<TransactionItemModel> history = walletHistory.AccountsHistoryModel.First().TransactionsHistory;
-                history.Count.Should().Be(2);
+                history.Count.Should().Be(3);
 
                 // Oldest items are first.
                 var firstItem = history.ToArray()[0];
-                firstItem.Amount.Should().Be(Money.Coins(10.00004520m)); //10 + fee
-                firstItem.Fee.Should().Be(Money.Coins(0.00004520m));
-                //firstItem.Payments.Count.Should().Be(1); // TODO Currently, returning a history set does not populate the payment collcetion. This is only done by querying a single txid.
-                //firstItem.Payments.First().Amount.Should().Be(Money.Coins(10));
-                firstItem.Type.Should().Be(TransactionItemType.Send);
+                firstItem.Amount.Should().Be(new Money(5000004520)); //Reward + tx mining fee
+                firstItem.Type.Should().Be(TransactionItemType.Mined);
 
                 var secondItem = history.ToArray()[1];
-                secondItem.Amount.Should().Be(new Money(20, MoneyUnit.BTC));
-                secondItem.Fee.Should().BeNull();
-                secondItem.Payments.Count.Should().Be(0);
-                secondItem.Type.Should().Be(TransactionItemType.Received);
+                secondItem.Amount.Should().Be(Money.Coins(10.00004520m)); //10 + fee
+                secondItem.Fee.Should().Be(Money.Coins(0.00004520m));
+                //firstItem.Payments.Count.Should().Be(1); // TODO Currently, returning a history set does not populate the payment collcetion. This is only done by querying a single txid.
+                //firstItem.Payments.First().Amount.Should().Be(Money.Coins(10));
+                secondItem.Type.Should().Be(TransactionItemType.Send);
+
+                var thirdItem = history.ToArray()[2];
+                thirdItem.Amount.Should().Be(new Money(20, MoneyUnit.BTC));
+                thirdItem.Fee.Should().BeNull();
+                thirdItem.Payments.Count.Should().Be(0);
+                thirdItem.Type.Should().Be(TransactionItemType.Received);
 
                 // The spendable amount on the sender should be change address.
                 var walletAccountReference = new WalletAccountReference(this.walletWithFundsName, "account 0");
-                var transactions = senderNode.FullNode.WalletManager().GetSpendableTransactionsInAccount(walletAccountReference);
-                transactions.Count().Should().Be(1);
-                transactions.First().Address.AddressType.Should().Be(1);
+                var transactions = senderNode.FullNode.WalletManager().GetSpendableTransactionsInAccount(walletAccountReference).ToList();
+                transactions.Count().Should().Be(2); // Mined plus receive
+                transactions[1].Address.AddressType.Should().Be(1);
             }
         }
     }
