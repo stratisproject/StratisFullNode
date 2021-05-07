@@ -53,8 +53,10 @@ namespace Stratis.Bitcoin.Builder
         {
             try
             {
+                this.logger.Info("Validating feature dependencies.");
                 this.Execute(feature => feature.ValidateDependencies(this.fullNode.Services));
 
+                this.logger.Info("Initializing fullnode features.");
                 this.Execute(feature =>
                 {
                     this.signals.Publish(new FullNodeEvent() { Message = $"Initializing feature '{feature.GetType().Name}'.", State = FullNodeState.Initializing.ToString() });
@@ -64,9 +66,9 @@ namespace Stratis.Bitcoin.Builder
                     this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' initialized.", State = FullNodeState.Initializing.ToString() });
                 });
             }
-            catch
+            catch (Exception ex)
             {
-                this.logger.Error("An error occurred starting the application.");
+                this.logger.Error($"An error occurred starting the application: {ex}");
                 this.logger.Trace("(-)[INITIALIZE_EXCEPTION]");
                 throw;
             }
