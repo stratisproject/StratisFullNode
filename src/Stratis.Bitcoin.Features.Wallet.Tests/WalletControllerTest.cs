@@ -778,7 +778,9 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             IActionResult result = controller.GetHistory(new WalletHistoryRequest
             {
-                WalletName = walletName
+                WalletName = walletName,
+                Skip = 0,
+                Take = 100
             });
 
             var errorResult = Assert.IsType<ErrorResult>(result);

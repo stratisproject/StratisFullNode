@@ -50,6 +50,13 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// </summary>
         public int? BlockHeight { get; set; }
 
+        /// <summary>
+        /// This is currently only set when querying a specific transaction.
+        /// <para>
+        /// Unsure as to the importance of this when returning a whole set of history items?
+        /// </para>
+        /// </summary>
+        /// <remarks>The poulation of this is currently only required by Bithumb exchange.</remarks>
         public List<FlattenedHistoryItemPayment> Payments { get; set; }
     }
 
