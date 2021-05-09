@@ -72,7 +72,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IConversionRequestRepository conversionRequestRepository,
             ChainIndexer chainIndexer,
             Network network,
-            IFederationManager federationManager,
+            IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
             ICoordinationManager coordinationManager = null)
         {
