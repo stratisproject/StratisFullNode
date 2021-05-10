@@ -268,6 +268,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Dispose()
         {
+            this.rocksDb.Dispose();
         }
     }
 }
