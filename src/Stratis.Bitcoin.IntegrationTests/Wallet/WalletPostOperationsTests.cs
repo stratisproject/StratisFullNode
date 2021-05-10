@@ -812,7 +812,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(senderNode, 10));
 
                 // Send coins to from the miner to the sender.
-                TestHelper.SendCoins(miningNode, senderNode, Money.Coins(20));
+                TestHelper.SendCoins(miningNode, miningNode, senderNode, Money.Coins(20));
 
                 // Advance the chain so that the coins become spendable.
                 TestHelper.MineBlocks(miningNode, 9);
@@ -827,7 +827,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestHelper.MineBlocks(miningNode, 1);
 
                 // Send an amount from the sender to the receiver that ensures change gets generated.
-                TestHelper.SendCoins(senderNode, receiverNode, Money.Coins(10));
+                TestHelper.SendCoins(miningNode, senderNode, receiverNode, Money.Coins(10));
 
                 // Advance the chain so that the coins become spendable.
                 TestHelper.MineBlocks(miningNode, 9);

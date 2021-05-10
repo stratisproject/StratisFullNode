@@ -27,19 +27,20 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var network = new StraxRegTestAdjusedCoinbaseMaturity();
 
             // Start 2 nodes
-            CoreNode nodeA = builder.CreateStratisPosNode(network, "history-1-nodeA", configParameters: configParameters).AddRewardClaimer().OverrideDateTimeProvider().WithWallet().Start();
-            CoreNode nodeB = builder.CreateStratisPosNode(network, "history-1-nodeB", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
+            CoreNode miner = builder.CreateStratisPosNode(network, "history-1-nodeA", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
+            CoreNode nodeA = builder.CreateStratisPosNode(network, "history-1-nodeB", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
+            CoreNode nodeB = builder.CreateStratisPosNode(network, "history-1-nodeC", configParameters: configParameters).OverrideDateTimeProvider().WithWallet().Start();
 
-            TestHelper.Connect(nodeA, nodeB);
+            TestHelper.ConnectAndSync(miner, nodeA, nodeB);
 
             // Get mining address
-            IEnumerable<string> miningAddresses = await $"http://localhost:{nodeA.ApiPort}/api"
+            IEnumerable<string> miningAddresses = await $"http://localhost:{miner.ApiPort}/api"
                 .AppendPathSegment("wallet/unusedAddresses")
                 .SetQueryParams(new { walletName = "mywallet", accountName = "account 0", count = 1 })
                 .GetJsonAsync<IEnumerable<string>>();
 
             // Assert empty history call result.
-            var noHistoryCall = $"http://localhost:{nodeA.ApiPort}/api"
+            var noHistoryCall = $"http://localhost:{miner.ApiPort}/api"
                 .AppendPathSegment("wallet/history")
                 .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0" })
                 .GetAsync()
@@ -47,16 +48,16 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             Assert.Empty(noHistoryCall.AccountsHistoryModel.First().TransactionsHistory);
 
             // Mine some blocks to receive the premine.
-            TestHelper.MineBlocks(nodeA, 5, miningAddress: miningAddresses.First());
+            TestHelper.MineBlocks(miner, 5, miningAddress: miningAddresses.First());
 
             // Send some coins to nodeB
-            TestHelper.SendCoins(nodeA, nodeB, Money.Coins(1000));
+            TestHelper.SendCoins(miner, miner, nodeB, Money.Coins(1000));
 
             // Mine the coins and advance the chain.
-            TestHelper.MineBlocks(nodeA, 15);
+            TestHelper.MineBlocks(miner, 15);
 
             // Start staking on the node.
-            IPosMinting minter = nodeA.FullNode.NodeService<IPosMinting>();
+            IPosMinting minter = miner.FullNode.NodeService<IPosMinting>();
             minter.Stake(new List<WalletSecret>() {
                 new WalletSecret()
                 {
@@ -65,16 +66,16 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             });
 
             // Stake to block height 30
-            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(nodeA, 30, 120), waitTimeSeconds: 120);
+            TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(miner, 30, 120), waitTimeSeconds: 120);
 
             // Stop staking.
             minter.StopStake();
 
             // Ensure nodes are synced.
-            TestBase.WaitLoop(() => TestHelper.AreNodesSynced(nodeA, nodeB));
+            TestBase.WaitLoop(() => TestHelper.AreNodesSynced(miner, nodeB));
 
             // Call the history method on node A
-            WalletHistoryModel historyNodeA = $"http://localhost:{nodeA.ApiPort}/api"
+            WalletHistoryModel historyNodeA = $"http://localhost:{miner.ApiPort}/api"
                                 .AppendPathSegment("wallet/history")
                                 .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0" })
                                 .GetAsync()
@@ -145,7 +146,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             // Assert payment details and change on sent tx.
             var sendTxs = historyNodeA.AccountsHistoryModel.First().TransactionsHistory.Where(t => t.Type == TransactionItemType.Send);
             var sendTx = sendTxs.First();
-            var singleTxCall = $"http://localhost:{nodeA.ApiPort}/api"
+            var singleTxCall = $"http://localhost:{miner.ApiPort}/api"
                 .AppendPathSegment("wallet/history")
                 .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0", SearchQuery = sendTx.Id.ToString() })
                 .GetAsync()
@@ -158,7 +159,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             Assert.Equal(Money.Coins(1000), normalPayments.First().Amount);
 
             // Assert Pagination and ordering
-            var paging = $"http://localhost:{nodeA.ApiPort}/api"
+            var paging = $"http://localhost:{miner.ApiPort}/api"
                 .AppendPathSegment("wallet/history")
                 .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0", Skip = 0, Take = 10 })
                 .GetAsync()
@@ -182,6 +183,71 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var receiveTx = receiveTxs.First();
             Assert.Equal(Money.Coins(1000), receiveTx.Amount);
             Assert.Equal(TransactionItemType.Received, receiveTx.Type);
+        }
+
+        [Fact]
+        public async Task MiningWalletCanReturnHistoryCorrectlyAsync()
+        {
+            using (var builder = NodeBuilder.Create(this))
+            {
+                var network = new StraxRegTestAdjusedCoinbaseMaturity();
+
+                // Start 3 nodes
+                CoreNode miner = builder.CreateStratisPosNode(network, "history-1-nodeA").WithWallet().Start();
+                CoreNode nodeA = builder.CreateStratisPosNode(network, "history-1-nodeB").WithWallet().Start();
+                CoreNode nodeB = builder.CreateStratisPosNode(network, "history-1-nodeC").WithWallet().Start();
+
+                TestHelper.ConnectAndSync(miner, nodeA, nodeB);
+
+                // Get mining address
+                IEnumerable<string> miningAddresses = await $"http://localhost:{miner.ApiPort}/api"
+                    .AppendPathSegment("wallet/unusedAddresses")
+                    .SetQueryParams(new { walletName = "mywallet", accountName = "account 0", count = 1 })
+                    .GetJsonAsync<IEnumerable<string>>();
+
+                // Assert empty history call result.
+                var noHistoryCall = $"http://localhost:{miner.ApiPort}/api"
+                    .AppendPathSegment("wallet/history")
+                    .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0" })
+                    .GetAsync()
+                    .ReceiveJson<WalletHistoryModel>().GetAwaiter().GetResult();
+                Assert.Empty(noHistoryCall.AccountsHistoryModel.First().TransactionsHistory);
+
+                // Mine some blocks to receive the premine.
+                TestHelper.MineBlocks(miner, 5, miningAddress: miningAddresses.First());
+
+                // Send some coins to nodeA
+                TestHelper.SendCoins(miner, miner, nodeA, Money.Coins(1000));
+
+                // Mine the coins and advance the chain.
+                TestHelper.MineBlocks(miner, 4);
+
+                // Send some more coins to nodeA
+                TestHelper.SendCoins(miner, miner, nodeA, Money.Coins(2000));
+
+                // Mine the coins and advance the chain.
+                TestHelper.MineBlocks(miner, 4);
+
+                // Send coins to nodeB (spend some of the first utxo)
+                TestHelper.SendCoins(miner, nodeA, nodeB, Money.Coins(500));
+
+                // Ensure nodes are synced.
+                TestBase.WaitLoop(() => TestHelper.AreNodesSynced(miner, nodeB));
+
+                // Call the history method on node A
+                WalletHistoryModel historyNodeA = $"http://localhost:{nodeA.ApiPort}/api"
+                                    .AppendPathSegment("wallet/history")
+                                    .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0" })
+                                    .GetAsync()
+                                    .ReceiveJson<WalletHistoryModel>().GetAwaiter().GetResult();
+
+                var history = historyNodeA.AccountsHistoryModel.First().TransactionsHistory.ToList();
+                Assert.Equal(3, history.Count);
+
+                Assert.Equal(TransactionItemType.Send, history[0].Type);
+                Assert.Equal(TransactionItemType.Received, history[1].Type);
+                Assert.Equal(TransactionItemType.Received, history[2].Type);
+            }
         }
 
         private class StraxRegTestAdjusedCoinbaseMaturity : StraxRegTest
