@@ -16,12 +16,12 @@ namespace Stratis.SmartContracts.CLR
 
         public EmbeddedContractIdentifier(ulong contractTypeId, uint version)
         {
-            this.value = new uint160(embeddedContractSignature.Concat(BitConverter.GetBytes(contractTypeId)).Concat(BitConverter.GetBytes(version)).ToArray());
+            this.value = new uint160(BitConverter.GetBytes(version).Concat(BitConverter.GetBytes(contractTypeId)).Concat(embeddedContractSignature).ToArray());
         }
 
-        public ulong ContractTypeId { get => BitConverter.ToUInt64(this.value.ToBytes(), 8); }
+        public ulong ContractTypeId { get => BitConverter.ToUInt64(this.value.ToBytes(), 4); }
 
-        public uint Version { get => BitConverter.ToUInt32(this.value.ToBytes(), 16); }
+        public uint Version { get => BitConverter.ToUInt32(this.value.ToBytes()); }
 
         public static implicit operator uint160(EmbeddedContractIdentifier embeddedContractIdentifier)
         {
@@ -30,8 +30,7 @@ namespace Stratis.SmartContracts.CLR
 
         public static bool IsEmbedded(uint160 id)
         {
-            return id.GetLow64() == BitConverter.ToUInt64(embeddedContractSignature);
+            return BitConverter.ToUInt64(id.ToBytes(), 12) == BitConverter.ToUInt64(embeddedContractSignature);
         }
     }
-
 }
