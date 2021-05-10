@@ -164,12 +164,15 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
+            this.logger.Info("Processing {0} matured blocks.", matureBlockDeposits.Value.Count);
+
             // Filter out conversion transactions & also log what we've received for diagnostic purposes.
             foreach (MaturedBlockDepositsModel maturedBlockDeposit in matureBlockDeposits.Value)
             {
                 var tempDepositList = new List<IDeposit>();
 
-                this.logger.Info("Matured deposit count: {0}.", maturedBlockDeposit.Deposits);
+                if (maturedBlockDeposit.Deposits.Count > 0)
+                    this.logger.Info("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
