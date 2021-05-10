@@ -35,18 +35,23 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         private readonly DBreezeSerializer dBreezeSerializer;
         private readonly IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
 
-        public RocksDbBlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dataStoreSerializer)
+        public RocksDbBlockRepository(Network network, string dataFolder, DBreezeSerializer dataStoreSerializer)
         {
-            Directory.CreateDirectory(dataFolder.BlockPath);
+            Directory.CreateDirectory(dataFolder);
 
             this.dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksDb = RocksDb.Open(this.dbOptions, dataFolder.BlockPath);
+            this.rocksDb = RocksDb.Open(this.dbOptions, dataFolder);
 
             this.dBreezeSerializer = dataStoreSerializer;
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.genesisTransactions = network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
+        }
+
+        public RocksDbBlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dataStoreSerializer)
+            : this(network, dataFolder.BlockPath, dataStoreSerializer)
+        {
         }
 
         /// <inheritdoc />
@@ -87,7 +92,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             Transaction res = null;
             lock (this.locker)
             {
-                byte[] transactionRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes()));
+                byte[] transactionRow = this.rocksDb.Get(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes());
 
                 if (transactionRow == null)
                 {
@@ -95,7 +100,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     return null;
                 }
 
-                byte[] blockRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.BlockTableName, transactionRow));
+                byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, transactionRow);
 
                 if (blockRow != null)
                 {
@@ -140,14 +145,14 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                         continue;
                     }
 
-                    byte[] transactionRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.TransactionTableName, trxids[i].ToBytes()));
+                    byte[] transactionRow = this.rocksDb.Get(BlockRepositoryConstants.TransactionTableName, trxids[i].ToBytes());
                     if (transactionRow == null)
                     {
                         this.logger.Trace("(-)[NO_TX_ROW]:null");
                         return null;
                     }
 
-                    byte[] blockRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.BlockTableName, transactionRow));
+                    byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, transactionRow);
 
                     if (blockRow != null)
                     {
@@ -184,7 +189,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             uint256 res = null;
             lock (this.locker)
             {
-                byte[] transactionRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes()));
+                byte[] transactionRow = this.rocksDb.Get(BlockRepositoryConstants.TransactionTableName, trxid.ToBytes());
                 if (transactionRow != null)
                     res = new uint256(transactionRow);
             }
@@ -218,10 +223,10 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     Block block = kv.Value;
 
                     // If the block is already in store don't write it again.
-                    byte[] blockRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.BlockTableName, blockId.ToBytes()));
+                    byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, blockId.ToBytes());
                     if (blockRow == null)
                     {
-                        batch.Put(DBH.Key(BlockRepositoryConstants.BlockTableName, blockId.ToBytes()), this.dBreezeSerializer.Serialize(block));
+                        batch.Put(BlockRepositoryConstants.BlockTableName, blockId.ToBytes(), this.dBreezeSerializer.Serialize(block));
 
                         if (this.TxIndex)
                         {
@@ -247,7 +252,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             {
                 // Index transactions.
                 foreach ((Transaction transaction, Block block) in transactions)
-                    batch.Put(DBH.Key(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes()), block.GetHash().ToBytes());
+                    batch.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
 
                 this.rocksDb.Write(batch);
             }
@@ -259,7 +264,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             {
                 foreach (ChainedHeader chainedHeader in headers)
                 {
-                    byte[] blockRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.BlockTableName, chainedHeader.HashBlock.ToBytes()));
+                    byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, chainedHeader.HashBlock.ToBytes());
                     Block block = blockRow != null ? this.dBreezeSerializer.Deserialize<Block>(blockRow) : null;
                     yield return block;
                 }
@@ -298,7 +303,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                                 var block = this.dBreezeSerializer.Deserialize<Block>(enumerator.Value());
                                 foreach (Transaction transaction in block.Transactions)
                                 {
-                                    batch.Put(DBH.Key(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes()), block.GetHash().ToBytes());
+                                    batch.Put(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes(), block.GetHash().ToBytes());
                                 }
 
                                 // inform the user about the ongoing operation
@@ -347,7 +352,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         private bool? LoadTxIndex()
         {
             bool? res = null;
-            byte[] row = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.CommonTableName, TxIndexKey));
+            byte[] row = this.rocksDb.Get(BlockRepositoryConstants.CommonTableName, TxIndexKey);
             if (row != null)
             {
                 this.TxIndex = BitConverter.ToBoolean(row);
@@ -360,7 +365,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         private void SaveTxIndex(bool txIndex)
         {
             this.TxIndex = txIndex;
-            this.rocksDb.Put(DBH.Key(BlockRepositoryConstants.CommonTableName, TxIndexKey), BitConverter.GetBytes(txIndex));
+            this.rocksDb.Put(BlockRepositoryConstants.CommonTableName, TxIndexKey, BitConverter.GetBytes(txIndex));
         }
 
         /// <inheritdoc />
@@ -376,7 +381,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         {
             if (this.TipHashAndHeight == null)
             {
-                byte[] row = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.CommonTableName, RepositoryTipKey));
+                byte[] row = this.rocksDb.Get(BlockRepositoryConstants.CommonTableName, RepositoryTipKey);
                 if (row != null)
                     this.TipHashAndHeight = this.dBreezeSerializer.Deserialize<HashHeightPair>(row);
             }
@@ -387,7 +392,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         private void SaveTipHashAndHeight(HashHeightPair newTip)
         {
             this.TipHashAndHeight = newTip;
-            this.rocksDb.Put(DBH.Key(BlockRepositoryConstants.CommonTableName, RepositoryTipKey), this.dBreezeSerializer.Serialize(newTip));
+            this.rocksDb.Put(BlockRepositoryConstants.CommonTableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(newTip));
         }
 
         /// <inheritdoc />
@@ -432,7 +437,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             {
                 // Lazy loading is on so we don't fetch the whole value, just the row.
                 byte[] key = hash.ToBytes();
-                byte[] blockRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.BlockTableName, key));
+                byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, key);
                 if (blockRow != null)
                     res = true;
             }
@@ -443,7 +448,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         protected virtual void OnDeleteTransactions(List<(Transaction, Block)> transactions)
         {
             foreach ((Transaction transaction, Block block) in transactions)
-                this.rocksDb.Remove(DBH.Key(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes()));
+                this.rocksDb.Remove(BlockRepositoryConstants.TransactionTableName, transaction.GetHash().ToBytes());
         }
 
         protected virtual void OnDeleteBlocks(List<Block> blocks)
@@ -460,7 +465,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
             }
 
             foreach (Block block in blocks)
-                this.rocksDb.Remove(DBH.Key(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes()));
+                this.rocksDb.Remove(BlockRepositoryConstants.BlockTableName, block.GetHash().ToBytes());
         }
 
         public List<Block> GetBlocksFromHashes(List<uint256> hashes)
@@ -482,7 +487,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
                     continue;
                 }
 
-                byte[] blockRow = this.rocksDb.Get(DBH.Key(BlockRepositoryConstants.BlockTableName, key.Item2));
+                byte[] blockRow = this.rocksDb.Get(BlockRepositoryConstants.BlockTableName, key.Item2);
                 if (blockRow != null)
                 {
                     results[key.Item1] = this.dBreezeSerializer.Deserialize<Block>(blockRow);
@@ -530,19 +535,19 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 
         public byte[] Get(byte tableName, byte[] key)
         {
-            byte[] result = this.rocksDb.Get(DBH.Key(tableName, key));
+            byte[] result = this.rocksDb.Get(tableName, key);
             return result;
         }
 
         public void Put(byte tableName, byte[] key, byte[] value)
         {
-            this.rocksDb.Put(DBH.Key(tableName, key), value);
+            this.rocksDb.Put(tableName, key, value);
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
+            this.rocksDb.Dispose();
         }
-
     }
 }
