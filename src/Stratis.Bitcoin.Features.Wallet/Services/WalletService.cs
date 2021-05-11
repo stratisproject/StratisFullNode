@@ -26,7 +26,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 {
     public class WalletService : IWalletService
     {
-        private const int MaxHistoryItemsPerAccount = 1000;
         protected readonly IWalletManager walletManager;
         private readonly IWalletTransactionHandler walletTransactionHandler;
         private readonly IWalletSyncManager walletSyncManager;
@@ -234,13 +233,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     // In effect, we filter out 'change' transactions that are not spent, as we don't want to show these in the history.
                     foreach (FlatHistory item in items.Where(t => !t.Address.IsChangeAddress() || (t.Address.IsChangeAddress() && t.Transaction.IsSpent())))
                     {
-                        // Count only unique transactions and limit it to MaxHistoryItemsPerAccount.
-                        int processedTransactions = uniqueProcessedTxIds.Count;
-                        if (processedTransactions >= MaxHistoryItemsPerAccount)
-                        {
-                            break;
-                        }
-
                         TransactionData transaction = item.Transaction;
                         HdAddress address = item.Address;
 
