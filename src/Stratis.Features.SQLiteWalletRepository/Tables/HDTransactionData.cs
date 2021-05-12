@@ -240,45 +240,76 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             string strTransactionId = DBParameter.Create(txId);
 
             var result = conn.Query<FlattenedHistoryItem>($@"
-                    SELECT 
-                        t.OutputTxId as Id, 
-                        CASE 
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN 1
-                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2
-                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
-                        END Type,                    
-                        t.OutputTxTime as TimeStamp,
-                        CASE
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value
-                            WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN ((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - t.Value)
-                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value
-                            WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN (SUM(t.Value) -
-                            (
-                                SELECT tt.Value
-                                FROM HDPayment p
-                                INNER JOIN HDTransactionData tt ON tt.OutputTxId = p.OutputTxId AND tt.OutputIndex = p.OutputIndex
-                                WHERE p.SpendTxId = t.OutputTxId AND p.SpendIsChange = 0
-                                LIMIT 1
-                            ))
-                        END Amount,
-                        sends.SpendValue as SendValue,
-                        sends.SpendScriptPubkey as SendToScriptPubkey,
-                        CASE 
-                            WHEN t.OutputTxIsCoinbase = 1 THEN t.Address
-                        END MineStakeReceiveAddress,
-                        t.OutputBlockHeight as BlockHeight
-                    FROM 
-                        HDTransactionData AS t
-                    LEFT OUTER JOIN HDPayment sends on sends.SpendTxId = t.OutputTxId AND sends.SpendIsChange = 0 AND t.OutputTxIsCoinbase = 0 AND t.AddressType = 1
-                    LEFT OUTER JOIN HDAddress a on a.Pubkey = sends.SpendScriptPubkey
-                    WHERE 
-                        t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex} {((txId == null) ? "" : $@" AND t.OutputTxId = {strTransactionId}")}
-                    GROUP BY 
-                        t.OutputTxId
-                    ORDER BY
-                        t.OutputTxTime DESC
-                    LIMIT {strLimit} OFFSET {strOffset}");
+
+            -- Interwoven receives and spends
+            SELECT * FROM
+            (
+              -- Find all receives
+              SELECT
+                  t.WalletId as WalletId,
+                  t.AccountIndex as AccountIndex,
+                  t.OutputTxId as Id, 
+                CASE 
+                    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
+                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
+                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2
+                END Type,                    
+                t.OutputTxTime as TimeStamp,
+                CASE
+                    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value
+                    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN ((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - t.Value)
+                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value
+                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN (SUM(t.Value) -
+                    (
+                        SELECT tt.Value
+                        FROM HDPayment p
+                        INNER JOIN HDTransactionData tt ON tt.OutputTxId = p.OutputTxId AND tt.OutputIndex = p.OutputIndex
+                        WHERE p.SpendTxId = t.OutputTxId AND p.SpendIsChange = 0
+                        LIMIT 1
+                    ))
+                END Amount,
+                NULL AS ChangeAmount,
+                NULL as Fee,
+                NULL as SendToScriptPubkey,
+                CASE
+                    WHEN t.OutputTxIsCoinbase = 1 THEN t.Address
+                END MineStakeReceiveAddress,
+                t.OutputBlockHeight as BlockHeight
+              FROM 
+                HDTransactionData AS t
+              WHERE 
+                t.WalletId = 1 AND t.AccountIndex = 0
+              GROUP BY t.OutputTxId
+            UNION ALL
+                SELECT * FROM (
+
+                  -- Find all sends
+                    SELECT
+                        t.WalletId as WalletId,        
+                        t.AccountIndex as AccountIndex,
+                        t.SpendTxId as Id,
+                        1 as Type,
+                        t.SpendTxTime as TimeStamp,
+                        (SELECT pp.SpendValue FROM HDPayment pp WHERE pp.SpendTxId = t.SpendTxId AND pp.SpendIsChange = 0 LIMIT 1) as Amount,
+                        (SELECT pp.SpendValue FROM HDPayment pp WHERE pp.SpendTxId = t.SpendTxId AND pp.SpendIsChange = 1 LIMIT 1) as ChangeAmount,
+                        SUM(t.Value) - t.SpendTxTotalOut as Fee,
+                        (SELECT pp.SpendScriptPubkey FROM HDPayment pp WHERE pp.SpendTxId = t.SpendTxId AND pp.SpendIsChange = 0 LIMIT 1) as SendToScriptPubkey,        
+                        NULL AS MineStakeReceiveAddress,
+                        t.SpendBlockHeight as BlockHeight
+                    FROM
+                    HDTransactionData t
+                    WHERE t.SpendtxId IS NOT NULL AND t.SpendTxIsCoinbase = 0
+                    GROUP BY t.SpendtxId
+                    ORDER BY t.SpendTxTime DESC
+                  )  
+            ) as T
+            WHERE
+                T.Type IS NOT NULL --eliminate sends in the first UNION
+                AND T.WalletId = {strWalletId} 
+                AND T.AccountIndex = {strAccountIndex} {((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
+            ORDER BY
+                T.TimeStamp DESC
+            LIMIT {strLimit} OFFSET {strOffset}");
 
             return result;
         }

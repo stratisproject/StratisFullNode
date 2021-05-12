@@ -37,7 +37,9 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         public long Amount { get; set; }
 
-        public long SendValue { get; set; }
+        public long ChangeAmount { get; set; }
+
+        public long Fee { get; set; }
 
         public string SendToScriptPubkey { get; set; }
 

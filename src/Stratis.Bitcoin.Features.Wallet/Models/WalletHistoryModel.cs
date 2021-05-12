@@ -52,7 +52,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
             if (this.Type == TransactionItemType.Send)
             {
-                this.Fee = historyItem.Amount - historyItem.SendValue;
+                this.Amount = new Money(historyItem.Amount + historyItem.Fee);
+                this.Fee = historyItem.Fee;
                 this.Payments = historyItem.Payments.Select(p => new PaymentDetailModel() { Amount = p.Amount, DestinationAddress = p.DestinationAddress, IsChange = p.IsChange }).ToList();
             }
         }

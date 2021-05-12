@@ -505,7 +505,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             return total == amount;
         }
 
-        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode receiver, Money amount, int? utxoCount = 1)
+        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode receiver, Money amount, List<OutPoint> outPoints= null, int? utxoCount = 1)
         {
             var receivingAddress = receiver.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(Name, AccountName));
             Money singleUtxoAmount = amount / utxoCount;
@@ -514,7 +514,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             for (int i = 0; i < utxoCount; i++)
                 recipients.Add(new Recipient { ScriptPubKey = receivingAddress.ScriptPubKey, Amount = singleUtxoAmount });
 
-            var context = CreateContext(sender.FullNode.Network, new WalletAccountReference(Name, AccountName), Password, recipients, FeeType.Medium, (int)sender.FullNode.Network.Consensus.CoinbaseMaturity);
+            var context = CreateContext(sender.FullNode.Network, new WalletAccountReference(Name, AccountName), Password, recipients, FeeType.Medium, (int)sender.FullNode.Network.Consensus.CoinbaseMaturity, outPoints);
 
             var transaction = sender.FullNode.WalletTransactionHandler().BuildTransaction(context);
 
@@ -528,7 +528,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             //    TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));
         }
 
-        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations)
+        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations, List<OutPoint> outPoints = null)
         {
             return new TransactionBuildContext(network)
             {
@@ -536,7 +536,8 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
                 MinConfirmations = minConfirmations,
                 FeeType = feeType,
                 WalletPassword = password,
-                Recipients = recipients
+                Recipients = recipients,
+                SelectedInputs = outPoints
             };
         }
     }
