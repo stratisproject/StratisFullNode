@@ -156,6 +156,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
     public class WalletTransactionCountRequest : RequestModel
     {
+        public WalletTransactionCountRequest()
+        {
+            this.AccountName = WalletManager.DefaultAccount;
+        }
+
         /// <summary>
         /// The name of the wallet to query transaction count for.
         /// </summary>
