@@ -5,6 +5,11 @@ namespace Stratis.SmartContracts.Core
     public interface IContractTransactionContext
     {
         /// <summary>
+        /// The transaction associated with this context.
+        /// </summary>
+        Transaction Transaction { get; }
+
+        /// <summary>
         /// Hash of the currently executing transaction.
         /// </summary>
         uint256 TransactionHash { get; }

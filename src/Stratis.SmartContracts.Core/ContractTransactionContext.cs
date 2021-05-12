@@ -18,6 +18,8 @@ namespace Stratis.SmartContracts.Core
 
         private readonly Money mempoolFee;
 
+        public Transaction Transaction => this.transaction;
+
         /// <inheritdoc />
         public uint256 TransactionHash
         {
