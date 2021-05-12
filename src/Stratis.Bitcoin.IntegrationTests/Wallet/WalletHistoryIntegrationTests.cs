@@ -176,7 +176,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 Assert.Equal(TransactionItemType.Received, history[2].Type);
 
                 // Assert payment details and change on sent tx.
-                var singleTxCall = $"http://localhost:{miner.ApiPort}/api"
+                var singleTxCall = $"http://localhost:{nodeA.ApiPort}/api"
                     .AppendPathSegment("wallet/history")
                     .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0", SearchQuery = history[0].Id.ToString() })
                     .GetAsync()
