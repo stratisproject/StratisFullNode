@@ -9,6 +9,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
     public class GetStorageRequest
     {
         /// <summary>
+        /// The height at which to query the state. If unset, will default to the current chain tip.
+        /// </summary>
+        public ulong? BlockHeight { get; set; }
+
+        /// <summary>
         /// The address of the smart contract.
         /// </summary>
         [Required(ErrorMessage = "A smart contract address is required.")]
