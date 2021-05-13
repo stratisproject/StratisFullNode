@@ -289,7 +289,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                         t.SpendTxTime as TimeStamp,
                         p.SendValue AS Amount,
                         t.Value - t.SpendTxTotalOut as Fee,
-                        p.SpendScriptPubKey as Address,
+                        p.SpendScriptPubKey as SendToScriptPubkey,
                         NULL AS ReceiveAddress,
                         t.SpendBlockHeight as BlockHeight
                     FROM
