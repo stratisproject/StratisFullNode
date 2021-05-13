@@ -159,13 +159,13 @@ namespace Stratis.Bitcoin.IntegrationTests.BlockStore
                 TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(syncer, 25));
 
                 // Spend some coins on minerA by sending 10 STRAT to syncer.
-                TestHelper.SendCoins(minerA, syncer, Money.Coins(10));
+                TestHelper.SendCoins(minerA, minerA, new[] { syncer }, Money.Coins(10));
 
                 // Miner A mines the transaction and advances onto 35.
                 // MinerA = 40
                 // MinerB = 20
                 // Syncer = 20
-                TestHelper.MineBlocks(minerA, 15);
+                TestHelper.MineBlocks(minerA, 14);
                 TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(minerA, 40));
                 TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(minerB, 20));
                 TestBase.WaitLoop(() => TestHelper.IsNodeSyncedAtHeight(syncer, 40));

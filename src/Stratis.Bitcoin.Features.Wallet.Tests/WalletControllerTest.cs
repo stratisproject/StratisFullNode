@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GenerateMnemonicWithoutParametersCreatesMnemonicWithDefaults()
+        public async Task GenerateMnemonicWithoutParametersCreatesMnemonicWithDefaultsAsync()
         {
             var controller = this.GetWalletController();
 
@@ -67,7 +67,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GenerateMnemonicWithDifferentWordCountCreatesMnemonicWithCorrectNumberOfWords()
+        public async Task GenerateMnemonicWithDifferentWordCountCreatesMnemonicWithCorrectNumberOfWordsAsync()
         {
             var controller = this.GetWalletController();
 
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         [InlineData("japanese", '　')]
         [InlineData("chinesetraditional", ' ')]
         [InlineData("chinesesimplified", ' ')]
-        public async Task GenerateMnemonicWithStrangeLanguageCasingReturnsCorrectMnemonic(string language,
+        public async Task GenerateMnemonicWithStrangeLanguageCasingReturnsCorrectMnemonicAsync(string language,
             char separator)
         {
             var controller = this.GetWalletController();
@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GenerateMnemonicWithUnknownLanguageReturnsBadRequest()
+        public async Task GenerateMnemonicWithUnknownLanguageReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
@@ -125,7 +125,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateWalletSuccessfullyReturnsMnemonic()
+        public async Task CreateWalletSuccessfullyReturnsMnemonicAsync()
         {
             var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
 
@@ -152,7 +152,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateWalletWithInvalidModelStateReturnsBadRequest()
+        public async Task CreateWalletWithInvalidModelStateReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
@@ -174,7 +174,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateWalletWithInvalidOperationExceptionReturnsConflict()
+        public async Task CreateWalletWithInvalidOperationExceptionReturnsConflictAsync()
         {
             string errorMessage = "An error occurred.";
 
@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task CreateWalletWithNotSupportedExceptionExceptionReturnsBadRequest()
+        public async Task CreateWalletWithNotSupportedExceptionExceptionReturnsBadRequestAsync()
         {
             var mockWalletCreate = this.ConfigureMock<IWalletManager>(
                 mock =>
@@ -239,7 +239,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RecoverWalletSuccessfullyReturnsWalletModel()
+        public async Task RecoverWalletSuccessfullyReturnsWalletModelAsync()
         {
             var wallet = new Wallet
             {
@@ -278,7 +278,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         /// The wallet should continue syncing from X without jumpoing forward.
         /// </summary>
         [Fact]
-        public async Task RecoverWalletWithDatedAfterCurrentSyncHeightDoesNotMoveSyncHeight()
+        public async Task RecoverWalletWithDatedAfterCurrentSyncHeightDoesNotMoveSyncHeightAsync()
         {
             var wallet = new Wallet
             {
@@ -318,7 +318,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RecoverWalletWithInvalidModelStateReturnsBadRequest()
+        public async Task RecoverWalletWithInvalidModelStateReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
@@ -341,7 +341,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RecoverWalletWithInvalidOperationExceptionReturnsConflict()
+        public async Task RecoverWalletWithInvalidOperationExceptionReturnsConflictAsync()
         {
             string errorMessage = "An error occurred.";
 
@@ -373,7 +373,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RecoverWalletWithFileNotFoundExceptionReturnsNotFound()
+        public async Task RecoverWalletWithFileNotFoundExceptionReturnsNotFoundAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
             {
@@ -404,7 +404,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RecoverWalletWithExceptionReturnsBadRequest()
+        public async Task RecoverWalletWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
             {
@@ -435,26 +435,26 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task RecoverWalletViaExtPubKeySuccessfullyReturnsWalletModel()
+        public async Task RecoverWalletViaExtPubKeySuccessfullyReturnsWalletModelAsync()
         {
             string walletName = "myWallet";
             string extPubKey =
                 "xpub661MyMwAqRbcEgnsMFfhjdrwR52TgicebTrbnttywb9zn3orkrzn6MHJrgBmKrd7MNtS6LAim44a6V2gizt3jYVPHGYq1MzAN849WEyoedJ";
 
-            await this.RecoverWithExtPubAndCheckSuccessfulResponse(walletName, extPubKey);
+            await this.RecoverWithExtPubAndCheckSuccessfulResponseAsync(walletName, extPubKey);
         }
 
         [Fact]
-        public async Task RecoverWalletViaExtPubKeySupportsStratisLegacyExtpubKey()
+        public async Task RecoverWalletViaExtPubKeySupportsStratisLegacyExtpubKeyAsync()
         {
             string walletName = "myWallet";
             string extPubKey =
                 "xpub6CCo1eBTzCPDuV7MDAV3SmRPNJyygTVc9FLwWey8qYQSnKFyv3iGsYpX9P5opDj1DXhbTxSgyy5jnKZPoCWqCtpsZdcGJWqrWri5LnQbPex";
 
-            await this.RecoverWithExtPubAndCheckSuccessfulResponse(walletName, extPubKey);
+            await this.RecoverWithExtPubAndCheckSuccessfulResponseAsync(walletName, extPubKey);
         }
 
-        private async Task RecoverWithExtPubAndCheckSuccessfulResponse(string walletName, string extPubKey)
+        private async Task RecoverWithExtPubAndCheckSuccessfulResponseAsync(string walletName, string extPubKey)
         {
             var wallet = new Wallet
             {
@@ -493,7 +493,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         /// </summary>
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous unit test.</placeholder></returns>
         [Fact]
-        public async Task RecoverWalletWithExtPubDatedAfterCurrentSyncHeightDoesNotMoveSyncHeight()
+        public async Task RecoverWalletWithExtPubDatedAfterCurrentSyncHeightDoesNotMoveSyncHeightAsync()
         {
             string walletName = "myWallet";
             string extPubKey =
@@ -505,7 +505,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 Network = KnownNetworks.StraxMain
             };
 
-            DateTime lastBlockDateTime = chainIndexer.Tip.Header.BlockTime.DateTime;
+            DateTime lastBlockDateTime = this.chainIndexer.Tip.Header.BlockTime.DateTime;
 
             var walletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(w =>
@@ -537,7 +537,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task LoadWalletSuccessfullyReturnsWalletModel()
+        public async Task LoadWalletSuccessfullyReturnsWalletModelAsync()
         {
             var wallet = new Wallet
             {
@@ -561,7 +561,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task LoadWalletWithInvalidModelReturnsBadRequest()
+        public async Task LoadWalletWithInvalidModelReturnsBadRequestAsync()
         {
             var controller = this.GetWalletController();
 
@@ -583,7 +583,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task LoadWalletWithFileNotFoundExceptionandReturnsNotFound()
+        public async Task LoadWalletWithFileNotFoundExceptionandReturnsNotFoundAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(wallet => wallet.LoadWallet(It.IsAny<string>(), It.IsAny<string>()))
@@ -609,7 +609,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task LoadWalletWithSecurityExceptionandReturnsForbidden()
+        public async Task LoadWalletWithSecurityExceptionandReturnsForbiddenAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(wallet => wallet.LoadWallet(It.IsAny<string>(), It.IsAny<string>()))
@@ -635,7 +635,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task LoadWalletWithOtherExceptionandReturnsBadRequest()
+        public async Task LoadWalletWithOtherExceptionandReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(wallet => wallet.LoadWallet(It.IsAny<string>(), It.IsAny<string>()))
@@ -660,7 +660,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetGeneralInfoSuccessfullyReturnsWalletGeneralInfoModel()
+        public async Task GetGeneralInfoSuccessfullyReturnsWalletGeneralInfoModelAsync()
         {
             var wallet = new Wallet
             {
@@ -714,7 +714,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetGeneralInfoWithModelStateErrorReturnsBadRequest()
+        public async Task GetGeneralInfoWithModelStateErrorReturnsBadRequestAsync()
         {
             var wallet = new Wallet
             {
@@ -743,7 +743,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetGeneralInfoWithExceptionReturnsBadRequest()
+        public async Task GetGeneralInfoWithExceptionReturnsBadRequestAsync()
         {
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
                 mock.Setup(w => w.GetWallet("myWallet")).Throws<FormatException>());
@@ -766,428 +766,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetHistoryWithoutAddressesReturnsEmptyModel()
+        public void GetHistoryWithExceptionReturnsBadRequest()
         {
             string walletName = "myWallet";
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null)).Returns(
-                    new List<AccountHistory>
-                    {
-                        new AccountHistory
-                        {
-                            History = new List<FlatHistory>(),
-                            Account = new HdAccount()
-                        }
-                    }));
-            mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(new Wallet());
-
-            var controller = this.GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.NotNull(model.AccountsHistoryModel);
-            Assert.NotEmpty(model.AccountsHistoryModel);
-            Assert.Single(model.AccountsHistoryModel);
-            Assert.Empty(model.AccountsHistoryModel.First().TransactionsHistory);
-        }
-
-        [Fact]
-        public async Task GetHistoryWithValidModelWithoutTransactionSpendingDetailsReturnsWalletHistoryModel()
-        {
-            string walletName = "myWallet";
-            HdAddress address = WalletTestsHelpers.CreateAddress();
-            TransactionData transaction = WalletTestsHelpers.CreateTransaction(new uint256(1), new Money(500000), 1);
-            address.Transactions.Add(transaction);
-
-            var addresses = new List<HdAddress> { address };
-            Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null);
-
-            account.ExternalAddresses.Add(address);
-
-            List<FlatHistory> flat = addresses
-                .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
-
-            var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
-                    .Returns(accountsHistory));
-            mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
-
-            var controller = this.GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.Single(model.AccountsHistoryModel);
-
-            AccountHistoryModel historyModel = model.AccountsHistoryModel.ElementAt(0);
-            Assert.Single(historyModel.TransactionsHistory);
-            TransactionItemModel resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(0);
-
-            Assert.Equal(TransactionItemType.Received, resultingTransactionModel.Type);
-            Assert.Equal(address.Address, resultingTransactionModel.ToAddress);
-            Assert.Equal(transaction.Id, resultingTransactionModel.Id);
-            Assert.Equal(transaction.Amount, resultingTransactionModel.Amount);
-            Assert.Equal(transaction.CreationTime, resultingTransactionModel.Timestamp);
-            Assert.Equal(1, resultingTransactionModel.ConfirmedInBlock);
-        }
-
-        [Fact]
-        public async Task GetHistoryWithCoinStakeWithMultipleInputs()
-        {
-            const int numberOfCoinStakeInputs = 10;
-            const string walletName = "myWallet";
-            HdAddress address = WalletTestsHelpers.CreateAddress();
-
-            // Set up a single address to have 10 transactions.
-            for (int i = 0; i < numberOfCoinStakeInputs; i++)
-            {
-                TransactionData transaction = WalletTestsHelpers.CreateTransaction(new uint256((ulong)i + 1),
-                    new Money(500000), 1, creationTime: DateTimeOffset.FromUnixTimeSeconds(i));
-                address.Transactions.Add(transaction);
-            }
-
-            // Make these transactions inputs to a new CoinStake transaction.
-            TransactionData coinStake = WalletTestsHelpers.CreateTransaction(
-                new uint256((ulong)numberOfCoinStakeInputs + 1),
-                address.Transactions.Sum(x => x.Amount) + Money.Coins(1), 2,
-                creationTime: DateTimeOffset.FromUnixTimeSeconds(numberOfCoinStakeInputs));
-            coinStake.IsCoinStake = true;
-
-            foreach (var spentTransaction in address.Transactions)
-            {
-                spentTransaction.SpendingDetails = new SpendingDetails
-                {
-                    BlockHeight = coinStake.BlockHeight,
-                    TransactionId = coinStake.Id,
-                    CreationTime = coinStake.CreationTime,
-                    IsCoinStake = true
-                };
-            }
-
-            address.Transactions.Add(coinStake);
-
-            var addresses = new List<HdAddress> { address };
-            Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null);
-
-            account.ExternalAddresses.Add(address);
-
-            List<FlatHistory> flat = addresses
-                .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
-
-            var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-            var mockWalletManager = this.ConfigureMock<IWalletManager>();
-
-            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
-                .Returns(accountsHistory);
-            mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
-
-            var controller = GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.Single(model.AccountsHistoryModel);
-
-            AccountHistoryModel historyModel = model.AccountsHistoryModel.ElementAt(0);
-
-            // We should have 11 entries. The most recent is our stake. The other 10 are receives.
-            Assert.Equal(numberOfCoinStakeInputs + 1, historyModel.TransactionsHistory.Count);
-            TransactionItemModel resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(0);
-
-            Assert.Equal(TransactionItemType.Staked, resultingTransactionModel.Type);
-            Assert.Equal(Money.Coins(1), resultingTransactionModel.Amount);
-
-            for (int i = 1; i <= numberOfCoinStakeInputs; i++)
-            {
-                TransactionItemModel receive = historyModel.TransactionsHistory.ElementAt(i);
-                Assert.Equal(TransactionItemType.Received, receive.Type);
-            }
-        }
-
-        [Fact]
-        public async Task GetHistoryWithValidModelWithTransactionSpendingDetailsReturnsWalletHistoryModel()
-        {
-            string walletName = "myWallet";
-            HdAddress changeAddress = WalletTestsHelpers.CreateAddress(changeAddress: true);
-            HdAddress address = WalletTestsHelpers.CreateAddress();
-            HdAddress destinationAddress = WalletTestsHelpers.CreateAddress();
-
-            TransactionData changeTransaction =
-                WalletTestsHelpers.CreateTransaction(new uint256(2), new Money(275000), 1);
-            changeAddress.Transactions.Add(changeTransaction);
-
-            PaymentDetails paymentDetails =
-                WalletTestsHelpers.CreatePaymentDetails(new Money(200000), destinationAddress);
-            SpendingDetails spendingDetails =
-                WalletTestsHelpers.CreateSpendingDetails(changeTransaction, paymentDetails);
-
-            TransactionData transaction =
-                WalletTestsHelpers.CreateTransaction(new uint256(1), new Money(500000), 1, spendingDetails);
-            address.Transactions.Add(transaction);
-
-            var addresses = new List<HdAddress> { address };
-            Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null);
-
-            account.ExternalAddresses.Add(address);
-            account.InternalAddresses.Add(changeAddress);
-
-            List<FlatHistory> flat = addresses
-                .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
-            var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
-                    .Returns(accountsHistory));
-            mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
-
-            var controller = this.GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.Single(model.AccountsHistoryModel);
-
-            AccountHistoryModel historyModel = model.AccountsHistoryModel.ElementAt(0);
-            Assert.Equal(2, historyModel.TransactionsHistory.Count);
-            TransactionItemModel resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(0);
-
-            Assert.Equal(TransactionItemType.Send, resultingTransactionModel.Type);
-            Assert.Null(resultingTransactionModel.ToAddress);
-            Assert.Equal(spendingDetails.TransactionId, resultingTransactionModel.Id);
-            Assert.Equal(spendingDetails.CreationTime, resultingTransactionModel.Timestamp);
-            Assert.Equal(spendingDetails.BlockHeight, resultingTransactionModel.ConfirmedInBlock);
-            Assert.Equal(paymentDetails.Amount, resultingTransactionModel.Amount);
-            Assert.Equal(new Money(25000), resultingTransactionModel.Fee);
-
-            Assert.Equal(1, resultingTransactionModel.Payments.Count);
-            PaymentDetailModel resultingPayment = resultingTransactionModel.Payments.ElementAt(0);
-            Assert.Equal(paymentDetails.DestinationAddress, resultingPayment.DestinationAddress);
-            Assert.Equal(paymentDetails.Amount, resultingPayment.Amount);
-
-            resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(1);
-
-            Assert.Equal(TransactionItemType.Received, resultingTransactionModel.Type);
-            Assert.Equal(address.Address, resultingTransactionModel.ToAddress);
-            Assert.Equal(transaction.Id, resultingTransactionModel.Id);
-            Assert.Equal(transaction.Amount, resultingTransactionModel.Amount);
-            Assert.Equal(transaction.CreationTime, resultingTransactionModel.Timestamp);
-            Assert.Equal(transaction.BlockHeight, resultingTransactionModel.ConfirmedInBlock);
-            Assert.Null(resultingTransactionModel.Fee);
-            Assert.Equal(0, resultingTransactionModel.Payments.Count);
-        }
-
-        [Fact]
-        public async Task GetHistoryWithValidModelWithFeeBelowZeroSetsFeeToZero()
-        {
-            string walletName = "myWallet";
-
-            HdAddress changeAddress = WalletTestsHelpers.CreateAddress(changeAddress: true);
-            HdAddress address = WalletTestsHelpers.CreateAddress();
-            HdAddress destinationAddress = WalletTestsHelpers.CreateAddress();
-
-            TransactionData changeTransaction =
-                WalletTestsHelpers.CreateTransaction(new uint256(2), new Money(310000), 1);
-            changeAddress.Transactions.Add(changeTransaction);
-
-            PaymentDetails paymentDetails =
-                WalletTestsHelpers.CreatePaymentDetails(new Money(200000), destinationAddress);
-            SpendingDetails spendingDetails =
-                WalletTestsHelpers.CreateSpendingDetails(changeTransaction, paymentDetails);
-
-            TransactionData transaction =
-                WalletTestsHelpers.CreateTransaction(new uint256(1), new Money(500000), 1, spendingDetails);
-            address.Transactions.Add(transaction);
-
-            var addresses = new List<HdAddress> { address, changeAddress };
-            Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null);
-
-            account.ExternalAddresses.Add(address);
-            account.InternalAddresses.Add(changeAddress);
-
-            List<FlatHistory> flat = addresses
-                .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
-            var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
-                    .Returns(accountsHistory));
-            mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
-
-            var controller = this.GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.Single(model.AccountsHistoryModel);
-
-            AccountHistoryModel historyModel = model.AccountsHistoryModel.ElementAt(0);
-            Assert.Equal(2, historyModel.TransactionsHistory.Count);
-
-            TransactionItemModel resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(0);
-            Assert.Equal(0, resultingTransactionModel.Fee);
-        }
-
-        /// <summary>
-        /// Tests that when a transaction has been sent that has multiple inputs to form the transaction these duplicate spending details do not show up multiple times in the history.
-        /// </summary>
-        [Fact]
-        public async Task GetHistoryWithDuplicateSpentTransactionsSelectsDistinctsSpentTransactionsForDuplicates()
-        {
-            string walletName = "myWallet";
-
-            var addresses = new List<HdAddress>
-            {
-                new HdAddress(
-                    new[]
-                    {
-                        new TransactionData
-                        {
-                            Id = new uint256(13),
-                            Amount = new Money(50),
-                            BlockHeight = 5,
-                            SpendingDetails = new SpendingDetails
-                            {
-                                TransactionId = new uint256(15),
-                                BlockHeight = 10,
-                                Payments = new List<PaymentDetails>
-                                {
-                                    new PaymentDetails
-                                    {
-                                        Amount = new Money(80),
-                                        DestinationAddress = "address1"
-                                    }
-                                }
-                            }
-                        }
-                    })
-                {
-                    HdPath = $"m/44'/0'/0'/1/0",
-                },
-                new HdAddress(new[]
-                {
-                    new TransactionData
-                    {
-                        Id = new uint256(14),
-                        Amount = new Money(30),
-                        BlockHeight = 6,
-                        SpendingDetails = new SpendingDetails
-                        {
-                            TransactionId = new uint256(15),
-                            BlockHeight = 10,
-                            Payments = new List<PaymentDetails>
-                            {
-                                new PaymentDetails
-                                {
-                                    Amount = new Money(80),
-                                    DestinationAddress = "address1"
-                                }
-                            }
-                        }
-                    }
-                })
-                {
-                    HdPath = $"m/44'/0'/0'/1/1",
-                    Index = 1
-                }
-            };
-
-            Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null);
-
-            foreach (HdAddress address in addresses)
-                if (address.AddressType == 0)
-                    account.ExternalAddresses.Add(address);
-                else
-                    account.InternalAddresses.Add(address);
-
-            List<FlatHistory> flat = addresses
-                .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
-            var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetWallet(walletName)).Returns(wallet));
-            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null))
-                .Returns(accountsHistory);
-
-            var controller = this.GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.Single(model.AccountsHistoryModel);
-
-            AccountHistoryModel historyModel = model.AccountsHistoryModel.ElementAt(0);
-            Assert.Single(historyModel.TransactionsHistory);
-
-            TransactionItemModel resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(0);
-
-            Assert.Equal(TransactionItemType.Send, resultingTransactionModel.Type);
-            Assert.Equal(new uint256(15), resultingTransactionModel.Id);
-            Assert.Equal(10, resultingTransactionModel.ConfirmedInBlock);
-            Assert.Equal(new Money(80), resultingTransactionModel.Amount);
-
-            Assert.Equal(1, resultingTransactionModel.Payments.Count);
-            PaymentDetailModel resultingPayment = resultingTransactionModel.Payments.ElementAt(0);
-            Assert.Equal("address1", resultingPayment.DestinationAddress);
-            Assert.Equal(new Money(80), resultingPayment.Amount);
-        }
-
-        [Fact]
-        public async Task GetHistoryWithExceptionReturnsBadRequest()
-        {
-            string walletName = "myWallet";
-            var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory("myWallet", WalletManager.DefaultAccount, null))
+                mock.Setup(w => w.GetHistory("myWallet", WalletManager.DefaultAccount, null, 100, 0))
                     .Throws(new InvalidOperationException("Issue retrieving wallets.")));
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(new Wallet());
 
             var controller = this.GetWalletController();
 
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
+            IActionResult result = controller.GetHistory(new WalletHistoryRequest
             {
-                WalletName = walletName
+                WalletName = walletName,
+                Skip = 0,
+                Take = 100
             });
 
             var errorResult = Assert.IsType<ErrorResult>(result);
@@ -1201,124 +794,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public async Task GetHistoryWithChangeAddressesShouldIncludeSpentChangeAddesses()
-        {
-            string walletName = "myWallet";
-
-            // create addresses
-            HdAddress changeAddress = WalletTestsHelpers.CreateAddress(changeAddress: true);
-            HdAddress changeAddress2 = WalletTestsHelpers.CreateAddress(changeAddress: true);
-            HdAddress address = WalletTestsHelpers.CreateAddress();
-            HdAddress destinationAddress = WalletTestsHelpers.CreateAddress();
-            HdAddress destinationAddress2 = WalletTestsHelpers.CreateAddress();
-
-            // create transaction on change address
-            TransactionData changeTransaction =
-                WalletTestsHelpers.CreateTransaction(new uint256(2), new Money(275000), 1);
-            changeAddress.Transactions.Add(changeTransaction);
-
-            // create transaction with spending details
-            PaymentDetails paymentDetails =
-                WalletTestsHelpers.CreatePaymentDetails(new Money(200000), destinationAddress);
-            SpendingDetails spendingDetails =
-                WalletTestsHelpers.CreateSpendingDetails(changeTransaction, paymentDetails);
-            TransactionData transaction =
-                WalletTestsHelpers.CreateTransaction(new uint256(1), new Money(500000), 1, spendingDetails);
-            address.Transactions.Add(transaction);
-
-            // create transaction on change address
-            TransactionData changeTransaction2 =
-                WalletTestsHelpers.CreateTransaction(new uint256(4), new Money(200000), 2);
-            changeAddress2.Transactions.Add(changeTransaction2);
-
-            // create transaction with spending details on change address
-            PaymentDetails paymentDetails2 =
-                WalletTestsHelpers.CreatePaymentDetails(new Money(50000), destinationAddress2);
-            SpendingDetails spendingDetails2 =
-                WalletTestsHelpers.CreateSpendingDetails(changeTransaction2, paymentDetails2);
-            TransactionData transaction2 =
-                WalletTestsHelpers.CreateTransaction(new uint256(3), new Money(275000), 2, spendingDetails2);
-            changeAddress.Transactions.Add(transaction2);
-
-            var addresses = new List<HdAddress> { address, changeAddress, changeAddress2 };
-
-            Wallet wallet = WalletTestsHelpers.CreateWallet(walletName);
-            HdAccount account = wallet.AddNewAccount((ExtPubKey)null);
-            foreach (HdAddress addr in addresses)
-                if (addr.AddressType == 0)
-                    account.ExternalAddresses.Add(addr);
-                else
-                    account.InternalAddresses.Add(addr);
-
-            List<FlatHistory> flat = addresses
-                .SelectMany(s => s.Transactions.Select(t => new FlatHistory { Address = s, Transaction = t })).ToList();
-
-            var mockWalletManager = this.ConfigureMock<IWalletManager>();
-
-            var accountsHistory = new List<AccountHistory> { new AccountHistory { History = flat, Account = account } };
-            mockWalletManager.Setup(w => w.GetHistory(walletName, WalletManager.DefaultAccount, null)).Returns(accountsHistory);
-            mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(wallet);
-
-            var controller = this.GetWalletController();
-
-            IActionResult result = await controller.GetHistoryAsync(new WalletHistoryRequest
-            {
-                WalletName = walletName
-            });
-
-            var viewResult = Assert.IsType<JsonResult>(result);
-            var model = viewResult.Value as WalletHistoryModel;
-
-            Assert.NotNull(model);
-            Assert.Single(model.AccountsHistoryModel);
-
-            AccountHistoryModel historyModel = model.AccountsHistoryModel.ElementAt(0);
-            Assert.Equal(3, historyModel.TransactionsHistory.Count);
-
-            TransactionItemModel resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(0);
-
-            Assert.Equal(TransactionItemType.Send, resultingTransactionModel.Type);
-            Assert.Null(resultingTransactionModel.ToAddress);
-            Assert.Equal(spendingDetails.TransactionId, resultingTransactionModel.Id);
-            Assert.Equal(spendingDetails.CreationTime, resultingTransactionModel.Timestamp);
-            Assert.Equal(spendingDetails.BlockHeight, resultingTransactionModel.ConfirmedInBlock);
-            Assert.Equal(paymentDetails.Amount, resultingTransactionModel.Amount);
-            Assert.Equal(new Money(25000), resultingTransactionModel.Fee);
-
-            Assert.Equal(1, resultingTransactionModel.Payments.Count);
-            PaymentDetailModel resultingPayment = resultingTransactionModel.Payments.ElementAt(0);
-            Assert.Equal(paymentDetails.DestinationAddress, resultingPayment.DestinationAddress);
-            Assert.Equal(paymentDetails.Amount, resultingPayment.Amount);
-
-            resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(1);
-
-            Assert.Equal(TransactionItemType.Received, resultingTransactionModel.Type);
-            Assert.Equal(address.Address, resultingTransactionModel.ToAddress);
-            Assert.Equal(transaction.Id, resultingTransactionModel.Id);
-            Assert.Equal(transaction.Amount, resultingTransactionModel.Amount);
-            Assert.Equal(transaction.CreationTime, resultingTransactionModel.Timestamp);
-            Assert.Equal(transaction.BlockHeight, resultingTransactionModel.ConfirmedInBlock);
-            Assert.Null(resultingTransactionModel.Fee);
-            Assert.Equal(0, resultingTransactionModel.Payments.Count);
-
-            resultingTransactionModel = historyModel.TransactionsHistory.ElementAt(2);
-
-            Assert.Equal(TransactionItemType.Send, resultingTransactionModel.Type);
-            Assert.Null(resultingTransactionModel.ToAddress);
-            Assert.Equal(spendingDetails2.TransactionId, resultingTransactionModel.Id);
-            Assert.Equal(spendingDetails2.CreationTime, resultingTransactionModel.Timestamp);
-            Assert.Equal(spendingDetails2.BlockHeight, resultingTransactionModel.ConfirmedInBlock);
-            Assert.Equal(paymentDetails2.Amount, resultingTransactionModel.Amount);
-            Assert.Equal(new Money(25000), resultingTransactionModel.Fee);
-
-            Assert.Equal(1, resultingTransactionModel.Payments.Count);
-            resultingPayment = resultingTransactionModel.Payments.ElementAt(0);
-            Assert.Equal(paymentDetails2.DestinationAddress, resultingPayment.DestinationAddress);
-            Assert.Equal(paymentDetails2.Amount, resultingPayment.Amount);
-        }
-
-        [Fact]
-        public async Task GetBalanceWithValidModelStateReturnsWalletBalanceModel()
+        public async Task GetBalanceWithValidModelStateReturnsWalletBalanceModelAsync()
         {
             HdAccount account = WalletTestsHelpers.CreateAccount("account 1");
             HdAddress accountAddress1 = WalletTestsHelpers.CreateAddress();

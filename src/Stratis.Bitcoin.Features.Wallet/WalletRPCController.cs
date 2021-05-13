@@ -471,7 +471,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             if (include_watchonly)
             {
-                WalletHistoryModel history = await GetWatchOnlyTransactionAsync(trxid);
+                WalletHistoryModel history = GetWatchOnlyTransaction(trxid);
                 if ((history?.AccountsHistoryModel?.FirstOrDefault()?.TransactionsHistory?.Count ?? 0) != 0)
                     return history;
             }
@@ -644,7 +644,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <summary>
         /// We get the details via the wallet service's history method.
         /// </summary>
-        private async Task<WalletHistoryModel> GetWatchOnlyTransactionAsync(uint256 trxid)
+        private WalletHistoryModel GetWatchOnlyTransaction(uint256 trxid)
         {
             var accountReference = this.GetWatchOnlyWalletAccountReference();
 
@@ -655,7 +655,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 SearchQuery = trxid.ToString(),
             };
 
-            var history = await this.walletService.GetHistory(request, default);
+            var history = this.walletService.GetHistory(request);
             return history;
         }
 

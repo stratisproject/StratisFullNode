@@ -88,5 +88,13 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 outputIndex,
                 scriptPubKey);
         }
+
+        internal static IEnumerable<HDPayment> GetPaymentsForTransactionId(DBConnection conn, string spendTxId)
+        {
+            return conn.Query<HDPayment>($@"
+                SELECT  *
+                FROM    HDPayment
+                WHERE   SpendTxId = ?", spendTxId);
+        }
     }
 }
