@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             TestBase.WaitLoop(() => TestHelper.AreNodesSynced(miner, syncer));
 
             // Assert ordering
-            var history = CallHistory(miner);
+            var history = await CallHistoryAsync(miner);
 
             // Staking items should appear first in the result.
             var stakingTxs = history.Where(t => t.Type == TransactionItemType.Staked);
@@ -90,7 +90,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             for (int mIndex = index; mIndex < index + 20; mIndex++)
             {
                 var item = history[mIndex];
-                if(mIndex == 28)
+                if ((miner.FullNode.ChainIndexer.Tip.Height - 2) == mIndex)
                     Assert.Equal(Money.Coins(130_000_000), item.Amount); //premine
                 else
                     Assert.Equal(Money.Coins(18), item.Amount);
@@ -141,20 +141,20 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestHelper.MineBlocks(miner, 5, miningAddress: miningAddresses.First());
 
                 // Send some coins to nodeA
-                TestHelper.SendCoins(miner, miner, nodeA, Money.Coins(1000));
+                TestHelper.SendCoins(miner, miner, new[] { nodeA }, Money.Coins(1000));
 
                 // Call the history method on node A
-                var history = CallHistory(nodeA);
+                var history = await CallHistoryAsync(nodeA);
                 Assert.Single(history);
 
                 // Mine the coins and advance the chain.
                 TestHelper.MineBlocks(miner, 4);
 
                 // Send some more coins to nodeA
-                TestHelper.SendCoins(miner, miner, nodeA, Money.Coins(2000));
+                TestHelper.SendCoins(miner, miner, new[] { nodeA }, Money.Coins(2000));
 
                 // Call the history method on node A
-                history = CallHistory(nodeA);
+                history = await CallHistoryAsync(nodeA);
                 Assert.Equal(2, history.Count);
 
                 // Mine the coins and advance the chain.
@@ -162,13 +162,13 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 // Send coins from NodeA to NodeB (spend some of the first utxo)
                 var coins = nodeA.FullNode.WalletManager().GetSpendableTransactionsInWallet("mywallet");
-                TestHelper.SendCoins(miner, nodeA, nodeB, Money.Coins(900), coins.Where(c => c.Transaction.Amount <= Money.Coins(1000)).Select(c => c.ToOutPoint()).ToList());
+                TestHelper.SendCoins(miner, nodeA, new[] { nodeB }, Money.Coins(900), coins.Where(c => c.Transaction.Amount <= Money.Coins(1000)).Select(c => c.ToOutPoint()).ToList());
 
                 // Ensure nodes are synced.
                 TestBase.WaitLoop(() => TestHelper.AreNodesSynced(miner, nodeB));
 
                 // Call the history method on node A
-                history = CallHistory(nodeA);
+                history = await CallHistoryAsync(nodeA);
                 Assert.Equal(3, history.Count);
 
                 Assert.Equal(TransactionItemType.Send, history[0].Type);
@@ -192,13 +192,56 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             }
         }
 
-        private List<TransactionItemModel> CallHistory(CoreNode node)
+        [Fact]
+        public async Task WalletCanReturnHistoryCorrectlyToMultipleRecipientsAsync()
         {
-            WalletHistoryModel historyNodeA = $"http://localhost:{node.ApiPort}/api"
+            using (var builder = NodeBuilder.Create(this))
+            {
+                var network = new StraxRegTestAdjusedCoinbaseMaturity();
+
+                // Start 4 nodes
+                CoreNode miner = builder.CreateStratisPosNode(network, "history-3-nodeA").WithWallet().Start();
+                CoreNode nodeA = builder.CreateStratisPosNode(network, "history-3-nodeB").WithWallet().Start();
+                CoreNode nodeB = builder.CreateStratisPosNode(network, "history-3-nodeC").WithWallet().Start();
+                CoreNode nodeC = builder.CreateStratisPosNode(network, "history-3-nodeD").WithWallet().Start();
+
+                TestHelper.ConnectAndSync(miner, nodeA, nodeB, nodeC);
+
+                // Mine some blocks to receive the premine.
+                TestHelper.MineBlocks(miner, 10);
+
+                // Send some coins to nodeA, nodeB and nodeC
+                TestHelper.SendCoins(miner, miner, new CoreNode[] { nodeA, nodeB, nodeC }, Money.Coins(100));
+
+                // Single receive tx
+                var history = await CallHistoryAsync(nodeA);
+                Assert.Single(history);
+
+                // Single receive tx
+                history = await CallHistoryAsync(nodeB);
+                Assert.Single(history);
+
+                // Single receive tx
+                history = await CallHistoryAsync(nodeC);
+                Assert.Single(history);
+
+                // 3 sends of 100
+                history = await CallHistoryAsync(miner);
+                var sends = history.Where(t => t.Type == TransactionItemType.Send).ToList();
+                Assert.Equal(3, sends.Count());
+                Assert.Equal(Money.Coins(100) + sends[0].Fee, sends[0].Amount);
+                Assert.Equal(Money.Coins(100) + sends[1].Fee, sends[1].Amount);
+                Assert.Equal(Money.Coins(100) + sends[2].Fee, sends[2].Amount);
+            }
+        }
+
+        private async Task<List<TransactionItemModel>> CallHistoryAsync(CoreNode node)
+        {
+            WalletHistoryModel historyNodeA = await $"http://localhost:{node.ApiPort}/api"
                                 .AppendPathSegment("wallet/history")
                                 .SetQueryParams(new WalletHistoryRequest { WalletName = "mywallet", AccountName = "account 0" })
                                 .GetAsync()
-                                .ReceiveJson<WalletHistoryModel>().GetAwaiter().GetResult();
+                                .ReceiveJson<WalletHistoryModel>();
 
             return historyNodeA.AccountsHistoryModel.First().TransactionsHistory.ToList();
         }

@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         public string SendToAddress { get; set; }
 
-        public string MineStakeReceiveAddress { get; set; }
+        public string ReceiveAddress { get; set; }
 
         /// <summary>
         /// The height of the block in which this transaction was confirmed.

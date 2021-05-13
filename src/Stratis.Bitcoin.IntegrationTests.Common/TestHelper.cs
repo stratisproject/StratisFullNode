@@ -505,14 +505,18 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             return total == amount;
         }
 
-        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode receiver, Money amount, List<OutPoint> outPoints= null, int? utxoCount = 1)
+        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode[] receivers, Money amount, List<OutPoint> outPoints= null, int? utxoCount = 1)
         {
-            var receivingAddress = receiver.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(Name, AccountName));
-            Money singleUtxoAmount = amount / utxoCount;
+            var recipients = new List<Recipient>(receivers.Length);
 
-            var recipients = new List<Recipient>(utxoCount.Value);
-            for (int i = 0; i < utxoCount; i++)
-                recipients.Add(new Recipient { ScriptPubKey = receivingAddress.ScriptPubKey, Amount = singleUtxoAmount });
+            foreach (var receiver in receivers)
+            {
+                var receivingAddress = receiver.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(Name, AccountName));
+                Money singleUtxoAmount = amount / utxoCount;
+
+                for (int i = 0; i < utxoCount; i++)
+                    recipients.Add(new Recipient { ScriptPubKey = receivingAddress.ScriptPubKey, Amount = singleUtxoAmount });
+            }
 
             var context = CreateContext(sender.FullNode.Network, new WalletAccountReference(Name, AccountName), Password, recipients, FeeType.Medium, (int)sender.FullNode.Network.Consensus.CoinbaseMaturity, outPoints);
 
@@ -522,7 +526,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
 
             MineBlocks(miner, 1);
 
-            TestBase.WaitLoop(() => receiver.FullNode.WalletManager().GetSpendableTransactionsInWallet(Name).Any());
+            foreach (var receiver in receivers)
+            {
+                TestBase.WaitLoop(() => receiver.FullNode.WalletManager().GetSpendableTransactionsInWallet(Name).Any());
+            }
 
             //if (sender != receiver)
             //    TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));

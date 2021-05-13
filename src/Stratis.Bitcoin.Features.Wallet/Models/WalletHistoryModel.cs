@@ -48,10 +48,15 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             this.Amount = new Money(historyItem.Amount);
             this.Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp);
             this.ConfirmedInBlock = historyItem.BlockHeight;
-            this.ToAddress = historyItem.SendToAddress;
+
+            if (historyItem.Type != (int)TransactionItemType.Send)
+            {
+                this.ToAddress = historyItem.ReceiveAddress;
+            }
 
             if (this.Type == TransactionItemType.Send)
             {
+                this.ToAddress = historyItem.SendToAddress;
                 this.Amount = new Money(historyItem.Amount + historyItem.Fee);
                 this.Fee = historyItem.Fee;
                 this.Payments = historyItem.Payments.Select(p => new PaymentDetailModel() { Amount = p.Amount, DestinationAddress = p.DestinationAddress, IsChange = p.IsChange }).ToList();

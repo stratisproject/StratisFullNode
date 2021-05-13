@@ -1517,11 +1517,6 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                     item.SendToAddress = address;
                 }
-
-                if (item.Type == (int)TransactionItemType.Mined || item.Type == (int)TransactionItemType.Staked)
-                {
-                    item.SendToAddress = item.MineStakeReceiveAddress;
-                }
             }
 
             return new AccountHistory()

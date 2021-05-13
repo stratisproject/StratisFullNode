@@ -268,38 +268,43 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                         LIMIT 1
                     ))
                 END Amount,
-                NULL AS ChangeAmount,
                 NULL as Fee,
                 NULL as SendToScriptPubkey,
-                CASE
-                    WHEN t.OutputTxIsCoinbase = 1 THEN t.Address
-                END MineStakeReceiveAddress,
+                t.Address AS ReceiveAddress,
                 t.OutputBlockHeight as BlockHeight
               FROM 
                 HDTransactionData AS t
-              GROUP BY t.OutputTxId
+              GROUP BY t.OutputTxId    
             UNION ALL
-                SELECT * FROM (
-
-                  -- Find all sends
+                SELECT * FROM 
+                (
+                    -- Find all sends
                     SELECT
                         t.WalletId as WalletId,        
                         t.AccountIndex as AccountIndex,
                         t.SpendTxId as Id,
                         1 as Type,
                         t.SpendTxTime as TimeStamp,
-                        (SELECT pp.SpendValue FROM HDPayment pp WHERE pp.SpendTxId = t.SpendTxId AND pp.SpendIsChange = 0 LIMIT 1) as Amount,
-                        (SELECT pp.SpendValue FROM HDPayment pp WHERE pp.SpendTxId = t.SpendTxId AND pp.SpendIsChange = 1 LIMIT 1) as ChangeAmount,
-                        SUM(t.Value) - t.SpendTxTotalOut as Fee,
-                        (SELECT pp.SpendScriptPubkey FROM HDPayment pp WHERE pp.SpendTxId = t.SpendTxId AND pp.SpendIsChange = 0 LIMIT 1) as SendToScriptPubkey,        
-                        NULL AS MineStakeReceiveAddress,
+                        p.SendValue AS Amount,
+                        t.Value - t.SpendTxTotalOut as Fee,
+                        p.SpendScriptPubKey as Address,
+                        NULL AS ReceiveAddress,
                         t.SpendBlockHeight as BlockHeight
                     FROM
-                    HDTransactionData t
-                    WHERE t.SpendtxId IS NOT NULL AND t.SpendTxIsCoinbase = 0
-                    GROUP BY t.SpendtxId
-                    ORDER BY t.SpendTxTime DESC
-                  )  
+                        (SELECT WalletId, AccountIndex, SpendTxId, SpendTxTime, SpendTxTotalOut, SUM(Value) Value,SpendBlockHeight FROM HDTransactionData WHERE SpendtxId IS NOT NULL AND SpendTxIsCoinbase = 0 GROUP BY SpendTxId) t
+                    LEFT JOIN (
+                        SELECT SpendTxId
+                    	,      SpendScriptPubKey
+                    	,      SUM(SpendValue) SendValue
+                    	FROM   (SELECT DISTINCT SpendTxId, SpendIndex, SpendValue, SpendScriptPubKey, SpendIsChange FROM HDPayment) p2
+                    	LEFT   JOIN   HDAddress a
+                    	ON     a.ScriptPubKey = p2.SpendScriptPubKey	
+                    	WHERE  SpendIsChange = 0 AND a.ScriptPubKey IS NULL
+                    	GROUP  BY SpendTxId, p2.SpendScriptPubKey
+                    	) p
+                    ON   p.SpendTxId = t.SpendTxId
+                    GROUP BY t.SpendtxId, p.SpendScriptPubKey
+                 )  
             ) as T
             WHERE
                 T.Type IS NOT NULL --eliminate sends in the first UNION
