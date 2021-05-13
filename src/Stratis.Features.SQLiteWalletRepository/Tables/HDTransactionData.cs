@@ -244,11 +244,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             -- Interwoven receives and spends
             SELECT * FROM
             (
-              -- Find all receives
-              SELECT
-                  t.WalletId as WalletId,
-                  t.AccountIndex as AccountIndex,
-                  t.OutputTxId as Id, 
+                -- Find all receives
+                SELECT
+                    t.WalletId as WalletId,
+                    t.AccountIndex as AccountIndex,
+                    t.OutputTxId as Id, 
+                    t.RedeemScript,
                 CASE 
                     WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
@@ -283,15 +284,16 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                         t.WalletId as WalletId,        
                         t.AccountIndex as AccountIndex,
                         t.SpendTxId as Id,
+                        t.RedeemScript,
                         1 as Type,
                         t.SpendTxTime as TimeStamp,
                         p.SendValue AS Amount,
                         t.Value - t.SpendTxTotalOut as Fee,
-                        p.SpendScriptPubKey as Address,
+                        p.SpendScriptPubKey as SendToScriptPubkey,
                         NULL AS ReceiveAddress,
                         t.SpendBlockHeight as BlockHeight
                     FROM
-                        (SELECT WalletId, AccountIndex, SpendTxId, SpendTxTime, SpendTxTotalOut, SUM(Value) Value,SpendBlockHeight FROM HDTransactionData WHERE SpendtxId IS NOT NULL AND SpendTxIsCoinbase = 0 GROUP BY SpendTxId) t
+                        (SELECT WalletId, AccountIndex, SpendTxId, SpendTxTime, SpendTxTotalOut, SUM(Value) Value, SpendBlockHeight, RedeemScript FROM HDTransactionData WHERE SpendtxId IS NOT NULL AND SpendTxIsCoinbase = 0 GROUP BY SpendTxId) t
                     LEFT JOIN (
                         SELECT SpendTxId
                     	,      SpendScriptPubKey

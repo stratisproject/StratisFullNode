@@ -1427,7 +1427,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = this.GetConnection(walletName);
 
-            HDAccount account = conn.GetAccountByName(walletName, accountName);
+            HDAccount account = (accountName == null) ? null : conn.GetAccountByName(walletName, accountName);
 
             return HDTransactionData.GetTransactionCount(conn, walletId, account.AccountIndex);
         }
@@ -1500,23 +1500,41 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
 
+            // Filter ColdstakeUtxos
+            result = result.Where(r =>
+            {
+                var scriptPubKey = new Script(Encoders.Hex.DecodeData(r.RedeemScript));
+                return !scriptPubKey.IsScriptType(ScriptType.ColdStaking);
+            });
+
+            if (!string.IsNullOrWhiteSpace(txId) && uint256.TryParse(txId, out uint256 _))
+            {
+                if (result.Any() && result.First().Type == (int)TransactionItemType.Send)
+                {
+                    var payments = this.GetPaymentDetails(account.AccountRoot.Wallet.Name, txId);
+                    var grouped = payments.GroupBy(p => p.DestinationScriptPubKey);
+
+                    foreach (var group in grouped)
+                    {
+                        result.First().Payments.Add(new FlattenedHistoryItemPayment() { Amount = group.First().Amount, DestinationAddress = group.First().DestinationAddress, IsChange = group.First().IsChange });
+                    }
+                }
+            }
+
             var lookup = new Dictionary<string, string>();
 
             // Update sent to and mine/stake addresses.
-            foreach (var item in result)
+            foreach (var item in result.Where(r => r.Type == (int)TransactionItemType.Send))
             {
-                if (item.Type == (int)TransactionItemType.Send)
+                // Cache the address.
+                if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
                 {
-                    // Cache the address.
-                    if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
-                    {
-                        var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
-                        address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
-                        lookup.Add(item.SendToScriptPubkey, address);
-                    }
-
-                    item.SendToAddress = address;
+                    var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
+                    address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+                    lookup.Add(item.SendToScriptPubkey, address);
                 }
+
+                item.SendToAddress = address;
             }
 
             return new AccountHistory()

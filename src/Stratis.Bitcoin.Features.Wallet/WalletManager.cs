@@ -881,33 +881,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             lock (this.lockObject)
             {
-                static bool coldStakeUtxoFilter(TransactionData d) => d.IsColdCoinStake == null || d.IsColdCoinStake == false;
-
-                if (searchQuery != null && uint256.TryParse(searchQuery, out uint256 _))
-                {
-                    // TODO coldStakeUtxoFilter
-                    accountHistory = this.WalletRepository.GetHistory(account, limit, offset, searchQuery);
-
-                    var result = accountHistory.History.FirstOrDefault();
-                    if (result != null && result.Type == (int)TransactionItemType.Send)
-                    {
-                        var payments = this.WalletRepository.GetPaymentDetails(account.AccountRoot.Wallet.Name, result.Id);
-                        var grouped = payments.GroupBy(p => p.DestinationScriptPubKey);
-
-                        foreach (var group in grouped)
-                        {
-                            result.Payments.Add(new FlattenedHistoryItemPayment() { Amount = group.First().Amount, DestinationAddress = group.First().DestinationAddress, IsChange = group.First().IsChange });
-                        }
-                    }
-                }
-                else
-                {
-                    // TODO coldStakeUtxoFilter
-                    accountHistory = this.WalletRepository.GetHistory(account, limit, offset);
-                }
+               return this.WalletRepository.GetHistory(account, limit, offset, searchQuery);
             }
-
-            return accountHistory;
         }
 
         /// <inheritdoc />
