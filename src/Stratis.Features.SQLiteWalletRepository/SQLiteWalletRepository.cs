@@ -1500,11 +1500,15 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
 
-            static bool coldStakeUtxoFilter(TransactionData d) => d.IsColdCoinStake == null || d.IsColdCoinStake == false;
+            // Filter ColdstakeUtxos
+            result = result.Where(r =>
+            {
+                var scriptPubKey = new Script(Encoders.Hex.DecodeData(r.RedeemScript));
+                return !scriptPubKey.IsScriptType(ScriptType.ColdStaking);
+            });
 
             if (!string.IsNullOrWhiteSpace(txId) && uint256.TryParse(txId, out uint256 _))
             {
-                // TODO coldStakeUtxoFilter
                 if (result.Any() && result.First().Type == (int)TransactionItemType.Send)
                 {
                     var payments = this.GetPaymentDetails(account.AccountRoot.Wallet.Name, txId);
@@ -1517,7 +1521,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 }
             }
 
-            // TODO coldStakeUtxoFilter
             var lookup = new Dictionary<string, string>();
 
             // Update sent to and mine/stake addresses.

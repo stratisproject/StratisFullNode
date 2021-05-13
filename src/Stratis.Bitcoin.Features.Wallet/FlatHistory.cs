@@ -47,6 +47,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         public string ReceiveAddress { get; set; }
 
+        public string RedeemScript { get; set; }
+
         /// <summary>
         /// The height of the block in which this transaction was confirmed.
         /// </summary>
