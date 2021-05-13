@@ -886,101 +886,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public void GetHistoryByNameWithExistingWalletReturnsAllAddressesWithTransactions()
-        {
-            var dataFolder = CreateDataFolder(this);
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader())
-            {
-                TestMode = true
-            };
-
-            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                CreateDataFolder(this), new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
-
-            walletManager.Start();
-
-            (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            HdAccount account = wallet.AddNewAccount("password", 0, "account 0");
-
-            var tx1 = this.Network.CreateTransaction();
-            tx1.Outputs.Add(new TxOut(new Money(1.0m, MoneyUnit.BTC), account.ExternalAddresses.ElementAt(0).ScriptPubKey));
-            walletRepository.ProcessTransaction("myWallet", tx1);
-
-            var tx2 = this.Network.CreateTransaction();
-            tx2.Outputs.Add(new TxOut(new Money(1.0m, MoneyUnit.BTC), account.InternalAddresses.ElementAt(0).ScriptPubKey));
-            walletRepository.ProcessTransaction("myWallet", tx2);
-
-            List<AccountHistory> result = walletManager.GetHistory("myWallet").ToList();
-
-            Assert.NotEmpty(result);
-            Assert.Single(result);
-            AccountHistory accountHistory = result.ElementAt(0);
-            Assert.NotNull(accountHistory.Account);
-            Assert.Equal("account 0", accountHistory.Account.Name);
-            Assert.NotEmpty(accountHistory.History);
-            Assert.Equal(2, accountHistory.History.Count());
-
-            FlatHistory historyAddress = accountHistory.History.ElementAt(0);
-            Assert.Equal(account.ExternalAddresses.ElementAt(0).ScriptPubKey, historyAddress.Address.ScriptPubKey);
-            historyAddress = accountHistory.History.ElementAt(1);
-            Assert.Equal(account.InternalAddresses.ElementAt(0).ScriptPubKey, historyAddress.Address.ScriptPubKey);
-        }
-
-        [Fact]
-        public void GetHistoryByAccountWithExistingAccountReturnsAllAddressesWithTransactions()
-        {
-            var dataFolder = CreateDataFolder(this);
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader())
-            {
-                TestMode = true
-            };
-
-            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
-
-            walletManager.Start();
-
-            (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            HdAccount account = wallet.AddNewAccount("password", 0, "myAccount");
-
-            WalletTestsHelpers.AddEmptyTransactionToAddress(account, 0, 0);
-            WalletTestsHelpers.AddEmptyTransactionToAddress(account, 1, 0);
-
-            AccountHistory accountHistory = walletManager.GetHistory(account);
-
-            Assert.NotNull(accountHistory);
-            Assert.NotNull(accountHistory.Account);
-            Assert.Equal("myAccount", accountHistory.Account.Name);
-            Assert.Equal(2, accountHistory.History.Count());
-
-            FlatHistory historyAddress = accountHistory.History.ElementAt(0);
-            Assert.Equal(account.ExternalAddresses.ElementAt(0).Address, historyAddress.Address.Address);
-            historyAddress = accountHistory.History.ElementAt(1);
-            Assert.Equal(account.InternalAddresses.ElementAt(0).Address, historyAddress.Address.Address);
-        }
-
-        [Fact]
-        public void GetHistoryByAccountWithoutHavingAddressesWithTransactionsReturnsEmptyList()
-        {
-            var dataFolder = CreateDataFolder(this);
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
-
-            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
-
-            walletManager.Start();
-
-            (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            HdAccount account = wallet.AddNewAccount("password", accountName: "myAccount");
-
-            AccountHistory result = walletManager.GetHistory(account);
-
-            Assert.NotNull(result.Account);
-            Assert.Equal("myAccount", result.Account.Name);
-            Assert.Empty(result.History);
-        }
-
-        [Fact]
         public void GetHistoryByWalletNameWithoutExistingWalletThrowsWalletException()
         {
             Assert.Throws<WalletException>(() =>
@@ -989,7 +894,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
                     dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
-                walletManager.GetHistory("noname");
+                walletManager.GetHistory("noname", "account 0", null);
             });
         }
 

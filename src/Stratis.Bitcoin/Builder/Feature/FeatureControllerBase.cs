@@ -24,8 +24,32 @@ namespace Stratis.Bitcoin.Builder.Feature
             this.Logger = logger;
         }
 
-        protected async Task<IActionResult> Execute<TRequest>(TRequest request, CancellationToken token,
-            Func<TRequest, CancellationToken, Task<IActionResult>> action, bool checkModelState = true)
+        protected IActionResult Execute<TRequest>(TRequest request, Func<TRequest, IActionResult> action, bool checkModelState = true)
+        {
+            if (checkModelState && !this.ModelState.IsValid)
+            {
+                Guard.NotNull(request, nameof(request));
+                this.Logger.LogTrace($"{nameof(request)}(-)[MODEL_STATE_INVALID]");
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+            }
+
+            try
+            {
+                return action(request);
+            }
+            catch (FeatureException e)
+            {
+                this.Logger.LogError("Exception occurred: {0}", e.ToString());
+                return e.MapToErrorResponse();
+            }
+            catch (Exception e)
+            {
+                this.Logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        protected async Task<IActionResult> Execute<TRequest>(TRequest request, CancellationToken token, Func<TRequest, CancellationToken, Task<IActionResult>> action, bool checkModelState = true)
         {
             if (checkModelState && !this.ModelState.IsValid)
             {

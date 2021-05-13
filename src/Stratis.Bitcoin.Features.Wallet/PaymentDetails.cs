@@ -34,5 +34,11 @@ namespace Stratis.Bitcoin.Features.Wallet
         [JsonProperty(PropertyName = "amount")]
         [JsonConverter(typeof(MoneyJsonConverter))]
         public Money Amount { get; set; }
+
+        /// <summary>
+        /// A flag indicating that this amount is change back to the wallet.
+        /// </summary>
+        [JsonProperty(PropertyName = "isChange")]
+        public bool IsChange { get; set; }
     }
 }

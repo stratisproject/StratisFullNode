@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Events;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -1344,18 +1345,46 @@ namespace Stratis.Features.SQLiteWalletRepository
             SpendingDetails spendingDetails = transactionData.SpendingDetails;
 
             var res = HDPayment.GetAllPayments(conn,
-                spendingDetails.TransactionId.ToString(),
-                transactionData.Id.ToString(),
-                transactionData.Index,
-                transactionData.AddressScriptPubKey.ToHex())
-                .Where(p => p.SpendIsChange == (isChange ? 1 : 0)).Select(p => new PaymentDetails()
-                {
-                    Amount = new Money(p.SpendValue),
-                    DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
-                    OutputIndex = p.SpendIndex
-                }).ToList();
+                 transactionData.SpendingDetails.TransactionId.ToString(),
+                 transactionData.Id.ToString(),
+                 transactionData.Index,
+                 transactionData.AddressScriptPubKey.ToHex())
+                 .Where(p => p.SpendIsChange == (isChange ? 1 : 0)).Select(p => new PaymentDetails()
+                 {
+                     Amount = new Money(p.SpendValue),
+                     DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
+                     OutputIndex = p.SpendIndex
+                 }).ToList();
 
             if (transactionData.SpendingDetails == null || this.ScriptAddressReader == null)
+                return res;
+
+            var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
+            foreach (Script script in lookup.Keys.ToList())
+                lookup[script] = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+
+            foreach (PaymentDetails paymentDetails in res)
+                paymentDetails.DestinationAddress = lookup[paymentDetails.DestinationScriptPubKey];
+
+            return res;
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, string transactionId)
+        {
+            WalletContainer walletContainer = this.GetWalletContainer(walletName);
+
+            DBConnection conn = walletContainer.Conn;
+
+            var res = HDPayment.GetPaymentsForTransactionId(conn, transactionId).ToList().Select(p => new PaymentDetails()
+            {
+                Amount = new Money(p.SpendValue),
+                DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
+                OutputIndex = p.SpendIndex,
+                IsChange = p.SpendIsChange == 1 ? true : false
+            }).ToList();
+
+            if (this.ScriptAddressReader == null)
                 return res;
 
             var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
@@ -1463,69 +1492,38 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account)
+        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null)
         {
-            Wallet hdWallet = account.AccountRoot.Wallet;
-            WalletContainer walletContainer = this.GetWalletContainer(hdWallet.Name);
-            (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
+            Wallet wallet = account.AccountRoot.Wallet;
+            WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
+            (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var history = new List<FlatHistory>();
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
 
-            foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.External, int.MaxValue)
-                .Concat(conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.Internal, int.MaxValue)))
+            var lookup = new Dictionary<string, string>();
+
+            // Update sent to and mine/stake addresses.
+            foreach (var item in result)
             {
-                HdAddress hdAddress = this.ToHdAddress(address, this.Network);
-
-                hdAddress.AddressCollection = (address.AddressType == 0) ? account.ExternalAddresses : account.InternalAddresses;
-
-                foreach (var transaction in conn.GetTransactionsForAddress(wallet.WalletId, account.Index, address.AddressType, address.AddressIndex))
+                if (item.Type == (int)TransactionItemType.Send)
                 {
-                    history.Add(new FlatHistory()
+                    // Cache the address.
+                    if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
                     {
-                        Address = hdAddress,
-                        Transaction = this.ToTransactionData(transaction, hdAddress.Transactions)
-                    });
+                        var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
+                        address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+                        lookup.Add(item.SendToScriptPubkey, address);
+                    }
+
+                    item.SendToAddress = address;
                 }
             }
 
             return new AccountHistory()
             {
                 Account = account,
-                History = history
+                History = result
             };
-        }
-
-        /// <inheritdoc />
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null)
-        {
-            WalletContainer walletContainer = this.GetWalletContainer(walletName);
-            (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
-
-            foreach (HDAccount account in conn.GetAccounts(wallet.WalletId, accountName))
-            {
-                var history = new List<FlatHistory>();
-
-                foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.External, int.MaxValue)
-                    .Concat(conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.Internal, int.MaxValue)))
-                {
-                    HdAddress hdAddress = this.ToHdAddress(address, this.Network);
-
-                    foreach (var transaction in conn.GetTransactionsForAddress(wallet.WalletId, account.AccountIndex, address.AddressType, address.AddressIndex))
-                    {
-                        history.Add(new FlatHistory()
-                        {
-                            Address = hdAddress,
-                            Transaction = this.ToTransactionData(transaction, hdAddress.Transactions)
-                        });
-                    }
-                }
-
-                yield return new AccountHistory()
-                {
-                    Account = this.ToHdAccount(account),
-                    History = history
-                };
-            }
         }
 
         /// <inheritdoc />

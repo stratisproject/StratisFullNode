@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
         private WalletHistoryModel GetWalletHistory(CoreNode node, string walletName)
         {
-            var walletHistory = node.FullNode.NodeController<WalletController>().GetHistoryAsync(new WalletHistoryRequest { WalletName = walletName }).GetAwaiter().GetResult() as JsonResult;
+            var walletHistory = node.FullNode.NodeController<WalletController>().GetHistory(new WalletHistoryRequest { WalletName = walletName }) as JsonResult;
             return walletHistory?.Value as WalletHistoryModel;
         }
 

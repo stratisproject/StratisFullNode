@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Security;
+using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         }
 
         [Fact]
-        public void WalletCanReceiveAndSendCorrectly()
+        public async Task WalletCanReceiveAndSendCorrectlyAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -56,7 +56,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     new WalletAccountReference(WalletName, Account), Password, sendto.ScriptPubKey, Money.COIN * 100, FeeType.Medium, 101));
 
                 // Broadcast to the other node
-                stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
+                await stratisSender.FullNode.NodeController<WalletController>().SendTransaction(new SendTransactionRequest(trx.ToHex()));
 
                 // Wait for the transaction to arrive
                 TestBase.WaitLoop(() => stratisReceiver.CreateRPCClient().GetRawMempool().Length > 0);
@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 TestHelper.MineBlocks(stratisSender, 2);
                 TestBase.WaitLoop(() => TestHelper.AreNodesSynced(stratisReceiver, stratisSender));
 
-                
+
                 // Send 1 transaction from the second node and let it get to the first.
                 sendto = stratisSender.FullNode.WalletManager().GetUnusedAddress(new WalletAccountReference(WalletName, Account));
                 Transaction testTx1 = stratisReceiver.FullNode.WalletTransactionHandler().BuildTransaction(CreateContext(stratisSender.FullNode.Network,
@@ -519,17 +519,6 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                 WalletPassword = password,
                 Recipients = new[] { new Recipient { Amount = amount, ScriptPubKey = destinationScript } }.ToList()
             };
-        }
-
-        /// <summary>
-        /// Copies the test wallet into data folder for node if it isn't already present.
-        /// </summary>
-        /// <param name="path">The path of the folder to move the wallet to.</param>
-        private void InitializeTestWallet(string path)
-        {
-            string testWalletPath = Path.Combine(path, "test.wallet.json");
-            if (!File.Exists(testWalletPath))
-                File.Copy("Data/test.wallet.json", testWalletPath);
         }
 
         private static Result<WalletSendTransactionModel> SendManyUtxosTransaction(CoreNode node, Script scriptPubKey, Money amount, int utxos = 1)
