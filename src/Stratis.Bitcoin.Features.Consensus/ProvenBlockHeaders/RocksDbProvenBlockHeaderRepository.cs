@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
                 lock (this.locker)
                 {
-                    row = this.rocksDb.Get(DBH.Key(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight)));
+                    row = this.rocksDb.Get(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(blockHeight));
                 }
 
                 if (row != null)
@@ -138,7 +138,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
 
             lock (this.locker)
             {
-                this.rocksDb.Put(DBH.Key(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey), this.dBreezeSerializer.Serialize(newTip));
+                this.rocksDb.Put(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey, this.dBreezeSerializer.Serialize(newTip));
             }
         }
 
@@ -151,7 +151,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             using var batch = new WriteBatch();
             {
                 foreach (KeyValuePair<int, ProvenBlockHeader> header in headers)
-                    batch.Put(DBH.Key(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(header.Key)), this.dBreezeSerializer.Serialize(header.Value));
+                    batch.Put(BlockHeaderRepositoryConstants.ProvenBlockHeaderTable, BitConverter.GetBytes(header.Key), this.dBreezeSerializer.Serialize(header.Value));
 
                 lock (this.locker)
                 {
@@ -171,7 +171,7 @@ namespace Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders
             byte[] row = null;
             lock (this.locker)
             {
-                row = this.rocksDb.Get(DBH.Key(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey));
+                row = this.rocksDb.Get(BlockHeaderRepositoryConstants.BlockHashHeightTable, BlockHeaderRepositoryConstants.BlockHashHeightKey);
             }
 
             if (row != null)

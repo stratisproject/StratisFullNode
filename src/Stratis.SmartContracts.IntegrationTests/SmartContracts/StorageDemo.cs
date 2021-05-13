@@ -22,6 +22,11 @@ public class StorageDemo : SmartContract
         }
     }
 
+    public int GetCounterValue()
+    {
+        return Counter;
+    }
+
     public string TestSave
     {
         get

@@ -1,8 +1,12 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.SmartContracts.CLR.Serialization;
+using Stratis.SmartContracts.Core;
+using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.RuntimeObserver;
 
 namespace Stratis.SmartContracts.CLR.Local
 {
@@ -17,13 +21,15 @@ namespace Stratis.SmartContracts.CLR.Local
         private readonly IStateFactory stateFactory;
         private readonly IStateProcessor stateProcessor;
         private readonly IContractPrimitiveSerializer contractPrimitiveSerializer;
+        private readonly ChainIndexer chainIndexer;
 
         public LocalExecutor(ILoggerFactory loggerFactory,
             ICallDataSerializer serializer,
             IStateRepositoryRoot stateRoot,
             IStateFactory stateFactory,
             IStateProcessor stateProcessor,
-            IContractPrimitiveSerializer contractPrimitiveSerializer)
+            IContractPrimitiveSerializer contractPrimitiveSerializer,
+            ChainIndexer chainIndexer)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType());
             this.stateRoot = stateRoot;
@@ -31,6 +37,7 @@ namespace Stratis.SmartContracts.CLR.Local
             this.stateFactory = stateFactory;
             this.stateProcessor = stateProcessor;
             this.contractPrimitiveSerializer = contractPrimitiveSerializer;
+            this.chainIndexer = chainIndexer;
         }
 
         public ILocalExecutionResult Execute(ulong blockHeight, uint160 sender, Money txOutValue, ContractTxData callData)
@@ -42,8 +49,16 @@ namespace Stratis.SmartContracts.CLR.Local
                 Address.Zero
             );
 
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeader((int)blockHeight);
+
+            var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
+
+            uint256 hashStateRoot = scHeader?.HashStateRoot ?? new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856"); // StateRootEmptyTrie
+
+            IStateRepositoryRoot stateAtHeight = this.stateRoot.GetSnapshotTo(hashStateRoot.ToBytes());
+
             IState state = this.stateFactory.Create(
-                this.stateRoot.StartTracking(),
+                stateAtHeight.StartTracking(),
                 block,
                 txOutValue,
                 new uint256());

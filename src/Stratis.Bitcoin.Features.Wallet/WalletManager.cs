@@ -877,6 +877,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         {
             Guard.NotNull(account, nameof(account));
 
+            var accountHistory = new AccountHistory();
+
             lock (this.lockObject)
             {
                return this.WalletRepository.GetHistory(account, limit, offset, searchQuery);
