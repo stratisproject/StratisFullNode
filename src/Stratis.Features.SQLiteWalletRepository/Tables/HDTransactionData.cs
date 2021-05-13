@@ -277,8 +277,6 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 t.OutputBlockHeight as BlockHeight
               FROM 
                 HDTransactionData AS t
-              WHERE 
-                t.WalletId = 1 AND t.AccountIndex = 0
               GROUP BY t.OutputTxId
             UNION ALL
                 SELECT * FROM (
