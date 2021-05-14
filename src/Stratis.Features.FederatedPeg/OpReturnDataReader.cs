@@ -131,7 +131,6 @@ namespace Stratis.Features.FederatedPeg
 
             // Apply destination translations (if any).
             // We don't require an API for this as incorrect addresses are no longer being allowed.
-            // TODO: Remove this code once the stuck deposits have been cleared.
             if (OpReturnDataReader.DestinationTranslations.TryGetValue(destination, out string translatedDestination))
                 destination = translatedDestination;
 
