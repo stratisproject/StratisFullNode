@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Net;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
@@ -103,5 +104,37 @@ namespace Stratis.Bitcoin.Configuration
 
         /// <summary>Path to the folder for <see cref="ProvenBlockHeader"/> items database files.</summary>
         public string ProvenBlockHeaderPath { get; set; }
+
+        /// <summary>True if the chain state directories are scheduled for deletion on the next graceful shutdown.</summary>
+        public bool ScheduledChainDeletion { get; private set; }
+
+        /// <summary>
+        /// Schedule the data folders storing chain state for deletion on the next graceful shutdown.
+        /// </summary>
+        public void ScheduleChainDeletion()
+        {
+            this.ScheduledChainDeletion = true;
+        }
+
+        /// <summary>
+        /// Deletes all directories that may be problematic for syncing. Will not delete a directory if it contains any files with a *.db extension.
+        /// This should not be called while the node is running.
+        /// </summary>
+        public void DeleteChainDirectories()
+        {
+            var dirsForDeletion = new string[] { BlockPath, ChainPath, CoindbPath, KeyValueRepositoryPath, SmartContractStatePath, ProvenBlockHeaderPath };
+
+            foreach (var dir in dirsForDeletion.Select(dir => new DirectoryInfo(dir)))
+            {
+                if (!dir.Exists)
+                    continue;
+
+                // Ignore any directories that contain suspected wallets.
+                if (dir.EnumerateFiles("*.db").Any())
+                    continue;
+
+                dir.Delete(true);
+            }
+        }
     }
 }

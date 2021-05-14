@@ -664,6 +664,19 @@ namespace Stratis.Bitcoin.Features.Api
         }
 
         /// <summary>
+        /// Schedules data folder storing chain state in the <see cref="DataFolder"/> for deletion on the next graceful shutdown.
+        /// </summary>
+        /// <returns></returns>
+        [HttpDelete]
+        [Route("datafolder/chain")]
+        public IActionResult DeleteChain()
+        {
+            this.nodeSettings.DataFolder.ScheduleChainDeletion();
+
+            return Ok();
+        }
+
+        /// <summary>
         /// Retrieves a transaction block given a valid hash.
         /// This function is used by other methods in this class and not explicitly by RPC/API.
         /// </summary>
