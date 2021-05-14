@@ -114,12 +114,26 @@ namespace Stratis.Features.FederatedPeg
                 .Select(RemoveOpReturnOperator);
         }
 
+        /// <summary>
+        /// This destination mapping rescues any funds sent to the wrong address.
+        /// </summary>
+        private static Dictionary<string, string> DestinationTranslations = new Dictionary<string, string>()
+        {
+            {"Incorrect address", "Correct address"}
+        };
+
         // Converts the raw bytes from the output into a BitcoinAddress.
         // The address is parsed using the target network bytes and returns null if validation fails.
         private string TryConvertValidOpReturnDataToAddress(byte[] data)
         {
             // Remove the RETURN operator and convert the remaining bytes to our candidate address.
             string destination = Encoding.UTF8.GetString(data);
+
+            // Apply destination translations (if any).
+            // We don't require an API for this as incorrect addresses are no longer being allowed.
+            // TODO: Remove this code once the stuck deposits have been cleared.
+            if (OpReturnDataReader.DestinationTranslations.TryGetValue(destination, out string translatedDestination))
+                destination = translatedDestination;
 
             // Attempt to parse the string. Validates the base58 string.
             try
