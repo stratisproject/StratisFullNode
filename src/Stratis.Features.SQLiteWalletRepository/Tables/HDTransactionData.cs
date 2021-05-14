@@ -329,7 +329,6 @@ SELECT * FROM
                 T.TimeStamp DESC
             LIMIT {strLimit} OFFSET {strOffset}");
 
-            //{((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
             return result;
         }
     }
