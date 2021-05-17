@@ -59,6 +59,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return deposits;
         }
 
+
+        /// <summary>
+        /// This destination overrides rescue any funds sent to a bad address.
+        /// </summary>
+        private static Dictionary<uint256, (bool, DestinationChain, string)> DestinationOverrides = new Dictionary<uint256, (bool, DestinationChain, string)>()
+        {
+            //{ uint256.Parse(""), (false, DestinationChain.STRAX, "Correct address") }
+        };
+
         /// <inheritdoc />
         public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
@@ -78,28 +87,30 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 return null;
 
             // Check the common case first.
-            bool conversionTransaction = false;
-            DestinationChain targetChain = DestinationChain.STRAX;
-
-            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
+            (bool conversion, DestinationChain chain, string address) target;
+            if (!DepositExtractor.DestinationOverrides.TryGetValue(transaction.GetHash(), out target))
             {
-                byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
-
-                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
+                target.chain = DestinationChain.STRAX;
+                if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out target.address))
                 {
-                    targetChain = (DestinationChain)destinationChain;
+                    byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
+
+                    if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out target.address))
+                    {
+                        target.chain = (DestinationChain)destinationChain;
+                    }
+                    else
+                        return null;
+
+                    target.conversion = true;
                 }
-                else
-                    return null;
-                
-                conversionTransaction = true;
             }
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
 
-            if (conversionTransaction)
+            if (target.conversion)
             {
                 if (amount < Money.Coins(ConversionTransactionMinimum))
                     return null;
@@ -113,7 +124,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
             else
             {
-                if (targetAddress == this.network.CirrusRewardDummyAddress)
+                if (target.address == this.network.CirrusRewardDummyAddress)
                     depositRetrievalType = DepositRetrievalType.Distribution;
                 else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.Large;
@@ -123,7 +134,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     depositRetrievalType = DepositRetrievalType.Small;
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, targetChain, blockHeight, blockHash);
+            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, target.address, target.chain, blockHeight, blockHash);
         }
     }
 }
