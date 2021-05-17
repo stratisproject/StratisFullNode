@@ -114,7 +114,6 @@ namespace Stratis.Features.FederatedPeg
                 .Select(RemoveOpReturnOperator);
         }
 
-
         // Converts the raw bytes from the output into a BitcoinAddress.
         // The address is parsed using the target network bytes and returns null if validation fails.
         private string TryConvertValidOpReturnDataToAddress(byte[] data)

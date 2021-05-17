@@ -86,10 +86,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!depositsToMultisig.Any())
                 return null;
 
-            // Check the common case first.
             (bool conversion, DestinationChain chain, string address) target;
             if (!DepositExtractor.DestinationOverrides.TryGetValue(transaction.GetHash(), out target))
             {
+                // Check the common case first.
                 target.chain = DestinationChain.STRAX;
                 if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out target.address))
                 {
