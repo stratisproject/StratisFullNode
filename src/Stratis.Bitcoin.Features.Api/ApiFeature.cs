@@ -47,6 +47,7 @@ namespace Stratis.Bitcoin.Features.Api
             this.certificateStore = certificateStore;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
+            this.DisposeLast = true;
             this.InitializeBeforeBase = true;
         }
 

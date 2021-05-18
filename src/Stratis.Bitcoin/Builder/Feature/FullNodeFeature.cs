@@ -19,6 +19,11 @@ namespace Stratis.Bitcoin.Builder.Feature
     public interface IFullNodeFeature : IDisposable
     {
         /// <summary>
+        /// Instructs the <see cref="FullNodeFeatureExecutor"/> to order and dispose this feature last.
+        /// </summary>
+        bool DisposeLast { get; set; }
+
+        /// <summary>
         /// Instructs the <see cref="FullNodeFeatureExecutor"/> to start this feature before the <see cref="Base.BaseFeature"/>.
         /// </summary>
         bool InitializeBeforeBase { get; set; }
@@ -58,6 +63,9 @@ namespace Stratis.Bitcoin.Builder.Feature
     public abstract class FullNodeFeature : IFullNodeFeature
     {
         private const float InitializationWaitSeconds = 1.0f;
+
+        /// <inheritdoc />
+        public bool DisposeLast { get; set; }
 
         /// <inheritdoc />
         public bool InitializeBeforeBase { get; set; }

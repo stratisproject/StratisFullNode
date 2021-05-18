@@ -22,6 +22,9 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
         private class FeatureBase : IFullNodeFeature
         {
             /// <inheritdoc />
+            public bool DisposeLast { get; set; }
+
+            /// <inheritdoc />
             public bool InitializeBeforeBase { get; set; }
 
             public FeatureInitializationState State { get; set; }

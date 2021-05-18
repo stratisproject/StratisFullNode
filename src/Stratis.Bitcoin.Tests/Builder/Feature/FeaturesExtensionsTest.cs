@@ -20,6 +20,9 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
         private class FeatureA : IFullNodeFeature
         {
             /// <inheritdoc />
+            public bool DisposeLast { get; set; }
+
+            /// <inheritdoc />
             public bool InitializeBeforeBase { get; set; }
 
             public FeatureInitializationState State { get; set; }
@@ -61,6 +64,9 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
         /// </summary>
         private class FeatureB : IFullNodeFeature
         {
+            /// <inheritdoc />
+            public bool DisposeLast { get; set; }
+
             /// <inheritdoc />
             public bool InitializeBeforeBase { get; set; }
 
