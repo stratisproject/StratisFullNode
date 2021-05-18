@@ -113,7 +113,6 @@ namespace Stratis.Bitcoin.Builder
             if (disposing)
             {
                 // When the node is shutting down, we need to dispose all features, so we don't break on exception.
-                var r = this.fullNode.Services.Features.Reverse().OrderBy(f => f.DisposeLast);
                 foreach (IFullNodeFeature feature in this.fullNode.Services.Features.Reverse().OrderBy(f => f.DisposeLast))
                 {
                     try
