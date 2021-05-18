@@ -23,6 +23,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private static readonly byte rewindTable = 3;
         private static readonly byte stakeTable = 4;
 
+        private readonly string dataFolder;
+
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
@@ -38,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
         /// <summary>Access to dBreeze database.</summary>
-        private readonly DB leveldb;
+        private DB leveldb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
@@ -48,20 +50,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
         }
 
-        public LevelDbCoindb(Network network, string folder, IDateTimeProvider dateTimeProvider,
+        public LevelDbCoindb(Network network, string dataFolder, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
-            Guard.NotEmpty(folder, nameof(folder));
+            Guard.NotEmpty(dataFolder, nameof(dataFolder));
 
+            this.dataFolder = dataFolder;
             this.dBreezeSerializer = dBreezeSerializer;
-
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-
-            // Open a connection to a new DB and create if not found
-            var options = new Options { CreateIfMissing = true };
-            this.leveldb = new DB(options, folder);
-
             this.network = network;
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
 
@@ -71,6 +68,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Initialize()
         {
+            // Open a connection to a new DB and create if not found
+            var options = new Options { CreateIfMissing = true };
+            this.leveldb = new DB(options, this.dataFolder);
+
             Block genesis = this.network.GetGenesis();
 
             if (this.GetTipHash() == null)

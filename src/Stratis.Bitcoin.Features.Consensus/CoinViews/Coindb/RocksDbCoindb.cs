@@ -23,11 +23,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private static readonly byte rewindTable = 3;
         private static readonly byte stakeTable = 4;
 
+        private readonly string dataFolder;
+
         /// <summary>Hash of the block which is currently the tip of the coinview.</summary>
         private HashHeightPair persistedCoinviewTip;
         private readonly DBreezeSerializer dBreezeSerializer;
-        private readonly DbOptions dbOptions;
-        private readonly RocksDb rocksDb;
+        private DbOptions dbOptions;
+        private RocksDb rocksDb;
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
         private readonly ILogger logger;
         private readonly Network network;
@@ -40,8 +42,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             INodeStats nodeStats,
             DBreezeSerializer dBreezeSerializer)
         {
-            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksDb = RocksDb.Open(this.dbOptions, dataFolder.CoindbPath);
+            this.dataFolder = dataFolder.CoindbPath;
             this.dBreezeSerializer = dBreezeSerializer;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -53,6 +54,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Initialize()
         {
+            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
+            this.rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
+
             Block genesis = this.network.GetGenesis();
 
             if (this.GetTipHash() == null)
