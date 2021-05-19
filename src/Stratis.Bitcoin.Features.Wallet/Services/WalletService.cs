@@ -611,8 +611,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         /// <param name="transactionResult">The transaction to validate.</param>
         public static void ValidateCrossChainTransfer(Network network, Transaction transactionResult)
         {
-            if (DepositHelper.TryGetDepositsToMultisig(network, transactionResult, Money.Zero, out _))
+            if (DepositHelper.TryGetDepositsToMultisig(network, transactionResult, Money.Zero, out List<TxOut> depositsToMultisig))
             {
+                if (depositsToMultisig.Any(d => d.Value < Money.COIN))
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Amount to small.",
+                        $"The cross-chain transfer amount is less than the minium of 1.");
+                }
+
                 Network targetNetwork = null;
 
                 if (network.Name.StartsWith("Cirrus"))
