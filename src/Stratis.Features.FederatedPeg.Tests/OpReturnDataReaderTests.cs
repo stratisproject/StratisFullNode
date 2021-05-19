@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
@@ -25,7 +26,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.network = CirrusNetwork.NetworksSelector.Regtest();
             this.counterChainNetwork = Networks.Strax.Regtest();
-            this.opReturnDataReader = new OpReturnDataReader(new CounterChainNetworkWrapper(this.counterChainNetwork));
+            this.opReturnDataReader = new OpReturnDataReader(this.counterChainNetwork);
 
             this.transactionBuilder = new TestTransactionBuilder();
             this.addressHelper = new AddressHelper(this.network, this.counterChainNetwork);
