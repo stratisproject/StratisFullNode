@@ -589,29 +589,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
 
-                if (DepositHelper.TryGetDepositsToMultisig(this.network, transactionResult, Money.Coins(1m) /* FederatedPegSettings.CrossChainTransferMinimum */, out _))
-                {
-                    Network targetNetwork = null;
-
-                    if (this.network.Name.StartsWith("Cirrus"))
-                    {
-                        targetNetwork = StraxNetwork.MainChainNetworks[this.network.NetworkType]();
-                    }
-                    else if(this.network.Name.StartsWith("Strax"))
-                    {
-                        targetNetwork = new CirrusAddressValidationNetwork(this.network.Name.Replace("Strax", "Cirrus"));
-                    }
-
-                    if (targetNetwork != null)
-                    {
-                        IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
-                        if (!DepositHelper.GetTarget(transactionResult, opReturnDataReader, out _, out _, out _))
-                        {
-                            throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
-                                $"The cross-chain transfer transaction contains no valid target address for the target network.");
-                        }
-                    }
-                }
+                ValidateCrossChainTransferAddress(transactionResult);
 
                 return new WalletBuildTransactionModel
                 {
@@ -620,6 +598,34 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     TransactionId = transactionResult.GetHash()
                 };
             }, cancellationToken);
+        }
+
+        public void ValidateCrossChainTransferAddress(Transaction transactionResult)
+        {
+            if (DepositHelper.TryGetDepositsToMultisig(this.network, transactionResult, Money.Coins(1m) /* FederatedPegSettings.CrossChainTransferMinimum */, out _))
+            {
+                Network targetNetwork = null;
+
+                if (this.network.Name.StartsWith("Cirrus"))
+                {
+                    targetNetwork = StraxNetwork.MainChainNetworks[this.network.NetworkType]();
+                }
+                else if (this.network.Name.StartsWith("Strax"))
+                {
+                    targetNetwork = new CirrusAddressValidationNetwork(this.network.Name.Replace("Strax", "Cirrus"));
+                }
+                else
+                {
+                    return;
+                }
+
+                IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
+                if (!DepositHelper.GetTarget(transactionResult, opReturnDataReader, out _, out _, out _))
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
+                        $"The cross-chain transfer transaction contains no valid target address for the target network.");
+                }
+            }
         }
 
         public async Task<Money> GetTransactionFeeEstimate(TxFeeEstimateRequest request,
