@@ -456,39 +456,38 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public class StraxAddressValidationNetwork : Network
+        public class CirrusAddressValidationNetwork : Network
         {
-            public StraxAddressValidationNetwork(string name) : base()
+            public CirrusAddressValidationNetwork(string name) : base()
             {
                 this.Name = name;
                 this.Base58Prefixes = new byte[12][];
                 switch (name)
                 {
-                    case "StraxMain":
-                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 75 }; // X
-                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 140 }; // y
-                        this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (75 + 128) };
+                    case "CirrusMain":
+                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 28 }; // C
+                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 88 }; // c
                         break;
-                    case "StraxTest":
-                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 120 }; // q
-                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 127 }; // t
-                        this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (120 + 128) };
+                    case "CirrusTest":
+                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 127 }; // t
+                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 137 }; // x
+
                         break;
-                    case "StraxRegTest":
-                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (120) };
-                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (127) };
-                        this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (120 + 128) };
+                    case "CirrusRegTest":
+                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 55 }; // P
+                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 117 }; // p
                         break;
                 }
 
+                this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (239) };
                 this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_NO_EC] = new byte[] { 0x01, 0x42 };
                 this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_EC] = new byte[] { 0x01, 0x43 };
-                this.Base58Prefixes[(int)Base58Type.EXT_PUBLIC_KEY] = new byte[] { (0x04), (0x88), (0xB2), (0x1E) };
-                this.Base58Prefixes[(int)Base58Type.EXT_SECRET_KEY] = new byte[] { (0x04), (0x88), (0xAD), (0xE4) };
+                this.Base58Prefixes[(int)Base58Type.EXT_PUBLIC_KEY] = new byte[] { (0x04), (0x35), (0x87), (0xCF) };
+                this.Base58Prefixes[(int)Base58Type.EXT_SECRET_KEY] = new byte[] { (0x04), (0x35), (0x83), (0x94) };
                 this.Base58Prefixes[(int)Base58Type.PASSPHRASE_CODE] = new byte[] { 0x2C, 0xE9, 0xB3, 0xE1, 0xFF, 0x39, 0xE2 };
                 this.Base58Prefixes[(int)Base58Type.CONFIRMATION_CODE] = new byte[] { 0x64, 0x3B, 0xF6, 0xA8, 0x9A };
-                this.Base58Prefixes[(int)Base58Type.STEALTH_ADDRESS] = new byte[] { 0x2a };
-                this.Base58Prefixes[(int)Base58Type.ASSET_ID] = new byte[] { 23 };
+                this.Base58Prefixes[(int)Base58Type.STEALTH_ADDRESS] = new byte[] { 0x2b };
+                this.Base58Prefixes[(int)Base58Type.ASSET_ID] = new byte[] { 115 };
                 this.Base58Prefixes[(int)Base58Type.COLORED_ADDRESS] = new byte[] { 0x13 };
             }
         }
@@ -600,7 +599,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     }
                     else
                     {
-                        targetNetwork = new StraxAddressValidationNetwork(this.network.Name.Replace("Strax", "Cirrus"));
+                        targetNetwork = new CirrusAddressValidationNetwork(this.network.Name.Replace("Strax", "Cirrus"));
                     }
                       
                     IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
