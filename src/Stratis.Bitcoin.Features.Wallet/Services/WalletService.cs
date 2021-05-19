@@ -456,6 +456,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
+        /// <summary>
+        /// When running on Strax its difficult to get the correct Cirrus network class due to circular references.
+        /// This is a bare-minimum network class for the sole purpose of address validation.
+        /// </summary>
         public class CirrusAddressValidationNetwork : Network
         {
             public CirrusAddressValidationNetwork(string name) : base()
@@ -600,6 +604,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
+        /// <summary>
+        /// Validates the target address of a cross-chain transfer transaction.
+        /// </summary>
+        /// <param name="transactionResult">The transaction to validate.</param>
         public void ValidateCrossChainTransferAddress(Transaction transactionResult)
         {
             if (DepositHelper.TryGetDepositsToMultisig(this.network, transactionResult, Money.Coins(1m) /* FederatedPegSettings.CrossChainTransferMinimum */, out _))
