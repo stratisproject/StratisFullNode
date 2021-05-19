@@ -615,7 +615,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             {
                 if (depositsToMultisig.Any(d => d.Value < Money.COIN))
                 {
-                    throw new FeatureException(HttpStatusCode.BadRequest, "Amount to small.",
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Amount below minimum.",
                         $"The cross-chain transfer amount is less than the minimum of 1.");
                 }
 
