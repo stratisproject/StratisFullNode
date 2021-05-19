@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             return depositsToMultisig.Any();
         }
 
-        public static bool GetTarget(Transaction transaction, IOpReturnDataReader opReturnDataReader, out bool conversion, out string targetAddress, out int targetChain)
+        public static bool TryGetTarget(Transaction transaction, IOpReturnDataReader opReturnDataReader, out bool conversion, out string targetAddress, out int targetChain)
         {
             conversion = false;
             targetChain = 0 /* DestinationChain.STRAX */;

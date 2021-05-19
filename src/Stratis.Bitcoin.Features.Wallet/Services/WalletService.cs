@@ -620,7 +620,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 }
 
                 IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
-                if (!DepositHelper.GetTarget(transactionResult, opReturnDataReader, out _, out _, out _))
+                if (!DepositHelper.TryGetTarget(transactionResult, opReturnDataReader, out _, out _, out _))
                 {
                     throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
                         $"The cross-chain transfer transaction contains no valid target address for the target network.");

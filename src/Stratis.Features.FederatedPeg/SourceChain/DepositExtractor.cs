@@ -56,7 +56,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!DepositHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
                 return null;
 
-            if (!DepositHelper.GetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
+            if (!DepositHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
                 return null;
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
