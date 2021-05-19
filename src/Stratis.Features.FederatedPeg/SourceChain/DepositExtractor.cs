@@ -12,15 +12,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
         public const decimal ConversionTransactionMinimum = 90_000;
 
-        /// <summary>
-        /// This deposit extractor implementation only looks for a very specific deposit format.
-        /// Deposits will have 2 outputs when there is no change.
-        /// </summary>
-        private const int ExpectedNumberOfOutputsNoChange = 2;
-
-        /// <summary> Deposits will have 3 outputs when there is change.</summary>
-        private const int ExpectedNumberOfOutputsChange = 3;
-
         private readonly Script depositScript;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
@@ -59,39 +50,33 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return deposits;
         }
 
-        /// <inheritdoc />
-        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public class DepositInfo
         {
-            // Coinbase transactions can't have deposits.
-            if (transaction.IsCoinBase)
-                return null;
+            public DepositRetrievalType depositRetrievalType;
+            public Money amount;
+            public string targetAddress;
+            public DestinationChain targetChain;
+        }
 
-            // Deposits have a certain structure.
-            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
-                return null;
-
-            var depositsToMultisig = transaction.Outputs.Where(output =>
-                output.ScriptPubKey == this.depositScript &&
-                output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
-
-            if (!depositsToMultisig.Any())
-                return null;
-
+        public DepositInfo GetDepositRetrievalType(Transaction transaction, List<TxOut> depositsToMultisig)
+        {
             // Check the common case first.
             bool conversionTransaction = false;
-            DestinationChain targetChain = DestinationChain.STRAX;
 
-            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
+            var deposit = new DepositInfo();
+            deposit.targetChain = DestinationChain.STRAX;
+
+            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out deposit.targetAddress))
             {
                 byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 
-                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
+                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out deposit.targetAddress))
                 {
-                    targetChain = (DestinationChain)destinationChain;
+                    deposit.targetChain = (DestinationChain)destinationChain;
                 }
                 else
                     return null;
-                
+
                 conversionTransaction = true;
             }
 
@@ -113,7 +98,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
             else
             {
-                if (targetAddress == this.network.CirrusRewardDummyAddress)
+                if (deposit.targetAddress == this.network.CirrusRewardDummyAddress)
                     depositRetrievalType = DepositRetrievalType.Distribution;
                 else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.Large;
@@ -123,7 +108,23 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     depositRetrievalType = DepositRetrievalType.Small;
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, targetChain, blockHeight, blockHash);
+            deposit.depositRetrievalType = depositRetrievalType;
+
+            return deposit;
+        }
+
+        /// <inheritdoc />
+        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        {
+            if (!DepositHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
+                return null;
+
+            DepositInfo result = this.GetDepositRetrievalType(transaction, depositsToMultisig);
+
+            if (result == null)
+                return null;
+
+            return new Deposit(transaction.GetHash(), result.depositRetrievalType, result.amount, result.targetAddress, result.targetChain, blockHeight, blockHash);
         }
     }
 }
