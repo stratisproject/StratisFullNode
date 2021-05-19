@@ -32,17 +32,17 @@ namespace Stratis.Bitcoin.Features.Wallet
             depositsToMultisig = transaction.Outputs.Where(output =>
                 output.ScriptPubKey == depositScript &&
                 output.Value >= crossChainTransferMinimum).ToList();
-
+            
             return depositsToMultisig.Any();
         }
 
-        public bool GetTarget(Transaction transaction, IOpReturnDataReader opReturnDataReader, out bool conversion, out string targetAddress, out int targetChain)
+        public static bool GetTarget(Transaction transaction, IOpReturnDataReader opReturnDataReader, out bool conversion, out string targetAddress, out int targetChain)
         {
             conversion = false;
             targetChain = 0 /* DestinationChain.STRAX */;
 
             // Check the common case first.
-            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
+            if (!opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
             {
                 byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 

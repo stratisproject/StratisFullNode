@@ -2,6 +2,7 @@
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -39,7 +40,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             this.network = network;
             this.federatedPegSettings = federatedPegSettings;
-            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, conversionRequestRepository, new OpReturnDataReader(counterChainNetworkWrapper), network);
+            this.withdrawalExtractor = new WithdrawalExtractor(federatedPegSettings, conversionRequestRepository, new OpReturnDataReader(counterChainNetworkWrapper.CounterChainNetwork), network);
             this.mempoolManager = mempoolManager;
         }
 

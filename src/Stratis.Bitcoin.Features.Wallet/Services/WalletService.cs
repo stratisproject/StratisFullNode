@@ -19,6 +19,7 @@ using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
+using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet.Services
@@ -455,6 +456,43 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
+        public class StraxAddressValidationNetwork : Network
+        {
+            public StraxAddressValidationNetwork(string name) : base()
+            {
+                this.Name = name;
+                this.Base58Prefixes = new byte[12][];
+                switch (name)
+                {
+                    case "StraxMain":
+                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 75 }; // X
+                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 140 }; // y
+                        this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (75 + 128) };
+                        break;
+                    case "StraxTest":
+                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 120 }; // q
+                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 127 }; // t
+                        this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (120 + 128) };
+                        break;
+                    case "StraxRegTest":
+                        this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (120) };
+                        this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (127) };
+                        this.Base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (120 + 128) };
+                        break;
+                }
+
+                this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_NO_EC] = new byte[] { 0x01, 0x42 };
+                this.Base58Prefixes[(int)Base58Type.ENCRYPTED_SECRET_KEY_EC] = new byte[] { 0x01, 0x43 };
+                this.Base58Prefixes[(int)Base58Type.EXT_PUBLIC_KEY] = new byte[] { (0x04), (0x88), (0xB2), (0x1E) };
+                this.Base58Prefixes[(int)Base58Type.EXT_SECRET_KEY] = new byte[] { (0x04), (0x88), (0xAD), (0xE4) };
+                this.Base58Prefixes[(int)Base58Type.PASSPHRASE_CODE] = new byte[] { 0x2C, 0xE9, 0xB3, 0xE1, 0xFF, 0x39, 0xE2 };
+                this.Base58Prefixes[(int)Base58Type.CONFIRMATION_CODE] = new byte[] { 0x64, 0x3B, 0xF6, 0xA8, 0x9A };
+                this.Base58Prefixes[(int)Base58Type.STEALTH_ADDRESS] = new byte[] { 0x2a };
+                this.Base58Prefixes[(int)Base58Type.ASSET_ID] = new byte[] { 23 };
+                this.Base58Prefixes[(int)Base58Type.COLORED_ADDRESS] = new byte[] { 0x13 };
+            }
+        }
+
         public async Task<WalletBuildTransactionModel> BuildTransaction(BuildTransactionRequest request, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await Task.Run(() =>
@@ -551,6 +589,27 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 }
 
                 Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
+
+                if (DepositHelper.TryGetDepositsToMultisig(this.network, transactionResult, Money.Coins(1m) /* FederatedPegSettings.CrossChainTransferMinimum */, out _))
+                {
+                    Network targetNetwork;
+
+                    if (this.network.Name.StartsWith("Cirrus"))
+                    {
+                        targetNetwork = StraxNetwork.MainChainNetworks[this.network.NetworkType]();
+                    }
+                    else
+                    {
+                        targetNetwork = new StraxAddressValidationNetwork(this.network.Name.Replace("Strax", "Cirrus"));
+                    }
+                      
+                    IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
+                    if (!DepositHelper.GetTarget(transactionResult, opReturnDataReader, out _, out _, out _))
+                    {
+                        throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
+                            $"The cross-chain transfer transaction contains no valid target address for the target network.");
+                    }
+                }
 
                 return new WalletBuildTransactionModel
                 {
