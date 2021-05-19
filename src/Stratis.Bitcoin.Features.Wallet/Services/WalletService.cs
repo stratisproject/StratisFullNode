@@ -593,7 +593,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
 
-                ValidateCrossChainTransferAddress(transactionResult);
+                ValidateCrossChainTransfer(this.network, transactionResult);
 
                 return new WalletBuildTransactionModel
                 {
@@ -607,20 +607,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         /// <summary>
         /// Validates the target address of a cross-chain transfer transaction.
         /// </summary>
+        /// <param name="network">The source network.</param>
         /// <param name="transactionResult">The transaction to validate.</param>
-        public void ValidateCrossChainTransferAddress(Transaction transactionResult)
+        public static void ValidateCrossChainTransfer(Network network, Transaction transactionResult)
         {
-            if (DepositHelper.TryGetDepositsToMultisig(this.network, transactionResult, Money.Coins(1m) /* FederatedPegSettings.CrossChainTransferMinimum */, out _))
+            if (DepositHelper.TryGetDepositsToMultisig(network, transactionResult, Money.Zero, out _))
             {
                 Network targetNetwork = null;
 
-                if (this.network.Name.StartsWith("Cirrus"))
+                if (network.Name.StartsWith("Cirrus"))
                 {
-                    targetNetwork = StraxNetwork.MainChainNetworks[this.network.NetworkType]();
+                    targetNetwork = StraxNetwork.MainChainNetworks[network.NetworkType]();
                 }
-                else if (this.network.Name.StartsWith("Strax"))
+                else if (network.Name.StartsWith("Strax"))
                 {
-                    targetNetwork = new CirrusAddressValidationNetwork(this.network.Name.Replace("Strax", "Cirrus"));
+                    targetNetwork = new CirrusAddressValidationNetwork(network.Name.Replace("Strax", "Cirrus"));
                 }
                 else
                 {
