@@ -75,7 +75,6 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (!DepositValidationHelper.TryGetDepositsToMultisig(network, transaction, Money.Zero, out List<TxOut> depositsToMultisig))
                 return false;
 
-
             if (depositsToMultisig.Any(d => d.Value < Money.COIN))
             {
                 throw new FeatureException(HttpStatusCode.BadRequest, "Amount below minimum.",
