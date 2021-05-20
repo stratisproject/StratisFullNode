@@ -598,7 +598,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
 
-                ValidateCrossChainTransfer(this.network, transactionResult);
+                ValidateCrossChainDeposit(this.network, transactionResult);
 
                 return new WalletBuildTransactionModel
                 {
@@ -610,42 +610,47 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         }
 
         /// <summary>
-        /// Validates the target address of a cross-chain transfer transaction.
+        /// Determines if this is a cross-chain transfer and then validates the target address as required.
         /// </summary>
         /// <param name="network">The source network.</param>
-        /// <param name="transactionResult">The transaction to validate.</param>
-        public static void ValidateCrossChainTransfer(Network network, Transaction transactionResult)
+        /// <param name="transaction">The transaction to validate.</param>
+        /// <returns><c>True</c> if its a cross-chain transfer and <c>false</c> otherwise.</returns>
+        /// <exception cref="FeatureException">If the address is invalid or inappropriate for the target network.</exception>
+        public static bool ValidateCrossChainDeposit(Network network, Transaction transaction)
         {
-            if (DepositHelper.TryGetDepositsToMultisig(network, transactionResult, Money.Zero, out List<TxOut> depositsToMultisig))
+            if (!DepositHelper.TryGetDepositsToMultisig(network, transaction, Money.Zero, out List<TxOut> depositsToMultisig))
+                return false;
+
+            
+            if (depositsToMultisig.Any(d => d.Value < Money.COIN))
             {
-                if (depositsToMultisig.Any(d => d.Value < Money.COIN))
-                {
-                    throw new FeatureException(HttpStatusCode.BadRequest, "Amount below minimum.",
-                        $"The cross-chain transfer amount is less than the minimum of 1.");
-                }
-
-                Network targetNetwork = null;
-
-                if (network.Name.StartsWith("Cirrus"))
-                {
-                    targetNetwork = StraxNetwork.MainChainNetworks[network.NetworkType]();
-                }
-                else if (network.Name.StartsWith("Strax"))
-                {
-                    targetNetwork = new CirrusAddressValidationNetwork(network.Name.Replace("Strax", "Cirrus"));
-                }
-                else
-                {
-                    return;
-                }
-
-                IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
-                if (!DepositHelper.TryGetTarget(transactionResult, opReturnDataReader, out _, out _, out _))
-                {
-                    throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
-                        $"The cross-chain transfer transaction contains no valid target address for the target network.");
-                }
+                throw new FeatureException(HttpStatusCode.BadRequest, "Amount below minimum.",
+                    $"The cross-chain transfer amount is less than the minimum of 1.");
             }
+
+            Network targetNetwork = null;
+
+            if (network.Name.StartsWith("Cirrus"))
+            {
+                targetNetwork = StraxNetwork.MainChainNetworks[network.NetworkType]();
+            }
+            else if (network.Name.StartsWith("Strax"))
+            {
+                targetNetwork = new CirrusAddressValidationNetwork(network.Name.Replace("Strax", "Cirrus"));
+            }
+            else
+            {
+                return true;
+            }
+
+            IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
+            if (!DepositHelper.TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
+            {
+                throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
+                    $"The cross-chain transfer transaction contains no valid target address for the target network.");
+            }
+
+            return true;
         }
 
         public async Task<Money> GetTransactionFeeEstimate(TxFeeEstimateRequest request,
