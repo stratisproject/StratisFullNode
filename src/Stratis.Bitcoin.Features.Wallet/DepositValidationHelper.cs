@@ -31,7 +31,11 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
                 return false;
 
-            var depositScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(network.Federations.GetOnlyFederation().Id).PaymentScript;
+            IFederation federation = network.Federations?.GetOnlyFederation();
+            if (federation == null)
+                return false;
+
+            var depositScript = PayToFederationTemplate.Instance.GenerateScriptPubKey(federation.Id).PaymentScript;
 
             depositsToMultisig = transaction.Outputs.Where(output =>
                 output.ScriptPubKey == depositScript &&
