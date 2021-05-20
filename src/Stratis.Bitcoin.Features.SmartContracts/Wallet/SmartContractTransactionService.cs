@@ -188,7 +188,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
 
-            WalletService.ValidateCrossChainDeposit(this.network, transaction);
+            DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
 
             var model = new WalletBuildTransactionModel
             {
