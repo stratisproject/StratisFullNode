@@ -125,7 +125,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.Partial }, false, false).ToArray();
 
             CrossChainTransferModel[] transactions = transfers
-                .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
+                .Where(t => ((string.IsNullOrEmpty(depositId) && string.IsNullOrEmpty(transactionId)) || (t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))))
                 .Select(t => new CrossChainTransferModel()
                 {
                     DepositAmount = t.DepositAmount,
@@ -148,7 +148,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             ICrossChainTransfer[] transfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned }, false, false).ToArray();
 
             CrossChainTransferModel[] transactions = transfers
-                .Where(t => t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId)))
+                .Where(t => (string.IsNullOrEmpty(depositId) && string.IsNullOrEmpty(transactionId)) || (t.DepositTransactionId.ToString().StartsWith(depositId) && (t.PartialTransaction == null || t.PartialTransaction.GetHash().ToString().StartsWith(transactionId))))
                 .Select(t => new CrossChainTransferModel()
                 {
                     DepositAmount = t.DepositAmount,
