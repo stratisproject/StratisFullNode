@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             ibdMock.Setup(s => s.IsInitialBlockDownload()).Returns(false);
 
             this.provenBlockHeaderRepository = new LevelDbProvenBlockHeaderRepository(this.Network, CreateTestDir(this), this.LoggerFactory.Object, dBreezeSerializer);
-
+            this.provenBlockHeaderRepository.InitializeAsync().GetAwaiter().GetResult();
             this.provenBlockHeaderStore = new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, nodeStats, ibdMock.Object);
         }
 
