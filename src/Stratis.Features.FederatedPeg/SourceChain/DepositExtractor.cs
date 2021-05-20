@@ -34,10 +34,22 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             this.opReturnDataReader = opReturnDataReader;
         }
 
+        private static int DepositInjectionHeight = 3000000;
+
+        private static List<IDeposit> DepositsToInject = new List<IDeposit>()
+        {
+            // new Deposit(0x1, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC), "target address", DestinationChain.STRAX, DepositInjectionHeight, 0)
+        };
+
         /// <inheritdoc />
         public IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType[] depositRetrievalTypes)
         {
-            var deposits = new List<IDeposit>();
+            var deposits = DepositsToInject.Where(d => d.BlockNumber == blockHeight).ToList();
+
+            foreach (IDeposit deposit in deposits)
+            {
+                ((Deposit)deposit).BlockHash = block.GetHash();
+            }
 
             // If it's an empty block (i.e. only the coinbase transaction is present), there's no deposits inside.
             if (block.Transactions.Count > 1)
@@ -59,15 +71,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             return deposits;
         }
 
-
-        /// <summary>
-        /// This destination overrides rescue any funds sent to a bad address.
-        /// </summary>
-        private static Dictionary<uint256, (bool, DestinationChain, string)> DestinationOverrides = new Dictionary<uint256, (bool, DestinationChain, string)>()
-        {
-            //{ uint256.Parse(""), (false, DestinationChain.STRAX, "Correct address") }
-        };
-
         /// <inheritdoc />
         public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
@@ -86,31 +89,29 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (!depositsToMultisig.Any())
                 return null;
 
-            (bool conversion, DestinationChain chain, string address) target;
-            if (!DepositExtractor.DestinationOverrides.TryGetValue(transaction.GetHash(), out target))
+            // Check the common case first.
+            bool conversionTransaction = false;
+            DestinationChain targetChain = DestinationChain.STRAX;
+
+            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
             {
-                // Check the common case first.
-                target.chain = DestinationChain.STRAX;
-                if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out target.address))
+                byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
+
+                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
                 {
-                    byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
-
-                    if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out target.address))
-                    {
-                        target.chain = (DestinationChain)destinationChain;
-                    }
-                    else
-                        return null;
-
-                    target.conversion = true;
+                    targetChain = (DestinationChain)destinationChain;
                 }
+                else
+                    return null;
+
+                conversionTransaction = true;
             }
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
             DepositRetrievalType depositRetrievalType;
 
-            if (target.conversion)
+            if (conversionTransaction)
             {
                 if (amount < Money.Coins(ConversionTransactionMinimum))
                     return null;
@@ -124,7 +125,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
             else
             {
-                if (target.address == this.network.CirrusRewardDummyAddress)
+                if (targetAddress == this.network.CirrusRewardDummyAddress)
                     depositRetrievalType = DepositRetrievalType.Distribution;
                 else if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.Large;
@@ -134,7 +135,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     depositRetrievalType = DepositRetrievalType.Small;
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, target.address, target.chain, blockHeight, blockHash);
+            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, targetChain, blockHeight, blockHash);
         }
     }
 }
