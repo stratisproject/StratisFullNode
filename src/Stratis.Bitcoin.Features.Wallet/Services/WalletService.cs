@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.DataEncoders;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
@@ -475,7 +476,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     case "CirrusTest":
                         this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 127 }; // t
                         this.Base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { 137 }; // x
-
                         break;
                     case "CirrusRegTest":
                         this.Base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { 55 }; // P
@@ -493,6 +493,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 this.Base58Prefixes[(int)Base58Type.STEALTH_ADDRESS] = new byte[] { 0x2b };
                 this.Base58Prefixes[(int)Base58Type.ASSET_ID] = new byte[] { 115 };
                 this.Base58Prefixes[(int)Base58Type.COLORED_ADDRESS] = new byte[] { 0x13 };
+
+                Bech32Encoder encoder = Encoders.Bech32("tb");
+                this.Bech32Encoders = new Bech32Encoder[2];
+                this.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
+                this.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
             }
         }
 
