@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Stratis.Bitcoin.Features.SmartContracts.Interfaces;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
-using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.PoA
 {
@@ -26,7 +24,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                 services.AddSingleton<IWhitelistedHashChecker, WhitelistedHashChecker>();
 
                 // Registers an additional contract tx validation consensus rule which checks whether the hash of the contract being deployed is whitelisted.
-                services.AddSingleton<IContractTransactionFullValidationRule, AllowedCodeHashLogic>();
+                //services.AddSingleton<IContractTransactionFullValidationRule, AllowedCodeHashLogic>();
             }
 
             return options;

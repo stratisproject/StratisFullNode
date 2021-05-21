@@ -363,7 +363,7 @@ namespace Stratis.Sidechains.Networks
                 // These rules occur directly after the fee check rule in the non- smart contract mempool.
                 typeof(SmartContractFormatLogicMempoolRule),
                 typeof(CanGetSenderMempoolRule),
-                typeof(AllowedCodeHashLogicMempoolRule), // PoA-specific
+                //typeof(AllowedCodeHashLogicMempoolRule), // PoA-specific
                 typeof(CheckMinGasLimitSmartContractMempoolRule),
 
                 // Remaining non-SC rules.

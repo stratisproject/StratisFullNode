@@ -234,6 +234,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                         Amount = scPayment.Amount.ToUnit(MoneyUnit.Satoshi),
                         BlockHeight = scTransaction.BlockHeight,
                         Hash = scTransaction.TransactionId,
+
                         TransactionFee = transactionFee.ToUnit(MoneyUnit.Satoshi),
                         GasFee = gasFee
                     };
