@@ -34,17 +34,21 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             this.opReturnDataReader = opReturnDataReader;
         }
 
-        private static int DepositInjectionHeight = 3000000;
-
-        private static List<IDeposit> DepositsToInject = new List<IDeposit>()
+        private static Dictionary<string, List<IDeposit>> DepositsToInject = new Dictionary<string, List<IDeposit>>()
         {
-            // new Deposit(0x1, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC), "target address", DestinationChain.STRAX, DepositInjectionHeight, 0)
+            { "CirrusRegTest", new List<IDeposit> { 
+                new Deposit(0x1, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC), "target address", DestinationChain.STRAX, 12500, 0) } }
         };
 
         /// <inheritdoc />
         public IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType[] depositRetrievalTypes)
         {
-            var deposits = DepositsToInject.Where(d => d.BlockNumber == blockHeight).ToList();
+            List<IDeposit> deposits;
+
+            if (DepositsToInject.TryGetValue(this.network.Name, out List<IDeposit> depositsList))
+                deposits = depositsList.Where(d => d.BlockNumber == blockHeight).ToList();
+            else
+                deposits = new List<IDeposit>();
 
             foreach (IDeposit deposit in deposits)
             {
