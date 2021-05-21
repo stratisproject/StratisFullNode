@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -310,7 +311,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             // Get coinview at current height (SLOW)
             var coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
 
-            var utxos = new List<UtxoModel>();
+            var utxos = new ConcurrentBag<UtxoModel>();
 
             // Get utxos for this address
             try
