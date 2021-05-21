@@ -37,7 +37,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private static Dictionary<string, List<IDeposit>> DepositsToInject = new Dictionary<string, List<IDeposit>>()
         {
             { "CirrusRegTest", new List<IDeposit> { 
-                new Deposit(0x1 /* Tx of deposit being redone */, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC), "PHjsrP2bGAgK7YCeJLyRje9YQmiVmSNpH5", DestinationChain.STRAX, 12500, 0) } }
+                new Deposit(0x1 /* Tx of deposit being redone */, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC), "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A", DestinationChain.STRAX, 12500, 0) } }
         };
 
         /// <inheritdoc />
