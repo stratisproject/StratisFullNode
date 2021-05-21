@@ -328,7 +328,7 @@ namespace Stratis.Sidechains.Networks
                 .Register<SetActivationDeploymentsFullValidationRule>()
 
                 // Rules that require the store to be loaded (coinview)
-                .Register<PoAHeaderSignatureRule>()
+                //.Register<PoAHeaderSignatureRule>()
                 .Register<LoadCoinviewRule>()
                 .Register<TransactionDuplicationActivationRule>() // implements BIP30
 
