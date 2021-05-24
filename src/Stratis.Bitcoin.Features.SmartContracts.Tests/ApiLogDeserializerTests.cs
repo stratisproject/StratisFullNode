@@ -1,7 +1,10 @@
 ﻿using System.Linq;
+using Moq;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Serialization;
+using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Networks;
 using Xunit;
 
@@ -41,7 +44,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
 
             var testBytes = primitiveSerializer.Serialize(testStruct);
 
-            var serializer = new ApiLogDeserializer(primitiveSerializer, network);
+            var serializer = new ApiLogDeserializer(primitiveSerializer, network, Mock.Of<IStateRepositoryRoot>(), Mock.Of<IContractAssemblyCache>());
             dynamic deserializedLog = serializer.DeserializeLogData(testBytes, typeof(TestLog));
 
             Assert.Equal(testStruct.Id, deserializedLog.Id);
