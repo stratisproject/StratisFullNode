@@ -304,6 +304,11 @@ namespace Stratis.Features.SQLiteWalletRepository
                 else
                     this.logger.LogDebug("Wallet '{0}' rewound to height '{1}'.", walletName, lastBlockSynced);
 
+                // It is possible that a re-org occurred of a block that the wallet just had an interest in
+                // (e.g. it staked a block and subsequently re-org).
+                // We therefore also need to notify the UI that it needs to get the balance and history again.
+                this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
+
                 return (true, res.Select(i => (uint256.Parse(i.txId), DateTimeOffset.FromUnixTimeSeconds(i.creationTime))).ToList());
             }
             catch (Exception ex)
