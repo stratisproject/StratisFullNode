@@ -23,9 +23,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private static readonly byte[] RepositoryHighestIndexKey = new byte[0];
 
+        private static readonly byte[] RepositoryTipKey = new byte[] { 0 };
+
         private readonly object lockObject = new object();
 
         private int highestPollId;
+
+        private HashHeightPair currentTip;
 
         public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
             : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer)
@@ -56,6 +60,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (row.Exists)
                         this.highestPollId = row.Value;
+
+                    Row<byte[], HashHeightPair> rowTip = transaction.Select<byte[], HashHeightPair>(TableName, RepositoryTipKey);
+
+                    if (rowTip.Exists)
+                        this.currentTip = rowTip.Value;
+                    else
+                    {
+                        var data = transaction.SelectDictionary<byte[], byte[]>(TableName);
+
+                        var polls = data
+                            .Where(d => d.Key.Length == 4)
+                            .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                            .ToDictionary(p => p.Id, p => p);
+
+                        // TODO: Must be on the current chain.
+                        int maxHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
+                        this.currentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
+                    }
                 }
             }
 
