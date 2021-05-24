@@ -434,17 +434,25 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         foreach (MaturedBlockDepositsModel maturedDeposit in maturedBlockDeposits)
                         {
                             if (maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight)
+                            {
+                                this.logger.Info("maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight, continuing.");
+
                                 continue;
+                            }
 
                             IReadOnlyList<IDeposit> deposits = maturedDeposit.Deposits.Where(depositFilter).ToList();
                             if (deposits.Count == 0)
                             {
+                                this.logger.Info("deposits.Count == 0, continuing.");
+
                                 this.NextMatureDepositHeight++;
                                 continue;
                             }
 
                             if (!this.federationWalletManager.IsFederationWalletActive())
                             {
+                                this.logger.Info("!this.federationWalletManager.IsFederationWalletActive(), continuing.");
+
                                 this.logger.Error("The store can't persist mature deposits while the federation is inactive.");
                                 continue;
                             }
@@ -462,7 +470,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             for (int i = 0; i < deposits.Count; i++)
                             {
                                 if (transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended)
+                                {
+                                    this.logger.Info("transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended, continuing.");
+
                                     continue;
+                                }
 
                                 IDeposit deposit = deposits[i];
                                 Transaction transaction = null;
@@ -492,6 +504,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                     if (invalidRecipient)
                                     {
+                                        this.logger.Info("Invalid recipient.");
+
                                         status = CrossChainTransferStatus.Rejected;
                                     }
                                     else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= this.settings.MaximumPartialTransactionThreshold)

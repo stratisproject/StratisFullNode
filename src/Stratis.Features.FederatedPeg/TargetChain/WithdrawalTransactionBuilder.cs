@@ -102,6 +102,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
                 {
+                    this.logger.Info("Generating recipient list for conversion transaction fee distribution.");
+
                     if (this.previousConversionFeeDistributionHeight != blockHeight)
                     {
                         multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
