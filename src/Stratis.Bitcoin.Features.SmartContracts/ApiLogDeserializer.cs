@@ -102,8 +102,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 {
                     return null;
                 }
-
+                
                 assembly = Assembly.Load(byteCode);
+            }
+            else
+            {
+                assembly = cachedAssembly.Assembly.Assembly;
             }
 
             return assembly;
