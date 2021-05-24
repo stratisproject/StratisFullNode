@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using NSubstitute.Core;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
