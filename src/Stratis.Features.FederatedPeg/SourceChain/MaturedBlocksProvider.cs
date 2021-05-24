@@ -42,12 +42,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     public sealed class MaturedBlocksProvider : IMaturedBlocksProvider
     {
         public const int MaturedBlocksBatchSize = 100;
-        public const string UnableToRetrieveBlockDataFromConsensusMessage = "Stopping mature block collection and sending what we've collected. Reason: Unable to get block data for {0} from consensus.";
 
         private readonly IConsensusManager consensusManager;
         private readonly IDepositExtractor depositExtractor;
         private readonly ConcurrentDictionary<int, BlockDeposits> deposits;
-        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILogger logger;
         private readonly Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
 
@@ -55,20 +53,24 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         {
             this.consensusManager = consensusManager;
             this.depositExtractor = depositExtractor;
-            this.federatedPegSettings = federatedPegSettings;
             this.logger = LogManager.GetCurrentClassLogger();
 
             // Take a copy of the tip upfront so that we work with the same tip later.
             this.deposits = new ConcurrentDictionary<int, BlockDeposits>();
             this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
             {
-                [DepositRetrievalType.Small] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits,
-                [DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits,
-                [DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits
+                [DepositRetrievalType.Small] = federatedPegSettings.MinimumConfirmationsSmallDeposits,
+                [DepositRetrievalType.Normal] = federatedPegSettings.MinimumConfirmationsNormalDeposits,
+                [DepositRetrievalType.Large] = federatedPegSettings.MinimumConfirmationsLargeDeposits
             };
 
-            if (this.federatedPegSettings.IsMainChain)
-                this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+            if (federatedPegSettings.IsMainChain)
+            {
+                this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.ConversionSmall] = federatedPegSettings.MinimumConfirmationsSmallDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.ConversionNormal] = federatedPegSettings.MinimumConfirmationsNormalDeposits;
+                this.retrievalTypeConfirmations[DepositRetrievalType.ConversionLarge] = federatedPegSettings.MinimumConfirmationsLargeDeposits;
+            }
         }
 
         /// <inheritdoc />
@@ -93,8 +95,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             // Determine the first block to extract deposits for.
             ChainedHeader firstToProcess = this.consensusManager.Tip.GetAncestor(maturityHeight);
             for (ChainedHeader verifyBlock = firstToProcess?.Previous; verifyBlock != null && verifyBlock.Height >= startHeight; verifyBlock = verifyBlock.Previous)
+            {
                 if (!this.deposits.TryGetValue(verifyBlock.Height, out BlockDeposits blockDeposits) || blockDeposits.BlockHash != verifyBlock.HashBlock)
                     firstToProcess = verifyBlock;
+            }
 
             var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(RestApiClientBase.TimeoutSeconds / 2));
             DepositRetrievalType[] retrievalTypes = this.retrievalTypeConfirmations.Keys.ToArray();
@@ -120,10 +124,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     // If the block height is more than the required confirmations, then the potential deposits
                     // contained within are valid for the given retrieval type.
                     if (chainedHeaderBlock.ChainedHeader.Height > requiredConfirmations)
-                    {
-                        foreach (IDeposit deposit in this.RecallBlockDeposits(chainedHeaderBlock.ChainedHeader.Height - requiredConfirmations, retrievalType))
-                            maturedDeposits.Add(deposit);
-                    }
+                        maturedDeposits.AddRange(this.RecallBlockDeposits(chainedHeaderBlock.ChainedHeader.Height - requiredConfirmations, retrievalType));
                 }
 
                 this.logger.Debug("{0} mature deposits retrieved from block '{1}'.", maturedDeposits.Count, chainedHeaderBlock.ChainedHeader);
@@ -196,13 +197,17 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     /// Small deposits are processed after <see cref="IFederatedPegSettings.MinimumConfirmationsSmallDeposits"/> confirmations (blocks).
     /// Normal deposits are processed after (<see cref="IFederatedPegSettings.MinimumConfirmationsNormalDeposits"/>) confirmations (blocks).
     /// Large deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsLargeDeposits"/>) confirmations (blocks).
-    /// Similarly, reward distribution deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
+    /// Conversion deposits are processed after similar intervals to the above, according to their size.
+    /// Reward distribution deposits are only processed after the height has increased past max re-org (<see cref="IFederatedPegSettings.MinimumConfirmationsDistributionDeposits"/>) confirmations (blocks).
     /// </summary>
     public enum DepositRetrievalType
     {
         Small,
         Normal,
         Large,
-        Distribution
+        Distribution,
+        ConversionSmall,
+        ConversionNormal,
+        ConversionLarge
     }
 }

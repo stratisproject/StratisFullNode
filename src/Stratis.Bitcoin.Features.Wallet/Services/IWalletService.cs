@@ -17,7 +17,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         Task<WalletBalanceModel> GetBalance(string requestWalletName, string requestAccountName,
             bool requestIncludeBalanceByAddress, CancellationToken cancellationToken);
 
-        Task<WalletHistoryModel> GetHistory(WalletHistoryRequest request, CancellationToken cancellationToken);
+        WalletHistoryModel GetHistory(WalletHistoryRequest request);
+
         Task<WalletGeneralInfoModel> GetWalletGeneralInfo(string walletName, CancellationToken cancellationToken);
 
         Task<WalletStatsModel> GetWalletStats(WalletStatsRequest request, CancellationToken cancellationToken);

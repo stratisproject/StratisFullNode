@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts.CLR;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Receipts;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
@@ -188,7 +187,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 // Wallet manager returns only 1 when an account name is specified.
                 AccountHistory accountHistory = accountsHistory.First();
 
-                List<FlatHistory> items = accountHistory.History.Where(x => x.Address.Address == request.Address).ToList();
+                List<FlatHistory> items = new List<FlatHistory>();// accountHistory.History.ToList();//.Where(x => x.Address.Address == request.Address).ToList();
 
                 // Represents a sublist of transactions associated with receive addresses + a sublist of already spent transactions associated with change addresses.
                 // In effect, we filter out 'change' transactions that are not spent, as we don't want to show these in the history.

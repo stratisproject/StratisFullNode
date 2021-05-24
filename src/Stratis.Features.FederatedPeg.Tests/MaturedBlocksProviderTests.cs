@@ -7,10 +7,12 @@ using NBitcoin;
 using NSubstitute;
 using NSubstitute.Core;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -51,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.addressHelper = new MultisigAddressHelper(this.network, this.mainChainNetwork);
             this.targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
-            this.opReturnBytes = Encoding.UTF8.GetBytes(this.targetAddress.ToString());
+            this.opReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode((int)DestinationChain.STRAX, this.targetAddress.ToString()));
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
@@ -83,7 +85,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             IFederatedPegSettings federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             federatedPegSettings.MinimumConfirmationsNormalDeposits.Returns(0);
 
-            var deposits = new List<IDeposit>() { new Deposit(new uint256(0), DepositRetrievalType.Normal, 100, "test", 0, new uint256(1)) };
+            var deposits = new List<IDeposit>() { new Deposit(new uint256(0), DepositRetrievalType.Normal, 100, "test", DestinationChain.STRAX, 0, new uint256(1)) };
 
             // Set the first block up to return 100 normal deposits.
             IDepositExtractor depositExtractor = Substitute.For<IDepositExtractor>();

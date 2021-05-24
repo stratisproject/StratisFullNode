@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using NBitcoin;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
-using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.Networks;

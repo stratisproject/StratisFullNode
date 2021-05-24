@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
-using Stratis.Features.FederatedPeg.Payloads;
 
 namespace Stratis.Features.FederatedPeg.Interfaces
 {

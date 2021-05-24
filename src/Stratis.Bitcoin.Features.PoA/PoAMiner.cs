@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
@@ -70,13 +71,15 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
+        private readonly NodeSettings nodeSettings;
+
         private readonly IWalletManager walletManager;
 
         protected readonly VotingManager votingManager;
 
         private readonly VotingDataEncoder votingDataEncoder;
 
-        private readonly PoAMinerSettings settings;
+        private readonly PoASettings poaSettings;
 
         private readonly IAsyncProvider asyncProvider;
 
@@ -100,9 +103,10 @@ namespace Stratis.Bitcoin.Features.PoA
             IWalletManager walletManager,
             INodeStats nodeStats,
             VotingManager votingManager,
-            PoAMinerSettings poAMinerSettings,
+            PoASettings poAMinerSettings,
             IAsyncProvider asyncProvider,
-            IIdleFederationMembersKicker idleFederationMembersKicker)
+            IIdleFederationMembersKicker idleFederationMembersKicker,
+            NodeSettings nodeSettings)
         {
             this.consensusManager = consensusManager;
             this.dateTimeProvider = dateTimeProvider;
@@ -116,13 +120,14 @@ namespace Stratis.Bitcoin.Features.PoA
             this.integrityValidator = integrityValidator;
             this.walletManager = walletManager;
             this.votingManager = votingManager;
-            this.settings = poAMinerSettings;
+            this.poaSettings = poAMinerSettings;
             this.asyncProvider = asyncProvider;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.cancellation = CancellationTokenSource.CreateLinkedTokenSource(new[] { nodeLifetime.ApplicationStopping });
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
+            this.nodeSettings = nodeSettings;
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
@@ -144,11 +149,11 @@ namespace Stratis.Bitcoin.Features.PoA
                 try
                 {
                     this.logger.LogDebug("IsInitialBlockDownload={0}, AnyConnectedPeers={1}, BootstrappingMode={2}, IsFederationMember={3}",
-                        this.ibdState.IsInitialBlockDownload(), this.connectionManager.ConnectedPeers.Any(), this.settings.BootstrappingMode, this.federationManager.IsFederationMember);
+                        this.ibdState.IsInitialBlockDownload(), this.connectionManager.ConnectedPeers.Any(), this.poaSettings.BootstrappingMode, this.federationManager.IsFederationMember);
 
                     // Don't mine in IBD or if we aren't connected to any node (unless bootstrapping mode is enabled).
                     // Don't try to mine if we aren't a federation member.
-                    bool cantMineAtAll = (this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.settings.BootstrappingMode;
+                    bool cantMineAtAll = (this.ibdState.IsInitialBlockDownload() || !this.connectionManager.ConnectedPeers.Any()) && !this.poaSettings.BootstrappingMode;
                     if (cantMineAtAll || !this.federationManager.IsFederationMember)
                     {
                         if (!cantMineAtAll)
@@ -185,18 +190,21 @@ namespace Stratis.Bitcoin.Features.PoA
                     var builder = new StringBuilder();
                     builder.AppendLine("<<==============================================================>>");
                     builder.AppendLine($"Block mined hash   : '{chainedHeader}'");
-                    builder.AppendLine($"Block miner pubkey : '{this.federationManager.CurrentFederationKey.PubKey.ToString()}'");
+                    builder.AppendLine($"Block miner pubkey : '{this.federationManager.CurrentFederationKey.PubKey}'");
                     builder.AppendLine("<<==============================================================>>");
                     this.logger.LogInformation(builder.ToString());
+
+                    // If DevMode is enabled the miner will continue it's bootstrapped mining, i.e. without any connections.
+                    if ((this.nodeSettings.DevMode != null && this.nodeSettings.DevMode == DevModeNodeRole.Miner))
+                        continue;
 
                     // The purpose of bootstrap mode is to kickstart the network when the last mined block is very old, which would normally put the node in IBD and inhibit mining.
                     // There is therefore no point keeping this mode enabled once this node has mined successfully.
                     // Additionally, keeping it enabled may result in network splits if this node becomes disconnected from its peers for a prolonged period.
-                    if (this.settings.BootstrappingMode)
+                    if (this.poaSettings.BootstrappingMode)
                     {
                         this.logger.LogInformation("Disabling bootstrap mode as a block has been successfully mined.");
-
-                        this.settings.DisableBootstrap();
+                        this.poaSettings.DisableBootstrap();
                     }
                 }
                 catch (OperationCanceledException)
@@ -281,9 +289,9 @@ namespace Stratis.Bitcoin.Features.PoA
             // If an address is specified for mining then preferentially use that.
             // The private key for this address is not used for block signing, so it can be any valid address.
             // Since it is known which miner mines in each block already it does not change the privacy level that every block mines to the same address.
-            if (!string.IsNullOrWhiteSpace(this.settings.MineAddress))
+            if (!string.IsNullOrWhiteSpace(this.poaSettings.MineAddress))
             {
-                this.walletScriptPubKey = BitcoinAddress.Create(this.settings.MineAddress, this.network).ScriptPubKey;
+                this.walletScriptPubKey = BitcoinAddress.Create(this.poaSettings.MineAddress, this.network).ScriptPubKey;
             }
             else
             {
@@ -417,7 +425,12 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            List<IFederationMember> modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+            // If the node is in DevMode just use the genesis members via the federation manager.
+            List<IFederationMember> modifiedFederation;
+            if (this.nodeSettings.DevMode != null)
+                modifiedFederation = this.federationManager.GetFederationMembers();
+            else
+                modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
 
             int maxDepth = modifiedFederation.Count;
 
@@ -446,7 +459,10 @@ namespace Stratis.Bitcoin.Features.PoA
                     currentHeader = currentHeader.Previous;
                     hitCount++;
 
-                    modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+                    if (this.nodeSettings.DevMode != null)
+                        modifiedFederation = this.federationManager.GetFederationMembers();
+                    else
+                        modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
                 }
                 else
                 {

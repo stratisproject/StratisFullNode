@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Flurl;
@@ -99,7 +98,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
             ulong gasPrice = SmartContractMempoolValidator.MinGasPrice,
             double feeAmount = 0.01)
         {
-            HttpResponseMessage createContractResponse = await $"http://localhost:{node.ApiPort}/api"
+            var createContractResponse = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("SmartContracts/build-and-send-create")
                 .PostJsonAsync(new
                 {
@@ -115,7 +114,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                     walletName = WalletName
                 });
 
-            string result = await createContractResponse.Content.ReadAsStringAsync();
+            string result = await createContractResponse.ResponseMessage.Content.ReadAsStringAsync();
             return JObject.Parse(result)["newContractAddress"].ToString();
         }
 

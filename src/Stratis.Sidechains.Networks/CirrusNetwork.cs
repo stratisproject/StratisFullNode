@@ -6,6 +6,12 @@ namespace Stratis.Sidechains.Networks
 {
     public static class CirrusNetwork
     {
+        /// <summary> The name of the root folder containing the different side chain block data.</summary>
+        public const string NetworkRootFolderName = "cirrus";
+
+        /// <summary> The default name used for the side chain configuration file. </summary>
+        public const string NetworkDefaultConfigFilename = "cirrus.conf";
+
         public static NetworksSelector NetworksSelector
         {
             get
@@ -43,7 +49,7 @@ namespace Stratis.Sidechains.Networks
             genesis.Header.HashPrevBlock = uint256.Zero;
             genesis.UpdateMerkleRoot();
 
-            ((SmartContractPoABlockHeader)genesis.Header).HashStateRoot = new uint256("21B463E3B52F6201C0AD6C991BE0485B6EF8C092E64583FFA655CC1B171FE856");
+            ((SmartContractPoABlockHeader)genesis.Header).HashStateRoot = SmartContractPoABlockDefinition.StateRootEmptyTrie;
 
             return genesis;
         }

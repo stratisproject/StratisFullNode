@@ -9,18 +9,16 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
 {
     public class RocksDbKeyValueRepository : IKeyValueRepository
     {
-        private readonly string dataFolder;
         private readonly DBreezeSerializer dataStoreSerializer;
         private readonly DbOptions dbOptions;
         private readonly RocksDb rocksdb;
 
         public RocksDbKeyValueRepository(DataFolder dataFolder, DBreezeSerializer dataStoreSerializer)
         {
-            this.dataFolder = dataFolder.KeyValueRepositoryPath;
-            Directory.CreateDirectory(this.dataFolder);
+            Directory.CreateDirectory(dataFolder.KeyValueRepositoryPath);
             this.dataStoreSerializer = dataStoreSerializer;
             this.dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksdb = RocksDb.Open(this.dbOptions, this.dataFolder);
+            this.rocksdb = RocksDb.Open(this.dbOptions, dataFolder.KeyValueRepositoryPath);
         }
 
         /// <inheritdoc />

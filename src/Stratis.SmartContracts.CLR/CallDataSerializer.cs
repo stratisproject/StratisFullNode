@@ -4,8 +4,8 @@ using System.Linq;
 using CSharpFunctionalExtensions;
 using NBitcoin;
 using Nethereum.RLP;
+using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts.CLR.Serialization;
-using Stratis.SmartContracts.Core;
 using TracerAttributes;
 
 namespace Stratis.SmartContracts.CLR
@@ -63,8 +63,9 @@ namespace Stratis.SmartContracts.CLR
 
             var contractExecutionCode = this.primitiveSerializer.Deserialize<byte[]>(decodedParams[0]);
             object[] methodParameters = this.DeserializeMethodParameters(decodedParams[1]);
+            string[] signatures = (decodedParams.Count > 2) ? this.DeserializeSignatures(decodedParams[2]) : null;
 
-            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractExecutionCode, methodParameters);
+            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractExecutionCode, methodParameters, signatures);
             return Result.Ok(callData);
         }
 
@@ -80,15 +81,15 @@ namespace Stratis.SmartContracts.CLR
 
             string methodName = this.primitiveSerializer.Deserialize<string>(decodedParams[0]);
             object[] methodParameters = this.DeserializeMethodParameters(decodedParams[1]);
-            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractAddress, methodName, methodParameters);
+            string[] signatures = (decodedParams.Count > 2) ? this.DeserializeSignatures(decodedParams[2]) : null;
+
+            var callData = new ContractTxData(vmVersion, gasPrice, gasLimit, contractAddress, methodName, methodParameters, signatures);
             return Result.Ok(callData);
         }
 
         protected static IList<byte[]> RLPDecode(byte[] remaining)
         {
-            RLPCollection list = RLP.Decode(remaining);
-
-            RLPCollection innerList = (RLPCollection) list[0];
+            RLPCollection innerList = (RLPCollection)RLP.Decode(remaining);
 
             return innerList.Select(x => x.RLPData).ToList();
         }
@@ -107,6 +108,8 @@ namespace Stratis.SmartContracts.CLR
             rlpBytes.Add(contractTxData.ContractExecutionCode);
             
             this.AddMethodParams(rlpBytes, contractTxData.MethodParameters);
+            if (contractTxData.Signatures != null)
+                this.AddSignatures(rlpBytes, contractTxData.Signatures);
             
             byte[] encoded = RLP.EncodeList(rlpBytes.Select(RLP.EncodeElement).ToArray());
             
@@ -126,6 +129,8 @@ namespace Stratis.SmartContracts.CLR
             rlpBytes.Add(this.primitiveSerializer.Serialize(contractTxData.MethodName));
 
             this.AddMethodParams(rlpBytes, contractTxData.MethodParameters);
+            if (contractTxData.Signatures != null)
+                this.AddSignatures(rlpBytes, contractTxData.Signatures);
 
             byte[] encoded = RLP.EncodeList(rlpBytes.Select(RLP.EncodeElement).ToArray());
             
@@ -163,6 +168,18 @@ namespace Stratis.SmartContracts.CLR
             }
         }
 
+        /// <summary>
+        /// Adds the passed signatures to the passed list of byte arrays.
+        /// </summary>
+        /// <param name="rlpBytes">The list of byte arrays to add the signatures to.</param>
+        /// <param name="signatures">The signatures as a base 64 encoded byte array. See <see cref="SerializeSignatures(string[])"/></param>
+        protected void AddSignatures(List<byte[]> rlpBytes, string[] signatures)
+        {
+            Guard.NotNull(signatures, nameof(signatures));
+
+            rlpBytes.Add(this.SerializeSignatures(signatures));
+        }
+
         protected static bool IsCallContract(byte type)
         {
             return type == (byte)ScOpcodeType.OP_CALLCONTRACT;
@@ -181,6 +198,57 @@ namespace Stratis.SmartContracts.CLR
                 methodParameters = this.methodParamSerializer.Deserialize(methodParametersRaw);
 
             return methodParameters;
+        }
+
+        /// <summary>
+        /// Serializes the signatures.
+        /// </summary>
+        /// <param name="signatures">Signatures passed as an array of base 64 encoded byte arrays.</param>
+        /// <returns>A byte array containing the decoded signatures, where each signature is prefixed by its length.</returns>
+        protected byte[] SerializeSignatures(string[] signatures)
+        {
+            byte[][] signaturesRaw = new byte[signatures.Length][];
+            int totalBytes = 0;
+            for (int i = 0; i < signatures.Length; i++)
+            {
+                signaturesRaw[i] = Convert.FromBase64String(signatures[i]);
+                totalBytes += signaturesRaw[i].Length + 1;
+            }
+
+            var res = new byte[totalBytes];
+            totalBytes = 0;
+            for (int i = 0; i < signatures.Length; i++)
+            {
+                res[totalBytes] = (byte)signaturesRaw[i].Length;
+                signaturesRaw[i].CopyTo(res, totalBytes + 1);
+                totalBytes += signaturesRaw[i].Length + 1;
+            }
+
+            return res;
+        }
+
+        /// <summary>
+        /// Deserializes signatures.
+        /// </summary>
+        /// <param name="signaturesRaw">A byte array containing the decoded signatures, where each signature is prefixed by its length.</param>
+        /// <returns>Signatures as an array of base 64 encoded byte arrays.</returns>
+        protected string[] DeserializeSignatures(byte[] signaturesRaw)
+        {
+            if (signaturesRaw == null || signaturesRaw.Length == 0)
+                return new string[0];
+
+            var signatures = new List<string>();
+
+            for (int i = 0; i < signaturesRaw.Length; i++)
+            {
+                int length = signaturesRaw[i];
+                var buffer = new byte[length];
+                Array.Copy(signaturesRaw, i + 1, buffer, 0, length);
+                i += length;
+                signatures.Add(Convert.ToBase64String(buffer));
+            }
+
+            return signatures.ToArray();
         }
     }
 }

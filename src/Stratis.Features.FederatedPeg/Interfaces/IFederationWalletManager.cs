@@ -29,8 +29,22 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         int WalletTipHeight { get; set; }
 
         /// <summary>
+        /// Because the CCTS syncs from the federation wallet, it needs to be
+        /// responsible for cleaning transactions past max reorg.
+        /// <para>
+        /// Doing this from the federation wallet manager could mean transactions
+        /// are cleaned before they are processed by the CCTS (which means they will
+        /// be wrongly added back.
+        /// </para>
+        /// </summary>
+        /// <param name="crossChainTransferTip">The tip of the <see cref="ICrossChainTransferStore"/>.</param>
+        /// <returns><c>true</c> if transactions were cleaned and the wallet should be saved.</returns>
+        bool CleanTransactionsPastMaxReorg(int crossChainTransferTip);
+
+        /// <summary>
         /// Lists all spendable transactions from all accounts in the wallet.
         /// </summary>
+        /// <param name="confirmations">The minimum confirmations to filter by.</param>
         /// <returns>A collection of spendable outputs</returns>
         IEnumerable<UnspentOutputReference> GetSpendableTransactionsInWallet(int confirmations = 0);
 

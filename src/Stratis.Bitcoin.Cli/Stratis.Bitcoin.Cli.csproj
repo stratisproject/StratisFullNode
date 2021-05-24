@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Flurl" Version="2.8.0" />
-    <PackageReference Include="Flurl.Http" Version="2.4.0" />
+    <PackageReference Include="Flurl" Version="3.0.1" />
+    <PackageReference Include="Flurl.Http" Version="3.0.1" />
   </ItemGroup>
 
   <ItemGroup>

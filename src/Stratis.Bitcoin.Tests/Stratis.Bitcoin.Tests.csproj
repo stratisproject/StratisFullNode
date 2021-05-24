@@ -27,9 +27,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Base\RocksDbChainRepositoryTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="DBreeze" Version="1.89.0" />
     <PackageReference Include="Microsoft.Build" Version="16.8.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

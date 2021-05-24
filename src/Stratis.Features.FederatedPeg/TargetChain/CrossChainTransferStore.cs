@@ -521,7 +521,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                             else
                                             {
                                                 status = CrossChainTransferStatus.Partial;
-                                                recordDepositResult.WithDrawalTransactions.Add(transaction);
+                                                recordDepositResult.WithdrawalTransactions.Add(transaction);
                                             }
                                         }
                                         else
@@ -640,7 +640,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     {
 
                         this.logger.Debug("Partial Transaction inputs:{0}", partialTransactions[0].Inputs.Count);
-                        this.logger.Debug("Partial Transaction outputs:{1}", partialTransactions[0].Outputs.Count);
+                        this.logger.Debug("Partial Transaction outputs:{0}", partialTransactions[0].Outputs.Count);
 
                         for (int i = 0; i < partialTransactions[0].Inputs.Count; i++)
                         {
@@ -655,7 +655,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         }
 
                         this.logger.Debug("Transfer Partial Transaction inputs:{0}", transfer.PartialTransaction.Inputs.Count);
-                        this.logger.Debug("Transfer Partial Transaction outputs:{1}", transfer.PartialTransaction.Outputs.Count);
+                        this.logger.Debug("Transfer Partial Transaction outputs:{0}", transfer.PartialTransaction.Outputs.Count);
 
                         for (int i = 0; i < transfer.PartialTransaction.Inputs.Count; i++)
                         {
@@ -777,7 +777,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             transferLookup = new Dictionary<uint256, ICrossChainTransfer>();
             for (int i = 0; i < uniqueDepositIds.Length; i++)
                 transferLookup[uniqueDepositIds[i]] = uniqueTransfers[i];
-
 
             // Only create a transaction if there is important work to do.
             using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
@@ -1002,6 +1001,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                 dbreezeTransaction.Commit();
                             }
+
+                            // As the CCTS syncs from the federation wallet, it needs to be
+                            // responsible for cleaning transactions past max reorg.
+                            // Doing this from the federation wallet manager could mean transactions
+                            // are cleaned before they are processed by the CCTS (which means they will
+                            // be wrongly added back.
+                            if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
+                                this.federationWalletManager.SaveWallet();
 
                             return true;
                         }

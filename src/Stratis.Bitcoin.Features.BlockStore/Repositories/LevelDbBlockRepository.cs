@@ -17,8 +17,8 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
     public class LevelDbBlockRepository : IBlockRepository
     {
         private readonly string dataFolder;
-        private readonly Options dbOptions;
-        private readonly DB leveldb;
+        private Options dbOptions;
+        private DB leveldb;
         private readonly object locker;
         private readonly ILogger logger;
         private readonly Network network;
@@ -36,25 +36,17 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         public DB Leveldb => this.leveldb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
-        private readonly IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
+        private IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
 
-        public LevelDbBlockRepository(
-            Network network,
-            DataFolder dataFolder,
-            DBreezeSerializer dBreezeSerializer)
+        public LevelDbBlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer)
             : this(network, dataFolder.BlockPath, dBreezeSerializer)
         {
         }
 
-        public LevelDbBlockRepository(Network network, string folder, DBreezeSerializer dBreezeSerializer)
+        public LevelDbBlockRepository(Network network, string dataFolder, DBreezeSerializer dBreezeSerializer)
         {
-            Directory.CreateDirectory(folder);
-
-            this.dataFolder = folder;
-            this.dbOptions = new Options { CreateIfMissing = true };
-            this.leveldb = new DB(this.dbOptions, folder);
+            this.dataFolder = dataFolder;
             this.locker = new object();
-
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.dBreezeSerializer = dBreezeSerializer;
@@ -62,9 +54,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         }
 
         /// <inheritdoc />
-        public virtual void Initialize()
+        public void Initialize()
         {
+            Directory.CreateDirectory(this.dataFolder);
+
+            this.dbOptions = new Options { CreateIfMissing = true };
+            this.leveldb = new DB(this.dbOptions, this.dataFolder);
+
             Block genesis = this.network.GetGenesis();
+            this.genesisTransactions = this.network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
 
             lock (this.locker)
             {

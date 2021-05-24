@@ -28,8 +28,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             public MockWalletManager(Network network, ChainIndexer chainIndexer, ILoggerFactory loggerFactory) : base(loggerFactory,
                     network, chainIndexer, new WalletSettings(NodeSettings.Default(network)),
                     NodeSettings.Default(network).DataFolder, new Mock<IWalletFeePolicy>().Object,
-                    new Mock<IAsyncProvider>().Object, new Mock<INodeLifetime>().Object, DateTimeProvider.Default,
-                    new Mock<IScriptAddressReader>().Object, new Mock<IWalletRepository>().Object)
+                    DateTimeProvider.Default, new Mock<IWalletRepository>().Object)
             {
             }
         }

@@ -51,7 +51,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
             lock (this.locker)
             {
-                bytes = this.rocksDb.Get(DBH.Key(HeaderTableName, bytes));
+                bytes = this.rocksDb.Get(HeaderTableName, bytes);
             }
 
             if (bytes == null)
@@ -77,19 +77,14 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
             {
                 // If ProvenBlockHeader copy the header parameters.
                 BlockHeader newHeader = consensusFactory.CreateBlockHeader();
-                newHeader.Bits = blockHeader.Bits;
-                newHeader.Time = blockHeader.Time;
-                newHeader.Nonce = blockHeader.Nonce;
-                newHeader.Version = blockHeader.Version;
-                newHeader.HashMerkleRoot = blockHeader.HashMerkleRoot;
-                newHeader.HashPrevBlock = blockHeader.HashPrevBlock;
+                newHeader.CopyFields(blockHeader);
 
                 blockHeader = newHeader;
             }
 
             lock (this.locker)
             {
-                this.rocksDb.Put(DBH.Key(HeaderTableName, blockHeader.GetHash().ToBytes()), blockHeader.ToBytes(consensusFactory));
+                this.rocksDb.Put(HeaderTableName, blockHeader.GetHash().ToBytes(), blockHeader.ToBytes(consensusFactory));
             }
 
             return true;
@@ -101,7 +96,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
             lock (this.locker)
             {
-                bytes = this.rocksDb.Get(DBH.Key(ChainTableName, BitConverter.GetBytes(height)));
+                bytes = this.rocksDb.Get(ChainTableName, BitConverter.GetBytes(height));
             }
 
             if (bytes == null)
@@ -121,7 +116,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
             {
                 foreach (var item in items)
                 {
-                    batch.Put(DBH.Key(ChainTableName, BitConverter.GetBytes(item.Height)), item.Data.ToBytes(this.network.Consensus.ConsensusFactory));
+                    batch.Put(ChainTableName, BitConverter.GetBytes(item.Height), item.Data.ToBytes(this.network.Consensus.ConsensusFactory));
                 }
 
                 lock (this.locker)
@@ -133,6 +128,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
 
         public void Dispose()
         {
+            this.rocksDb?.Dispose();
         }
     }
 }
