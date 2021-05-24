@@ -7,7 +7,7 @@ using NBitcoin;
 using NLog;
 using TracerAttributes;
 
-namespace Stratis.Bitcoin.Features.Wallet
+namespace Stratis.Bitcoin
 {
     /// <summary>
     /// OP_RETURN data can be a hash, an address or unknown.
