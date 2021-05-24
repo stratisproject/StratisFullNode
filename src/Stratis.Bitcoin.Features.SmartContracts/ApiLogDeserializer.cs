@@ -91,8 +91,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             // Attempt to load from cache.
             CachedAssemblyPackage cachedAssembly = this.contractAssemblyCache.Retrieve(codeHash);
 
-            Assembly assembly;
-
             if (cachedAssembly == null)
             {
                 // Cache is not thread-safe so don't load into the cache if not found - leave that for consensus for now.
@@ -103,14 +101,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                     return null;
                 }
                 
-                assembly = Assembly.Load(byteCode);
-            }
-            else
-            {
-                assembly = cachedAssembly.Assembly.Assembly;
+                return Assembly.Load(byteCode);
             }
 
-            return assembly;
+            return cachedAssembly.Assembly.Assembly;            
         }
 
         /// <summary>
