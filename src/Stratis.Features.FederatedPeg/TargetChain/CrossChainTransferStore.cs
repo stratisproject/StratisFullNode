@@ -510,7 +510,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                                             if (!this.ValidateTransaction(transaction))
                                             {
-                                                this.logger.Debug("Suspending transfer for deposit '{0}' to retry invalid transaction later.", deposit.Id);
+                                                this.logger.Info("Suspending transfer for deposit '{0}' to retry invalid transaction later.", deposit.Id);
 
                                                 this.federationWalletManager.RemoveWithdrawalTransactions(deposit.Id);
                                                 haveSuspendedTransfers = true;
@@ -524,9 +524,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                         }
                                         else
                                         {
+                                            this.logger.Info("Unable to build withdrawal transaction, suspending.");
                                             haveSuspendedTransfers = true;
                                         }
                                     }
+                                }
+                                else
+                                {
+                                    this.logger.Info("Suspended flag set: '{0}'", deposit);
                                 }
 
                                 if (transfers[i] == null || transaction == null)
@@ -566,6 +571,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     // contained any suspended transfers.
                                     if (!haveSuspendedTransfers)
                                     {
+                                        this.logger.Info("Suspended flag not set, saving mature height: '{0}'", this.NextMatureDepositHeight + 1);
                                         this.SaveNextMatureHeight(dbreezeTransaction, this.NextMatureDepositHeight + 1);
                                     }
 
