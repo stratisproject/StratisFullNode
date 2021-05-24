@@ -35,11 +35,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             this.contractAssemblyCache = contractAssemblyCache;
         }
 
-        public List<LogResponse> MapLogResponses(Receipt receipt)
+        public List<LogResponse> MapLogResponses(Log[] logs)
         {
             var logResponses = new List<LogResponse>();
 
-            foreach (Log log in receipt.Logs)
+            foreach (Log log in logs)
             {
                 var logResponse = new LogResponse(log, this.network);
 
@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             // Attempt to load from cache.
             CachedAssemblyPackage cachedAssembly = this.contractAssemblyCache.Retrieve(codeHash);
 
-            Assembly assembly = null;
+            Assembly assembly;
 
             if (cachedAssembly == null)
             {

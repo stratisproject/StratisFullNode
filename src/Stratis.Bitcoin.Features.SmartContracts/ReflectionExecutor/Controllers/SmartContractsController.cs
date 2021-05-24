@@ -229,7 +229,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
 
-            List<LogResponse> logResponses = deserializer.MapLogResponses(receipt);
+            List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
 
             return new ReceiptResponse(receipt, logResponses, this.network);
         }
@@ -299,7 +299,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             foreach (Receipt receipt in receipts)
             {
-                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt);
+                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
 
                 var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
 
