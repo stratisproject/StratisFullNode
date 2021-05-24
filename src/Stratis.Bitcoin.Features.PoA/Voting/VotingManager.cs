@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
             this.scheduledVotingData = new List<VotingData>();
-            this.pollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer);
+            this.pollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.poaConsensusOptions = (PoAConsensusOptions)this.network.Consensus.Options;
@@ -97,6 +97,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.pollsRepository.Initialize();
 
+            this.Synchronize();
+
             this.polls = this.pollsRepository.GetAllPolls();
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
@@ -107,6 +109,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.isInitialized = true;
 
             this.logger.LogDebug("VotingManager initialized.");
+        }
+
+        private void Synchronize()
+        {
+            var chainTip = new HashHeightPair(this.chainIndexer.Tip);
+
+            while (this.pollsRepository.CurrentTip != chainTip)
+            {
+
+            }
         }
 
         /// <summary> Remove all polls that started on or after the given height.</summary>

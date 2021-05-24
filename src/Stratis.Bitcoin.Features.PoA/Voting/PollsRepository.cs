@@ -6,6 +6,7 @@ using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -19,6 +20,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
+        private readonly ChainIndexer chainIndexer;
+
         internal const string TableName = "DataTable";
 
         private static readonly byte[] RepositoryHighestIndexKey = new byte[0];
@@ -29,14 +32,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private int highestPollId;
 
-        private HashHeightPair currentTip;
+        public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer)
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
         {
         }
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
@@ -45,6 +48,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.dBreezeSerializer = dBreezeSerializer;
+            this.chainIndexer = chainIndexer;
         }
 
         public void Initialize()
@@ -64,7 +68,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     Row<byte[], HashHeightPair> rowTip = transaction.Select<byte[], HashHeightPair>(TableName, RepositoryTipKey);
 
                     if (rowTip.Exists)
-                        this.currentTip = rowTip.Value;
+                        this.CurrentTip = rowTip.Value;
                     else
                     {
                         var data = transaction.SelectDictionary<byte[], byte[]>(TableName);
@@ -72,11 +76,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         var polls = data
                             .Where(d => d.Key.Length == 4)
                             .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                            .Where(p => this.chainIndexer.GetHeader(p.PollStartBlockData.Hash) != null)
                             .ToDictionary(p => p.Id, p => p);
 
-                        // TODO: Must be on the current chain.
                         int maxHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
-                        this.currentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
+                        this.CurrentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
                     }
                 }
             }
