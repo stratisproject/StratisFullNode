@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -12,7 +13,6 @@ using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Distribution;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -57,7 +57,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
             this.initialBlockDownloadState.IsInitialBlockDownload().Returns(false);
 
-            this.opReturnDataReader = new OpReturnDataReader(new CounterChainNetworkWrapper(new CirrusRegTest()));
+            this.opReturnDataReader = new OpReturnDataReader(new CirrusRegTest());
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);

@@ -16,8 +16,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
 {
     public class RocksDbBlockRepository : IBlockRepository
     {
-        private readonly DbOptions dbOptions;
-        private readonly RocksDb rocksDb;
+        private readonly string dataFolder;
+        private DbOptions dbOptions;
+        private RocksDb rocksDb;
         private readonly object locker;
         private readonly ILogger logger;
         private readonly Network network;
@@ -33,20 +34,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         public bool TxIndex { get; private set; }
 
         private readonly DBreezeSerializer dBreezeSerializer;
-        private readonly IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
+        private IReadOnlyDictionary<uint256, Transaction> genesisTransactions;
 
         public RocksDbBlockRepository(Network network, string dataFolder, DBreezeSerializer dataStoreSerializer)
         {
-            Directory.CreateDirectory(dataFolder);
-
-            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
-            this.rocksDb = RocksDb.Open(this.dbOptions, dataFolder);
-
+            this.dataFolder = dataFolder;
             this.dBreezeSerializer = dataStoreSerializer;
             this.locker = new object();
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
-            this.genesisTransactions = network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
         }
 
         public RocksDbBlockRepository(Network network, DataFolder dataFolder, DBreezeSerializer dataStoreSerializer)
@@ -55,9 +51,15 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         }
 
         /// <inheritdoc />
-        public virtual void Initialize()
+        public void Initialize()
         {
+            Directory.CreateDirectory(this.dataFolder);
+
+            this.dbOptions = new DbOptions().SetCreateIfMissing(true);
+            this.rocksDb = RocksDb.Open(this.dbOptions, this.dataFolder);
+
             Block genesis = this.network.GetGenesis();
+            this.genesisTransactions = this.network.GetGenesis().Transactions.ToDictionary(k => k.GetHash());
 
             lock (this.locker)
             {
