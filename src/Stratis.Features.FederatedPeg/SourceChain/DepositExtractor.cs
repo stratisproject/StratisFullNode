@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -11,15 +12,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
     {
         // Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.
         public const decimal ConversionTransactionMinimum = 90_000;
-
-        /// <summary>
-        /// This deposit extractor implementation only looks for a very specific deposit format.
-        /// Deposits will have 2 outputs when there is no change.
-        /// </summary>
-        private const int ExpectedNumberOfOutputsNoChange = 2;
-
-        /// <summary> Deposits will have 3 outputs when there is change.</summary>
-        private const int ExpectedNumberOfOutputsChange = 3;
 
         private readonly Script depositScript;
         private readonly IFederatedPegSettings federatedPegSettings;
@@ -62,38 +54,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc />
         public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
-            // Coinbase transactions can't have deposits.
-            if (transaction.IsCoinBase)
+            if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
                 return null;
 
-            // Deposits have a certain structure.
-            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
+            if (!DepositValidationHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
                 return null;
-
-            var depositsToMultisig = transaction.Outputs.Where(output =>
-                output.ScriptPubKey == this.depositScript &&
-                output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
-
-            if (!depositsToMultisig.Any())
-                return null;
-
-            // Check the common case first.
-            bool conversionTransaction = false;
-            DestinationChain targetChain = DestinationChain.STRAX;
-
-            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
-            {
-                byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
-
-                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
-                {
-                    targetChain = (DestinationChain)destinationChain;
-                }
-                else
-                    return null;
-                
-                conversionTransaction = true;
-            }
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
@@ -123,7 +88,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     depositRetrievalType = DepositRetrievalType.Small;
             }
 
-            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, targetChain, blockHeight, blockHash);
+
+            return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash);
         }
     }
 }
