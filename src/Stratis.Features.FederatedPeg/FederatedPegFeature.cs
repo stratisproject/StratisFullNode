@@ -15,6 +15,7 @@ using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Features.Notifications;
 using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
@@ -262,7 +263,7 @@ namespace Stratis.Features.FederatedPeg
                     {
                         services.AddSingleton<IMaturedBlocksProvider, MaturedBlocksProvider>();
                         services.AddSingleton<IFederatedPegSettings, FederatedPegSettings>();
-                        services.AddSingleton<IOpReturnDataReader, OpReturnDataReader>();
+                        services.AddSingleton<IOpReturnDataReader>(provider => new OpReturnDataReader(provider.GetService<CounterChainNetworkWrapper>().CounterChainNetwork));
                         services.AddSingleton<IDepositExtractor, DepositExtractor>();
                         services.AddSingleton<IWithdrawalExtractor, WithdrawalExtractor>();
                         services.AddSingleton<IFederationWalletSyncManager, FederationWalletSyncManager>();

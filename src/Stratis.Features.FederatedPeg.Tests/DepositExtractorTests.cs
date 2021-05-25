@@ -6,6 +6,8 @@ using FluentAssertions;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin.Features.ExternalApi;
+using Stratis.Bitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;

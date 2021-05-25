@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json;
 using NSubstitute;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers;
@@ -15,6 +16,7 @@ using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Events;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -160,7 +162,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[0] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[0].Outputs[2].Value);
-                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[0], out string actualDepositId);
+                new OpReturnDataReader(this.counterChainNetworkWrapper.CounterChainNetwork).TryGetTransactionId(transactions[0], out string actualDepositId);
                 Assert.Equal(deposit1.Id.ToString(), actualDepositId);
 
                 // Transactions[1] inputs.
@@ -181,7 +183,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[1] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[1].Outputs[2].Value);
-                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[1], out string actualDepositId2);
+                new OpReturnDataReader(this.counterChainNetworkWrapper.CounterChainNetwork).TryGetTransactionId(transactions[1], out string actualDepositId2);
                 Assert.Equal(deposit2.Id.ToString(), actualDepositId2);
 
                 ICrossChainTransfer[] transfers = crossChainTransferStore.GetAsync(new uint256[] { 0, 1 }).GetAwaiter().GetResult().ToArray();
@@ -313,7 +315,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[0] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[0].Outputs[2].Value);
-                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[0], out string actualDepositId);
+                new OpReturnDataReader(this.counterChainNetworkWrapper.CounterChainNetwork).TryGetTransactionId(transactions[0], out string actualDepositId);
                 Assert.Equal(deposit1.Id.ToString(), actualDepositId);
 
                 Assert.Null(transactions[1]);
@@ -351,7 +353,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 // Transaction[1] output value - op_return.
                 Assert.Equal(new Money(1m, MoneyUnit.Satoshi), transactions[1].Outputs[2].Value);
-                new OpReturnDataReader(this.counterChainNetworkWrapper).TryGetTransactionId(transactions[1], out string actualDepositId2);
+                new OpReturnDataReader(this.counterChainNetworkWrapper.CounterChainNetwork).TryGetTransactionId(transactions[1], out string actualDepositId2);
                 Assert.Equal(deposit2.Id.ToString(), actualDepositId2);
 
                 Assert.Equal(2, transfers.Length);
@@ -960,7 +962,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 // Get rid of the pre-existing transactions. It's easier to track with 10 of our own utxos.
                 this.fundingTransactions.Clear();
 
-                foreach (TransactionData tx in this.wallet.MultiSigAddress.Transactions.ToList())
+                foreach (FederatedPeg.Wallet.TransactionData tx in this.wallet.MultiSigAddress.Transactions.ToList())
                 {
                     this.wallet.MultiSigAddress.Transactions.Remove(tx);
                 }

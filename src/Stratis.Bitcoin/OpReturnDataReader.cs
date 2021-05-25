@@ -5,10 +5,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NBitcoin;
 using NLog;
-using Stratis.Features.Collateral.CounterChain;
 using TracerAttributes;
 
-namespace Stratis.Features.FederatedPeg
+namespace Stratis.Bitcoin
 {
     /// <summary>
     /// OP_RETURN data can be a hash, an address or unknown.
@@ -45,10 +44,10 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly Network counterChainNetwork;
 
-        public OpReturnDataReader(CounterChainNetworkWrapper counterChainNetworkWrapper)
+        public OpReturnDataReader(Network network)
         {
             this.logger = LogManager.GetCurrentClassLogger();
-            this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
+            this.counterChainNetwork = network;
         }
 
         /// <inheritdoc />

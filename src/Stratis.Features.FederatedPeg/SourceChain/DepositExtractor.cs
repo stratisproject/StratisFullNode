@@ -5,6 +5,9 @@ using System.Net.Http;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Features.ExternalApi;
+using Stratis.Bitcoin;
+using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
@@ -108,32 +111,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         /// <inheritdoc />
         public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
-            // Coinbase transactions can't have deposits.
-            if (transaction.IsCoinBase)
+            if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
                 return null;
 
-            // Deposits have a certain structure.
-            if (transaction.Outputs.Count != ExpectedNumberOfOutputsNoChange && transaction.Outputs.Count != ExpectedNumberOfOutputsChange)
+            if (!DepositValidationHelper.TryGetTarget(transaction, this.opReturnDataReader, out bool conversionTransaction, out string targetAddress, out int targetChain))
                 return null;
-
-            var depositsToMultisig = transaction.Outputs.Where(output =>
-                output.ScriptPubKey == this.federatedPegSettings.MultiSigRedeemScript.PaymentScript &&
-                output.Value >= FederatedPegSettings.CrossChainTransferMinimum).ToList();
-
-            if (!depositsToMultisig.Any())
-                return null;
-
-            // Check the common case first.
-            bool conversionTransaction = false;
-            if (!this.opReturnDataReader.TryGetTargetAddress(transaction, out string targetAddress))
-            {
-                if (!this.opReturnDataReader.TryGetTargetETHAddress(transaction, out targetAddress))
-                {
-                    return null;
-                }
-
-                conversionTransaction = true;
-            }
 
             Money amount = depositsToMultisig.Sum(o => o.Value);
 
