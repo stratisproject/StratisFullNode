@@ -658,6 +658,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Guard.Assert(this.blockRepository != null);
 
             ChainedHeader repoTip = (this.pollsRepository.CurrentTip != null) ? this.chainIndexer.GetHeader(this.pollsRepository.CurrentTip.Hash) : null;
+            if (repoTip == newTip)
+                return;
 
             // Remove blocks as required.
             if (repoTip != null)
