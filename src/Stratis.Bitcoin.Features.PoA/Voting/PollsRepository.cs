@@ -128,7 +128,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private void SaveHighestPollId(DBreeze.Transactions.Transaction transaction)
         {
-            transaction.Insert<byte[], byte[]>(TableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
+            if (this.CurrentTip == null)
+                transaction.RemoveKey<byte[]>(TableName, RepositoryTipKey);
+            else
+                transaction.Insert<byte[], byte[]>(TableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
+
             transaction.Insert<byte[], int>(TableName, RepositoryHighestIndexKey, this.highestPollId);
         }
 
