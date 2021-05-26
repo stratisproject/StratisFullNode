@@ -97,28 +97,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.pollsRepository.Initialize();
 
-            this.Synchronize();
-
             this.polls = this.pollsRepository.GetAllPolls();
+
+            this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
 
-            this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
-
             this.isInitialized = true;
 
             this.logger.LogDebug("VotingManager initialized.");
-        }
-
-        private void Synchronize()
-        {
-            var chainTip = new HashHeightPair(this.chainIndexer.Tip);
-
-            while (this.pollsRepository.CurrentTip != chainTip)
-            {
-
-            }
         }
 
         /// <summary> Remove all polls that started on or after the given height.</summary>
@@ -432,11 +420,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return member != null && this.federationManager.IsMultisigMember(member.PubKey);
         }
 
-        private void OnBlockConnected(BlockConnected blockConnected)
+        private void ProcessBlock(ChainedHeaderBlock chBlock)
         {
             try
             {
-                ChainedHeaderBlock chBlock = blockConnected.ConnectedBlock;
                 HashHeightPair newFinalizedHash = this.finalizedBlockInfo.GetFinalizedBlockInfo();
 
                 lock (this.locker)
@@ -445,7 +432,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         foreach (Poll poll in this.GetApprovedPolls().ToList())
                         {
-                            if (blockConnected.ConnectedBlock.ChainedHeader.Height - poll.PollVotedInFavorBlockData.Height == this.network.Consensus.MaxReorgLength)
+                            if (chBlock.ChainedHeader.Height - poll.PollVotedInFavorBlockData.Height == this.network.Consensus.MaxReorgLength)
                             {
                                 this.logger.LogDebug("Applying poll '{0}'.", poll);
                                 this.pollResultExecutor.ApplyChange(poll.VotingData);
@@ -473,6 +460,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (rawVotingData == null)
                 {
                     this.logger.LogTrace("(-)[NO_VOTING_DATA]");
+
+                    this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader);
                     return;
                 }
 
@@ -480,7 +469,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 // Please see the description under `VotingManagerV2ActivationHeight`.
                 // PubKey of the federation member that created the voting data.
-                if (this.poaConsensusOptions.VotingManagerV2ActivationHeight == 0 || blockConnected.ConnectedBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
+                if (this.poaConsensusOptions.VotingManagerV2ActivationHeight == 0 || chBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
                     fedMemberKeyHex = this.federationHistory.GetFederationMemberForTimestamp(chBlock.Block.Header.Time, this.poaConsensusOptions).PubKey.ToHex();
                 else
                     fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
@@ -578,6 +567,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.pollsRepository.UpdatePoll(poll);
                     }
                 }
+
+                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader);
             }
             catch (Exception ex)
             {
@@ -586,10 +577,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
+        private void UnProcessBlock(ChainedHeaderBlock chBlock)
         {
-            ChainedHeaderBlock chBlock = blockDisconnected.DisconnectedBlock;
-
             lock (this.locker)
             {
                 foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
@@ -607,6 +596,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (rawVotingData == null)
             {
                 this.logger.LogTrace("(-)[NO_VOTING_DATA]");
+
+                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader.Previous);
                 return;
             }
 
@@ -651,7 +642,49 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
                     }
                 }
+
+                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader.Previous);
             }
+        }
+
+        private void Synchronize(ChainedHeader newTip)
+        {
+            Guard.Assert(this.blockRepository != null);
+
+            ChainedHeader repoTip = this.chainIndexer.GetHeader(this.pollsRepository.CurrentTip.Hash);
+
+            ChainedHeader fork = repoTip.FindFork(newTip);
+
+            // Remove blocks as required.
+            for (ChainedHeader header = fork; header.Height > newTip.Height; header = header.Previous)
+            {
+                Block block = this.blockRepository.GetBlock(header.HashBlock);
+
+                this.UnProcessBlock(new ChainedHeaderBlock(block, header));
+            }
+
+            // Add blocks as required.
+            foreach (ChainedHeader header in this.chainIndexer.EnumerateToTip(repoTip).Skip(1))
+            {
+                if (header.Height > newTip.Height)
+                    break;
+
+                Block block = this.blockRepository.GetBlock(header.HashBlock);
+
+                this.ProcessBlock(new ChainedHeaderBlock(block, header));
+            }
+        }
+
+        private void OnBlockConnected(BlockConnected blockConnected)
+        {
+            this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous);
+            this.ProcessBlock(blockConnected.ConnectedBlock);
+        }
+
+        private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
+        {
+            this.Synchronize(blockDisconnected.DisconnectedBlock.ChainedHeader);
+            this.UnProcessBlock(blockDisconnected.DisconnectedBlock);
         }
 
         [NoTrace]

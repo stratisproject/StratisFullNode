@@ -65,13 +65,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (row.Exists)
                         this.highestPollId = row.Value;
 
-                    Row<byte[], HashHeightPair> rowTip = transaction.Select<byte[], HashHeightPair>(TableName, RepositoryTipKey);
+                    Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(TableName, RepositoryTipKey);
 
                     if (rowTip.Exists)
-                        this.CurrentTip = rowTip.Value;
+                        this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
                     else
                     {
-                        var data = transaction.SelectDictionary<byte[], byte[]>(TableName);
+                        Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(TableName);
 
                         var polls = data
                             .Where(d => d.Key.Length == 4)
@@ -86,6 +86,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
+        }
+
+        public void SaveCurrentTip(ChainedHeader tip)
+        {
+            this.CurrentTip = new HashHeightPair(tip);
+
+            using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+            {
+                transaction.Insert<byte[], byte[]>(TableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
+                transaction.Commit();
+            }
         }
 
         /// <summary>Provides Id of the most recently added poll.</summary>
