@@ -140,6 +140,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
+            this.logger.Info($"Requesting deposits from counterchain node.");
+
             SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
 
             if (matureBlockDeposits == null)
