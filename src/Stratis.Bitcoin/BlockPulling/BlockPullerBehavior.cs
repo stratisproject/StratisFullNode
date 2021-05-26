@@ -191,7 +191,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
         private Task OnMessageReceivedAsync(INetworkPeer peer, IncomingMessage message)
         {
-            if (message.Message.Payload is BlockPayload block)
+            if (message.Message.Payload is BlockPayload block && this.blockPuller.CanPullBlocks())
             {
                 block.Obj.Header.PrecomputeHash(true, true);
                 uint256 blockHash = block.Obj.GetHash();

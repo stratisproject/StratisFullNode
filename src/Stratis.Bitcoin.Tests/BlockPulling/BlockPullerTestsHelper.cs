@@ -130,6 +130,8 @@ namespace Stratis.Bitcoin.Tests.BlockPulling
             this.puller = new BlockPuller(chainState, nodeSettings, dateTimeProvider, nodeStats);
         }
 
+        public Func<bool> CanPullBlocks { get; set; } = () => true;
+
         public Dictionary<int, IBlockPullerBehavior> PullerBehaviorsByPeerId => (Dictionary<int, IBlockPullerBehavior>)this.puller.GetMemberValue("pullerBehaviorsByPeerId");
 
         public Dictionary<uint256, AssignedDownload> AssignedDownloadsByHash => (Dictionary<uint256, AssignedDownload>)this.puller.GetMemberValue("assignedDownloadsByHash");

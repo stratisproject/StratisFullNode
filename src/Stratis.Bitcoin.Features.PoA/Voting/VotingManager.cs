@@ -5,6 +5,8 @@ using System.Text;
 using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.AsyncWork;
+using Stratis.Bitcoin.BlockPulling;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
@@ -49,6 +51,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private IIdleFederationMembersKicker idleFederationMembersKicker;
 
+        private INodeLifetime nodeLifetime;
+
+        private IAsyncProvider asyncProvider;
+
+        private IAsyncLoop syncLoop;
+
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private List<Poll> polls;
@@ -63,12 +71,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private bool isInitialized;
         private bool isBusyReconstructing;
 
+        // Only pull blocks when its possible to validate them.
+        private bool canPullBlocks => ((this.pollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) > (this.chainIndexer?.Height ?? 0);
+
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals,
             IFinalizedBlockInfoRepository finalizedBlockInfo,
             Network network,
             IBlockRepository blockRepository = null,
-            ChainIndexer chainIndexer = null)
+            ChainIndexer chainIndexer = null,
+            IBlockPuller blockPuller = null,
+            INodeLifetime nodeLifetime = null,
+            IAsyncProvider asyncProvider = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -86,8 +100,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
+            this.nodeLifetime = nodeLifetime;
+            this.asyncProvider = asyncProvider;
 
-            this.isInitialized = false;
+            blockPuller.CanPullBlocks = () => this.canPullBlocks;
         }
 
         public void Initialize(IFederationHistory federationHistory, IIdleFederationMembersKicker idleFederationMembersKicker = null)
@@ -103,6 +119,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
 
             this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
+
+            // Can't rely on block conneced event when can't pull and validate blocks.
+            this.syncLoop = this.asyncProvider.CreateAndRunAsyncLoop("SyncVotesRepo", async token =>
+            {
+                if (!this.canPullBlocks)
+                {
+                    this.pollsRepository.Synchronous(() =>
+                    {
+                        this.Synchronize(this.chainIndexer.Tip);
+                    });
+                }
+            },
+            this.nodeLifetime.ApplicationStopping,
+            repeatEvery: TimeSpan.FromSeconds(30),
+            startAfter: TimeSpan.FromSeconds(30));
 
             this.isInitialized = true;
 
@@ -672,54 +703,66 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (repoTip == newTip)
                 return;
 
-            // Remove blocks as required.
-            if (repoTip != null)
+            try
             {
-                ChainedHeader fork = repoTip.FindFork(newTip);
-
-                for (ChainedHeader header = repoTip; header.Height > fork.Height; header = header.Previous)
+                // Remove blocks as required.
+                if (repoTip != null)
                 {
-                    Block block = this.blockRepository.GetBlock(header.HashBlock);
+                    ChainedHeader fork = repoTip.FindFork(newTip);
 
-                    this.UnProcessBlock(new ChainedHeaderBlock(block, header));
+                    for (ChainedHeader header = repoTip; header.Height > fork.Height; header = header.Previous)
+                    {
+                        Block block = this.blockRepository.GetBlock(header.HashBlock);
+
+                        this.UnProcessBlock(new ChainedHeaderBlock(block, header));
+                    }
+
+                    repoTip = fork;
                 }
 
-                repoTip = fork;
+                // Add blocks as required.
+                var headers = new List<ChainedHeader>();
+                for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
+                {
+                    ChainedHeader header = this.chainIndexer.GetHeader(height);
+                    headers.Add(header);
+                }
+
+                int i = 0;
+                foreach (Block block in this.blockRepository.EnumerateBatch(headers))
+                {
+                    ChainedHeader header = headers[i++];
+
+                    // An accurate last active time is critical to determining when/if a poll is executed as inactive members don't contribute to the quorum requirement.
+                    // TODO: The last acive times are probably unreliable when only the poll repository is deleted/rebuilt.
+                    this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(new ChainedHeaderBlock(block, header), false);
+
+                    this.ProcessBlock(new ChainedHeaderBlock(block, header));
+                }
             }
-
-            // Add blocks as required.
-            var headers = new List<ChainedHeader>();
-            for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
+            finally
             {
-                ChainedHeader header = this.chainIndexer.GetHeader(height);
-                headers.Add(header);
-            }
-
-            int i = 0;
-            foreach (Block block in this.blockRepository.EnumerateBatch(headers))
-            {
-                ChainedHeader header = headers[i++];
-
-                // TODO: Why is the last active time dependent on the blocks synced by the voting repo?
-                // The last active time needs a time dimension!!!
-                this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(new ChainedHeaderBlock(block, header), false);
-
-                this.ProcessBlock(new ChainedHeaderBlock(block, header));
             }
         }
 
         private void OnBlockConnected(BlockConnected blockConnected)
         {
-            this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous);
-            this.ProcessBlock(blockConnected.ConnectedBlock);
-            this.pollsRepository.SaveCurrentTip(blockConnected.ConnectedBlock.ChainedHeader);
+            this.pollsRepository.Synchronous(() =>
+            {
+                this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous);
+                this.ProcessBlock(blockConnected.ConnectedBlock);
+                this.pollsRepository.SaveCurrentTip(blockConnected.ConnectedBlock.ChainedHeader);
+            });
         }
 
         private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
         {
-            this.Synchronize(blockDisconnected.DisconnectedBlock.ChainedHeader);
-            this.UnProcessBlock(blockDisconnected.DisconnectedBlock);
-            this.pollsRepository.SaveCurrentTip(blockDisconnected.DisconnectedBlock.ChainedHeader);
+            this.pollsRepository.Synchronous(() =>
+            {
+                this.Synchronize(blockDisconnected.DisconnectedBlock.ChainedHeader);
+                this.UnProcessBlock(blockDisconnected.DisconnectedBlock);
+                this.pollsRepository.SaveCurrentTip(blockDisconnected.DisconnectedBlock.ChainedHeader);
+            });
         }
 
         [NoTrace]

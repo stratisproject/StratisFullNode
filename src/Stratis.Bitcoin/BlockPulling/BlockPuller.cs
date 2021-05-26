@@ -81,6 +81,11 @@ namespace Stratis.Bitcoin.BlockPulling
         /// <param name="block">The block.</param>
         /// <param name="peerId">ID of a peer that delivered a block.</param>
         void PushBlock(uint256 blockHash, Block block, int peerId);
+
+        /// <summary>
+        /// Determines whether the node is ready to receive blocks.
+        /// </summary>
+        Func<bool> CanPullBlocks { get; set; }
     }
 
     public class BlockPuller : IBlockPuller
@@ -205,6 +210,8 @@ namespace Stratis.Bitcoin.BlockPulling
 
         /// <summary>Loop that checks if peers failed to deliver important blocks in given time and penalizes them if they did.</summary>
         private Task stallingLoop;
+
+        public Func<bool> CanPullBlocks { get; set; } = () => true;
 
         public BlockPuller(IChainState chainState, NodeSettings nodeSettings, IDateTimeProvider dateTimeProvider, INodeStats nodeStats)
         {
@@ -381,17 +388,24 @@ namespace Stratis.Bitcoin.BlockPulling
         {
             while (!this.cancellationSource.IsCancellationRequested)
             {
-                try
+                if (this.CanPullBlocks())
                 {
-                    await this.processQueuesSignal.WaitAsync(this.cancellationSource.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    this.logger.Trace("(-)[CANCELLED]");
-                    return;
-                }
+                    try
+                    {
+                        await this.processQueuesSignal.WaitAsync(this.cancellationSource.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        this.logger.Trace("(-)[CANCELLED]");
+                        return;
+                    }
 
-                await this.AssignDownloadJobsAsync().ConfigureAwait(false);
+                    await this.AssignDownloadJobsAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    await Task.Delay(StallingLoopIntervalMs, this.cancellationSource.Token).ConfigureAwait(false);
+                }
             }
         }
 
