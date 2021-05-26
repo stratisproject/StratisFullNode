@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (rowTip.Exists)
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                    else
+                    else if (this.chainIndexer != null)
                     {
                         // This is required for repositories that don't have a stored tip yet.
                         Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(TableName);
