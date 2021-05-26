@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -8,11 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json.Converters;
+using Stratis.Bitcoin;
+using Stratis.Bitcoin.Features.Api;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
-namespace Stratis.Bitcoin.Features.Api
+namespace Stratis.Features.Unity3dApi
 {
     public class Startup
     {
@@ -82,7 +83,7 @@ namespace Stratis.Bitcoin.Features.Api
                 })
                 // add serializers for NBitcoin objects
                 .AddNewtonsoftJson(options => {
-                    Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
+                    Stratis.Bitcoin.Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
                 })
                 .AddControllers(this.fullNode.Services.Features, services);
 
@@ -114,9 +115,7 @@ namespace Stratis.Bitcoin.Features.Api
             // Register the Swagger generator. This will use the options we injected just above.
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("contracts", new OpenApiInfo { Title = "Contract API", Version = "1" });
-                c.DocumentFilter<HideUnityFilter>();
-
+                c.DocumentFilter<HideAllButUnityFilter>();
             });
             services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
 
@@ -159,13 +158,13 @@ namespace Stratis.Bitcoin.Features.Api
         }
     }
 
-    public class HideUnityFilter : IDocumentFilter
+    public class HideAllButUnityFilter : IDocumentFilter
     {
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
             foreach (string pathKey in swaggerDoc.Paths.Keys.ToList())
             {
-                if (!pathKey.Contains("Unity3d"))
+                if (pathKey.Contains("Unity3d"))
                     continue;
 
                 swaggerDoc.Paths.Remove(pathKey);

@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Api
             {
                 Title = "Stratis Node API",
                 Version = description.ApiVersion.ToString(),
-                Description = "Access to the Stratis Node's core features."
+                Description = "Access to the Stratis Node's api."
             };
 
             if (info.Version.Contains("dev"))
