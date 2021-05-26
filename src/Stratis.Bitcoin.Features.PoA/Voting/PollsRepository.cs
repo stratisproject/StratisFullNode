@@ -77,12 +77,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         var polls = data
                             .Where(d => d.Key.Length == 4)
                             .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
-                            .Where(p => this.chainIndexer.GetHeader(p.PollStartBlockData.Hash) != null)
+                            .Where(p => p.Id <= this.highestPollId && this.chainIndexer.GetHeader(p.PollStartBlockData.Hash) != null)
                             .ToDictionary(p => p.Id, p => p);
 
                         if (polls.Count > 0)
                         {
-                            int maxHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
+                            int maxStartHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
+                            int maxVotedInFavorHeight = polls.Max(p => p.Value.PollVotedInFavorBlockData?.Height ?? 0);
+                            int maxPollExecutedHeight = polls.Max(p => p.Value.PollExecutedBlockData?.Height ?? 0);
+                            int maxHeight = Math.Max(maxStartHeight, Math.Max(maxVotedInFavorHeight, maxPollExecutedHeight));
                             this.CurrentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
                         }
                     }

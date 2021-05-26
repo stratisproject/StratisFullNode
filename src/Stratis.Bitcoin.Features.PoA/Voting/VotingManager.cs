@@ -700,6 +700,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 ChainedHeader header = headers[i++];
 
+                // TODO: Why is the last active time dependent on the blocks synced by the voting repo?
+                // The last active time needs a time dimension!!!
                 this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(new ChainedHeaderBlock(block, header), false);
 
                 this.ProcessBlock(new ChainedHeaderBlock(block, header));
