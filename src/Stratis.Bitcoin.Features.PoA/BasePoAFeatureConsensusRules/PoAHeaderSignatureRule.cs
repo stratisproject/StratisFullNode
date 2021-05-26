@@ -47,29 +47,24 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         {
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
+            if (!this.federationHistory.CanGetFederationForBlock(chainedHeader))
+            {
+                // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
+                // that we have not yet processed all the votes that may determine the federation make-up.
+                // Mark header as insufficient to avoid banning the peer that presented it.
+                // When we advance consensus we will be able to validate it.
+                context.ValidationContext.InsufficientHeaderInformation = true;
+
+                this.Logger.LogWarning("The polls repository is too far behind to reliably determine the federation members.");
+                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
+                PoAConsensusErrors.InvalidHeaderSignature.Throw();
+            }
+
             var header = chainedHeader.Header as PoABlockHeader;
 
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(chainedHeader);
 
             PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, federation)?.PubKey;
-
-            if (pubKey == null || !this.validator.VerifySignature(pubKey, header))
-            {
-                ChainedHeader currentHeader = context.ValidationContext.ChainedHeaderToValidate;
-
-                // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
-                // that we have not yet processed all the votes that may determine the federation make-up.
-                bool mightBeInsufficient = currentHeader.Height - this.chainState.ConsensusTip.Height > this.maxReorg;
-                if (mightBeInsufficient)
-                {
-                    // Mark header as insufficient to avoid banning the peer that presented it.
-                    // When we advance consensus we will be able to validate it.
-                    context.ValidationContext.InsufficientHeaderInformation = true;
-                }
-
-                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
-                PoAConsensusErrors.InvalidHeaderSignature.Throw();
-            }
 
             // Look at the last round of blocks to find the previous time that the miner mined.
             var roundTime = this.slotsManager.GetRoundLength(federation.Count);

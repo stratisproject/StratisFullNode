@@ -28,6 +28,11 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
         List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
 
+        /// <summary>Determines if the federation for a specified block can be determined based on the available poll information.</summary>
+        /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <returns><c>True</c> if the federation can be determined and <c>false</c> otherwise.</returns>
+        bool CanGetFederationForBlock(ChainedHeader chainedHeader);
+
         /// <summary>
         /// See <see cref="PoAConsensusOptions.VotingManagerV2ActivationHeight"/>
         /// </summary>
@@ -51,6 +56,12 @@ namespace Stratis.Bitcoin.Features.PoA
             this.federationManager = federationManager;
             this.votingManager = votingManager;
             this.minersByBlockHash = new Dictionary<uint256, IFederationMember>();
+        }
+
+        /// <inheritdoc />
+        public bool CanGetFederationForBlock(ChainedHeader chainedHeader)
+        {
+            return this.votingManager.CanGetFederationForBlock(chainedHeader);
         }
 
         /// <inheritdoc />

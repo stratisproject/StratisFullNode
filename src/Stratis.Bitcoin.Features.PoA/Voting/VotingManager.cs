@@ -351,6 +351,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        public bool CanGetFederationForBlock(ChainedHeader chainedHeader)
+        {
+            if (chainedHeader.Height < ((this.pollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength))
+                return true;
+
+            this.Synchronize(this.chainIndexer.Tip);
+            this.pollsRepository.SaveCurrentTip(this.chainIndexer.Tip);
+
+            return chainedHeader.Height < ((this.pollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength);
+        }
+
         public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader)
         {
             lock (this.locker)
@@ -358,7 +369,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 // It's not possible to determine the federation reliably if the polls repository is too far behind.
                 if (((this.pollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) <= chainedHeader.Height)
                 {
-                    throw new Exception("The polls repository is too far behind to reliably determine the federation members.");
+                    this.logger.LogWarning("The polls repository is too far behind to reliably determine the federation members.");
                 }
 
                 // Starting with the genesis federation...
@@ -467,7 +478,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     this.logger.LogTrace("(-)[NO_VOTING_DATA]");
 
-                    this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader);
+                    this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader, false);
                     return;
                 }
 
@@ -574,7 +585,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
                 }
 
-                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader);
+                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader, false);
             }
             catch (Exception ex)
             {
@@ -603,7 +614,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.logger.LogTrace("(-)[NO_VOTING_DATA]");
 
-                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader.Previous);
+                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader.Previous, false);
                 return;
             }
 
@@ -649,7 +660,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
                 }
 
-                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader.Previous);
+                this.pollsRepository.SaveCurrentTip(chBlock.ChainedHeader.Previous, false);
             }
         }
 
@@ -666,22 +677,30 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 ChainedHeader fork = repoTip.FindFork(newTip);
 
-                for (ChainedHeader header = fork; header.Height > newTip.Height; header = header.Previous)
+                for (ChainedHeader header = repoTip; header.Height > fork.Height; header = header.Previous)
                 {
                     Block block = this.blockRepository.GetBlock(header.HashBlock);
 
                     this.UnProcessBlock(new ChainedHeaderBlock(block, header));
                 }
 
-                repoTip = newTip;
+                repoTip = fork;
             }
 
             // Add blocks as required.
+            var headers = new List<ChainedHeader>();
             for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
             {
                 ChainedHeader header = this.chainIndexer.GetHeader(height);
+                headers.Add(header);
+            }
 
-                Block block = this.blockRepository.GetBlock(header.HashBlock);
+            int i = 0;
+            foreach (Block block in this.blockRepository.EnumerateBatch(headers))
+            {
+                ChainedHeader header = headers[i++];
+
+                this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(new ChainedHeaderBlock(block, header), false);
 
                 this.ProcessBlock(new ChainedHeaderBlock(block, header));
             }
@@ -691,12 +710,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous);
             this.ProcessBlock(blockConnected.ConnectedBlock);
+            this.pollsRepository.SaveCurrentTip(blockConnected.ConnectedBlock.ChainedHeader);
         }
 
         private void OnBlockDisconnected(BlockDisconnected blockDisconnected)
         {
             this.Synchronize(blockDisconnected.DisconnectedBlock.ChainedHeader);
             this.UnProcessBlock(blockDisconnected.DisconnectedBlock);
+            this.pollsRepository.SaveCurrentTip(blockDisconnected.DisconnectedBlock.ChainedHeader);
         }
 
         [NoTrace]
