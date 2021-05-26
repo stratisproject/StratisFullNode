@@ -99,10 +99,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.polls = this.pollsRepository.GetAllPolls();
 
-            this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
-
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
+
+            this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
 
             this.isInitialized = true;
 
