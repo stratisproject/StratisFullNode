@@ -35,7 +35,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Maximum number of partial transactions.
         /// </summary>
-        public const int MaximumPartialTransactions = 5;
+        public const int MaximumPartialTransactions = 10;
 
         /// <summary>This table contains the cross-chain transfer information.</summary>
         private const string transferTableName = "Transfers";
@@ -435,7 +435,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         {
                             if (maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight)
                             {
-                                this.logger.Info("maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight, continuing.");
+                                //this.logger.Info("maturedDeposit.BlockInfo.BlockHeight != this.NextMatureDepositHeight, continuing.");
 
                                 continue;
                             }
@@ -443,7 +443,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             IReadOnlyList<IDeposit> deposits = maturedDeposit.Deposits.Where(depositFilter).ToList();
                             if (deposits.Count == 0)
                             {
-                                this.logger.Info("deposits.Count == 0, continuing.");
+                                //this.logger.Info("deposits.Count == 0, continuing.");
 
                                 this.NextMatureDepositHeight++;
                                 continue;
@@ -451,7 +451,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                             if (!this.federationWalletManager.IsFederationWalletActive())
                             {
-                                this.logger.Info("!this.federationWalletManager.IsFederationWalletActive(), continuing.");
+                                //this.logger.Info("!this.federationWalletManager.IsFederationWalletActive(), continuing.");
 
                                 this.logger.Error("The store can't persist mature deposits while the federation is inactive.");
                                 continue;
@@ -471,7 +471,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             {
                                 if (transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended)
                                 {
-                                    this.logger.Info("transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended, continuing.");
+                                    //this.logger.Info("transfers[i] != null && transfers[i].Status != CrossChainTransferStatus.Suspended, continuing.");
 
                                     continue;
                                 }
