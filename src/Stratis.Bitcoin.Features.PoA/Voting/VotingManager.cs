@@ -355,6 +355,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.locker)
             {
+                // It's not possible to determine the federation reliably if the polls repository is too far behind.
+                if ((this.pollsRepository.CurrentTip.Height + this.network.Consensus.MaxReorgLength) <= chainedHeader.Height)
+                {
+                    throw new Exception("The polls repository is too far behind to reliably determine the federation members.");
+                }
+
                 // Starting with the genesis federation...
                 var modifiedFederation = new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers);
                 IEnumerable<Poll> approvedPolls = this.GetApprovedPolls().MemberPolls();

@@ -71,6 +71,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
                     else
                     {
+                        // This is required for repositories that don't have a stored tip yet.
                         Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(TableName);
 
                         var polls = data
