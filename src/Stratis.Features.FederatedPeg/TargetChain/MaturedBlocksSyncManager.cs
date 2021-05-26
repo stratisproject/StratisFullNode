@@ -134,7 +134,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Dont ask for deposits until the CCCTS is clear of suspended txs.
-            if (this.crossChainTransferStore.HasSuspended())
+            if (this.crossChainTransferStore.GetTransferCountByStatus(CrossChainTransferStatus.Partial) > 0 && this.crossChainTransferStore.HasSuspended())
             {
                 this.logger.Info($"The CCTS will start processing deposits again once all suspended transactions has been processed.");
                 return true;
