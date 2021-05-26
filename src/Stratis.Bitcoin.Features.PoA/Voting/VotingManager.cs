@@ -356,7 +356,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 // It's not possible to determine the federation reliably if the polls repository is too far behind.
-                if ((this.pollsRepository.CurrentTip.Height + this.network.Consensus.MaxReorgLength) <= chainedHeader.Height)
+                if (((this.pollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) <= chainedHeader.Height)
                 {
                     throw new Exception("The polls repository is too far behind to reliably determine the federation members.");
                 }
@@ -657,23 +657,27 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             Guard.Assert(this.blockRepository != null);
 
-            ChainedHeader repoTip = this.chainIndexer.GetHeader(this.pollsRepository.CurrentTip.Hash);
-
-            ChainedHeader fork = repoTip.FindFork(newTip);
+            ChainedHeader repoTip = (this.pollsRepository.CurrentTip != null) ? this.chainIndexer.GetHeader(this.pollsRepository.CurrentTip.Hash) : null;
 
             // Remove blocks as required.
-            for (ChainedHeader header = fork; header.Height > newTip.Height; header = header.Previous)
+            if (repoTip != null)
             {
-                Block block = this.blockRepository.GetBlock(header.HashBlock);
+                ChainedHeader fork = repoTip.FindFork(newTip);
 
-                this.UnProcessBlock(new ChainedHeaderBlock(block, header));
+                for (ChainedHeader header = fork; header.Height > newTip.Height; header = header.Previous)
+                {
+                    Block block = this.blockRepository.GetBlock(header.HashBlock);
+
+                    this.UnProcessBlock(new ChainedHeaderBlock(block, header));
+                }
+
+                repoTip = newTip;
             }
 
             // Add blocks as required.
-            foreach (ChainedHeader header in this.chainIndexer.EnumerateToTip(repoTip).Skip(1))
+            for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
             {
-                if (header.Height > newTip.Height)
-                    break;
+                ChainedHeader header = this.chainIndexer.GetHeader(height);
 
                 Block block = this.blockRepository.GetBlock(header.HashBlock);
 

@@ -80,8 +80,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             .Where(p => this.chainIndexer.GetHeader(p.PollStartBlockData.Hash) != null)
                             .ToDictionary(p => p.Id, p => p);
 
-                        int maxHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
-                        this.CurrentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
+                        if (polls.Count > 0)
+                        {
+                            int maxHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
+                            this.CurrentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
+                        }
                     }
                 }
             }
