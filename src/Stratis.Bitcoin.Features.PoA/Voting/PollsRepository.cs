@@ -91,12 +91,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public void SaveCurrentTip(ChainedHeader tip)
         {
-            this.CurrentTip = new HashHeightPair(tip);
-
-            using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+            lock (this.lockObject)
             {
-                transaction.Insert<byte[], byte[]>(TableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
-                transaction.Commit();
+                this.CurrentTip = new HashHeightPair(tip);
+
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                {
+                    transaction.Insert<byte[], byte[]>(TableName, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
+                    transaction.Commit();
+                }
             }
         }
 
