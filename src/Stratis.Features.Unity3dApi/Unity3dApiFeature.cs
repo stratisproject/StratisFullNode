@@ -9,6 +9,7 @@ using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Features.Api;
+using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Features.Unity3dApi.Controllers;
 
 namespace Stratis.Features.Unity3dApi
@@ -141,6 +142,7 @@ namespace Stratis.Features.Unity3dApi
 
                     // Controller
                     services.AddTransient<Unity3dController>();
+                    services.AddTransient<BlockStoreController>();
                 });
             });
 
