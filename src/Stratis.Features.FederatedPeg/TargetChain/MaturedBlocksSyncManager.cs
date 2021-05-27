@@ -329,7 +329,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit deposit in maturedBlockDeposit.Deposits)
                 {
-                    this.logger.Info("Deposit matured: {0}", deposit.ToString());
+                    this.logger.Debug("Deposit matured: {0}", deposit.ToString());
                 }
             }
 
