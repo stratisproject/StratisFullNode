@@ -2,6 +2,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,7 +86,17 @@ namespace Stratis.Features.Unity3dApi
                 .AddNewtonsoftJson(options => {
                     Stratis.Bitcoin.Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
                 })
-                .AddControllers(this.fullNode.Services.Features, services);
+                .AddControllers(this.fullNode.Services.Features, services)
+                .ConfigureApplicationPartManager(a =>
+                {
+                    foreach (ApplicationPart appPart in a.ApplicationParts.ToList())
+                    {
+                        if (appPart.Name == "Stratis.Features.Unity3dApi")
+                            continue;
+
+                        a.ApplicationParts.Remove(appPart);
+                    }
+                });
 
             // Enable API versioning.
             // Note much of this is borrowed from https://github.com/microsoft/aspnet-api-versioning/blob/master/samples/aspnetcore/SwaggerSample/Startup.cs
