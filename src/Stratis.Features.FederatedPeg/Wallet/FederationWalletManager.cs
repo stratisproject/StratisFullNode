@@ -1057,7 +1057,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
                                                              .FirstOrDefault();
                     if (oldestInput != null && DeterministicCoinOrdering.CompareTransactionData(earliestUnspent, oldestInput) < 0)
                     {
-                        this.logger.Debug("Earlier unspent UTXOs exist.");
+                        this.logger.Debug($"Earlier unspent UTXOs exist; [Oldest {oldestInput.Amount} {oldestInput.CreationTime}] [Earliest {earliestUnspent.Amount} {earliestUnspent.CreationTime}]");
                         return ValidateTransactionResult.Failed("Earlier unspent UTXOs exist.");
                     }
                 }
