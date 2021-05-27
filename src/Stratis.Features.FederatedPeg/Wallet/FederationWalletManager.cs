@@ -1040,7 +1040,10 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 // Verify that the transaction has valid UTXOs.
                 if (!this.TransactionHasValidUTXOs(transaction, coins))
+                {
+                    this.logger.Debug("Transaction does not have valid UTXOs.");
                     return ValidateTransactionResult.Failed("Transaction does not have valid UTXOs.");
+                }
 
                 // Verify that there are no earlier unspent UTXOs.
                 var comparer = Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData);
@@ -1053,7 +1056,10 @@ namespace Stratis.Features.FederatedPeg.Wallet
                                                              .OrderByDescending(t => t, comparer)
                                                              .FirstOrDefault();
                     if (oldestInput != null && DeterministicCoinOrdering.CompareTransactionData(earliestUnspent, oldestInput) < 0)
+                    {
+                        this.logger.Debug("Earlier unspent UTXOs exist.");
                         return ValidateTransactionResult.Failed("Earlier unspent UTXOs exist.");
+                    }
                 }
 
                 // Verify that all inputs are signed.
