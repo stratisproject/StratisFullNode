@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,7 +85,17 @@ namespace Stratis.Bitcoin.Features.Api
                 .AddNewtonsoftJson(options => {
                     Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
                 })
-                .AddControllers(this.fullNode.Services.Features, services);
+                .AddControllers(this.fullNode.Services.Features, services)
+                .ConfigureApplicationPartManager(a =>
+                {
+                    foreach (ApplicationPart appPart in a.ApplicationParts.ToList())
+                    {
+                        if (appPart.Name != "Stratis.Features.Unity3dApi")
+                            continue;
+
+                        a.ApplicationParts.Remove(appPart);
+                    }
+                });
 
             // Enable API versioning.
             // Note much of this is borrowed from https://github.com/microsoft/aspnet-api-versioning/blob/master/samples/aspnetcore/SwaggerSample/Startup.cs
@@ -115,8 +126,6 @@ namespace Stratis.Bitcoin.Features.Api
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("contracts", new OpenApiInfo { Title = "Contract API", Version = "1" });
-                c.DocumentFilter<HideUnityFilter>();
-
             });
             services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
 
@@ -156,20 +165,6 @@ namespace Stratis.Bitcoin.Features.Api
                 // Hack to be able to access and modify the options object configured here
                 this.uiOptions = c;
             });
-        }
-    }
-
-    public class HideUnityFilter : IDocumentFilter
-    {
-        public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
-        {
-            foreach (string pathKey in swaggerDoc.Paths.Keys.ToList())
-            {
-                if (!pathKey.Contains("Unity3d"))
-                    continue;
-
-                swaggerDoc.Paths.Remove(pathKey);
-            }
         }
     }
 }

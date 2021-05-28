@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Api;
+using Stratis.Features.Unity3dApi.Controllers;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -91,7 +92,7 @@ namespace Stratis.Features.Unity3dApi
                 {
                     foreach (ApplicationPart appPart in a.ApplicationParts.ToList())
                     {
-                        if (appPart.Name == "Stratis.Features.Unity3dApi")
+                        if (appPart.Name == typeof(Startup).Namespace)
                             continue;
 
                         a.ApplicationParts.Remove(appPart);
