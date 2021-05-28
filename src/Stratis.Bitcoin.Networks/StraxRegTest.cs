@@ -34,6 +34,8 @@ namespace Stratis.Bitcoin.Networks
             this.CoinTicker = "TSTRAX";
             this.DefaultBanTimeSeconds = 11250; // 500 (MaxReorg) * 45 (TargetSpacing) / 2 = 3 hours, 7 minutes and 30 seconds
 
+            this.RewardClaimerBatchActivationHeight = 0;
+            this.RewardClaimerBlockInterval = 100;
             this.CirrusRewardDummyAddress = "PDpvfcpPm9cjQEoxWzQUL699N8dPaf8qML"; // Cirrus test address
 
             var powLimit = new Target(new uint256("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
