@@ -26,15 +26,23 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         private static Dictionary<string, List<IDeposit>> DepositsToInject = new Dictionary<string, List<IDeposit>>()
         {
-            { "CirrusRegTest", new List<IDeposit> { 
+            { "CirrusRegTest", new List<IDeposit> {
                 new Deposit(
-                    0x1 /* Tx of deposit being redone */, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC), 
-                    "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A", DestinationChain.STRAX, 85, 0) 
-                } 
+                    0x1 /* Tx of deposit being redone */, DepositRetrievalType.Small, new Money(10, MoneyUnit.BTC),
+                    "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A", DestinationChain.STRAX, 85, 0)
+                }
             },
+
+            { "CirrusTest", new List<IDeposit> {
+                new Deposit(
+                    uint256.Parse("7691bf9838ebdede6db0cb466d93c1941d13894536dc3a5db8289ad04b28d12c"), DepositRetrievalType.Small, new Money(20, MoneyUnit.BTC),
+                    "qeyK7poxBE1wy8H24a7AcpLySCsfiqAo6A", DestinationChain.STRAX, 2_177_900, 0)
+                }
+            },
+
             { "CirrusMain", new List<IDeposit> {
                 new Deposit(
-                    uint256.Parse("6179ee3332348948641210e2c9358a41aa8aaf2924d783e52bc4cec47deef495") /* Tx of deposit being redone */, DepositRetrievalType.Normal, 
+                    uint256.Parse("6179ee3332348948641210e2c9358a41aa8aaf2924d783e52bc4cec47deef495") /* Tx of deposit being redone */, DepositRetrievalType.Normal,
                     new Money(239, MoneyUnit.BTC), "XNrgftud4ExFL7dXEHjPPx3JX22qvFy39v", DestinationChain.STRAX, 2500000, 0),
                 new Deposit(
                     uint256.Parse("b8417bdbe7690609b2fff47d6d8b39bed69993df6656d7e10197c141bdacdd90") /* Tx of deposit being redone */, DepositRetrievalType.Normal,
