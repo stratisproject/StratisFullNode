@@ -76,6 +76,21 @@ namespace Stratis.Features.Unity3dApi.Controllers
         }
 
         /// <summary>
+        /// Validates a bech32 or base58 bitcoin address.
+        /// </summary>
+        /// <param name="address">A Bitcoin address to validate in a string format.</param>
+        /// <returns>Json formatted <see cref="ValidatedAddress"/> containing a boolean indicating address validity. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
+        /// <exception cref="ArgumentException">Thrown if address provided is empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if network is not provided.</exception>
+        [Route("validateaddress")]
+        [HttpGet]
+        public IActionResult ValidateAddress([FromQuery] string address)
+        {
+            return this.nodeController.ValidateAddress(address);
+        }
+
+
+        /// <summary>
         /// Retrieves the block which matches the supplied block hash.
         /// </summary>
         /// <param name="query">An object containing the necessary parameters to search for a block.</param>

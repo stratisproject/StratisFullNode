@@ -124,10 +124,7 @@ namespace Stratis.Features.Unity3dApi
             services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
             // Register the Swagger generator. This will use the options we injected just above.
-            services.AddSwaggerGen(c =>
-            {
-                c.DocumentFilter<HideAllButUnityFilter>();
-            });
+            services.AddSwaggerGen();
             services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
 
             // Hack to be able to access and modify the options object
@@ -166,20 +163,6 @@ namespace Stratis.Features.Unity3dApi
                 // Hack to be able to access and modify the options object configured here
                 this.uiOptions = c;
             });
-        }
-    }
-
-    public class HideAllButUnityFilter : IDocumentFilter
-    {
-        public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
-        {
-            foreach (string pathKey in swaggerDoc.Paths.Keys.ToList())
-            {
-                if (pathKey.Contains("Unity3d"))
-                    continue;
-
-                swaggerDoc.Paths.Remove(pathKey);
-            }
         }
     }
 }
