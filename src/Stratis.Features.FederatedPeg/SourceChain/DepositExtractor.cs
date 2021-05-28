@@ -35,7 +35,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             { "CirrusTest", new List<IDeposit> {
                 new Deposit(
-                    uint256.Parse("7691bf9838ebdede6db0cb466d93c1941d13894536dc3a5db8289ad04b28d12c"), DepositRetrievalType.Small, new Money(1000, MoneyUnit.BTC),
+                    uint256.Parse("7691bf9838ebdede6db0cb466d93c1941d13894536dc3a5db8289ad04b28d12c"), DepositRetrievalType.Small, new Money(20, MoneyUnit.BTC),
                     "qeyK7poxBE1wy8H24a7AcpLySCsfiqAo6A", DestinationChain.STRAX, 2_177_900, 0)
                 }
             },
