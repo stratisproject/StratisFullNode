@@ -133,13 +133,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            // Dont ask for deposits until the CCCTS is clear of suspended txs.
-            if (this.crossChainTransferStore.GetTransferCountByStatus(CrossChainTransferStatus.Partial) > 0 && this.crossChainTransferStore.HasSuspended())
-            {
-                this.logger.Info($"The CCTS will start processing deposits again once all suspended transactions has been processed.");
-                return true;
-            }
-
             this.logger.Info($"Requesting deposits from counterchain node.");
 
             SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits = await this.federationGatewayClient.GetMaturedBlockDepositsAsync(this.crossChainTransferStore.NextMatureDepositHeight, this.nodeLifetime.ApplicationStopping).ConfigureAwait(false);
