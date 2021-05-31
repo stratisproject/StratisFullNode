@@ -13,90 +13,71 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         private readonly Network network;
         private readonly PollsRepository pollsRepository;
+        private readonly IFederationHistory federationHistory;
         private readonly DBreezeSerializer dBreezeSerializer;
+        private readonly ChainIndexer chainIndexer;
         private readonly uint maxInactiveSeconds;
+        private readonly HashSet<PubKey> members;
 
         // The accuracy of this information is critical when determining the quorum requirement
         // for poll execution. For overall data integrity we include it into this repository
         // so that the information is committed together/atomically.
-        internal const string ActivityTable = "ActivityTable";
+        private const string ActivityTable = "ActivityTable";
         //  - Key   = Member:BlockHeight:BlockHash:Activity
         //  - Value = BlockTime
 
-        public IdleFederationMembersTracker(Network network, PollsRepository pollsRepository, DBreezeSerializer dBreezeSerializer)
+        public IdleFederationMembersTracker(Network network, PollsRepository pollsRepository, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, IFederationHistory federationHistory)
         {
             this.network = network;
             this.pollsRepository = pollsRepository;
             this.dBreezeSerializer = dBreezeSerializer;
+            this.chainIndexer = chainIndexer;
+            this.federationHistory = federationHistory;
             this.maxInactiveSeconds = ((PoAConsensusOptions)network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
-            this.lastActivity = new Dictionary<PubKey, (uint, uint256, uint, Activity)>();
+            this.members = new HashSet<PubKey>();
         }
 
-        // Most recent "Joined" or "Mined" activity.
-        private Dictionary<PubKey, (uint, uint256, uint, Activity)> lastActivity;
-
-        public enum Activity
+        public void Initialize()
         {
-            Joined = 0,
-            Mined = 1
-        };
+            this.pollsRepository.WithTransaction(transaction =>
+            {
+                foreach (var member in EnumerateMembers(transaction))
+                {
+                    this.members.Add(member);
+                }
+            });
+        }
+
+        private IEnumerable<PubKey> EnumerateMembers(DBreeze.Transactions.Transaction transaction)
+        {
+            for (byte[] pubKey = new byte[33]; ; )
+            {
+                pubKey = transaction.SelectForwardSkipFrom<byte[], uint>(ActivityTable, ActivityKey(pubKey, 0, 0, 0), 0)
+                    .Where(x => x.Exists).Select(x => x.Key.SafeSubarray(0, 33)).FirstOrDefault();
+
+                if (pubKey == null)
+                    break;
+                else
+                    yield return new PubKey(pubKey);
+
+                for (int i = pubKey.Length - 1; i >= 0; i--)
+                {
+                    pubKey[i]++;
+                    if (pubKey[i] != 0)
+                        break;
+                }
+            }
+        }
+        
+        private byte[] ActivityKey(byte[] pubKey, uint blockHeight, uint256 blockHash, Activity activity)
+        {
+            // All items must be big-endian to support ordering by the overall key.
+            return pubKey.Concat(blockHeight.ToBytes()).Concat(this.dBreezeSerializer.Serialize(blockHash)).Concat(((uint)activity).ToBytes()).ToArray();
+        }
 
         private byte[] ActivityKey(PubKey pubKey, uint blockHeight, uint256 blockHash, Activity activity)
         {
-            byte[] key = this.dBreezeSerializer.Serialize(pubKey)
-                // This has to be big-endian to support ordering by the overall key.
-                .Concat(blockHeight.ToBytes())
-                .Concat(this.dBreezeSerializer.Serialize(blockHash))
-                .Concat(((uint)activity).ToBytes())
-                .ToArray();
-
-            return key;
-        }
-
-        /// <summary>
-        /// It's easier to rewind "last active" information if it's recorded in tables.
-        /// </summary>
-        public void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, uint blockHeight, uint256 blockHash, Activity activity, uint time)
-        {
-            byte[] key = ActivityKey(pubKey, blockHeight, blockHash, activity);
-            transaction.Insert<byte[], uint>(ActivityTable, key, time);
-            this.lastActivity[pubKey] = (blockHeight, blockHash, time, activity);
-        }
-
-        public bool TryGetLastCachedActivity(PubKey pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity)
-        {
-            return this.lastActivity.TryGetValue(pubKey, out lastActivity);
-        }
-
-        /// <summary>
-        /// This method is used to determine which members get counted towards the quorum requirement when deciding whether to execute polls that
-        /// add or remove members. It must be accurate to ensure that the federation is accurately determined.
-        /// </summary>
-        public bool IsMemberInactive(DBreeze.Transactions.Transaction transaction, IFederationMember federationMember, ChainedHeader tip)
-        {
-            // TODO: Track activity tips separately.
-            Guard.Assert(tip.Height <= this.pollsRepository.CurrentTip.Height);
-
-            PubKey pubKey = federationMember.PubKey;
-            uint inactiveSeconds;
-
-            if (this.lastActivity.TryGetValue(pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity))
-            {
-                if (lastActivity.blockTime <= tip.Header.Time)
-                {
-                    inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
-                    if (inactiveSeconds <= this.maxInactiveSeconds)
-                        return false;
-                }
-            }
-
-            if (!TryGetLastActivity(transaction, federationMember, tip, out lastActivity))
-                return true;
-
-            this.lastActivity[pubKey] = lastActivity;
-            inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
-
-            return inactiveSeconds > this.maxInactiveSeconds;
+            return ActivityKey(this.dBreezeSerializer.Serialize(pubKey), blockHeight, blockHash, activity);
         }
 
         private (PubKey pubKey, uint blockHeight, uint256 blockHash, Activity activity) DeserializeActivityRowKey(byte[] rowKey)
@@ -118,11 +99,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return key;
         }
 
-        public bool TryGetLastActivity(DBreeze.Transactions.Transaction transaction, IFederationMember federationMember, ChainedHeader tip, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity activity) activity)
+        private void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader chainedHeader, Activity activity)
+        {
+            byte[] key = this.ActivityKey(pubKey, (uint)chainedHeader.Height, chainedHeader.HashBlock, activity);
+            transaction.Insert(ActivityTable, key, chainedHeader.Header.Time);            
+            this.members.Add(pubKey);
+        }
+
+        private bool TryGetLastActivity(DBreeze.Transactions.Transaction transaction,  IFederationMember federationMember, ChainedHeader tip, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity activity) activity)
         {
             // Look backwards for the most recent activity.
-            var startKey = this.ActivityKey(federationMember.PubKey, (uint)tip.Height + 1, 0, (Activity)0);
-            var stopKey = this.ActivityKey(federationMember.PubKey, 0, 0, (Activity)0);
+            var startKey = this.ActivityKey(federationMember.PubKey, (uint)tip.Height + 1, 0, 0);
+            var stopKey = this.ActivityKey(federationMember.PubKey, 0, 0, 0);
             foreach (Row<byte[], uint> row in transaction.SelectBackwardFromTo<byte[], uint>(ActivityTable, startKey, false, stopKey, true))
             {
                 if (!row.Exists)
@@ -151,6 +139,157 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             activity = default;
             return false;
+        }
+
+        public enum Activity
+        {
+            Joined = 0,
+            Mined = 1
+        };
+
+        /// <summary>
+        /// Used to confirm that a range of blocks is present in the tracking database.
+        /// </summary>
+        public class Cursor
+        {
+            private readonly IdleFederationMembersTracker idleFederationMembersTracker;
+
+            private HashHeightPair FirstConfirmedBlock { get; set; }
+            private uint FirstConfirmedTime { get; set; }
+            private HashHeightPair LastConfirmedBlock { get; set; }
+            private uint LastConfirmedTime { get; set; }
+
+            public Cursor(IdleFederationMembersTracker idleFederationMembersTracker)
+            {
+                Network network = idleFederationMembersTracker.network;
+
+                this.idleFederationMembersTracker = idleFederationMembersTracker;
+                this.FirstConfirmedBlock = new HashHeightPair(network.GenesisHash, 0);
+                this.FirstConfirmedTime = network.GenesisTime;
+                this.LastConfirmedBlock = new HashHeightPair(network.GenesisHash, 0);
+                this.LastConfirmedTime = network.GenesisTime;
+                this.lastActivity = new Dictionary<PubKey, (uint, uint256, uint, Activity)>();
+            }
+
+            // Most recent "Joined" or "Mined" activity.
+            private Dictionary<PubKey, (uint, uint256, uint, Activity)> lastActivity;
+
+            public void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader chainedHeader, Activity activity, uint time)
+            {
+                this.idleFederationMembersTracker.RecordActivity(transaction, pubKey, chainedHeader, activity);
+
+                if (this.LastConfirmedBlock.Hash == chainedHeader.Previous.HashBlock)
+                {
+                    this.LastConfirmedBlock = new HashHeightPair(chainedHeader);
+                    this.LastConfirmedTime = time;
+                }
+
+                this.lastActivity[pubKey] = ((uint)chainedHeader.Height, chainedHeader.HashBlock, time, activity);
+            }
+
+            public bool TryGetLastCachedActivity(PubKey pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity)
+            {
+                return this.lastActivity.TryGetValue(pubKey, out lastActivity);
+            }
+
+            /// <summary>
+            /// This method is used to determine which members get counted towards the quorum requirement when deciding whether to execute polls that
+            /// add or remove members. It must be accurate to ensure that the federation is accurately determined.
+            /// </summary>
+            public bool IsMemberInactive(DBreeze.Transactions.Transaction transaction, IFederationMember federationMember, ChainedHeader tip)
+            {
+                Guard.Assert(tip.Height <= this.idleFederationMembersTracker.pollsRepository.CurrentTip.Height);
+
+                PubKey pubKey = federationMember.PubKey;
+                uint inactiveSeconds;
+
+                if (this.lastActivity.TryGetValue(pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity))
+                {
+                    if (lastActivity.blockTime <= tip.Header.Time)
+                    {
+                        inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
+                        if (inactiveSeconds <= this.idleFederationMembersTracker.maxInactiveSeconds)
+                            return false;
+                    }
+                }
+
+                if (!this.TryGetLastActivity(transaction, federationMember, tip, out lastActivity))
+                    return true;
+
+                this.lastActivity[pubKey] = lastActivity;
+                inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
+
+                return inactiveSeconds > this.idleFederationMembersTracker.maxInactiveSeconds;
+            }
+
+            public bool TryGetLastActivity(DBreeze.Transactions.Transaction transaction, IFederationMember federationMember, ChainedHeader tip, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity activity) activity)
+            {
+                this.EnsureBlocksPresent(transaction, tip);
+
+                return this.idleFederationMembersTracker.TryGetLastActivity(transaction, federationMember, tip, out activity);
+            }
+
+            /// <summary>
+            /// Ensures that the necessary blocks are present to make an idle determination at the given block.
+            /// </summary>
+            /// <param name="tip">The block at which to make the "is idle" determination.</param>
+            private void EnsureBlocksPresent(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
+            {
+                if ((this.FirstConfirmedTime + this.idleFederationMembersTracker.maxInactiveSeconds) < tip.Header.Time && this.LastConfirmedBlock.Height >= tip.Height)
+                    return;
+
+                var maxInactiveSeconds = this.idleFederationMembersTracker.maxInactiveSeconds;
+
+                // Determine the last required block.
+                ChainedHeader lastRequiredBlock = (this.LastConfirmedBlock.Height < tip.Height) ? tip : this.idleFederationMembersTracker.chainIndexer.GetHeader(this.FirstConfirmedBlock.Height);
+
+                // Determine first required block.
+                ChainedHeader firstRequiredBlock = lastRequiredBlock;
+                while ((firstRequiredBlock.Header.Time + maxInactiveSeconds) >= tip.Header.Time && firstRequiredBlock.Height > 1)
+                {
+                    firstRequiredBlock = firstRequiredBlock.Previous;
+                }
+
+                // Determine which blocks are already present by accumulating the blocks in this range mined by each miner.
+                int arraySize = lastRequiredBlock.Height - firstRequiredBlock.Height + 1;
+                var present = new bool[arraySize];
+
+                foreach (PubKey pubKey in this.idleFederationMembersTracker.members)
+                {
+                    var pubKeyBytes = this.idleFederationMembersTracker.dBreezeSerializer.Serialize(pubKey);
+                    var startKey = this.idleFederationMembersTracker.ActivityKey(pubKeyBytes, (uint)firstRequiredBlock.Height, 0, 0);
+                    var stopKey = this.idleFederationMembersTracker.ActivityKey(pubKeyBytes, (uint)lastRequiredBlock.Height + 1, 0, 0);
+                    foreach (Row<byte[], uint> row in transaction.SelectForwardFromTo<byte[], uint>(IdleFederationMembersTracker.ActivityTable, startKey, false, stopKey, true))
+                    {
+                        if (!row.Exists)
+                            continue;
+
+                        uint height = BitConverter.ToUInt32(row.Key.SafeSubarray(33, 4).Reverse());
+
+                        present[height - firstRequiredBlock.Height] = true;
+                    }
+                }
+
+                // Process the blocks that are not present.
+                foreach (ChainedHeader chainedHeader in lastRequiredBlock.EnumerateToGenesis())
+                {
+                    if (!present[chainedHeader.Height - firstRequiredBlock.Height])
+                    {
+                        IFederationMember federationMember = this.idleFederationMembersTracker.federationHistory.GetFederationMemberForBlock(this.idleFederationMembersTracker.chainIndexer[chainedHeader.Height]);
+
+                        // Process the missing block.
+                        this.idleFederationMembersTracker.RecordActivity(transaction, federationMember.PubKey, chainedHeader, Activity.Mined);
+                    }
+
+                    if (chainedHeader.Height <= firstRequiredBlock.Height)
+                        break;
+                }
+
+                this.FirstConfirmedBlock = new HashHeightPair(firstRequiredBlock.HashBlock, firstRequiredBlock.Height);
+                this.FirstConfirmedTime = firstRequiredBlock.Header.Time;
+                this.LastConfirmedBlock = new HashHeightPair(lastRequiredBlock.HashBlock, lastRequiredBlock.Height);
+                this.LastConfirmedTime = lastRequiredBlock.Header.Time;
+            }
         }
     }
 }

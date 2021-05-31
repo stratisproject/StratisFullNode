@@ -49,9 +49,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private IdleFederationMembersTracker idleFederationMembersTracker;
 
+        private IdleFederationMembersTracker.Cursor idleFederationMembersCursor;
+
         private IIdleFederationMembersKicker idleFederationMembersKicker;
 
         private INodeLifetime nodeLifetime;
+
+        private DBreezeSerializer dBreezeSerializer;
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
@@ -85,7 +89,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
             this.scheduledVotingData = new List<VotingData>();
             this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
-            this.idleFederationMembersTracker = new IdleFederationMembersTracker(network, this.PollsRepository, dBreezeSerializer);
+
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.poaConsensusOptions = (PoAConsensusOptions)this.network.Consensus.Options;
@@ -93,14 +97,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
+            this.dBreezeSerializer = dBreezeSerializer;
         }
 
         public void Initialize(IFederationHistory federationHistory, IIdleFederationMembersKicker idleFederationMembersKicker = null)
         {
             this.federationHistory = federationHistory;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
+            this.idleFederationMembersTracker = new IdleFederationMembersTracker(this.network, this.PollsRepository, this.dBreezeSerializer, this.chainIndexer, federationHistory);
+            this.idleFederationMembersCursor = new IdleFederationMembersTracker.Cursor(this.idleFederationMembersTracker);
 
             this.PollsRepository.Initialize();
+            this.idleFederationMembersTracker.Initialize();
 
             this.PollsRepository.WithTransaction(transaction => this.polls = this.PollsRepository.GetAllPolls(transaction));
 
@@ -496,7 +504,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 fedMemberKey = member.PubKey;
 
                 // TODO: Remove this debug code. It simulates the header signature rule.
-                if (this.idleFederationMembersTracker.TryGetLastCachedActivity(fedMemberKey, out (uint blockHeight, uint256 blockHash, uint blockTime, IdleFederationMembersTracker.Activity activity) lastActivity))
+                if (this.idleFederationMembersCursor.TryGetLastCachedActivity(fedMemberKey, out (uint blockHeight, uint256 blockHash, uint blockTime, IdleFederationMembersTracker.Activity activity) lastActivity))
                 {
                     uint idleTimeSeconds = chBlock.ChainedHeader.Header.Time - lastActivity.blockTime;
                     uint expectedIdleTimeSeconds = (uint)modifiedFederation.Count * (uint)this.poaConsensusOptions.TargetSpacingSeconds;
@@ -515,7 +523,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
                 }
                 
-                this.idleFederationMembersTracker.RecordActivity(transaction, fedMemberKey, (uint)chBlock.ChainedHeader.Height, chBlock.ChainedHeader.HashBlock, IdleFederationMembersTracker.Activity.Mined, chBlock.ChainedHeader.Header.Time);
+                this.idleFederationMembersCursor.RecordActivity(transaction, fedMemberKey, chBlock.ChainedHeader, IdleFederationMembersTracker.Activity.Mined, chBlock.ChainedHeader.Header.Time);
 
                 lock (this.locker)
                 {
@@ -535,7 +543,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         if (poll.VotingData.Key == VoteKey.AddFederationMember)
                         {
                             IFederationMember federationMember = ((PoAConsensusFactory)this.network.Consensus.ConsensusFactory).DeserializeFederationMember(poll.VotingData.Data);
-                            this.idleFederationMembersTracker.RecordActivity(transaction, federationMember.PubKey, (uint)chBlock.ChainedHeader.Height, chBlock.ChainedHeader.HashBlock, IdleFederationMembersTracker.Activity.Joined, chBlock.ChainedHeader.Header.Time);
+                            this.idleFederationMembersCursor.RecordActivity(transaction, federationMember.PubKey, chBlock.ChainedHeader, IdleFederationMembersTracker.Activity.Joined, chBlock.ChainedHeader.Header.Time);
                         }
                     }
                 }
@@ -618,7 +626,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         // Inactive members don't participate in voting.
                         ChainedHeader pollStartHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
                         var voters = new ConcurrentHashSet<string>(modifiedFederation
-                            .Where(m => ((CollateralFederationMember)m).IsMultisigMember || !this.idleFederationMembersTracker.IsMemberInactive(transaction, m, chBlock.ChainedHeader))
+                            .Where(m => ((CollateralFederationMember)m).IsMultisigMember || !this.idleFederationMembersCursor.IsMemberInactive(transaction, m, chBlock.ChainedHeader))
                             .Select(m => m.PubKey.ToHex()))
                             .ToArray();
 

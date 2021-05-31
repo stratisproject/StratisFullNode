@@ -113,6 +113,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
             var options = (PoAConsensusOptions)this.network.Consensus.Options;
 
+            // This may be required when the voting repository synchronizes during initialization, so initialize it first.
+            this.whitelistedHashesRepository.Initialize();
+
             if (options.VotingEnabled)
             {
                 // If we are kicking members, we need to initialize this component before the VotingManager.
@@ -130,7 +133,6 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             this.federationManager.Initialize();
-            this.whitelistedHashesRepository.Initialize();
 
             var rebuildFederationHeight = this.nodeSettings.ConfigReader.GetOrDefault(ReconstructFederationFlag, false);
             if (rebuildFederationHeight)
