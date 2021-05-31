@@ -425,7 +425,12 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            List<IFederationMember> modifiedFederation = this.federationManager.GetFederationMembers(currentHeader);
+            // If the node is in DevMode just use the genesis members via the federation manager.
+            List<IFederationMember> modifiedFederation;
+            if (this.nodeSettings.DevMode != null)
+                modifiedFederation = this.federationManager.GetFederationMembers();
+            else
+                modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
 
             int maxDepth = modifiedFederation.Count;
 
@@ -454,7 +459,10 @@ namespace Stratis.Bitcoin.Features.PoA
                     currentHeader = currentHeader.Previous;
                     hitCount++;
 
-                    modifiedFederation = this.federationManager.GetFederationMembers(currentHeader);
+                    if (this.nodeSettings.DevMode != null)
+                        modifiedFederation = this.federationManager.GetFederationMembers();
+                    else
+                        modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
                 }
                 else
                 {
