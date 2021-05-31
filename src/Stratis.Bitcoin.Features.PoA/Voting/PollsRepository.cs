@@ -22,6 +22,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ChainIndexer chainIndexer;
 
+        private readonly Network network;
+
         private readonly uint maxInactiveSeconds;
 
         internal const string DataTable = "DataTable";
@@ -82,27 +84,46 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
+        public bool TryGetLastCachedActivity(PubKey pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity)
+        {
+            return this.lastActivity.TryGetValue(pubKey, out lastActivity);
+        }
+
         /// <summary>
         /// This method is used to determine which members get counted towards the quorum requirement when deciding whether to execute polls that
         /// add or remove members. It must be accurate to ensure that the federation is accurately determined.
         /// </summary>
-        public bool IsMemberInactive(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader tip)
+        public bool IsMemberInactive(DBreeze.Transactions.Transaction transaction, IFederationMember federationMember, ChainedHeader tip)
         {
             Guard.Assert(tip.Height <= this.CurrentTip.Height);
+
+            PubKey pubKey = federationMember.PubKey;
+            uint inactiveSeconds;
 
             if (this.lastActivity.TryGetValue(pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity))
             {
                 if (lastActivity.blockTime <= tip.Header.Time)
                 {
-                    uint inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
+                    inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
                     if (inactiveSeconds <= this.maxInactiveSeconds)
                         return false;
                 }
             }
 
+            if (!TryGetLastActivity(transaction, federationMember, tip, out lastActivity))
+                return true;
+
+            this.lastActivity[pubKey] = lastActivity;
+            inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
+
+            return inactiveSeconds > this.maxInactiveSeconds;
+        }
+
+        public bool TryGetLastActivity(DBreeze.Transactions.Transaction transaction, IFederationMember federationMember, ChainedHeader tip, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity activity) activity)
+        {
             // Look backwards for the most recent activity.
-            var startKey = this.ActivityKey(pubKey, (uint)tip.Height + 1, 0, (Activity)0);
-            var stopKey = this.ActivityKey(pubKey, 0, 0, (Activity)0);
+            var startKey = this.ActivityKey(federationMember.PubKey, (uint)tip.Height + 1, 0, (Activity)0);
+            var stopKey = this.ActivityKey(federationMember.PubKey, 0, 0, (Activity)0);
             foreach (Row<byte[], uint> row in transaction.SelectBackwardFromTo<byte[], uint>(ActivityTable, startKey, false, stopKey, true))
             {
                 if (!row.Exists)
@@ -117,19 +138,27 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (tip.Height < rowKey.blockHeight || tip.GetAncestor((int)rowKey.blockHeight)?.HashBlock != rowKey.blockHash)
                     continue;
 
-                lastActivity = (rowKey.blockHeight, rowKey.blockHash, row.Value, rowKey.activity);
-                this.lastActivity[pubKey] = lastActivity;
-
-                uint inactiveSeconds = tip.Header.Time - lastActivity.blockTime;
-                return inactiveSeconds > this.maxInactiveSeconds;
+                activity = (rowKey.blockHeight, rowKey.blockHash, row.Value, rowKey.activity);
+                return true;
             }
 
-            return true;
+            (HashHeightPair block, uint time) joinedTime = (federationMember.JoinedTime != default) ? federationMember.JoinedTime : (new HashHeightPair(this.network.GenesisHash, 0), this.network.GenesisTime);
+
+            if (joinedTime.block.Height <= tip.Height)
+            {
+                activity = ((uint)(joinedTime.block.Height), joinedTime.block.Hash, joinedTime.time, Activity.Joined);
+                return true;
+            }
+
+            activity = default;
+            return false;
         }
 
         public PollsRepository(Network network, string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
+
+            this.network = network;
 
             Directory.CreateDirectory(folder);
             this.dbreeze = new DBreezeEngine(folder);
@@ -147,14 +176,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // Load highest index.
             lock (this.lockObject)
             {
-                this.highestPollId = -1;
-
                 using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
-                    Row<byte[], int> row = transaction.Select<byte[], int>(DataTable, RepositoryHighestIndexKey);
+                    Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
 
-                    if (row.Exists)
-                        this.highestPollId = row.Value;
+                    Poll[] polls = data
+                        .Where(d => d.Key.Length == 4)
+                        .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                        .ToArray();
+
+                    this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
 
                     Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
 
@@ -172,36 +203,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (this.chainIndexer != null && this.CurrentTip == null)
                     {
                         // This is required for repositories that don't have a stored tip yet.
-                        Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
-
-                        var polls = data
-                            .Where(d => d.Key.Length == 4)
-                            .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
-                            .Where(p => p.Id <= this.highestPollId && this.chainIndexer.GetHeader(p.PollStartBlockData.Hash) != null)
-                            .ToDictionary(p => p.Id, p => p);
-
-                        if (polls.Count > 0)
+                        if (polls.Length > 0)
                         {
-                            int maxStartHeight = polls.Max(p => p.Value.PollStartBlockData.Height);
-                            int maxVotedInFavorHeight = polls.Max(p => p.Value.PollVotedInFavorBlockData?.Height ?? 0);
-                            int maxPollExecutedHeight = polls.Max(p => p.Value.PollExecutedBlockData?.Height ?? 0);
+                            int maxStartHeight = polls.Max(p => p.PollStartBlockData.Height);
+                            int maxVotedInFavorHeight = polls.Max(p => p.PollVotedInFavorBlockData?.Height ?? 0);
+                            int maxPollExecutedHeight = polls.Max(p => p.PollExecutedBlockData?.Height ?? 0);
                             int maxHeight = Math.Max(maxStartHeight, Math.Max(maxVotedInFavorHeight, maxPollExecutedHeight));
-                            this.CurrentTip = polls.FirstOrDefault(p => p.Value.PollStartBlockData.Height == maxHeight).Value.PollStartBlockData;
+                            this.CurrentTip = polls.FirstOrDefault(p => p.PollStartBlockData.Height == maxHeight).PollStartBlockData;
                         }
                     }
 
                     // Trim polls repository to height.
-                    //const int trimHeight = 1424647;
-                    const int trimHeight = 1358857;
+                    int trimHeight = this.chainIndexer.Tip.Height; // 1682000;
                     if (this.CurrentTip?.Height > trimHeight)
                     {
-                        Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
-
-                        Poll[] polls = data
-                            .Where(d => d.Key.Length == 4)
-                            .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
-                            .ToArray();
-
                         // Determine list of polls to remove completely.
                         Poll[] pollsToRemove = polls.Where(p => p.PollStartBlockData.Height > trimHeight).ToArray();
 
@@ -226,6 +241,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         this.SaveCurrentTip(transaction, this.chainIndexer.GetHeader(trimHeight));
                     }
+
+                    this.SaveHighestPollId(transaction);
                 }
             }
 
@@ -322,11 +339,26 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        public DBreeze.Transactions.Transaction GetTransaction()
+        public T WithTransaction<T>(Func<DBreeze.Transactions.Transaction, T> func)
         {
-            var transaction = this.dbreeze.GetTransaction();
+            lock (this.lockObject)
+            {
+                using (var transaction = this.dbreeze.GetTransaction())
+                {
+                    return func(transaction);
+                }
+            }
+        }
 
-            return transaction;
+        public void WithTransaction(Action<DBreeze.Transactions.Transaction> action)
+        {
+            lock (this.lockObject)
+            {
+                using (var transaction = this.dbreeze.GetTransaction())
+                {
+                    action(transaction);
+                }
+            }
         }
 
         /// <summary>Adds new poll.</summary>

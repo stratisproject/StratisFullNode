@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
 
-            var federationManager = new FederationManager(fullNode.Object, network, nodeSettings, signals, counterChainSettings);
+            var federationManager = new FederationManager(fullNode.Object, network, nodeSettings, counterChainSettings);
             var asyncProvider = new AsyncProvider(loggerFactory, signals);
             var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), asyncProvider);
             finalizedBlockRepo.LoadFinalizedBlockInfoAsync(network).GetAwaiter().GetResult();
@@ -140,7 +140,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             });
 
             federationHistory
-                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), It.IsAny<PoAConsensusOptions>()))
+                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<ChainedHeader>(), It.IsAny<PoAConsensusOptions>(), It.IsAny<List<IFederationMember>>()))
                 .Returns<uint, PoAConsensusOptions>((headerUnixTimestamp, poAConsensusOptions) =>
                 {
                     List<IFederationMember> federationMembers = poAConsensusOptions.GenesisFederationMembers;

@@ -4,6 +4,7 @@ using System.Linq;
 using NBitcoin;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.PoA.Voting;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
@@ -37,7 +38,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// See <see cref="PoAConsensusOptions.VotingManagerV2ActivationHeight"/>
         /// </summary>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
-        IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, PoAConsensusOptions poAConsensusOptions);
+        IFederationMember GetFederationMemberForTimestamp(ChainedHeader chainedHeader, PoAConsensusOptions poAConsensusOptions, List<IFederationMember> modifiedFederation = null);
     }
 
     /// <summary>
@@ -121,11 +122,13 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, PoAConsensusOptions poAConsensusOptions)
+        public IFederationMember GetFederationMemberForTimestamp(ChainedHeader chainedHeader, PoAConsensusOptions poAConsensusOptions, List<IFederationMember> modifiedFederation = null)
         {
-            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
+            List<IFederationMember> federationMembers = modifiedFederation ?? this.federationManager.GetFederationMembers(chainedHeader);
 
             uint roundTime = this.GetRoundLengthSeconds(poAConsensusOptions, federationMembers.Count);
+
+            uint headerUnixTimestamp = chainedHeader.Header.Time;
 
             // Time when current round started.
             uint roundStartTimestamp = (headerUnixTimestamp / roundTime) * roundTime;

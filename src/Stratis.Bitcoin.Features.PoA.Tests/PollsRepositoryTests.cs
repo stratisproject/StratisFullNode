@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             Assert.Equal(-1, this.repository.GetHighestPollId());
 
-            using (var transaction = this.repository.GetTransaction())
+            this.repository.WithTransaction(transaction =>
             {
                 this.repository.AddPolls(transaction, new Poll() { Id = 0 });
                 this.repository.AddPolls(transaction, new Poll() { Id = 1 });
@@ -36,11 +36,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 this.repository.AddPolls(transaction, new Poll() { Id = 3 });
 
                 transaction.Commit();
-            }
+            });
 
             Assert.Equal(3, this.repository.GetHighestPollId());
 
-            using (var transaction = this.repository.GetTransaction())
+            this.repository.WithTransaction(transaction =>
             {
                 this.repository.RemovePolls(transaction, 3);
 
@@ -52,7 +52,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 this.repository.RemovePolls(transaction, 0);
 
                 transaction.Commit();
-            }
+            });
 
             this.repository.Dispose();
         }
@@ -60,14 +60,14 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void SavesHighestPollId()
         {
-            using (var transaction = this.repository.GetTransaction())
+            this.repository.WithTransaction(transaction =>
             {
                 this.repository.AddPolls(transaction, new Poll() { Id = 0 });
                 this.repository.AddPolls(transaction, new Poll() { Id = 1 });
                 this.repository.AddPolls(transaction, new Poll() { Id = 2 });
 
                 transaction.Commit();
-            }
+            });
 
             this.repository.Initialize();
 
@@ -77,22 +77,22 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         [Fact]
         public void CanLoadPolls()
         {
-            using (var transaction = this.repository.GetTransaction())
+            this.repository.WithTransaction(transaction =>
             {
                 this.repository.AddPolls(transaction, new Poll() { Id = 0 });
                 this.repository.AddPolls(transaction, new Poll() { Id = 1 });
                 this.repository.AddPolls(transaction, new Poll() { Id = 2 });
 
                 transaction.Commit();
-            }
+            });
 
-            using (var transaction = this.repository.GetTransaction())
+            this.repository.WithTransaction(transaction =>
             {
                 Assert.True(this.repository.GetPolls(transaction, 0, 1, 2).Count == 3);
                 Assert.True(this.repository.GetAllPolls(transaction).Count == 3);
                 Assert.Throws<ArgumentException>(() => this.repository.GetPolls(transaction, -1));
                 Assert.Throws<ArgumentException>(() => this.repository.GetPolls(transaction, 9));
-            }
+            });
         }
 
         [Fact]
@@ -100,20 +100,20 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             var poll = new Poll() { Id = 0, VotingData = new VotingData() { Key = VoteKey.AddFederationMember } };
 
-            using (var transaction = this.repository.GetTransaction())
-            {
-                this.repository.AddPolls(transaction, poll);
+            this.repository.WithTransaction(transaction =>
+             {
+                 this.repository.AddPolls(transaction, poll);
 
-                poll.VotingData.Key = VoteKey.KickFederationMember;
-                this.repository.UpdatePoll(transaction, poll);
+                 poll.VotingData.Key = VoteKey.KickFederationMember;
+                 this.repository.UpdatePoll(transaction, poll);
 
-                transaction.Commit();
-            }
+                 transaction.Commit();
+             });
 
-            using (var transaction = this.repository.GetTransaction())
+            this.repository.WithTransaction(transaction =>
             {
                 Assert.Equal(VoteKey.KickFederationMember, this.repository.GetPolls(transaction, poll.Id).First().VotingData.Key);
-            }
+            });
         }
     }
 }

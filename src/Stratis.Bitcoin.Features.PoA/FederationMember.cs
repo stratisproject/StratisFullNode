@@ -9,6 +9,7 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         /// <summary>Public key of a federation member used for mining.</summary>
         PubKey PubKey { get; }
+        (HashHeightPair block, uint time) JoinedTime { get; set; }
     }
 
     /// <summary>Representation of a federation member on standard PoA network.</summary>
@@ -23,6 +24,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <inheritdoc />
         public PubKey PubKey { get; }
+        public (HashHeightPair, uint) JoinedTime { get; set; }
 
         /// <inheritdoc />
         public override string ToString()
