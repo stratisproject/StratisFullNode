@@ -48,10 +48,10 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         {
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
+            // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
+            // that we have not yet processed all the votes that may determine the federation make-up.
             if (!this.federationHistory.CanGetFederationForBlock(chainedHeader))
             {
-                // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
-                // that we have not yet processed all the votes that may determine the federation make-up.
                 // Mark header as insufficient to avoid banning the peer that presented it.
                 // When we advance consensus we will be able to validate it.
                 context.ValidationContext.InsufficientHeaderInformation = true;
