@@ -22,8 +22,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ChainIndexer chainIndexer;
 
-        private readonly Network network;
-
         internal const string DataTable = "DataTable";
 
         private static readonly byte[] RepositoryHighestIndexKey = new byte[0];
@@ -36,17 +34,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(Network network, DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
-            : this(network, dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
         {
         }
 
 
-        public PollsRepository(Network network, string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
-
-            this.network = network;
 
             Directory.CreateDirectory(folder);
             this.dbreeze = new DBreezeEngine(folder);
@@ -54,8 +50,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.dBreezeSerializer = dBreezeSerializer;
 
-            this.chainIndexer = chainIndexer;
-            
+            this.chainIndexer = chainIndexer;            
         }
 
         public void Initialize()

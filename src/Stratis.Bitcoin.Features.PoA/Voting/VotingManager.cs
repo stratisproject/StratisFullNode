@@ -5,8 +5,6 @@ using System.Text;
 using ConcurrentCollections;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.AsyncWork;
-using Stratis.Bitcoin.BlockPulling;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Consensus;
@@ -75,9 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Network network,
             IBlockRepository blockRepository = null,
             ChainIndexer chainIndexer = null,
-            IBlockPuller blockPuller = null,
-            INodeLifetime nodeLifetime = null,
-            IAsyncProvider asyncProvider = null)
+            INodeLifetime nodeLifetime = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -88,7 +84,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
             this.scheduledVotingData = new List<VotingData>();
-            this.PollsRepository = new PollsRepository(network, dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
+            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
             this.idleFederationMembersTracker = new IdleFederationMembersTracker(network, this.PollsRepository, dBreezeSerializer);
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;

@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 
@@ -15,17 +13,9 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
     /// </summary>
     public class PoAHeaderSignatureRule : FullValidationConsensusRule
     {
-        private PoABlockHeaderValidator validator;
-
         private ISlotsManager slotsManager;
 
         private IFederationHistory federationHistory;
-
-        private uint maxReorg;
-
-        private IChainState chainState;
-
-        private Network network;
 
         /// <inheritdoc />
         public override void Initialize()
@@ -37,11 +27,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             // TODO: Consider adding these via a constructor on this rule.
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
-            this.validator = engine.PoaHeaderValidator;
-            this.chainState = engine.ChainState;
-            this.network = this.Parent.Network;
-
-            this.maxReorg = this.network.Consensus.MaxReorgLength;
         }
 
         public override async Task RunAsync(RuleContext context)
