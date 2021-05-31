@@ -67,9 +67,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private bool isInitialized;
         private bool isBusyReconstructing;
 
-        // Only pull blocks when its possible to validate them.
-        private bool canPullBlocks => true;// ((this.PollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) > (this.chainIndexer?.Height ?? 0);
-
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals,
             IFinalizedBlockInfoRepository finalizedBlockInfo,
@@ -97,8 +94,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
-
-            blockPuller.CanPullBlocks = () => this.canPullBlocks;
         }
 
         public void Initialize(IFederationHistory federationHistory, IIdleFederationMembersKicker idleFederationMembersKicker = null)
@@ -820,7 +815,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 1000 == 0)
                             {
-                                this.logger.LogInformation($"Synchronizing voting data at height {header.Height}. Will resume downloading blocks when done.");
+                                this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
                             }
                         }
 

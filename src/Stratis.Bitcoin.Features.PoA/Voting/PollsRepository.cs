@@ -214,7 +214,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
 
                     // Trim polls repository to height.
-                    int trimHeight = this.chainIndexer.Tip.Height; // 1682000;
+                    int trimHeight = this.chainIndexer.Tip.Height;
                     if (this.CurrentTip?.Height > trimHeight)
                     {
                         // Determine list of polls to remove completely.
