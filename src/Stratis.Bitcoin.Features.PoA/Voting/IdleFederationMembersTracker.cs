@@ -20,7 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly HashSet<PubKey> members;
 
         // The accuracy of this information is critical when determining the quorum requirement
-        // for poll execution. For overall data integrity we include it into this repository
+        // for poll execution. For overall data integrity we include it into the polls repository
         // so that the information is committed together/atomically.
         private const string ActivityTable = "ActivityTable";
         //  - Key   = Member:BlockHeight:BlockHash:Activity
@@ -235,18 +235,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             /// <param name="tip">The block at which to make the "is idle" determination.</param>
             private void EnsureBlocksPresent(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
             {
+                // If the tip and lower bound of interest is contained within the bubble then exit.
                 if ((this.FirstConfirmedTime + this.idleFederationMembersTracker.maxInactiveSeconds) < tip.Header.Time && this.LastConfirmedBlock.Height >= tip.Height)
                     return;
 
                 var maxInactiveSeconds = this.idleFederationMembersTracker.maxInactiveSeconds;
 
-                // Determine the last required block.
-                ChainedHeader lastRequiredBlock = (this.LastConfirmedBlock.Height < tip.Height) ? tip : this.idleFederationMembersTracker.chainIndexer.GetHeader(this.FirstConfirmedBlock.Height);
+                // Determine the last required block. We will read from the tip unless its included in the current bubble, in which case we extend the bubble downwards.
+                ChainedHeader lastRequiredBlock = tip;
+                if (tip.Height >= this.FirstConfirmedBlock.Height && tip.Height <= this.LastConfirmedBlock.Height)
+                    lastRequiredBlock = this.idleFederationMembersTracker.chainIndexer.GetHeader(this.FirstConfirmedBlock.Height).Previous;
 
                 // Determine first required block.
                 ChainedHeader firstRequiredBlock = lastRequiredBlock;
                 while ((firstRequiredBlock.Header.Time + maxInactiveSeconds) >= tip.Header.Time && firstRequiredBlock.Height > 1)
                 {
+                    if (firstRequiredBlock.Previous.HashBlock == this.LastConfirmedBlock.Hash && (this.FirstConfirmedTime + maxInactiveSeconds) < tip.Header.Time)
+                        break;
+
                     firstRequiredBlock = firstRequiredBlock.Previous;
                 }
 
@@ -259,7 +265,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     var pubKeyBytes = this.idleFederationMembersTracker.dBreezeSerializer.Serialize(pubKey);
                     var startKey = this.idleFederationMembersTracker.ActivityKey(pubKeyBytes, (uint)firstRequiredBlock.Height, 0, 0);
                     var stopKey = this.idleFederationMembersTracker.ActivityKey(pubKeyBytes, (uint)lastRequiredBlock.Height + 1, 0, 0);
-                    foreach (Row<byte[], uint> row in transaction.SelectForwardFromTo<byte[], uint>(IdleFederationMembersTracker.ActivityTable, startKey, false, stopKey, true))
+                    foreach (Row<byte[], uint> row in transaction.SelectForwardFromTo<byte[], uint>(ActivityTable, startKey, false, stopKey, true))
                     {
                         if (!row.Exists)
                             continue;
@@ -285,10 +291,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         break;
                 }
 
-                this.FirstConfirmedBlock = new HashHeightPair(firstRequiredBlock.HashBlock, firstRequiredBlock.Height);
-                this.FirstConfirmedTime = firstRequiredBlock.Header.Time;
-                this.LastConfirmedBlock = new HashHeightPair(lastRequiredBlock.HashBlock, lastRequiredBlock.Height);
-                this.LastConfirmedTime = lastRequiredBlock.Header.Time;
+                ChainedHeader prevFirst = this.idleFederationMembersTracker.chainIndexer.GetHeader(this.FirstConfirmedBlock.Height).Previous;
+
+                if (firstRequiredBlock.Previous.HashBlock != this.LastConfirmedBlock.Hash)
+                {
+                    this.FirstConfirmedBlock = new HashHeightPair(firstRequiredBlock.HashBlock, firstRequiredBlock.Height);
+                    this.FirstConfirmedTime = firstRequiredBlock.Header.Time;
+                }
+
+                if (lastRequiredBlock != prevFirst)
+                {
+                    this.LastConfirmedBlock = new HashHeightPair(lastRequiredBlock.HashBlock, lastRequiredBlock.Height);
+                    this.LastConfirmedTime = lastRequiredBlock.Header.Time;
+                }
             }
         }
     }
