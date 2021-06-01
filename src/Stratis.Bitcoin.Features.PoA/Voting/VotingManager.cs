@@ -95,7 +95,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public void Initialize(IFederationHistory federationHistory)
         {
             this.federationHistory = federationHistory;
-            ((FederationHistory)this.federationHistory).Initialize(this.network, this.chainIndexer, this.nodeLifetime.ApplicationStopping);
             this.idleFederationMembersTracker = new IdleFederationMembersTracker(this.network, this.PollsRepository, this.dBreezeSerializer, this.chainIndexer, federationHistory);
             this.idleFederationMembersCursor = new IdleFederationMembersTracker.Cursor(this.idleFederationMembersTracker);
 
@@ -110,6 +109,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
 
             this.isInitialized = true;
+
+            ((FederationHistory)this.federationHistory).Initialize(this.network, this.chainIndexer, this.nodeLifetime.ApplicationStopping);
 
             this.PollsRepository.Synchronous(() =>
             {
