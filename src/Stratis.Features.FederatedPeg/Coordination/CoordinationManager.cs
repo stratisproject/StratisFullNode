@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Text;
 using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
+using Stratis.Bitcoin.Configuration.Logging;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Payloads;
@@ -75,7 +79,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private readonly object lockObject = new object();
 
-        public CoordinationManager(IFederatedPegBroadcaster federatedPegBroadcaster)
+        public CoordinationManager(
+            IFederatedPegBroadcaster federatedPegBroadcaster,
+            INodeStats nodeStats)
         {
             this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
             this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
@@ -87,6 +93,25 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.logger = LogManager.GetCurrentClassLogger();
+
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+        }
+
+        private void AddComponentStats(StringBuilder benchLog)
+        {
+            benchLog.AppendLine(">> Interop Coordination Manager");
+
+            foreach (KeyValuePair<string, Dictionary<ulong, int>> vote in this.activeFeeVotes)
+            {
+                benchLog.AppendLine("Fee Vote:".PadRight(LoggingConfiguration.ColumnLength) + $" Id: {vote.Key} Votes: {vote.Value.Count}");
+            }
+
+            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> vote in this.activeVotes)
+            {
+                benchLog.AppendLine("Vote:".PadRight(LoggingConfiguration.ColumnLength) + $" Id: {vote.Key} Votes: {vote.Value.Count}");
+            }
+
+            benchLog.AppendLine();
         }
 
         /// <inheritdoc/>
