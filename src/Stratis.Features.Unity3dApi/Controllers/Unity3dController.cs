@@ -1,13 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.Api;
+using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.BlockStore.Models;
+using Stratis.Bitcoin.Features.Consensus.CoinViews;
+using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Utilities;
+using Stratis.Features.Unity3dApi.Models;
 
 namespace Stratis.Features.Unity3dApi.Controllers
 {
@@ -19,14 +27,99 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly BlockStoreController blockStoreController;
 
+        private readonly IAddressIndexer addressIndexer;
+
+        private readonly IBlockStore blockStore;
+
+        private readonly IChainState chainState;
+
+        private readonly Network network;
+
+        private readonly ICoinView coinView;
+
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
-        public Unity3dController(ILoggerFactory loggerFactory, BlockStoreController blockStoreController, NodeController nodeController)
+        public Unity3dController(ILoggerFactory loggerFactory, BlockStoreController blockStoreController, NodeController nodeController, IAddressIndexer addressIndexer,
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView)
         {
+            Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.nodeController = nodeController;
-            this.blockStoreController = blockStoreController;
+            this.nodeController = Guard.NotNull(nodeController, nameof(nodeController));
+            this.blockStoreController = Guard.NotNull(blockStoreController, nameof(blockStoreController));
+            this.addressIndexer = Guard.NotNull(addressIndexer, nameof(addressIndexer));
+            this.blockStore = Guard.NotNull(blockStore, nameof(blockStore));
+            this.chainState = Guard.NotNull(chainState, nameof(chainState));
+            this.network = Guard.NotNull(network, nameof(network));
+            this.coinView = Guard.NotNull(coinView, nameof(coinView));
+        }
+
+        /// <summary>
+        /// Gets UTXOs for specified address.
+        /// </summary>
+        /// <param name="address">Address to get UTXOs for.</param>
+        [Route("getutxosforaddress")]
+        [HttpGet]
+        public IActionResult GetUTXOsForAddress([FromQuery] string address)
+        {
+            VerboseAddressBalancesResult balancesResult = this.addressIndexer.GetAddressIndexerState(new[] {address});
+
+            if (balancesResult.BalancesData == null || balancesResult.BalancesData.Count != 1)
+            {
+                this.logger.LogWarning("No balances found for address {0}, Reason: {1}", address, balancesResult.Reason);
+                return this.Json(new GetURXOsResponseModel() {Reason = balancesResult.Reason});
+            }
+
+            BitcoinAddress bitcoinAddress = this.network.CreateBitcoinAddress(address);
+
+            AddressIndexerData addressBalances = balancesResult.BalancesData.First();
+
+            List<AddressBalanceChange> deposits = addressBalances.BalanceChanges.Where(x => x.Deposited).ToList();
+            long totalDeposited = deposits.Sum(x => x.Satoshi);
+            long totalWithdrawn = addressBalances.BalanceChanges.Where(x => !x.Deposited).Sum(x => x.Satoshi);
+
+            long balanceSat = totalDeposited - totalWithdrawn;
+
+            HashSet<uint256> blocksToRequest = new HashSet<uint256>(deposits.Count);
+
+            foreach (AddressBalanceChange deposit in deposits)
+            {
+                int blockHeight = deposit.BalanceChangedHeight;
+                uint256 blockHash = this.chainState.ConsensusTip.GetAncestor(blockHeight).Header.GetHash();
+                blocksToRequest.Add(blockHash);
+            }
+            
+            List<Block> blocks = this.blockStore.GetBlocks(blocksToRequest.ToList());
+            List<OutPoint> collectedOutPoints = new List<OutPoint>(deposits.Count);
+
+            foreach (List<Transaction> txList in blocks.Select(x => x.Transactions))
+            {
+                foreach (Transaction transaction in txList.Where(x => !x.IsCoinBase && !x.IsCoinStake))
+                {
+                    for (int i = 0; i < transaction.Outputs.Count; i++)
+                    {
+                        if (!transaction.Outputs[i].IsTo(bitcoinAddress))
+                            continue;
+
+                        collectedOutPoints.Add(new OutPoint(transaction, i));
+                    }
+                }
+            }
+
+            FetchCoinsResponse fetchCoinsResponse = this.coinView.FetchCoins(collectedOutPoints.ToArray());
+
+            // Unspent outpoints
+            List<OutPoint> cleanedOutPoints = collectedOutPoints.Where(x => fetchCoinsResponse.UnspentOutputs[x].Coins != null).ToList();
+
+            List<OutPointModel> outPointModels = cleanedOutPoints.Select(x => new OutPointModel(x)).ToList();
+
+            GetURXOsResponseModel response = new GetURXOsResponseModel()
+            {
+                BalanceSat = balanceSat,
+                UTXOs = outPointModels
+            };
+            
+            return this.Json(response);
         }
 
         /// <summary>
