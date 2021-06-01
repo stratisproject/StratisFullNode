@@ -171,7 +171,7 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
 
-                this.logger.Info("{0} received from '{1}':'{2}' [pubkey: '{3}']. Request {4} proposing fee distribution of {5}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, pubKey, payload.RequestId, payload.FeeAmount);
+                this.logger.Info("{0} received from '{1}':'{2}' [pubkey: '{3}']. Request {4} proposing fee distribution of {5}.", nameof(FeeCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, pubKey, payload.RequestId, payload.FeeAmount);
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
