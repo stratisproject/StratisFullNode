@@ -256,14 +256,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, potentialConversionTransaction.Id.ToString(), candidateFee).GetAwaiter().GetResult();
 
-                    ulong conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.coordinationManager.GetQuorum());
+                    ulong conversionFeeAmountSatoshi;
 
-                    if (conversionFeeAmountSatoshi == 0UL)
+                    do
                     {
-                        this.logger.Warn("Unable to determine actual fee for conversion transaction {0}, ignoring.", potentialConversionTransaction.Id);
+                        conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.coordinationManager.GetQuorum());
 
-                        continue;
-                    }
+                        if (conversionFeeAmountSatoshi == 0UL)
+                        {
+                            this.logger.Warn("The actual fee for conversion transaction {0} has not yet been agreed upon by all the nodes, stalling deposit processing.", potentialConversionTransaction.Id);
+                            await Task.Delay(TimeSpan.FromSeconds(2));
+                            
+                            continue;
+                        }
+
+                        break;
+
+                    } while (true);
 
                     if (Money.Satoshis(conversionFeeAmountSatoshi) >= potentialConversionTransaction.Amount)
                     {

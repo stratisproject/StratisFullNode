@@ -189,10 +189,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.coordinationManager.AddFeeVote(payload.RequestId, payload.FeeAmount, pubKey);
 
+            // If the fee has not yet been agreed, then broadcast the fee coordination payload again.
             if (this.coordinationManager.GetAgreedTransactionFee(payload.RequestId, this.interopSettings.ETHMultisigWalletQuorum) == 0)
-            {
-
-            }
+                await this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, payload.RequestId, payload.FeeAmount);
         }
     }
 }
