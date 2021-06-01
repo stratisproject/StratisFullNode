@@ -164,14 +164,14 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.Info("{0} received from '{1}':'{2}'. Request {3} proposing fee distribution of {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.FeeAmount);
-
             // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;
 
             try
             {
                 pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
+
+                this.logger.Info("{0} received from '{1}':'{2}' [pubkey: '{3}']. Request {4} proposing fee distribution of {5}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, pubKey, payload.RequestId, payload.FeeAmount);
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
@@ -186,7 +186,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 return;
             }
-            
+
             this.coordinationManager.AddFeeVote(payload.RequestId, payload.FeeAmount, pubKey);
 
             if (this.coordinationManager.GetAgreedTransactionFee(payload.RequestId, this.interopSettings.ETHMultisigWalletQuorum) == 0)
