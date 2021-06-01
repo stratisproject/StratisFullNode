@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -58,6 +59,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
         void RegisterQuorumSize(int quorum);
 
         int GetQuorum();
+
+        Task BroadcastAllAsync(Key currentMemberKey);
 
         Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee);
     }
@@ -303,6 +306,15 @@ namespace Stratis.Features.FederatedPeg.Coordination
         public int GetQuorum()
         {
             return this.quorum;
+        }
+
+        public async Task BroadcastAllAsync(Key currentMemberKey)
+        {
+            foreach (KeyValuePair<string, Dictionary<ulong, int>> request in this.activeFeeVotes)
+            {
+                string signature = currentMemberKey.SignMessage(request.Key + request.Value.Keys.First());
+                await this.federatedPegBroadcaster.BroadcastAsync(new FeeCoordinationPayload(request.Key, request.Value.Keys.First(), signature)).ConfigureAwait(false);
+            }
         }
 
         public async Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee)
