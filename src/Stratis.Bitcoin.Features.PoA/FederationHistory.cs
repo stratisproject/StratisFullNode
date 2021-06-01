@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -58,38 +56,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.federationManager = federationManager;
             this.votingManager = votingManager;
             this.minersByBlockHash = new Dictionary<uint256, IFederationMember>();
-        }
-
-        public void Initialize(Network network, ChainIndexer chainIndexer, CancellationToken cancellationToken)
-        {
-            // The federation can be determined up to MaxReorgLength blocks beyond the polls repository tip.
-            // To efficiently utilize multi-threaded CPUs we can determine the federation for all those blocks in advance.
-            void AsynchronousReader()
-            {
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    int lastKnowableHeight = (this.votingManager.PollsRepository.CurrentTip?.Height ?? 0) + (int)network.Consensus.MaxReorgLength - 1;
-                    if (lastKnowableHeight > chainIndexer.Tip.Height)
-                        lastKnowableHeight = chainIndexer.Tip.Height;
-
-                    bool workDone = false;
-
-                    if (this.votingManager.isInitialized)
-                    {
-                        Parallel.ForEach(chainIndexer.GetHeader(lastKnowableHeight).EnumerateToGenesis().TakeWhile(chainedHeader =>
-                            !this.minersByBlockHash.ContainsKey(chainedHeader.HashBlock)), chainedHeader =>
-                            {
-                                workDone = true;
-                                GetFederationMemberForBlock(chainedHeader);
-                            });
-                    }
-
-                    if (!workDone)
-                        Task.Delay(100, cancellationToken);
-                }
-            }
-
-            new Task(AsynchronousReader).Start();
         }
 
         /// <inheritdoc />

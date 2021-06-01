@@ -83,34 +83,40 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.CurrentTip = null;
                     }
 
-                    if (this.chainIndexer != null && this.CurrentTip == null)
-                    {
-                        // This is required for repositories that don't have a stored tip yet.
-                        if (polls.Length > 0)
-                        {
-                            int maxStartHeight = polls.Max(p => p.PollStartBlockData.Height);
-                            int maxVotedInFavorHeight = polls.Max(p => p.PollVotedInFavorBlockData?.Height ?? 0);
-                            int maxPollExecutedHeight = polls.Max(p => p.PollExecutedBlockData?.Height ?? 0);
-                            int maxHeight = Math.Max(maxStartHeight, Math.Max(maxVotedInFavorHeight, maxPollExecutedHeight));
-                            this.CurrentTip = polls.FirstOrDefault(p => p.PollStartBlockData.Height == maxHeight).PollStartBlockData;
-                        }
-                    }
-
                     int trimHeight = this.chainIndexer.Tip.Height;
 
-                    if (this.nodeSettings.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, -1) != -1)
+                    if (this.nodeSettings != null && this.nodeSettings.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, -1) != -1)
                     {
                         trimHeight = this.nodeSettings.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, 0);
                     }
 
+                    if (trimHeight > (this.CurrentTip?.Height ?? 0))
+                        trimHeight = (this.CurrentTip?.Height ?? 0);
+
+                    int maxStartHeight = polls.Max(p => p.PollStartBlockData.Height);
+                    int maxVotedInFavorHeight = polls.Max(p => p.PollVotedInFavorBlockData?.Height ?? 0);
+                    int maxPollExecutedHeight = polls.Max(p => p.PollExecutedBlockData?.Height ?? 0);
+                    int maxHeight = Math.Max(maxStartHeight, Math.Max(maxVotedInFavorHeight, maxPollExecutedHeight));
+
                     // Trim polls repository to height.
-                    if (this.CurrentTip?.Height > trimHeight)
+                    if (maxHeight > trimHeight)
                     {
                         // Determine list of polls to remove completely.
                         Poll[] pollsToRemove = polls.Where(p => p.PollStartBlockData.Height > trimHeight).ToArray();
 
                         if (pollsToRemove.Length > 0)
+                        {
                             this.RemovePolls(transaction, pollsToRemove.Select(p => p.Id).ToArray());
+
+                            // Ensures we don't try to update polls that were removed.
+                            data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
+                            polls = data
+                                .Where(d => d.Key.Length == 4)
+                                .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                                .ToArray();
+
+                            Guard.Assert(this.highestPollId == ((polls.Length > 0) ? polls.Max(p => p.Id) : -1));
+                        }
 
                         // Update any polls are executed after the trim height.
                         Poll[] executedPollsToUpdate = polls.Where(p => p.PollExecutedBlockData?.Height > trimHeight).ToArray();
@@ -129,6 +135,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
 
                         this.SaveCurrentTip(transaction, this.chainIndexer.GetHeader(trimHeight));
+                        transaction.Commit();
                     }
                 }
             }

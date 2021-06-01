@@ -110,8 +110,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.isInitialized = true;
 
-            ((FederationHistory)this.federationHistory).Initialize(this.network, this.chainIndexer, this.nodeLifetime.ApplicationStopping);
-
             this.PollsRepository.Synchronous(() =>
             {
                 this.Synchronize(this.chainIndexer.Tip);
@@ -381,8 +379,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
                         else if (poll.VotingData.Key == VoteKey.KickFederationMember)
                         {
-                            Guard.Assert(modifiedFederation.Contains(federationMember));
-                            modifiedFederation.Remove(federationMember);
+                            if (modifiedFederation.Contains(federationMember))
+                            {
+                                modifiedFederation.Remove(federationMember);
+                            }
                         }
                     }
 
@@ -482,6 +482,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             continue;
 
                         Poll poll = this.polls.SingleOrDefault(x => x.VotingData == data && !x.IsExecuted);
+
+                        Guard.Assert(poll == null || poll.PollStartBlockData.Height < chBlock.ChainedHeader.Height);
 
                         if (poll == null)
                         {

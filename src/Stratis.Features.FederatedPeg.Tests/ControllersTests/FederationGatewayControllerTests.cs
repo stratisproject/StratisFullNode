@@ -257,14 +257,12 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
             var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), asyncProvider);
-            finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
-            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
+            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, this.network);
             var federationHistory = new FederationHistory(this.federationManager, votingManager);
             votingManager.Initialize(federationHistory);
 
