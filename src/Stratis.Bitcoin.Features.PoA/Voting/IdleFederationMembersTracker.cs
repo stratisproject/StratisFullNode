@@ -283,9 +283,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             continue;
 
                         present[rowKey.blockHeight - firstRequiredBlock.Height] = true;
+                        break;
                     }
                 }
-
+                
                 // Process the blocks that are not present.
                 ChainedHeader[] chainedHeaders = lastRequiredBlock.EnumerateToGenesis()
                     .TakeWhile(x => x.Height >= firstRequiredBlock.Height)
@@ -293,11 +294,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     .Reverse()
                     .ToArray();
 
-                foreach ((PubKey pubKey, ChainedHeader chainedHeader, byte[] key) in this.idleFederationMembersTracker.federationHistory.GetFederationMembersForBlocks(chainedHeaders)
-                    .Select((member, n) => (member.PubKey, chainedHeaders[n], this.idleFederationMembersTracker.ActivityKey(member.PubKey, (uint)chainedHeaders[n].Height, chainedHeaders[n].HashBlock, Activity.Mined)))
-                    .OrderBy(x => x.Item3, new ByteArrayComparer()))
+                if (chainedHeaders.Length > 0)
                 {
-                    this.idleFederationMembersTracker.RecordActivity(transaction, pubKey, chainedHeader, key);
+                    foreach ((PubKey pubKey, ChainedHeader chainedHeader, byte[] key) in this.idleFederationMembersTracker.federationHistory.GetFederationMembersForBlocks(chainedHeaders)
+                        .Select((member, n) => (member.PubKey, chainedHeaders[n], this.idleFederationMembersTracker.ActivityKey(member.PubKey, (uint)chainedHeaders[n].Height, chainedHeaders[n].HashBlock, Activity.Mined)))
+                        .OrderBy(x => x.Item3, new ByteArrayComparer()))
+                    {
+                        this.idleFederationMembersTracker.RecordActivity(transaction, pubKey, chainedHeader, key);
+                    }
                 }
 
                 ChainedHeader prevFirst = this.idleFederationMembersTracker.chainIndexer.GetHeader(this.FirstConfirmedBlock.Height).Previous;

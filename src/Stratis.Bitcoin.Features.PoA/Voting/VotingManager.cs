@@ -382,6 +382,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         int pollExecutionHeight = poll.PollVotedInFavorBlockData.Height + (int)this.network.Consensus.MaxReorgLength;
                         if (pollExecutionHeight > chainedHeader.Height)
                         {
+                            this.cachedFederations[chainedHeader.HashBlock] = modifiedFederation;
+
                             yield return new List<IFederationMember>(modifiedFederation);
                             break;
                         }
