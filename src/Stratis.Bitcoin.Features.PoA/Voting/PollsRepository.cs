@@ -22,6 +22,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ChainIndexer chainIndexer;
 
+        private readonly NodeSettings nodeSettings;
+
         internal const string DataTable = "DataTable";
 
         private static readonly byte[] RepositoryHighestIndexKey = new byte[0];
@@ -34,13 +36,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings)
         {
         }
 
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
@@ -50,7 +52,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.dBreezeSerializer = dBreezeSerializer;
 
-            this.chainIndexer = chainIndexer;            
+            this.chainIndexer = chainIndexer;
+            this.nodeSettings = nodeSettings;
         }
 
         public void Initialize()
@@ -95,8 +98,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
                     }
 
-                    // Trim polls repository to height.
                     int trimHeight = this.chainIndexer.Tip.Height;
+
+                    if (this.nodeSettings.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, -1) != -1)
+                    {
+                        trimHeight = this.nodeSettings.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, 0);
+                    }
+
+                    // Trim polls repository to height.
                     if (this.CurrentTip?.Height > trimHeight)
                     {
                         // Determine list of polls to remove completely.

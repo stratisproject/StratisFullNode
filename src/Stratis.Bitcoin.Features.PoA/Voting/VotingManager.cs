@@ -69,7 +69,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private List<VotingData> scheduledVotingData;
 
         private bool isInitialized;
-        private bool isBusyReconstructing;
 
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals,
@@ -77,7 +76,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Network network,
             IBlockRepository blockRepository = null,
             ChainIndexer chainIndexer = null,
-            INodeLifetime nodeLifetime = null)
+            INodeLifetime nodeLifetime = null,
+            NodeSettings nodeSettings = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -88,7 +88,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
             this.scheduledVotingData = new List<VotingData>();
-            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
+            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings);
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
@@ -151,51 +151,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     transaction.Commit();
                 }
             });
-        }
-
-        /// <summary> Reconstructs voting and poll data from a given height.</summary>
-        /// <param name="height">The height to start reconstructing from.</param>
-        public void ReconstructVotingDataFromHeightLocked(int height)
-        {
-            try
-            {
-                this.isBusyReconstructing = true;
-
-                var currentHeight = height;
-                var progress = $"Reconstructing voting poll data from height {currentHeight}.";
-                this.logger.LogInformation(progress);
-                this.signals.Publish(new RecontructFederationProgressEvent() { Progress = progress });
-
-                do
-                {
-                    ChainedHeader chainedHeader = this.chainIndexer.GetHeader(currentHeight);
-                    if (chainedHeader == null)
-                        break;
-
-                    Block block = this.blockRepository.GetBlock(chainedHeader.HashBlock);
-                    if (block == null)
-                        break;
-
-                    var chainedHeaderBlock = new ChainedHeaderBlock(block, chainedHeader);
-
-                    this.idleFederationMembersKicker.UpdateFederationMembersLastActiveTime(chainedHeaderBlock, false);
-
-                    OnBlockConnected(new BlockConnected(chainedHeaderBlock));
-
-                    currentHeight++;
-
-                    if (currentHeight % 10000 == 0)
-                    {
-                        progress = $"Reconstructing voting data at height {currentHeight}";
-                        this.logger.LogInformation(progress);
-                        this.signals.Publish(new RecontructFederationProgressEvent() { Progress = progress });
-                    }
-                } while (true);
-            }
-            finally
-            {
-                this.isBusyReconstructing = false;
-            }
         }
 
         /// <summary>Schedules a vote for the next time when the block will be mined.</summary>

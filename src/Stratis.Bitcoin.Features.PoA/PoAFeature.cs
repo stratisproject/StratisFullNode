@@ -56,8 +56,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IBlockStoreQueue blockStoreQueue;
 
-        private readonly ReconstructFederationService reconstructFederationService;
-
         private readonly NodeSettings nodeSettings;
 
         public PoAFeature(
@@ -77,7 +75,6 @@ namespace Stratis.Bitcoin.Features.PoA
             IChainState chainState,
             IBlockStoreQueue blockStoreQueue,
             NodeSettings nodeSettings,
-            ReconstructFederationService reconstructFederationService,
             IPoAMiner miner = null
            )
         {
@@ -96,7 +93,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.chainState = chainState;
             this.blockStoreQueue = blockStoreQueue;
-            this.reconstructFederationService = reconstructFederationService;
             this.nodeSettings = nodeSettings;
 
             payloadProvider.DiscoverPayloads(this.GetType().Assembly);
@@ -133,10 +129,6 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             this.federationManager.Initialize();
-
-            var rebuildFederationHeight = this.nodeSettings.ConfigReader.GetOrDefault(ReconstructFederationFlag, false);
-            if (rebuildFederationHeight)
-                this.reconstructFederationService.Reconstruct();
 
             // If the node is started in devmode, its role must be of miner in order to mine.
             // If devmode is not specified, initialize mining as per normal.
