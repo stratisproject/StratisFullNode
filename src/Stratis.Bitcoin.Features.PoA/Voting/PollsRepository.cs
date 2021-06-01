@@ -26,8 +26,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         internal const string DataTable = "DataTable";
 
-        private static readonly byte[] RepositoryHighestIndexKey = new byte[0];
-
         private static readonly byte[] RepositoryTipKey = new byte[] { 0 };
 
         private readonly object lockObject = new object();
@@ -132,8 +130,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         this.SaveCurrentTip(transaction, this.chainIndexer.GetHeader(trimHeight));
                     }
-
-                    this.SaveHighestPollId(transaction);
                 }
             }
 
@@ -145,9 +141,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.lockObject)
             {
                 this.CurrentTip = new HashHeightPair(tip);
-
-                if (transaction == null)
-                    return;
 
                 transaction.Insert<byte[], byte[]>(DataTable, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
             }
@@ -167,16 +160,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private void SaveHighestPollId(DBreeze.Transactions.Transaction transaction)
-        {
-            if (this.CurrentTip == null)
-                transaction.RemoveKey<byte[]>(DataTable, RepositoryTipKey);
-            else
-                transaction.Insert<byte[], byte[]>(DataTable, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
-
-            transaction.Insert<byte[], int>(DataTable, RepositoryHighestIndexKey, this.highestPollId);
-        }
-
         /// <summary>Removes polls for the provided ids.</summary>
         public void DeletePollsAndSetHighestPollId(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
@@ -189,7 +172,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 List<Poll> polls = GetAllPolls(transaction);
                 this.highestPollId = (polls.Count == 0) ? -1 : polls.Max(a => a.Id);
-                SaveHighestPollId(transaction);
             }
         }
 
@@ -206,7 +188,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     transaction.RemoveKey<byte[]>(DataTable, pollId.ToBytes());
 
                     this.highestPollId--;
-                    this.SaveHighestPollId(transaction);
                 }
             }
         }
@@ -248,7 +229,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     transaction.Insert<byte[], byte[]>(DataTable, pollToAdd.Id.ToBytes(), bytes);
 
                     this.highestPollId++;
-                    this.SaveHighestPollId(transaction);
                 }
             }
         }
