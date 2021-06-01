@@ -23,6 +23,8 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
         IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader, List<IFederationMember> federation);
 
+        IEnumerable<IFederationMember> GetFederationMembersForBlocks(IEnumerable<ChainedHeader> chainedHeaders);
+
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
@@ -49,7 +51,7 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         private readonly IFederationManager federationManager;
         private readonly VotingManager votingManager;
-        private readonly Dictionary<uint256, IFederationMember> minersByBlockHash;
+        internal readonly Dictionary<uint256, IFederationMember> minersByBlockHash;
 
         public FederationHistory(IFederationManager federationManager, VotingManager votingManager)
         {
@@ -77,6 +79,15 @@ namespace Stratis.Bitcoin.Features.PoA
                 return federationMember;
 
             return GetFederationMemberForBlockInternal(chainedHeader, this.GetFederationForBlock(chainedHeader));
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<IFederationMember> GetFederationMembersForBlocks(IEnumerable<ChainedHeader> chainedHeaders)
+        {
+            List<IFederationMember>[] federations = this.votingManager.GetModifiedFederations(chainedHeaders).ToArray();
+
+            return chainedHeaders.Select((chainedHeader, n) => this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember) ? federationMember : 
+                GetFederationMemberForBlockInternal(chainedHeader, federations[n]));
         }
 
         /// <inheritdoc />

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
 using NBitcoin;
@@ -99,11 +100,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return key;
         }
 
+        private void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader chainedHeader, byte[] key)
+        {
+            transaction.Insert(ActivityTable, key, chainedHeader.Header.Time);
+            this.members.Add(pubKey);
+        }
+
         private void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader chainedHeader, Activity activity)
         {
-            byte[] key = this.ActivityKey(pubKey, (uint)chainedHeader.Height, chainedHeader.HashBlock, activity);
-            transaction.Insert(ActivityTable, key, chainedHeader.Header.Time);            
-            this.members.Add(pubKey);
+            this.RecordActivity(transaction, pubKey, chainedHeader, this.ActivityKey(pubKey, (uint)chainedHeader.Height, chainedHeader.HashBlock, activity));
         }
 
         private bool TryGetLastActivity(DBreeze.Transactions.Transaction transaction,  IFederationMember federationMember, ChainedHeader tip, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity activity) activity)
@@ -174,17 +179,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // Most recent "Joined" or "Mined" activity.
             private Dictionary<PubKey, (uint, uint256, uint, Activity)> lastActivity;
 
-            public void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader chainedHeader, Activity activity, uint time)
+            public void RecordActivity(DBreeze.Transactions.Transaction transaction, PubKey pubKey, ChainedHeader chainedHeader, Activity activity)
             {
                 this.idleFederationMembersTracker.RecordActivity(transaction, pubKey, chainedHeader, activity);
+
+                uint blockTime = chainedHeader.Header.Time;
 
                 if (this.LastConfirmedBlock.Hash == chainedHeader.Previous.HashBlock)
                 {
                     this.LastConfirmedBlock = new HashHeightPair(chainedHeader);
-                    this.LastConfirmedTime = time;
+                    this.LastConfirmedTime = blockTime;
                 }
 
-                this.lastActivity[pubKey] = ((uint)chainedHeader.Height, chainedHeader.HashBlock, time, activity);
+                this.lastActivity[pubKey] = ((uint)chainedHeader.Height, chainedHeader.HashBlock, blockTime, activity);
             }
 
             public bool TryGetLastCachedActivity(PubKey pubKey, out (uint blockHeight, uint256 blockHash, uint blockTime, Activity type) lastActivity)
@@ -270,25 +277,27 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         if (!row.Exists)
                             continue;
 
-                        uint height = BitConverter.ToUInt32(row.Key.SafeSubarray(33, 4).Reverse());
+                        var rowKey = this.idleFederationMembersTracker.DeserializeActivityRowKey(row.Key);
 
-                        present[height - firstRequiredBlock.Height] = true;
+                        if (rowKey.activity != Activity.Mined)
+                            continue;
+
+                        present[rowKey.blockHeight - firstRequiredBlock.Height] = true;
                     }
                 }
 
                 // Process the blocks that are not present.
-                foreach (ChainedHeader chainedHeader in lastRequiredBlock.EnumerateToGenesis())
+                ChainedHeader[] chainedHeaders = lastRequiredBlock.EnumerateToGenesis()
+                    .TakeWhile(x => x.Height >= firstRequiredBlock.Height)
+                    .Where(x => !present[x.Height - firstRequiredBlock.Height])
+                    .Reverse()
+                    .ToArray();
+
+                foreach ((PubKey pubKey, ChainedHeader chainedHeader, byte[] key) in this.idleFederationMembersTracker.federationHistory.GetFederationMembersForBlocks(chainedHeaders)
+                    .Select((member, n) => (member.PubKey, chainedHeaders[n], this.idleFederationMembersTracker.ActivityKey(member.PubKey, (uint)chainedHeaders[n].Height, chainedHeaders[n].HashBlock, Activity.Mined)))
+                    .OrderBy(x => x.Item3, new ByteArrayComparer()))
                 {
-                    if (!present[chainedHeader.Height - firstRequiredBlock.Height])
-                    {
-                        IFederationMember federationMember = this.idleFederationMembersTracker.federationHistory.GetFederationMemberForBlock(this.idleFederationMembersTracker.chainIndexer[chainedHeader.Height]);
-
-                        // Process the missing block.
-                        this.idleFederationMembersTracker.RecordActivity(transaction, federationMember.PubKey, chainedHeader, Activity.Mined);
-                    }
-
-                    if (chainedHeader.Height <= firstRequiredBlock.Height)
-                        break;
+                    this.idleFederationMembersTracker.RecordActivity(transaction, pubKey, chainedHeader, key);
                 }
 
                 ChainedHeader prevFirst = this.idleFederationMembersTracker.chainIndexer.GetHeader(this.FirstConfirmedBlock.Height).Previous;

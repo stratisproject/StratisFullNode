@@ -93,10 +93,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (trimHeight > (this.CurrentTip?.Height ?? 0))
                         trimHeight = (this.CurrentTip?.Height ?? 0);
 
-                    int maxStartHeight = polls.Max(p => p.PollStartBlockData.Height);
-                    int maxVotedInFavorHeight = polls.Max(p => p.PollVotedInFavorBlockData?.Height ?? 0);
-                    int maxPollExecutedHeight = polls.Max(p => p.PollExecutedBlockData?.Height ?? 0);
-                    int maxHeight = Math.Max(maxStartHeight, Math.Max(maxVotedInFavorHeight, maxPollExecutedHeight));
+                    int maxHeight = 0;
+                    if (polls.Length > 0)
+                    {
+                        int maxStartHeight = polls.Max(p => p.PollStartBlockData.Height);
+                        int maxVotedInFavorHeight = polls.Max(p => p.PollVotedInFavorBlockData?.Height ?? 0);
+                        int maxPollExecutedHeight = polls.Max(p => p.PollExecutedBlockData?.Height ?? 0);
+
+                        maxHeight = Math.Max(maxStartHeight, Math.Max(maxVotedInFavorHeight, maxPollExecutedHeight));
+                    }
 
                     // Trim polls repository to height.
                     if (maxHeight > trimHeight)
