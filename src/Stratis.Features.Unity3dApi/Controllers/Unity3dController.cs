@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Unity3dApi.Models;
 
 namespace Stratis.Features.Unity3dApi.Controllers
 {
@@ -108,17 +107,23 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             FetchCoinsResponse fetchCoinsResponse = this.coinView.FetchCoins(collectedOutPoints.ToArray());
 
-            // Unspent outpoints
-            List<OutPoint> cleanedOutPoints = collectedOutPoints.Where(x => fetchCoinsResponse.UnspentOutputs[x].Coins != null).ToList();
-
-            List<OutPointModel> outPointModels = cleanedOutPoints.Select(x => new OutPointModel(x)).ToList();
-
             GetURXOsResponseModel response = new GetURXOsResponseModel()
             {
                 BalanceSat = balanceSat,
-                UTXOs = outPointModels
+                UTXOs = new List<UTXOModel>()
             };
-            
+
+            foreach (KeyValuePair<OutPoint, UnspentOutput> unspentOutput in fetchCoinsResponse.UnspentOutputs)
+            {
+                if (unspentOutput.Value.Coins == null)
+                    continue; // spent
+
+                OutPoint outPoint = unspentOutput.Key;
+                Money value = unspentOutput.Value.Coins.TxOut.Value;
+
+                response.UTXOs.Add(new UTXOModel(outPoint, value));
+            }
+
             return this.Json(response);
         }
 
