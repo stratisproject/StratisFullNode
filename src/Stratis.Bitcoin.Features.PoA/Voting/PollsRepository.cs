@@ -136,13 +136,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
         }
 
-        public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
+        public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip = null)
         {
             lock (this.lockObject)
             {
-                this.CurrentTip = new HashHeightPair(tip);
+                if (tip != null)
+                    this.CurrentTip = new HashHeightPair(tip);
 
-                transaction.Insert<byte[], byte[]>(DataTable, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
+                if (transaction != null)
+                    transaction.Insert<byte[], byte[]>(DataTable, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
             }
         }
 

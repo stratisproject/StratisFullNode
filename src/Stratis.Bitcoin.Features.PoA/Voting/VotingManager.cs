@@ -7,11 +7,9 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.BlockStore;
-using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
@@ -39,8 +37,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly Network network;
         private readonly ILogger logger;
 
-        private readonly IFinalizedBlockInfoRepository finalizedBlockInfo;
-
         /// <summary>Protects access to <see cref="scheduledVotingData"/>, <see cref="polls"/>, <see cref="PollsRepository"/>.</summary>
         private readonly object locker;
 
@@ -50,8 +46,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private IdleFederationMembersTracker idleFederationMembersTracker;
 
         private IdleFederationMembersTracker.Cursor idleFederationMembersCursor;
-
-        private IIdleFederationMembersKicker idleFederationMembersKicker;
 
         private INodeLifetime nodeLifetime;
 
@@ -68,11 +62,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private List<VotingData> scheduledVotingData;
 
-        private bool isInitialized;
+        internal bool isInitialized;
 
         public VotingManager(IFederationManager federationManager, ILoggerFactory loggerFactory, IPollResultExecutor pollResultExecutor,
             INodeStats nodeStats, DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals,
-            IFinalizedBlockInfoRepository finalizedBlockInfo,
             Network network,
             IBlockRepository blockRepository = null,
             ChainIndexer chainIndexer = null,
@@ -83,7 +76,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
             this.signals = Guard.NotNull(signals, nameof(signals));
             this.nodeStats = Guard.NotNull(nodeStats, nameof(nodeStats));
-            this.finalizedBlockInfo = Guard.NotNull(finalizedBlockInfo, nameof(finalizedBlockInfo));
 
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
@@ -100,10 +92,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.dBreezeSerializer = dBreezeSerializer;
         }
 
-        public void Initialize(IFederationHistory federationHistory, IIdleFederationMembersKicker idleFederationMembersKicker = null)
+        public void Initialize(IFederationHistory federationHistory)
         {
             this.federationHistory = federationHistory;
-            this.idleFederationMembersKicker = idleFederationMembersKicker;
+            ((FederationHistory)this.federationHistory).Initialize(this.network, this.chainIndexer, this.nodeLifetime.ApplicationStopping);
             this.idleFederationMembersTracker = new IdleFederationMembersTracker(this.network, this.PollsRepository, this.dBreezeSerializer, this.chainIndexer, federationHistory);
             this.idleFederationMembersCursor = new IdleFederationMembersTracker.Cursor(this.idleFederationMembersTracker);
 
@@ -426,63 +418,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                HashHeightPair newFinalizedHash = this.finalizedBlockInfo.GetFinalizedBlockInfo();
-                PubKey fedMemberKey;
-
-                // Please see the description under `VotingManagerV2ActivationHeight`.
-                // PubKey of the federation member that created the voting data.
-                //       if (this.poaConsensusOptions.VotingManagerV2ActivationHeight == 0 || chBlock.ChainedHeader.Height < this.poaConsensusOptions.VotingManagerV2ActivationHeight)
-                //           fedMemberKey = this.federationHistory.GetFederationMemberForTimestamp(chBlock.Block.Header.Time, this.poaConsensusOptions).PubKey;
-                //       else
-
-                int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight() /* 1413998 */;
+                int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight();
                 if (chBlock.ChainedHeader.Height == multisigMinersApplicabilityHeight)
                     this.EnterStraxEra(modifiedFederation);
 
-                IFederationMember member = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader, modifiedFederation);
-                if (member == null)
-                {
-                    // Determine the failed poll that should have added the member.
-                    foreach (Poll poll in this.GetPendingPolls().ToList())
-                    {
-                        if (poll.VotingData.Key != VoteKey.AddFederationMember)
-                            continue;
-
-                        IFederationMember federationMember = ((PoAConsensusFactory)this.network.Consensus.ConsensusFactory).DeserializeFederationMember(poll.VotingData.Data);
-                        member = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader, new List<IFederationMember>() { federationMember });
-                        if (member != null)
-                        {
-                        }
-                    }
-                }
-
-                fedMemberKey = member.PubKey;
-
-                // TODO: Remove this debug code. It simulates the header signature rule.
-                if (this.idleFederationMembersCursor.TryGetLastCachedActivity(fedMemberKey, out (uint blockHeight, uint256 blockHash, uint blockTime, IdleFederationMembersTracker.Activity activity) lastActivity))
-                {
-                    uint idleTimeSeconds = chBlock.ChainedHeader.Header.Time - lastActivity.blockTime;
-                    uint expectedIdleTimeSeconds = (uint)modifiedFederation.Count * (uint)this.poaConsensusOptions.TargetSpacingSeconds;
-                    if (idleTimeSeconds < expectedIdleTimeSeconds)
-                    {
-                        bool changed = this.GetModifiedFederation(chBlock.ChainedHeader.GetAncestor((int)lastActivity.blockHeight)).Count != modifiedFederation.Count;
-                        changed |= this.GetModifiedFederation(chBlock.ChainedHeader.GetAncestor((int)lastActivity.blockHeight).Previous).Count != modifiedFederation.Count;
-
-                        if (!changed)
-                        {
-                            // Slot-based mining seems to be present up to block 2342180.
-                            if (fedMemberKey != this.federationHistory.GetFederationMemberForTimestamp(chBlock.ChainedHeader, this.poaConsensusOptions, modifiedFederation).PubKey)
-                            {
-                            }
-                        }
-                    }
-                }
-                
-                this.idleFederationMembersCursor.RecordActivity(transaction, fedMemberKey, chBlock.ChainedHeader, IdleFederationMembersTracker.Activity.Mined, chBlock.ChainedHeader.Header.Time);
-
                 lock (this.locker)
                 {
-                    this.PollsRepository.SaveCurrentTip(transaction, chBlock.ChainedHeader);
+                    this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader);
 
                     foreach (Poll poll in this.GetApprovedPolls())
                     {
@@ -502,6 +444,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
                     }
                 }
+
+                IFederationMember member = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader, modifiedFederation);
+
+                PubKey fedMemberKey = member.PubKey;
+
+                this.idleFederationMembersCursor.RecordActivity(transaction, fedMemberKey, chBlock.ChainedHeader, IdleFederationMembersTracker.Activity.Mined, chBlock.ChainedHeader.Header.Time);
 
                 byte[] rawVotingData = this.votingDataEncoder.ExtractRawVotingData(chBlock.Block.Transactions[0]);
 
@@ -634,7 +582,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.logger.LogTrace("(-)[NO_VOTING_DATA]");
 
-                this.PollsRepository.SaveCurrentTip(transaction, chBlock.ChainedHeader.Previous);
+                this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader.Previous);
                 return;
             }
 
@@ -680,7 +628,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     }
                 }
 
-                this.PollsRepository.SaveCurrentTip(transaction, chBlock.ChainedHeader.Previous);
+                this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader.Previous);
             }
         }
 
@@ -780,6 +728,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
                             }
                         }
+
+                        this.PollsRepository.SaveCurrentTip(transaction);
 
                         transaction.Commit();
                     });

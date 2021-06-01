@@ -112,21 +112,15 @@ namespace Stratis.Bitcoin.Features.PoA
             // This may be required when the voting repository synchronizes during initialization, so initialize it first.
             this.whitelistedHashesRepository.Initialize();
 
-            if (options.VotingEnabled)
+            if (options.VotingEnabled && options.AutoKickIdleMembers)
             {
                 // If we are kicking members, we need to initialize this component before the VotingManager.
                 // The VotingManager may tally votes and execute federation changes, but the IdleKicker needs to know who the current block is from.
                 // The IdleKicker can much more easily find out who the block is from if it receives the block first.
-                if (options.AutoKickIdleMembers)
-                {
-                    this.idleFederationMembersKicker.Initialize();
-                    this.votingManager.Initialize(this.federationHistory, this.idleFederationMembersKicker);
-                }
-                else
-                {
-                    this.votingManager.Initialize(this.federationHistory);
-                }
+                this.idleFederationMembersKicker.Initialize();
             }
+
+            this.votingManager.Initialize(this.federationHistory);
 
             this.federationManager.Initialize();
 
