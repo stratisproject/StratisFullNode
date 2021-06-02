@@ -196,11 +196,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.logger.Info("Conversion transaction {0} received in matured blocks.", potentialConversionTransaction.Id);
 
-                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
-                    {
-                        this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
-                        continue;
-                    }
+                    // TODO comment back once conversion txs has been processed.
+                    //if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    //{
+                    //    this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
+                    //    continue;
+                    //}
 
                     // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
                     // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
