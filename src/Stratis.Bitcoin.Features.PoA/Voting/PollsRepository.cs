@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
                                 .ToArray();
 
-                            Guard.Assert(this.highestPollId == ((polls.Length > 0) ? polls.Max(p => p.Id) : -1));
+                            this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
                         }
 
                         // Update any polls are executed after the trim height.

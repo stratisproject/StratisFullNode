@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Crypto;
 using Stratis.Bitcoin.Features.PoA.Voting;
@@ -23,7 +24,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
         IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader, List<IFederationMember> federation);
 
-        IEnumerable<IFederationMember> GetFederationMembersForBlocks(IEnumerable<ChainedHeader> chainedHeaders);
+        IFederationMember[] GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders);
 
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
@@ -75,34 +76,36 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader)
         {
-            if (this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember))
-                return federationMember;
-
             return GetFederationMemberForBlockInternal(chainedHeader, this.GetFederationForBlock(chainedHeader));
-        }
-
-        /// <inheritdoc />
-        public IEnumerable<IFederationMember> GetFederationMembersForBlocks(IEnumerable<ChainedHeader> chainedHeaders)
-        {
-            List<IFederationMember>[] federations = this.votingManager.GetModifiedFederations(chainedHeaders).ToArray();
-
-            return chainedHeaders.Select((chainedHeader, n) => this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember) ? federationMember : 
-                GetFederationMemberForBlockInternal(chainedHeader, federations[n]));
         }
 
         /// <inheritdoc />
         public IFederationMember GetFederationMemberForBlock(ChainedHeader chainedHeader, List<IFederationMember> federation)
         {
-            if (this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember))
-                return federationMember;
-
             return GetFederationMemberForBlockInternal(chainedHeader, federation);
+        }
+
+        /// <inheritdoc />
+        public IFederationMember[] GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders)
+        {
+            if (chainedHeaders.Length <= 1)
+                return (chainedHeaders.Length == 0) ? new IFederationMember[] { } : new IFederationMember[] { GetFederationMemberForBlock(chainedHeaders[0]) };
+
+            List<IFederationMember>[] federations = this.votingManager.GetModifiedFederations(chainedHeaders).ToArray();
+            IFederationMember[] miners = new IFederationMember[chainedHeaders.Length];
+
+            Parallel.For(0, chainedHeaders.Length, (i) => miners[i] = GetFederationMemberForBlockInternal(chainedHeaders[i], federations[i]));
+
+            return miners;
         }
 
         private IFederationMember GetFederationMemberForBlockInternal(ChainedHeader chainedHeader, List<IFederationMember> federation)
         {
             if (chainedHeader.Height == 0)
                 return federation.Last();
+
+            if (this.minersByBlockHash.TryGetValue(chainedHeader.HashBlock, out IFederationMember federationMember))
+                return federationMember;
 
             // Try to provide the public key that signed the block.
             try
@@ -116,7 +119,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     if (pubKeyForSig == null)
                         break;
 
-                    IFederationMember federationMember = federation.FirstOrDefault(m => m.PubKey == pubKeyForSig);
+                    federationMember = federation.FirstOrDefault(m => m.PubKey == pubKeyForSig);
                     if (federationMember != null)
                     {
                         this.minersByBlockHash[chainedHeader.HashBlock] = federationMember;

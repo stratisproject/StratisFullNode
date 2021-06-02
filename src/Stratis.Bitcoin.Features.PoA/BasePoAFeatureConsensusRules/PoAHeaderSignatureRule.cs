@@ -51,6 +51,12 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(chainedHeader);
 
             PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, federation)?.PubKey;
+            if (pubKey == null)
+            {
+                this.Logger.LogWarning("The block signature could not be matched with a current federation member.");
+                this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
+                PoAConsensusErrors.InvalidHeaderSignature.Throw();
+            }
 
             // Look at the last round of blocks to find the previous time that the miner mined.
             var roundTime = this.slotsManager.GetRoundLength(federation.Count);

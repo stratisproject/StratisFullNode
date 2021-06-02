@@ -5,16 +5,17 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Signals;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public interface IPollResultExecutor
     {
         /// <summary>Applies effect of <see cref="VotingData"/>.</summary>
-        void ApplyChange(VotingData data, List<IFederationMember> modifiedFederation);
+        void ApplyChange(VotingData data, List<IFederationMember> modifiedFederation, ChainedHeader joinedHeader);
 
         /// <summary>Reverts effect of <see cref="VotingData"/>.</summary>
-        void RevertChange(VotingData data, List<IFederationMember> modifiedFederation);
+        void RevertChange(VotingData data, List<IFederationMember> modifiedFederation, ChainedHeader joinedHeader);
 
         /// <summary>Converts <see cref="VotingData"/> to a human readable format.</summary>
         string ConvertToString(VotingData data);
@@ -30,22 +31,28 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ILogger logger;
 
-        public PollResultExecutor(ILoggerFactory loggerFactory, IWhitelistedHashesRepository whitelistedHashesRepository, Network network, ISignals signals)
+        private readonly Network network;
+
+        private readonly IFederationManager federationManager;
+
+        public PollResultExecutor(ILoggerFactory loggerFactory, IWhitelistedHashesRepository whitelistedHashesRepository, Network network, ISignals signals, IFederationManager federationManager)
         {
             this.whitelistedHashesRepository = whitelistedHashesRepository;
             this.consensusFactory = network.Consensus.ConsensusFactory as PoAConsensusFactory;
             this.signals = signals;
+            this.federationManager = federationManager;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.network = network;
         }
 
         /// <inheritdoc />
-        public void ApplyChange(VotingData data, List<IFederationMember> modifiedFederation)
+        public void ApplyChange(VotingData data, List<IFederationMember> modifiedFederation, ChainedHeader chainedHeader)
         {
             switch (data.Key)
             {
                 case VoteKey.AddFederationMember:
-                    this.AddFederationMember(data.Data, modifiedFederation);
+                    this.AddFederationMember(data.Data, modifiedFederation, chainedHeader);
                     break;
 
                 case VoteKey.KickFederationMember:
@@ -63,7 +70,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <inheritdoc />
-        public void RevertChange(VotingData data, List<IFederationMember> modifiedFederation)
+        public void RevertChange(VotingData data, List<IFederationMember> modifiedFederation, ChainedHeader joinedHeader)
         {
             switch (data.Key)
             {
@@ -72,7 +79,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     break;
 
                 case VoteKey.KickFederationMember:
-                    this.AddFederationMember(data.Data, modifiedFederation);
+                    this.AddFederationMember(data.Data, modifiedFederation, joinedHeader);
                     break;
 
                 case VoteKey.WhitelistHash:
@@ -107,16 +114,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>Should be protected by <see cref="locker"/>.</summary>
-        private void AddFederationMember(byte[] federationMemberBytes, List<IFederationMember> modifiedFederation)
+        private void AddFederationMember(byte[] federationMemberBytes, List<IFederationMember> modifiedFederation, ChainedHeader joinedHeader)
         {
             IFederationMember federationMember = this.consensusFactory.DeserializeFederationMember(federationMemberBytes);
-
+            /*
             if (modifiedFederation.Contains(federationMember))
             {
                 this.logger.LogDebug("(-)[FEDERATION_MEMBER_ALREADY_EXISTS]");
                 return;
             }
-
+            */
             if (federationMember is CollateralFederationMember collateralFederationMember)
             {
                 if (modifiedFederation.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
@@ -129,6 +136,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     this.logger.LogDebug("(-)[ALREADY_EXISTS]");
                     return;
+                }
+
+                bool straxEra = joinedHeader.Height >= this.federationManager.GetMultisigMinersApplicabilityHeight();
+                if (straxEra)
+                {
+                    bool shouldBeMultisigMember = ((PoANetwork)this.network).StraxMiningMultisigMembers.Contains(federationMember.PubKey);
+                    if (collateralFederationMember.IsMultisigMember != shouldBeMultisigMember)
+                        collateralFederationMember.IsMultisigMember = shouldBeMultisigMember;
                 }
             }
 
