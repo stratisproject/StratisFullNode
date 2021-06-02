@@ -167,7 +167,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 if (proposals.Count >= this.quorum)
                 {
                     IEnumerable<long> values = proposals.Values.Select(s => Convert.ToInt64(s));
-                    this.logger.Debug($"Proposal fee for request id {proposals.Count} has concluded; average amount: {values.Average()}");
+                    this.logger.Debug($"Proposal fee for request id '{requestId}' has concluded; average amount: {values.Average()}");
                     isProposalConcluded = true;
                 }
                 else
@@ -192,18 +192,18 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 if (!this.feeProposalsByRequestId.TryGetValue(requestId, out Dictionary<PubKey, ulong> proposals))
                 {
                     // Add this pubkey's proposal.
-                    this.logger.Debug($"Adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
-                    this.feeProposalsByRequestId.Add(requestId, new Dictionary<PubKey, ulong>() { { this.federationManager.CurrentFederationKey.PubKey, feeAmount } });
+                    this.logger.Debug($"Request doesn't exist, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                    this.feeProposalsByRequestId.Add(requestId, new Dictionary<PubKey, ulong>() { { pubKey, feeAmount } });
                 }
                 else
                 {
                     if (!proposals.Any(p => p.Key == pubKey))
                     {
                         proposals.Add(pubKey, feeAmount);
-                        this.logger.Debug($"Add proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        this.logger.Debug($"Request exists, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
                     }
                     else
-                        this.logger.Debug($"{pubKey} has already proposed a fee for conversion request id '{requestId}'.");
+                        this.logger.Debug($"Conversion request id '{requestId}' has already been voted on by {pubKey}.");
                 }
 
                 this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
@@ -213,7 +213,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 {
                     proposals.Add(this.federationManager.CurrentFederationKey.PubKey, feeAmount);
 
-                    this.logger.Debug($"Add proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
+                    this.logger.Debug($"Adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
                 }
             }
         }
