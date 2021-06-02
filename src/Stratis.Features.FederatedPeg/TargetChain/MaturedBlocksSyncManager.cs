@@ -47,7 +47,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ICoordinationManager coordinationManager;
         private readonly Network network;
         private readonly IFederationManager federationManager;
-        
+
         private IAsyncLoop requestDepositsTask;
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.coordinationManager = coordinationManager;
             this.network = network;
             this.federationManager = federationManager;
-            
+
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -196,12 +196,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.logger.Info("Conversion transaction {0} received in matured blocks.", potentialConversionTransaction.Id);
 
-                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
-                    {
-                        this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
-
-                        continue;
-                    }
+                    //if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    //{
+                    //    this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
+                    //    continue;
+                    //}
 
                     // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
                     // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
@@ -229,102 +228,136 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (!found)
                     {
                         this.logger.Warn("Unable to determine timestamp for conversion transaction {0}, ignoring.", potentialConversionTransaction.Id);
-
                         continue;
                     }
-
-                    // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated on the other chain.
-                    // Note that this may not be precisely the fee that will be used; the multisig members need to agree on the actual amount.
-                    decimal tempConversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
-                    ulong tempConversionFeeAmountSatoshi = (ulong)(tempConversionFeeAmount * 100_000_000m);
-
-                    // First check if the other nodes have started proposing fees, in which case compare it against what we think the fee should be.
-                    ulong candidateFee = this.coordinationManager.GetCandidateTransactionFee(potentialConversionTransaction.Id.ToString());
-
-                    if (candidateFee == 0UL)
-                    {
-                        candidateFee = tempConversionFeeAmountSatoshi;
-                    }
-
-                    if ((Math.Abs(candidateFee - tempConversionFeeAmount) / tempConversionFeeAmount * 100) <= 10)
-                    {
-                        // The candidate fee has diverged too far from the estimated fee.
-                        this.logger.Warn("Estimated conversion fee for transaction {0} ({1}) significantly differs from fee received from peers: {1}.", potentialConversionTransaction.Id, tempConversionFeeAmountSatoshi, candidateFee);
-                    }
-
-                    this.coordinationManager.AddFeeVote(potentialConversionTransaction.Id.ToString(), candidateFee, this.federationManager.GetCurrentFederationMember().PubKey);
-
-                    await this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, potentialConversionTransaction.Id.ToString(), candidateFee);
-
-                    ulong conversionFeeAmountSatoshi;
 
                     do
                     {
-                        conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.coordinationManager.GetQuorum());
+                        if (this.coordinationManager.HasProposalConcluded(potentialConversionTransaction.Id.ToString()))
+                            break;
 
-                        if (conversionFeeAmountSatoshi == 0UL)
-                        {
-                            this.logger.Warn("The actual fee for conversion transaction {0} has not yet been agreed upon by all the nodes, stalling deposit processing.", potentialConversionTransaction.Id);
+                        await Task.Delay(TimeSpan.FromSeconds(2));
 
-                            await this.coordinationManager.BroadcastAllAsync(this.federationManager.CurrentFederationKey);
-
-                            await Task.Delay(TimeSpan.FromSeconds(2));
-                            
-                            continue;
-                        }
-
-                        break;
+                        continue;
 
                     } while (true);
 
-                    if (Money.Satoshis(conversionFeeAmountSatoshi) >= potentialConversionTransaction.Amount)
-                    {
-                        this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
 
-                        continue;
-                    }
+                    //do
+                    //{
+                    //    // Check if this request has had its fee proposal agreed upon.
+                    //    if (this.coordinationManager.HasFeeBeenAgreed(potentialConversionTransaction.Id.ToString(), out AgreedFee agreed))
+                    //        break;
 
-                    // We insert the fee distribution as a deposit to be processed, albeit with a special address.
-                    // Deposits with this address as their destination will be distributed between the multisig members.
-                    // Note that it will be actioned immediately as a matured deposit.
-                    this.logger.Info("Adding conversion fee distribution for transaction {0} to deposit list.", potentialConversionTransaction.Id);
+                    //    // Check if this node has already voted for the agreed fee.
+                    //    if (this.coordinationManager.AlreadyVotedOnAgreedFee(this.federationManager.GetCurrentFederationMember().PubKey, potentialConversionTransaction.Id.ToString()))
+                    //        break;
 
-                    // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
-                    DepositRetrievalType depositType = DepositRetrievalType.Small;
+                    //    this.logger.Debug($"Broadcasting agreed fee vote of {candidateFee} for conversion request id {potentialConversionTransaction.Id}");
 
-                    switch (potentialConversionTransaction.RetrievalType)
-                    {
-                        case DepositRetrievalType.ConversionSmall:
-                            depositType = DepositRetrievalType.Small;
-                            break;
-                        case DepositRetrievalType.ConversionNormal:
-                            depositType = DepositRetrievalType.Normal;
-                            break;
-                        case DepositRetrievalType.ConversionLarge:
-                            depositType = DepositRetrievalType.Large;
-                            break;
-                    }
+                    //    this.coordinationManager.VoteOnAgreedFee(potentialConversionTransaction.Id.ToString(), agreed, this.federationManager.GetCurrentFederationMember().PubKey);
 
-                    tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
-                        depositType,
-                        Money.Satoshis(conversionFeeAmountSatoshi),
-                        this.network.ConversionTransactionFeeDistributionDummyAddress,
-                        potentialConversionTransaction.BlockNumber,
-                        potentialConversionTransaction.BlockHash));
+                    //    await Task.Delay(TimeSpan.FromSeconds(2));
 
-                    this.logger.Info("Adding conversion request for transaction {0} to repository.", potentialConversionTransaction.Id);
+                    //    continue;
 
-                    this.conversionRequestRepository.Save(new ConversionRequest() {
-                        RequestId = potentialConversionTransaction.Id.ToString(),
-                        RequestType = ConversionRequestType.Mint,
-                        Processed = false,
-                        RequestStatus = ConversionRequestStatus.Unprocessed,
-                        // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(conversionFeeAmountSatoshi)).Satoshi,
-                        BlockHeight = header.Height,
-                        DestinationAddress = potentialConversionTransaction.TargetAddress,
-                        DestinationChain = potentialConversionTransaction.TargetChain
-                    });
+                    //} while (true);
+
+                    //-------------------------------------
+
+                    // Re-compute the conversion transaction fee. It is possible that the gas price and other exchange rates have substantially changed since the deposit was first initiated on the other chain.
+                    // Note that this may not be precisely the fee that will be used; the multisig members need to agree on the actual amount.
+                    //decimal tempConversionFeeAmount = this.externalApiPoller.EstimateConversionTransactionFee();
+                    //ulong tempConversionFeeAmountSatoshi = (ulong)(tempConversionFeeAmount * 100_000_000m);
+
+                    //// First check if the other nodes have started proposing fees, in which case compare it against what we think the fee should be.
+                    //ulong candidateFee = this.coordinationManager.GetCandidateTransactionFee(potentialConversionTransaction.Id.ToString());
+
+                    //if (candidateFee == 0UL)
+                    //{
+                    //    candidateFee = tempConversionFeeAmountSatoshi;
+                    //}
+
+                    //if ((Math.Abs(candidateFee - tempConversionFeeAmount) / tempConversionFeeAmount * 100) <= 10)
+                    //{
+                    //    // The candidate fee has diverged too far from the estimated fee.
+                    //    this.logger.Warn("Estimated conversion fee for transaction {0} ({1}) significantly differs from fee received from peers: {1}.", potentialConversionTransaction.Id, tempConversionFeeAmountSatoshi, candidateFee);
+                    //}
+
+                    //this.coordinationManager.AddFeeVote(potentialConversionTransaction.Id.ToString(), candidateFee, this.federationManager.GetCurrentFederationMember().PubKey);
+
+                    //await this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, potentialConversionTransaction.Id.ToString(), candidateFee);
+
+                    //ulong conversionFeeAmountSatoshi;
+
+                    //do
+                    //{
+                    //    conversionFeeAmountSatoshi = this.coordinationManager.GetAgreedTransactionFee(potentialConversionTransaction.Id.ToString(), this.coordinationManager.GetQuorum());
+
+                    //    if (conversionFeeAmountSatoshi == 0UL)
+                    //    {
+                    //        this.logger.Warn("The actual fee for conversion transaction {0} has not yet been agreed upon by all the nodes, stalling deposit processing.", potentialConversionTransaction.Id);
+
+                    //        await this.coordinationManager.BroadcastAllAsync(this.federationManager.CurrentFederationKey);
+
+                    //        await Task.Delay(TimeSpan.FromSeconds(2));
+
+                    //        continue;
+                    //    }
+
+                    //    break;
+
+                    //} while (true);
+
+                    //if (Money.Satoshis(conversionFeeAmountSatoshi) >= potentialConversionTransaction.Amount)
+                    //{
+                    //    this.logger.Warn("Conversion transaction {0} is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
+
+                    //    continue;
+                    //}
+
+                    //// We insert the fee distribution as a deposit to be processed, albeit with a special address.
+                    //// Deposits with this address as their destination will be distributed between the multisig members.
+                    //// Note that it will be actioned immediately as a matured deposit.
+                    //this.logger.Info("Adding conversion fee distribution for transaction {0} to deposit list.", potentialConversionTransaction.Id);
+
+                    //// Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
+                    //DepositRetrievalType depositType = DepositRetrievalType.Small;
+
+                    //switch (potentialConversionTransaction.RetrievalType)
+                    //{
+                    //    case DepositRetrievalType.ConversionSmall:
+                    //        depositType = DepositRetrievalType.Small;
+                    //        break;
+                    //    case DepositRetrievalType.ConversionNormal:
+                    //        depositType = DepositRetrievalType.Normal;
+                    //        break;
+                    //    case DepositRetrievalType.ConversionLarge:
+                    //        depositType = DepositRetrievalType.Large;
+                    //        break;
+                    //}
+
+                    //tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
+                    //    depositType,
+                    //    Money.Satoshis(conversionFeeAmountSatoshi),
+                    //    this.network.ConversionTransactionFeeDistributionDummyAddress,
+                    //    potentialConversionTransaction.BlockNumber,
+                    //    potentialConversionTransaction.BlockHash));
+
+                    //this.logger.Info("Adding conversion request for transaction {0} to repository.", potentialConversionTransaction.Id);
+
+                    //this.conversionRequestRepository.Save(new ConversionRequest()
+                    //{
+                    //    RequestId = potentialConversionTransaction.Id.ToString(),
+                    //    RequestType = ConversionRequestType.Mint,
+                    //    Processed = false,
+                    //    RequestStatus = ConversionRequestStatus.Unprocessed,
+                    //    // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                    //    Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(conversionFeeAmountSatoshi)).Satoshi,
+                    //    BlockHeight = header.Height,
+                    //    DestinationAddress = potentialConversionTransaction.TargetAddress,
+                    //    DestinationChain = potentialConversionTransaction.TargetChain
+                    //});
                 }
 
                 maturedBlockDeposit.Deposits = tempDepositList.AsReadOnly();

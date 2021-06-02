@@ -95,6 +95,10 @@ namespace Stratis.Bitcoin.Features.Interop
                     case FeeCoordinationPayload feeCoordinationPayload:
                         await this.ProcessFeeCoordinationAsync(peer, feeCoordinationPayload).ConfigureAwait(false);
                         break;
+
+                    case FeeProposalPayload feeProposalPayload:
+                        await this.ProcessFeeProposal(peer, feeProposalPayload).ConfigureAwait(false);
+                        break;
                 }
             }
             catch (OperationCanceledException)
@@ -192,6 +196,35 @@ namespace Stratis.Bitcoin.Features.Interop
             //// If the fee has not yet been agreed, then broadcast the fee coordination payload again.
             //if (this.coordinationManager.GetAgreedTransactionFee(payload.RequestId, this.interopSettings.ETHMultisigWalletQuorum) == 0)
             //    await this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, payload.RequestId, payload.FeeAmount);
+        }
+
+        private async Task ProcessFeeProposal(INetworkPeer peer, FeeProposalPayload payload)
+        {
+            if (!this.federationManager.IsFederationMember)
+                return;
+
+            // Check that the payload is signed by a multisig federation member.
+            PubKey pubKey;
+
+            try
+            {
+                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
+
+                this.logger.Info($"Fee proposal payload received from PubKey '{pubKey}' for proposal '{payload.RequestId}'.");
+
+                if (!this.federationManager.IsMultisigMember(pubKey))
+                {
+                    this.logger.Warn("Received unverified fee proposal payload for '{0}'. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                this.logger.Warn("Received malformed fee proposal payload for '{0}'.", payload.RequestId);
+                return;
+            }
+
+            this.coordinationManager.ProposeFeeFromMultiSigMember(payload.RequestId, payload.FeeAmount, pubKey);
         }
     }
 }

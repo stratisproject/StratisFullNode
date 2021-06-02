@@ -52,6 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
             payloadProvider.AddPayload(typeof(FeeCoordinationPayload));
+            payloadProvider.AddPayload(typeof(FeeProposalPayload));
         }
 
         public override Task InitializeAsync()
