@@ -236,9 +236,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     this.logger.Debug($"Adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
                 }
 
-                if (HasFeeProposalBeenConcluded(requestId))
-                    return;
-
                 // Broadcast/ask for this request from other nodes as well
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
                 this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, feeAmount, signature)).GetAwaiter().GetResult();
@@ -349,9 +346,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                     this.logger.Debug($"Adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
                 }
-
-                if (HasFeeVoteBeenConcluded(requestId))
-                    return;
 
                 // Broadcast/ask for this vote from other nodes as well
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
