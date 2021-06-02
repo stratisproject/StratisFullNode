@@ -180,7 +180,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <remarks>Requires txindex=1, otherwise only txes that spend or create UTXOs for a wallet can be returned.</remarks>
         [Route("getrawtransaction")]
         [HttpGet]
-        public TransactionBriefModel GetRawTransaction([FromQuery] string trxid)
+        public RawTxModel GetRawTransaction([FromQuery] string trxid)
         {
             try
             {
@@ -199,7 +199,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                     return null;
                 }
                 
-                return new TransactionBriefModel(trx);
+                return new RawTxModel() { Hex = trx.ToHex() };
                 
             }
             catch (Exception e)
@@ -208,32 +208,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 return null;
             }
         }
-
-        /// <summary>
-        /// Gets a JSON representation for a given transaction in hex format.
-        /// </summary>
-        /// <param name="request">A class containing the necessary parameters for a block search request.</param>
-        /// <returns>The JSON representation of the transaction.</returns>
-        [HttpPost]
-        [Route("decoderawtransaction")]
-        public TransactionVerboseModel DecodeRawTransaction([FromBody] DecodeRawTransactionModel request)
-        {
-            try
-            {
-                if (!this.ModelState.IsValid)
-                {
-                    return null;
-                }
-
-                return new TransactionVerboseModel(this.network.CreateTransaction(request.RawHex), this.network);
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError("Exception occurred: {0}", e.ToString());
-                return null;
-            }
-        }
-
+        
         /// <summary>
         /// Sends a transaction that has already been built.
         /// Use the /api/Wallet/build-transaction call to create transactions.
@@ -400,37 +375,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
                     return null;
 
                 return new TipModel() { TipHash = addressIndexerTip.HashBlock.ToString(), TipHeight = addressIndexerTip.Height };
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError("Exception occurred: {0}", e.ToString());
-                return null;
-            }
-        }
-
-        /// <summary>Provides balance of the given addresses confirmed with at least <paramref name="minConfirmations"/> confirmations.</summary>
-        /// <param name="addresses">A comma delimited set of addresses that will be queried.</param>
-        /// <param name="minConfirmations">Only blocks below consensus tip less this parameter will be considered.</param>
-        /// <returns>A result object containing the balance for each requested address and if so, a message stating why the indexer is not queryable.</returns>
-        /// <response code="200">Returns balances for the requested addresses</response>
-        /// <response code="400">Unexpected exception occurred</response>
-        [Route(BlockStoreRouteEndPoint.GetAddressesBalances)]
-        [HttpGet]
-        [ProducesResponseType((int) HttpStatusCode.OK)]
-        [ProducesResponseType((int) HttpStatusCode.BadRequest)]
-        public AddressBalancesResult GetAddressesBalances(string addresses, int minConfirmations)
-        {
-            try
-            {
-                string[] addressesArray = addresses.Split(',');
-
-                this.logger.LogDebug("Asking data for {0} addresses.", addressesArray.Length);
-
-                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(addressesArray, minConfirmations);
-
-                this.logger.LogDebug("Sending data for {0} addresses.", result.Balances.Count);
-
-                return result;
             }
             catch (Exception e)
             {

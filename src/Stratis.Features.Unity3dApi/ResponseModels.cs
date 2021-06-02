@@ -40,4 +40,9 @@ namespace Stratis.Features.Unity3dApi
 
         public int TipHeight { get; set; }
     }
+
+    public sealed class RawTxModel
+    {
+        public string Hex { get; set; }
+    }
 }
