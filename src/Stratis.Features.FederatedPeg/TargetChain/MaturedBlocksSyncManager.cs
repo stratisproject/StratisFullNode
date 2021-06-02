@@ -233,6 +233,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     do
                     {
+                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                            break;
+
                         if (this.coordinationManager.HasProposalConcluded(potentialConversionTransaction.Id.ToString()))
                             break;
 
@@ -241,7 +244,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
 
                     } while (true);
-
 
                     //do
                     //{
