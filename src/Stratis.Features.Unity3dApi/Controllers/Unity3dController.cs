@@ -18,6 +18,7 @@ using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Bitcoin.Utilities.JsonErrors;
 
 namespace Stratis.Features.Unity3dApi.Controllers
 {
@@ -131,6 +132,30 @@ namespace Stratis.Features.Unity3dApi.Controllers
             }
 
             return response;
+        }
+
+        /// <summary>Provides balance of the given address confirmed with at least 1 confirmation.</summary>
+        /// <param name="address">Address that will be queried.</param>
+        /// <returns>A result object containing the balance for each requested address and if so, a message stating why the indexer is not queryable.</returns>
+        /// <response code="200">Returns balances for the requested addresses</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("getaddressbalance")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public long GetAddressBalance(string address)
+        {
+            try
+            {
+                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(new []{address}, 1);
+
+                return result.Balances.First().Balance.Satoshi;
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return -1;
+            }
         }
 
         /// <summary>
