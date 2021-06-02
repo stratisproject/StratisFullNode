@@ -66,14 +66,14 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <param name="address">Address to get UTXOs for.</param>
         [Route("getutxosforaddress")]
         [HttpGet]
-        public GetURXOsResponseModel GetUTXOsForAddress([FromQuery] string address)
+        public GetUTXOsResponseModel GetUTXOsForAddress([FromQuery] string address)
         {
             VerboseAddressBalancesResult balancesResult = this.addressIndexer.GetAddressIndexerState(new[] {address});
 
             if (balancesResult.BalancesData == null || balancesResult.BalancesData.Count != 1)
             {
                 this.logger.LogWarning("No balances found for address {0}, Reason: {1}", address, balancesResult.Reason);
-                return new GetURXOsResponseModel() {Reason = balancesResult.Reason};
+                return new GetUTXOsResponseModel() {Reason = balancesResult.Reason};
             }
 
             BitcoinAddress bitcoinAddress = this.network.CreateBitcoinAddress(address);
@@ -114,7 +114,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             FetchCoinsResponse fetchCoinsResponse = this.coinView.FetchCoins(collectedOutPoints.ToArray());
 
-            GetURXOsResponseModel response = new GetURXOsResponseModel()
+            GetUTXOsResponseModel response = new GetUTXOsResponseModel()
             {
                 BalanceSat = balanceSat,
                 UTXOs = new List<UTXOModel>()

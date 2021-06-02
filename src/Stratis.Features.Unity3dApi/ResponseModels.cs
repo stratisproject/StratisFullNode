@@ -3,7 +3,7 @@ using NBitcoin;
 
 namespace Stratis.Features.Unity3dApi
 {
-    public class GetURXOsResponseModel
+    public class GetUTXOsResponseModel
     {
         public long BalanceSat;
 
