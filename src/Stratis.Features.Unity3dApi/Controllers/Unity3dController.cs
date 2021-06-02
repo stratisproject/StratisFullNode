@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,8 @@ using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
+using Stratis.Bitcoin.Features.Wallet.Controllers;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
@@ -36,11 +39,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly ICoinView coinView;
 
+        private readonly WalletController walletController;
+
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
         public Unity3dController(ILoggerFactory loggerFactory, BlockStoreController blockStoreController, NodeController nodeController, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView)
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -51,6 +56,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.chainState = Guard.NotNull(chainState, nameof(chainState));
             this.network = Guard.NotNull(network, nameof(network));
             this.coinView = Guard.NotNull(coinView, nameof(coinView));
+            this.walletController = Guard.NotNull(walletController, nameof(walletController));
         }
 
         /// <summary>
@@ -171,6 +177,29 @@ namespace Stratis.Features.Unity3dApi.Controllers
         public IActionResult DecodeRawTransaction([FromBody] DecodeRawTransactionModel request)
         {
             return this.nodeController.DecodeRawTransaction(request);
+        }
+
+        /// <summary>
+        /// Sends a transaction that has already been built.
+        /// Use the /api/Wallet/build-transaction call to create transactions.
+        /// </summary>
+        /// <param name="request">An object containing the necessary parameters used to a send transaction request.</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>A JSON object containing information about the sent transaction.</returns>
+        /// <response code="200">Returns transaction details</response>
+        /// <response code="400">Invalid request, cannot broadcast transaction, or unexpected exception occurred</response>
+        /// <response code="403">No connected peers</response>
+        /// <response code="500">Request is null</response>
+        [Route("send-transaction")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> SendTransaction([FromBody] SendTransactionRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await this.walletController.SendTransaction(request, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
