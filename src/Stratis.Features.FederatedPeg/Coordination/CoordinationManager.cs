@@ -124,7 +124,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 IEnumerable<long> values = vote.Value.Values.Select(s => Convert.ToInt64(s));
 
-                benchLog.AppendLine("Fee Proposal:".PadRight(LoggingConfiguration.ColumnLength) + $" Id: {vote.Key} Proposals: {vote.Value.Count} Fee (Avg): {values.Average() }");
+                var state = vote.Value.Count >= this.quorum ? "Concluded" : "In Progress";
+                benchLog.AppendLine($"Fee Proposal Id: {vote.Key} Proposals: {vote.Value.Count} Fee (Avg): {values.Average()} State: {state}");
             }
 
             benchLog.AppendLine();
@@ -135,39 +136,49 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
+                bool isProposalConcluded = false;
+
                 // If the request id doesn't exist yet propose the fee and broadcast it.
                 if (!this.feeProposalsByRequestId.TryGetValue(requestId, out Dictionary<PubKey, ulong> proposals))
                 {
-                    // If this node hasnt yet proposed a fee, then do so.
-                    if (proposals == null || !proposals.Any(p => p.Key == this.federationManager.CurrentFederationKey.PubKey))
+                    ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
+
+                    this.logger.Debug($"No nodes has proposed a fee of {candidateFee} for conversion request id '{requestId}'.");
+
+                    this.feeProposalsByRequestId.Add(requestId, new Dictionary<PubKey, ulong>() { { this.federationManager.CurrentFederationKey.PubKey, candidateFee } });
+                }
+                else
+                {
+                    if (!proposals.Any(p => p.Key == this.federationManager.CurrentFederationKey.PubKey))
                     {
-                        // If not, propose a fee from this node and broadcast it to the other multisig nodes.
                         ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
 
-                        this.logger.Debug($"Broadcasting proposal fee of {candidateFee} for conversion request id {requestId}");
-
-                        string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + candidateFee);
-
-                        this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, candidateFee, signature)).GetAwaiter().GetResult();
-
-                        this.feeProposalsByRequestId.Add(requestId, new Dictionary<PubKey, ulong>() { { this.federationManager.CurrentFederationKey.PubKey, candidateFee } });
+                        this.logger.Debug($"Adding proposed fee of {candidateFee} for conversion request id '{requestId}'.");
+                        proposals.Add(this.federationManager.CurrentFederationKey.PubKey, candidateFee);
                     }
                     else
-                        this.logger.Debug($"This node has already proposed a fee for conversion request id {requestId}.");
-
-                    return false;
+                        this.logger.Debug($"This node has already proposed a fee for conversion request id '{requestId}'.");
                 }
 
-                this.logger.Debug($"{proposals.Count} nodes has proposed a fee for conversion request id {requestId}.");
+                this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
+
+                this.logger.Debug($"{proposals.Count} node(s) has proposed a fee for conversion request id {requestId}.");
 
                 if (proposals.Count >= this.quorum)
                 {
                     IEnumerable<long> values = proposals.Values.Select(s => Convert.ToInt64(s));
                     this.logger.Debug($"Proposal fee for request id {proposals.Count} has concluded; average amount: {values.Average()}");
-                    return true;
+                    isProposalConcluded = true;
+                }
+                else
+                {
+                    // If the proposal is not concluded, broadcast again.
+                    KeyValuePair<PubKey, ulong> myProposal = proposals.First(p => p.Key == this.federationManager.CurrentFederationKey.PubKey);
+                    string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + myProposal.Value);
+                    this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, myProposal.Value, signature)).GetAwaiter().GetResult();
                 }
 
-                return false;
+                return isProposalConcluded;
             }
         }
 
