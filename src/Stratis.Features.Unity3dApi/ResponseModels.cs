@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
-using Newtonsoft.Json;
-using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Features.Unity3dApi
 {
