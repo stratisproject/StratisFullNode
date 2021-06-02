@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
+using Newtonsoft.Json;
+using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Features.Unity3dApi
 {
@@ -30,5 +32,12 @@ namespace Stratis.Features.Unity3dApi
         public uint N;
 
         public long Satoshis;
+    }
+
+    public sealed class TipModel
+    {
+        public string TipHash { get; set; }
+
+        public int TipHeight { get; set; }
     }
 }

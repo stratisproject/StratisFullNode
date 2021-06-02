@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.BlockStore.Models;
+using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
@@ -25,10 +26,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
     [Route("[controller]")]
     public class Unity3dController : Controller
     {
-        private readonly NodeController nodeController;
-
-        private readonly BlockStoreController blockStoreController;
-
         private readonly IAddressIndexer addressIndexer;
 
         private readonly IBlockStore blockStore;
@@ -41,22 +38,26 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly WalletController walletController;
 
+        private readonly ChainIndexer chainIndexer;
+
+        private readonly IStakeChain stakeChain;
+
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
-        public Unity3dController(ILoggerFactory loggerFactory, BlockStoreController blockStoreController, NodeController nodeController, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController)
+        public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.nodeController = Guard.NotNull(nodeController, nameof(nodeController));
-            this.blockStoreController = Guard.NotNull(blockStoreController, nameof(blockStoreController));
             this.addressIndexer = Guard.NotNull(addressIndexer, nameof(addressIndexer));
             this.blockStore = Guard.NotNull(blockStore, nameof(blockStore));
             this.chainState = Guard.NotNull(chainState, nameof(chainState));
             this.network = Guard.NotNull(network, nameof(network));
             this.coinView = Guard.NotNull(coinView, nameof(coinView));
             this.walletController = Guard.NotNull(walletController, nameof(walletController));
+            this.chainIndexer = Guard.NotNull(chainIndexer, nameof(chainIndexer));
+            this.stakeChain = Guard.NotNull(stakeChain, nameof(stakeChain));
         }
 
         /// <summary>
@@ -65,14 +66,14 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <param name="address">Address to get UTXOs for.</param>
         [Route("getutxosforaddress")]
         [HttpGet]
-        public IActionResult GetUTXOsForAddress([FromQuery] string address)
+        public GetURXOsResponseModel GetUTXOsForAddress([FromQuery] string address)
         {
             VerboseAddressBalancesResult balancesResult = this.addressIndexer.GetAddressIndexerState(new[] {address});
 
             if (balancesResult.BalancesData == null || balancesResult.BalancesData.Count != 1)
             {
                 this.logger.LogWarning("No balances found for address {0}, Reason: {1}", address, balancesResult.Reason);
-                return this.Json(new GetURXOsResponseModel() {Reason = balancesResult.Reason});
+                return new GetURXOsResponseModel() {Reason = balancesResult.Reason};
             }
 
             BitcoinAddress bitcoinAddress = this.network.CreateBitcoinAddress(address);
@@ -130,14 +131,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 response.UTXOs.Add(new UTXOModel(outPoint, value));
             }
 
-            return this.Json(response);
+            return response;
         }
 
         /// <summary>
         /// Gets the block header of a block identified by a block hash.
         /// </summary>
         /// <param name="hash">The hash of the block to retrieve.</param>
-        /// <param name="isJsonFormat">A flag that specifies whether to return the block header in the JSON format. Defaults to true. A value of false is currently not supported.</param>
         /// <returns>Json formatted <see cref="BlockHeaderModel"/>. <c>null</c> if block not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if fails.</returns>
         /// <exception cref="NotImplementedException">Thrown if isJsonFormat = false</exception>"
         /// <exception cref="ArgumentException">Thrown if hash is empty.</exception>
@@ -145,9 +145,28 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <remarks>Binary serialization is not supported with this method.</remarks>
         [Route("getblockheader")]
         [HttpGet]
-        public IActionResult GetBlockHeader([FromQuery] string hash, bool isJsonFormat = true)
+        public BlockHeaderModel GetBlockHeader([FromQuery] string hash)
         {
-            return this.nodeController.GetBlockHeader(hash, isJsonFormat);
+            try
+            {
+                Guard.NotEmpty(hash, nameof(hash));
+
+                this.logger.LogDebug("GetBlockHeader {0}", hash);
+
+                BlockHeaderModel model = null;
+                BlockHeader blockHeader = this.chainIndexer?.GetHeader(uint256.Parse(hash))?.Header;
+                if (blockHeader != null)
+                {
+                    model = new BlockHeaderModel(blockHeader);
+                }
+
+                return model;
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
         }
 
         /// <summary>
@@ -155,16 +174,39 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// This method first searches the transaction pool and then tries the block store.
         /// </summary>
         /// <param name="trxid">The transaction ID (a hash of the trancaction).</param>
-        /// <param name="verbose">A flag that specifies whether to return verbose information about the transaction.</param>
         /// <returns>Json formatted <see cref="TransactionBriefModel"/> or <see cref="TransactionVerboseModel"/>. <c>null</c> if transaction not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if otherwise fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if fullNode, network, or chain are not available.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid<see cref="uint256"/>.</exception>
         /// <remarks>Requires txindex=1, otherwise only txes that spend or create UTXOs for a wallet can be returned.</remarks>
         [Route("getrawtransaction")]
         [HttpGet]
-        public async Task<IActionResult> GetRawTransactionAsync([FromQuery] string trxid, bool verbose = false)
+        public TransactionBriefModel GetRawTransaction([FromQuery] string trxid)
         {
-            return await this.nodeController.GetRawTransactionAsync(trxid, verbose);
+            try
+            {
+                Guard.NotEmpty(trxid, nameof(trxid));
+
+                uint256 txid;
+                if (!uint256.TryParse(trxid, out txid))
+                {
+                    throw new ArgumentException(nameof(trxid));
+                }
+
+                Transaction trx = this.blockStore?.GetTransactionById(txid);
+                
+                if (trx == null)
+                {
+                    return null;
+                }
+                
+                return new TransactionBriefModel(trx);
+                
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
         }
 
         /// <summary>
@@ -174,9 +216,22 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <returns>The JSON representation of the transaction.</returns>
         [HttpPost]
         [Route("decoderawtransaction")]
-        public IActionResult DecodeRawTransaction([FromBody] DecodeRawTransactionModel request)
+        public TransactionVerboseModel DecodeRawTransaction([FromBody] DecodeRawTransactionModel request)
         {
-            return this.nodeController.DecodeRawTransaction(request);
+            try
+            {
+                if (!this.ModelState.IsValid)
+                {
+                    return null;
+                }
+
+                return new TransactionVerboseModel(this.network.CreateTransaction(request.RawHex), this.network);
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
         }
 
         /// <summary>
@@ -211,9 +266,54 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <exception cref="ArgumentNullException">Thrown if network is not provided.</exception>
         [Route("validateaddress")]
         [HttpGet]
-        public IActionResult ValidateAddress([FromQuery] string address)
+        public ValidatedAddress ValidateAddress([FromQuery] string address)
         {
-            return this.nodeController.ValidateAddress(address);
+            Guard.NotEmpty(address, nameof(address));
+
+            var result = new ValidatedAddress
+            {
+                IsValid = false,
+                Address = address,
+            };
+
+            try
+            {
+                // P2WPKH
+                if (BitcoinWitPubKeyAddress.IsValid(address, this.network, out Exception _))
+                {
+                    result.IsValid = true;
+                }
+                // P2WSH
+                else if (BitcoinWitScriptAddress.IsValid(address, this.network, out Exception _))
+                {
+                    result.IsValid = true;
+                }
+                // P2PKH
+                else if (BitcoinPubKeyAddress.IsValid(address, this.network))
+                {
+                    result.IsValid = true;
+                }
+                // P2SH
+                else if (BitcoinScriptAddress.IsValid(address, this.network))
+                {
+                    result.IsValid = true;
+                    result.IsScript = true;
+                }
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
+
+            if (result.IsValid)
+            {
+                var scriptPubKey = BitcoinAddress.Create(address, this.network).ScriptPubKey;
+                result.ScriptPubKey = scriptPubKey.ToHex();
+                result.IsWitness = scriptPubKey.IsWitness(this.network);
+            }
+
+            return result;
         }
 
 
@@ -228,24 +328,84 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         [ProducesResponseType((int) HttpStatusCode.OK)]
         [ProducesResponseType((int) HttpStatusCode.BadRequest)]
-        public IActionResult GetBlock([FromQuery] SearchByHashRequest query)
+        public BlockModel GetBlock([FromQuery] SearchByHashRequest query)
         {
-            return this.blockStoreController.GetBlock(query);
+            if (!this.ModelState.IsValid)
+                return null;
+
+            try
+            {
+                uint256 blockId = uint256.Parse(query.Hash);
+
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockId);
+
+                if (chainedHeader == null)
+                    return null;
+
+                Block block = chainedHeader.Block ?? this.blockStore.GetBlock(blockId);
+
+                // In rare occasions a block that is found in the
+                // indexer may not have been pushed to the store yet. 
+                if (block == null)
+                    return null;
+
+                BlockModel blockModel = query.ShowTransactionDetails
+                    ? new BlockTransactionDetailsModel(block, chainedHeader, this.chainIndexer.Tip, this.network)
+                    : new BlockModel(block, chainedHeader, this.chainIndexer.Tip, this.network);
+
+                if (this.network.Consensus.IsProofOfStake)
+                {
+                    var posBlock = block as PosBlock;
+
+                    blockModel.PosBlockSignature = posBlock.BlockSignature.ToHex(this.network);
+                    blockModel.PosBlockTrust = new Target(chainedHeader.GetBlockTarget()).ToUInt256().ToString();
+                    blockModel.PosChainTrust = chainedHeader.ChainWork.ToString(); // this should be similar to ChainWork
+
+                    if (this.stakeChain != null)
+                    {
+                        BlockStake blockStake = this.stakeChain.Get(blockId);
+
+                        blockModel.PosModifierv2 = blockStake?.StakeModifierV2.ToString();
+                        blockModel.PosFlags = blockStake?.Flags == BlockFlag.BLOCK_PROOF_OF_STAKE ? "proof-of-stake" : "proof-of-work";
+                        blockModel.PosHashProof = blockStake?.HashProof?.ToString();
+                    }
+                }
+
+                return blockModel;
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
         }
 
         /// <summary>
         /// Retrieves the <see cref="addressIndexer"/>'s tip. 
         /// </summary>
-        /// <returns>An instance of <see cref="AddressIndexerTipModel"/> containing the tip's hash and height.</returns>
+        /// <returns>An instance of <see cref="TipModel"/> containing the tip's hash and height.</returns>
         /// <response code="200">Returns the address indexer tip</response>
         /// <response code="400">Unexpected exception occurred</response>
         [Route("tip")]
         [HttpGet]
         [ProducesResponseType((int) HttpStatusCode.OK)]
         [ProducesResponseType((int) HttpStatusCode.BadRequest)]
-        public IActionResult GetTip()
+        public TipModel GetTip()
         {
-            return this.blockStoreController.GetAddressIndexerTip();
+            try
+            {
+                ChainedHeader addressIndexerTip = this.addressIndexer.IndexerTip;
+
+                if (addressIndexerTip == null)
+                    return null;
+
+                return new TipModel() { TipHash = addressIndexerTip.HashBlock.ToString(), TipHeight = addressIndexerTip.Height };
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
         }
 
         /// <summary>Provides balance of the given addresses confirmed with at least <paramref name="minConfirmations"/> confirmations.</summary>
@@ -258,9 +418,25 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         [ProducesResponseType((int) HttpStatusCode.OK)]
         [ProducesResponseType((int) HttpStatusCode.BadRequest)]
-        public IActionResult GetAddressesBalances(string addresses, int minConfirmations)
+        public AddressBalancesResult GetAddressesBalances(string addresses, int minConfirmations)
         {
-            return this.blockStoreController.GetAddressesBalances(addresses, minConfirmations);
+            try
+            {
+                string[] addressesArray = addresses.Split(',');
+
+                this.logger.LogDebug("Asking data for {0} addresses.", addressesArray.Length);
+
+                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(addressesArray, minConfirmations);
+
+                this.logger.LogDebug("Sending data for {0} addresses.", result.Balances.Count);
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return null;
+            }
         }
     }
 }
