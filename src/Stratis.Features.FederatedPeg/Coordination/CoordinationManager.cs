@@ -175,6 +175,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     // If the proposal is not concluded, broadcast again.
                     KeyValuePair<PubKey, ulong> myProposal = proposals.First(p => p.Key == this.federationManager.CurrentFederationKey.PubKey);
                     string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + myProposal.Value);
+
                     this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, myProposal.Value, signature)).GetAwaiter().GetResult();
                 }
 
@@ -203,6 +204,16 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     }
                     else
                         this.logger.Debug($"{pubKey} has already proposed a fee for conversion request id '{requestId}'.");
+                }
+
+                this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
+
+                // Check if this node has this request.
+                if (!proposals.Any(p => p.Key == this.federationManager.CurrentFederationKey.PubKey))
+                {
+                    proposals.Add(this.federationManager.CurrentFederationKey.PubKey, feeAmount);
+
+                    this.logger.Debug($"Add proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
                 }
             }
         }
@@ -407,10 +418,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
             }
         }
 
-        public async Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee)
+        public async Task BroadcastVoteAsync(Key federationKey,string requestId, ulong fee)
         {
             string signature = federationKey.SignMessage(requestId + fee);
-
             await this.federatedPegBroadcaster.BroadcastAsync(new FeeCoordinationPayload(requestId, fee, signature)).ConfigureAwait(false);
         }
     }
