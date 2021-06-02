@@ -196,11 +196,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.logger.Info("Conversion transaction {0} received in matured blocks.", potentialConversionTransaction.Id);
 
-                    //if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
-                    //{
-                    //    this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
-                    //    continue;
-                    //}
+                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    {
+                        this.logger.Info("Conversion transaction {0} already exists, ignoring.", potentialConversionTransaction.Id);
+                        continue;
+                    }
 
                     // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
                     // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
@@ -236,7 +236,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                             break;
 
-                        if (this.coordinationManager.HasProposalConcluded(potentialConversionTransaction.Id.ToString()))
+                        if (this.coordinationManager.ProposeFeeForConversionRequest(potentialConversionTransaction.Id.ToString()))
+                            break;
+
+                        await Task.Delay(TimeSpan.FromSeconds(2));
+
+                        continue;
+
+                    } while (true);
+
+                    ulong conversionFeeAmountSatoshi = 0;
+
+                    do
+                    {
+                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                            break;
+
+                        if (this.coordinationManager.AgreeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), out conversionFeeAmountSatoshi))
                             break;
 
                         await Task.Delay(TimeSpan.FromSeconds(2));
@@ -318,48 +334,48 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     //    continue;
                     //}
 
-                    //// We insert the fee distribution as a deposit to be processed, albeit with a special address.
-                    //// Deposits with this address as their destination will be distributed between the multisig members.
-                    //// Note that it will be actioned immediately as a matured deposit.
-                    //this.logger.Info("Adding conversion fee distribution for transaction {0} to deposit list.", potentialConversionTransaction.Id);
+                    // We insert the fee distribution as a deposit to be processed, albeit with a special address.
+                    // Deposits with this address as their destination will be distributed between the multisig members.
+                    // Note that it will be actioned immediately as a matured deposit.
+                    this.logger.Info("Adding conversion fee distribution for transaction {0} to deposit list.", potentialConversionTransaction.Id);
 
-                    //// Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
-                    //DepositRetrievalType depositType = DepositRetrievalType.Small;
+                    // Instead of being a conversion deposit, the fee distribution is translated to its non-conversion equivalent.
+                    DepositRetrievalType depositType = DepositRetrievalType.Small;
 
-                    //switch (potentialConversionTransaction.RetrievalType)
-                    //{
-                    //    case DepositRetrievalType.ConversionSmall:
-                    //        depositType = DepositRetrievalType.Small;
-                    //        break;
-                    //    case DepositRetrievalType.ConversionNormal:
-                    //        depositType = DepositRetrievalType.Normal;
-                    //        break;
-                    //    case DepositRetrievalType.ConversionLarge:
-                    //        depositType = DepositRetrievalType.Large;
-                    //        break;
-                    //}
+                    switch (potentialConversionTransaction.RetrievalType)
+                    {
+                        case DepositRetrievalType.ConversionSmall:
+                            depositType = DepositRetrievalType.Small;
+                            break;
+                        case DepositRetrievalType.ConversionNormal:
+                            depositType = DepositRetrievalType.Normal;
+                            break;
+                        case DepositRetrievalType.ConversionLarge:
+                            depositType = DepositRetrievalType.Large;
+                            break;
+                    }
 
-                    //tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
-                    //    depositType,
-                    //    Money.Satoshis(conversionFeeAmountSatoshi),
-                    //    this.network.ConversionTransactionFeeDistributionDummyAddress,
-                    //    potentialConversionTransaction.BlockNumber,
-                    //    potentialConversionTransaction.BlockHash));
+                    tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
+                        depositType,
+                        Money.Satoshis(conversionFeeAmountSatoshi),
+                        this.network.ConversionTransactionFeeDistributionDummyAddress,
+                        potentialConversionTransaction.BlockNumber,
+                        potentialConversionTransaction.BlockHash));
 
-                    //this.logger.Info("Adding conversion request for transaction {0} to repository.", potentialConversionTransaction.Id);
+                    this.logger.Info("Adding conversion request for transaction {0} to repository.", potentialConversionTransaction.Id);
 
-                    //this.conversionRequestRepository.Save(new ConversionRequest()
-                    //{
-                    //    RequestId = potentialConversionTransaction.Id.ToString(),
-                    //    RequestType = ConversionRequestType.Mint,
-                    //    Processed = false,
-                    //    RequestStatus = ConversionRequestStatus.Unprocessed,
-                    //    // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                    //    Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(conversionFeeAmountSatoshi)).Satoshi,
-                    //    BlockHeight = header.Height,
-                    //    DestinationAddress = potentialConversionTransaction.TargetAddress,
-                    //    DestinationChain = potentialConversionTransaction.TargetChain
-                    //});
+                    this.conversionRequestRepository.Save(new ConversionRequest()
+                    {
+                        RequestId = potentialConversionTransaction.Id.ToString(),
+                        RequestType = ConversionRequestType.Mint,
+                        Processed = false,
+                        RequestStatus = ConversionRequestStatus.Unprocessed,
+                        // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(conversionFeeAmountSatoshi)).Satoshi,
+                        BlockHeight = header.Height,
+                        DestinationAddress = potentialConversionTransaction.TargetAddress,
+                        DestinationChain = potentialConversionTransaction.TargetChain
+                    });
                 }
 
                 maturedBlockDeposit.Deposits = tempDepositList.AsReadOnly();

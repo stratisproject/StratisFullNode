@@ -97,7 +97,11 @@ namespace Stratis.Bitcoin.Features.Interop
                         break;
 
                     case FeeProposalPayload feeProposalPayload:
-                        await this.ProcessFeeProposal(peer, feeProposalPayload).ConfigureAwait(false);
+                        await this.ProcessFeeProposalAsync(peer, feeProposalPayload).ConfigureAwait(false);
+                        break;
+
+                    case FeeAgreePayload feeAgreePayload:
+                        await this.ProcessFeeAgreeAsync(peer, feeAgreePayload).ConfigureAwait(false);
                         break;
                 }
             }
@@ -198,7 +202,7 @@ namespace Stratis.Bitcoin.Features.Interop
             //    await this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, payload.RequestId, payload.FeeAmount);
         }
 
-        private async Task ProcessFeeProposal(INetworkPeer peer, FeeProposalPayload payload)
+        private async Task ProcessFeeProposalAsync(INetworkPeer peer, FeeProposalPayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
@@ -224,7 +228,36 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.ProposeFeeFromMultiSigMember(payload.RequestId, payload.FeeAmount, pubKey);
+            this.coordinationManager.MultiSigMemberProposedFee(payload.RequestId, payload.FeeAmount, pubKey);
+        }
+
+        private async Task ProcessFeeAgreeAsync(INetworkPeer peer, FeeAgreePayload payload)
+        {
+            if (!this.federationManager.IsFederationMember)
+                return;
+
+            // Check that the payload is signed by a multisig federation member.
+            PubKey pubKey;
+
+            try
+            {
+                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
+
+                this.logger.Info($"Fee agreed vote payload received from PubKey '{pubKey}' for request '{payload.RequestId}'.");
+
+                if (!this.federationManager.IsMultisigMember(pubKey))
+                {
+                    this.logger.Warn("Received unverified fee vote payload for '{0}'. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                this.logger.Warn("Received malformed fee vote payload for '{0}'.", payload.RequestId);
+                return;
+            }
+
+            this.coordinationManager.MultiSigMemberAgreedOnFee(payload.RequestId, payload.FeeAmount, pubKey);
         }
     }
 }
