@@ -197,7 +197,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// Gets a raw transaction that is present on this full node.
         /// This method gets transaction using block store.
         /// </summary>
-        /// <param name="trxid">The transaction ID (a hash of the trancaction).</param>
+        /// <param name="trxid">The transaction ID (a hash of the transaction).</param>
         /// <returns>Json formatted <see cref="TransactionBriefModel"/> or <see cref="TransactionVerboseModel"/>. <c>null</c> if transaction not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if otherwise fails.</returns>
         /// <exception cref="ArgumentNullException">Thrown if fullNode, network, or chain are not available.</exception>
         /// <exception cref="ArgumentException">Thrown if trxid is empty or not a valid<see cref="uint256"/>.</exception>
