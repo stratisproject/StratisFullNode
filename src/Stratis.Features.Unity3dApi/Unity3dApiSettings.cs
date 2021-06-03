@@ -129,7 +129,7 @@ namespace Stratis.Features.Unity3dApi
         {
             builder.AppendLine("####Unity3d API Settings####");
             builder.AppendLine($"#Enable unity3d api support");
-            builder.AppendLine($"#-unityapi_enable=");
+            builder.AppendLine($"#unityapi_enable=");
             builder.AppendLine($"#URI to node's API interface. Defaults to '{ DefaultApiHost }'.");
             builder.AppendLine($"#unityapi_apiuri={ DefaultApiHost }");
             builder.AppendLine($"#Port of node's API interface. Defaults to { network.DefaultAPIPort }.");

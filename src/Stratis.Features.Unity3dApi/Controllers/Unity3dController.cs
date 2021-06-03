@@ -85,13 +85,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
             long totalWithdrawn = addressBalances.BalanceChanges.Where(x => !x.Deposited).Sum(x => x.Satoshi);
 
             long balanceSat = totalDeposited - totalWithdrawn;
-
-            HashSet<uint256> blocksToRequest = new HashSet<uint256>(deposits.Count);
-
-            foreach (AddressBalanceChange deposit in deposits)
+            
+            List<int> heights = deposits.Select(x => x.BalanceChangedHeight).Distinct().ToList();
+            HashSet<uint256> blocksToRequest = new HashSet<uint256>(heights.Count);
+            
+            foreach (int height in heights)
             {
-                int blockHeight = deposit.BalanceChangedHeight;
-                uint256 blockHash = this.chainState.ConsensusTip.GetAncestor(blockHeight).Header.GetHash();
+                uint256 blockHash = this.chainState.ConsensusTip.GetAncestor(height).Header.GetHash();
                 blocksToRequest.Add(blockHash);
             }
             
@@ -195,7 +195,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         /// <summary>
         /// Gets a raw transaction that is present on this full node.
-        /// This method first searches the transaction pool and then tries the block store.
+        /// This method gets transaction using block store.
         /// </summary>
         /// <param name="trxid">The transaction ID (a hash of the trancaction).</param>
         /// <returns>Json formatted <see cref="TransactionBriefModel"/> or <see cref="TransactionVerboseModel"/>. <c>null</c> if transaction not found. Returns <see cref="Microsoft.AspNetCore.Mvc.IActionResult"/> formatted error if otherwise fails.</returns>
