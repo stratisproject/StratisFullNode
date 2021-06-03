@@ -57,7 +57,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.coinView = Guard.NotNull(coinView, nameof(coinView));
             this.walletController = Guard.NotNull(walletController, nameof(walletController));
             this.chainIndexer = Guard.NotNull(chainIndexer, nameof(chainIndexer));
-            this.stakeChain = Guard.NotNull(stakeChain, nameof(stakeChain));
+            this.stakeChain = stakeChain;
         }
 
         /// <summary>
