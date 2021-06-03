@@ -19,6 +19,7 @@ using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.Features.Unity3dApi;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusD
@@ -77,6 +78,7 @@ namespace Stratis.CirrusD
             .UseSmartContractWallet()
             .AddSQLiteWalletRepository()
             .UseApi()
+            .UseUnity3dApi()
             .AddRPC()
             .AddSignalR(options =>
             {

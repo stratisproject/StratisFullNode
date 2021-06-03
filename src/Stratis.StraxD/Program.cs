@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.Features.Unity3dApi;
 
 namespace Stratis.StraxD
 {
@@ -45,6 +46,7 @@ namespace Stratis.StraxD
                     .AddSQLiteWalletRepository()
                     .AddPowPosMining(true)
                     .UseApi()
+                    .UseUnity3dApi()
                     .AddRPC()
                     .AddSignalR(options =>
                     {
