@@ -400,7 +400,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (maturedBlockDeposits.Count == 0 || maturedBlockDeposits.First().BlockInfo.BlockHeight != this.NextMatureDepositHeight)
                     {
-                        this.logger.Debug("(-)[NO_VIABLE_BLOCKS]:true");
+                        this.logger.Debug($"No viable blocks to process; {nameof(maturedBlockDeposits)}={maturedBlockDeposits.Count};{nameof(this.NextMatureDepositHeight)}={this.NextMatureDepositHeight}");
                         return new RecordLatestMatureDepositsResult().Succeeded();
                     }
 
