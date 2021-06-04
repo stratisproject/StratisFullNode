@@ -6,10 +6,12 @@ namespace Stratis.Features.FederatedPeg.Payloads
     [Payload("feeagree")]
     public class FeeAgreePayload : Payload
     {
+        private int height;
         private string requestId;
         private ulong feeAmount;
         private string signature;
 
+        public int Height { get { return this.height; } }
         public string RequestId { get { return this.requestId; } }
         public ulong FeeAmount { get { return this.feeAmount; } }
         public string Signature { get { return this.signature; } }
@@ -19,8 +21,9 @@ namespace Stratis.Features.FederatedPeg.Payloads
         {
         }
 
-        public FeeAgreePayload(string requestId, ulong feeAmount, string signature)
+        public FeeAgreePayload(string requestId, ulong feeAmount, int height, string signature)
         {
+            this.height = height;
             this.requestId = requestId;
             this.feeAmount = feeAmount;
             this.signature = signature;
@@ -30,6 +33,7 @@ namespace Stratis.Features.FederatedPeg.Payloads
         {
             stream.ReadWrite(ref this.requestId);
             stream.ReadWrite(ref this.feeAmount);
+            stream.ReadWrite(ref this.height);
             stream.ReadWrite(ref this.signature);
         }
 

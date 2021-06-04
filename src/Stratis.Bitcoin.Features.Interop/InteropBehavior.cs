@@ -257,7 +257,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.MultiSigMemberAgreedOnFee(payload.RequestId, payload.FeeAmount, pubKey);
+            this.coordinationManager.MultiSigMemberAgreedOnFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
         }
     }
 }
