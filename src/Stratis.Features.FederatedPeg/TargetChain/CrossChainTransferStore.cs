@@ -1012,7 +1012,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // responsible for cleaning transactions past max reorg.
                             // Doing this from the federation wallet manager could mean transactions
                             // are cleaned before they are processed by the CCTS (which means they will
-                            // be wrongly added back.
+                            // be wrongly added back).
                             if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
                                 this.federationWalletManager.SaveWallet();
 

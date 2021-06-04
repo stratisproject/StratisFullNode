@@ -54,7 +54,8 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         BlockHeight = request.BlockHeight,
                         DestinationAddress = request.DestinationAddress,
                         Amount = request.Amount,
-                        Processed = request.Processed
+                        Processed = request.Processed,
+                        Status = request.RequestStatus.ToString(),
                     });
                 }
 
@@ -72,11 +73,12 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         BlockHeight = request.BlockHeight,
                         DestinationAddress = request.DestinationAddress,
                         Amount = request.Amount,
-                        Processed = request.Processed
+                        Processed = request.Processed,
+                        Status = request.RequestStatus.ToString(),
                     });
                 }
 
-                response.MintRequests = burnRequests;
+                response.BurnRequests = burnRequests;
 
                 var receivedVotes = new Dictionary<string, List<string>>();
 

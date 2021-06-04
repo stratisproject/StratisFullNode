@@ -126,26 +126,26 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private void AddComponentStats(StringBuilder benchLog)
         {
             benchLog.AppendLine(">> Interop Coordination Manager");
-
-            benchLog.AppendLine($"Fee Proposals:");
+            benchLog.AppendLine();
+            benchLog.AppendLine(">> Fee Proposals:");
 
             foreach (KeyValuePair<string, Dictionary<PubKey, ulong>> vote in this.feeProposalsByRequestId)
             {
                 IEnumerable<long> values = vote.Value.Values.Select(s => Convert.ToInt64(s));
 
                 var state = vote.Value.Count >= this.quorum ? "Concluded" : "In Progress";
-                benchLog.AppendLine($"Id: {vote.Key} Proposals: {vote.Value.Count} Fee (Avg): {values.Average()} State: {state}");
+                benchLog.AppendLine($"Id: {vote.Key} Proposals: {vote.Value.Count} Fee (Avg): {new Money((long)values.Average())} State: {state}");
             }
 
             benchLog.AppendLine();
-            benchLog.AppendLine($"Fee Votes:");
+            benchLog.AppendLine(">> Fee Votes:");
 
             foreach (KeyValuePair<string, Dictionary<PubKey, ulong>> vote in this.agreedFeeVotesByRequestId)
             {
                 IEnumerable<long> values = vote.Value.Values.Select(s => Convert.ToInt64(s));
 
                 var state = vote.Value.Count >= this.quorum ? "Concluded" : "In Progress";
-                benchLog.AppendLine($"Id: {vote.Key} Votes: {vote.Value.Count} Fee (Avg): {values.Average()} State: {state}");
+                benchLog.AppendLine($"Id: {vote.Key} Votes: {vote.Value.Count} Fee (Avg): {new Money((long)values.Average())} State: {state}");
             }
 
             benchLog.AppendLine();
@@ -158,7 +158,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 bool isProposalConcluded = false;
 
-                // If the request id doesn't exist yet propose the fee and broadcast it.
+                // If the request id doesn't exist yet, propose the fee and broadcast it.
                 if (!this.feeProposalsByRequestId.TryGetValue(requestId, out Dictionary<PubKey, ulong> proposals))
                 {
                     ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
@@ -188,6 +188,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 {
                     IEnumerable<long> values = proposals.Values.Select(s => Convert.ToInt64(s));
                     this.logger.Debug($"Proposal fee for request id '{requestId}' has concluded, average amount: {values.Average()}");
+
                     isProposalConcluded = true;
                 }
                 else
@@ -237,7 +238,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
 
                 // TODO Rethink this.
-                Task.Delay(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
+                Task.Delay(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
 
                 // Broadcast/ask for this request from other nodes as well
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
@@ -261,7 +262,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
                         return false;
                     }
-                    
+
                     ulong candidateFee = (ulong)proposals.Values.Select(s => Convert.ToInt64(s)).Average();
 
                     this.logger.Debug($"No nodes has voted on conversion request id '{requestId}' with a fee amount of {candidateFee}.");
@@ -295,8 +296,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 if (HasFeeVoteBeenConcluded(requestId))
                 {
                     this.logger.Debug($"Voting on fee for request id '{requestId}' has concluded, amount: {votes.Values.Select(s => Convert.ToInt64(s)).First()}");
-                    isFeeAgreedUpon = true;
                     agreedFeeAmount = votes.Values.First();
+
+                    isFeeAgreedUpon = true;
                 }
                 else
                 {
@@ -351,7 +353,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
 
                 // TODO Rethink this.
-                Task.Delay(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
+                Task.Delay(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
 
                 // Broadcast/ask for this vote from other nodes as well
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);

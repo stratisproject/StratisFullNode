@@ -25,5 +25,8 @@ namespace Stratis.Bitcoin.Features.Interop.Models
 
         [JsonProperty(PropertyName = "processed")]
         public bool Processed { get; set; }
+
+        [JsonProperty(PropertyName = "status")]
+        public string Status { get; set; }
     }
 }
