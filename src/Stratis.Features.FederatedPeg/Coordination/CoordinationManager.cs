@@ -145,7 +145,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 IEnumerable<long> values = vote.Value.Select(s => Convert.ToInt64(s.FeeAmount));
 
                 var state = vote.Value.Count >= this.quorum ? "Concluded" : "In Progress";
-                benchLog.AppendLine($"Id: {vote.Key} Votes: {vote.Value.Count} Fee (Avg): {new Money((long)values.Average())} State: {state}");
+                benchLog.AppendLine($"Height: {vote.Value.First().BlockHeight} Id: {vote.Key} Votes: {vote.Value.Count} Fee (Avg): {new Money((long)values.Average())} State: {state}");
             }
 
             benchLog.AppendLine();
@@ -228,14 +228,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
 
                 this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
-
-                // Check if this node has this request.
-                if (!proposals.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
-                {
-                    proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = feeAmount });
-
-                    this.logger.Debug($"Adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
-                }
 
                 // TODO Rethink this.
                 Task.Delay(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
@@ -343,14 +335,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
 
                 this.agreedFeeVotesByRequestId.TryGetValue(requestId, out votes);
-
-                // Check if this node has this request.
-                if (!votes.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
-                {
-                    votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = feeAmount });
-
-                    this.logger.Debug($"Adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey} to this node.");
-                }
 
                 // TODO Rethink this.
                 Task.Delay(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
