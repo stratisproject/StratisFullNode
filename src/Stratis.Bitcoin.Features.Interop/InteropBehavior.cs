@@ -228,7 +228,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.MultiSigMemberProposedFee(payload.RequestId, payload.FeeAmount, pubKey);
+            this.coordinationManager.MultiSigMemberProposedFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
         }
 
         private async Task ProcessFeeAgreeAsync(INetworkPeer peer, FeeAgreePayload payload)

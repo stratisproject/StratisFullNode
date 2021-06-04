@@ -222,7 +222,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (!found)
                     {
-                        this.logger.Warn("Unable to determine timestamp for conversion transaction {0}, ignoring.", potentialConversionTransaction.Id);
+                        this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
                         continue;
                     }
 
@@ -232,7 +232,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                             break;
 
-                        if (this.coordinationManager.ProposeFeeForConversionRequest(potentialConversionTransaction.Id.ToString()))
+                        if (this.coordinationManager.ProposeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight))
                             break;
 
                         await Task.Delay(TimeSpan.FromSeconds(1));
@@ -248,7 +248,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                             break;
 
-                        if (this.coordinationManager.AgreeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), out conversionFeeAmountSatoshi))
+                        if (this.coordinationManager.AgreeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight, out conversionFeeAmountSatoshi))
                             break;
 
                         await Task.Delay(TimeSpan.FromSeconds(1));

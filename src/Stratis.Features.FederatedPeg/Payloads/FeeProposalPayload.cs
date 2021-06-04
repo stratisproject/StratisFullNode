@@ -4,12 +4,14 @@ using Stratis.Bitcoin.P2P.Protocol.Payloads;
 namespace Stratis.Features.FederatedPeg.Payloads
 {
     [Payload("feeproposal")]
-    public class FeeProposalPayload : Payload
+    public sealed class FeeProposalPayload : Payload
     {
+        private int height;
         private string requestId;
         private ulong feeAmount;
         private string signature;
 
+        public int Height { get { return this.height; } }
         public string RequestId { get { return this.requestId; } }
         public ulong FeeAmount { get { return this.feeAmount; } }
         public string Signature { get { return this.signature; } }
@@ -19,10 +21,11 @@ namespace Stratis.Features.FederatedPeg.Payloads
         {
         }
 
-        public FeeProposalPayload(string requestId, ulong feeAmount, string signature)
+        public FeeProposalPayload(string requestId, ulong feeAmount, int height, string signature)
         {
             this.requestId = requestId;
             this.feeAmount = feeAmount;
+            this.height = height;
             this.signature = signature;
         }
 
@@ -30,6 +33,7 @@ namespace Stratis.Features.FederatedPeg.Payloads
         {
             stream.ReadWrite(ref this.requestId);
             stream.ReadWrite(ref this.feeAmount);
+            stream.ReadWrite(ref this.height);
             stream.ReadWrite(ref this.signature);
         }
 
