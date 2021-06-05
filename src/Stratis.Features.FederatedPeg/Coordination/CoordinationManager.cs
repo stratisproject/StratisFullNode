@@ -164,7 +164,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
 
                     this.logger.Debug($"No nodes has proposed a fee of {candidateFee} for conversion request id '{requestId}'.");
-
                     this.feeProposalsByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee } });
                 }
                 else
@@ -176,8 +175,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         this.logger.Debug($"Adding proposed fee of {candidateFee} for conversion request id '{requestId}'.");
                         proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee });
                     }
-                    else
-                        this.logger.Debug($"This node has already proposed a fee for conversion request id '{requestId}'.");
                 }
 
                 this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
@@ -223,8 +220,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                         this.logger.Debug($"Request exists, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
                     }
-                    else
-                        this.logger.Debug($"Conversion request id '{requestId}' has already been proposed by {pubKey}.");
                 }
 
                 this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
@@ -243,42 +238,33 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
-                bool isFeeAgreedUpon = false;
                 agreedFeeAmount = 0;
+
+                if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
+                {
+                    this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
+                    return false;
+                }
+
+                bool isFeeAgreedUpon = false;
+
+                ulong candidateFee = (ulong)proposals.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
+
+                var interOpFeeToMultisig = new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee };
 
                 // If the request id doesn't exist yet, create a fee vote and broadcast it.
                 if (!this.agreedFeeVotesByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> votes))
                 {
-                    if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
-                    {
-                        this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
-                        return false;
-                    }
-
-                    ulong candidateFee = (ulong)proposals.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
-
                     this.logger.Debug($"No nodes has voted on conversion request id '{requestId}' with a fee amount of {candidateFee}.");
-
-                    this.agreedFeeVotesByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee } });
+                    this.agreedFeeVotesByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { interOpFeeToMultisig });
                 }
                 else
                 {
                     if (!votes.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
                     {
-                        // TODO: duplicate code
-                        if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
-                        {
-                            this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
-                            return false;
-                        }
-
-                        ulong candidateFee = (ulong)proposals.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
-
                         this.logger.Debug($"Adding fee vote for conversion request id '{requestId}' for amount {candidateFee}.");
-                        votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee });
+                        votes.Add(interOpFeeToMultisig);
                     }
-                    else
-                        this.logger.Debug($"This node has already voted on conversion request id '{requestId}'.");
                 }
 
                 this.agreedFeeVotesByRequestId.TryGetValue(requestId, out votes);
@@ -287,8 +273,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                 if (HasFeeVoteBeenConcluded(requestId))
                 {
-                    this.logger.Debug($"Voting on fee for request id '{requestId}' has concluded, amount: {votes.Select(s => Convert.ToInt64(s.FeeAmount)).First()}");
-                    agreedFeeAmount = votes.First().FeeAmount;
+                    this.logger.Debug($"Voting on fee for request id '{requestId}' has concluded, amount: {candidateFee}");
+                    agreedFeeAmount = candidateFee;
 
                     isFeeAgreedUpon = true;
                 }
@@ -330,8 +316,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                         this.logger.Debug($"Request exists, adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
                     }
-                    else
-                        this.logger.Debug($"Conversion request id '{requestId}' has already been voted on by {pubKey}.");
                 }
 
                 this.agreedFeeVotesByRequestId.TryGetValue(requestId, out votes);
