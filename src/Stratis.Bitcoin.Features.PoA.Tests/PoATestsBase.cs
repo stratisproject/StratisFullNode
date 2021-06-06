@@ -140,7 +140,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             });
 
             federationHistory
-                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), It.IsAny<PoAConsensusOptions>()))
+                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), It.IsAny<PoAConsensusOptions>(), It.IsAny<List<IFederationMember>>()))
                 .Returns<uint, PoAConsensusOptions>((headerUnixTimestamp, poAConsensusOptions) =>
                 {
                     List<IFederationMember> federationMembers = poAConsensusOptions.GenesisFederationMembers;
