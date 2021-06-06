@@ -94,6 +94,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.logger.Info($"Reconstruction completed");
 
                     SetReconstructionFlag(false);
+
+                    // Only if successful...
+                    this.idleFederationMembersKicker.SaveStatePeriodically = true;
                 }
                 catch (Exception ex)
                 {
@@ -101,8 +104,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     throw ex;
                 }
                 finally
-                {
-                    this.idleFederationMembersKicker.SaveStatePeriodically = true;
+                {                    
                     this.isBusyReconstructing = false;
                 }
             }
