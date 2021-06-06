@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private List<VotingData> scheduledVotingData;
 
-        private bool isInitialized;
+        public bool IsInitialized { get; private set; }
         private bool isBusyReconstructing;
 
         private INodeLifetime nodeLifetime;
@@ -91,7 +91,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.chainIndexer = chainIndexer;
             this.nodeLifetime = nodeLifetime;
 
-            this.isInitialized = false;
+            this.IsInitialized = false;
         }
 
         public void Initialize(IFederationHistory federationHistory, IIdleFederationMembersKicker idleFederationMembersKicker = null)
@@ -108,7 +108,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1200);
 
-            this.isInitialized = true;
+            this.IsInitialized = true;
 
             this.logger.LogDebug("VotingManager initialized.");
         }
@@ -521,9 +521,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader);
                             this.pollsRepository.UpdatePoll(poll);
-
-                            this.idleFederationMembersKicker.UpdateTip(chBlock.ChainedHeader);
-                            this.idleFederationMembersKicker.SaveMembersByLastActiveTime();
                         }
                     }
                 }
@@ -736,7 +733,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [NoTrace]
         private void EnsureInitialized()
         {
-            if (!this.isInitialized)
+            if (!this.IsInitialized)
             {
                 throw new Exception("VotingManager is not initialized. Check that voting is enabled in PoAConsensusOptions.");
             }

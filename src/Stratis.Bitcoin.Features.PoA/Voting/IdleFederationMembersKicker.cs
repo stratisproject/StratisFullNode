@@ -2,8 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Persistence;
 using Stratis.Bitcoin.Utilities;
@@ -53,16 +55,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         void ResetFederationMemberLastActiveTime();
 
-        /// <summary>
-        /// Saves the current state.
-        /// </summary>
-        void SaveMembersByLastActiveTime();
-
-        /// <summary>
-        /// Updates idle information up to the specified block.
-        /// </summary>
-        /// <param name="blockHeader">The block to update idle information up to.</param>
-        void UpdateTip(ChainedHeader blockHeader);
+        bool SaveStatePeriodically { get; set; }
     }
 
     /// <summary>
@@ -74,6 +67,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IKeyValueRepository keyValueRepository;
 
         private readonly IConsensusManager consensusManager;
+
+        private readonly IAsyncProvider asyncProvider;
 
         private readonly Network network;
 
@@ -91,18 +86,28 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly PoAConsensusFactory consensusFactory;
 
+        private IAsyncLoop asyncLoop;
+
+        private readonly INodeLifetime nodeLifetime;
+
+        private readonly object lockObject;
+
         public ConcurrentDictionary<PubKey, List<uint>> lastActiveTimes;
         public ChainedHeader lastActiveTip;
+
+        public bool SaveStatePeriodically { get; set; }
 
         private const string fedMembersByLastActiveTimeKey = "fedMembersByLastActiveTime";
         private const string lastActiveTipKey = "lastActiveTip";
 
-        public IdleFederationMembersKicker(Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager,
+        public IdleFederationMembersKicker(Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager, IAsyncProvider asyncProvider, INodeLifetime nodeLifetime,
             IFederationManager federationManager, VotingManager votingManager, IFederationHistory federationHistory, ILoggerFactory loggerFactory, ChainIndexer chainIndexer)
         {
             this.network = network;
             this.keyValueRepository = keyValueRepository;
             this.consensusManager = consensusManager;
+            this.asyncProvider = asyncProvider;
+            this.nodeLifetime = nodeLifetime;
             this.federationManager = federationManager;
             this.votingManager = votingManager;
             this.federationHistory = federationHistory;
@@ -111,75 +116,96 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.federationMemberMaxIdleTimeSeconds = ((PoAConsensusOptions)network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
             this.chainIndexer = chainIndexer;
+            this.lockObject = new object();
         }
 
         /// <inheritdoc />
         public void Initialize()
         {
-            ResetFederationMemberLastActiveTime();
-
-            Dictionary<string, uint> loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
-            if (loaded != null)
+            lock (this.lockObject)
             {
-                foreach (KeyValuePair<string, uint> loadedMember in loaded)
+                ResetFederationMemberLastActiveTime();
+
+                this.SaveStatePeriodically = true;
+
+                this.asyncLoop = this.asyncProvider.CreateAndRunAsyncLoop($"{this.GetType().Name}.{nameof(PeriodicSaveAsync)}", async token =>
                 {
-                    PubKey pubKey = new PubKey(loadedMember.Key);
-                    if (!this.lastActiveTimes.TryGetValue(pubKey, out List<uint> activity))
+                    await PeriodicSaveAsync().ConfigureAwait(false);
+                }, 
+                this.nodeLifetime.ApplicationStopping,
+                repeatEvery: TimeSpan.FromSeconds(30));
+
+                Dictionary<string, uint> loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
+                if (loaded != null)
+                {
+                    foreach (KeyValuePair<string, uint> loadedMember in loaded)
                     {
-                        activity = new List<uint>();
-                        this.lastActiveTimes[pubKey] = activity;
+                        PubKey pubKey = new PubKey(loadedMember.Key);
+                        if (!this.lastActiveTimes.TryGetValue(pubKey, out List<uint> activity))
+                        {
+                            activity = new List<uint>();
+                            this.lastActiveTimes[pubKey] = activity;
+                        }
+
+                        activity.Add(loadedMember.Value);
                     }
-
-                    activity.Add(loadedMember.Value);
                 }
+
+                HashHeightPair lastActiveTip = this.keyValueRepository.LoadValue<HashHeightPair>(lastActiveTipKey);
+                if (lastActiveTip != null)
+                {
+                    this.lastActiveTip = this.chainIndexer.GetHeader(lastActiveTip.Hash);
+                    return;
+                }
+
+                if (this.lastActiveTimes.Count == 0)
+                    return;
+
+                // Try to determine the tip if none could be loaded.
+                uint maxTime = 0;
+
+                foreach ((PubKey pubKey, List<uint> activity) in this.lastActiveTimes)
+                {
+                    if (activity.LastOrDefault() > maxTime)
+                        maxTime = activity.LastOrDefault();
+                }
+
+                if (this.chainIndexer.Tip.Header.Time < maxTime)
+                {
+                    DiscardActivityAboveTime(this.chainIndexer.Tip.Header.Time);
+                    this.lastActiveTip = this.chainIndexer.Tip;
+                    return;
+                }
+
+                int height = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeader(x).Header.Time >= maxTime, 0, this.chainIndexer.Tip.Height + 1);
+
+                this.lastActiveTip = this.chainIndexer.GetHeader(height);
             }
-
-            HashHeightPair lastActiveTip = this.keyValueRepository.LoadValue<HashHeightPair>(lastActiveTipKey);
-            if (lastActiveTip != null)
-            {
-                this.lastActiveTip = this.chainIndexer.GetHeader(lastActiveTip.Hash);
-                return;
-            }
-
-            if (this.lastActiveTimes.Count == 0)
-                return;
-
-            // Try to determine the tip if none could be loaded.
-            uint maxTime = 0;
-
-            foreach ((PubKey pubKey, List<uint> activity) in this.lastActiveTimes)
-            {
-                if (activity.LastOrDefault() > maxTime)
-                    maxTime = activity.LastOrDefault();
-            }
-
-            if (this.chainIndexer.Tip.Header.Time < maxTime)
-            {
-                DiscardActivityAboveTime(this.chainIndexer.Tip.Header.Time);
-                this.lastActiveTip = this.chainIndexer.Tip;
-                return;
-            }
-
-            int height = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeader(x).Header.Time >= maxTime, 0, this.chainIndexer.Tip.Height + 1);
-
-            this.lastActiveTip = this.chainIndexer.GetHeader(height);
         }
 
         /// <inheritdoc />
         public void ResetFederationMemberLastActiveTime()
         {
-            this.lastActiveTip = null;
-            this.lastActiveTimes = new ConcurrentDictionary<PubKey, List<uint>>();
+            lock (this.lockObject)
+            {
+                this.lastActiveTip = null;
+                this.lastActiveTimes = new ConcurrentDictionary<PubKey, List<uint>>();
+            }
         }
 
         /// <inheritdoc />
         public ConcurrentDictionary<IFederationMember, uint> GetFederationMembersByLastActiveTime()
         {
-            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(this.lastActiveTip);
+            lock (this.lockObject)
+            {
+                ChainedHeader tip = this.lastActiveTip ?? this.chainIndexer.GetHeader(0);
 
-            return new ConcurrentDictionary<IFederationMember, uint>(federationMembers
-                .Select(m => (m, (this.GetLastActiveTime(m, this.lastActiveTip, out uint lastActiveTime) && lastActiveTime != default) ? lastActiveTime : this.network.GenesisTime))
-                .ToDictionary(x => x.m, x => x.Item2));
+                List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip);
+
+                return new ConcurrentDictionary<IFederationMember, uint>(federationMembers
+                    .Select(m => (m, (this.GetLastActiveTime(m, tip, out uint lastActiveTime) && lastActiveTime != default) ? lastActiveTime : this.network.GenesisTime))
+                    .ToDictionary(x => x.m, x => x.Item2));
+            }
         }
 
         private void DiscardActivityAboveTime(uint discardAboveTime)
@@ -202,7 +228,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.lastActiveTimes.Remove(pubKey, out _);
         }
 
-        public void UpdateTip(ChainedHeader blockHeader)
+        private void UpdateTip(ChainedHeader blockHeader)
         {
             if (this.lastActiveTip != null)
             {
@@ -272,36 +298,39 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <inheritdoc />
         public bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out uint lastActiveTime)
         {
-            UpdateTip(blockHeader);
-
-            if (this.lastActiveTimes.TryGetValue(federationMember.PubKey, out List<uint> activity))
+            lock (this.lockObject)
             {
-                uint blockTime = blockHeader.Header.Time;
+                UpdateTip(blockHeader);
 
-                lastActiveTime = activity.Last();
-                if (activity.Last() <= blockTime)
-                    return true;
-
-                int pos = BinarySearch.BinaryFindFirst(i => activity[i] > blockTime, 0, activity.Count);
-
-                if (pos > 0)
+                if (this.lastActiveTimes.TryGetValue(federationMember.PubKey, out List<uint> activity))
                 {
-                    lastActiveTime = activity[pos - 1];
+                    uint blockTime = blockHeader.Header.Time;
+
+                    lastActiveTime = activity.Last();
+                    if (activity.Last() <= blockTime)
+                        return true;
+
+                    int pos = BinarySearch.BinaryFindFirst(i => activity[i] > blockTime, 0, activity.Count);
+
+                    if (pos > 0)
+                    {
+                        lastActiveTime = activity[pos - 1];
+                        return true;
+                    }
+                }
+
+                if (((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Any(m => m.PubKey == federationMember.PubKey))
+                {
+                    lastActiveTime = default;
                     return true;
                 }
-            }
 
-            if (((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Any(m => m.PubKey == federationMember.PubKey))
-            {
+                // This should never happen.
+                this.logger.LogWarning("Could not resolve federation member's first activity.");
+
                 lastActiveTime = default;
-                return true;
+                return false;
             }
-
-            // This should never happen.
-            this.logger.LogWarning("Could not resolve federation member's first activity.");
-
-            lastActiveTime = default;
-            return false;
         }
 
         /// <inheritdoc />
@@ -309,88 +338,106 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             Guard.NotNull(federationMember, nameof(federationMember));
 
-            PubKey pubKey = federationMember.PubKey;
+            lock (this.lockObject)
+            {
+                PubKey pubKey = federationMember.PubKey;
 
-            if (this.lastActiveTimes == null)
-                throw new Exception($"'{nameof(IdleFederationMembersKicker)}' has not been initialized.");
+                if (this.lastActiveTimes == null)
+                    throw new Exception($"'{nameof(IdleFederationMembersKicker)}' has not been initialized.");
 
-            uint lastActiveTime = this.network.GenesisTime;
-            if (this.GetLastActiveTime(federationMember, currentTip, out lastActiveTime))
-                lastActiveTime = (lastActiveTime != default) ?  lastActiveTime : this.network.GenesisTime;
+                uint lastActiveTime = this.network.GenesisTime;
+                if (this.GetLastActiveTime(federationMember, currentTip, out lastActiveTime))
+                    lastActiveTime = (lastActiveTime != default) ? lastActiveTime : this.network.GenesisTime;
 
-            uint blockTime = blockHeader.Header.Time;
+                uint blockTime = blockHeader.Header.Time;
 
-            inactiveForSeconds = blockTime - lastActiveTime;
+                inactiveForSeconds = blockTime - lastActiveTime;
 
-            // This might happen in test setup scenarios.
-            if (blockTime < lastActiveTime)
-                inactiveForSeconds = 0;
+                // This might happen in test setup scenarios.
+                if (blockTime < lastActiveTime)
+                    inactiveForSeconds = 0;
 
-            return inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !(federationMember is CollateralFederationMember collateralFederationMember && collateralFederationMember.IsMultisigMember);
+                return inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !(federationMember is CollateralFederationMember collateralFederationMember && collateralFederationMember.IsMultisigMember);
+            }
         }
 
         /// <inheritdoc />
         public void Execute(ChainedHeader consensusTip)
         {
-            // No member can be kicked at genesis.
-            if (consensusTip.Height == 0)
-                return;
-
-            // Federation member kicking is not yet enabled.
-            var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime;
-            if (federationMemberActivationTime != null &&
-                federationMemberActivationTime > 0 &&
-                consensusTip.Header.Time < federationMemberActivationTime)
-                return;
-
-            try
+            lock (this.lockObject)
             {
-                UpdateTip(consensusTip);
+                // No member can be kicked at genesis.
+                if (consensusTip.Height == 0)
+                    return;
 
-                // Check if any fed member was idle for too long. Use the timestamp of the mined block.
-                foreach ((IFederationMember federationMember, uint lastActiveTime) in this.GetFederationMembersByLastActiveTime())
+                // Federation member kicking is not yet enabled.
+                var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime;
+                if (federationMemberActivationTime != null &&
+                    federationMemberActivationTime > 0 &&
+                    consensusTip.Header.Time < federationMemberActivationTime)
+                    return;
+
+                try
                 {
-                    if (this.ShouldMemberBeKicked(federationMember, consensusTip, consensusTip, out uint inactiveForSeconds))
+                    UpdateTip(consensusTip);
+
+                    // Check if any fed member was idle for too long. Use the timestamp of the mined block.
+                    foreach ((IFederationMember federationMember, uint lastActiveTime) in this.GetFederationMembersByLastActiveTime())
                     {
-                        byte[] federationMemberBytes = this.consensusFactory.SerializeFederationMember(federationMember);
-
-                        bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
-
-                        if (!alreadyKicking)
+                        if (this.ShouldMemberBeKicked(federationMember, consensusTip, consensusTip, out uint inactiveForSeconds))
                         {
-                            this.logger.LogWarning("Federation member '{0}' was inactive for {1} seconds and will be scheduled to be kicked.", federationMember.PubKey, inactiveForSeconds);
+                            byte[] federationMemberBytes = this.consensusFactory.SerializeFederationMember(federationMember);
 
-                            this.votingManager.ScheduleVote(new VotingData()
+                            bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
+
+                            if (!alreadyKicking)
                             {
-                                Key = VoteKey.KickFederationMember,
-                                Data = federationMemberBytes
-                            });
-                        }
-                        else
-                        {
-                            this.logger.LogDebug("Skipping because kicking is already voted for.");
+                                this.logger.LogWarning("Federation member '{0}' was inactive for {1} seconds and will be scheduled to be kicked.", federationMember.PubKey, inactiveForSeconds);
+
+                                this.votingManager.ScheduleVote(new VotingData()
+                                {
+                                    Key = VoteKey.KickFederationMember,
+                                    Data = federationMemberBytes
+                                });
+                            }
+                            else
+                            {
+                                this.logger.LogDebug("Skipping because kicking is already voted for.");
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, ex.ToString());
-                throw;
+                catch (Exception ex)
+                {
+                    this.logger.LogError(ex, ex.ToString());
+                    throw;
+                }
             }
         }
 
         /// <inheritdoc />
-        public void SaveMembersByLastActiveTime()
+        private void SaveMembersByLastActiveTime()
         {
-            var members = this.GetFederationMembersByLastActiveTime();
-            var dataToSave = new Dictionary<string, uint>();
+            if (this.lastActiveTip != null)
+            {
+                var members = this.GetFederationMembersByLastActiveTime();
+                var dataToSave = new Dictionary<string, uint>();
 
-            foreach (KeyValuePair<IFederationMember, uint> pair in members)
-                dataToSave.Add(pair.Key.PubKey.ToHex(), pair.Value);
+                foreach (KeyValuePair<IFederationMember, uint> pair in members)
+                    dataToSave.Add(pair.Key.PubKey.ToHex(), pair.Value);
 
-            this.keyValueRepository.SaveValueJson(fedMembersByLastActiveTimeKey, dataToSave);
-            this.keyValueRepository.SaveValueJson(lastActiveTipKey, new HashHeightPair(this.lastActiveTip));
+                this.keyValueRepository.SaveValueJson(fedMembersByLastActiveTimeKey, dataToSave);
+                this.keyValueRepository.SaveValueJson(lastActiveTipKey, new HashHeightPair(this.lastActiveTip));
+            }
+        }
+
+        public async Task PeriodicSaveAsync()
+        {
+            lock (this.lockObject)
+            {
+                if (this.SaveStatePeriodically && this.votingManager.IsInitialized)
+                    this.SaveMembersByLastActiveTime();
+            }
         }
 
         /// <inheritdoc />
