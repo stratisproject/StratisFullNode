@@ -86,7 +86,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
-                KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == this.federationManager.CurrentFederationKey.PubKey);
+                KeyValuePair<IFederationMember, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key.PubKey == this.federationManager.CurrentFederationKey.PubKey);
                 if (lastActive.Key != null)
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
@@ -154,15 +154,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var federationMemberModels = new List<FederationMemberModel>();
 
                 // Get their last active times.
-                ConcurrentDictionary<PubKey, uint> activeTimes = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime();
+                ConcurrentDictionary<IFederationMember, uint> activeTimes = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime();
                 foreach (IFederationMember federationMember in federationMembers)
                 {
                     federationMemberModels.Add(new FederationMemberModel()
                     {
                         PubKey = federationMember.PubKey.ToHex(),
                         CollateralAmount = (federationMember as CollateralFederationMember).CollateralAmount.ToUnit(MoneyUnit.BTC),
-                        LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value),
-                        PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key == federationMember.PubKey).Value)
+                        LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value),
+                        PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(activeTimes.FirstOrDefault(a => a.Key.PubKey == federationMember.PubKey).Value)
                     });
                 }
 

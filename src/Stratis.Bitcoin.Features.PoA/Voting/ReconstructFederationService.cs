@@ -61,7 +61,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     // Determine the reconstruction height.
                     this.logger.Info($"Reconstructing voting data: Determining the reconstruction height.");
-                    var federationMemberActivationTime = ((PoAConsensusOptions)this.nodeSettings.Network.Consensus.Options).FederationMemberActivationTime;
+                    var federationMemberActivationTime = ((PoAConsensusOptions)this.nodeSettings.Network.Consensus.Options).FederationMemberActivationTime ?? 0;
                     int reconstructionHeight;
                     if (this.chainIndexer.Tip.Header.Time < federationMemberActivationTime)
                     {
