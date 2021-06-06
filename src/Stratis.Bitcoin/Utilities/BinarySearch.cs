@@ -5,7 +5,7 @@ namespace Stratis.Bitcoin.Utilities
     public class BinarySearch
     {
         /// <summary>
-        /// Finds the first index in arange which evaluates to <c>true</c> when <paramref name="func"/> is applied to it.
+        /// Finds the first index in a range which evaluates to <c>true</c> when <paramref name="func"/> is applied to it.
         /// The range should strictly contain zero or more indexes for which <paramref name="func"/> evaluates to <c>false</c>
         /// optionally followed by indexes that evalates to <c>true</c>. The range may contain some indexes that evaluate to <c>null</c>.
         /// </summary>
