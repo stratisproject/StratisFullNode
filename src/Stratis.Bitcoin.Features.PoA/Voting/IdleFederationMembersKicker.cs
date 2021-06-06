@@ -159,7 +159,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (headers.Length != 0)
             {
-                (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.federationHistory.GetFederationMembersForBlocks(headers, false);
+                (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.federationHistory.GetFederationMembersForBlocks(headers);
 
                 for (int i = 0; i < headers.Length; i++)
                 {

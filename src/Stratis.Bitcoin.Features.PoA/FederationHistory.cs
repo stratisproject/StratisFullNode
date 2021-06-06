@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// and then the signature in <see cref="PoABlockHeader.BlockSignature"/>.</summary>
         /// <param name="chainedHeaders">Identifies the blocks and timestamps.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined, as well as the federations.</returns>
-        (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders, bool forceV2 = false);
+        (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders);
 
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
@@ -101,7 +101,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders, bool forceV2 = false)
+        public (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders)
         {
             (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations = this.votingManager.GetModifiedFederations(chainedHeaders).ToArray();
             IFederationMember[] miners = new IFederationMember[chainedHeaders.Length];
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load the block times here.
             int votingManagerV2ActivationHeight = GetVotingManagerV2ActivationHeight();
 
-            Parallel.For(0, chainedHeaders.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], federations[i].members, forceV2 || chainedHeaders[i].Height >= votingManagerV2ActivationHeight));
+            Parallel.For(0, chainedHeaders.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], federations[i].members, chainedHeaders[i].Height >= votingManagerV2ActivationHeight));
 
             if (chainedHeaders.FirstOrDefault()?.Height == 0)
                 miners[0] = federations[0].members.Last();
