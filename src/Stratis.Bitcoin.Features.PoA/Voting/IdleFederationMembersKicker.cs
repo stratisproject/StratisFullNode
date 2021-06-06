@@ -85,7 +85,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly PoAConsensusFactory consensusFactory;
 
-        // TODO: Use SortedSet? Can it be an ordinary list, assuming items can be added sequentially? How are re-orgs handled?
         public ConcurrentDictionary<PubKey, List<uint>> lastActiveTimes;
         public ChainedHeader lastActiveTip; // Need to handle forks with this...
 
