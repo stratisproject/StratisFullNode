@@ -86,7 +86,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly PoAConsensusFactory consensusFactory;
 
         public ConcurrentDictionary<PubKey, List<uint>> lastActiveTimes;
-        public ChainedHeader lastActiveTip; // Need to handle forks with this...
+        public ChainedHeader lastActiveTip;
 
         private const string fedMembersByLastActiveTimeKey = "fedMembersByLastActiveTime";
         private const string lastActiveTipKey = "lastActiveTip";
