@@ -5,30 +5,58 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.EventBus;
-using Stratis.Bitcoin.EventBus.CoreEvents;
-using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Persistence;
-using Stratis.Bitcoin.Primitives;
-using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public interface IIdleFederationMembersKicker : IDisposable
     {
+        /// <summary>
+        /// Determines when a federation member was last active. This includes mining or joining.
+        /// </summary>
+        /// <param name="federationMember">Member to check activity of.</param>
+        /// <param name="blockHeader">Block at which to check for past activity.</param>
+        /// <param name="lastActiveHeader">Block at which member was last active.</param>
+        /// <returns><c>True</c> if the information is available and <c>false</c> otherwise.</returns>
+        bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out ChainedHeader lastActiveHeader);
+
+        /// <summary>
+        /// Determines when the current federation members were last active. This includes mining or joining.
+        /// </summary>
+        /// <returns>A list of public keys and the times at which they were active.</returns>
         ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime();
-        bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds);
+
+        /// <summary>
+        /// Determines if a federation member should be kicked.
+        /// </summary>
+        /// <param name="federationMember">Member to check activity of.</param>
+        /// <param name="chainedHeader">Block at which to check for past activity.</param>
+        /// <param name="consensusTip">Typically the poll repository tip.</param>
+        /// <param name="inactiveForSeconds">Number of seconds member was inactive for.</param>
+        /// <returns><c>True</c> if the member should be kicked and <c>false</c> otherwise.</returns>
+        bool ShouldMemberBeKicked(IFederationMember federationMember, ChainedHeader chainedHeader, ChainedHeader consensusTip, out uint inactiveForSeconds);
+
+        /// <summary>
+        /// Determine whether or not any miners should be scheduled to be kicked from the federation at the current tip.
+        /// </summary>
+        /// <param name="consensusTip">The current consenus tip.</param>
         void Execute(ChainedHeader consensusTip);
+
+        /// <summary>
+        /// Initializes this component.
+        /// </summary>
         void Initialize();
 
         /// <summary> 
-        /// If this is a clean sync initialize each member's last active time with the genesis timestamp.
-        /// Each member's last active time will be updated on each block connected event during syncing
-        /// or on block mined.
+        /// Clears the recorded member activity before a re-sync.
         /// </summary>
-        void InitializeFederationMemberLastActiveTime(IEnumerable<IFederationMember> federationMembers);
-        void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true);
+        void ResetFederationMemberLastActiveTime();
+
+        /// <summary>
+        /// Saves the current state.
+        /// </summary>
+        void SaveMembersByLastActiveTime();
     }
 
     /// <summary>
@@ -37,8 +65,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     /// </summary>
     public class IdleFederationMembersKicker : IIdleFederationMembersKicker
     {
-        private readonly ISignals signals;
-
         private readonly IKeyValueRepository keyValueRepository;
 
         private readonly IConsensusManager consensusManager;
@@ -57,17 +83,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly PoAConsensusFactory consensusFactory;
 
-        private SubscriptionToken blockConnectedToken, fedMemberAddedToken, fedMemberKickedToken;
-
-        /// <summary>Active time is updated when member is added or produced a new block.</remarks>
-        private ConcurrentDictionary<PubKey, uint> fedPubKeysByLastActiveTime;
+        // TODO: Use SortedSet? Can it be an ordinary list, assuming items can be added sequentially? How are re-orgs handled?
+        public ConcurrentDictionary<PubKey, SortedList<uint, ChainedHeader>> lastActiveTimes;
+        public ChainedHeader lastActiveTip; // Need to handle forks with this...
 
         private const string fedMembersByLastActiveTimeKey = "fedMembersByLastActiveTime";
 
-        public IdleFederationMembersKicker(ISignals signals, Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager,
+        public IdleFederationMembersKicker(Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager,
             IFederationManager federationManager, VotingManager votingManager, IFederationHistory federationHistory, ILoggerFactory loggerFactory)
         {
-            this.signals = signals;
             this.network = network;
             this.keyValueRepository = keyValueRepository;
             this.consensusManager = consensusManager;
@@ -83,85 +107,143 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <inheritdoc />
         public void Initialize()
         {
-            this.blockConnectedToken = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
-            this.fedMemberAddedToken = this.signals.Subscribe<FedMemberAdded>(this.OnFedMemberAdded);
-            this.fedMemberKickedToken = this.signals.Subscribe<FedMemberKicked>(this.OnFedMemberKicked);
+            ResetFederationMemberLastActiveTime();
 
             Dictionary<string, uint> loaded = this.keyValueRepository.LoadValueJson<Dictionary<string, uint>>(fedMembersByLastActiveTimeKey);
             if (loaded != null)
             {
-                this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
-
                 foreach (KeyValuePair<string, uint> loadedMember in loaded)
                 {
-                    this.fedPubKeysByLastActiveTime[new PubKey(loadedMember.Key)] = loadedMember.Value;
+                    PubKey pubKey = new PubKey(loadedMember.Key);
+                    if (!this.lastActiveTimes.TryGetValue(pubKey, out SortedList<uint, ChainedHeader> activity))
+                    {
+                        activity = new SortedList<uint, ChainedHeader>();
+                        this.lastActiveTimes[pubKey] = activity;
+                    }
+
+                    activity[loadedMember.Value] = null;
                 }
-            }
-            else
-            {
-                this.logger.LogDebug("No saved data found. Initializing federation data with current timestamp.");
-                InitializeFederationMemberLastActiveTime(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
             }
         }
 
         /// <inheritdoc />
-        public void InitializeFederationMemberLastActiveTime(IEnumerable<IFederationMember> federationMembers)
+        public void ResetFederationMemberLastActiveTime()
         {
-            this.fedPubKeysByLastActiveTime = new ConcurrentDictionary<PubKey, uint>();
-
-            foreach (IFederationMember federationMember in federationMembers)
-            {
-                this.fedPubKeysByLastActiveTime[federationMember.PubKey] = this.network.GenesisTime;
-            }
-
-            this.SaveMembersByLastActiveTime();
+            this.lastActiveTip = null;
+            this.lastActiveTimes = new ConcurrentDictionary<PubKey, SortedList<uint, ChainedHeader>>();
         }
 
         /// <inheritdoc />
         public ConcurrentDictionary<PubKey, uint> GetFederationMembersByLastActiveTime()
         {
-            return this.fedPubKeysByLastActiveTime;
+            List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(this.lastActiveTip);
+
+            return new ConcurrentDictionary<PubKey, uint>(federationMembers
+                .Select(m => (m.PubKey, (this.GetLastActiveTime(m, this.lastActiveTip, out ChainedHeader lastActiveHeader) && lastActiveHeader != null) ? lastActiveHeader.Header.Time : this.network.GenesisTime))
+                .ToDictionary(x => x.PubKey, x => x.Item2));
         }
 
-        /// <summary>
-        /// This is to ensure that we keep <see cref="fedPubKeysByLastActiveTime"></see> up to date from other blocks being mined.
-        /// </summary>
-        /// <param name="blockConnected">The block that was connected.</param>
-        private void OnBlockConnected(BlockConnected blockConnected)
+        public void UpdateTip(ChainedHeader blockHeader)
         {
-            UpdateFederationMembersLastActiveTime(blockConnected.ConnectedBlock);
-        }
+            // TODO: Check for fork.
 
-        private void OnFedMemberKicked(FedMemberKicked fedMemberKickedData)
-        {
-            this.fedPubKeysByLastActiveTime.Remove(fedMemberKickedData.KickedMember.PubKey, out _);
+            if (blockHeader.Height <= (this.lastActiveTip?.Height ?? 0))
+                return;
 
-            this.SaveMembersByLastActiveTime();
-        }
+            var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime;
 
-        private void OnFedMemberAdded(FedMemberAdded fedMemberAddedData)
-        {
-            if (!this.fedPubKeysByLastActiveTime.ContainsKey(fedMemberAddedData.AddedMember.PubKey))
+            ChainedHeader[] headers = blockHeader
+                .EnumerateToGenesis()
+                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && h.Header.Time >= federationMemberActivationTime)
+                .Reverse().ToArray();
+
+            if (headers.Length != 0)
             {
-                this.fedPubKeysByLastActiveTime[fedMemberAddedData.AddedMember.PubKey] = this.consensusManager.Tip.Header.Time;
+                (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.federationHistory.GetFederationMembersForBlocks(headers, false);
 
-                this.SaveMembersByLastActiveTime();
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    ChainedHeader header = headers[i];
+
+                    uint headerTime = header.Header.Time;
+
+                    if (miners[i] != null)
+                    {
+                        if (!this.lastActiveTimes.TryGetValue(miners[i].PubKey, out SortedList<uint, ChainedHeader> minerActivity))
+                        {
+                            minerActivity = new SortedList<uint, ChainedHeader>();
+                            this.lastActiveTimes[miners[i].PubKey] = minerActivity;
+                        }
+
+                        minerActivity[headerTime] = header;
+                    }
+
+                    foreach (IFederationMember member in federations[i].whoJoined)
+                    {
+                        if (!this.lastActiveTimes.TryGetValue(member.PubKey, out SortedList<uint, ChainedHeader> joinActivity))
+                        {
+                            joinActivity = new SortedList<uint, ChainedHeader>();
+                            this.lastActiveTimes[member.PubKey] = joinActivity;
+                        }
+
+                        joinActivity[headerTime] = header;
+                    }
+                }
             }
+
+            this.lastActiveTip = blockHeader;
         }
 
         /// <inheritdoc />
-        public bool ShouldMemberBeKicked(PubKey pubKey, uint blockTime, out uint inactiveForSeconds)
+        public bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out ChainedHeader lastActiveHeader)
         {
-            Guard.NotNull(pubKey, nameof(pubKey));
+            UpdateTip(blockHeader);
 
-            if (this.fedPubKeysByLastActiveTime == null)
+            if (this.lastActiveTimes.TryGetValue(federationMember.PubKey, out SortedList<uint, ChainedHeader> activity))
+            {
+                uint blockTime = blockHeader.Header.Time;
+
+                lastActiveHeader = activity.Values.Last();
+                if (activity.Keys.Last() <= blockTime)
+                    return true;
+
+                int pos = BinarySearch.BinaryFindFirst(i => activity.Keys[i] > blockTime, 0, activity.Count);
+
+                if (pos > 0)
+                {
+                    lastActiveHeader = activity.Values[pos - 1];
+                    return true;
+                }
+            }
+
+            if (((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Any(m => m.PubKey == federationMember.PubKey))
+            {
+                lastActiveHeader = null;
+                return true;
+            }
+
+            // This should never happen.
+            this.logger.LogWarning("Could not resolve federation member's first activity.");
+
+            lastActiveHeader = null;
+            return false;
+        }
+
+        /// <inheritdoc />
+        public bool ShouldMemberBeKicked(IFederationMember federationMember, ChainedHeader blockHeader, ChainedHeader currentTip, out uint inactiveForSeconds)
+        {
+            Guard.NotNull(federationMember, nameof(federationMember));
+
+            PubKey pubKey = federationMember.PubKey;
+
+            if (this.lastActiveTimes == null)
                 throw new Exception($"'{nameof(IdleFederationMembersKicker)}' has not been initialized.");
 
-            if (!this.fedPubKeysByLastActiveTime.TryGetValue(pubKey, out uint lastActiveTime))
-            {
-                inactiveForSeconds = 0;
-                return false;
-            }
+            uint lastActiveTime = this.network.GenesisTime;
+            if (this.GetLastActiveTime(federationMember, currentTip, out ChainedHeader lastActiveHeader))
+                lastActiveTime = lastActiveHeader?.Header.Time ?? this.network.GenesisTime;
+
+            uint blockTime = blockHeader.Header.Time;
 
             inactiveForSeconds = blockTime - lastActiveTime;
 
@@ -169,7 +251,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (blockTime < lastActiveTime)
                 inactiveForSeconds = 0;
 
-            return (inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !this.federationManager.IsMultisigMember(pubKey));
+            return inactiveForSeconds > this.federationMemberMaxIdleTimeSeconds && !((CollateralFederationMember)federationMember).IsMultisigMember;
         }
 
         /// <inheritdoc />
@@ -188,14 +270,26 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             try
             {
-                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(consensusTip).PubKey;
+                UpdateTip(consensusTip);
+
+                List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(this.lastActiveTip);
+
+                /*
+                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(consensusTip, modifiedFederation).PubKey;
                 this.fedPubKeysByLastActiveTime.AddOrReplace(pubKey, consensusTip.Header.Time);
+                this.fedPubKeysByLastActiveTime1.AddOrReplace(pubKey, consensusTip);
+
                 this.SaveMembersByLastActiveTime();
+                */
 
                 // Check if any fed member was idle for too long. Use the timestamp of the mined block.
-                foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.fedPubKeysByLastActiveTime)
+                foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.GetFederationMembersByLastActiveTime())
                 {
-                    if (this.ShouldMemberBeKicked(fedMemberToActiveTime.Key, consensusTip.Header.Time, out uint inactiveForSeconds))
+                    IFederationMember federationMember = modifiedFederation.FirstOrDefault(m => m.PubKey == fedMemberToActiveTime.Key);
+                    if (federationMember == null)
+                        continue;
+
+                    if (this.ShouldMemberBeKicked(federationMember, consensusTip, consensusTip, out uint inactiveForSeconds))
                     {
                         IFederationMember memberToKick = this.federationManager.GetFederationMembers().SingleOrDefault(x => x.PubKey == fedMemberToActiveTime.Key);
 
@@ -227,24 +321,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        public void UpdateFederationMembersLastActiveTime(ChainedHeaderBlock blockConnected, bool save = true)
+        /// <inheritdoc />
+        public void SaveMembersByLastActiveTime()
         {
-            // The pubkey of the member that signed the block.
-            PubKey key = this.federationHistory.GetFederationMemberForBlock(blockConnected.ChainedHeader).PubKey;
-
-            // Update the dictionary.
-            this.fedPubKeysByLastActiveTime.AddOrReplace(key, blockConnected.ChainedHeader.Header.Time);
-
-            // Save it back.
-            if (save)
-                this.SaveMembersByLastActiveTime();
-        }
-
-        private void SaveMembersByLastActiveTime()
-        {
+            var members = this.GetFederationMembersByLastActiveTime();
             var dataToSave = new Dictionary<string, uint>();
 
-            foreach (KeyValuePair<PubKey, uint> pair in this.fedPubKeysByLastActiveTime)
+            foreach (KeyValuePair<PubKey, uint> pair in members)
                 dataToSave.Add(pair.Key.ToHex(), pair.Value);
 
             this.keyValueRepository.SaveValueJson(fedMembersByLastActiveTimeKey, dataToSave);
@@ -253,9 +336,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <inheritdoc />
         public void Dispose()
         {
-            this.signals.Unsubscribe(this.blockConnectedToken);
-            this.signals.Unsubscribe(this.fedMemberAddedToken);
-            this.signals.Unsubscribe(this.fedMemberKickedToken);
         }
     }
 }
