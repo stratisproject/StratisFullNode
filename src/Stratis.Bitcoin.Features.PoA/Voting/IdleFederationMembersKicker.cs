@@ -344,14 +344,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(this.lastActiveTip);
 
-                /*
-                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(consensusTip, modifiedFederation).PubKey;
-                this.fedPubKeysByLastActiveTime.AddOrReplace(pubKey, consensusTip.Header.Time);
-                this.fedPubKeysByLastActiveTime1.AddOrReplace(pubKey, consensusTip);
-
-                this.SaveMembersByLastActiveTime();
-                */
-
                 // Check if any fed member was idle for too long. Use the timestamp of the mined block.
                 foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.GetFederationMembersByLastActiveTime())
                 {
