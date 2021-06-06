@@ -393,6 +393,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 dataToSave.Add(pair.Key.ToHex(), pair.Value);
 
             this.keyValueRepository.SaveValueJson(fedMembersByLastActiveTimeKey, dataToSave);
+            this.keyValueRepository.SaveValueJson(lastActiveTipKey, new HashHeightPair(this.lastActiveTip));
         }
 
         /// <inheritdoc />
