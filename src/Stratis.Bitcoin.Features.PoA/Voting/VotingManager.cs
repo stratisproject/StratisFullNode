@@ -521,6 +521,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader);
                             this.pollsRepository.UpdatePoll(poll);
+
+                            this.idleFederationMembersKicker.UpdateTip(chBlock.ChainedHeader);
+                            this.idleFederationMembersKicker.SaveMembersByLastActiveTime();
                         }
                     }
                 }

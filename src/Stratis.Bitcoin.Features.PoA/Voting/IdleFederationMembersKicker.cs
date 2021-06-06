@@ -57,6 +57,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// Saves the current state.
         /// </summary>
         void SaveMembersByLastActiveTime();
+
+        /// <summary>
+        /// Updates idle information up to the specified block.
+        /// </summary>
+        /// <param name="blockHeader">The block to update idle information up to.</param>
+        void UpdateTip(ChainedHeader blockHeader);
     }
 
     /// <summary>
