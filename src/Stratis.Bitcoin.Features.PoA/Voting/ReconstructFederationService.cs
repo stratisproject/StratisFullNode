@@ -90,6 +90,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.logger.Info($"Reconstructing voting data...");
                     this.votingManager.ReconstructVotingDataFromHeightLocked(reconstructionHeight);
 
+                    this.idleFederationMembersKicker.SaveMembersByLastActiveTime();
+
                     this.logger.Info($"Reconstruction completed");
 
                     SetReconstructionFlag(false);

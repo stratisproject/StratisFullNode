@@ -17,9 +17,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         /// <param name="federationMember">Member to check activity of.</param>
         /// <param name="blockHeader">Block at which to check for past activity.</param>
-        /// <param name="lastActiveHeader">Block at which member was last active.</param>
+        /// <param name="lastActiveTime">Time at which member was last active.</param>
         /// <returns><c>True</c> if the information is available and <c>false</c> otherwise.</returns>
-        bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out ChainedHeader lastActiveHeader);
+        bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out uint lastActiveTime);
 
         /// <summary>
         /// Determines when the current federation members were last active. This includes mining or joining.
@@ -79,18 +79,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly ILogger logger;
 
+        private readonly ChainIndexer chainIndexer;
+
         private readonly uint federationMemberMaxIdleTimeSeconds;
 
         private readonly PoAConsensusFactory consensusFactory;
 
         // TODO: Use SortedSet? Can it be an ordinary list, assuming items can be added sequentially? How are re-orgs handled?
-        public ConcurrentDictionary<PubKey, SortedList<uint, ChainedHeader>> lastActiveTimes;
+        public ConcurrentDictionary<PubKey, List<uint>> lastActiveTimes;
         public ChainedHeader lastActiveTip; // Need to handle forks with this...
 
         private const string fedMembersByLastActiveTimeKey = "fedMembersByLastActiveTime";
+        private const string lastActiveTipKey = "lastActiveTip";
 
         public IdleFederationMembersKicker(Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager,
-            IFederationManager federationManager, VotingManager votingManager, IFederationHistory federationHistory, ILoggerFactory loggerFactory)
+            IFederationManager federationManager, VotingManager votingManager, IFederationHistory federationHistory, ILoggerFactory loggerFactory, ChainIndexer chainIndexer)
         {
             this.network = network;
             this.keyValueRepository = keyValueRepository;
@@ -102,6 +105,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.federationMemberMaxIdleTimeSeconds = ((PoAConsensusOptions)network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
+            this.chainIndexer = chainIndexer;
         }
 
         /// <inheritdoc />
@@ -115,22 +119,52 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 foreach (KeyValuePair<string, uint> loadedMember in loaded)
                 {
                     PubKey pubKey = new PubKey(loadedMember.Key);
-                    if (!this.lastActiveTimes.TryGetValue(pubKey, out SortedList<uint, ChainedHeader> activity))
+                    if (!this.lastActiveTimes.TryGetValue(pubKey, out List<uint> activity))
                     {
-                        activity = new SortedList<uint, ChainedHeader>();
+                        activity = new List<uint>();
                         this.lastActiveTimes[pubKey] = activity;
                     }
 
-                    activity[loadedMember.Value] = null;
+                    activity.Add(loadedMember.Value);
                 }
             }
+
+            HashHeightPair lastActiveTip = this.keyValueRepository.LoadValue<HashHeightPair>(lastActiveTipKey);
+            if (lastActiveTip != null)
+            {
+                this.lastActiveTip = this.chainIndexer.GetHeader(lastActiveTip.Hash);
+                return;
+            }
+
+            if (this.lastActiveTimes.Count == 0)
+                return;
+
+            // Try to determine the tip if none could be loaded.
+            uint maxTime = 0;
+
+            foreach ((PubKey pubKey, List<uint> activity) in this.lastActiveTimes)
+            {
+                if (activity.LastOrDefault() > maxTime)
+                    maxTime = activity.LastOrDefault();
+            }
+
+            if (this.chainIndexer.Tip.Header.Time < maxTime)
+            {
+                DiscardActivityAboveTime(this.chainIndexer.Tip.Header.Time);
+                this.lastActiveTip = this.chainIndexer.Tip;
+                return;
+            }
+
+            int height = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeader(x).Header.Time >= maxTime, 0, this.chainIndexer.Tip.Height + 1);
+
+            this.lastActiveTip = this.chainIndexer.GetHeader(height);
         }
 
         /// <inheritdoc />
         public void ResetFederationMemberLastActiveTime()
         {
             this.lastActiveTip = null;
-            this.lastActiveTimes = new ConcurrentDictionary<PubKey, SortedList<uint, ChainedHeader>>();
+            this.lastActiveTimes = new ConcurrentDictionary<PubKey, List<uint>>();
         }
 
         /// <inheritdoc />
@@ -139,16 +173,50 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(this.lastActiveTip);
 
             return new ConcurrentDictionary<PubKey, uint>(federationMembers
-                .Select(m => (m.PubKey, (this.GetLastActiveTime(m, this.lastActiveTip, out ChainedHeader lastActiveHeader) && lastActiveHeader != null) ? lastActiveHeader.Header.Time : this.network.GenesisTime))
+                .Select(m => (m.PubKey, (this.GetLastActiveTime(m, this.lastActiveTip, out uint lastActiveTime) && lastActiveTime != default) ? lastActiveTime : this.network.GenesisTime))
                 .ToDictionary(x => x.PubKey, x => x.Item2));
+        }
+
+        private void DiscardActivityAboveTime(uint discardAboveTime)
+        {
+            var remove = new List<PubKey>();
+
+            foreach ((PubKey pubKey, List<uint> activity) in this.lastActiveTimes)
+            {
+                int pos = BinarySearch.BinaryFindFirst(x => x > discardAboveTime, 0, activity.Count);
+                if (pos >= 0)
+                {
+                    if (pos == 0)
+                        remove.Add(pubKey);
+                    else
+                        activity.RemoveRange(pos, activity.Count - pos);
+                }
+            }
+
+            foreach (PubKey pubKey in remove)
+                this.lastActiveTimes.Remove(pubKey, out _);
         }
 
         public void UpdateTip(ChainedHeader blockHeader)
         {
-            // TODO: Check for fork.
+            if (this.lastActiveTip != null)
+            {
+                if (blockHeader == this.lastActiveTip)
+                    return;
 
-            if (blockHeader.Height <= (this.lastActiveTip?.Height ?? 0))
-                return;
+                ChainedHeader fork = this.lastActiveTip.FindFork(blockHeader);
+
+                // If the current chain includes the block then do nothing.
+                if (fork == blockHeader)
+                    return;
+
+                // If the fork shows blocks that are not in common then discard those blocks.
+                if (fork != this.lastActiveTip)
+                {
+                    DiscardActivityAboveTime(fork.Header.Time);
+                    this.lastActiveTip = fork;
+                }
+            }
 
             var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime;
 
@@ -169,24 +237,26 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (miners[i] != null)
                     {
-                        if (!this.lastActiveTimes.TryGetValue(miners[i].PubKey, out SortedList<uint, ChainedHeader> minerActivity))
+                        if (!this.lastActiveTimes.TryGetValue(miners[i].PubKey, out List<uint> minerActivity))
                         {
-                            minerActivity = new SortedList<uint, ChainedHeader>();
+                            minerActivity = new List<uint>();
                             this.lastActiveTimes[miners[i].PubKey] = minerActivity;
                         }
 
-                        minerActivity[headerTime] = header;
+                        if (minerActivity.LastOrDefault() != headerTime)
+                            minerActivity.Add(headerTime);
                     }
 
                     foreach (IFederationMember member in federations[i].whoJoined)
                     {
-                        if (!this.lastActiveTimes.TryGetValue(member.PubKey, out SortedList<uint, ChainedHeader> joinActivity))
+                        if (!this.lastActiveTimes.TryGetValue(member.PubKey, out List<uint> joinActivity))
                         {
-                            joinActivity = new SortedList<uint, ChainedHeader>();
+                            joinActivity = new List<uint>();
                             this.lastActiveTimes[member.PubKey] = joinActivity;
                         }
 
-                        joinActivity[headerTime] = header;
+                        if (joinActivity.LastOrDefault() != headerTime)
+                            joinActivity.Add(headerTime);
                     }
                 }
             }
@@ -195,37 +265,37 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <inheritdoc />
-        public bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out ChainedHeader lastActiveHeader)
+        public bool GetLastActiveTime(IFederationMember federationMember, ChainedHeader blockHeader, out uint lastActiveTime)
         {
             UpdateTip(blockHeader);
 
-            if (this.lastActiveTimes.TryGetValue(federationMember.PubKey, out SortedList<uint, ChainedHeader> activity))
+            if (this.lastActiveTimes.TryGetValue(federationMember.PubKey, out List<uint> activity))
             {
                 uint blockTime = blockHeader.Header.Time;
 
-                lastActiveHeader = activity.Values.Last();
-                if (activity.Keys.Last() <= blockTime)
+                lastActiveTime = activity.Last();
+                if (activity.Last() <= blockTime)
                     return true;
 
-                int pos = BinarySearch.BinaryFindFirst(i => activity.Keys[i] > blockTime, 0, activity.Count);
+                int pos = BinarySearch.BinaryFindFirst(i => activity[i] > blockTime, 0, activity.Count);
 
                 if (pos > 0)
                 {
-                    lastActiveHeader = activity.Values[pos - 1];
+                    lastActiveTime = activity[pos - 1];
                     return true;
                 }
             }
 
             if (((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers.Any(m => m.PubKey == federationMember.PubKey))
             {
-                lastActiveHeader = null;
+                lastActiveTime = default;
                 return true;
             }
 
             // This should never happen.
             this.logger.LogWarning("Could not resolve federation member's first activity.");
 
-            lastActiveHeader = null;
+            lastActiveTime = default;
             return false;
         }
 
@@ -240,8 +310,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 throw new Exception($"'{nameof(IdleFederationMembersKicker)}' has not been initialized.");
 
             uint lastActiveTime = this.network.GenesisTime;
-            if (this.GetLastActiveTime(federationMember, currentTip, out ChainedHeader lastActiveHeader))
-                lastActiveTime = lastActiveHeader?.Header.Time ?? this.network.GenesisTime;
+            if (this.GetLastActiveTime(federationMember, currentTip, out lastActiveTime))
+                lastActiveTime = (lastActiveTime != default) ?  lastActiveTime : this.network.GenesisTime;
 
             uint blockTime = blockHeader.Header.Time;
 
