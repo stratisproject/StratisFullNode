@@ -28,7 +28,7 @@ namespace NBitcoin
         /// The tip height of the best known validated chain.
         /// </summary>
         public int Height => this.Tip.Height;
-        public ChainedHeader Genesis => this.GetHeader(0);
+        public ChainedHeader Genesis => this.GetHeaderByHeight(0);
 
         public ChainIndexer()
         {
@@ -90,7 +90,7 @@ namespace NBitcoin
             // Find the first block the caller has in the main chain.
             foreach (uint256 hash in hashes)
             {
-                ChainedHeader chainedHeader = this.GetHeader(hash);
+                ChainedHeader chainedHeader = this.GetHeaderByHash(hash);
                 if (chainedHeader != null)
                     return chainedHeader;
             }
@@ -118,7 +118,7 @@ namespace NBitcoin
         /// <returns>Enumeration of chained block headers after given block hash.</returns>
         public IEnumerable<ChainedHeader> EnumerateAfter(uint256 blockHash)
         {
-            ChainedHeader block = this.GetHeader(blockHash);
+            ChainedHeader block = this.GetHeaderByHash(blockHash);
 
             if (block == null)
                 return new ChainedHeader[0];
@@ -146,7 +146,7 @@ namespace NBitcoin
         /// <returns>Enumeration of chained block headers from the given block hash to tip.</returns>
         public IEnumerable<ChainedHeader> EnumerateToTip(uint256 blockHash)
         {
-            ChainedHeader block = this.GetHeader(blockHash);
+            ChainedHeader block = this.GetHeaderByHash(blockHash);
             if (block == null)
                 yield break;
 
@@ -168,7 +168,7 @@ namespace NBitcoin
 
             while (true)
             {
-                ChainedHeader b = this.GetHeader(i);
+                ChainedHeader b = this.GetHeaderByHeight(i);
                 if ((b == null) || (b.Previous != prev))
                     yield break;
 
@@ -215,7 +215,7 @@ namespace NBitcoin
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's hash.
         /// </summary>
-        public virtual ChainedHeader GetHeader(uint256 id)
+        public virtual ChainedHeader GetHeaderByHash(uint256 id)
         {
             lock (this.lockObject)
             {
@@ -228,7 +228,7 @@ namespace NBitcoin
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's height.
         /// </summary>
-        public virtual ChainedHeader GetHeader(int height)
+        public virtual ChainedHeader GetHeaderByHeight(int height)
         {
             lock (this.lockObject)
             {
@@ -241,12 +241,12 @@ namespace NBitcoin
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's height.
         /// </summary>
-        public ChainedHeader this[int key] => this.GetHeader(key);
+        public ChainedHeader this[int key] => this.GetHeaderByHeight(key);
 
         /// <summary>
         /// Get a <see cref="ChainedHeader"/> based on it's hash.
         /// </summary>
-        public ChainedHeader this[uint256 id] => this.GetHeader(id);
+        public ChainedHeader this[uint256 id] => this.GetHeaderByHash(id);
 
         public override string ToString()
         {

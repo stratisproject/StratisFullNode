@@ -674,7 +674,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             if (lastBalanceHeight == 0)
                 return null;
 
-            ChainedHeader header = this.chainIndexer.GetHeader(lastBalanceHeight);
+            ChainedHeader header = this.chainIndexer.GetHeaderByHeight(lastBalanceHeight);
 
             if (header == null)
                 return null;

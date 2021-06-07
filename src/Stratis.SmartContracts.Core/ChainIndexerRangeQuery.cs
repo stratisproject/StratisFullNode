@@ -33,7 +33,7 @@ namespace Stratis.SmartContracts.Core
             }
 
             ChainedHeader toHeader = toBlockHeight.HasValue && toBlockHeight <= tip.Height
-                ? this.chainIndexer.GetHeader(toBlockHeight.Value)
+                ? this.chainIndexer.GetHeaderByHeight(toBlockHeight.Value)
                 : tip;
 
             if (toHeader == null)
