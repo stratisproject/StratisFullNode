@@ -31,8 +31,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// Initializes this component.
         /// </summary>
         void Initialize();
-
-        bool SaveStatePeriodically { get; set; }
     }
 
     /// <summary>
@@ -41,15 +39,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     /// </summary>
     public class IdleFederationMembersKicker : IIdleFederationMembersKicker
     {
-        private readonly IKeyValueRepository keyValueRepository;
-
-        private readonly IConsensusManager consensusManager;
-
-        private readonly IAsyncProvider asyncProvider;
-
         private readonly Network network;
-
-        private readonly IFederationManager federationManager;
 
         private readonly VotingManager votingManager;
 
@@ -63,16 +53,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly object lockObject;
 
-        public bool SaveStatePeriodically { get; set; }
-
         public IdleFederationMembersKicker(Network network, IKeyValueRepository keyValueRepository, IConsensusManager consensusManager, IAsyncProvider asyncProvider,
             IFederationManager federationManager, VotingManager votingManager, IFederationHistory federationHistory, ILoggerFactory loggerFactory)
         {
             this.network = network;
-            this.keyValueRepository = keyValueRepository;
-            this.consensusManager = consensusManager;
-            this.asyncProvider = asyncProvider;
-            this.federationManager = federationManager;
             this.votingManager = votingManager;
             this.federationHistory = federationHistory;
 

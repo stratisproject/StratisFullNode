@@ -58,7 +58,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 try
                 {
                     this.isBusyReconstructing = true;
-                    this.idleFederationMembersKicker.SaveStatePeriodically = false;
 
                     // Determine the reconstruction height.
                     this.logger.Info($"Reconstructing voting data: Determining the reconstruction height.");
@@ -89,9 +88,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.logger.Info($"Reconstruction completed");
 
                     SetReconstructionFlag(false);
-
-                    // Only if successful...
-                    this.idleFederationMembersKicker.SaveStatePeriodically = true;
                 }
                 catch (Exception ex)
                 {
