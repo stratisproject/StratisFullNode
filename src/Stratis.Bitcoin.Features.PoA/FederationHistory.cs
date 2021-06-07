@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.Crypto;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Utilities;
 
@@ -57,18 +58,20 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly VotingManager votingManager;
         private readonly ChainIndexer chainIndexer;
         private readonly Network network;
+        private readonly NodeSettings nodeSettings;
         private readonly object lockObject;
 
         private SortedDictionary<uint, (List<IFederationMember>, IFederationMember)> federationHistory;
         private ConcurrentDictionary<PubKey, List<uint>> lastActiveTimeByPubKey;
         private ChainedHeader lastActiveTip;
 
-        public FederationHistory(IFederationManager federationManager, Network network, VotingManager votingManager = null, ChainIndexer chainIndexer = null)
+        public FederationHistory(IFederationManager federationManager, Network network, VotingManager votingManager = null, ChainIndexer chainIndexer = null, NodeSettings nodeSettings = null)
         {
             this.federationManager = federationManager;
             this.votingManager = votingManager;
             this.chainIndexer = chainIndexer;
             this.network = network;
+            this.nodeSettings = nodeSettings;
             this.lockObject = new object();
             this.lastActiveTimeByPubKey = new ConcurrentDictionary<PubKey, List<uint>>();
             this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>();
@@ -85,7 +88,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
                     return item.modifiedFederation;
 
-                return (this.votingManager == null) ? this.federationManager.GetFederationMembers() : this.votingManager.GetModifiedFederation(chainedHeader);
+                return this.GetFederationMembersForBlocks(new[] { chainedHeader }).federations[0].members;
             }
         }
 
@@ -99,12 +102,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
                     return item.miner;
 
-                List<IFederationMember> federation = (this.votingManager == null) ? this.federationManager.GetFederationMembers() : this.votingManager.GetModifiedFederation(chainedHeader);
-
-                if (chainedHeader.Height == 0)
-                    return federation.Last();
-
-                return GetFederationMemberForBlock(chainedHeader.Header as PoABlockHeader, federation, chainedHeader.Height >= this.GetVotingManagerV2ActivationHeight());
+                return this.GetFederationMembersForBlocks(new[] { chainedHeader }).miners[0];
             }
         }
 
@@ -118,7 +116,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders)
         {
-            (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations = this.votingManager.GetModifiedFederations(chainedHeaders).ToArray();
+            (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations;
+            if (this.votingManager != null && this.nodeSettings.DevMode == null)
+                federations = this.votingManager.GetModifiedFederations(chainedHeaders).ToArray();
+            else
+                federations = Enumerable.Range(0, chainedHeaders.Length).Select(n => (this.federationManager.GetFederationMembers(), new HashSet<IFederationMember>())).ToArray();
+
             IFederationMember[] miners = new IFederationMember[chainedHeaders.Length];
             PoABlockHeader[] headers = chainedHeaders.Select(h => (PoABlockHeader)h.Header).ToArray();
 
