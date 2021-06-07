@@ -26,12 +26,6 @@ namespace Stratis.Bitcoin.Features.PoA
         List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
 
         /// <summary>
-        /// See <see cref="PoAConsensusOptions.VotingManagerV2ActivationHeight"/>
-        /// </summary>
-        /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
-        IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, PoAConsensusOptions poAConsensusOptions, List<IFederationMember> federationMembers = null);
-
-        /// <summary>
         /// Determines when a federation member was last active. This includes mining or joining.
         /// </summary>
         /// <param name="federationMember">Member to check activity of.</param>
@@ -123,6 +117,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 federations = Enumerable.Range(0, chainedHeaders.Length).Select(n => (this.federationManager.GetFederationMembers(), new HashSet<IFederationMember>())).ToArray();
 
             IFederationMember[] miners = new IFederationMember[chainedHeaders.Length];
+
+            // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load it here.
             PoABlockHeader[] headers = chainedHeaders.Select(h => (PoABlockHeader)h.Header).ToArray();
 
             // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load the block times here.
@@ -139,7 +135,7 @@ namespace Stratis.Bitcoin.Features.PoA
         private IFederationMember GetFederationMemberForBlock(PoABlockHeader blockHeader, List<IFederationMember> federation, bool votingManagerV2)
         {
             if (!votingManagerV2)
-                return GetFederationMemberForTimestamp(blockHeader.Time, this.network.Consensus.Options as PoAConsensusOptions, federation);
+                return GetFederationMemberForTimestamp(blockHeader.Time, federation);
 
             uint256 blockHash = blockHeader.GetHash();
 
@@ -164,10 +160,11 @@ namespace Stratis.Bitcoin.Features.PoA
             return null;
         }
 
-        /// <inheritdoc />
-        public IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, PoAConsensusOptions poAConsensusOptions, List<IFederationMember> federationMembers = null)
+        private IFederationMember GetFederationMemberForTimestamp(uint headerUnixTimestamp, List<IFederationMember> federationMembers)
         {
             federationMembers = federationMembers ?? this.federationManager.GetFederationMembers();
+
+            var poAConsensusOptions = (PoAConsensusOptions)this.network.Consensus.Options;
 
             uint roundTime = this.GetRoundLengthSeconds(poAConsensusOptions, federationMembers.Count);
 

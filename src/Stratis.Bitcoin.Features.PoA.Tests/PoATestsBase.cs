@@ -133,23 +133,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });
 
-            federationHistory
-                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), It.IsAny<PoAConsensusOptions>(), It.IsAny<List<IFederationMember>>()))
-                .Returns<uint, PoAConsensusOptions, List<IFederationMember>>((headerUnixTimestamp, poAConsensusOptions, federation) =>
-                {
-                    List<IFederationMember> federationMembers = federation ?? poAConsensusOptions.GenesisFederationMembers;
-
-                    uint roundTime = (uint)(federationMembers.Count * poAConsensusOptions.TargetSpacingSeconds);
-
-                    // Time when current round started.
-                    uint roundStartTimestamp = (headerUnixTimestamp / roundTime) * roundTime;
-
-                    // Slot number in current round.
-                    int currentSlotNumber = (int)((headerUnixTimestamp - roundStartTimestamp) / poAConsensusOptions.TargetSpacingSeconds);
-
-                    return federationMembers[currentSlotNumber];
-                });
-
             votingManager.Initialize(federationHistory.Object);
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
             federationManager.Initialize();
