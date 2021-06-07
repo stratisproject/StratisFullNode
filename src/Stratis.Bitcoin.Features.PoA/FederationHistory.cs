@@ -57,7 +57,6 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly VotingManager votingManager;
         private readonly ChainIndexer chainIndexer;
         private readonly Network network;
-        private readonly ConcurrentDictionary<uint256, PubKey[]> candidatesByBlockHash;
         private readonly object lockObject;
 
         private SortedDictionary<uint, (List<IFederationMember>, IFederationMember)> federationHistory;
@@ -70,7 +69,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingManager = votingManager;
             this.chainIndexer = chainIndexer;
             this.network = network;
-            this.candidatesByBlockHash = new ConcurrentDictionary<uint256, PubKey[]>();
             this.lockObject = new object();
             this.lastActiveTimeByPubKey = new ConcurrentDictionary<PubKey, List<uint>>();
             this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>();
@@ -142,28 +140,22 @@ namespace Stratis.Bitcoin.Features.PoA
 
             uint256 blockHash = blockHeader.GetHash();
 
-            if (!this.candidatesByBlockHash.TryGetValue(blockHash, out PubKey[] pubKeys))
+            try
             {
-                pubKeys = new PubKey[4];
-
-                try
+                var signature = ECDSASignature.FromDER(blockHeader.BlockSignature.Signature);
+                for (int recId = 0; recId < 4; recId++)
                 {
-                    var signature = ECDSASignature.FromDER(blockHeader.BlockSignature.Signature);
-                    for (int recId = 0; recId < pubKeys.Length; recId++)
-                        pubKeys[recId] = PubKey.RecoverFromSignature(recId, signature, blockHash, true);
-                }
-                catch (Exception)
-                {
-                }
+                    PubKey pubKeyForSig = PubKey.RecoverFromSignature(recId, signature, blockHash, true);
+                    if (pubKeyForSig == null)
+                        break;
 
-                this.candidatesByBlockHash[blockHash] = pubKeys;
+                    IFederationMember federationMember = federation.FirstOrDefault(m => m.PubKey == pubKeyForSig);
+                    if (federationMember != null)
+                        return federationMember;
+                }
             }
-
-            foreach (PubKey pubKeyForSig in pubKeys)
-            { 
-                IFederationMember federationMember = federation.FirstOrDefault(m => m.PubKey == pubKeyForSig);
-                if (federationMember != null)
-                    return federationMember;
+            catch (Exception)
+            {
             }
 
             return null;
@@ -230,10 +222,37 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(pos2).ToDictionary(x => x.Key, x => x.Value));
         }
 
+        private void DiscardActivityBelowTime(uint discardBelowTime)
+        {
+            // Discard 500 blocks if there is more than 1000 extraneous blocks.
+            int pos2 = BinarySearch.BinaryFindFirst(x => this.federationHistory.ElementAt(x).Key > discardBelowTime, 0, this.federationHistory.Values.Count);
+            if (pos2 < 1000)
+                return;
+
+            this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(500).ToDictionary(x => x.Key, x => x.Value));
+
+            discardBelowTime = this.federationHistory.ElementAt(0).Key;
+
+            var remove = new List<PubKey>();
+
+            foreach ((PubKey pubKey, List<uint> activity) in this.lastActiveTimeByPubKey)
+            {
+                int pos = BinarySearch.BinaryFindFirst(x => activity[x] >= discardBelowTime, 0, activity.Count);
+                if (pos >= 0)
+                {
+                    if (activity.Count <= pos )
+                        remove.Add(pubKey);
+                    else
+                        activity.RemoveRange(0, pos);
+                }
+            }
+
+            foreach (PubKey pubKey in remove)
+                this.lastActiveTimeByPubKey.Remove(pubKey, out _);
+        }
+
         private void UpdateTip(ChainedHeader blockHeader)
         {
-            // TODO: Add cleanup of older blocks.
-
             if (this.lastActiveTip != null)
             {
                 if (blockHeader == this.lastActiveTip)
@@ -253,14 +272,15 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
-            var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
-
+            // Gather enough blocks to handle idle checking but nothing below the activation time.
+            uint federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
             uint maxInactiveTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
             uint blockTime = blockHeader.Header.Time;
+            uint maxTime = Math.Max(blockTime - maxInactiveTime, federationMemberActivationTime);
 
             ChainedHeader[] headers = blockHeader
                 .EnumerateToGenesis()
-                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && (h.Header.Time + maxInactiveTime) >= blockTime && h.Header.Time >= federationMemberActivationTime)
+                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && h.Header.Time >= maxTime)
                 .Reverse().ToArray();
 
             if (headers.Length != 0)
@@ -302,6 +322,8 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             this.lastActiveTip = blockHeader;
+
+            DiscardActivityBelowTime(maxTime);
         }
 
         /// <inheritdoc />
