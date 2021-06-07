@@ -5,6 +5,7 @@ using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Primitives;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
 
@@ -60,8 +61,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
             }
         }
 
-        public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money totalReward)
+        public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money fee)
         {
+            // Retrieve all the multisig members at the current block height
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
 
             var multisigs = new List<CollateralFederationMember>();
@@ -77,18 +79,53 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 multisigs.Add(collateralMember);
             }
 
-            Money reward = totalReward / multisigs.Count;
-
-            var recipients = new List<Recipient>();
-
-            foreach (CollateralFederationMember multisig in multisigs)
+            // Inspect the last (size of current federation) less maxerorg blocks to determine
+            // which of them were mined by a multisig member.
+            var multiSigMinerScripts = new List<Script>();
+            var startHeight = this.chainIndexer.Tip.Height - this.epoch;
+            for (int i = federation.Count; i >= 0; i--)
             {
-                Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(multisig.PubKey);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(startHeight - i);
 
-                recipients.Add(new Recipient() { Amount = reward, ScriptPubKey = p2pkh });
+                var collateralFederationMember = this.federationHistory.GetFederationMemberForBlock(chainedHeader) as CollateralFederationMember;
+                if (collateralFederationMember != null && collateralFederationMember.IsMultisigMember)
+                {
+                    if (chainedHeader.Block == null)
+                        chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+
+                    Transaction coinBase = chainedHeader.Block.Transactions[0];
+
+                    Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
+
+                    // If the POA miner at the time did not have a wallet address, the script length can be 0.
+                    // In this case the block shouldn't count as it was "not mined by anyone".
+                    if (Script.IsNullOrEmpty(minerScript))
+                        continue;
+
+                    if (!multiSigMinerScripts.Contains(minerScript))
+                        multiSigMinerScripts.Add(minerScript);
+                }
             }
 
-            return recipients;
+            Money feeReward = fee / multiSigMinerScripts.Count;
+
+            var multiSigRecipients = new List<Recipient>();
+
+            foreach (Script multiSigMinerScript in multiSigMinerScripts)
+            {
+                if (multiSigMinerScript.IsScriptType(ScriptType.P2PK))
+                {
+                    PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(multiSigMinerScript);
+                    Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                    multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = p2pkh });
+                }
+                else
+                    multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = multiSigMinerScript });
+
+            }
+
+            return multiSigRecipients;
         }
 
         /// <inheritdoc />
