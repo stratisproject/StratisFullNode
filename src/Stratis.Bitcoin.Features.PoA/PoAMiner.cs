@@ -175,9 +175,9 @@ namespace Stratis.Bitcoin.Features.PoA
                         continue;
                     }
 
-                    uint miningTimestamp = await this.WaitUntilMiningSlotAsync().ConfigureAwait(false);
+                    (ChainedHeader tip, DateTimeOffset miningTimestamp) = await this.WaitUntilMiningSlotAsync().ConfigureAwait(false);
 
-                    ChainedHeader chainedHeader = await this.MineBlockAtTimestampAsync(miningTimestamp).ConfigureAwait(false);
+                    ChainedHeader chainedHeader = await this.MineBlockAtTimestampAsync(tip, miningTimestamp).ConfigureAwait(false);
 
                     if (chainedHeader == null)
                     {
@@ -234,51 +234,52 @@ namespace Stratis.Bitcoin.Features.PoA
             }
         }
 
-        private async Task<uint> WaitUntilMiningSlotAsync()
+        private async Task<(ChainedHeader tip, DateTimeOffset miningTimestamp)> WaitUntilMiningSlotAsync()
         {
-            uint? myTimestamp = null;
-
             while (!this.cancellation.IsCancellationRequested)
             {
-                uint timeNow = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+                DateTime timeNow = this.dateTimeProvider.GetAdjustedTime();
 
-                if (timeNow <= this.consensusManager.Tip.Header.Time)
+                ChainedHeader tip = this.consensusManager.Tip;
+
+                try
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
-                    continue;
-                }
+                    DateTimeOffset myTimestamp = this.slotsManager.GetMiningTimestamp(tip, timeNow);
 
-                if (myTimestamp == null)
+                    if (myTimestamp > timeNow)
+                    {
+                        TimeSpan waitTime = myTimestamp - timeNow;
+
+                        if (waitTime.Milliseconds > 50)
+                        {
+                            await Task.Delay(50, this.cancellation.Token).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        await Task.Delay(waitTime, this.cancellation.Token).ConfigureAwait(false);
+                    }
+
+                    return (tip, myTimestamp);
+                }
+                catch (NotAFederationMemberException)
                 {
-                    try
-                    {
-                        myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
-                    }
-                    catch (NotAFederationMemberException)
-                    {
-                        this.logger.LogWarning("This node is no longer a federation member!");
-
-                        throw new OperationCanceledException();
-                    }
+                    this.logger.LogWarning("This node is no longer a federation member!");
+                    break;
                 }
-
-                int estimatedWaitingTime = (int)(myTimestamp - timeNow) - 1;
-
-                if (estimatedWaitingTime <= 0)
-                    return myTimestamp.Value;
-
-                await Task.Delay(TimeSpan.FromMilliseconds(500), this.cancellation.Token).ConfigureAwait(false);
+                catch (Exception err)
+                {
+                    this.logger.LogError(err.Message);
+                    break;
+                }
             }
 
             throw new OperationCanceledException();
         }
 
-        protected async Task<ChainedHeader> MineBlockAtTimestampAsync(uint timestamp)
+        protected async Task<ChainedHeader> MineBlockAtTimestampAsync(ChainedHeader tip, DateTimeOffset timestamp)
         {
-            ChainedHeader tip = this.consensusManager.Tip;
-
             // Timestamp should always be greater than prev one.
-            if (timestamp <= tip.Header.Time)
+            if (timestamp <= tip.Header.BlockTime)
             {
                 // Can happen only when target spacing had crazy low value or key was compromised and someone is mining with our key.
                 this.logger.LogWarning("Somehow another block was connected with greater timestamp. Dropping current block.");
@@ -319,7 +320,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 return null;
             }
 
-            blockTemplate.Block.Header.Time = timestamp;
+            ((PoABlockHeader)blockTemplate.Block.Header).BlockTime = timestamp;
 
             // Update merkle root.
             blockTemplate.Block.UpdateMerkleRoot();

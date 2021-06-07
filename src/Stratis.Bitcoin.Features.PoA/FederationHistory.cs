@@ -25,8 +25,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <param name="offset">Set to a non-zero value to specify a block relative to <paramref name="chainedHeader"/>.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
-        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
+        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, int offset = 0);
 
         /// <summary>
         /// See <see cref="PoAConsensusOptions.VotingManagerV2ActivationHeight"/>
@@ -54,9 +55,9 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader)
+        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, int offset = 0)
         {
-            return (this.votingManager == null) ? this.federationManager.GetFederationMembers() : this.votingManager.GetModifiedFederation(chainedHeader);
+            return (this.votingManager == null) ? this.federationManager.GetFederationMembers() : this.votingManager.GetModifiedFederation(chainedHeader, offset);
         }
 
         /// <inheritdoc />
@@ -82,10 +83,12 @@ namespace Stratis.Bitcoin.Features.PoA
             if (chainedHeader.Height == 0)
                 return federation.Last();
 
-            // Try to provide the public key that signed the block.
+            // Try to provide the member that signed the block.
             try
             {
                 var header = chainedHeader.Header as PoABlockHeader;
+                if (header == null)
+                    return null;
 
                 var signature = ECDSASignature.FromDER(header.BlockSignature.Signature);
                 for (int recId = 0; recId < 4; recId++)

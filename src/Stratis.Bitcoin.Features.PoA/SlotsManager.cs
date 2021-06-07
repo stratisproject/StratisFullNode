@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Utilities;
 
@@ -15,10 +14,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets next timestamp at which current node can produce a block.</summary>
         /// <exception cref="Exception">Thrown if this node is not a federation member.</exception>
-        uint GetMiningTimestamp(uint currentTime);
-
-        /// <summary>Determines whether timestamp is valid according to the network rules.</summary>
-        bool IsValidTimestamp(uint headerUnixTimestamp);
+        DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset currentTime);
 
         TimeSpan GetRoundLength(int? federationMembersCount = null);
     }
@@ -29,54 +25,83 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IFederationManager federationManager;
 
-        private readonly ChainIndexer chainIndexer;
+        private readonly IFederationHistory federationHistory;
 
-        private readonly ILogger logger;
-
-        public SlotsManager(Network network, IFederationManager federationManager, ChainIndexer chainIndexer, ILoggerFactory loggerFactory)
+        public SlotsManager(Network network, IFederationManager federationManager, IFederationHistory federationHistory)
         {
             Guard.NotNull(network, nameof(network));
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
-            this.chainIndexer = chainIndexer;
+            this.federationHistory = Guard.NotNull(federationHistory, nameof(federationHistory));
             this.consensusOptions = (network as PoANetwork).ConsensusOptions;
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
         /// <inheritdoc />
-        public uint GetMiningTimestamp(uint currentTime)
+        public DateTimeOffset GetMiningTimestamp(ChainedHeader tip, DateTimeOffset timeNow)
         {
-            if (!this.federationManager.IsFederationMember)
+            /*
+            A miner can calculate when its expected to mine by looking at the ordered list of federation members
+            and the last block that was mined and by whom. It can count the number of mining slots from that member
+            to itself and multiply that with the target spacing to arrive at its mining timestamp.
+            */
+            List<IFederationMember> federationMembersAtMinedBlock = this.federationHistory.GetFederationForBlock(tip, 1);
+
+            int myIndex = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
+            if (myIndex < 0)
                 throw new NotAFederationMemberException();
 
-            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
+            var roundTime = this.GetRoundLength(federationMembersAtMinedBlock.Count);
 
-            // Round length in seconds.
-            uint roundTime = (uint)this.GetRoundLength(federationMembers.Count).TotalSeconds;
+            // Determine the index of the miner that mined the last block.
+            IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip);
+            List<IFederationMember> federationMembersAtTip = this.federationHistory.GetFederationForBlock(tip);
+            int lastMinerIndex = federationMembersAtTip.FindIndex(m => m.PubKey == lastMiner.PubKey);
+            if (lastMinerIndex < 0)
+                throw new Exception($"The miner ('{lastMiner.PubKey.ToHex()}') of the block at height {tip.Height} could not be located in federation.");
 
-            // Index of a slot that current node can take in each round.
-            uint slotIndex = (uint)federationMembers.FindIndex(x => x.PubKey == this.federationManager.CurrentFederationKey.PubKey);
+            int index = -1;
 
-            // Time when current round started.
-            uint roundStartTimestamp = (currentTime / roundTime) * roundTime;
-            uint nextTimestampForMining = roundStartTimestamp + slotIndex * this.consensusOptions.TargetSpacingSeconds;
-
-            // Check if we have missed our turn for this round.
-            // We still consider ourselves "in a turn" if we are in the first half of the turn and we haven't mined there yet.
-            // This might happen when starting the node for the first time or if there was a problem when mining.
-            if (currentTime > nextTimestampForMining + (this.consensusOptions.TargetSpacingSeconds / 2) // We are closer to the next turn than our own
-                  || this.chainIndexer.Tip.Header.Time == nextTimestampForMining) // We have already mined in that slot
+            // Looking back, find the first member in common between the old and new federation.
+            for (int i = federationMembersAtTip.Count; i >= 1 && index < 0; i--)
             {
-                // Get timestamp for next round.
-                nextTimestampForMining = roundStartTimestamp + roundTime + slotIndex * this.consensusOptions.TargetSpacingSeconds;
+                PubKey keyToFind = federationMembersAtTip[(i + lastMinerIndex) % federationMembersAtTip.Count].PubKey;
+                index = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == keyToFind);
+            }
+            
+            if (index < 0)
+                throw new Exception("Could not find a member in common between the old and new federation");
+
+            // Found a member that occurs in both old and new federation.
+            // Determine "distance" apart in new federation.
+            int diff = myIndex - index;
+            while (diff < 0)
+                diff += federationMembersAtMinedBlock.Count;
+
+            DateTimeOffset tipTime = tip.Header.BlockTime;
+            while ((tipTime + roundTime) < timeNow)
+                tipTime += roundTime;
+
+            DateTimeOffset timeToMine = tipTime + roundTime * diff / federationMembersAtMinedBlock.Count;
+            if (timeToMine < timeNow)
+                timeToMine += roundTime;
+
+            // Ensure we have not already mined in this round.
+            // The loop tries to find a block (mined by us) within "roundTime" of "timeToMine". 
+            // If found the timeToMine is bumped by one round.
+            for (ChainedHeader header = tip; header != null; header = header.Previous)
+            {
+                // If the current block is to far back in time to meeting our criteria the exit.
+                if ((header.Header.BlockTime + roundTime) <= timeToMine)
+                    break;
+
+                // A recent block was found. Postpone mining to the next round.
+                if (this.federationHistory.GetFederationMemberForBlock(header).PubKey == this.federationManager.CurrentFederationKey.PubKey)
+                {
+                    timeToMine += roundTime;
+                    break;
+                }
             }
 
-            return nextTimestampForMining;
-        }
-
-        /// <inheritdoc />
-        public bool IsValidTimestamp(uint headerUnixTimestamp)
-        {
-            return (headerUnixTimestamp % this.consensusOptions.TargetSpacingSeconds) == 0;
+            return timeToMine;
         }
 
         public TimeSpan GetRoundLength(int? federationMembersCount)
