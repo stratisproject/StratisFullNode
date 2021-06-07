@@ -82,11 +82,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.logger.Info($"Reconstructing voting data: Re-initializing federation members.");
                     this.federationManager.Initialize();
 
-                    // Re-initialize the idle members kicker as we will be resetting the
-                    // last active times via the reconstruction events.
-                    this.logger.Info($"Reconstructing voting data: Re-initializing federation members last active times.");
-                    this.idleFederationMembersKicker.ResetFederationMemberLastActiveTime();
-
                     // Reconstruct polls per block which will rebuild the federation.
                     this.logger.Info($"Reconstructing voting data...");
                     this.votingManager.ReconstructVotingDataFromHeightLocked(reconstructionHeight);

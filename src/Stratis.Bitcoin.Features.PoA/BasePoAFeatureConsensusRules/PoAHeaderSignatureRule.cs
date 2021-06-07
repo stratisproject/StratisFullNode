@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -28,10 +26,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private Network network;
 
-        // Tracks mining activity and federation size for one round's worth of blocks.
-        private List<(PubKey pubKey, int federationSize, DateTimeOffset blockTime)> activity;
-        private ChainedHeader activityTip;
-
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -45,8 +39,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.validator = engine.PoaHeaderValidator;
             this.chainState = engine.ChainState;
             this.network = this.Parent.Network;
-            this.activity = new List<(PubKey pubKey, int federationSize, DateTimeOffset blockTime)>();
-            this.activityTip = null;
 
             this.maxReorg = this.network.Consensus.MaxReorgLength;
         }
@@ -59,7 +51,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(chainedHeader);
 
-            PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate/*, federation*/)?.PubKey;
+            PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate)?.PubKey;
 
             if (pubKey == null || !this.validator.VerifySignature(pubKey, header))
             {
@@ -83,45 +75,26 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             var roundTime = this.slotsManager.GetRoundLength(federation.Count);
             int blockCounter = 0;
 
-            var headers = chainedHeader.Previous
-                .EnumerateToGenesis()
-                .TakeWhile(h => (header.BlockTime - h.Header.BlockTime) >= roundTime && !(this.activityTip?.HashBlock == h.HashBlock))
-                .Reverse()
-                .ToArray();
-
-
-            if (headers.FirstOrDefault()?.Previous?.HashBlock != this.activityTip?.HashBlock)
-                this.activity.Clear();
-
-            (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> _)[] federations) = this.federationHistory.GetFederationMembersForBlocks(headers);
-
-            this.activity.AddRange(Enumerable.Range(0, miners.Length)
-                .Select(i => (miners[i].PubKey, federations[i].members.Count, headers[i].Header.BlockTime)));
-
-            this.activityTip = chainedHeader.Previous;
-
-            for (int i = this.activity.Count - 1; i >= 0; i--)
+            for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
             {
                 blockCounter += 1;
 
-                (PubKey miner, int federationSize, DateTimeOffset blockTime) = this.activity[i];
-
-                if ((header.BlockTime - blockTime) >= roundTime)
+                if ((header.BlockTime - prevHeader.Header.BlockTime) >= roundTime)
                     break;
 
                 // If the miner is found again within the same round then throw a consensus error.
-                if (miner != pubKey)
+                if (this.federationHistory.GetFederationMemberForBlock(prevHeader)?.PubKey != pubKey)
                     continue;
 
                 // Mining slots shift when the federation changes. 
                 // Only raise an error if the federation did not change.
-                if (federationSize != federation.Count)
+                if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader).Count) != roundTime)
                     break;
 
-                if (this.activity[i - 1].federationSize != federation.Count)
+                if (this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(prevHeader.Previous).Count) != roundTime)
                     break;
 
-                this.Logger.LogDebug("Block was mined by the same miner '{0}' as {1} blocks ({2})s ago and there was no federation change.", pubKey.ToHex(), blockCounter, (header.BlockTime - blockTime).TotalSeconds);
+                this.Logger.LogDebug("Block {0} was mined by the same miner '{1}' as {2} blocks ({3})s ago and there was no federation change.", prevHeader.HashBlock, pubKey.ToHex(), blockCounter, header.Time - prevHeader.Header.Time);
                 this.Logger.LogTrace("(-)[TIME_TOO_EARLY]");
                 ConsensusErrors.BlockTimestampTooEarly.Throw();
             }
