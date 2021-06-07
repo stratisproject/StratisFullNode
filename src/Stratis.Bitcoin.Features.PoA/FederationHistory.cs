@@ -255,9 +255,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
             var federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
 
+            uint maxInactiveTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
+            uint blockTime = blockHeader.Header.Time;
+
             ChainedHeader[] headers = blockHeader
                 .EnumerateToGenesis()
-                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && h.Header.Time >= federationMemberActivationTime)
+                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && (h.Header.Time + maxInactiveTime) >= blockTime && h.Header.Time >= federationMemberActivationTime)
                 .Reverse().ToArray();
 
             if (headers.Length != 0)
