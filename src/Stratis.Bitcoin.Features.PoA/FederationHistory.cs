@@ -39,6 +39,11 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         /// <returns>A list of public keys and the times at which they were active.</returns>
         ConcurrentDictionary<IFederationMember, uint> GetFederationMembersByLastActiveTime();
+
+        /// <summary>
+        /// Initializes this component.
+        /// </summary>
+        void Initialize();
     }
 
     /// <summary>
@@ -70,6 +75,11 @@ namespace Stratis.Bitcoin.Features.PoA
             this.lastActiveTimeByPubKey = new ConcurrentDictionary<PubKey, List<uint>>();
             this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>();
             this.lastActiveTip = null;
+        }
+
+        public void Initialize()
+        {
+            GetFederationForBlock(this.chainIndexer.Tip);
         }
 
         /// <inheritdoc />
