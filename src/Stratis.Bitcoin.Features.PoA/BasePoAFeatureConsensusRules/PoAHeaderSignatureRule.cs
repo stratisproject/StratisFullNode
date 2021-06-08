@@ -12,6 +12,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
     /// </summary>
     public class PoAHeaderSignatureRule : FullValidationConsensusRule
     {
+        private PoABlockHeaderValidator validator;
+
         private ISlotsManager slotsManager;
 
         private IFederationHistory federationHistory;
@@ -26,6 +28,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             // TODO: Consider adding these via a constructor on this rule.
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
+            this.validator = engine.PoaHeaderValidator;
         }
 
         public override async Task RunAsync(RuleContext context)
@@ -48,7 +51,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             var header = chainedHeader.Header as PoABlockHeader;
 
             PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
-            if (pubKey == null)
+            if (pubKey == null || !this.validator.VerifySignature(pubKey, header))
             {
                 this.Logger.LogWarning("The block signature could not be matched with a current federation member.");
                 this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");

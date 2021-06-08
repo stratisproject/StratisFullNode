@@ -95,8 +95,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.federationHistory = federationHistory;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
 
-            var rebuildFederationHeight = this.nodeSettings.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, false);
-            if (rebuildFederationHeight || (this.PollsRepository.CurrentTip?.Height ?? 0) > this.chainIndexer.Tip.Height)
+            var rebuildFederationHeight = this.nodeSettings?.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, false) ?? false;
+            if (rebuildFederationHeight || (this.PollsRepository.CurrentTip?.Height ?? 0) > this.chainIndexer?.Tip.Height)
             {
                 this.PollsRepository.Reset();
             }
@@ -666,11 +666,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         internal bool Synchronize(ChainedHeader newTip)
         {
-            Guard.Assert(this.blockRepository != null);
+            if (newTip?.HashBlock == this.PollsRepository.CurrentTip?.Hash)
+                return true;
 
             ChainedHeader repoTip = GetPollsRepositoryTip();
-            if (repoTip == newTip)
-                return true;
 
             bool bSuccess = true;
 

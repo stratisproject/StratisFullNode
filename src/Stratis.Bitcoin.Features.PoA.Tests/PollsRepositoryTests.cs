@@ -66,6 +66,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 this.repository.AddPolls(transaction, new Poll() { Id = 1 });
                 this.repository.AddPolls(transaction, new Poll() { Id = 2 });
 
+                this.repository.SaveCurrentTip(transaction, new HashHeightPair(0, 0));
+
                 transaction.Commit();
             });
 

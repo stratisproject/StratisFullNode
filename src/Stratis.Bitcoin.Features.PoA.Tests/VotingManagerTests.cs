@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Moq;
 using NBitcoin;
 using Stratis.Bitcoin.EventBus.CoreEvents;
@@ -53,13 +54,27 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             };
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
+            ChainedHeaderBlock[] blocks = GetBlocks(votesRequired, votingData);
 
             for (int i = 0; i < votesRequired; i++)
             {
-                this.TriggerOnBlockConnected(this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
+                this.TriggerOnBlockConnected(blocks[i]);
             }
 
             Assert.Single(this.votingManager.GetApprovedPolls());
+        }
+
+        private ChainedHeaderBlock[] GetBlocks(int count, VotingData votingData)
+        {
+            ChainedHeader previous = null;
+
+            return Enumerable.Range(0, count).Select(i =>
+            {
+                ChainedHeaderBlock chainedHeaderBlock = this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1);
+                chainedHeaderBlock.ChainedHeader.SetPrivatePropertyValue("Previous", previous);
+                previous = chainedHeaderBlock.ChainedHeader;
+                return chainedHeaderBlock;
+            }).ToArray();
         }
 
         [Fact]
@@ -75,16 +90,18 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
+            ChainedHeaderBlock[] blocks = GetBlocks(votesRequired + 1, votingData);
+
             for (int i = 0; i < votesRequired; i++)
             {
-                this.TriggerOnBlockConnected(this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
+                this.TriggerOnBlockConnected(blocks[i]);
             }
 
             Assert.Single(this.votingManager.GetApprovedPolls());
             Assert.Empty(this.votingManager.GetPendingPolls());
 
             // Now that poll is complete, add another vote for it.
-            ChainedHeaderBlock blockToDisconnect = this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, votesRequired + 1);
+            ChainedHeaderBlock blockToDisconnect = blocks[votesRequired];
             this.TriggerOnBlockConnected(blockToDisconnect);
 
             // Now we have 1 finished and 1 pending for the same data.
