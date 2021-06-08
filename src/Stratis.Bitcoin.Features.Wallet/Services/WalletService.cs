@@ -1094,7 +1094,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             }, cancellationToken);
         }
 
-        public async Task<List<string>> Sweep(SweepRequest request, CancellationToken cancellationToken)
+        public async Task<SweepResponse> Sweep(SweepRequest request, CancellationToken cancellationToken)
         {
             // Build the set of scriptPubKeys to look for.
             var scriptList = new HashSet<Script>();
@@ -1118,14 +1118,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
             return await Task.Run(() =>
             {
-                var coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
+                ReconstructedCoinviewContext coinView = this.utxoIndexer.GetCoinviewAtHeight(this.chainIndexer.Height);
 
                 var builder = new TransactionBuilder(this.network);
 
-                var sweepTransactions = new List<string>();
+                var sweepResponse = new SweepResponse();
 
                 Money total = 0;
-                int currentOutputCount = 0;
+                int currentInputCount = 0;
 
                 foreach (OutPoint outPoint in coinView.UnspentOutputs)
                 {
@@ -1138,11 +1138,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         continue;
                     }
 
-                    // Add the UTXO as an input to the sweeping transaction.
+                    // Add the UTXO as a potential input to the sweeping transaction.
                     builder.AddCoins(new Coin(outPoint, txOut));
                     builder.AddKeys(new[] { keyMap[txOut.ScriptPubKey] });
 
-                    currentOutputCount++;
+                    currentInputCount++;
                     total += txOut.Value;
 
                     if (total == 0)
@@ -1150,25 +1150,26 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                         continue;
                     }
 
-                    // If we reach a high total output count, we'll finalize the transaction and start building another one.
-                    if (currentOutputCount > 500)
+                    // If we reach a high total input count, we'll finalize the transaction and start building another one.
+                    // TODO: Should check the actual transaction size instead of the number of inputs, although for most generic transactions 500 inputs' signatures won't exceed the max size 
+                    if (currentInputCount > 500)
                     {
-                        PrepareTransaction(request.DestinationAddress, ref builder, total, sweepTransactions);
+                        PrepareTransaction(request.DestinationAddress, ref builder, total, sweepResponse);
 
-                        currentOutputCount = 0;
+                        currentInputCount = 0;
                         total = 0;
                     }
                 }
 
                 // If there was a total of less than 500 inputs, or leftovers, we'll prepare the transaction.
-                if (currentOutputCount > 0)
+                if (currentInputCount > 0)
                 {
-                    PrepareTransaction(request.DestinationAddress, ref builder, total, sweepTransactions);
+                    PrepareTransaction(request.DestinationAddress, ref builder, total, sweepResponse);
                 }
 
                 if (request.Broadcast)
                 {
-                    foreach (string sweepTransaction in sweepTransactions)
+                    foreach (string sweepTransaction in sweepResponse.Transactions)
                     {
                         Transaction toBroadcast = this.network.CreateTransaction(sweepTransaction);
 
@@ -1176,11 +1177,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                     }
                 }
 
-                return sweepTransactions;
+                return sweepResponse;
             }, cancellationToken);
         }
 
-        public void PrepareTransaction(string destAddress, ref TransactionBuilder builder, Money total, List<string> sweepTransactions)
+        private void PrepareTransaction(string destAddress, ref TransactionBuilder builder, Money total, SweepResponse response)
         {
             BitcoinAddress destination = BitcoinAddress.Create(destAddress, this.network);
 
@@ -1195,17 +1196,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
             Transaction sweepTransaction = builder.BuildTransaction(true);
 
             TransactionPolicyError[] errors = builder.Check(sweepTransaction);
-
+            
             if (errors.Length == 0)
             {
-                sweepTransactions.Add(sweepTransaction.ToHex());
+                response.Transactions.Add(sweepTransaction.ToHex());
             }
             else
             {
-                // If there are errors, simply append them to the list of return values.
-                foreach (var error in errors)
+                foreach (TransactionPolicyError error in errors)
                 {
-                    sweepTransactions.Add(error.ToString());
+                    response.Errors.Add(error.ToString());
                 }
             }
 

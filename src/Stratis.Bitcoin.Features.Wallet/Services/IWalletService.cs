@@ -54,7 +54,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         Task<DistributeUtxoModel> DistributeUtxos(DistributeUtxosRequest request,
             CancellationToken cancellationToken);
 
-        Task<List<string>> Sweep(SweepRequest request,
+        Task<SweepResponse> Sweep(SweepRequest request,
             CancellationToken cancellationToken);
 
         Task<BuildOfflineSignResponse> BuildOfflineSignRequest(BuildOfflineSignRequest request,
