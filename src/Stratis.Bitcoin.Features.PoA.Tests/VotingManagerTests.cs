@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Moq;
 using NBitcoin;
@@ -54,7 +55,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             };
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
-            ChainedHeaderBlock[] blocks = GetBlocks(votesRequired, votingData);
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired, votingData);
 
             for (int i = 0; i < votesRequired; i++)
             {
@@ -64,13 +65,23 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             Assert.Single(this.votingManager.GetApprovedPolls());
         }
 
-        private ChainedHeaderBlock[] GetBlocks(int count, VotingData votingData)
+        private ChainedHeaderBlock[] GetBlocksWithVotingData(int count, VotingData votingData)
+        {
+            return GetBlocks(count, i => this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1));
+        }
+
+        private ChainedHeaderBlock[] GetBlocksWithVotingRequest(int count, JoinFederationRequest votingRequest)
+        {
+            return GetBlocks(count, i => this.CreateBlockWithVotingRequest(votingRequest, i + 1));
+        }
+
+        private ChainedHeaderBlock[] GetBlocks(int count, Func<int, ChainedHeaderBlock> block)
         {
             ChainedHeader previous = null;
 
             return Enumerable.Range(0, count).Select(i =>
             {
-                ChainedHeaderBlock chainedHeaderBlock = this.CreateBlockWithVotingData(new List<VotingData>() { votingData }, i + 1);
+                ChainedHeaderBlock chainedHeaderBlock = block(i);
                 chainedHeaderBlock.ChainedHeader.SetPrivatePropertyValue("Previous", previous);
                 previous = chainedHeaderBlock.ChainedHeader;
                 return chainedHeaderBlock;
@@ -90,7 +101,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
-            ChainedHeaderBlock[] blocks = GetBlocks(votesRequired + 1, votingData);
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingData(votesRequired + 1, votingData);
 
             for (int i = 0; i < votesRequired; i++)
             {
@@ -128,9 +139,11 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             int votesRequired = (this.federationManager.GetFederationMembers().Count / 2) + 1;
 
+            ChainedHeaderBlock[] blocks = GetBlocksWithVotingRequest(votesRequired, votingRequest);
+
             for (int i = 0; i < votesRequired; i++)
             {
-                this.TriggerOnBlockConnected(this.CreateBlockWithVotingRequest(votingRequest, i + 1));
+                this.TriggerOnBlockConnected(blocks[i]);
             }
         }
 
