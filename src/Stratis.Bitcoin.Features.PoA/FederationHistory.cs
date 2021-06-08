@@ -110,14 +110,6 @@ namespace Stratis.Bitcoin.Features.PoA
             }
         }
 
-        private int GetVotingManagerV2ActivationHeight()
-        {
-            if (this.network.Consensus.Options is PoAConsensusOptions poaConsensusOptions)
-                return (poaConsensusOptions.VotingManagerV2ActivationHeight == 0) ? int.MaxValue : poaConsensusOptions.VotingManagerV2ActivationHeight;
-
-            return 0;
-        }
-
         private (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) GetFederationMembersForBlocks(ChainedHeader[] chainedHeaders)
         {
             (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations;
@@ -132,7 +124,7 @@ namespace Stratis.Bitcoin.Features.PoA
             PoABlockHeader[] headers = chainedHeaders.Select(h => (PoABlockHeader)h.Header).ToArray();
 
             // Reading chainedHeader's "Header" does not play well with asynchronocity so we will load the block times here.
-            int votingManagerV2ActivationHeight = GetVotingManagerV2ActivationHeight();
+            int votingManagerV2ActivationHeight = (this.network.Consensus.Options as PoAConsensusOptions).VotingManagerV2ActivationHeight;
 
             Parallel.For(0, chainedHeaders.Length, i => miners[i] = GetFederationMemberForBlock(headers[i], federations[i].members, chainedHeaders[i].Height >= votingManagerV2ActivationHeight));
 

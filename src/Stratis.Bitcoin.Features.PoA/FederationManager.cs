@@ -341,6 +341,11 @@ namespace Stratis.Bitcoin.Features.PoA
         public int? GetMultisigMinersApplicabilityHeight()
         {
             IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+
+            // Not always passed in tests.
+            if (consensusManager == null)
+                return 0;
+
             ChainedHeader fork = (this.lastBlockChecked == null) ? null : consensusManager.Tip.FindFork(this.lastBlockChecked);
 
             if (this.multisigMinersApplicabilityHeight != null && fork?.HashBlock == this.lastBlockChecked?.HashBlock)
