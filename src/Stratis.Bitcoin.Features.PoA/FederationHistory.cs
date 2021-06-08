@@ -248,7 +248,7 @@ namespace Stratis.Bitcoin.Features.PoA
             if (pos2 < 1000)
                 return;
 
-            this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(500).ToDictionary(x => x.Key, x => x.Value));
+            this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(pos2).ToDictionary(x => x.Key, x => x.Value));
 
             discardBelowTime = this.federationHistory.ElementAt(0).Key;
 
