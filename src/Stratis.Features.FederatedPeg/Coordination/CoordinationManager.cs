@@ -191,23 +191,24 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
-                // If the request id has no proposals, add it.
-                if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
+                if (!HasFeeProposalBeenConcluded(requestId))
                 {
-                    // Add this pubkey's proposal.
-                    this.logger.Debug($"Request doesn't exist, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
-                    this.feeProposalsByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount } });
-                }
-                else
-                {
-                    if (!proposals.Any(p => p.PubKey == pubKey.ToHex()))
+                    // If the request id has no proposals, add it.
+                    if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
                     {
-                        proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
-                        this.logger.Debug($"Request exists, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        // Add this pubkey's proposal.
+                        this.logger.Debug($"Request doesn't exist, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        this.feeProposalsByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount } });
+                    }
+                    else
+                    {
+                        if (!proposals.Any(p => p.PubKey == pubKey.ToHex()))
+                        {
+                            proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
+                            this.logger.Debug($"Request exists, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        }
                     }
                 }
-
-                this.feeProposalsByRequestId.TryGetValue(requestId, out proposals);
 
                 // TODO Rethink this.
                 Task.Delay(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
@@ -281,29 +282,30 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
-                // If the request id has no votes, add it.
-                if (!this.agreedFeeVotesByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> votes))
+                if (!HasFeeVoteBeenConcluded(requestId))
                 {
-                    if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
+                    // If the request id has no votes, add it.
+                    if (!this.agreedFeeVotesByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> votes))
                     {
-                        this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
-                        return;
-                    }
+                        if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
+                        {
+                            this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
+                            return;
+                        }
 
-                    // Add this pubkey's vote.
-                    this.logger.Debug($"Fee vote doesn't exist, adding vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
-                    this.agreedFeeVotesByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount } });
-                }
-                else
-                {
-                    if (!votes.Any(p => p.PubKey == pubKey.ToHex()))
+                        // Add this pubkey's vote.
+                        this.logger.Debug($"Fee vote doesn't exist, adding vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        this.agreedFeeVotesByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount } });
+                    }
+                    else
                     {
-                        votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
-                        this.logger.Debug($"Request exists, adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        if (!votes.Any(p => p.PubKey == pubKey.ToHex()))
+                        {
+                            votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
+                            this.logger.Debug($"Request exists, adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        }
                     }
                 }
-
-                this.agreedFeeVotesByRequestId.TryGetValue(requestId, out votes);
 
                 // TODO Rethink this.
                 Task.Delay(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
