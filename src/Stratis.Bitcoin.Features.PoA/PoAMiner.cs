@@ -67,6 +67,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         protected readonly IFederationManager federationManager;
 
+        protected readonly IFederationHistory federationHistory;
+
         private readonly IIntegrityValidator integrityValidator;
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
@@ -99,6 +101,7 @@ namespace Stratis.Bitcoin.Features.PoA
             IConnectionManager connectionManager,
             PoABlockHeaderValidator poaHeaderValidator,
             IFederationManager federationManager,
+            IFederationHistory federationHistory,
             IIntegrityValidator integrityValidator,
             IWalletManager walletManager,
             INodeStats nodeStats,
@@ -117,6 +120,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.connectionManager = connectionManager;
             this.poaHeaderValidator = poaHeaderValidator;
             this.federationManager = federationManager;
+            this.federationHistory = federationHistory;
             this.integrityValidator = integrityValidator;
             this.walletManager = walletManager;
             this.votingManager = votingManager;
@@ -425,12 +429,7 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            // If the node is in DevMode just use the genesis members via the federation manager.
-            List<IFederationMember> modifiedFederation;
-            if (this.nodeSettings.DevMode != null)
-                modifiedFederation = this.federationManager.GetFederationMembers();
-            else
-                modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
 
             int maxDepth = modifiedFederation.Count;
 
@@ -459,10 +458,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     currentHeader = currentHeader.Previous;
                     hitCount++;
 
-                    if (this.nodeSettings.DevMode != null)
-                        modifiedFederation = this.federationManager.GetFederationMembers();
-                    else
-                        modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+                    modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
                 }
                 else
                 {

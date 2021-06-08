@@ -229,15 +229,19 @@ namespace Stratis.Bitcoin.Features.PoA
                 // Update member types by using the multisig mining keys supplied on the command-line. Don't add/remove members.
                 foreach (CollateralFederationMember federationMember in this.federationMembers)
                 {
+                    bool shouldBeMultisigMember;
                     if (straxEra)
                     {
-                        federationMember.IsMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
+                        shouldBeMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
                     }
                     else
                     {
-                        federationMember.IsMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
+                        shouldBeMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
                             .Any(m => m.PubKey == federationMember.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
                     }
+
+                    if (federationMember.IsMultisigMember != shouldBeMultisigMember)
+                        federationMember.IsMultisigMember = shouldBeMultisigMember;
                 }
             }
         }
@@ -330,13 +334,18 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
             this.federationMembers = votingManager.GetFederationFromExecutedPolls();
-            this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
+            this.UpdateMultisigMiners(this.GetMultisigMinersApplicabilityHeight() != null);
         }
 
         /// <inheritdoc />
         public int? GetMultisigMinersApplicabilityHeight()
         {
             IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+
+            // Not always passed in tests.
+            if (consensusManager == null)
+                return 0;
+
             ChainedHeader fork = (this.lastBlockChecked == null) ? null : consensusManager.Tip.FindFork(this.lastBlockChecked);
 
             if (this.multisigMinersApplicabilityHeight != null && fork?.HashBlock == this.lastBlockChecked?.HashBlock)
@@ -364,8 +373,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.lastBlockChecked = headers.LastOrDefault();
             this.multisigMinersApplicabilityHeight = first?.Height;
-
-            this.UpdateMultisigMiners(first != null);
 
             return this.multisigMinersApplicabilityHeight;
         }

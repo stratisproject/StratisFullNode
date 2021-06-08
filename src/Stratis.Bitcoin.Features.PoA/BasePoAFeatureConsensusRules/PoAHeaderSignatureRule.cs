@@ -49,9 +49,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             var header = chainedHeader.Header as PoABlockHeader;
 
-            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(chainedHeader);
-
-            PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate, federation)?.PubKey;
+            PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(context.ValidationContext.ChainedHeaderToValidate)?.PubKey;
 
             if (pubKey == null || !this.validator.VerifySignature(pubKey, header))
             {
@@ -72,7 +70,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             }
 
             // Look at the last round of blocks to find the previous time that the miner mined.
-            var roundTime = this.slotsManager.GetRoundLength(federation.Count);
+            var roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
             int blockCounter = 0;
 
             for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)

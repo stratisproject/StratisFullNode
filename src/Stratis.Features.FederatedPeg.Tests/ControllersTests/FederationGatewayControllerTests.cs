@@ -229,7 +229,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var model = ((JsonResult)result).Value as FederationGatewayInfoModel;
             model.IsMainChain.Should().BeFalse();
-            model.FederationMiningPubKeys.Should().Equal(((PoAConsensusOptions)CirrusNetwork.NetworksSelector.Regtest().Consensus.Options).GenesisFederationMembers.Select(keys => keys.ToString()));
+            model.FederationMiningPubKeys.Should().Equal(this.federationManager.GetFederationMembers().Select(keys => keys.ToString()));
             model.MultiSigRedeemScript.Should().Be(redeemScript);
             string.Join(",", model.FederationNodeIpEndPoints).Should().Be(federationIps);
             model.IsActive.Should().BeTrue();
@@ -265,7 +265,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
             var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
-            var federationHistory = new FederationHistory(this.federationManager, votingManager);
+            var federationHistory = new FederationHistory(this.federationManager, nodeSettings.Network, votingManager);
             votingManager.Initialize(federationHistory);
 
             return votingManager;

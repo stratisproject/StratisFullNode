@@ -4,18 +4,18 @@ using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public sealed class ReconstructFederationService
     {
-        private const int ReconstructionHeight = 1_410_000;
-
         private readonly IFederationManager federationManager;
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly object locker;
         private readonly Logger logger;
         private readonly NodeSettings nodeSettings;
+        private readonly ChainIndexer chainIndexer;
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly VotingManager votingManager;
         private bool isBusyReconstructing;
@@ -23,6 +23,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public ReconstructFederationService(
             IFederationManager federationManager,
             NodeSettings nodeSettings,
+            ChainIndexer chainIndexer,
             Network network,
             IIdleFederationMembersKicker idleFederationMembersKicker,
             VotingManager votingManager)
@@ -30,6 +31,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.federationManager = federationManager;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.nodeSettings = nodeSettings;
+            this.chainIndexer = chainIndexer;
             this.votingManager = votingManager;
 
             this.locker = new object();
@@ -57,23 +59,31 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     this.isBusyReconstructing = true;
 
+                    // Determine the reconstruction height.
+                    this.logger.Info($"Reconstructing voting data: Determining the reconstruction height.");
+                    var federationMemberActivationTime = ((PoAConsensusOptions)this.nodeSettings.Network.Consensus.Options).FederationMemberActivationTime ?? 0;
+                    int reconstructionHeight;
+                    if (this.chainIndexer.Tip.Header.Time < federationMemberActivationTime)
+                    {
+                        reconstructionHeight = this.chainIndexer.Tip.Height + 1;
+                    }
+                    else
+                    {
+                        reconstructionHeight = BinarySearch.BinaryFindFirst(x => this.chainIndexer.GetHeader(x).Header.Time >= federationMemberActivationTime, 0, this.chainIndexer.Tip.Height + 1);
+                    }
+
                     // First delete all polls that was started on or after the given height.
-                    this.logger.Info($"Reconstructing voting data: Cleaning polls after height {ReconstructionHeight}");
-                    this.votingManager.DeletePollsAfterHeight(ReconstructionHeight);
+                    this.logger.Info($"Reconstructing voting data: Cleaning polls after height {reconstructionHeight}.");
+                    this.votingManager.DeletePollsAfterHeight(reconstructionHeight);
 
                     // Re-initialize the federation manager which will re-contruct the federation make-up
                     // up to the given height.
                     this.logger.Info($"Reconstructing voting data: Re-initializing federation members.");
                     this.federationManager.Initialize();
 
-                    // Re-initialize the idle members kicker as we will be resetting the
-                    // last active times via the reconstruction events.
-                    this.logger.Info($"Reconstructing voting data: Re-initializing federation members last active times.");
-                    this.idleFederationMembersKicker.InitializeFederationMemberLastActiveTime(this.federationManager.GetFederationMembers());
-
                     // Reconstruct polls per block which will rebuild the federation.
                     this.logger.Info($"Reconstructing voting data...");
-                    this.votingManager.ReconstructVotingDataFromHeightLocked(ReconstructionHeight);
+                    this.votingManager.ReconstructVotingDataFromHeightLocked(reconstructionHeight);
 
                     this.logger.Info($"Reconstruction completed");
 
@@ -85,7 +95,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     throw ex;
                 }
                 finally
-                {
+                {                    
                     this.isBusyReconstructing = false;
                 }
             }

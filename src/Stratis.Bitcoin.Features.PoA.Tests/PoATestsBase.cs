@@ -128,33 +128,10 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return members[chainedHeader.Height % members.Count];
             });
 
-            federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>(), It.IsAny<List<IFederationMember>>())).Returns<ChainedHeader, List<IFederationMember>>((chainedHeader, members) =>
-            {
-                members = members ?? ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
-                return members[chainedHeader.Height % members.Count];
-            });
-
             federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) =>
             {
                 return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });
-
-            federationHistory
-                .Setup(x => x.GetFederationMemberForTimestamp(It.IsAny<uint>(), It.IsAny<PoAConsensusOptions>()))
-                .Returns<uint, PoAConsensusOptions>((headerUnixTimestamp, poAConsensusOptions) =>
-                {
-                    List<IFederationMember> federationMembers = poAConsensusOptions.GenesisFederationMembers;
-
-                    uint roundTime = (uint)(federationMembers.Count * poAConsensusOptions.TargetSpacingSeconds);
-
-                    // Time when current round started.
-                    uint roundStartTimestamp = (headerUnixTimestamp / roundTime) * roundTime;
-
-                    // Slot number in current round.
-                    int currentSlotNumber = (int)((headerUnixTimestamp - roundStartTimestamp) / poAConsensusOptions.TargetSpacingSeconds);
-
-                    return federationMembers[currentSlotNumber];
-                });
 
             votingManager.Initialize(federationHistory.Object);
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
