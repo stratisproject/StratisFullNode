@@ -143,7 +143,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 bool isProposalConcluded = false;
 
-                // If the request id doesn't exist yet, propose the fee and broadcast it.
+                // If the request id doesn't exist, propose the fee and broadcast it.
                 if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
                 {
                     ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
@@ -153,7 +153,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
                 else
                 {
-                    if (!proposals.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
+                    if (!HasFeeProposalBeenConcluded(requestId) && !proposals.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
                     {
                         ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
 
@@ -246,7 +246,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
                 else
                 {
-                    if (!votes.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
+                    // Add this node's vote if its missing and has not yet concluded.
+                    if (!HasFeeVoteBeenConcluded(requestId) && !votes.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
                     {
                         this.logger.Debug($"Adding fee vote for conversion request id '{requestId}' for amount {candidateFee}.");
                         votes.Add(interOpFeeToMultisig);
@@ -259,8 +260,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                 if (HasFeeVoteBeenConcluded(requestId))
                 {
-                    this.logger.Debug($"Voting on fee for request id '{requestId}' has concluded, amount: {candidateFee}");
-                    agreedFeeAmount = candidateFee;
+                    agreedFeeAmount = (ulong)votes.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
+                    this.logger.Debug($"Voting on fee for request id '{requestId}' has concluded, amount: {agreedFeeAmount}");
 
                     isFeeAgreedUpon = true;
                 }
