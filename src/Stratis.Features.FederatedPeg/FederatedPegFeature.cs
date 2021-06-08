@@ -284,6 +284,7 @@ namespace Stratis.Features.FederatedPeg
                         if (!isMainChain)
                         {
                             services.AddSingleton<ICoordinationManager, CoordinationManager>();
+                            services.AddSingleton<IInteropFeeCoordinationKeyValueStore, InteropFeeCoordinationKeyValueStore>();
                         }
 
                         services.AddSingleton<IMaturedBlocksSyncManager, MaturedBlocksSyncManager>();

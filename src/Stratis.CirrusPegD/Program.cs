@@ -130,10 +130,10 @@ namespace Stratis.CirrusPegD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
+                .AddExternalApi()
                 .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
-                .AddExternalApi()
                 .Build();
 
             return node;

@@ -174,7 +174,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 var tempDepositList = new List<IDeposit>();
 
                 if (maturedBlockDeposit.Deposits.Count > 0)
-                    this.logger.Info("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
+                    this.logger.Debug("Matured deposit count for block {0} height {1}: {2}.", maturedBlockDeposit.BlockInfo.BlockHash, maturedBlockDeposit.BlockInfo.BlockHeight, maturedBlockDeposit.Deposits.Count);
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
@@ -192,13 +192,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    this.logger.Info("Conversion transaction '{0}' received in matured blocks.", potentialConversionTransaction.Id);
-
-                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
-                    {
-                        this.logger.Info("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
-                        continue;
-                    }
+                    this.logger.Debug("Conversion transaction '{0}' received in matured blocks.", potentialConversionTransaction.Id);
 
                     // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
                     // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
@@ -226,38 +220,9 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    // Get all the nodes to first propose a fee amount.
-                    do
-                    {
-                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
-                            break;
+                    InteropConversionRequestFee interopConversionRequestFee = await this.coordinationManager.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight);
 
-                        if (this.coordinationManager.ProposeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight))
-                            break;
-
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-
-                        continue;
-
-                    } while (true);
-
-                    // Then get all the nodes to agree on the averaged fee amount.
-                    ulong conversionFeeAmountSatoshi = 0;
-                    do
-                    {
-                        if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
-                            break;
-
-                        if (this.coordinationManager.AgreeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight, out conversionFeeAmountSatoshi))
-                            break;
-
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-
-                        continue;
-
-                    } while (true);
-
-                    if (Money.Satoshis(conversionFeeAmountSatoshi) >= potentialConversionTransaction.Amount)
+                    if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
                     {
                         this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
                         continue;
@@ -286,10 +251,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     tempDepositList.Add(new Deposit(potentialConversionTransaction.Id,
                         depositType,
-                        Money.Satoshis(conversionFeeAmountSatoshi),
+                        Money.Satoshis(interopConversionRequestFee.Amount),
                         this.network.ConversionTransactionFeeDistributionDummyAddress,
                         potentialConversionTransaction.BlockNumber,
                         potentialConversionTransaction.BlockHash));
+
+                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    {
+                        this.logger.Info("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
+                        continue;
+                    }
 
                     this.logger.Info("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
 
@@ -300,7 +271,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         Processed = false,
                         RequestStatus = ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(conversionFeeAmountSatoshi)).Satoshi,
+                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
                         BlockHeight = header.Height,
                         DestinationAddress = potentialConversionTransaction.TargetAddress,
                         DestinationChain = potentialConversionTransaction.TargetChain

@@ -61,23 +61,23 @@ namespace Stratis.Bitcoin.Features.ExternalApi
                 this.logger.LogInformation($"Ethereum gas price tracking enabled.");
 
                 this.gasPriceLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckGasPrice", async (cancellation) =>
+                {
+                    this.logger.LogTrace("Beginning gas price check loop.");
+
+                    try
                     {
-                        this.logger.LogTrace("Beginning gas price check loop.");
+                        await this.etherscanClient.GasOracle(true).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.logger.LogWarning("Exception raised when checking current gas price. {0}", e);
+                    }
 
-                        try
-                        {
-                            await this.etherscanClient.GasOracle(true).ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            this.logger.LogWarning("Exception raised when checking current gas price. {0}", e);
-                        }
-
-                        this.logger.LogTrace("Finishing gas price check loop.");
-                    },
-                    this.nodeLifetime.ApplicationStopping,
-                    repeatEvery: TimeSpans.Minute,
-                    startAfter: TimeSpans.TenSeconds);
+                    this.logger.LogTrace("Finishing gas price check loop.");
+                },
+                this.nodeLifetime.ApplicationStopping,
+                repeatEvery: TimeSpans.Minute,
+                startAfter: TimeSpans.Second);
             }
 
             if (this.externalApiSettings.PriceTracking)
@@ -85,23 +85,23 @@ namespace Stratis.Bitcoin.Features.ExternalApi
                 this.logger.LogInformation($"Price tracking for STRAX and ETH enabled.");
 
                 this.priceLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicCheckPrice", async (cancellation) =>
+                {
+                    this.logger.LogTrace("Beginning price check loop.");
+
+                    try
                     {
-                        this.logger.LogTrace("Beginning price check loop.");
+                        await this.coinGeckoClient.PriceDataRetrievalAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.logger.LogWarning("Exception raised when checking current prices. {0}", e);
+                    }
 
-                        try
-                        {
-                            await this.coinGeckoClient.PriceDataRetrievalAsync().ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            this.logger.LogWarning("Exception raised when checking current prices. {0}", e);
-                        }
-
-                        this.logger.LogTrace("Finishing price check loop.");
-                    },
-                    this.nodeLifetime.ApplicationStopping,
-                    repeatEvery: TimeSpans.Minute,
-                    startAfter: TimeSpans.TenSeconds);
+                    this.logger.LogTrace("Finishing price check loop.");
+                },
+                this.nodeLifetime.ApplicationStopping,
+                repeatEvery: TimeSpans.Minute,
+                startAfter: TimeSpans.Second);
             }
         }
 
