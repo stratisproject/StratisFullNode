@@ -92,10 +92,6 @@ namespace Stratis.Bitcoin.Features.Interop
                         await this.ProcessInteropCoordinationAsync(peer, interopCoordinationPayload).ConfigureAwait(false);
                         break;
 
-                    case FeeCoordinationPayload feeCoordinationPayload:
-                        await this.ProcessFeeCoordinationAsync(peer, feeCoordinationPayload).ConfigureAwait(false);
-                        break;
-
                     case FeeProposalPayload feeProposalPayload:
                         await this.ProcessFeeProposalAsync(peer, feeProposalPayload).ConfigureAwait(false);
                         break;
@@ -165,41 +161,6 @@ namespace Stratis.Bitcoin.Features.Interop
             this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
             this.coordinationManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
-        }
-
-        private async Task ProcessFeeCoordinationAsync(INetworkPeer peer, FeeCoordinationPayload payload)
-        {
-            if (!this.federationManager.IsFederationMember)
-                return;
-
-            // Check that the payload is signed by a multisig federation member.
-            PubKey pubKey;
-
-            try
-            {
-                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
-
-                this.logger.Info("{0} received from '{1}':'{2}' [pubkey: '{3}']. Request {4} proposing fee distribution of {5}.", nameof(FeeCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, pubKey, payload.RequestId, payload.FeeAmount);
-
-                if (!this.federationManager.IsMultisigMember(pubKey))
-                {
-                    this.logger.Warn("Received unverified fee coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
-
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                this.logger.Warn("Received malformed fee coordination payload for {0}.", payload.RequestId);
-
-                return;
-            }
-
-            this.coordinationManager.AddFeeVote(payload.RequestId, payload.FeeAmount, pubKey);
-
-            //// If the fee has not yet been agreed, then broadcast the fee coordination payload again.
-            //if (this.coordinationManager.GetAgreedTransactionFee(payload.RequestId, this.interopSettings.ETHMultisigWalletQuorum) == 0)
-            //    await this.coordinationManager.BroadcastVoteAsync(this.federationManager.CurrentFederationKey, payload.RequestId, payload.FeeAmount);
         }
 
         private async Task ProcessFeeProposalAsync(INetworkPeer peer, FeeProposalPayload payload)

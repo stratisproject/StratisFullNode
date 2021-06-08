@@ -52,19 +52,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <summary>Provides mapping of all request ids to pubkeys that have voted for them.</summary>
         Dictionary<string, HashSet<PubKey>> GetStatus();
 
-        void AddFeeVote(string requestId, ulong proposedFee, PubKey pubKey);
-
-        ulong GetAgreedTransactionFee(string requestId, int quorum);
-
-        ulong GetCandidateTransactionFee(string requestId);
-
         void RegisterQuorumSize(int quorum);
 
         int GetQuorum();
-
-        Task BroadcastAllAsync(Key currentMemberKey);
-
-        Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee);
 
         bool ProposeFeeForConversionRequest(string requestId, int blockHeight);
 
@@ -82,16 +72,14 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
         private readonly ILogger logger;
 
-        // Interflux transaction ID votes
+        /// <summary> Interflux transaction ID votes </summary>
         private Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
         private Dictionary<string, HashSet<PubKey>> receivedVotes;
 
-        // Interflux conversion fee votes
-        private Dictionary<string, Dictionary<ulong, int>> activeFeeVotes;
-        private Dictionary<string, HashSet<PubKey>> receivedFeeVotes;
-
-        // Proposed fees by request id
+        /// <summary> Proposed fees by request id. </summary>
         private Dictionary<string, List<InterOpFeeToMultisig>> feeProposalsByRequestId;
+
+        /// <summary> Agreed fees by request id. </summary>
         private Dictionary<string, List<InterOpFeeToMultisig>> agreedFeeVotesByRequestId;
 
         private int quorum;
@@ -106,9 +94,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
             this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
-
-            this.activeFeeVotes = new Dictionary<string, Dictionary<ulong, int>>();
-            this.receivedFeeVotes = new Dictionary<string, HashSet<PubKey>>();
 
             this.feeProposalsByRequestId = new Dictionary<string, List<InterOpFeeToMultisig>>();
             this.agreedFeeVotesByRequestId = new Dictionary<string, List<InterOpFeeToMultisig>>();
@@ -396,7 +381,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 return highestVoted;
             }
         }
-
+        
         /// <inheritdoc/>
         public BigInteger GetCandidateTransactionId(string requestId)
         {
@@ -454,78 +439,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
             }
         }
 
-        public void AddFeeVote(string requestId, ulong proposedFee, PubKey pubKey)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.receivedFeeVotes.TryGetValue(requestId, out HashSet<PubKey> voted))
-                    voted = new HashSet<PubKey>();
-
-                // Ignore the vote if the pubkey has already submitted a vote.
-                if (voted.Contains(pubKey))
-                    return;
-
-                this.logger.Info("Pubkey {0} adding vote for request {1}, fee {2}.", pubKey.ToHex(), requestId, proposedFee);
-
-                voted.Add(pubKey);
-
-                if (!this.activeFeeVotes.TryGetValue(requestId, out Dictionary<ulong, int> feeVotes))
-                    feeVotes = new Dictionary<ulong, int>();
-
-                if (!feeVotes.ContainsKey(proposedFee))
-                    feeVotes[proposedFee] = 1;
-                else
-                    feeVotes[proposedFee]++;
-
-                this.activeFeeVotes[requestId] = feeVotes;
-                this.receivedFeeVotes[requestId] = voted;
-            }
-        }
-
-        public ulong GetAgreedTransactionFee(string requestId, int quorum)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.activeFeeVotes.ContainsKey(requestId))
-                    return 0UL;
-
-                ulong highestVoted = 0UL;
-                int voteCount = 0;
-                foreach (KeyValuePair<ulong, int> vote in this.activeFeeVotes[requestId])
-                {
-                    if (vote.Value > voteCount && vote.Value >= quorum)
-                    {
-                        highestVoted = vote.Key;
-                        voteCount = vote.Value;
-                    }
-                }
-
-                return highestVoted;
-            }
-        }
-
-        public ulong GetCandidateTransactionFee(string requestId)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.activeFeeVotes.ContainsKey(requestId))
-                    return 0UL;
-
-                ulong highestVoted = 0UL;
-                int voteCount = 0;
-                foreach (KeyValuePair<ulong, int> vote in this.activeFeeVotes[requestId])
-                {
-                    if (vote.Value > voteCount)
-                    {
-                        highestVoted = vote.Key;
-                        voteCount = vote.Value;
-                    }
-                }
-
-                return highestVoted;
-            }
-        }
-
         public void RegisterQuorumSize(int quorum)
         {
             this.quorum = quorum;
@@ -534,21 +447,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
         public int GetQuorum()
         {
             return this.quorum;
-        }
-
-        public async Task BroadcastAllAsync(Key currentMemberKey)
-        {
-            foreach (KeyValuePair<string, Dictionary<ulong, int>> request in this.activeFeeVotes)
-            {
-                string signature = currentMemberKey.SignMessage(request.Key + request.Value.Keys.First());
-                await this.federatedPegBroadcaster.BroadcastAsync(new FeeCoordinationPayload(request.Key, request.Value.Keys.First(), signature)).ConfigureAwait(false);
-            }
-        }
-
-        public async Task BroadcastVoteAsync(Key federationKey, string requestId, ulong fee)
-        {
-            string signature = federationKey.SignMessage(requestId + fee);
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeCoordinationPayload(requestId, fee, signature)).ConfigureAwait(false);
         }
     }
 

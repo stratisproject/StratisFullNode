@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 }
             }
 
-            this.logger.Info("Fee reward to multisig nmode at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
+            this.logger.Info("Fee reward to multisig node at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
 
             Money feeReward = fee / multiSigMinerScripts.Count;
 
