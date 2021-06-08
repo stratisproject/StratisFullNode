@@ -13,6 +13,11 @@ namespace Stratis.Bitcoin.Features.PoA
 {
     public interface IFederationHistory
     {
+        /// <summary>Determines if the federation for a specified block can be determined based on the available poll information.</summary>
+        /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <returns><c>True</c> if the federation can be determined and <c>false</c> otherwise.</returns>
+        bool CanGetFederationForBlock(ChainedHeader chainedHeader);
+
         /// <summary>Gets the federation member for a specified block by first looking at a cache 
         /// and then the signature in <see cref="PoABlockHeader.BlockSignature"/>.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
@@ -83,13 +88,22 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
+        public bool CanGetFederationForBlock(ChainedHeader chainedHeader)
+        {
+            return this.votingManager.CanGetFederationForBlock(chainedHeader);
+        }
+
+        /// <inheritdoc />
         public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader)
         {
             lock (this.lockObject)
             {
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                    return item.modifiedFederation;
+
                 this.UpdateTip(chainedHeader);
 
-                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out item))
                     return item.modifiedFederation;
 
                 return this.GetFederationMembersForBlocks(new[] { chainedHeader }).federations[0].members;
@@ -101,9 +115,12 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             lock (this.lockObject)
             {
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                    return item.miner;
+
                 this.UpdateTip(chainedHeader);
 
-                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out item))
                     return item.miner;
 
                 return this.GetFederationMembersForBlocks(new[] { chainedHeader }).miners[0];
@@ -242,7 +259,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 int pos = BinarySearch.BinaryFindFirst(x => activity[x] >= discardBelowTime, 0, activity.Count);
                 if (pos >= 0)
                 {
-                    if (activity.Count <= pos )
+                    if (activity.Count <= pos)
                         remove.Add(pubKey);
                     else
                         activity.RemoveRange(0, pos);
@@ -274,13 +291,22 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
+            // See if we can prefetch a few blocks.
+            // The federation can be determined for the MaxReOrgLength blocks starting with the greatest PollStartedBlockData.
+            ChainedHeader lastHeader = blockHeader;
+            int lastKnownFederationHeight = this.votingManager.LastKnownFederationHeight();
+            Guard.Assert(lastHeader.Height <= lastKnownFederationHeight);
+
+            if ((lastKnownFederationHeight - lastHeader.Height) >= 200 && this.chainIndexer.Tip.Height >= lastKnownFederationHeight)
+                lastHeader = this.chainIndexer[lastKnownFederationHeight];
+
             // Gather enough blocks to handle idle checking but nothing below the activation time.
             uint federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
             uint maxInactiveTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
             uint blockTime = blockHeader.Header.Time;
             uint maxTime = Math.Max(blockTime - maxInactiveTime, federationMemberActivationTime);
 
-            ChainedHeader[] headers = blockHeader
+            ChainedHeader[] headers = lastHeader
                 .EnumerateToGenesis()
                 .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && h.Header.Time >= maxTime)
                 .Reverse().ToArray();
@@ -323,7 +349,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
-            this.lastActiveTip = blockHeader;
+            this.lastActiveTip = lastHeader;
 
             DiscardActivityBelowTime(maxTime);
         }

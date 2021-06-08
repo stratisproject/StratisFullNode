@@ -56,8 +56,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly IBlockStoreQueue blockStoreQueue;
 
-        private readonly ReconstructFederationService reconstructFederationService;
-
         private readonly NodeSettings nodeSettings;
 
         public PoAFeature(
@@ -96,7 +94,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.chainState = chainState;
             this.blockStoreQueue = blockStoreQueue;
-            this.reconstructFederationService = reconstructFederationService;
             this.nodeSettings = nodeSettings;
 
             payloadProvider.DiscoverPayloads(this.GetType().Assembly);
@@ -132,9 +129,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
 
-            var rebuildFederationHeight = this.nodeSettings.ConfigReader.GetOrDefault(ReconstructFederationFlag, false);
-            if (rebuildFederationHeight)
-                this.reconstructFederationService.Reconstruct();
+            this.votingManager.Synchronize(this.chainIndexer.Tip);
 
             this.federationHistory.Initialize();
 
