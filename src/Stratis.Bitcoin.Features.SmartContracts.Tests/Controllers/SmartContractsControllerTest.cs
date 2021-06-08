@@ -54,6 +54,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.Controllers
                 null,
                 null,
                 null,
+                null,
                 null
             );
         }
