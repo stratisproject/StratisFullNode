@@ -24,6 +24,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 {
     public static class FederationGatewayRouteEndPoint
     {
+        public const string DeleteSuspended = "transfers/deletesuspended";
         public const string GetMaturedBlockDeposits = "deposits";
         public const string GetFederationInfo = "info";
         public const string GetFederationMemberInfo = "member/info";
@@ -386,6 +387,22 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction, true));
 
             return this.Json($"{depositIdTransactionId} does not exist.");
+        }
+
+        [Route(FederationGatewayRouteEndPoint.DeleteSuspended)]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DeleteSuspendedTransfers()
+        {
+            if (this.network.IsTest() || this.network.IsRegTest())
+            {
+                var result = this.crossChainTransferStore.DeleteSuspendedTransfers();
+                return this.Json($"{result} suspended transfers has been removed.");
+            }
+
+            return this.Json($"Deleting suspended transfers is only available on test networks.");
         }
     }
 }

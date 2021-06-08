@@ -1486,13 +1486,35 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
         }
 
-
         /// <inheritdoc />
         public List<WithdrawalModel> GetCompletedWithdrawals(int transfersToDisplay)
         {
             HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.SeenInBlock];
             ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
             return this.withdrawalHistoryProvider.GetHistory(transfers, transfersToDisplay);
+        }
+
+        /// <inheritdoc />
+        public int DeleteSuspendedTransfers()
+        {
+            HashSet<uint256> depositIds = this.depositsIdsByStatus[CrossChainTransferStatus.Suspended];
+            ICrossChainTransfer[] transfers = this.Get(depositIds.ToArray()).Where(t => t != null).ToArray();
+
+            using (DBreeze.Transactions.Transaction dbreezeTransaction = this.DBreeze.GetTransaction())
+            {
+                dbreezeTransaction.SynchronizeTables(transferTableName, commonTableName);
+                dbreezeTransaction.ValuesLazyLoadingIsOn = false;
+
+                foreach (ICrossChainTransfer transfer in transfers)
+                {
+                    this.DeleteTransfer(dbreezeTransaction, transfer);
+                    this.logger.Debug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
+                }
+
+                dbreezeTransaction.Commit();
+            }
+
+            return transfers.Count();
         }
 
         /// <inheritdoc />
