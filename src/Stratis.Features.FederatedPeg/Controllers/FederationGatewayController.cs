@@ -396,9 +396,13 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public IActionResult DeleteSuspendedTransfers()
         {
-           var result =  this.crossChainTransferStore.DeleteSuspendedTransfers();
+            if (this.network.IsTest() || this.network.IsRegTest())
+            {
+                var result = this.crossChainTransferStore.DeleteSuspendedTransfers();
+                return this.Json($"{result} suspended transfers has been removed.");
+            }
 
-            return this.Json($"{result} suspended transfers has been removed.");
+            return this.Json($"Deleting suspended transfers is only available on test networks.");
         }
     }
 }
