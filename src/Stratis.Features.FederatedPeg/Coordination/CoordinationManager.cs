@@ -204,7 +204,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             if (HasFeeProposalBeenConcluded(interopConversionRequestFee))
             {
                 // Update the proposal state and save it.
-                interopConversionRequestFee.State = InteropFeeState.ProposalConcluded;
+                interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
                 this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee);
 
                 IEnumerable<long> values = processedProposals.Select(s => Convert.ToInt64(s.FeeAmount));
@@ -545,7 +545,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
     public enum InteropFeeState
     {
         ProposalInProgress,
-        ProposalConcluded,
         AgreeanceInProgress,
         AgreeanceConcluded,
     }
