@@ -229,7 +229,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var model = ((JsonResult)result).Value as FederationGatewayInfoModel;
             model.IsMainChain.Should().BeFalse();
-            model.FederationMiningPubKeys.Should().Equal(((PoAConsensusOptions)CirrusNetwork.NetworksSelector.Regtest().Consensus.Options).GenesisFederationMembers.Select(keys => keys.ToString()));
+            model.FederationMiningPubKeys.Should().Equal(this.federationManager.GetFederationMembers().Select(keys => keys.ToString()));
             model.MultiSigRedeemScript.Should().Be(redeemScript);
             string.Join(",", model.FederationNodeIpEndPoints).Should().Be(federationIps);
             model.IsActive.Should().BeTrue();
