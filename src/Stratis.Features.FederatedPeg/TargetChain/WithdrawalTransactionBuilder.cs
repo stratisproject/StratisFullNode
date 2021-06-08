@@ -66,7 +66,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             try
             {
-                this.logger.Info("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
+                this.logger.Debug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
 
                 // Build the multisig transaction template.
                 uint256 opReturnData = depositId;
@@ -86,31 +86,29 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 multiSigContext.Recipients = new List<Recipient> { recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee) };
 
                 // Withdrawals from the sidechain won't have the OP_RETURN transaction tag, so we need to check against the ScriptPubKey of the Cirrus Dummy address.
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey)
+                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0)
                 {
-                    // Use the distribution manager to determine the actual list of recipients.
-                    // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
-                    if (this.previousDistributionHeight != blockHeight)
+                    if (recipient.ScriptPubKey == this.cirrusRewardDummyAddressScriptPubKey && this.previousDistributionHeight != blockHeight)
                     {
+                        // Use the distribution manager to determine the actual list of recipients.
+                        // TODO: This would probably be neater if it was moved to the CCTS with the current method accepting a list of recipients instead
                         multiSigContext.Recipients = this.distributionManager.Distribute(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount); // Reduce the overall amount by the fee first before splitting it up.
 
                         // This can be transient as it is just to stop distribution happening multiple times
                         // on blocks that contain more than one deposit.
                         this.previousDistributionHeight = blockHeight;
                     }
-                }
 
-                if (!this.federatedPegSettings.IsMainChain && recipient.ScriptPubKey.Length > 0 && recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
-                {
-                    this.logger.Info("Generating recipient list for conversion transaction fee distribution.");
-
-                    if (this.previousConversionFeeDistributionHeight != blockHeight)
+                    if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey && this.previousConversionFeeDistributionHeight != blockHeight)
                     {
+                        this.logger.Debug("Generating recipient list for conversion transaction fee distribution.");
+
                         multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
 
                         // Similarly to the regular distributions, this prevents distribution occurring multiple times in a given block.
                         this.previousConversionFeeDistributionHeight = blockHeight;
                     }
+
                 }
 
                 // TODO: Amend this so we're not picking coins twice.

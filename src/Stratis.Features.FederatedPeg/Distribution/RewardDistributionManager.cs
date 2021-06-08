@@ -83,6 +83,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // which of them were mined by a multisig member.
             var multiSigMinerScripts = new List<Script>();
             var startHeight = this.chainIndexer.Tip.Height - this.epoch;
+
             for (int i = federation.Count; i >= 0; i--)
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(startHeight - i);
@@ -106,6 +107,8 @@ namespace Stratis.Features.FederatedPeg.Distribution
                         multiSigMinerScripts.Add(minerScript);
                 }
             }
+
+            this.logger.Info("Fee reward to multisig nmode at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
 
             Money feeReward = fee / multiSigMinerScripts.Count;
 
