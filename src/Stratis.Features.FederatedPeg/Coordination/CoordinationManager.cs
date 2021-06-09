@@ -538,7 +538,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 IEnumerable<long> values = vote.Value.Select(s => Convert.ToInt64(s.FeeAmount));
 
                 var state = vote.Value.Count >= this.quorum ? "Concluded" : "In Progress";
-                benchLog.AppendLine($"Height: {vote.Value.First().BlockHeight} Id: {vote.Key} Votes: {vote.Value.Count} Fee (Avg): {new Money((long)values.Average())} State: {state}");
+                benchLog.AppendLine($"Height: {vote.Value.First().BlockHeight} Id: {vote.Key} Votes: {vote.Value.Count} Fee : {new Money((long)values.Average())} State: {state}");
             }
 
             benchLog.AppendLine();
