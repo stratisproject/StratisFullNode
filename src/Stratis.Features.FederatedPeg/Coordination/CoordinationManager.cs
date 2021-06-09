@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json;
 using NLog;
@@ -57,7 +56,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         int GetQuorum();
 
-        Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight);
+        InteropConversionRequestFee AgreeFeeForConversionRequest(string requestId, int blockHeight);
 
         void MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
 
@@ -66,6 +65,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
     public sealed class CoordinationManager : ICoordinationManager
     {
+        private readonly IDateTimeProvider dateTimeProvider;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IFederationManager federationManager;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
@@ -87,12 +87,14 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly object lockObject = new object();
 
         public CoordinationManager(
+            IDateTimeProvider dateTimeProvider,
             IExternalApiPoller externalApiPoller,
             IFederationManager federationManager,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore,
             INodeStats nodeStats)
         {
+            this.dateTimeProvider = dateTimeProvider;
             this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
             this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
 
@@ -109,45 +111,41 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <inheritdoc/>
-        public async Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight)
+        public InteropConversionRequestFee AgreeFeeForConversionRequest(string requestId, int blockHeight)
         {
             InteropConversionRequestFee interopConversionRequestFee;
 
             lock (this.lockObject)
             {
                 interopConversionRequestFee = GetOrCreateInteropConversionRequestFeeLocked(requestId, blockHeight);
-
-                // If the fee for this request has been proposed and agreed upon, then return
-                // it back to the Matured Blocks Sync Manager so that the deposit
-                // can be created.
             }
+
+            // If the fee for this request has been proposed and agreed upon, then return
+            // it back to the Matured Blocks Sync Manager so that the deposit
+            // can be created.
 
             if (interopConversionRequestFee.State == InteropFeeState.AgreeanceConcluded)
                 return interopConversionRequestFee;
 
+            DateTime lastConversionRequestSync = this.dateTimeProvider.GetUtcNow();
+
             do
             {
+                // Execute a small delay to not flood the network with proposal requests.
+                if (lastConversionRequestSync.AddMilliseconds(1000) > this.dateTimeProvider.GetUtcNow())
+                    continue;
+
                 // If the fee proposal has not concluded then continue until it has.
                 if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
-                {
                     SubmitProposalForInteropFeeForConversionRequest(interopConversionRequestFee);
 
-                    // Execute a small delay to not flood the network with proposal requests.
-                    await Task.Delay(TimeSpan.FromMilliseconds(500));
-                    continue;
-                }
-
                 if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
-                {
                     AgreeOnInteropFeeForConversionRequest(interopConversionRequestFee);
-
-                    // Execute a small delay to not flood the network with proposal requests.
-                    await Task.Delay(TimeSpan.FromMilliseconds(500));
-                    continue;
-                }
 
                 if (interopConversionRequestFee.State == InteropFeeState.AgreeanceConcluded)
                     break;
+
+                lastConversionRequestSync = this.dateTimeProvider.GetUtcNow();
 
             } while (true);
 
@@ -253,9 +251,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
             }
 
-            // TODO Rethink this.
-            Task.Delay(TimeSpan.FromMilliseconds(500)).GetAwaiter().GetResult();
-
             // Broadcast/ask for this request from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
             this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, feeAmount, blockHeight, signature)).GetAwaiter().GetResult();
@@ -354,9 +349,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
                 }
             }
-
-            // TODO Rethink this.
-            Task.Delay(TimeSpan.FromMilliseconds(500)).GetAwaiter().GetResult();
 
             // Broadcast/ask for this vote from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);

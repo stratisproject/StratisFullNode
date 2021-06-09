@@ -220,7 +220,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    InteropConversionRequestFee interopConversionRequestFee = await this.coordinationManager.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight);
+                    InteropConversionRequestFee interopConversionRequestFee = this.coordinationManager.AgreeFeeForConversionRequest(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight);
 
                     if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
                     {
