@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json;
 using NLog;
@@ -56,11 +57,11 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         int GetQuorum();
 
-        InteropConversionRequestFee AgreeFeeForConversionRequest(string requestId, int blockHeight);
+        Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight);
 
-        void MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
+        Task MultiSigMemberProposedInteropFeeAsync(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
 
-        void MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
+        Task MultiSigMemberAgreedOnInteropFeeAsync(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
     }
 
     public sealed class CoordinationManager : ICoordinationManager
@@ -111,36 +112,29 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <inheritdoc/>
-        public InteropConversionRequestFee AgreeFeeForConversionRequest(string requestId, int blockHeight)
+        public async Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight)
         {
             InteropConversionRequestFee interopConversionRequestFee;
-
-            lock (this.lockObject)
-            {
-                interopConversionRequestFee = GetOrCreateInteropConversionRequestFeeLocked(requestId, blockHeight);
-            }
-
-            // If the fee for this request has been proposed and agreed upon, then return
-            // it back to the Matured Blocks Sync Manager so that the deposit
-            // can be created.
-
-            if (interopConversionRequestFee.State == InteropFeeState.AgreeanceConcluded)
-                return interopConversionRequestFee;
 
             DateTime lastConversionRequestSync = this.dateTimeProvider.GetUtcNow();
 
             do
             {
                 // Execute a small delay to not flood the network with proposal requests.
-                if (lastConversionRequestSync.AddMilliseconds(1000) > this.dateTimeProvider.GetUtcNow())
+                if (lastConversionRequestSync.AddMilliseconds(500) > this.dateTimeProvider.GetUtcNow())
                     continue;
+
+                lock (this.lockObject)
+                {
+                    interopConversionRequestFee = GetOrCreateInteropConversionRequestFeeLocked(requestId, blockHeight);
+                }
 
                 // If the fee proposal has not concluded then continue until it has.
                 if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
-                    SubmitProposalForInteropFeeForConversionRequest(interopConversionRequestFee);
+                    await SubmitProposalForInteropFeeForConversionRequestAsync(interopConversionRequestFee);
 
                 if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
-                    AgreeOnInteropFeeForConversionRequest(interopConversionRequestFee);
+                    await AgreeOnInteropFeeForConversionRequestAsync(interopConversionRequestFee);
 
                 if (interopConversionRequestFee.State == InteropFeeState.AgreeanceConcluded)
                     break;
@@ -171,12 +165,14 @@ namespace Stratis.Features.FederatedPeg.Coordination
             return interopConversionRequest;
         }
 
-        private void SubmitProposalForInteropFeeForConversionRequest(InteropConversionRequestFee interopConversionRequestFee)
+        private async Task SubmitProposalForInteropFeeForConversionRequestAsync(InteropConversionRequestFee interopConversionRequestFee)
         {
+            List<InterOpFeeToMultisig> proposals = null;
+
             lock (this.lockObject)
             {
                 // If the request id doesn't exist, propose the fee and broadcast it.
-                if (!this.feeProposalsByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out List<InterOpFeeToMultisig> proposals))
+                if (!this.feeProposalsByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out proposals))
                 {
                     ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
 
@@ -193,33 +189,33 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         proposals.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee });
                     }
                 }
+
+                this.feeProposalsByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out proposals);
+
+                this.logger.Debug($"{proposals.Count} node(s) has proposed a fee for conversion request id {interopConversionRequestFee.RequestId}.");
+
+                if (HasFeeProposalBeenConcluded(interopConversionRequestFee))
+                {
+                    // Only update the proposal state if it is ProposalInProgress and save it.
+                    if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
+                    {
+                        interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
+                        this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+
+                        IEnumerable<long> values = proposals.Select(s => Convert.ToInt64(s.FeeAmount));
+                        this.logger.Debug($"Proposal fee for request id '{interopConversionRequestFee.RequestId}' has concluded, average amount: {values.Average()}");
+                    }
+                }
             }
 
-            this.feeProposalsByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out List<InterOpFeeToMultisig> processedProposals);
+            InterOpFeeToMultisig myProposal = proposals.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
+            string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myProposal.FeeAmount);
 
-            this.logger.Debug($"{processedProposals.Count} node(s) has proposed a fee for conversion request id {interopConversionRequestFee.RequestId}.");
-
-            if (HasFeeProposalBeenConcluded(interopConversionRequestFee))
-            {
-                // Update the proposal state and save it.
-                interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
-                this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
-
-                IEnumerable<long> values = processedProposals.Select(s => Convert.ToInt64(s.FeeAmount));
-                this.logger.Debug($"Proposal fee for request id '{interopConversionRequestFee.RequestId}' has concluded, average amount: {values.Average()}");
-            }
-            else
-            {
-                // If the proposal is not concluded, broadcast again.
-                InterOpFeeToMultisig myProposal = processedProposals.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
-                string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myProposal.FeeAmount);
-
-                this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).GetAwaiter().GetResult();
-            }
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature));
         }
 
         /// <inheritdoc/>
-        public void MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey)
+        public async Task MultiSigMemberProposedInteropFeeAsync(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey)
         {
             lock (this.lockObject)
             {
@@ -243,21 +239,26 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         }
                     }
                 }
-                // Set the proposal to concluded
                 else
                 {
-                    interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
-                    this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+                    // Set the proposal to concluded only if it is ProposalInProgress
+                    if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
+                    {
+                        interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
+                        this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+                    }
                 }
             }
 
             // Broadcast/ask for this request from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
-            this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, feeAmount, blockHeight, signature)).GetAwaiter().GetResult();
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, feeAmount, blockHeight, signature));
         }
 
-        private void AgreeOnInteropFeeForConversionRequest(InteropConversionRequestFee interopConversionRequestFee)
+        private async Task AgreeOnInteropFeeForConversionRequestAsync(InteropConversionRequestFee interopConversionRequestFee)
         {
+            List<InterOpFeeToMultisig> votes = null;
+
             lock (this.lockObject)
             {
                 if (!this.feeProposalsByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out List<InterOpFeeToMultisig> proposals))
@@ -271,7 +272,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 var interOpFeeToMultisig = new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee };
 
                 // If the request id doesn't exist yet, create a fee vote and broadcast it.
-                if (!this.agreedFeeVotesByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out List<InterOpFeeToMultisig> votes))
+                if (!this.agreedFeeVotesByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out votes))
                 {
                     this.logger.Debug($"No nodes has voted on conversion request id '{interopConversionRequestFee.RequestId}' with a fee amount of {candidateFee}.");
                     this.agreedFeeVotesByRequestId.Add(interopConversionRequestFee.RequestId, new List<InterOpFeeToMultisig>() { interOpFeeToMultisig });
@@ -285,33 +286,34 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         votes.Add(interOpFeeToMultisig);
                     }
                 }
+
+                this.agreedFeeVotesByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out votes);
+
+                this.logger.Debug($"{votes.Count} node(s) has voted on a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
+
+                if (HasFeeVoteBeenConcluded(interopConversionRequestFee.RequestId))
+                {
+                    // Update the amount and state only if it is AgreeanceInProgress and save it.
+                    if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
+                    {
+                        interopConversionRequestFee.Amount = (ulong)votes.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
+                        interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
+                        this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+
+                        this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {interopConversionRequestFee.Amount}");
+                    }
+                }
             }
 
-            this.agreedFeeVotesByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out List<InterOpFeeToMultisig> processedVotes);
+            // If the fee vote is not concluded, broadcast again.
+            InterOpFeeToMultisig myVote = votes.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
+            string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myVote.FeeAmount);
 
-            this.logger.Debug($"{processedVotes.Count} node(s) has voted on a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
-
-            if (HasFeeVoteBeenConcluded(interopConversionRequestFee.RequestId))
-            {
-                // Update the state and amount and save it.
-                interopConversionRequestFee.Amount = (ulong)processedVotes.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
-                interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
-                this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
-
-                this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {interopConversionRequestFee.Amount}");
-            }
-            else
-            {
-                // If the fee vote is not concluded, broadcast again.
-                InterOpFeeToMultisig myVote = processedVotes.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
-                string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myVote.FeeAmount);
-
-                this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).GetAwaiter().GetResult();
-            }
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature));
         }
 
         /// <inheritdoc/>
-        public void MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey)
+        public async Task MultiSigMemberAgreedOnInteropFeeAsync(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey)
         {
             lock (this.lockObject)
             {
@@ -344,16 +346,18 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 // Set the agreeance to concluded
                 else
                 {
-                    interopConversionRequestFee.Amount = feeAmount;
-                    interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
-                    this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+                    if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
+                    {
+                        interopConversionRequestFee.Amount = feeAmount;
+                        interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
+                        this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+                    }
                 }
             }
 
             // Broadcast/ask for this vote from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
-            this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(requestId, feeAmount, blockHeight, signature)).GetAwaiter().GetResult();
-
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(requestId, feeAmount, blockHeight, signature));
         }
 
         private bool HasFeeProposalBeenConcluded(InteropConversionRequestFee interopConversionRequestFee)
