@@ -175,8 +175,6 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
 
-                this.logger.Info($"Fee proposal payload received from PubKey '{pubKey}' for proposal '{payload.RequestId}'.");
-
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
                     this.logger.Warn("Received unverified fee proposal payload for '{0}'. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
@@ -189,7 +187,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            await this.coordinationManager.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
         }
 
         private async Task ProcessFeeAgreeAsync(INetworkPeer peer, FeeAgreePayload payload)
@@ -204,8 +202,6 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.FeeAmount, payload.Signature);
 
-                this.logger.Info($"Fee agreed vote payload received from PubKey '{pubKey}' for request '{payload.RequestId}'.");
-
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
                     this.logger.Warn("Received unverified fee vote payload for '{0}'. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
@@ -218,7 +214,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            await this.coordinationManager.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
         }
     }
 }

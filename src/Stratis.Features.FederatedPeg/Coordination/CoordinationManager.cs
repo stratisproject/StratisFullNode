@@ -71,6 +71,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly IFederationManager federationManager;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
         private readonly IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore;
+        private readonly INodeLifetime nodeLifetime;
         private readonly ILogger logger;
 
         /// <summary> Interflux transaction ID votes </summary>
@@ -93,6 +94,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             IFederationManager federationManager,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore,
+            INodeLifetime nodeLifetime,
             INodeStats nodeStats)
         {
             this.dateTimeProvider = dateTimeProvider;
@@ -106,6 +108,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.interopRequestKeyValueStore = interopRequestKeyValueStore;
+            this.nodeLifetime = nodeLifetime;
             this.logger = LogManager.GetCurrentClassLogger();
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
@@ -114,12 +117,15 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <inheritdoc/>
         public async Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight)
         {
-            InteropConversionRequestFee interopConversionRequestFee;
+            InteropConversionRequestFee interopConversionRequestFee = null;
 
             DateTime lastConversionRequestSync = this.dateTimeProvider.GetUtcNow();
 
             do
             {
+                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                    break;
+
                 // Execute a small delay to not flood the network with proposal requests.
                 if (lastConversionRequestSync.AddMilliseconds(500) > this.dateTimeProvider.GetUtcNow())
                     continue;
@@ -160,6 +166,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 interopConversionRequest = new InteropConversionRequestFee() { RequestId = requestId, BlockHeight = blockHeight, State = InteropFeeState.ProposalInProgress };
                 this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequest);
+
+                this.logger.Debug($"InteropConversionRequestFee object for request '{requestId}' has been created.");
             }
 
             return interopConversionRequest;
@@ -227,7 +235,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
                     {
                         // Add this pubkey's proposal.
-                        this.logger.Debug($"Request doesn't exist, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        this.logger.Debug($"Conversion request proposal '{requestId}' received from pubkey '{pubKey}' which doesn't exist, adding proposal fee of {feeAmount}.");
                         this.feeProposalsByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount } });
                     }
                     else
@@ -235,7 +243,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         if (!proposals.Any(p => p.PubKey == pubKey.ToHex()))
                         {
                             proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
-                            this.logger.Debug($"Request exists, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                            this.logger.Debug($"Conversion request proposal '{requestId}' received from pubkey '{pubKey}' which exists, adding proposal fee of {feeAmount}.");
                         }
                     }
                 }
@@ -244,6 +252,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     // Set the proposal to concluded only if it is ProposalInProgress
                     if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
                     {
+                        this.logger.Debug($"Conversion request proposal '{requestId}' received from pubkey '{pubKey}' has concluded, setting state to '{InteropFeeState.AgreeanceInProgress}'");
+
                         interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
                         this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
                     }
@@ -318,6 +328,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
             lock (this.lockObject)
             {
                 InteropConversionRequestFee interopConversionRequestFee = GetOrCreateInteropConversionRequestFeeLocked(requestId, blockHeight);
+                if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
+                    return;
 
                 if (!HasFeeVoteBeenConcluded(requestId))
                 {
@@ -326,12 +338,12 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     {
                         if (!this.feeProposalsByRequestId.TryGetValue(requestId, out List<InterOpFeeToMultisig> proposals))
                         {
-                            this.logger.Error($"Fee proposal for request id '{requestId}' does not exist.");
+                            this.logger.Error($"Conversion request fee vote '{requestId}' received from pubkey '{pubKey}' does not have any corresponding proposals as of yet.");
                             return;
                         }
 
                         // Add this pubkey's vote.
-                        this.logger.Debug($"Fee vote doesn't exist, adding vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                        this.logger.Debug($"Conversion request fee vote '{requestId}' received from pubkey '{pubKey}' which doesnt exist, adding vote of {feeAmount}.");
                         this.agreedFeeVotesByRequestId.Add(requestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount } });
                     }
                     else
@@ -339,15 +351,17 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         if (!votes.Any(p => p.PubKey == pubKey.ToHex()))
                         {
                             votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
-                            this.logger.Debug($"Request exists, adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
+                            this.logger.Debug($"Conversion request fee vote '{requestId}' received from pubkey '{pubKey}' which exists, adding fee vote of {feeAmount}.");
                         }
                     }
                 }
-                // Set the agreeance to concluded
                 else
                 {
+                    // Set the agreeance to concluded
                     if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
                     {
+                        this.logger.Debug($"Conversion request fee vote '{requestId}' received from pubkey '{pubKey}' has concluded, setting state to '{InteropFeeState.AgreeanceConcluded}'");
+
                         interopConversionRequestFee.Amount = feeAmount;
                         interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
                         this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
