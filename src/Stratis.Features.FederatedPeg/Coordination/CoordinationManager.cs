@@ -120,9 +120,16 @@ namespace Stratis.Features.FederatedPeg.Coordination
             InteropConversionRequestFee interopConversionRequestFee = null;
 
             DateTime lastConversionRequestSync = this.dateTimeProvider.GetUtcNow();
+            DateTime conversionRequestSyncStart = this.dateTimeProvider.GetUtcNow();
 
             do
             {
+                if (conversionRequestSyncStart.AddMinutes(3) <= this.dateTimeProvider.GetUtcNow())
+                {
+                    this.logger.Warn($"A fee for request '{requestId}' failed to reach consensus after 3 minutes... ignoring.");
+                    break;
+                }
+
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     break;
 
