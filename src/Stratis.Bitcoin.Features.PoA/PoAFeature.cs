@@ -58,6 +58,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private readonly NodeSettings nodeSettings;
 
+        private readonly ReconstructFederationService reconstructFederationService;
+
         public PoAFeature(
             IFederationManager federationManager,
             PayloadProvider payloadProvider,
@@ -95,6 +97,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.chainState = chainState;
             this.blockStoreQueue = blockStoreQueue;
             this.nodeSettings = nodeSettings;
+            this.reconstructFederationService = reconstructFederationService;
 
             payloadProvider.DiscoverPayloads(this.GetType().Assembly);
         }
@@ -112,6 +115,13 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (options.VotingEnabled)
             {
+                var rebuildFederation = this.nodeSettings?.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, false) ?? false;
+                if (rebuildFederation || (this.votingManager.PollsRepository.CurrentTip?.Height ?? 0) > this.chainIndexer?.Tip.Height)
+                {
+                    this.votingManager.PollsRepository.Reset();
+                    this.reconstructFederationService.SetReconstructionFlag(false);
+                }
+
                 // If we are kicking members, we need to initialize this component before the VotingManager.
                 // The VotingManager may tally votes and execute federation changes, but the IdleKicker needs to know who the current block is from.
                 // The IdleKicker can much more easily find out who the block is from if it receives the block first.

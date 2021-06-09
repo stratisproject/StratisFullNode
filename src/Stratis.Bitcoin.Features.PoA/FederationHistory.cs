@@ -243,9 +243,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private void DiscardActivityBelowTime(uint discardBelowTime)
         {
-            // Discard 500 blocks if there is more than 1000 extraneous blocks.
+            const int discardThreshold = 1000;
+            
+            // If there is more than the threshold amount of extraneous history then discard it.
             int pos2 = BinarySearch.BinaryFindFirst(x => this.federationHistory.ElementAt(x).Key > discardBelowTime, 0, this.federationHistory.Values.Count);
-            if (pos2 < 1000)
+            if (pos2 < discardThreshold)
                 return;
 
             this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(pos2).ToDictionary(x => x.Key, x => x.Value));
@@ -291,67 +293,84 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
-            // See if we can prefetch a few blocks.
-            // The federation can be determined for the MaxReOrgLength blocks starting with the greatest PollStartedBlockData.
+            // The federation members are knowable for up to MaxReOrgLength blocks beyond the polls repository tip.
+            // Take advantage of this fact by bulk processing and caching some "history" information ahead of time.
+            // Bulk processing allows the most CPU intensive parts to be parallelised over multiple blocks. Also,
+            // federations at multiple heights can be determined with a single scan of polls and headers.
             ChainedHeader lastHeader = blockHeader;
             int lastKnownFederationHeight = this.votingManager.LastKnownFederationHeight();
             Guard.Assert(lastHeader.Height <= lastKnownFederationHeight);
 
-            if ((lastKnownFederationHeight - lastHeader.Height) >= 200 && this.chainIndexer.Tip.Height >= lastKnownFederationHeight)
+            uint prefetchThreshold = this.network.Consensus.MaxReorgLength / 2;
+
+            if ((lastKnownFederationHeight - lastHeader.Height) >= prefetchThreshold && this.chainIndexer.Tip.Height >= lastKnownFederationHeight)
                 lastHeader = this.chainIndexer[lastKnownFederationHeight];
 
             // Gather enough blocks to handle idle checking but nothing below the activation time.
             uint federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
             uint maxInactiveTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
-            uint blockTime = blockHeader.Header.Time;
-            uint maxTime = Math.Max(blockTime - maxInactiveTime, federationMemberActivationTime);
+            uint minTime = Math.Max(blockHeader.Header.Time - maxInactiveTime, federationMemberActivationTime);
+            int start = this.lastActiveTip?.Height ?? 0;
+
+            Guard.Assert(lastHeader.Height >= start);
+
+            // Reduce the number of headers read from the db by performing a binary search instead of a scan.
+            int pos = BinarySearch.BinaryFindFirst(n => this.chainIndexer[n].Header.Time >= minTime, start, lastHeader.Height - start);
+            int take = (pos < 0) ? 0 : lastHeader.Height - pos + 1;
+
+            if (take == 0)
+            {
+                this.lastActiveTip = lastHeader;
+                return;
+            }
 
             ChainedHeader[] headers = lastHeader
                 .EnumerateToGenesis()
-                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && h.Header.Time >= maxTime)
-                .Reverse().ToArray();
+                .Take(take)
+                .Reverse()
+                .ToArray();
 
-            if (headers.Length != 0)
+            (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.GetFederationMembersForBlocks(headers);
+
+            // TODO: Should the headers be accessed in hash order to optimize the db read speed?
+            uint[] times = headers.Select(h => h.Header.Time).ToArray();
+
+            for (int i = 0; i < headers.Length; i++)
             {
-                (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.GetFederationMembersForBlocks(headers);
+                ChainedHeader header = headers[i];
 
-                for (int i = 0; i < headers.Length; i++)
+                uint headerTime = times[i];
+
+                this.federationHistory[headerTime] = (federations[i].members, miners[i]);
+
+                if (miners[i] != null)
                 {
-                    ChainedHeader header = headers[i];
-
-                    uint headerTime = header.Header.Time;
-
-                    this.federationHistory[headerTime] = (federations[i].members, miners[i]);
-
-                    if (miners[i] != null)
+                    if (!this.lastActiveTimeByPubKey.TryGetValue(miners[i].PubKey, out List<uint> minerActivity))
                     {
-                        if (!this.lastActiveTimeByPubKey.TryGetValue(miners[i].PubKey, out List<uint> minerActivity))
-                        {
-                            minerActivity = new List<uint>();
-                            this.lastActiveTimeByPubKey[miners[i].PubKey] = minerActivity;
-                        }
-
-                        if (minerActivity.LastOrDefault() != headerTime)
-                            minerActivity.Add(headerTime);
+                        minerActivity = new List<uint>();
+                        this.lastActiveTimeByPubKey[miners[i].PubKey] = minerActivity;
                     }
 
-                    foreach (IFederationMember member in federations[i].whoJoined)
-                    {
-                        if (!this.lastActiveTimeByPubKey.TryGetValue(member.PubKey, out List<uint> joinActivity))
-                        {
-                            joinActivity = new List<uint>();
-                            this.lastActiveTimeByPubKey[member.PubKey] = joinActivity;
-                        }
+                    if (minerActivity.LastOrDefault() != headerTime)
+                        minerActivity.Add(headerTime);
+                }
 
-                        if (joinActivity.LastOrDefault() != headerTime)
-                            joinActivity.Add(headerTime);
+                foreach (IFederationMember member in federations[i].whoJoined)
+                {
+                    if (!this.lastActiveTimeByPubKey.TryGetValue(member.PubKey, out List<uint> joinActivity))
+                    {
+                        joinActivity = new List<uint>();
+                        this.lastActiveTimeByPubKey[member.PubKey] = joinActivity;
                     }
+
+                    if (joinActivity.LastOrDefault() != headerTime)
+                        joinActivity.Add(headerTime);
                 }
             }
 
             this.lastActiveTip = lastHeader;
 
-            DiscardActivityBelowTime(maxTime);
+            DiscardActivityBelowTime(minTime);
         }
 
         /// <inheritdoc />

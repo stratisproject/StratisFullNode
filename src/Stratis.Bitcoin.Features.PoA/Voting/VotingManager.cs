@@ -35,7 +35,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly INodeStats nodeStats;
 
         private readonly Network network;
-        private readonly NodeSettings nodeSettings;
         private readonly ILogger logger;
 
         /// <summary>Protects access to <see cref="scheduledVotingData"/>, <see cref="polls"/>, <see cref="PollsRepository"/>.</summary>
@@ -72,7 +71,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
             this.signals = Guard.NotNull(signals, nameof(signals));
             this.nodeStats = Guard.NotNull(nodeStats, nameof(nodeStats));
-            this.nodeSettings = nodeSettings;
 
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
@@ -94,12 +92,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             this.federationHistory = federationHistory;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
-
-            var rebuildFederationHeight = this.nodeSettings?.ConfigReader.GetOrDefault(PoAFeature.ReconstructFederationFlag, false) ?? false;
-            if (rebuildFederationHeight || (this.PollsRepository.CurrentTip?.Height ?? 0) > this.chainIndexer?.Tip.Height)
-            {
-                this.PollsRepository.Reset();
-            }
 
             this.PollsRepository.Initialize();
 
@@ -444,7 +436,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (rawVotingData == null)
                     {
                         this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader);
-                        this.logger.LogTrace("(-)[NO_VOTING_DATA]");
                         return;
                     }
 
@@ -710,8 +701,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                 if (headers.Count > 0)
                 {
-                    List<IFederationMember> modifiedFederation = this.GetFederationAtPollsRepositoryTip(repoTip);
-
                     this.PollsRepository.WithTransaction(transaction =>
                     {
                         int i = 0;
