@@ -61,19 +61,19 @@ namespace Stratis.Features.FederatedPeg.Conversion
             return values;
         }
 
-        public void SaveBytes(string key, byte[] bytes)
+        public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
 
             this.leveldb.Put(keyBytes, bytes);
         }
 
-        public void SaveValue<T>(string key, T value)
+        public void SaveValue<T>(string key, T value, bool overWrite = false)
         {
             this.SaveBytes(key, this.dBreezeSerializer.Serialize(value));
         }
 
-        public void SaveValueJson<T>(string key, T value)
+        public void SaveValueJson<T>(string key, T value, bool overWrite = false)
         {
             string json = Serializer.ToString(value);
             byte[] jsonBytes = Encoding.ASCII.GetBytes(json);

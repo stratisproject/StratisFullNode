@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public void SaveBytes(string key, byte[] bytes)
+        public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
 
@@ -73,13 +73,13 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
-        public void SaveValue<T>(string key, T value)
+        public void SaveValue<T>(string key, T value, bool overWrite = false)
         {
             this.SaveBytes(key, this.dBreezeSerializer.Serialize(value));
         }
 
         /// <inheritdoc />
-        public void SaveValueJson<T>(string key, T value)
+        public void SaveValueJson<T>(string key, T value, bool overWrite = false)
         {
             string json = Serializer.ToString(value);
             byte[] jsonBytes = Encoding.ASCII.GetBytes(json);

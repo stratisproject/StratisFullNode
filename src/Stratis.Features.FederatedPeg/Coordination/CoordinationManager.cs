@@ -205,7 +205,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 // Update the proposal state and save it.
                 interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
-                this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee);
+                this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
                 IEnumerable<long> values = processedProposals.Select(s => Convert.ToInt64(s.FeeAmount));
                 this.logger.Debug($"Proposal fee for request id '{interopConversionRequestFee.RequestId}' has concluded, average amount: {values.Average()}");
@@ -244,6 +244,12 @@ namespace Stratis.Features.FederatedPeg.Coordination
                             this.logger.Debug($"Request exists, adding proposal fee of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
                         }
                     }
+                }
+                // Set the proposal to concluded
+                else
+                {
+                    interopConversionRequestFee.State = InteropFeeState.AgreeanceInProgress;
+                    this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
                 }
             }
 
@@ -295,7 +301,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 // Update the state and amount and save it.
                 interopConversionRequestFee.Amount = (ulong)processedVotes.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
                 interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
-                this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee);
+                this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
                 this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {interopConversionRequestFee.Amount}");
             }
@@ -339,6 +345,13 @@ namespace Stratis.Features.FederatedPeg.Coordination
                             this.logger.Debug($"Request exists, adding fee vote of {feeAmount} for conversion request id '{requestId}' from {pubKey}.");
                         }
                     }
+                }
+                // Set the agreeance to concluded
+                else
+                {
+                    interopConversionRequestFee.Amount = feeAmount;
+                    interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
+                    this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
                 }
             }
 
@@ -490,9 +503,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             benchLog.AppendLine(">> Interop Coordination Manager");
             benchLog.AppendLine();
-            benchLog.AppendLine(">> Fee Proposals (last 5):");
+            benchLog.AppendLine(">> Fee Proposals (last 10):");
 
-            foreach (KeyValuePair<string, List<InterOpFeeToMultisig>> proposal in this.feeProposalsByRequestId.Take(5))
+            foreach (KeyValuePair<string, List<InterOpFeeToMultisig>> proposal in this.feeProposalsByRequestId.Take(10))
             {
                 IEnumerable<long> values = proposal.Value.Select(s => Convert.ToInt64(s.FeeAmount));
 
@@ -501,9 +514,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
             }
 
             benchLog.AppendLine();
-            benchLog.AppendLine(">> Fee Votes (last 5):");
+            benchLog.AppendLine(">> Fee Votes (last 10):");
 
-            foreach (KeyValuePair<string, List<InterOpFeeToMultisig>> vote in this.agreedFeeVotesByRequestId.Take(5))
+            foreach (KeyValuePair<string, List<InterOpFeeToMultisig>> vote in this.agreedFeeVotesByRequestId.Take(10))
             {
                 IEnumerable<long> values = vote.Value.Select(s => Convert.ToInt64(s.FeeAmount));
 

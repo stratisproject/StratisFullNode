@@ -29,26 +29,33 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
         }
 
         /// <inheritdoc />
-        public void SaveBytes(string key, byte[] bytes)
+        public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+
+            if (overWrite)
+            {
+                byte[] row = this.leveldb.Get(keyBytes);
+                if (row != null)
+                    this.leveldb.Delete(keyBytes);
+            }
 
             this.leveldb.Put(keyBytes, bytes);
         }
 
         /// <inheritdoc />
-        public void SaveValue<T>(string key, T value)
+        public void SaveValue<T>(string key, T value, bool overWrite = false)
         {
-            this.SaveBytes(key, this.dBreezeSerializer.Serialize(value));
+            this.SaveBytes(key, this.dBreezeSerializer.Serialize(value), overWrite);
         }
 
         /// <inheritdoc />
-        public void SaveValueJson<T>(string key, T value)
+        public void SaveValueJson<T>(string key, T value, bool overWrite = false)
         {
             string json = Serializer.ToString(value);
             byte[] jsonBytes = Encoding.ASCII.GetBytes(json);
 
-            this.SaveBytes(key, jsonBytes);
+            this.SaveBytes(key, jsonBytes, overWrite);
         }
 
         /// <inheritdoc />
