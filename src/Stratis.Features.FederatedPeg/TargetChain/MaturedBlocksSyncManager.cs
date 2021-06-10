@@ -194,6 +194,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.logger.Debug("Conversion transaction '{0}' received in matured blocks.", potentialConversionTransaction.Id);
 
+                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
+                    {
+                        this.logger.Debug("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
+                        continue;
+                    }
+
                     // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
                     // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
                     // TODO: This can probably be made more efficient than looping every time. 
@@ -222,10 +228,12 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     InteropConversionRequestFee interopConversionRequestFee = await this.coordinationManager.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight);
 
-                    if (interopConversionRequestFee == null)
+                    if (interopConversionRequestFee == null ||
+                        (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
                         interopConversionRequestFee.Amount = Money.Coins(100);
-                        this.logger.Warn($"Conversion transaction '{potentialConversionTransaction.Id}' will be using a fixed fee of 100 STRAX.");
+
+                        this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of 100 STRAX.");
                     }
 
                     if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
@@ -261,12 +269,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         this.network.ConversionTransactionFeeDistributionDummyAddress,
                         potentialConversionTransaction.BlockNumber,
                         potentialConversionTransaction.BlockHash));
-
-                    if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
-                    {
-                        this.logger.Info("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
-                        continue;
-                    }
 
                     this.logger.Info("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
 

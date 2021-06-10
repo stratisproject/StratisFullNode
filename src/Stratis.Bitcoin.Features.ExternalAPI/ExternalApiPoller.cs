@@ -120,7 +120,7 @@ namespace Stratis.Bitcoin.Features.ExternalApi
             return this.etherscanClient.GetGasPrice();
         }
 
-        /// <remarks>The decimal type is acceptable here because it supports sufficiently large numbers for most conceivable gas calculations.</remarks>
+        /// <summary>The decimal type is acceptable here because it supports sufficiently large numbers for most conceivable gas calculations.</summary>
         /// <returns>The estimated total amount of gas a conversion transaction will require.</returns>
         public decimal EstimateConversionTransactionGas()
         {

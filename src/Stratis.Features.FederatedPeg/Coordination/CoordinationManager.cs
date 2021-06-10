@@ -189,7 +189,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 // If the request id doesn't exist, propose the fee and broadcast it.
                 if (!this.feeProposalsByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out proposals))
                 {
-                    ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
+                    if (!EstimateConversionTransactionFee(out ulong candidateFee))
+                        return;
 
                     this.logger.Debug($"No nodes has proposed a fee of {candidateFee} for conversion request id '{interopConversionRequestFee.RequestId}'.");
                     this.feeProposalsByRequestId.Add(interopConversionRequestFee.RequestId, new List<InterOpFeeToMultisig>() { new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee } });
@@ -198,7 +199,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 {
                     if (!HasFeeProposalBeenConcluded(interopConversionRequestFee) && !proposals.Any(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex()))
                     {
-                        ulong candidateFee = (ulong)(this.externalApiPoller.EstimateConversionTransactionFee() * 100_000_000m);
+                        if (!EstimateConversionTransactionFee(out ulong candidateFee))
+                            return;
 
                         this.logger.Debug($"Adding proposed fee of {candidateFee} for conversion request id '{interopConversionRequestFee.RequestId}'.");
                         proposals.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee });
@@ -379,6 +381,22 @@ namespace Stratis.Features.FederatedPeg.Coordination
             // Broadcast/ask for this vote from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
             await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(requestId, feeAmount, blockHeight, signature));
+        }
+
+        private bool EstimateConversionTransactionFee(out ulong candidateFee)
+        {
+            candidateFee = 0;
+
+            var conversionTransactionFee = this.externalApiPoller.EstimateConversionTransactionFee();
+            if (conversionTransactionFee == -1)
+            {
+                this.logger.Debug("External poller returned -1, will retry.");
+                return false;
+            }
+
+            candidateFee = (ulong)(conversionTransactionFee * 100_000_000m);
+
+            return true;
         }
 
         private bool HasFeeProposalBeenConcluded(InteropConversionRequestFee interopConversionRequestFee)
