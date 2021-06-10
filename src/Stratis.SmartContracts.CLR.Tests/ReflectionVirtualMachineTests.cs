@@ -114,6 +114,8 @@ namespace Stratis.SmartContracts.CLR.Tests
         [Fact]
         public void VM_ExecuteEmbeddedContract_WithParameters()
         {
+            // Version 1 of the Authentication contract.
+            // See the constructor of ContractExecutorTestContext.
             var testAddress = ((uint160)new EmbeddedContractIdentifier(1, 1)).ToAddress();
 
             var contractState = new SmartContractState(
