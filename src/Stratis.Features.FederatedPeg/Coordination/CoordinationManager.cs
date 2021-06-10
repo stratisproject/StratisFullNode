@@ -11,7 +11,6 @@ using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonConverters;
-using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Payloads;
 
@@ -44,15 +43,16 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <returns>The transactionId of the highest-voted request.</returns>
         BigInteger GetCandidateTransactionId(string requestId);
 
-        /// <summary>Checks if vote was received from the pubkey specified for a particular <see cref="ConversionRequest"/>.</summary>
-        bool CheckIfVoted(string requestId, PubKey pubKey);
-
         /// <summary>Removes all votes associated with provided request Id.</summary>
         void RemoveTransaction(string requestId);
 
         /// <summary>Provides mapping of all request ids to pubkeys that have voted for them.</summary>
         Dictionary<string, HashSet<PubKey>> GetStatus();
 
+        /// <summary>
+        /// Registers the quorum for conversion request transactions, i.e. minimum amount of votes required to process it.
+        /// </summary>
+        /// <param name="quorum">The amount of votrs required.</param>
         void RegisterQuorumSize(int quorum);
 
         int GetQuorum();
@@ -75,18 +75,20 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly ILogger logger;
 
         /// <summary> Interflux transaction ID votes </summary>
-        private Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
-        private Dictionary<string, HashSet<PubKey>> receivedVotes;
+        private readonly Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
+        private readonly Dictionary<string, HashSet<PubKey>> receivedVotes;
 
         /// <summary> Proposed fees by request id. </summary>
-        private Dictionary<string, List<InterOpFeeToMultisig>> feeProposalsByRequestId;
+        private readonly Dictionary<string, List<InterOpFeeToMultisig>> feeProposalsByRequestId;
 
         /// <summary> Agreed fees by request id. </summary>
-        private Dictionary<string, List<InterOpFeeToMultisig>> agreedFeeVotesByRequestId;
+        private readonly Dictionary<string, List<InterOpFeeToMultisig>> agreedFeeVotesByRequestId;
 
-        private int quorum;
+        /// <summary> The amount of acceptable range another node can propose a fee in.</summary>
+        private const decimal FeeProposalRange = 0.1m;
 
         private readonly object lockObject = new object();
+        private int quorum;
 
         public CoordinationManager(
             IDateTimeProvider dateTimeProvider,
@@ -251,6 +253,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     {
                         if (!proposals.Any(p => p.PubKey == pubKey.ToHex()))
                         {
+                            if (!IsFeeWithinAcceptableRange(proposals, requestId, feeAmount, pubKey))
+                                return;
+
                             proposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                             this.logger.Debug($"Conversion request proposal '{requestId}' received from pubkey '{pubKey}' which exists, adding proposal fee of {feeAmount}.");
                         }
@@ -359,6 +364,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     {
                         if (!votes.Any(p => p.PubKey == pubKey.ToHex()))
                         {
+                            if (!IsFeeWithinAcceptableRange(votes, requestId, feeAmount, pubKey))
+                                return;
+
                             votes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                             this.logger.Debug($"Conversion request fee vote '{requestId}' received from pubkey '{pubKey}' which exists, adding fee vote of {feeAmount}.");
                         }
@@ -381,6 +389,27 @@ namespace Stratis.Features.FederatedPeg.Coordination
             // Broadcast/ask for this vote from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
             await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(requestId, feeAmount, blockHeight, signature));
+        }
+
+        /// <summary>
+        /// Check that the fee proposed is within range of the current average.
+        /// </summary>
+        /// <param name="proposals">The current set of fee proposals.</param>
+        /// <param name="requestId">The request id in question.</param>
+        /// <param name="feeAmount">The fee amount from the other node.</param>
+        /// <param name="pubKey">The pubkey of the node proposing the fee.</param>
+        /// <returns><c>Trie if within range of <see cref="FeeProposalRange"/></c></returns>
+        private bool IsFeeWithinAcceptableRange(List<InterOpFeeToMultisig> proposals, string requestId, ulong feeAmount, PubKey pubKey)
+        {
+            var currentAverage = (ulong)proposals.Select(s => Convert.ToInt64(s.FeeAmount)).Average();
+            if (feeAmount < (currentAverage - (currentAverage * FeeProposalRange)) ||
+                feeAmount > (currentAverage + (currentAverage * FeeProposalRange)))
+            {
+                this.logger.Warn($"Conversion request '{requestId}' received from pubkey '{pubKey}' with amount {feeAmount} is out of range of the current average of {currentAverage}, skipping.");
+                return false;
+            }
+
+            return true;
         }
 
         private bool EstimateConversionTransactionFee(out ulong candidateFee)
@@ -487,21 +516,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
 
                 return highestVoted;
-            }
-        }
-
-        /// <inheritdoc/>
-        public bool CheckIfVoted(string requestId, PubKey pubKey)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.receivedVotes.ContainsKey(requestId))
-                    return false;
-
-                if (!this.receivedVotes[requestId].Contains(pubKey))
-                    return false;
-
-                return true;
             }
         }
 
