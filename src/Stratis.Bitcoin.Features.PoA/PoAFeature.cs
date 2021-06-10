@@ -139,7 +139,8 @@ namespace Stratis.Bitcoin.Features.PoA
             this.federationManager.Initialize();
             this.whitelistedHashesRepository.Initialize();
 
-            this.votingManager.Synchronize(this.chainIndexer.Tip);
+            if (!this.votingManager.Synchronize(this.chainIndexer.Tip))
+                throw new System.OperationCanceledException();
 
             this.federationHistory.Initialize();
 
