@@ -149,7 +149,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 return true;
             }
 
-            return await ProcessMatureBlockDepositsAsync(matureBlockDeposits);
+            return await ProcessMatureBlockDepositsAsync(matureBlockDeposits).ConfigureAwait(false);
         }
 
         private async Task<bool> ProcessMatureBlockDepositsAsync(SerializableResult<List<MaturedBlockDepositsModel>> matureBlockDeposits)
@@ -226,7 +226,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    InteropConversionRequestFee interopConversionRequestFee = await this.coordinationManager.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight);
+                    InteropConversionRequestFee interopConversionRequestFee = await this.coordinationManager.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
 
                     if (interopConversionRequestFee == null ||
                         (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))

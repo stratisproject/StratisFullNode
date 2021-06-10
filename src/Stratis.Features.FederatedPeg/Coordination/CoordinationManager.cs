@@ -146,10 +146,10 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                 // If the fee proposal has not concluded then continue until it has.
                 if (interopConversionRequestFee.State == InteropFeeState.ProposalInProgress)
-                    await SubmitProposalForInteropFeeForConversionRequestAsync(interopConversionRequestFee);
+                    await SubmitProposalForInteropFeeForConversionRequestAsync(interopConversionRequestFee).ConfigureAwait(false);
 
                 if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
-                    await AgreeOnInteropFeeForConversionRequestAsync(interopConversionRequestFee);
+                    await AgreeOnInteropFeeForConversionRequestAsync(interopConversionRequestFee).ConfigureAwait(false);
 
                 if (interopConversionRequestFee.State == InteropFeeState.AgreeanceConcluded)
                     break;
@@ -230,7 +230,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             InterOpFeeToMultisig myProposal = proposals.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
             string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myProposal.FeeAmount);
 
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature));
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -276,7 +276,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             // Broadcast/ask for this request from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, feeAmount, blockHeight, signature));
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(requestId, feeAmount, blockHeight, signature)).ConfigureAwait(false);
         }
 
         private async Task AgreeOnInteropFeeForConversionRequestAsync(InteropConversionRequestFee interopConversionRequestFee)
@@ -333,7 +333,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             InterOpFeeToMultisig myVote = votes.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
             string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myVote.FeeAmount);
 
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature));
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -388,7 +388,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             // Broadcast/ask for this vote from other nodes as well
             string signature = this.federationManager.CurrentFederationKey.SignMessage(requestId + feeAmount);
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(requestId, feeAmount, blockHeight, signature));
+            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(requestId, feeAmount, blockHeight, signature)).ConfigureAwait(false);
         }
 
         /// <summary>

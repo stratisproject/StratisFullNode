@@ -97,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ICrossChainTransfer fullySignedTransfer in fullySignedTransfers)
             {
-                result.Items.Add(await BroadcastFullySignedTransfersAsync(fullySignedTransfer));
+                result.Items.Add(await BroadcastFullySignedTransfersAsync(fullySignedTransfer).ConfigureAwait(false));
             }
 
             return result;

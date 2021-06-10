@@ -187,7 +187,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            await this.coordinationManager.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            await this.coordinationManager.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey).ConfigureAwait(false);
         }
 
         private async Task ProcessFeeAgreeAsync(INetworkPeer peer, FeeAgreePayload payload)
@@ -214,7 +214,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            await this.coordinationManager.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            await this.coordinationManager.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey).ConfigureAwait(false);
         }
     }
 }

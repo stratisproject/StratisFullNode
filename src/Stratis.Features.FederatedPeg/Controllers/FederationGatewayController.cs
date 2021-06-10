@@ -381,7 +381,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
             if (!uint256.TryParse(depositIdTransactionId, out uint256 id))
                 return this.Json("Invalid deposit transaction id");
 
-            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id }, false);
+            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { id }, false).ConfigureAwait(false);
 
             if (transfers != null && transfers.Any())
                 return this.Json(this.federationWalletManager.ValidateTransaction(transfers[0].PartialTransaction, true));

@@ -91,7 +91,7 @@ namespace Stratis.Features.FederatedPeg
 
             this.logger.Debug("{0} with deposit Id '{1}' received from '{2}':'{3}'.", nameof(RequestPartialTransactionPayload), payload.DepositId, peer.PeerEndPoint.Address, peer.RemoteSocketAddress);
 
-            ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId });
+            ICrossChainTransfer[] transfer = await this.crossChainTransferStore.GetAsync(new[] { payload.DepositId }).ConfigureAwait(false);
 
             // This could be null if the store was unable to sync with the federation 
             // wallet manager. It is possible that the federation wallet's tip is not 
@@ -135,7 +135,7 @@ namespace Stratis.Features.FederatedPeg
                 this.logger.Debug("Signed transaction (deposit={0}) to produce {1} from {2}.", payload.DepositId, signedTransaction.GetHash(), oldHash);
 
                 // Respond back to the peer that requested a signature.
-                await this.BroadcastAsync(payload.AddPartial(signedTransaction));
+                await this.BroadcastAsync(payload.AddPartial(signedTransaction)).ConfigureAwait(false);
             }
             else
             {
@@ -150,7 +150,7 @@ namespace Stratis.Features.FederatedPeg
             if (result.Signed)
             {
                 this.logger.Debug("Signed consolidating transaction to produce {0} from {1}", result.TransactionResult.GetHash(), payload.PartialTransaction.GetHash());
-                await this.BroadcastAsync(payload.AddPartial(result.TransactionResult));
+                await this.BroadcastAsync(payload.AddPartial(result.TransactionResult)).ConfigureAwait(false);
             }
         }
     }
