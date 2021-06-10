@@ -74,7 +74,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             });
             this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(Network)))).Returns(this.Network);
             this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IPersistenceStrategy)))).Returns(this.PersistenceStrategy);
-            this.Vm = new ReflectionVirtualMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache, this.mockServiceProvider.Object, this.mockEmbeddedContractContainer.Object);
+            this.Vm = new EmbeddedContractMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache, this.mockServiceProvider.Object, this.mockEmbeddedContractContainer.Object);
             this.StateProcessor = new StateProcessor(this.Vm, this.AddressGenerator);
             this.InternalTxExecutorFactory = new InternalExecutorFactory(this.LoggerFactory, this.StateProcessor);
             this.SmartContractStateFactory = new SmartContractStateFactory(this.ContractPrimitiveSerializer, this.InternalTxExecutorFactory, this.Serializer);

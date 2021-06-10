@@ -179,72 +179,21 @@ namespace Stratis.SmartContracts.CLR
             return VmExecutionResult.Ok(invocationResult.Return, typeToInstantiate);
         }
 
-        private bool TryConstructEmbedded(ISmartContractState contractState, uint160 address, ref string typeName, out IContract contract, out VmExecutionResult executionResult)
-        {
-            if (!EmbeddedContractIdentifier.IsEmbedded(address) || this.embeddedContractContainer.TryGetContractTypeAndVersion(address, out typeName, out uint version))
-            {
-                contract = null;
-                executionResult = null;
-
-                return false;
-            }
-
-            // TODO: Verify that the contract is white-listed by IWhitelistedHashChecker.                
-            Type type = Type.GetType(typeName);
-            contract = Contract.CreateUninitialized(type, contractState, address);
-
-            // Invoke the constructor of the provided contract code
-            Result<object[]> result = GetEmbeddedConstructorParameters(type, version);
-            if (result.IsFailure)
-            {
-                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
-                executionResult = VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, result.Error);
-            }
-
-            IContractInvocationResult invocationResult = contract.InvokeConstructor(result.Value);
-
-            if (!invocationResult.IsSuccess)
-            {
-                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
-                executionResult = GetInvocationVmErrorResult(invocationResult);
-            }
-
-            this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_SUCCEEDED");
-
-            executionResult = VmExecutionResult.Ok(null, typeName);
-
-            return true;
-        }
-
         /// <summary>
         /// Invokes a method on an existing smart contract
         /// </summary>
-        public VmExecutionResult ExecuteMethod(ISmartContractState contractState, ExecutionContext executionContext,
+        public virtual VmExecutionResult ExecuteMethod(ISmartContractState contractState, ExecutionContext executionContext,
             MethodCall methodCall, byte[] contractCode, string typeName)
         {
             IContract contract;
             Observer previousObserver = null;
-            CachedAssemblyPackage assemblyPackage = null;
-            uint256 codeHashUint256;
 
-            bool isEmbedded = TryConstructEmbedded(contractState, contractState.Message.ContractAddress.ToUint160(), ref typeName, out contract, out VmExecutionResult executionResult);
+            // Hash the code
+            byte[] codeHash = HashHelper.Keccak256(contractCode);
+            uint256 codeHashUint256 = new uint256(codeHash);
 
-            if (isEmbedded)
-            {
-                if (!executionResult.IsSuccess)
-                {
-                    return executionResult;
-                }
-
-                codeHashUint256 = uint256.Zero; // Not used.
-            }
-            else
-            {
-                codeHashUint256 = new uint256(HashHelper.Keccak256(contractCode));
-
-                // Lets see if we already have an assembly
-                assemblyPackage = this.assemblyCache.Retrieve(codeHashUint256);
-            }
+            // Lets see if we already have an assembly
+            CachedAssemblyPackage assemblyPackage = this.assemblyCache.Retrieve(codeHashUint256);
 
             if (assemblyPackage != null)
             {
@@ -255,9 +204,10 @@ namespace Stratis.SmartContracts.CLR
 
                 Type type = assemblyPackage.Assembly.GetType(typeName);
 
-                contract = Contract.CreateUninitialized(type, contractState, contractState.Message.ContractAddress.ToUint160());
+                uint160 address = contractState.Message.ContractAddress.ToUint160();
+                contract = Contract.CreateUninitialized(type, contractState, address);
             }
-            else if (!isEmbedded)
+            else
             {
                 // Rewrite from scratch.
                 using (IContractModuleDefinition moduleDefinition = this.moduleDefinitionReader.Read(contractCode).Value)
@@ -303,12 +253,12 @@ namespace Stratis.SmartContracts.CLR
             this.LogExecutionContext(contract.State.Block, contract.State.Message, contract.Address);
 
             // Set new Observer and load and execute.
-            assemblyPackage.Assembly?.SetObserver(executionContext.Observer);
+            assemblyPackage.Assembly.SetObserver(executionContext.Observer);
 
             IContractInvocationResult invocationResult = contract.Invoke(methodCall);
 
             // Always reset the observer, even if the previous was null.
-            assemblyPackage.Assembly?.SetObserver(previousObserver);
+            assemblyPackage.Assembly.SetObserver(previousObserver);
 
             if (!invocationResult.IsSuccess)
             {
@@ -322,7 +272,7 @@ namespace Stratis.SmartContracts.CLR
             return VmExecutionResult.Ok(invocationResult.Return, typeName);
         }
 
-        private static VmExecutionResult GetInvocationVmErrorResult(IContractInvocationResult invocationResult)
+        protected static VmExecutionResult GetInvocationVmErrorResult(IContractInvocationResult invocationResult)
         {
             if (invocationResult.InvocationErrorType == ContractInvocationErrorType.OutOfGas)
             {
@@ -335,32 +285,6 @@ namespace Stratis.SmartContracts.CLR
             }
 
             return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, invocationResult.ErrorMessage);
-        }
-
-        private Result<object[]> GetEmbeddedConstructorParameters(Type type, uint version)
-        {
-            // If its an embedded contract then we feed the constructor anything it wants including other contracts.
-            // Note: Only one (backwards-compatible) contructor is allowed.
-            ConstructorInfo info = type.GetConstructors().Single();
-            ParameterInfo[] parameterTypes = info.GetParameters().ToArray();
-            if (parameterTypes[0].ParameterType != typeof(ISmartContractState))
-            {
-                const string typeNotFoundError = "Invalid constructor!";
-
-                this.logger.LogDebug(typeNotFoundError);
-
-                return Result.Fail<object[]>($"Constructor should contain a first argument of type {nameof(ISmartContractState)}.");
-            }
-
-            parameterTypes = parameterTypes.Skip(1).ToArray();
-            var parameters = new object[parameterTypes.Length];
-            for (int i = 0; i < parameters.Length; i++)
-            {                
-                Type parameterType = parameterTypes[i].ParameterType;
-                parameters[i] = this.serviceProvider.GetService(parameterType);
-            }
-
-            return Result.Ok(parameters);
         }
 
         /// <summary>
