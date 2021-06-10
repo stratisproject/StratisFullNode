@@ -27,8 +27,6 @@ namespace Stratis.SmartContracts.CLR
         private readonly ILoader assemblyLoader;
         private readonly IContractModuleDefinitionReader moduleDefinitionReader;
         private readonly IContractAssemblyCache assemblyCache;
-        private readonly IServiceProvider serviceProvider;
-        private readonly IEmbeddedContractContainer embeddedContractContainer;
         public const int VmVersion = 1;
         public const long MemoryUnitLimit = 100_000;
 
@@ -36,17 +34,13 @@ namespace Stratis.SmartContracts.CLR
             ILoggerFactory loggerFactory,
             ILoader assemblyLoader,
             IContractModuleDefinitionReader moduleDefinitionReader,
-            IContractAssemblyCache assemblyCache,
-            IServiceProvider serviceProvider = null,
-            IEmbeddedContractContainer embeddedContractContainer = null)
+            IContractAssemblyCache assemblyCache)
         {
             this.validator = validator;
             this.logger = loggerFactory.CreateLogger(this.GetType());
             this.assemblyLoader = assemblyLoader;
             this.moduleDefinitionReader = moduleDefinitionReader;
             this.assemblyCache = assemblyCache;
-            this.serviceProvider = serviceProvider;
-            this.embeddedContractContainer = embeddedContractContainer;
         }
 
         /// <summary>
