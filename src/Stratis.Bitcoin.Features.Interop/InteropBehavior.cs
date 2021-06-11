@@ -191,7 +191,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
             // Reply back to the peer with this node's amount.
             FeeProposalPayload replyToPayload = this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
-            await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
+            if (replyToPayload != null)
+                await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
 
         private async Task ProcessFeeAgreeAsync(FeeAgreePayload payload)
