@@ -211,7 +211,7 @@ namespace NBitcoin
         /// Returns the identifiers of all defined contracts, whether active or inactive.
         /// </summary>
         /// <returns></returns>
-        IEnumerable<uint160> GetContractIdentifiers();
+        IEnumerable<uint160> GetEmbeddedContractAddresses();
 
         /// <summary>
         /// Extracts the contract type and version from a contract hash.
