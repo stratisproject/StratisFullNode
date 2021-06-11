@@ -1516,6 +1516,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 foreach (ICrossChainTransfer transfer in transfers)
                 {
                     this.DeleteTransfer(dbreezeTransaction, transfer);
+                    this.depositsIdsByStatus[CrossChainTransferStatus.Suspended].Clear();
                     this.logger.Debug($"Suspended transfer with deposit id '{transfer.DepositTransactionId}' deleted.");
                 }
 
