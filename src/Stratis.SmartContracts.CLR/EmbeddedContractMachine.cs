@@ -4,6 +4,7 @@ using System.Reflection;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Loader;
@@ -13,6 +14,9 @@ namespace Stratis.SmartContracts.CLR
 {
     public class EmbeddedContractMachine : ReflectionVirtualMachine
     {
+        private readonly Network network;
+        private readonly ChainIndexer chainIndexer;
+        private readonly NodeDeployments nodeDeployments;
         private readonly IServiceProvider serviceProvider;
         private readonly IEmbeddedContractContainer embeddedContractContainer;
         private readonly ILogger logger;
@@ -22,10 +26,16 @@ namespace Stratis.SmartContracts.CLR
            ILoader assemblyLoader,
            IContractModuleDefinitionReader moduleDefinitionReader,
            IContractAssemblyCache assemblyCache,
+           Network network,
+           ChainIndexer chainIndexer,
+           NodeDeployments nodeDeployments,
            IServiceProvider serviceProvider,
            IEmbeddedContractContainer embeddedContractContainer) : base(validator, loggerFactory, assemblyLoader, moduleDefinitionReader, assemblyCache)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType());
+            this.network = network;
+            this.chainIndexer = chainIndexer;
+            this.nodeDeployments = nodeDeployments;
             this.serviceProvider = serviceProvider;
             this.embeddedContractContainer = embeddedContractContainer;
         }
@@ -46,7 +56,13 @@ namespace Stratis.SmartContracts.CLR
                 return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, "The embedded contract is not registered.");
             }
 
-            // TODO: Verify that the contract is white-listed by IWhitelistedHashChecker. The particular version may not have been BIP activated yet.             
+            // Verify that the contract is allowed or had been BIP activated id required.
+            ChainedHeader prevHeader = this.chainIndexer.GetHeader(contractState.Block.Number - 1);
+            if (!this.network.EmbeddedContractContainer.IsActive(address, prevHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active))
+            {
+                this.logger.LogDebug("CREATE_CONTRACT_INSTANTIATION_FAILED");
+                return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, "The embedded contract is not active.");
+            }
 
             Type type = Type.GetType(typeName);
             IContract contract = Contract.CreateUninitialized(type, contractState, address);
