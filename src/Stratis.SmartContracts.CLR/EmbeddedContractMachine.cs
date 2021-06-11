@@ -35,7 +35,7 @@ namespace Stratis.SmartContracts.CLR
         {
             uint160 address = contractState.Message.ContractAddress.ToUint160();
 
-            if (!EmbeddedContractIdentifier.IsEmbedded(address))
+            if (!EmbeddedContractAddress.IsEmbedded(address))
             {
                 return base.ExecuteMethod(contractState, executionContext, methodCall, contractCode, typeName);
             }

@@ -12,7 +12,7 @@ public class Authentication : SmartContract
 
     public Authentication(ISmartContractState state, Network network) : base(state)
     {
-        uint version = new EmbeddedContractIdentifier(state.Message.ContractAddress.ToUint160()).Version;
+        uint version = new EmbeddedContractAddress(state.Message.ContractAddress.ToUint160()).Version;
 
         Assert(version == 1, "Only a version of 1 is supported.");
 

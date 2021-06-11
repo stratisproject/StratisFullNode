@@ -27,17 +27,17 @@ namespace Stratis.SmartContracts.CLR
         }
     }
 
-    public struct EmbeddedContractIdentifier
+    public struct EmbeddedContractAddress
     {
         private static byte[] embeddedContractSignature = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0 };
         private uint160 value;
 
-        public EmbeddedContractIdentifier(uint160 id)
+        public EmbeddedContractAddress(uint160 id)
         {
             this.value = id;
         }
 
-        public EmbeddedContractIdentifier(Type contractType, uint version)
+        public EmbeddedContractAddress(Type contractType, uint version)
         {
             EmbeddedContractType contractTypeId = EmbeddedContractAttribute.GetEmbeddedContractTypeId(contractType);
             this.value = new uint160(BitConverter.GetBytes(version).Concat(BitConverter.GetBytes((ulong)contractTypeId)).Concat(embeddedContractSignature).ToArray());
@@ -45,7 +45,7 @@ namespace Stratis.SmartContracts.CLR
 
         public uint Version { get => BitConverter.ToUInt32(this.value.ToBytes()); }
 
-        public static implicit operator uint160(EmbeddedContractIdentifier embeddedContractIdentifier)
+        public static implicit operator uint160(EmbeddedContractAddress embeddedContractIdentifier)
         {
             return embeddedContractIdentifier.value;
         }

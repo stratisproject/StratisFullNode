@@ -36,15 +36,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <summary>
-        /// Checks that a supplied hash is present in the whitelisted hashes repository.
+        /// Checks that a supplied hash is whitelisted.
         /// </summary>
         /// <param name="hash">The hash to check.</param>
         /// <param name="previousHeader">The block before the block to check.</param>
         /// <returns>True if the hash was found in the whitelisted hashes repository.</returns>
         public bool CheckHashWhitelisted(uint256 codeHash, ChainedHeader previousHeader)
         {
-            uint160 id = (new EmbeddedCodeHash(codeHash)).Id;
-            return this.network.EmbeddedContractContainer.IsActive(id, previousHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active);
+            uint160 address = (new EmbeddedCodeHash(codeHash)).Address;
+            return this.network.EmbeddedContractContainer.IsActive(address, previousHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active);
         }
 
         /// <inheritdoc />

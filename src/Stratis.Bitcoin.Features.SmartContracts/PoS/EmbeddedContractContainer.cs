@@ -12,7 +12,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// </summary>
     public class EmbeddedContractVersion
     {
-        public EmbeddedContractVersion(Type contractType, ulong version, (int start, int? end)[] activationHistory, string activationName, bool activationState)
+        public EmbeddedContractVersion(Type contractType, uint version, (int start, int? end)[] activationHistory, string activationName, bool activationState)
         {
             this.ContractType = contractType;
             this.Version = version;
@@ -22,13 +22,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <summary>The contract version that this information applies to.</summary>
-        public ulong Version { get; private set; }
+        public uint Version { get; private set; }
 
         /// <summary>The <see cref="Type.AssemblyQualifiedName"/> of the contract.</summary>
         public Type ContractType { get; private set; }
 
         /// <summary>The aadress of the contract.</summary>
-        public uint160 Address => new EmbeddedContractIdentifier(typeof(Authentication), 1);
+        public uint160 Address => new EmbeddedContractAddress(this.ContractType, this.Version);
 
         /// <summary>History of block ranges over which contracts were active.
         /// The BIP9 Deployments array is sometimes cleaned up and the information therein has to be transferred here.</summary>
@@ -70,13 +70,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <inheritdoc/>
-        public bool TryGetContractTypeAndVersion(uint160 id, out string contractType, out uint version)
+        public bool TryGetContractTypeAndVersion(uint160 address, out string contractType, out uint version)
         {
-            Guard.Assert(EmbeddedContractIdentifier.IsEmbedded(id));
+            Guard.Assert(EmbeddedContractAddress.IsEmbedded(address));
 
-            version = new EmbeddedContractIdentifier(id).Version;
+            version = new EmbeddedContractAddress(address).Version;
 
-            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersion contract))
+            if (!this.contracts.TryGetValue(address, out EmbeddedContractVersion contract))
             {
                 contractType = null;
                 return false;
@@ -88,9 +88,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <inheritdoc/>
-        public bool IsActive(uint160 id, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition)
+        public bool IsActive(uint160 address, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition)
         {
-            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersion contract))
+            if (!this.contracts.TryGetValue(address, out EmbeddedContractVersion contract))
                 return false;
 
             bool isActive = contract.ActivationHistory.Any(r => (previousHeader.Height + 1) >= r.start && (r.end == null || (previousHeader.Height + 1) <= r.end));
@@ -106,7 +106,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         }
 
         /// <inheritdoc/>
-        public IEnumerable<uint160> GetContractIdentifiers()
+        public IEnumerable<uint160> GetEmbeddedContractAddresses()
         {
             return this.contracts.Select(c => c.Key);
         }
