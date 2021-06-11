@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Base.Deployments;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Patricia;
 using Stratis.SmartContracts.CLR.Caching;
@@ -72,9 +73,13 @@ namespace Stratis.SmartContracts.CLR.Tests
                 (uint160)new EmbeddedContractAddress(typeof(Authentication), 1),
                 (uint160)new EmbeddedContractAddress(typeof(MultiSig), 1)
             });
+
+            this.mockEmbeddedContractContainer.Setup(x => x.IsActive(It.IsAny<uint160>(), It.IsAny<ChainedHeader>(), It.IsAny<Func<ChainedHeader, int, bool>>())).Returns(true);
+
             this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(Network)))).Returns(this.Network);
             this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IPersistenceStrategy)))).Returns(this.PersistenceStrategy);
-            this.Vm = new EmbeddedContractMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache, this.mockServiceProvider.Object, this.mockEmbeddedContractContainer.Object);
+            this.Vm = new EmbeddedContractMachine(this.Validator, this.LoggerFactory, this.AssemblyLoader, this.ModuleDefinitionReader, this.ContractCache, new Mock<ChainIndexer>().Object, null, this.mockServiceProvider.Object,
+                this.mockEmbeddedContractContainer.Object);
             this.StateProcessor = new StateProcessor(this.Vm, this.AddressGenerator);
             this.InternalTxExecutorFactory = new InternalExecutorFactory(this.LoggerFactory, this.StateProcessor);
             this.SmartContractStateFactory = new SmartContractStateFactory(this.ContractPrimitiveSerializer, this.InternalTxExecutorFactory, this.Serializer);
