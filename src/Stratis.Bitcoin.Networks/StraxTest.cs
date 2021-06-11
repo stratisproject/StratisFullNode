@@ -9,7 +9,6 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Networks.Policies;
-using Stratis.SmartContracts.CLR;
 
 namespace Stratis.Bitcoin.Networks
 {
@@ -81,9 +80,9 @@ namespace Stratis.Bitcoin.Networks
 
             this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
-                new Dictionary<uint160, EmbeddedContractDescriptor> {
-                    {new EmbeddedContractIdentifier(typeof(Authentication), 1), new EmbeddedContractDescriptor(typeof(Authentication), new (int, int?)[] { }, null, false) },
-                    {new EmbeddedContractIdentifier(typeof(MultiSig), 1), new EmbeddedContractDescriptor(typeof(MultiSig), new (int, int?)[] { }, null, false) }
+                new List<EmbeddedContractVersionInfo> {
+                    new EmbeddedContractVersionInfo(typeof(Authentication), 1, new (int, int?)[] { }, null, false),
+                    new EmbeddedContractVersionInfo(typeof(MultiSig), 1, new (int, int?)[] { }, null, false)
                 },
                 new PrimaryAuthenticators(this, new[]
                 {

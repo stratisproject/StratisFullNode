@@ -10,18 +10,25 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// <summary>
     /// Holds the information and logic to determines whether an embedded system contract should be active.
     /// </summary>
-    public class EmbeddedContractDescriptor
+    public class EmbeddedContractVersionInfo
     {
-        public EmbeddedContractDescriptor(Type contractType, (int start, int? end)[] activationHistory, string activationName, bool activationState)
+        public EmbeddedContractVersionInfo(Type contractType, ulong version, (int start, int? end)[] activationHistory, string activationName, bool activationState)
         {
-            this.ContractType = contractType.AssemblyQualifiedName;
+            this.ContractType = contractType;
+            this.Version = version;
             this.ActivationHistory = activationHistory;
             this.ActivationName = activationName;
             this.ActivationState = activationState;
         }
 
+        /// <summary>The contract version that this information applies to.</summary>
+        public ulong Version { get; private set; }
+
         /// <summary>The <see cref="Type.AssemblyQualifiedName"/> of the contract.</summary>
-        public string ContractType { get; private set; }
+        public Type ContractType { get; private set; }
+
+        /// <summary>The aadress of the contract.</summary>
+        public uint160 Address => new EmbeddedContractIdentifier(typeof(Authentication), 1);
 
         /// <summary>History of block ranges over which contracts were active.
         /// The BIP9 Deployments array is sometimes cleaned up and the information therein has to be transferred here.</summary>
@@ -42,7 +49,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         private readonly Network network;
 
         /// <summary>The embedded contracts for this network.</summary>
-        private Dictionary<uint160, EmbeddedContractDescriptor> contracts;
+        private Dictionary<uint160, EmbeddedContractVersionInfo> contracts;
 
         /// <summary>
         /// The addresses (defaults) and quorum of the primary authenticators of this network.
@@ -52,11 +59,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <summary>The class constructor.</summary>
         public EmbeddedContractContainer(
             Network network,
-            Dictionary<uint160, EmbeddedContractDescriptor> contracts,
+            List<EmbeddedContractVersionInfo> contracts,
             PrimaryAuthenticators primaryAuthenticators)
         {
             this.network = network;
-            this.contracts = contracts;
+            this.contracts = new Dictionary<uint160, EmbeddedContractVersionInfo>();
+            foreach (EmbeddedContractVersionInfo contract in contracts)
+                this.contracts.Add(contract.Address, contract);
             this.PrimaryAuthenticators = primaryAuthenticators;
         }
 
@@ -67,13 +76,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 
             version = new EmbeddedContractIdentifier(id).Version;
 
-            if (!this.contracts.TryGetValue(id, out EmbeddedContractDescriptor contract))
+            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersionInfo contract))
             {
                 contractType = null;
                 return false;
             }
 
-            contractType = contract.ContractType;
+            contractType = contract.ContractType.AssemblyQualifiedName;
 
             return true;
         }
@@ -81,7 +90,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <inheritdoc/>
         public bool IsActive(uint160 id, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition)
         {
-            if (!this.contracts.TryGetValue(id, out EmbeddedContractDescriptor contract))
+            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersionInfo contract))
                 return false;
 
             bool isActive = contract.ActivationHistory.Any(r => (previousHeader.Height + 1) >= r.start && (r.end == null || (previousHeader.Height + 1) <= r.end));
