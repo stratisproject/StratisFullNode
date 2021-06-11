@@ -20,8 +20,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
             EmbeddedContractIdentifier contractId = new EmbeddedContractIdentifier(typeof(Authentication), 1);
             var container = new EmbeddedContractContainer(
                 network,
-                new List<EmbeddedContractVersionInfo> {
-                    { new EmbeddedContractVersionInfo(typeof(Authentication), 1, new[] { (1, (int?)10) }, "SystemContracts", true) } },
+                new List<EmbeddedContractVersion> {
+                    { new EmbeddedContractVersion(typeof(Authentication), 1, new[] { (1, (int?)10) }, "SystemContracts", true) } },
                 null);
 
             uint160 id = container.GetContractIdentifiers().First();

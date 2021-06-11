@@ -80,9 +80,9 @@ namespace Stratis.Bitcoin.Networks
 
             this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
-                new List<EmbeddedContractVersionInfo> {
-                    new EmbeddedContractVersionInfo(typeof(Authentication), 1, new (int, int?)[] { }, null, false),
-                    new EmbeddedContractVersionInfo(typeof(MultiSig), 1, new (int, int?)[] { }, null, false)
+                new List<EmbeddedContractVersion> {
+                    new EmbeddedContractVersion(typeof(Authentication), 1, new (int, int?)[] { }, null, false),
+                    new EmbeddedContractVersion(typeof(MultiSig), 1, new (int, int?)[] { }, null, false)
                 },
                 new PrimaryAuthenticators(this, new[]
                 {

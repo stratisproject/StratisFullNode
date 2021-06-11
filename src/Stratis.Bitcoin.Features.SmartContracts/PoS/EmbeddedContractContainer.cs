@@ -10,9 +10,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// <summary>
     /// Holds the information and logic to determines whether an embedded system contract should be active.
     /// </summary>
-    public class EmbeddedContractVersionInfo
+    public class EmbeddedContractVersion
     {
-        public EmbeddedContractVersionInfo(Type contractType, ulong version, (int start, int? end)[] activationHistory, string activationName, bool activationState)
+        public EmbeddedContractVersion(Type contractType, ulong version, (int start, int? end)[] activationHistory, string activationName, bool activationState)
         {
             this.ContractType = contractType;
             this.Version = version;
@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         private readonly Network network;
 
         /// <summary>The embedded contracts for this network.</summary>
-        private Dictionary<uint160, EmbeddedContractVersionInfo> contracts;
+        private Dictionary<uint160, EmbeddedContractVersion> contracts;
 
         /// <summary>
         /// The addresses (defaults) and quorum of the primary authenticators of this network.
@@ -59,12 +59,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <summary>The class constructor.</summary>
         public EmbeddedContractContainer(
             Network network,
-            List<EmbeddedContractVersionInfo> contracts,
+            List<EmbeddedContractVersion> contracts,
             PrimaryAuthenticators primaryAuthenticators)
         {
             this.network = network;
-            this.contracts = new Dictionary<uint160, EmbeddedContractVersionInfo>();
-            foreach (EmbeddedContractVersionInfo contract in contracts)
+            this.contracts = new Dictionary<uint160, EmbeddedContractVersion>();
+            foreach (EmbeddedContractVersion contract in contracts)
                 this.contracts.Add(contract.Address, contract);
             this.PrimaryAuthenticators = primaryAuthenticators;
         }
@@ -76,7 +76,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
 
             version = new EmbeddedContractIdentifier(id).Version;
 
-            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersionInfo contract))
+            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersion contract))
             {
                 contractType = null;
                 return false;
@@ -90,7 +90,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <inheritdoc/>
         public bool IsActive(uint160 id, ChainedHeader previousHeader, Func<ChainedHeader, int, bool> deploymentCondition)
         {
-            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersionInfo contract))
+            if (!this.contracts.TryGetValue(id, out EmbeddedContractVersion contract))
                 return false;
 
             bool isActive = contract.ActivationHistory.Any(r => (previousHeader.Height + 1) >= r.start && (r.end == null || (previousHeader.Height + 1) <= r.end));

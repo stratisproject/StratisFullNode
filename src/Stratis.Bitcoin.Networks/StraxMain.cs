@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Networks
             
             this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
-                new List<EmbeddedContractVersionInfo> { },
+                new List<EmbeddedContractVersion> { },
                 null /* TODO */);
 
             // To successfully process the OP_FEDERATION opcode the federations should be known.
