@@ -59,18 +59,18 @@ namespace Stratis.SmartContracts.CLR.Tests
             {
                 var outputType = typeof(Authentication).AssemblyQualifiedName;
                 var version = (uint)1;
-                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractIdentifier(1, 1), out outputType, out version)).Returns(true);
+                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractIdentifier(typeof(Authentication), 1), out outputType, out version)).Returns(true);
             }
 
             {
                 var outputType = typeof(MultiSig).AssemblyQualifiedName;
                 var version = (uint)1;
-                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractIdentifier(2, 1), out outputType, out version)).Returns(true);
+                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractIdentifier(typeof(MultiSig), 1), out outputType, out version)).Returns(true);
             }
 
             this.mockEmbeddedContractContainer.Setup(x => x.GetContractIdentifiers()).Returns(new[] { 
-                (uint160)new EmbeddedContractIdentifier(1, 1),
-                (uint160)new EmbeddedContractIdentifier(2, 1)
+                (uint160)new EmbeddedContractIdentifier(typeof(Authentication), 1),
+                (uint160)new EmbeddedContractIdentifier(typeof(MultiSig), 1)
             });
             this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(Network)))).Returns(this.Network);
             this.mockServiceProvider.Setup(x => x.GetService(It.Is<Type>(t => t == typeof(IPersistenceStrategy)))).Returns(this.PersistenceStrategy);

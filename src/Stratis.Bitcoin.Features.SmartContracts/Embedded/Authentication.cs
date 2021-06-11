@@ -4,6 +4,7 @@ using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using ECRecover = Stratis.SCL.Crypto.ECRecover;
 
+[EmbeddedContract(EmbeddedContractType.Authentication)]
 public class Authentication : SmartContract
 {
     const string primaryGroup = "main";

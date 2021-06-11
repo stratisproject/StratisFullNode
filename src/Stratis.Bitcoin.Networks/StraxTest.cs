@@ -9,6 +9,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin.Features.SmartContracts.PoS;
 using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Networks.Policies;
+using Stratis.SmartContracts.CLR;
 
 namespace Stratis.Bitcoin.Networks
 {
@@ -80,9 +81,13 @@ namespace Stratis.Bitcoin.Networks
 
             this.EmbeddedContractContainer = new EmbeddedContractContainer(
                 this,
-                new Dictionary<uint160, EmbeddedContractDescriptor> { },
+                new Dictionary<uint160, EmbeddedContractDescriptor> {
+                    {new EmbeddedContractIdentifier(typeof(Authentication), 1), new EmbeddedContractDescriptor(typeof(Authentication), new (int, int?)[] { }, null, false) },
+                    {new EmbeddedContractIdentifier(typeof(MultiSig), 1), new EmbeddedContractDescriptor(typeof(MultiSig), new (int, int?)[] { }, null, false) }
+                },
                 new PrimaryAuthenticators(this, new[]
                 {
+                    // The addresses to use with the "signmessage" API to sign challenges.
                     "qZc3WCqj8dipxUau1q18rT6EMBN6LRZ44A",
                     "qeEpNUPeRU4f2U9uWDoukbhqKyVrDt8Pn2",
                     "qPwZeTFkTG4kYueCjxQ532EpUYYBFSevzH"

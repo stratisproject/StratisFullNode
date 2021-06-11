@@ -3,6 +3,7 @@ using NBitcoin;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 
+[EmbeddedContract(EmbeddedContractType.Multisig)]
 public class MultiSig : SmartContract
 {
     const string primaryGroup = "main";
@@ -16,7 +17,7 @@ public class MultiSig : SmartContract
         Assert(version == 1, "Only a version of 1 is supported.");
 
         this.version = version;
-        this.authentication = new Authentication(GetState(state, persistenceStrategy, new EmbeddedContractIdentifier(1, 1)), network);
+        this.authentication = new Authentication(GetState(state, persistenceStrategy, new EmbeddedContractIdentifier(typeof(Authentication), 1)), network);
 
         // Exit if already initialized.
         if (this.Initialized)

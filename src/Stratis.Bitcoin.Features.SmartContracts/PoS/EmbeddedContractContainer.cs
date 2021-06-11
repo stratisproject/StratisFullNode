@@ -12,9 +12,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
     /// </summary>
     public class EmbeddedContractDescriptor
     {
-        public EmbeddedContractDescriptor(string contractType, (int start, int? end)[] activationHistory, string activationName, bool activationState)
+        public EmbeddedContractDescriptor(Type contractType, (int start, int? end)[] activationHistory, string activationName, bool activationState)
         {
-            this.ContractType = contractType;
+            this.ContractType = contractType.AssemblyQualifiedName;
             this.ActivationHistory = activationHistory;
             this.ActivationName = activationName;
             this.ActivationState = activationState;

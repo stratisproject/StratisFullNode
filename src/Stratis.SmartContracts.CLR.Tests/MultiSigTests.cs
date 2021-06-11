@@ -54,7 +54,7 @@ namespace Stratis.SmartContracts.CLR.Tests
             var context = new ContractExecutorTestContext(new SmartContractsPoSRegTest());
             var internalTxExecutor = new Mock<IInternalTransactionExecutor>();
             var internalHashHelper = new Mock<IInternalHashHelper>();
-            var testAddress = ((uint160)new EmbeddedContractIdentifier(2, 1)).ToAddress();
+            var testAddress = ((uint160)new EmbeddedContractIdentifier(typeof(MultiSig), 1)).ToAddress();
             var persistentState = new PersistentState(
                 context.PersistenceStrategy,
                 context.Serializer, testAddress.ToUint160());
@@ -78,7 +78,7 @@ namespace Stratis.SmartContracts.CLR.Tests
 
             Assert.True(persistentState.GetBool("Initialized"));
 
-            var authPersistentState = new PersistentState(context.PersistenceStrategy, context.Serializer, new EmbeddedContractIdentifier(1, 1));
+            var authPersistentState = new PersistentState(context.PersistenceStrategy, context.Serializer, new EmbeddedContractIdentifier(typeof(Authentication), 1));
 
             var federationDetails = this.network.Federations.GetOnlyFederation().GetFederationDetails();
             var federationId = this.network.Federations.GetFederations().Single().Id.ToHex(this.network);
