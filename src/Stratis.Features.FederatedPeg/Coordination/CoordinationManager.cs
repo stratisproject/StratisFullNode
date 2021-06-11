@@ -87,6 +87,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <summary> The amount of acceptable range another node can propose a fee in.</summary>
         private const decimal FeeProposalRange = 0.1m;
 
+        /// <summary> The fallback fee incase the nodes can't agree on it.</summary>
+        public static readonly Money FallBackFee = Money.Coins(100m);
+
         private readonly object lockObject = new object();
         private int quorum;
 
@@ -204,7 +207,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                         if (!EstimateConversionTransactionFee(out ulong candidateFee))
                             return;
 
-                        this.logger.Debug($"Adding proposed fee of {candidateFee} for conversion request id '{interopConversionRequestFee.RequestId}'.");
+                        this.logger.Debug($"Adding this node's proposed fee of {candidateFee} for conversion request id '{interopConversionRequestFee.RequestId}'.");
                         proposals.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex(), FeeAmount = candidateFee });
                     }
                 }
@@ -325,8 +328,14 @@ namespace Stratis.Features.FederatedPeg.Coordination
                             this.logger.Debug($"Pubkey '{vote.PubKey}' voted for {new Money(vote.FeeAmount)}.");
                         }
 
-                        InterOpFeeToMultisig myVote = votes.First(s => s.PubKey == this.federationManager.GetCurrentFederationMember().PubKey.ToHex());
-                        interopConversionRequestFee.Amount = (ulong)Convert.ToInt64(myVote.FeeAmount);
+                        // Try and find the majority vote
+                        IEnumerable<IGrouping<decimal, decimal>> grouped = votes.Select(v => Math.Truncate(Money.Satoshis(v.FeeAmount).ToDecimal(MoneyUnit.BTC))).GroupBy(s => s);
+                        IGrouping<decimal, decimal> majority = grouped.OrderByDescending(g => g.Count()).First();
+                        if (majority.Count() >= (this.quorum / 2) + 1)
+                            interopConversionRequestFee.Amount = Money.Coins(majority.Key);
+                        else
+                            interopConversionRequestFee.Amount = FallBackFee;
+
                         interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
                         this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
