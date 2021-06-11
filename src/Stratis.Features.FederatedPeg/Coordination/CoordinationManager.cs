@@ -88,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private const decimal FeeProposalRange = 0.1m;
 
         /// <summary> The fallback fee incase the nodes can't agree on it.</summary>
-        public static readonly Money FallBackFee = Money.Coins(100m);
+        public static readonly Money FallBackFee = Money.Coins(150m);
 
         private readonly object lockObject = new object();
         private int quorum;
@@ -319,29 +319,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 this.logger.Debug($"{votes.Count} node(s) has voted on a fee for conversion request id '{interopConversionRequestFee.RequestId}'.");
 
                 if (HasFeeVoteBeenConcluded(interopConversionRequestFee.RequestId))
-                {
-                    // Update the amount and state only if it is AgreeanceInProgress and save it.
-                    if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
-                    {
-                        foreach (InterOpFeeToMultisig vote in this.agreedFeeVotesByRequestId[interopConversionRequestFee.RequestId])
-                        {
-                            this.logger.Debug($"Pubkey '{vote.PubKey}' voted for {new Money(vote.FeeAmount)}.");
-                        }
-
-                        // Try and find the majority vote
-                        IEnumerable<IGrouping<decimal, decimal>> grouped = votes.Select(v => Math.Truncate(Money.Satoshis(v.FeeAmount).ToDecimal(MoneyUnit.BTC))).GroupBy(s => s);
-                        IGrouping<decimal, decimal> majority = grouped.OrderByDescending(g => g.Count()).First();
-                        if (majority.Count() >= (this.quorum / 2) + 1)
-                            interopConversionRequestFee.Amount = Money.Coins(majority.Key);
-                        else
-                            interopConversionRequestFee.Amount = FallBackFee;
-
-                        interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
-                        this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
-
-                        this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {interopConversionRequestFee.Amount}");
-                    }
-                }
+                    ConcludeInteropConversionRequestFee(interopConversionRequestFee, votes);
             }
 
             {
@@ -391,20 +369,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
                 else
                 {
-                    // Set the agreeance to concluded
-                    if (interopConversionRequestFee.State == InteropFeeState.AgreeanceInProgress)
-                    {
-                        this.logger.Debug($"Conversion request fee vote '{requestId}' received from pubkey '{pubKey}' has concluded with amount {new Money(feeAmount)}, setting state to '{InteropFeeState.AgreeanceConcluded}'");
-
-                        foreach (InterOpFeeToMultisig vote in this.agreedFeeVotesByRequestId[requestId])
-                        {
-                            this.logger.Debug($"Pubkey '{vote.PubKey}' voted for {new Money(vote.FeeAmount)}.");
-                        }
-
-                        interopConversionRequestFee.Amount = feeAmount;
-                        interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
-                        this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
-                    }
+                    this.agreedFeeVotesByRequestId.TryGetValue(interopConversionRequestFee.RequestId, out List<InterOpFeeToMultisig> votes);
+                    ConcludeInteropConversionRequestFee(interopConversionRequestFee, votes);
                 }
             }
 
@@ -464,6 +430,30 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 return votes.Count >= this.quorum;
 
             return false;
+        }
+
+        private void ConcludeInteropConversionRequestFee(InteropConversionRequestFee interopConversionRequestFee, List<InterOpFeeToMultisig> votes)
+        {
+            if (interopConversionRequestFee.State != InteropFeeState.AgreeanceInProgress)
+                return;
+
+            foreach (InterOpFeeToMultisig vote in this.agreedFeeVotesByRequestId[interopConversionRequestFee.RequestId])
+            {
+                this.logger.Debug($"Pubkey '{vote.PubKey}' voted for {new Money(vote.FeeAmount)}.");
+            }
+
+            // Try and find the majority vote
+            IEnumerable<IGrouping<decimal, decimal>> grouped = votes.Select(v => Math.Truncate(Money.Satoshis(v.FeeAmount).ToDecimal(MoneyUnit.BTC))).GroupBy(s => s);
+            IGrouping<decimal, decimal> majority = grouped.OrderByDescending(g => g.Count()).First();
+            if (majority.Count() >= (this.quorum / 2) + 1)
+                interopConversionRequestFee.Amount = Money.Coins(majority.Key);
+            else
+                interopConversionRequestFee.Amount = FallBackFee;
+
+            interopConversionRequestFee.State = InteropFeeState.AgreeanceConcluded;
+            this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
+
+            this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {interopConversionRequestFee.Amount}");
         }
 
         /// <inheritdoc/>

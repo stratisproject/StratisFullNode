@@ -231,8 +231,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     if (interopConversionRequestFee == null ||
                         (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
-                        interopConversionRequestFee.Amount = Money.Coins(100);
-
+                        interopConversionRequestFee.Amount = CoordinationManager.FallBackFee;
                         this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of 100 STRAX.");
                     }
 
