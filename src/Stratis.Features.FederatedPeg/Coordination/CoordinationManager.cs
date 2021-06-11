@@ -88,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private const decimal FeeProposalRange = 0.1m;
 
         /// <summary> The fallback fee incase the nodes can't agree on it.</summary>
-        public static readonly Money FallBackFee = Money.Coins(150m);
+        public static readonly Money FallBackFee = Money.Coins(150);
 
         private readonly object lockObject = new object();
         private int quorum;
@@ -132,6 +132,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 if (conversionRequestSyncStart.AddMinutes(3) <= this.dateTimeProvider.GetUtcNow())
                 {
                     this.logger.Warn($"A fee for request '{requestId}' failed to reach consensus after 3 minutes... ignoring.");
+                    interopConversionRequestFee.State = InteropFeeState.Failed;
                     break;
                 }
 
@@ -621,5 +622,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
         ProposalInProgress,
         AgreeanceInProgress,
         AgreeanceConcluded,
+        Failed
     }
 }
