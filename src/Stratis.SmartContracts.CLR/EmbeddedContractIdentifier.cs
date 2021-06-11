@@ -55,5 +55,4 @@ namespace Stratis.SmartContracts.CLR
             return BitConverter.ToUInt64(id.ToBytes(), 12) == BitConverter.ToUInt64(embeddedContractSignature);
         }
     }
-
 }
