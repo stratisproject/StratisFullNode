@@ -56,7 +56,7 @@ namespace Stratis.SmartContracts.CLR
                 return VmExecutionResult.Fail(VmExecutionErrorKind.InvocationFailed, "The embedded contract is not registered.");
             }
 
-            // Verify that the contract is allowed or had been BIP activated id required.
+            // Verify that the contract had been BIP activated if required.
             ChainedHeader prevHeader = this.chainIndexer.GetHeader(contractState.Block.Number - 1);
             if (!this.network.EmbeddedContractContainer.IsActive(address, prevHeader, (h, d) => this.nodeDeployments.BIP9.GetState(h, d) == ThresholdState.Active))
             {
