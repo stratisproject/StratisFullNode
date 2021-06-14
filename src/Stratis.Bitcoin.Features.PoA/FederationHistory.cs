@@ -13,6 +13,11 @@ namespace Stratis.Bitcoin.Features.PoA
 {
     public interface IFederationHistory
     {
+        /// <summary>Determines if the federation for a specified block can be determined based on the available poll information.</summary>
+        /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <returns><c>True</c> if the federation can be determined and <c>false</c> otherwise.</returns>
+        bool CanGetFederationForBlock(ChainedHeader chainedHeader);
+
         /// <summary>Gets the federation member for a specified block by first looking at a cache 
         /// and then the signature in <see cref="PoABlockHeader.BlockSignature"/>.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
@@ -83,13 +88,22 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
+        public bool CanGetFederationForBlock(ChainedHeader chainedHeader)
+        {
+            return this.votingManager.CanGetFederationForBlock(chainedHeader);
+        }
+
+        /// <inheritdoc />
         public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader)
         {
             lock (this.lockObject)
             {
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                    return item.modifiedFederation;
+
                 this.UpdateTip(chainedHeader);
 
-                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out item))
                     return item.modifiedFederation;
 
                 return this.GetFederationMembersForBlocks(new[] { chainedHeader }).federations[0].members;
@@ -101,9 +115,12 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             lock (this.lockObject)
             {
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                    return item.miner;
+
                 this.UpdateTip(chainedHeader);
 
-                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out (List<IFederationMember> modifiedFederation, IFederationMember miner) item))
+                if (this.federationHistory.TryGetValue(chainedHeader.Header.Time, out item))
                     return item.miner;
 
                 return this.GetFederationMembersForBlocks(new[] { chainedHeader }).miners[0];
@@ -226,12 +243,14 @@ namespace Stratis.Bitcoin.Features.PoA
 
         private void DiscardActivityBelowTime(uint discardBelowTime)
         {
-            // Discard 500 blocks if there is more than 1000 extraneous blocks.
+            const int discardThreshold = 1000;
+            
+            // If there is more than the threshold amount of extraneous history then discard it.
             int pos2 = BinarySearch.BinaryFindFirst(x => this.federationHistory.ElementAt(x).Key > discardBelowTime, 0, this.federationHistory.Values.Count);
-            if (pos2 < 1000)
+            if (pos2 < discardThreshold)
                 return;
 
-            this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(500).ToDictionary(x => x.Key, x => x.Value));
+            this.federationHistory = new SortedDictionary<uint, (List<IFederationMember>, IFederationMember)>(this.federationHistory.Skip(pos2).ToDictionary(x => x.Key, x => x.Value));
 
             discardBelowTime = this.federationHistory.ElementAt(0).Key;
 
@@ -242,7 +261,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 int pos = BinarySearch.BinaryFindFirst(x => activity[x] >= discardBelowTime, 0, activity.Count);
                 if (pos >= 0)
                 {
-                    if (activity.Count <= pos )
+                    if (activity.Count <= pos)
                         remove.Add(pubKey);
                     else
                         activity.RemoveRange(0, pos);
@@ -274,58 +293,84 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
+            // The federation members are knowable for up to MaxReOrgLength blocks beyond the polls repository tip.
+            // Take advantage of this fact by bulk processing and caching some "history" information ahead of time.
+            // Bulk processing allows the most CPU intensive parts to be parallelised over multiple blocks. Also,
+            // federations at multiple heights can be determined with a single scan of polls and headers.
+            ChainedHeader lastHeader = blockHeader;
+            int lastKnownFederationHeight = this.votingManager.LastKnownFederationHeight();
+            Guard.Assert(lastHeader.Height <= lastKnownFederationHeight);
+
+            uint prefetchThreshold = this.network.Consensus.MaxReorgLength / 2;
+
+            if ((lastKnownFederationHeight - lastHeader.Height) >= prefetchThreshold && this.chainIndexer.Tip.Height >= lastKnownFederationHeight)
+                lastHeader = this.chainIndexer[lastKnownFederationHeight];
+
             // Gather enough blocks to handle idle checking but nothing below the activation time.
             uint federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
             uint maxInactiveTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
-            uint blockTime = blockHeader.Header.Time;
-            uint maxTime = Math.Max(blockTime - maxInactiveTime, federationMemberActivationTime);
+            uint minTime = Math.Max(blockHeader.Header.Time - maxInactiveTime, federationMemberActivationTime);
+            int start = this.lastActiveTip?.Height ?? 0;
 
-            ChainedHeader[] headers = blockHeader
-                .EnumerateToGenesis()
-                .TakeWhile(h => h.HashBlock != this.lastActiveTip?.HashBlock && h.Header.Time >= maxTime)
-                .Reverse().ToArray();
+            Guard.Assert(lastHeader.Height >= start);
 
-            if (headers.Length != 0)
+            // Reduce the number of headers read from the db by performing a binary search instead of a scan.
+            int pos = BinarySearch.BinaryFindFirst(n => this.chainIndexer[n].Header.Time >= minTime, start, lastHeader.Height - start);
+            int take = (pos < 0) ? 0 : lastHeader.Height - pos + 1;
+
+            if (take == 0)
             {
-                (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.GetFederationMembersForBlocks(headers);
+                this.lastActiveTip = lastHeader;
+                return;
+            }
 
-                for (int i = 0; i < headers.Length; i++)
+            ChainedHeader[] headers = lastHeader
+                .EnumerateToGenesis()
+                .Take(take)
+                .Reverse()
+                .ToArray();
+
+            (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.GetFederationMembersForBlocks(headers);
+
+            // TODO: Should the headers be accessed in hash order to optimize the db read speed?
+            uint[] times = headers.Select(h => h.Header.Time).ToArray();
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                ChainedHeader header = headers[i];
+
+                uint headerTime = times[i];
+
+                this.federationHistory[headerTime] = (federations[i].members, miners[i]);
+
+                if (miners[i] != null)
                 {
-                    ChainedHeader header = headers[i];
-
-                    uint headerTime = header.Header.Time;
-
-                    this.federationHistory[headerTime] = (federations[i].members, miners[i]);
-
-                    if (miners[i] != null)
+                    if (!this.lastActiveTimeByPubKey.TryGetValue(miners[i].PubKey, out List<uint> minerActivity))
                     {
-                        if (!this.lastActiveTimeByPubKey.TryGetValue(miners[i].PubKey, out List<uint> minerActivity))
-                        {
-                            minerActivity = new List<uint>();
-                            this.lastActiveTimeByPubKey[miners[i].PubKey] = minerActivity;
-                        }
-
-                        if (minerActivity.LastOrDefault() != headerTime)
-                            minerActivity.Add(headerTime);
+                        minerActivity = new List<uint>();
+                        this.lastActiveTimeByPubKey[miners[i].PubKey] = minerActivity;
                     }
 
-                    foreach (IFederationMember member in federations[i].whoJoined)
-                    {
-                        if (!this.lastActiveTimeByPubKey.TryGetValue(member.PubKey, out List<uint> joinActivity))
-                        {
-                            joinActivity = new List<uint>();
-                            this.lastActiveTimeByPubKey[member.PubKey] = joinActivity;
-                        }
+                    if (minerActivity.LastOrDefault() != headerTime)
+                        minerActivity.Add(headerTime);
+                }
 
-                        if (joinActivity.LastOrDefault() != headerTime)
-                            joinActivity.Add(headerTime);
+                foreach (IFederationMember member in federations[i].whoJoined)
+                {
+                    if (!this.lastActiveTimeByPubKey.TryGetValue(member.PubKey, out List<uint> joinActivity))
+                    {
+                        joinActivity = new List<uint>();
+                        this.lastActiveTimeByPubKey[member.PubKey] = joinActivity;
                     }
+
+                    if (joinActivity.LastOrDefault() != headerTime)
+                        joinActivity.Add(headerTime);
                 }
             }
 
-            this.lastActiveTip = blockHeader;
+            this.lastActiveTip = lastHeader;
 
-            DiscardActivityBelowTime(maxTime);
+            DiscardActivityBelowTime(minTime);
         }
 
         /// <inheritdoc />
