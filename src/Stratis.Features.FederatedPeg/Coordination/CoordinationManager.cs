@@ -123,8 +123,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 if (conversionRequestSyncStart.AddMinutes(3) <= this.dateTimeProvider.GetUtcNow())
                 {
                     this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 3 minutes... ignoring.");
-                    interopConversionRequestFee.State = InteropFeeState.Failed;
-                    this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequest);
+                    interopConversionRequestFee.State = InteropFeeState.FailRevertToFallback;
+                    this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequestFee);
                     break;
                 }
 
