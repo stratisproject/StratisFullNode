@@ -124,6 +124,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 {
                     this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 3 minutes... ignoring.");
                     interopConversionRequestFee.State = InteropFeeState.Failed;
+                    this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequest);
                     break;
                 }
 
@@ -550,6 +551,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
         ProposalInProgress,
         AgreeanceInProgress,
         AgreeanceConcluded,
-        Failed
+        FailRevertToFallback
     }
 }
