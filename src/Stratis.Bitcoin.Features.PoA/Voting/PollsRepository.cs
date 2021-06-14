@@ -6,6 +6,7 @@ using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -19,20 +20,25 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
-        internal const string TableName = "DataTable";
+        private readonly ChainIndexer chainIndexer;
 
-        private static readonly byte[] RepositoryHighestIndexKey = new byte[0];
+        internal const string DataTable = "DataTable";
+
+        private static readonly byte[] RepositoryTipKey = new byte[] { 0 };
 
         private readonly object lockObject = new object();
 
         private int highestPollId;
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer)
+        public HashHeightPair CurrentTip { get; private set; }
+
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings)
         {
         }
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
+
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
@@ -41,6 +47,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.dBreezeSerializer = dBreezeSerializer;
+
+            this.chainIndexer = chainIndexer;
         }
 
         public void Initialize()
@@ -48,18 +56,69 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             // Load highest index.
             lock (this.lockObject)
             {
-                this.highestPollId = -1;
-
                 using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
-                    Row<byte[], int> row = transaction.Select<byte[], int>(TableName, RepositoryHighestIndexKey);
+                    Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
 
-                    if (row.Exists)
-                        this.highestPollId = row.Value;
+                    Poll[] polls = data
+                        .Where(d => d.Key.Length == 4)
+                        .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                        .ToArray();
+
+                    this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
+
+                    Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
+
+                    if (rowTip.Exists)
+                    {
+                        this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
+                        if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
+                            this.CurrentTip = null;
+                    }
+                    else
+                    {
+                        this.ResetLocked(transaction);
+                        transaction.Commit();
+                    }
                 }
             }
 
             this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
+        }
+
+        private void ResetLocked(DBreeze.Transactions.Transaction transaction)
+        {
+            this.highestPollId = -1;
+            transaction.RemoveAllKeys(DataTable, true);
+            this.CurrentTip = null;
+        }
+
+        public void Reset()
+        {
+            lock (this.lockObject)
+            {
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                {
+                    ResetLocked(transaction);
+                    transaction.Commit();
+                }
+            }
+        }
+        public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
+        {
+            SaveCurrentTip(transaction, (tip == null) ? null : new HashHeightPair(tip));
+        }
+
+        public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, HashHeightPair tip = null)
+        {
+            lock (this.lockObject)
+            {
+                if (tip != null)
+                    this.CurrentTip = tip;
+
+                if (transaction != null)
+                    transaction.Insert<byte[], byte[]>(DataTable, RepositoryTipKey, this.dBreezeSerializer.Serialize(this.CurrentTip));
+            }
         }
 
         /// <summary>Provides Id of the most recently added poll.</summary>
@@ -76,153 +135,132 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        private void SaveHighestPollId(DBreeze.Transactions.Transaction transaction)
-        {
-            transaction.Insert<byte[], int>(TableName, RepositoryHighestIndexKey, this.highestPollId);
-        }
-
         /// <summary>Removes polls for the provided ids.</summary>
-        public void DeletePollsAndSetHighestPollId(params int[] ids)
+        public void DeletePollsAndSetHighestPollId(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
             lock (this.lockObject)
             {
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                foreach (int pollId in ids.OrderBy(a => a))
                 {
-                    foreach (int pollId in ids.OrderBy(a => a))
-                    {
-                        transaction.RemoveKey<byte[]>(TableName, pollId.ToBytes());
-                    }
-
-                    transaction.Commit();
+                    transaction.RemoveKey<byte[]>(DataTable, pollId.ToBytes());
                 }
 
-                List<Poll> polls = GetAllPolls();
+                List<Poll> polls = GetAllPolls(transaction);
                 this.highestPollId = (polls.Count == 0) ? -1 : polls.Max(a => a.Id);
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
-                {
-                    SaveHighestPollId(transaction);
-                    transaction.Commit();
-                }
             }
         }
 
         /// <summary>Removes polls under provided ids.</summary>
-        public void RemovePolls(params int[] ids)
+        public void RemovePolls(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
             lock (this.lockObject)
             {
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                foreach (int pollId in ids.OrderBy(id => id).Reverse())
                 {
-                    foreach (int pollId in ids.OrderBy(id => id).Reverse())
-                    {
-                        if (this.highestPollId != pollId)
-                            throw new ArgumentException("Only deletion of the most recent item is allowed!");
+                    if (this.highestPollId != pollId)
+                        throw new ArgumentException("Only deletion of the most recent item is allowed!");
 
-                        transaction.RemoveKey<byte[]>(TableName, pollId.ToBytes());
+                    transaction.RemoveKey<byte[]>(DataTable, pollId.ToBytes());
 
-                        this.highestPollId--;
-                        this.SaveHighestPollId(transaction);
-                    }
+                    this.highestPollId--;
+                }
+            }
+        }
 
-                    transaction.Commit();
+        public T WithTransaction<T>(Func<DBreeze.Transactions.Transaction, T> func)
+        {
+            lock (this.lockObject)
+            {
+                using (var transaction = this.dbreeze.GetTransaction())
+                {
+                    return func(transaction);
+                }
+            }
+        }
+
+        public void WithTransaction(Action<DBreeze.Transactions.Transaction> action)
+        {
+            lock (this.lockObject)
+            {
+                using (var transaction = this.dbreeze.GetTransaction())
+                {
+                    action(transaction);
                 }
             }
         }
 
         /// <summary>Adds new poll.</summary>
-        public void AddPolls(params Poll[] polls)
+        public void AddPolls(DBreeze.Transactions.Transaction transaction, params Poll[] polls)
         {
             lock (this.lockObject)
             {
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                foreach (Poll pollToAdd in polls.OrderBy(p => p.Id))
                 {
-                    foreach (Poll pollToAdd in polls.OrderBy(p => p.Id))
-                    {
-                        if (pollToAdd.Id != this.highestPollId + 1)
-                            throw new ArgumentException("Id is incorrect. Gaps are not allowed.");
+                    if (pollToAdd.Id != this.highestPollId + 1)
+                        throw new ArgumentException("Id is incorrect. Gaps are not allowed.");
 
-                        byte[] bytes = this.dBreezeSerializer.Serialize(pollToAdd);
+                    byte[] bytes = this.dBreezeSerializer.Serialize(pollToAdd);
 
-                        transaction.Insert<byte[], byte[]>(TableName, pollToAdd.Id.ToBytes(), bytes);
+                    transaction.Insert<byte[], byte[]>(DataTable, pollToAdd.Id.ToBytes(), bytes);
 
-                        this.highestPollId++;
-                        this.SaveHighestPollId(transaction);
-                    }
-
-                    transaction.Commit();
+                    this.highestPollId++;
                 }
             }
         }
 
         /// <summary>Updates existing poll.</summary>
-        public void UpdatePoll(Poll poll)
+        public void UpdatePoll(DBreeze.Transactions.Transaction transaction, Poll poll)
         {
             lock (this.lockObject)
             {
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
-                {
-                    Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(TableName, poll.Id.ToBytes());
+                byte[] bytes = this.dBreezeSerializer.Serialize(poll);
 
-                    if (!row.Exists)
-                        throw new ArgumentException("Value doesn't exist!");
-
-                    byte[] bytes = this.dBreezeSerializer.Serialize(poll);
-
-                    transaction.Insert<byte[], byte[]>(TableName, poll.Id.ToBytes(), bytes);
-
-                    transaction.Commit();
-                }
+                transaction.Insert<byte[], byte[]>(DataTable, poll.Id.ToBytes(), bytes);
             }
         }
 
         /// <summary>Loads polls under provided keys from the database.</summary>
-        public List<Poll> GetPolls(params int[] ids)
+        public List<Poll> GetPolls(DBreeze.Transactions.Transaction transaction, params int[] ids)
         {
             lock (this.lockObject)
             {
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                var polls = new List<Poll>(ids.Length);
+
+                foreach (int id in ids)
                 {
-                    var polls = new List<Poll>(ids.Length);
+                    Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(DataTable, id.ToBytes());
 
-                    foreach (int id in ids)
-                    {
-                        Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(TableName, id.ToBytes());
+                    if (!row.Exists)
+                        throw new ArgumentException("Value under provided key doesn't exist!");
 
-                        if (!row.Exists)
-                            throw new ArgumentException("Value under provided key doesn't exist!");
+                    Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
 
-                        Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
-
-                        polls.Add(poll);
-                    }
-
-                    return polls;
+                    polls.Add(poll);
                 }
+
+                return polls;
             }
         }
 
         /// <summary>Loads all polls from the database.</summary>
-        public List<Poll> GetAllPolls()
+        public List<Poll> GetAllPolls(DBreeze.Transactions.Transaction transaction)
         {
             lock (this.lockObject)
             {
-                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                var polls = new List<Poll>(this.highestPollId + 1);
+
+                for (int i = 0; i < this.highestPollId + 1; i++)
                 {
-                    var polls = new List<Poll>(this.highestPollId + 1);
+                    Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(DataTable, i.ToBytes());
 
-                    for (int i = 0; i < this.highestPollId + 1; i++)
+                    if (row.Exists)
                     {
-                        Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(TableName, i.ToBytes());
-
-                        if (row.Exists)
-                        {
-                            Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
-                            polls.Add(poll);
-                        }
+                        Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
+                        polls.Add(poll);
                     }
-
-                    return polls;
                 }
+
+                return polls;
             }
         }
 
