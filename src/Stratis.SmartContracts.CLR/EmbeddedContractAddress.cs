@@ -27,32 +27,24 @@ namespace Stratis.SmartContracts.CLR
         }
     }
 
-    public struct EmbeddedContractAddress
+    public static class EmbeddedContractAddress
     {
-        private static byte[] embeddedContractSignature = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0 };
-        private uint160 value;
+        const int zeroPadding = 12;
 
-        public EmbeddedContractAddress(uint160 id)
+        public static uint160 Create(Type contractType, uint version)
         {
-            this.value = id;
+            // Stick to uint160 convention of big-endian. This results in the contract type id, followed by version in big-endian notation.
+            return new uint160(BitConverter.GetBytes(version).Concat(BitConverter.GetBytes((uint)EmbeddedContractAttribute.GetEmbeddedContractTypeId(contractType))).Reverse().Concat(new byte[zeroPadding]).ToArray());
         }
 
-        public EmbeddedContractAddress(Type contractType, uint version)
+        public static uint GetEmbeddedVersion(this uint160 address)
         {
-            EmbeddedContractType contractTypeId = EmbeddedContractAttribute.GetEmbeddedContractTypeId(contractType);
-            this.value = new uint160(BitConverter.GetBytes(version).Concat(BitConverter.GetBytes((ulong)contractTypeId)).Concat(embeddedContractSignature).ToArray());
+            return BitConverter.ToUInt32(address.ToBytes().Reverse().ToArray(), zeroPadding /* Skip signature */);        
         }
 
-        public uint Version { get => BitConverter.ToUInt32(this.value.ToBytes()); }
-
-        public static implicit operator uint160(EmbeddedContractAddress embeddedContractIdentifier)
+        public static bool IsEmbedded(this uint160 address)
         {
-            return embeddedContractIdentifier.value;
-        }
-
-        public static bool IsEmbedded(uint160 id)
-        {
-            return BitConverter.ToUInt64(id.ToBytes(), 12) == BitConverter.ToUInt64(embeddedContractSignature);
+            return BitConverter.ToUInt64(address.ToBytes(), sizeof(uint) + sizeof (uint)) == 0 && BitConverter.ToUInt32(address.ToBytes(), sizeof(uint) + sizeof(uint) + sizeof(ulong)) == 0;
         }
     }
 }

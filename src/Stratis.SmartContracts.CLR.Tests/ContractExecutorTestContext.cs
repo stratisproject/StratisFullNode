@@ -60,18 +60,18 @@ namespace Stratis.SmartContracts.CLR.Tests
             {
                 var outputType = typeof(Authentication).AssemblyQualifiedName;
                 var version = (uint)1;
-                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractAddress(typeof(Authentication), 1), out outputType, out version)).Returns(true);
+                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(EmbeddedContractAddress.Create(typeof(Authentication), 1), out outputType, out version)).Returns(true);
             }
 
             {
                 var outputType = typeof(MultiSig).AssemblyQualifiedName;
                 var version = (uint)1;
-                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(new EmbeddedContractAddress(typeof(MultiSig), 1), out outputType, out version)).Returns(true);
+                this.mockEmbeddedContractContainer.Setup(x => x.TryGetContractTypeAndVersion(EmbeddedContractAddress.Create(typeof(MultiSig), 1), out outputType, out version)).Returns(true);
             }
 
             this.mockEmbeddedContractContainer.Setup(x => x.GetEmbeddedContractAddresses()).Returns(new[] { 
-                (uint160)new EmbeddedContractAddress(typeof(Authentication), 1),
-                (uint160)new EmbeddedContractAddress(typeof(MultiSig), 1)
+                EmbeddedContractAddress.Create(typeof(Authentication), 1),
+                EmbeddedContractAddress.Create(typeof(MultiSig), 1)
             });
 
             this.mockEmbeddedContractContainer.Setup(x => x.IsActive(It.IsAny<uint160>(), It.IsAny<ChainedHeader>(), It.IsAny<Func<ChainedHeader, int, bool>>())).Returns(true);

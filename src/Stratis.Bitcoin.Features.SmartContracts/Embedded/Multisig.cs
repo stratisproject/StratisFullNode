@@ -12,12 +12,12 @@ public class MultiSig : SmartContract
 
     public MultiSig(ISmartContractState state, IPersistenceStrategy persistenceStrategy, Network network) : base(state)
     {
-        uint version = new EmbeddedContractAddress(state.Message.ContractAddress.ToUint160()).Version;
+        uint version = state.Message.ContractAddress.ToUint160().GetEmbeddedVersion();
 
         Assert(version == 1, "Only a version of 1 is supported.");
 
         this.version = version;
-        this.authentication = new Authentication(GetState(state, persistenceStrategy, new EmbeddedContractAddress(typeof(Authentication), 1)), network);
+        this.authentication = new Authentication(GetState(state, persistenceStrategy, EmbeddedContractAddress.Create(typeof(Authentication), 1)), network);
 
         // Exit if already initialized.
         if (this.Initialized)

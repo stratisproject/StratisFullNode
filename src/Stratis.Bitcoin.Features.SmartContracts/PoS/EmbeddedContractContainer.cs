@@ -28,7 +28,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         public Type ContractType { get; private set; }
 
         /// <summary>The aadress of the contract.</summary>
-        public uint160 Address => new EmbeddedContractAddress(this.ContractType, this.Version);
+        public uint160 Address => EmbeddedContractAddress.Create(this.ContractType, this.Version);
 
         /// <summary>History of block ranges over which contracts were active.
         /// The BIP9 Deployments array is sometimes cleaned up and the information therein has to be transferred here.</summary>
@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         {
             Guard.Assert(EmbeddedContractAddress.IsEmbedded(address));
 
-            version = new EmbeddedContractAddress(address).Version;
+            version = address.GetEmbeddedVersion();
 
             if (!this.contracts.TryGetValue(address, out EmbeddedContractVersion contract))
             {

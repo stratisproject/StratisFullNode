@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
         public void CanUseEmbeddedContractContainer()
         {
             var network = new StraxMain();
-            EmbeddedContractAddress embeddedContractAddress = new EmbeddedContractAddress(typeof(Authentication), 1);
+            uint160 embeddedContractAddress = EmbeddedContractAddress.Create(typeof(Authentication), 1);
             var container = new EmbeddedContractContainer(
                 network,
                 new List<EmbeddedContractVersion> {
@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
             Assert.True(container.TryGetContractTypeAndVersion(address, out string contractType, out uint version));
 
             Assert.Equal(typeof(Authentication).AssemblyQualifiedName, contractType);
-            Assert.Equal(embeddedContractAddress.Version, version);
+            Assert.Equal(embeddedContractAddress.GetEmbeddedVersion(), version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };
             var mockChainStore = new Mock<IChainStore>();
