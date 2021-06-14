@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <summary>The <see cref="Type.AssemblyQualifiedName"/> of the contract.</summary>
         public Type ContractType { get; private set; }
 
-        /// <summary>The aadress of the contract.</summary>
+        /// <summary>The address of the contract.</summary>
         public uint160 Address => EmbeddedContractAddress.Create(this.ContractType, this.Version);
 
         /// <summary>History of block ranges over which contracts were active.
