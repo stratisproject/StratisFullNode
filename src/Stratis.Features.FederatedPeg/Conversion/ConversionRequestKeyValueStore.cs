@@ -61,6 +61,11 @@ namespace Stratis.Features.FederatedPeg.Conversion
             return values;
         }
 
+        public List<T> GetAllAsJson<T>()
+        {
+            throw new System.NotImplementedException();
+        }
+
         public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);

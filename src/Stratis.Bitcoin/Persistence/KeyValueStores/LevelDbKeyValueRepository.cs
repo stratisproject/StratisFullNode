@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using LevelDB;
 using Stratis.Bitcoin.Configuration;
@@ -96,6 +97,25 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             T value = Serializer.ToObject<T>(json);
 
             return value;
+        }
+
+        public List<T> GetAllAsJson<T>()
+        {
+            var values = new List<T>();
+            IEnumerator<KeyValuePair<byte[], byte[]>> enumerator = this.leveldb.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                (byte[] key, byte[] value) = enumerator.Current;
+
+                if (value == null)
+                    continue;
+
+                string json = Encoding.ASCII.GetString(value);
+                values.Add(Serializer.ToObject<T>(json));
+            }
+
+            return values;
         }
 
         /// <inheritdoc />

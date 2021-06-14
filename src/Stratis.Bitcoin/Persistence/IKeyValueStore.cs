@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Stratis.Bitcoin.Persistence
 {
@@ -22,5 +23,12 @@ namespace Stratis.Bitcoin.Persistence
 
         /// <summary>Loads JSON from the database and deserializes it.</summary>
         T LoadValueJson<T>(string key);
+
+        /// <summary>
+        /// Gets all the values from the store.
+        /// </summary>
+        /// <typeparam name="T">The type to query.</typeparam>
+        /// <returns>A list of <typeparamref name="T"/></returns>
+        List<T> GetAllAsJson<T>();
     }
 }

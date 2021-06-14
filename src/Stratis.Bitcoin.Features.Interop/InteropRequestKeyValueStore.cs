@@ -128,6 +128,12 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <inheritdoc />
+        public List<T> GetAllAsJson<T>()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <inheritdoc />
         public void Dispose()
         {
             this.leveldb.Dispose();

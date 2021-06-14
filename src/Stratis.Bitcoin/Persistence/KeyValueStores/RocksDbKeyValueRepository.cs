@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using RocksDbSharp;
 using Stratis.Bitcoin.Configuration;
@@ -90,6 +92,12 @@ namespace Stratis.Bitcoin.Persistence.KeyValueStores
             T value = Serializer.ToObject<T>(json);
 
             return value;
+        }
+
+        /// <inheritdoc />
+        public List<T> GetAllAsJson<T>()
+        {
+            throw new NotImplementedException();
         }
 
         /// <inheritdoc />
