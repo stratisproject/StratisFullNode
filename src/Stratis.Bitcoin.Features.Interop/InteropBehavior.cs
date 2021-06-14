@@ -16,7 +16,7 @@ using TracerAttributes;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
-    public class InteropBehavior : NetworkPeerBehavior
+    public sealed class InteropBehavior : NetworkPeerBehavior
     {
         private readonly ILogger logger;
 
@@ -93,11 +93,11 @@ namespace Stratis.Bitcoin.Features.Interop
                         break;
 
                     case FeeProposalPayload feeProposalPayload:
-                        await this.ProcessFeeProposalAsync(peer, feeProposalPayload).ConfigureAwait(false);
+                        await this.ProcessFeeProposalAsync(feeProposalPayload).ConfigureAwait(false);
                         break;
 
                     case FeeAgreePayload feeAgreePayload:
-                        await this.ProcessFeeAgreeAsync(peer, feeAgreePayload).ConfigureAwait(false);
+                        await this.ProcessFeeAgreeAsync(feeAgreePayload).ConfigureAwait(false);
                         break;
                 }
             }
@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.coordinationManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
         }
 
-        private async Task ProcessFeeProposalAsync(INetworkPeer peer, FeeProposalPayload payload)
+        private async Task ProcessFeeProposalAsync(FeeProposalPayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
@@ -187,10 +187,15 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            await this.coordinationManager.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey).ConfigureAwait(false);
+            this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+
+            // Reply back to the peer with this node's amount.
+            FeeProposalPayload replyToPayload = this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            if (replyToPayload != null)
+                await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
 
-        private async Task ProcessFeeAgreeAsync(INetworkPeer peer, FeeAgreePayload payload)
+        private async Task ProcessFeeAgreeAsync(FeeAgreePayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
@@ -214,7 +219,10 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            await this.coordinationManager.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, payload.Height, pubKey).ConfigureAwait(false);
+            // Reply back to the peer with this node's amount.
+            FeeAgreePayload replyToPayload = this.coordinationManager.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            if (replyToPayload != null)
+                await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
     }
 }

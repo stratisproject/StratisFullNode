@@ -192,11 +192,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    this.logger.Debug("Conversion transaction '{0}' received in matured blocks.", potentialConversionTransaction.Id);
+                    this.logger.Info("Conversion transaction '{0}' received in matured blocks.", potentialConversionTransaction.Id);
 
                     if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
                     {
-                        this.logger.Debug("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
+                        this.logger.Warn("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
                         continue;
                     }
 
@@ -269,7 +269,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         potentialConversionTransaction.BlockNumber,
                         potentialConversionTransaction.BlockHash));
 
-                    this.logger.Info("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
+                    this.logger.Debug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
 
                     this.conversionRequestRepository.Save(new ConversionRequest()
                     {
