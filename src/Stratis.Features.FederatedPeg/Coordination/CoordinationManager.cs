@@ -44,24 +44,65 @@ namespace Stratis.Features.FederatedPeg.Coordination
         BigInteger GetCandidateTransactionId(string requestId);
 
         /// <summary>Removes all votes associated with provided request Id.</summary>
+        /// <param name="requestId">The identifier of the request.</param>
         void RemoveTransaction(string requestId);
 
         /// <summary>Provides mapping of all request ids to pubkeys that have voted for them.</summary>
+        /// <returns>A dictionary of pubkeys that voted on a request.</returns>
         Dictionary<string, HashSet<PubKey>> GetStatus();
 
         /// <summary>
         /// Registers the quorum for conversion request transactions, i.e. minimum amount of votes required to process it.
         /// </summary>
-        /// <param name="quorum">The amount of votrs required.</param>
-        void RegisterQuorumSize(int quorum);
+        /// <param name="quorum">The amount of votes required.</param>
+        void RegisterConversionRequestQuorum(int quorum);
 
-        int GetQuorum();
+        int GetConversionRequestQuorum();
 
+        /// <summary>
+        /// Starts the process of first proposing a fee and then voting on said fee for an interop conversion request.
+        /// <para>
+        /// When the <see cref="TargetChain.MaturedBlocksSyncManager"/> receives a transaction that contains a conversion request, it passes it to this
+        /// method, effectively stalling the process until the multisig nodes has proposed and voted on a fee to pay back to the multisig.
+        /// </para>
+        /// <para>
+        /// Each multisig node, first gets an estimated fee in STRAX from an external client API for the conversion request and then broadcasts it to all the other multisig nodes.
+        /// Once the quorum amount <see cref="FederatedPegSettings.MultiSigM"/> of proposals has been received, an avergae value is taken and then submitted
+        /// as a fee vote.
+        /// Once the quorum amount <see cref="FederatedPegSettings.MultiSigM"/> of votes has been received, the fee amount is returned to the sync manager
+        /// which then creates a deposit out of the agreed amount.
+        /// </para>
+        /// </summary>
+        /// <param name="requestId">The request id which is also used as the deposit id.</param>
+        /// <param name="blockHeight">The block height at which the deposit was received.</param>
+        /// <returns>An object containing the state and agreed fee amount.</returns>
         Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight);
 
-        FeeProposalPayload MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
+        /// <summary>
+        /// Processes a fee proposal payload from another multisig.
+        /// <para>
+        /// This checks that the node hasn't already proposed the fee amount and that it is within an acceptable range, <see cref="CoordinationManager.IsFeeWithinAcceptableRange(List{InterOpFeeToMultisig}, string, ulong, PubKey)"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="requestId">The deposit id associated with the conversion request.</param>
+        /// <param name="feeAmount">The proposed fee amount (retrieved from the external api client.</param>
+        /// <param name="pubKey">The pubkey of the node that proposed the fee.</param>
+        /// 
+        /// <returns>A fee proposal payload for THIS node.</returns>
+        FeeProposalPayload MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, PubKey pubKey);
 
-        FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey);
+        /// <summary>
+        /// Processes a fee vote payload from another multisig.
+        /// <para>
+        /// This checks that the node hasn't already voted on the fee.
+        /// </para>
+        /// </summary>
+        /// <param name="requestId">The deposit id associated with the conversion request.</param>
+        /// <param name="feeAmount">The node's view of the average fee amount.</param>
+        /// <param name="pubKey">The pubkey of the node that voted on the fee.</param>
+        /// 
+        /// <returns>A fee vote payload for THIS node.</returns>
+        FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, PubKey pubKey);
     }
 
     public sealed class CoordinationManager : ICoordinationManager
@@ -70,6 +111,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IFederationManager federationManager;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore;
         private readonly INodeLifetime nodeLifetime;
         private readonly ILogger logger;
@@ -81,16 +123,18 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <summary> The amount of acceptable range another node can propose a fee in.</summary>
         private const decimal FeeProposalRange = 0.1m;
 
-        /// <summary> The fallback fee incase the nodes can't agree on it.</summary>
+        /// <summary> The fallback fee incase the nodes can't agree.</summary>
         public static readonly Money FallBackFee = Money.Coins(150);
 
         private readonly object lockObject = new object();
-        private int quorum;
+
+        private int conversionRequestQuorum;
 
         public CoordinationManager(
             IDateTimeProvider dateTimeProvider,
             IExternalApiPoller externalApiPoller,
             IFederationManager federationManager,
+            IFederatedPegSettings federatedPegSettings,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore,
             INodeLifetime nodeLifetime,
@@ -103,6 +147,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             this.externalApiPoller = externalApiPoller;
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
+            this.federatedPegSettings = federatedPegSettings;
             this.interopRequestKeyValueStore = interopRequestKeyValueStore;
             this.nodeLifetime = nodeLifetime;
             this.logger = LogManager.GetCurrentClassLogger();
@@ -258,7 +303,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <inheritdoc/>
-        public FeeProposalPayload MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey)
+        public FeeProposalPayload MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, PubKey pubKey)
         {
             lock (this.lockObject)
             {
@@ -274,7 +319,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     if (!IsFeeWithinAcceptableRange(interopConversionRequestFee.FeeProposals, requestId, feeAmount, pubKey))
                         return null;
 
-                    interopConversionRequestFee.FeeProposals.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
+                    interopConversionRequestFee.FeeProposals.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                     this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
                     this.logger.Debug($"Received conversion request proposal '{requestId}' from '{pubKey}', proposing fee of {new Money(feeAmount)}.");
@@ -288,7 +333,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <inheritdoc/>
-        public FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, int blockHeight, PubKey pubKey)
+        public FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, PubKey pubKey)
         {
             lock (this.lockObject)
             {
@@ -300,7 +345,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 // Check if the vote is still in progress and that the incoming node still has to vote on this fee.
                 if (!HasFeeVoteBeenConcluded(interopConversionRequestFee) && !interopConversionRequestFee.FeeVotes.Any(p => p.PubKey == pubKey.ToHex()))
                 {
-                    interopConversionRequestFee.FeeVotes.Add(new InterOpFeeToMultisig() { BlockHeight = blockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
+                    interopConversionRequestFee.FeeVotes.Add(new InterOpFeeToMultisig() { BlockHeight = interopConversionRequestFee.BlockHeight, PubKey = pubKey.ToHex(), FeeAmount = feeAmount });
                     this.interopRequestKeyValueStore.SaveValueJson(interopConversionRequestFee.RequestId, interopConversionRequestFee, true);
 
                     this.logger.Debug($"Received conversion request fee vote '{requestId}' from '{pubKey} for a fee of {new Money(feeAmount)}.");
@@ -352,12 +397,12 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private bool HasFeeProposalBeenConcluded(InteropConversionRequestFee interopConversionRequestFee)
         {
-            return interopConversionRequestFee.FeeProposals.Count >= this.quorum;
+            return interopConversionRequestFee.FeeProposals.Count >= this.federatedPegSettings.MultiSigM;
         }
 
         private bool HasFeeVoteBeenConcluded(InteropConversionRequestFee interopConversionRequestFee)
         {
-            return interopConversionRequestFee.FeeVotes.Count >= this.quorum;
+            return interopConversionRequestFee.FeeVotes.Count >= this.federatedPegSettings.MultiSigM;
         }
 
         private void ConcludeInteropConversionRequestFee(InteropConversionRequestFee interopConversionRequestFee)
@@ -373,7 +418,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             // Try and find the majority vote
             IEnumerable<IGrouping<decimal, decimal>> grouped = interopConversionRequestFee.FeeVotes.Select(v => Math.Truncate(Money.Satoshis(v.FeeAmount).ToDecimal(MoneyUnit.BTC))).GroupBy(s => s);
             IGrouping<decimal, decimal> majority = grouped.OrderByDescending(g => g.Count()).First();
-            if (majority.Count() >= (this.quorum / 2) + 1)
+            if (majority.Count() >= (this.conversionRequestQuorum / 2) + 1)
                 interopConversionRequestFee.Amount = Money.Coins(majority.Key);
             else
                 interopConversionRequestFee.Amount = FallBackFee;
@@ -478,14 +523,15 @@ namespace Stratis.Features.FederatedPeg.Coordination
             }
         }
 
-        public void RegisterQuorumSize(int quorum)
+        /// <inheritdoc/>
+        public void RegisterConversionRequestQuorum(int conversionRequestQuorum)
         {
-            this.quorum = quorum;
+            this.conversionRequestQuorum = conversionRequestQuorum;
         }
 
-        public int GetQuorum()
+        public int GetConversionRequestQuorum()
         {
-            return this.quorum;
+            return this.conversionRequestQuorum;
         }
 
         private void AddComponentStats(StringBuilder benchLog)

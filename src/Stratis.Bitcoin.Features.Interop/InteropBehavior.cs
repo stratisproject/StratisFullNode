@@ -187,10 +187,10 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
 
             // Reply back to the peer with this node's amount.
-            FeeProposalPayload replyToPayload = this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            FeeProposalPayload replyToPayload = this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
             if (replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
@@ -220,7 +220,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // Reply back to the peer with this node's amount.
-            FeeAgreePayload replyToPayload = this.coordinationManager.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, payload.Height, pubKey);
+            FeeAgreePayload replyToPayload = this.coordinationManager.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
             if (replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }

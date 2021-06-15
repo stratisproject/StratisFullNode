@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public override Task InitializeAsync()
         {
-            this.coordinationManager.RegisterQuorumSize(this.interopSettings.ETHMultisigWalletQuorum);
+            this.coordinationManager.RegisterConversionRequestQuorum(this.interopSettings.ETHMultisigWalletQuorum);
 
             this.interopPoller?.Initialize();
 
