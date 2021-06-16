@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Interfaces;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 {
@@ -17,6 +18,13 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         private ISlotsManager slotsManager;
 
         private IFederationHistory federationHistory;
+
+        private IInitialBlockDownloadState initialBlockDownloadState;
+
+        public PoAHeaderSignatureRule(IInitialBlockDownloadState initialBlockDownloadState)
+        {
+            this.initialBlockDownloadState = initialBlockDownloadState;
+        }
 
         /// <inheritdoc />
         public override void Initialize()
@@ -33,6 +41,9 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         public override async Task RunAsync(RuleContext context)
         {
+            if (this.initialBlockDownloadState?.IsInitialBlockDownload() ?? false)
+                return;
+
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
             // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
