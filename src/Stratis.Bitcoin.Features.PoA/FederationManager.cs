@@ -355,10 +355,9 @@ namespace Stratis.Bitcoin.Features.PoA
             this.multisigMinersApplicabilityHeight = null;
             var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
 
-            ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked && h.Height >= this.network.CollateralCommitmentActivationHeight).Reverse().ToArray();
-
-            ChainedHeader first = BinarySearch.BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
+            int firstIndex = BinarySearch.BinaryFindFirst((height) =>
             {
+                ChainedHeader chainedHeader = consensusManager.Tip.GetAncestor(height);
                 ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
                 if (block == null)
                     return null;
@@ -369,9 +368,11 @@ namespace Stratis.Bitcoin.Features.PoA
                     return null;
 
                 return magic == this.counterChainSettings.CounterChainNetwork.Magic;
-            });
+            }, (this.lastBlockChecked?.Height ?? 0) + 1, consensusManager.Tip.Height - (this.lastBlockChecked?.Height ?? 0));
 
-            this.lastBlockChecked = headers.LastOrDefault();
+            ChainedHeader first = consensusManager.Tip.GetAncestor(firstIndex);
+
+            this.lastBlockChecked = consensusManager.Tip;
             this.multisigMinersApplicabilityHeight = first?.Height;
 
             return this.multisigMinersApplicabilityHeight;
