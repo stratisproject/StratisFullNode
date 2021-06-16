@@ -122,7 +122,7 @@ namespace Stratis.Sidechains.Networks
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 3 // 3 Hours
             )
             {
-                DynamicFeeActivationBlock = 496600,
+                DynamicFeeActivationBlock = 2_244_350,
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 VotingManagerV2ActivationHeight = 1_999_500
