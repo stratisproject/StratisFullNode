@@ -175,7 +175,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { parsed }, false);
 
-            if (!transfers.Any())
+            if (transfers != null && transfers[0] == null)
                 return this.Json($"{depositId} does not exist.");
 
             var model = new CrossChainTransferModel()

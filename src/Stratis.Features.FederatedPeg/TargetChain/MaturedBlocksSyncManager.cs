@@ -178,11 +178,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                 foreach (IDeposit potentialConversionTransaction in maturedBlockDeposit.Deposits)
                 {
+                    // If this is not a conversion transaction then add it immediately to the temporary list.
                     if (potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionSmall &&
                         potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionNormal &&
                         potentialConversionTransaction.RetrievalType != DepositRetrievalType.ConversionLarge)
                     {
                         tempDepositList.Add(potentialConversionTransaction);
+                        continue;
+                    }
+
+                    var dynamicFeeActivationBlock = ((PoAConsensusOptions)this.network.Consensus.Options).DynamicFeeActivationBlock;
+                    if (dynamicFeeActivationBlock != 0 && this.chainIndexer.Tip.Height < dynamicFeeActivationBlock)
+                    {
+                        this.logger.Warn("Conversion transactions '{0}' will not be processed below activation height {1}.", potentialConversionTransaction.Id, dynamicFeeActivationBlock);
                         continue;
                     }
 
@@ -192,7 +200,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    this.logger.Info("Conversion transaction '{0}' received in matured blocks.", potentialConversionTransaction.Id);
+                    this.logger.Info("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
 
                     if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
                     {

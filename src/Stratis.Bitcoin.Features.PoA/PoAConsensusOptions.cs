@@ -45,6 +45,15 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int VotingManagerV2ActivationHeight { get; set; }
 
+        /// <summary>
+        /// This is the height at which dynamic fee's paid to the multsig for interop conversion requests will activate.
+        /// <para>
+        /// Currently this is only set on testnet as there are multiple conversion requests done did not process properly,
+        /// so it will interfere with the completed synchronization logic. 
+        /// </para>
+        /// </summary>
+        public int DynamicFeeActivationBlock { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
@@ -64,6 +73,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.VotingEnabled = votingEnabled;
             this.AutoKickIdleMembers = autoKickIdleMembers;
             this.FederationMemberMaxIdleTimeSeconds = federationMemberMaxIdleTimeSeconds;
+            this.DynamicFeeActivationBlock = 0;
 
             if (this.AutoKickIdleMembers && !this.VotingEnabled)
                 throw new ArgumentException("Voting should be enabled for automatic kicking to work.");
