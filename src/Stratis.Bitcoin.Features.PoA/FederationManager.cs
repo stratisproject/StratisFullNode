@@ -4,13 +4,10 @@ using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Features.PoA.Voting;
-using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.PoA.Collateral;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Bitcoin.Features.PoA
@@ -81,9 +78,6 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly PoANetwork network;
         private readonly NodeSettings nodeSettings;
         private readonly ISignals signals;
-
-        private int? multisigMinersApplicabilityHeight;
-        private ChainedHeader lastBlockChecked;
 
         public FederationManager(
             IFullNode fullNode,
@@ -340,42 +334,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public int? GetMultisigMinersApplicabilityHeight()
         {
-            IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
-
-            // Not always passed in tests.
-            if (consensusManager == null)
-                return 0;
-
-            ChainedHeader fork = (this.lastBlockChecked == null) ? null : consensusManager.Tip.FindFork(this.lastBlockChecked);
-
-            if (this.multisigMinersApplicabilityHeight != null && fork?.HashBlock == this.lastBlockChecked?.HashBlock)
-                return this.multisigMinersApplicabilityHeight;
-
-            this.lastBlockChecked = fork;
-            this.multisigMinersApplicabilityHeight = null;
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
-
-            int firstIndex = BinarySearch.BinaryFindFirst((height) =>
-            {
-                ChainedHeader chainedHeader = consensusManager.Tip.GetAncestor(height);
-                ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
-                if (block == null)
-                    return null;
-
-                // Finding the height of the first STRAX collateral commitment height.
-                (int? commitmentHeight, uint? magic) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Block.Transactions.First());
-                if (commitmentHeight == null)
-                    return null;
-
-                return magic == this.counterChainSettings.CounterChainNetwork.Magic;
-            }, (this.lastBlockChecked?.Height ?? 0) + 1, consensusManager.Tip.Height - (this.lastBlockChecked?.Height ?? 0));
-
-            ChainedHeader first = consensusManager.Tip.GetAncestor(firstIndex);
-
-            this.lastBlockChecked = consensusManager.Tip;
-            this.multisigMinersApplicabilityHeight = first?.Height;
-
-            return this.multisigMinersApplicabilityHeight;
+            return this.network.MultisigMinersApplicabilityHeight;
         }
 
         public bool IsMultisigMember(PubKey pubKey)
