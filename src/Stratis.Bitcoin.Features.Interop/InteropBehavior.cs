@@ -112,7 +112,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.Info("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.Debug("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
