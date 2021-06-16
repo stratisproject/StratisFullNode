@@ -31,6 +31,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         public const string FederationMemberIpAdd = "member/ip/add";
         public const string FederationMemberIpRemove = "member/ip/remove";
         public const string FederationMemberIpReplace = "member/ip/replace";
+        public const string GetTransferByDepositIdEndpoint = "transfer";
         public const string GetTransfersPartialEndpoint = "transfer/pending";
         public const string GetTransfersFullySignedEndpoint = "transfer/fullysigned";
         public const string VerifyPartialTransactionEndpoint = "transfer/verify";
@@ -160,6 +161,33 @@ namespace Stratis.Features.FederatedPeg.Controllers
                 }).ToArray();
 
             return this.Json(transactions);
+        }
+
+        [Route(FederationGatewayRouteEndPoint.GetTransferByDepositIdEndpoint)]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> GetTransferByDepositIdAsync([FromQuery(Name = "depositId")] string depositId)
+        {
+            if (!uint256.TryParse(depositId, out uint256 parsed))
+                return this.Json($"{depositId} is not a valid deposit id.");
+
+            ICrossChainTransfer[] transfers = await this.crossChainTransferStore.GetAsync(new[] { parsed }, false);
+
+            if (!transfers.Any())
+                return this.Json($"{depositId} does not exist.");
+
+            var model = new CrossChainTransferModel()
+            {
+                DepositAmount = transfers[0].DepositAmount,
+                DepositId = transfers[0].DepositTransactionId,
+                DepositHeight = transfers[0].DepositHeight,
+                Transaction = new TransactionVerboseModel(transfers[0].PartialTransaction, this.network),
+                TransferStatus = transfers[0].Status.ToString(),
+            };
+
+            return this.Json(model);
         }
 
         /// <summary>

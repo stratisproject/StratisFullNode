@@ -22,6 +22,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <summary>
         /// Enables the node operator to try and manually push fully signed transactions.
         /// </summary>
+        /// <returns></returns>
         Task<SignedMultisigTransactionBroadcastResult> BroadcastFullySignedTransfersAsync();
 
         /// <summary>
@@ -80,16 +81,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         public async Task<SignedMultisigTransactionBroadcastResult> BroadcastFullySignedTransfersAsync()
         {
             if (this.ibdState.IsInitialBlockDownload() || !this.federationWalletManager.IsFederationWalletActive())
-            {
-                this.logger.Info("Federation wallet isn't active or the node is in IBD.");
                 return new SignedMultisigTransactionBroadcastResult() { Message = "The federation wallet isn't active or the node is in IBD." };
-            }
 
             ICrossChainTransfer[] fullySignedTransfers = this.crossChainTransferStore.GetTransfersByStatus(new[] { CrossChainTransferStatus.FullySigned });
 
             if (fullySignedTransfers.Length == 0)
             {
-                this.logger.Info("There are no fully signed transactions to broadcast.");
+                this.logger.Debug("There are no fully signed transactions to broadcast.");
                 return new SignedMultisigTransactionBroadcastResult() { Message = "There are no fully signed transactions to broadcast." };
             }
 
