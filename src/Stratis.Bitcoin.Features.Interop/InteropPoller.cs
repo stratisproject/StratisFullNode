@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Crypto;
 using Nethereum.Contracts;
 using Nethereum.Util;
 using Nethereum.Web3;
@@ -19,6 +20,7 @@ using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Interfaces;
+using Stratis.Patricia;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -346,37 +348,16 @@ namespace Stratis.Bitcoin.Features.Interop
                 // transfers. As we don't know precisely what value transactions are expected, the sole determining factor is
                 // whether the reserve has a large enough balance to service the current conversion request. If not, trigger a
                 // mint for a predetermined amount.
-                //BigInteger reserveBalanace = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.MultisigWalletAddress).ConfigureAwait(false);
+                BigInteger balanceRemaining = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.ETHMultisigWalletAddress).ConfigureAwait(false);
 
                 // The request is denominated in satoshi and needs to be converted to wei.
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
 
-                /* Temporarily disabled mint logic
-                if (amountInWei > reserveBalanace)
+                // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
+                if (amountInWei >= balanceRemaining)
                 {
-                    if (this.minting)
-                    {
-                        this.logger.LogInformation("Minting transaction has not yet confirmed. Waiting.");
-
-                        return;
-                    }
-
-                    this.minting = true;
-
-                    this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
-
-                    string mintData = this.ETHClientBase.EncodeMintParams(this.interopSettings.MultisigWalletAddress, ReserveBalanceTarget);
-
-                    BigInteger mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData).ConfigureAwait(false);
-
-                    // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
-                    string mintSignature = this.federationManager.CurrentFederationKey.SignMessage(MintPlaceHolderRequestId + ((int)mintTransactionId));
-                    // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
-                    await this.federatedPegBroadcaster.BroadcastAsync(new InteropCoordinationPayload(MintPlaceHolderRequestId, (int)mintTransactionId, mintSignature)).ConfigureAwait(false);
-
-                    return;
+                    await this.PerformReplenishment(request, amountInWei, originator);
                 }
-                */
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
                 switch (request.RequestStatus)
@@ -554,6 +535,105 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Currently the processing is done in the WithdrawalExtractor.
             }
+        }
+
+        private async Task PerformReplenishment(ConversionRequest request, BigInteger amountInWei, bool originator)
+        {
+            // We need a 'request ID' for the minting that is a) different from the current request ID and b) always unique so that transaction ID votes are unique to this minting.
+            string mintRequestId;
+
+            // So, just hash the request ID once. This way all nodes will have the same request ID for this mint.
+            using (var hs = new HashStream())
+            {
+                var bs = new BitcoinStream(hs, true);
+                bs.ReadWrite(uint256.Parse(request.RequestId));
+
+                mintRequestId = hs.GetHash().ToString();
+            }
+
+            // Only the originator initially knows what value this gets set to after submission until voting is concluded.
+            BigInteger mintTransactionId = BigInteger.MinusOne;
+            if (originator)
+            {
+                this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
+
+                // By minting the request amount + the reserve requirement, we cater for arbitrarily large amounts in the request.
+                string mintData = this.ETHClientBase.EncodeMintParams(this.interopSettings.ETHMultisigWalletAddress, amountInWei + this.ReserveBalanceTarget);
+
+                int gasPrice = this.externalApiPoller.GetGasPrice();
+
+                // If a gas price is not currently available then fall back to the value specified on the command line.
+                if (gasPrice == -1)
+                    gasPrice = this.interopSettings.ETHGasPrice;
+
+                this.logger.LogInformation("Originator will use a gas price of {0} to submit the mint replenishment transaction.", gasPrice);
+
+                mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData, gasPrice).ConfigureAwait(false);
+
+                // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
+                // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
+                await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId);
+            }
+            else
+            {
+                this.logger.LogInformation("Insufficient reserve balance remaining, waiting for originator to initiate mint transaction to replenish reserve.");
+            }
+
+            BigInteger agreedTransactionId;
+
+            // For non-originators to keep track of the ID they are intending to use.
+            BigInteger ourTransactionId = BigInteger.MinusOne;
+            while (true)
+            {
+                agreedTransactionId = this.coordinationManager.GetAgreedTransactionId(mintRequestId, this.interopSettings.ETHMultisigWalletQuorum);
+
+                if (agreedTransactionId != BigInteger.MinusOne)
+                {
+                    break;
+                }
+
+                if (agreedTransactionId == BigInteger.MinusOne && originator)
+                {
+                    // Just re-broadcast.
+                    await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId);
+                }
+
+                if (agreedTransactionId == BigInteger.MinusOne && !originator)
+                {
+                    if (ourTransactionId == BigInteger.MinusOne)
+                    {
+                        ourTransactionId = this.coordinationManager.GetCandidateTransactionId(mintRequestId);
+                    }
+
+                    this.coordinationManager.AddVote(request.RequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
+
+                    // Broadcast our vote.
+                    await this.BroadcastCoordinationAsync(mintRequestId, ourTransactionId);
+                }
+
+                await Task.Delay(2000);
+            }
+
+            if (!originator)
+            {
+                int gasPrice = this.externalApiPoller.GetGasPrice();
+
+                // If a gas price is not currently available then fall back to the value specified on the command line.
+                if (gasPrice == -1)
+                    gasPrice = this.interopSettings.ETHGasPrice;
+
+                this.logger.LogInformation("Non-originator will use a gas price of {0} to confirm the mint replenishment transaction.", gasPrice);
+
+                await this.ETHClientBase.ConfirmTransactionAsync(agreedTransactionId, gasPrice);
+            }
+
+            while (await this.ETHClientBase.GetConfirmationCountAsync(mintTransactionId) < this.interopSettings.ETHMultisigWalletQuorum)
+            {
+                this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction.");
+                await Task.Delay(5000);
+            }
+
+            this.logger.LogInformation("Mint replenishment transaction fully confirmed.");
         }
 
         private async Task BroadcastCoordinationAsync(string requestId, BigInteger transactionId)
