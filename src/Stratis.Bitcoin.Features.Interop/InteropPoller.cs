@@ -11,16 +11,15 @@ using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.ExternalApi;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Interfaces;
-using Stratis.Patricia;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -356,7 +355,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
                 if (amountInWei >= balanceRemaining)
                 {
-                    await this.PerformReplenishment(request, amountInWei, originator);
+                    await this.PerformReplenishmentAsync(request, amountInWei, originator);
                 }
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
@@ -537,7 +536,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task PerformReplenishment(ConversionRequest request, BigInteger amountInWei, bool originator)
+        private async Task PerformReplenishmentAsync(ConversionRequest request, BigInteger amountInWei, bool originator)
         {
             // We need a 'request ID' for the minting that is a) different from the current request ID and b) always unique so that transaction ID votes are unique to this minting.
             string mintRequestId;
@@ -575,9 +574,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId);
             }
             else
-            {
                 this.logger.LogInformation("Insufficient reserve balance remaining, waiting for originator to initiate mint transaction to replenish reserve.");
-            }
 
             BigInteger agreedTransactionId;
 
@@ -587,25 +584,22 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 agreedTransactionId = this.coordinationManager.GetAgreedTransactionId(mintRequestId, this.interopSettings.ETHMultisigWalletQuorum);
 
-                if (agreedTransactionId != BigInteger.MinusOne)
-                {
+                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     break;
-                }
 
+                if (agreedTransactionId != BigInteger.MinusOne)
+                    break;
+
+                // Just re-broadcast.
                 if (agreedTransactionId == BigInteger.MinusOne && originator)
-                {
-                    // Just re-broadcast.
                     await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId);
-                }
 
                 if (agreedTransactionId == BigInteger.MinusOne && !originator)
                 {
                     if (ourTransactionId == BigInteger.MinusOne)
-                    {
                         ourTransactionId = this.coordinationManager.GetCandidateTransactionId(mintRequestId);
-                    }
 
-                    this.coordinationManager.AddVote(request.RequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
+                    this.coordinationManager.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                     // Broadcast our vote.
                     await this.BroadcastCoordinationAsync(mintRequestId, ourTransactionId);
@@ -629,6 +623,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
             while (await this.ETHClientBase.GetConfirmationCountAsync(mintTransactionId) < this.interopSettings.ETHMultisigWalletQuorum)
             {
+                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                    break;
+
                 this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction.");
                 await Task.Delay(5000);
             }

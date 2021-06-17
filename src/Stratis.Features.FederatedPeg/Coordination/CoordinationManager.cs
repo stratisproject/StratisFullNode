@@ -536,6 +536,25 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private void AddComponentStats(StringBuilder benchLog)
         {
+            benchLog.AppendLine(">> Interop Conversion Request Votes (last 10):");
+
+            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.activeVotes.Take(10))
+            {
+                benchLog.AppendLine($"Activate Vote Id: {active.Key} Votes: {active.Value.Count}");
+
+                foreach (KeyValuePair<BigInteger, int> result in active.Value)
+                {
+                    benchLog.AppendLine($"Activate Vote Id: {active.Key} Vote: {result.Key} Count: {result.Value}");
+                }
+            }
+
+            foreach (KeyValuePair<string, HashSet<PubKey>> received in this.receivedVotes.Take(10))
+            {
+                benchLog.AppendLine($"Received Vote Id: {received.Key} Votes: {received.Value.Count}");
+            }
+
+            benchLog.AppendLine();
+
             benchLog.AppendLine(">> Interop Fee Proposals / Votes (last 10):");
 
             IOrderedEnumerable<InteropConversionRequestFee> conversionRequests = this.interopRequestKeyValueStore.GetAllAsJson<InteropConversionRequestFee>().OrderByDescending(i => i.BlockHeight);
@@ -548,7 +567,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                 benchLog.AppendLine($"Height: {conversionRequest.BlockHeight} Id: {conversionRequest.RequestId} Proposals: {conversionRequest.FeeProposals.Count} Proposal Amount (Avg): {averageProposal} Votes: {conversionRequest.FeeVotes.Count} Amount: {new Money(conversionRequest.Amount)} State: {conversionRequest.State}");
             }
-
             benchLog.AppendLine();
         }
     }
