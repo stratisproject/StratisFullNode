@@ -83,6 +83,8 @@ namespace Stratis.Bitcoin.Consensus
         /// <inheritdoc />
         public ChainedHeader Tip { get; private set; }
 
+        private double consumptionRate;
+
         /// <inheritdoc />
         public int? HeaderTip => this.chainedHeaderTree.GetBestPeerTip()?.Height ?? this.Tip.Height;
 
@@ -811,15 +813,26 @@ namespace Stratis.Bitcoin.Consensus
                     }
                 }
 
-                using (this.performanceCounter.MeasureBlockConnectedSignal())
+                StopwatchDisposable dsb2 = (StopwatchDisposable)this.performanceCounter.MeasureBlockConnectionFV();
+
+                using (dsb2)
                 {
-                    this.signals.Publish(new BlockConnected(blockToConnect));
+                    using (this.performanceCounter.MeasureBlockConnectedSignal())
+                    {
+                        this.signals.Publish(new BlockConnected(blockToConnect));
+                    }
                 }
 
                 // TODO: Validate block size display, seems incorrect
                 this.logger.LogDebug("New tip = {0}-{1} : time  = {2} ms : size = {3} kb : trx count = {4}",
                     blockToConnect.ChainedHeader.Height, blockToConnect.ChainedHeader.HashBlock,
                     dsb.watch.ElapsedMilliseconds, blockToConnect.Block.BlockSize.Value.BytesToKiloBytes(), blockToConnect.Block.Transactions.Count());
+
+                double latestConsumptionRate = (new TimeSpan(dsb.watch.ElapsedTicks + dsb2.Watch.ElapsedTicks)).TotalSeconds;
+                if (this.consumptionRate == 0)
+                    this.consumptionRate = latestConsumptionRate;
+                else
+                    this.consumptionRate = this.consumptionRate * 0.99 + latestConsumptionRate * 0.01;
             }
 
             // After successfully connecting all blocks set the tree tip and claim the branch.
@@ -1510,6 +1523,13 @@ namespace Stratis.Bitcoin.Consensus
                 double filledPercentage = Math.Round((this.chainedHeaderTree.UnconsumedBlocksDataBytes / (double)this.maxUnconsumedBlocksDataBytes) * 100, 2);
 
                 log.AppendLine("Unconsumed blocks".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {unconsumedBlocks} -- ({this.chainedHeaderTree.UnconsumedBlocksDataBytes.BytesToMegaBytes()} / {this.maxUnconsumedBlocksDataBytes.BytesToMegaBytes()} MB). Cache filled by: {filledPercentage}%");
+                if (this.consumptionRate != 0)
+                    log.AppendLine("Consumption rate".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {Math.Round(1.0 / this.consumptionRate, 0)} per second (when blocks available)");
+
+                if (this.isIbd && this.chainedHeaderTree.UnconsumedBlocksCount == 0)
+                {
+                    log.AppendLine(string.Empty.PadRight(LoggingConfiguration.ColumnLength, ' ') + "  (A zero value indicates that blocks are being processed faster than the Block Puller can acquire them.)");
+                }
 
                 int pendingDownloadCount = this.callbacksByBlocksRequestedHash.Count;
                 int currentlyDownloadingCount = this.expectedBlockSizes.Count;
