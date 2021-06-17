@@ -11,32 +11,27 @@ using Xunit;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 {
-    public class TestEmbeddedContract
-    {
-
-    }
-
     public class EmbeddedContractContainerTests
     {
         [Fact]
         public void CanUseEmbeddedContractContainer()
         {
             var network = new StraxMain();
-            EmbeddedContractIdentifier contractId = new EmbeddedContractIdentifier(1, 1);
+            uint160 embeddedContractAddress = EmbeddedContractAddress.Create(typeof(Authentication), 1);
             var container = new EmbeddedContractContainer(
                 network,
-                new Dictionary<uint160, EmbeddedContractDescriptor> {
-                    { contractId, new EmbeddedContractDescriptor(typeof(TestEmbeddedContract).AssemblyQualifiedName,new[] { (1, (int?)10) }, "SystemContracts", true) } },
+                new List<EmbeddedContractVersion> {
+                    { new EmbeddedContractVersion(typeof(Authentication), 1, new[] { (1, (int?)10) }, "SystemContracts", true) } },
                 null);
 
-            uint160 id = container.GetContractIdentifiers().First();
+            uint160 address = container.GetEmbeddedContractAddresses().First();
 
-            Assert.True(EmbeddedContractIdentifier.IsEmbedded(contractId));
+            Assert.True(EmbeddedContractAddress.IsEmbedded(embeddedContractAddress));
 
-            Assert.True(container.TryGetContractTypeAndVersion(id, out string contractType, out uint version));
+            Assert.True(container.TryGetContractTypeAndVersion(address, out string contractType, out uint version));
 
-            Assert.Equal(typeof(TestEmbeddedContract).AssemblyQualifiedName, contractType);
-            Assert.Equal(contractId.Version, version);
+            Assert.Equal(typeof(Authentication).AssemblyQualifiedName, contractType);
+            Assert.Equal(embeddedContractAddress.GetEmbeddedVersion(), version);
 
             ChainedHeader chainedHeader = new ChainedHeader(0, null, null) { };
             var mockChainStore = new Mock<IChainStore>();
@@ -46,15 +41,15 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
 
             // Active if previous header is at height 9.
             chainedHeader.SetPrivatePropertyValue("Height", 9);
-            Assert.True(container.IsActive(id, chainedHeader, (h, d) => false));
+            Assert.True(container.IsActive(address, chainedHeader, (h, d) => false));
 
             // Inactive if previous header is at height 10.
             chainedHeader.SetPrivatePropertyValue("Height", 10);
-            Assert.False(container.IsActive(id, chainedHeader, (h, d) => false));
+            Assert.False(container.IsActive(address, chainedHeader, (h, d) => false));
 
             // Inactive if previous header is at height 10 unless activated by BIP 9.
             chainedHeader.SetPrivatePropertyValue("Height", 10);
-            Assert.True(container.IsActive(id, chainedHeader, (h, d) => true));
+            Assert.True(container.IsActive(address, chainedHeader, (h, d) => true));
         }
 
         [Fact]
@@ -62,9 +57,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests.PoS
         {
             foreach (Network network in new Network[] { new StraxMain(), new StraxTest(), new StraxRegTest() })
             {
-                foreach (uint160 id in network.EmbeddedContractContainer.GetContractIdentifiers())
+                foreach (uint160 address in network.EmbeddedContractContainer.GetEmbeddedContractAddresses())
                 {
-                    Assert.True(network.EmbeddedContractContainer.TryGetContractTypeAndVersion(id, out string typeName, out uint version));
+                    Assert.True(network.EmbeddedContractContainer.TryGetContractTypeAndVersion(address, out string typeName, out uint version));
 
                     Assert.NotNull(Type.GetType(typeName));
                 }

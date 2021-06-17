@@ -11,6 +11,7 @@ using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.CLR.Metering;
 using Stratis.SmartContracts.Core.Hashing;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.Networks;
 using Stratis.SmartContracts.RuntimeObserver;
 using Xunit;
 
@@ -30,7 +31,7 @@ namespace Stratis.SmartContracts.CLR.Tests
         public ReflectionVirtualMachineTests()
         {
             // Take what's needed for these tests
-            this.context = new ContractExecutorTestContext();
+            this.context = new ContractExecutorTestContext(new SmartContractsPoSRegTest());
             this.network = this.context.Network;
             this.TestAddress = "0x0000000000000000000000000000000000000001".HexToAddress();
             this.vm = this.context.Vm;
@@ -39,7 +40,7 @@ namespace Stratis.SmartContracts.CLR.Tests
                 new Block(1, this.TestAddress),
                 new Message(this.TestAddress, this.TestAddress, 0),
                 new PersistentState(
-                    new TestPersistenceStrategy(this.state),
+                    this.context.PersistenceStrategy,
                     this.context.Serializer, this.TestAddress.ToUint160()),
                 this.context.Serializer,
                 new ContractLogHolder(),
@@ -108,6 +109,41 @@ namespace Stratis.SmartContracts.CLR.Tests
             Assert.True(result.IsSuccess);
             Assert.Null(result.Error);
             Assert.Equal(methodParameters[0], result.Success.Result);
+        }
+
+        [Fact]
+        public void VM_ExecuteEmbeddedContract_WithParameters()
+        {
+            // Version 1 of the Authentication contract.
+            // See the constructor of ContractExecutorTestContext.
+            var testAddress = EmbeddedContractAddress.Create(typeof(Authentication), 1).ToAddress();
+
+            var contractState = new SmartContractState(
+                new Block(1, testAddress),
+                new Message(testAddress, testAddress, 0),
+                new PersistentState(
+                    this.context.PersistenceStrategy,
+                    this.context.Serializer, testAddress.ToUint160()),
+                this.context.Serializer,
+                new ContractLogHolder(),
+                Mock.Of<IInternalTransactionExecutor>(),
+                new InternalHashHelper(),
+                () => 1000);
+
+            var methodParameters = new object[] { "main" };
+            var callData = new MethodCall("GetSignatories", methodParameters);
+
+            var executionContext = new ExecutionContext(new Observer(this.gasMeter, new MemoryMeter(100_000)));
+
+            VmExecutionResult result = this.vm.ExecuteMethod(contractState,
+                executionContext,
+                callData,
+                null, "StorageTest");
+
+            // Check that the observer has been reset.
+            Assert.True(result.IsSuccess);
+            Assert.Null(result.Error);
+            Assert.Equal(3, ((Address[])result.Success.Result).Length);
         }
 
         [Fact]

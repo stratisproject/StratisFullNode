@@ -182,7 +182,7 @@ namespace Stratis.SmartContracts.CLR.Tests
                      && g.GetBalance == getBalance
                      && g.Serializer == serializer);
 
-            message.Setup(x => x.ContractAddress).Returns((((uint160)new EmbeddedContractIdentifier(1, 1)).ToAddress()));
+            message.Setup(x => x.ContractAddress).Returns(((EmbeddedContractAddress.Create(typeof(Authentication), 1)).ToAddress()));
 
             Network network = new SmartContractsPoSRegTest();
 

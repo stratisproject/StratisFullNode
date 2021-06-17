@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
@@ -174,7 +176,7 @@ namespace Stratis.SmartContracts.CLR
         /// <summary>
         /// Invokes a method on an existing smart contract
         /// </summary>
-        public VmExecutionResult ExecuteMethod(ISmartContractState contractState, ExecutionContext executionContext,
+        public virtual VmExecutionResult ExecuteMethod(ISmartContractState contractState, ExecutionContext executionContext,
             MethodCall methodCall, byte[] contractCode, string typeName)
         {
             IContract contract;
@@ -264,7 +266,7 @@ namespace Stratis.SmartContracts.CLR
             return VmExecutionResult.Ok(invocationResult.Return, typeName);
         }
 
-        private static VmExecutionResult GetInvocationVmErrorResult(IContractInvocationResult invocationResult)
+        protected static VmExecutionResult GetInvocationVmErrorResult(IContractInvocationResult invocationResult)
         {
             if (invocationResult.InvocationErrorType == ContractInvocationErrorType.OutOfGas)
             {

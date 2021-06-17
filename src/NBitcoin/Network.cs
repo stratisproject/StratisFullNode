@@ -211,7 +211,7 @@ namespace NBitcoin
         /// Returns the identifiers of all defined contracts, whether active or inactive.
         /// </summary>
         /// <returns></returns>
-        IEnumerable<uint160> GetContractIdentifiers();
+        IEnumerable<uint160> GetEmbeddedContractAddresses();
 
         /// <summary>
         /// Extracts the contract type and version from a contract hash.
@@ -241,6 +241,8 @@ namespace NBitcoin
         IFederation GetFederationAtHeight(byte[] federationId, ulong blockHeight, uint256 blockHash);
 
         IFederation GetOnlyFederation();
+
+        IEnumerable<IFederation> GetFederations();
     }
 
     public class Federations : IFederations
@@ -250,6 +252,11 @@ namespace NBitcoin
         public Federations()
         {
             this.federations = new Dictionary<FederationId, IFederation>();
+        }
+
+        public IEnumerable<IFederation> GetFederations()
+        {
+            return this.federations.Values.AsEnumerable();
         }
 
         public IFederation GetFederation(FederationId federationId)
