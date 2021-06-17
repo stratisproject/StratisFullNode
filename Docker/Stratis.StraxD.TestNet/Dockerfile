@@ -8,4 +8,4 @@ RUN cd /StratisFullNode/src/Stratis.StraxD && dotnet build
 VOLUME /root/.stratisfullnode
 WORKDIR /StratisFullNode/src/Stratis.StraxD
 EXPOSE 27103 27104 27105
-ENTRYPOINT [ "dotnet", "run", "-testnet" ]
+ENTRYPOINT ["dotnet", "run", "-testnet"]
