@@ -55,7 +55,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
                     return;
 
                 // Ensure we're getting the right block at the last checkpoint height.
-                if (context.ValidationContext.ChainedHeaderToValidate.GetAncestor(this.lastCheckPoint.Height)?.HashBlock != this.lastCheckPoint.Hash)
+                if (context.ValidationContext.ChainedHeaderToValidate.HashBlock != this.lastCheckPoint.Hash)
                 {
                     this.Logger.LogWarning("Can't  validate signature due to being on wrong chain.");
                     this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
