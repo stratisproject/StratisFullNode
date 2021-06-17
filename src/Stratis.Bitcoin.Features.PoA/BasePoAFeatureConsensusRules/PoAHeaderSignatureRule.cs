@@ -1,9 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 {
@@ -21,6 +23,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private IInitialBlockDownloadState initialBlockDownloadState;
 
+        private HashHeightPair lastCheckPoint;
+
         public PoAHeaderSignatureRule(IInitialBlockDownloadState initialBlockDownloadState)
         {
             this.initialBlockDownloadState = initialBlockDownloadState;
@@ -37,12 +41,27 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
+
+            var lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
+            this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
         }
 
         public override async Task RunAsync(RuleContext context)
         {
-            if (this.initialBlockDownloadState?.IsInitialBlockDownload() ?? false)
-                return;
+            // Only start validating at the last checkpoint block.
+            if (this.initialBlockDownloadState.IsInitialBlockDownload() && context.ValidationContext.ChainedHeaderToValidate.Height <= (this.lastCheckPoint?.Height ?? 0))
+            {
+                if (context.ValidationContext.ChainedHeaderToValidate.Height < this.lastCheckPoint.Height)
+                    return;
+
+                // Ensure we're getting the right block at the last checkpoint height.
+                if (context.ValidationContext.ChainedHeaderToValidate.HashBlock != this.lastCheckPoint.Hash)
+                {
+                    this.Logger.LogWarning("Can't  validate signature due to being on wrong chain.");
+                    this.Logger.LogDebug("(-)[INVALID_SIGNATURE]");
+                    PoAConsensusErrors.InvalidHeaderSignature.Throw();
+                }
+            }
 
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
