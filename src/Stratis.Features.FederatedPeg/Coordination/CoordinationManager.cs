@@ -540,11 +540,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.activeVotes.Take(10))
             {
-                benchLog.AppendLine($"Activate Vote Id: {active.Key} Votes: {active.Value.Count}");
-
                 foreach (KeyValuePair<BigInteger, int> result in active.Value)
                 {
-                    benchLog.AppendLine($"Activate Vote Id: {active.Key} Vote: {result.Key} Count: {result.Value}");
+                    benchLog.AppendLine($"Active Vote Id: {active.Key} Vote: {result.Key} Count: {result.Value}");
                 }
             }
 

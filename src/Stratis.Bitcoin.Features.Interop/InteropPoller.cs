@@ -571,7 +571,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                 // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
-                await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId);
+                await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId).ConfigureAwait(false);
             }
             else
                 this.logger.LogInformation("Insufficient reserve balance remaining, waiting for originator to initiate mint transaction to replenish reserve.");
@@ -592,7 +592,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Just re-broadcast.
                 if (agreedTransactionId == BigInteger.MinusOne && originator)
-                    await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId);
+                    await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId).ConfigureAwait(false);
 
                 if (agreedTransactionId == BigInteger.MinusOne && !originator)
                 {
@@ -602,10 +602,10 @@ namespace Stratis.Bitcoin.Features.Interop
                     this.coordinationManager.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                     // Broadcast our vote.
-                    await this.BroadcastCoordinationAsync(mintRequestId, ourTransactionId);
+                    await this.BroadcastCoordinationAsync(mintRequestId, ourTransactionId).ConfigureAwait(false);
                 }
 
-                await Task.Delay(2000);
+                await Task.Delay(2000).ConfigureAwait(false);
             }
 
             if (!originator)
@@ -618,16 +618,16 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Non-originator will use a gas price of {0} to confirm the mint replenishment transaction.", gasPrice);
 
-                await this.ETHClientBase.ConfirmTransactionAsync(agreedTransactionId, gasPrice);
+                await this.ETHClientBase.ConfirmTransactionAsync(agreedTransactionId, gasPrice).ConfigureAwait(false);
             }
 
-            while (await this.ETHClientBase.GetConfirmationCountAsync(mintTransactionId) < this.interopSettings.ETHMultisigWalletQuorum)
+            while (await this.ETHClientBase.GetConfirmationCountAsync(mintTransactionId).ConfigureAwait(false) < this.interopSettings.ETHMultisigWalletQuorum)
             {
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     break;
 
                 this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction.");
-                await Task.Delay(5000);
+                await Task.Delay(5000).ConfigureAwait(false);
             }
 
             this.logger.LogInformation("Mint replenishment transaction fully confirmed.");
