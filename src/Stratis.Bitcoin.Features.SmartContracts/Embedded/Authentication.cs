@@ -10,6 +10,12 @@ public class Authentication : SmartContract
     const string primaryGroup = "main";
     private readonly uint version;
 
+    private bool Initialized
+    {
+        get => this.State.GetBool("Initialized");
+        set => this.State.SetBool("Initialized", value);
+    }
+
     public Authentication(ISmartContractState state, Network network) : base(state)
     {
         uint version = state.Message.ContractAddress.ToUint160().GetEmbeddedVersion();
@@ -30,12 +36,6 @@ public class Authentication : SmartContract
         this.SetQuorum(primaryGroup, primaryAuthenticators.Quorum);
 
         this.Initialized = true;
-    }
-
-    public bool Initialized 
-    {
-        get => this.State.GetBool("Initialized");
-        private set => this.State.SetBool("Initialized", value);
     }
 
     public void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)

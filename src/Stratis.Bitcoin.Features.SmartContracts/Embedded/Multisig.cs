@@ -10,6 +10,12 @@ public class MultiSig : SmartContract
     private readonly uint version;
     private readonly Authentication authentication;
 
+    private bool Initialized
+    {
+        get => this.State.GetBool("Initialized");
+        set => this.State.SetBool("Initialized", value);
+    }
+
     public MultiSig(ISmartContractState state, IPersistenceStrategy persistenceStrategy, Network network) : base(state)
     {
         uint version = state.Message.ContractAddress.ToUint160().GetEmbeddedVersion();
@@ -36,12 +42,6 @@ public class MultiSig : SmartContract
     {
         return new SmartContractState(state.Block, state.Message, new PersistentState(persistenceStrategy, state.Serializer, address),
             state.Serializer, state.ContractLogger, state.InternalTransactionExecutor, state.InternalHashHelper, state.GetBalance);
-    }
-
-    public bool Initialized
-    {
-        get => this.State.GetBool("Initialized");
-        set => this.State.SetBool("Initialized", value);
     }
 
     private void VerifySignatures(string group, byte[] signatures, string authorizationChallenge)
@@ -87,31 +87,62 @@ public class MultiSig : SmartContract
         this.State.SetUInt32($"Nonce:{federationId}", value);
     }
 
+    private string[] AddSignatory(string[] signatories, string pubKey, uint newSize)
+    {
+        string[] result = new string[signatories.Length + 1];
+
+        int i = 0;
+        foreach (string item in signatories)
+        {
+            Assert(item != pubKey, "The signatory already exists.");
+            result[i++] = item;
+        }
+
+        result[i] = pubKey;
+
+        Assert(newSize == result.Length, "The expected size is incorrect.");
+        return result;
+    }
+
     public void AddMember(byte[] signatures, string federationId, string pubKey, uint newSize, uint newQuorum)
     {
         Assert(!string.IsNullOrEmpty(federationId));
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
         Assert(new PubKey(pubKey).ToHex().ToUpper() == pubKey.ToUpper());
 
-        string[] signatories = this.GetFederationMembers(federationId);
-        foreach (string signatory in signatories)
-            Assert(signatory != pubKey, "The signatory already exists.");
-
-        Assert((signatories.Length + 1) == newSize, "The expected size is incorrect.");
+        string[] signatories = AddSignatory(this.GetFederationMembers(federationId), pubKey, newSize);
 
         // The nonce is used to prevent replay attacks.
         uint nonce = this.GetFederationNonce(federationId);
 
         // Validate or provide a unique challenge to the signatories that depends on the exact action being performed.
-        // If the signatures are missing or fail validation contract execution will stop here.
+        // If the signatures are missing or fail validation contract then execution will stop here.
         this.VerifySignatures(primaryGroup, signatures, $"{nameof(AddMember)}(Nonce:{nonce},FederationId:{federationId},PubKey:{pubKey},NewSize:{newSize},NewQuorum:{newQuorum})");
-
-        System.Array.Resize(ref signatories, signatories.Length + 1);
-        signatories[signatories.Length - 1] = pubKey;
 
         this.SetFederationMembers(federationId, signatories);
         this.SetFederationQuorum(federationId, newQuorum);
         this.SetFederationNonce(federationId, nonce + 1);
+    }
+
+    private string[] RemoveSignatory(string[] signatories, string pubKey, uint newSize)
+    {
+        string[] result = new string[signatories.Length - 1];
+
+        int i = 0;
+        foreach (string item in signatories)
+        {
+            if (item == pubKey)
+            {
+                continue;
+            }
+
+            Assert(result.Length != i, "The signatory does not exist.");
+
+            result[i++] = item;
+        }
+
+        Assert(newSize == result.Length, "The expected size is incorrect.");
+        return result;
     }
 
     public void RemoveMember(byte[] signatures, string federationId, string pubKey, uint newSize, uint newQuorum)
@@ -120,29 +151,13 @@ public class MultiSig : SmartContract
         Assert(newSize >= newQuorum, "The number of signatories can't be less than the quorum.");
         Assert(new PubKey(pubKey).ToHex().ToUpper() == pubKey.ToUpper());
 
-        string[] prevSignatories = this.GetFederationMembers(federationId);
-        string[] signatories = new string[prevSignatories.Length - 1];
-
-        int i = 0;
-        foreach (string item in prevSignatories)
-        {
-            if (item == pubKey)
-            {
-                continue;
-            }
-
-            Assert(signatories.Length != i, "The signatory does not exist.");
-
-            signatories[i++] = item;
-        }
-
-        Assert(newSize == signatories.Length, "The expected size is incorrect.");
+        string[] signatories = RemoveSignatory(this.GetFederationMembers(federationId), pubKey, newSize);
 
         // The nonce is used to prevent replay attacks.
         uint nonce = this.GetFederationNonce(federationId);
 
         // Validate or provide a unique challenge to the signatories that depends on the exact action being performed.
-        // If the signatures are missing or fail validation contract execution will stop here.
+        // If the signatures are missing or fail validation then contract execution will stop here.
         this.VerifySignatures(primaryGroup, signatures, $"{nameof(RemoveMember)}(Nonce:{nonce},FederationId:{federationId},PubKey:{pubKey},NewSize:{newSize},NewQuorum:{newQuorum})");
 
         this.SetFederationMembers(federationId, signatories);

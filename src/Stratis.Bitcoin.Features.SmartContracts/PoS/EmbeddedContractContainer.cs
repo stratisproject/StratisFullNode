@@ -24,13 +24,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoS
         /// <summary>The contract version that this information applies to.</summary>
         public uint Version { get; private set; }
 
-        /// <summary>The <see cref="Type.AssemblyQualifiedName"/> of the contract.</summary>
+        /// <summary>The type of contract.</summary>
         public Type ContractType { get; private set; }
 
         /// <summary>The address of the contract.</summary>
         public uint160 Address => EmbeddedContractAddress.Create(this.ContractType, this.Version);
 
-        /// <summary>History of block ranges over which contracts were active.
+        /// <summary>History of block ranges over which the contract was active.
         /// The BIP9 Deployments array is sometimes cleaned up and the information therein has to be transferred here.</summary>
         public (int start, int? end)[] ActivationHistory { get; private set; }
 
