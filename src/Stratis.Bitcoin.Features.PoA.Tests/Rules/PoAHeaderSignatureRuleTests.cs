@@ -20,9 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
 
         public PoAHeaderSignatureRuleTests() : base(new TestPoANetwork(new List<PubKey>() { key.PubKey }))
         {
-            var mockIBD = new Mock<IInitialBlockDownloadState>();
-            mockIBD.Setup(x => x.IsInitialBlockDownload()).Returns(false);
-            this.signatureRule = new PoAHeaderSignatureRule(mockIBD.Object);
+            this.signatureRule = new PoAHeaderSignatureRule();
             this.InitRule(this.signatureRule);
         }
 

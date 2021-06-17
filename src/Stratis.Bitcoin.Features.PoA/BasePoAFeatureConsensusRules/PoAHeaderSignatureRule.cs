@@ -21,13 +21,10 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private IFederationHistory federationHistory;
 
-        private IInitialBlockDownloadState initialBlockDownloadState;
-
         private HashHeightPair lastCheckPoint;
 
-        public PoAHeaderSignatureRule(IInitialBlockDownloadState initialBlockDownloadState)
+        public PoAHeaderSignatureRule()
         {
-            this.initialBlockDownloadState = initialBlockDownloadState;
         }
 
         /// <inheritdoc />
@@ -49,7 +46,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         public override async Task RunAsync(RuleContext context)
         {
             // Only start validating at the last checkpoint block.
-            if (this.initialBlockDownloadState.IsInitialBlockDownload() && context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
+            if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
                 return;
 
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
