@@ -599,6 +599,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     if (ourTransactionId == BigInteger.MinusOne)
                         ourTransactionId = this.coordinationManager.GetCandidateTransactionId(mintRequestId);
 
+                    this.logger.LogDebug("Non-orignator broadcasting id {0}.", ourTransactionId);
+
                     this.coordinationManager.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                     // Broadcast our vote.

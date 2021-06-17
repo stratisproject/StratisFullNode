@@ -352,7 +352,10 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 }
 
                 // This node would have voted on this if the InteropConversionRequestFee object exists.
-                InterOpFeeToMultisig myVote = interopConversionRequestFee.FeeVotes.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
+                InterOpFeeToMultisig myVote = interopConversionRequestFee.FeeVotes.FirstOrDefault(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
+                if (myVote == null)
+                    return null;
+
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myVote.FeeAmount);
                 return new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature);
             }
