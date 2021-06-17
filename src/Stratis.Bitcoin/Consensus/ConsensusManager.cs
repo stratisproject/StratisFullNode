@@ -1526,6 +1526,11 @@ namespace Stratis.Bitcoin.Consensus
                 if (this.consumptionRate != 0)
                     log.AppendLine("Consumption rate".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {Math.Round(1.0 / this.consumptionRate, 0)} per second (when blocks available)");
 
+                if (this.isIbd && this.chainedHeaderTree.UnconsumedBlocksCount == 0)
+                {
+                    log.AppendLine(string.Empty.PadRight(LoggingConfiguration.ColumnLength, ' ') + "  (A zero value indicates that blocks are being processed faster than the Block Puller can acquire them.)");
+                }
+
                 int pendingDownloadCount = this.callbacksByBlocksRequestedHash.Count;
                 int currentlyDownloadingCount = this.expectedBlockSizes.Count;
 
