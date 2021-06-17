@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
-using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
@@ -22,10 +21,6 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
         private IFederationHistory federationHistory;
 
         private HashHeightPair lastCheckPoint;
-
-        public PoAHeaderSignatureRule()
-        {
-        }
 
         /// <inheritdoc />
         public override void Initialize()
