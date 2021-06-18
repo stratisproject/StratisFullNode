@@ -83,6 +83,9 @@ namespace Stratis.Sidechains.Networks
             var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
             var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
 
+            // The height at which the following list of members apply.
+            this.MultisigMinersApplicabilityHeight = 0;
+
             // Mining keys!
             this.StraxMiningMultisigMembers = newFederationPubKeys;
 
