@@ -1,8 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 {
@@ -18,6 +20,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private IFederationHistory federationHistory;
 
+        private HashHeightPair lastCheckPoint;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -29,10 +33,17 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.slotsManager = engine.SlotsManager;
             this.federationHistory = engine.FederationHistory;
             this.validator = engine.PoaHeaderValidator;
+
+            var lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
+            this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
         }
 
         public override async Task RunAsync(RuleContext context)
         {
+            // Only start validating at the last checkpoint block.
+            if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
+                return;
+
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
             // If we're evaluating a batch of received headers it's possible that we're so far beyond the current tip
