@@ -95,6 +95,9 @@ namespace Stratis.Sidechains.Networks
             // Register the new set of federation members.
             this.Federations.RegisterFederation(new Federation(straxFederationTransactionSigningKeys));
 
+            // The height at which the following list of members apply.
+            this.MultisigMinersApplicabilityHeight = 1873798;
+
             // Set the list of Strax Era mining keys.
             this.StraxMiningMultisigMembers = new List<PubKey>()
             {

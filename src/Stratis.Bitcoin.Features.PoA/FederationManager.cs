@@ -334,6 +334,18 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public int? GetMultisigMinersApplicabilityHeight()
         {
+            IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+
+            // Not always passed in tests.
+            if (consensusManager == null)
+                return 0;
+
+            if (this.network.MultisigMinersApplicabilityHeight == null)
+                return null;
+            
+            if (consensusManager.Tip.Height < this.network.MultisigMinersApplicabilityHeight)
+                return null;
+
             return this.network.MultisigMinersApplicabilityHeight;
         }
 

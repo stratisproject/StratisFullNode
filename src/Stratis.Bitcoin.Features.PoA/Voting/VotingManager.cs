@@ -57,9 +57,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private List<VotingData> scheduledVotingData;
 
-        public int BlocksProcessed { get; private set; }
+        private int blocksProcessed;
 
-        public long BlocksProcessingTime { get; private set; }
+        public long blocksProcessingTime;
 
         internal bool isInitialized;
 
@@ -522,10 +522,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                                 if (chainedHeader?.Header == null)
                                 {
-                                    this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
+                                    chainedHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
+                                    if (chainedHeader == null)
+                                    {
+                                        this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
 
-                                    Guard.NotNull(chainedHeader, nameof(chainedHeader));
-                                    Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
+                                        Guard.NotNull(chainedHeader, nameof(chainedHeader));
+                                        Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
+                                    }
                                 }
 
                                 foreach (IFederationMember miner in modifiedFederation)
@@ -565,8 +569,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 long timeConsumed = DateTime.Now.Ticks - flagFall;
 
-                this.BlocksProcessed++;
-                this.BlocksProcessingTime += timeConsumed;
+                this.blocksProcessed++;
+                this.blocksProcessingTime += timeConsumed;
             }
         }
 
@@ -734,7 +738,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 10000 == 0)
                             {
-                                this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
+                               this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
                             }
                         }
 
@@ -791,15 +795,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             List<Poll> executedPolls = this.polls.Where(x => x.IsExecuted).ToList();
 
             double avgBlockProcessingTime;
-            if (this.BlocksProcessed == 0)
+            if (this.blocksProcessed == 0)
                 avgBlockProcessingTime = double.NaN;
             else
-                avgBlockProcessingTime = Math.Round((double)(new TimeSpan(this.BlocksProcessingTime).Milliseconds) / this.BlocksProcessed, 2);
+                avgBlockProcessingTime = Math.Round((double)(new TimeSpan(this.blocksProcessingTime).Milliseconds) / this.blocksProcessed, 2);
 
-            double avgBlockProcessingThroughput = Math.Round(this.BlocksProcessed / (new TimeSpan(this.BlocksProcessingTime).TotalSeconds), 2);
+            double avgBlockProcessingThroughput = Math.Round(this.blocksProcessed / (new TimeSpan(this.blocksProcessingTime).TotalSeconds), 2);
 
             log.AppendLine("Polls Repository Height".PadRight(LoggingConfiguration.ColumnLength) + $": {(this.PollsRepository.CurrentTip?.Height ?? 0)}".PadRight(10) + $"(Hash: {(this.PollsRepository.CurrentTip?.Hash.ToString())})");
-            log.AppendLine("Blocks Processed".PadRight(LoggingConfiguration.ColumnLength) + $": Count  : {this.BlocksProcessed}".PadRight(20) + $"Avg Time: { avgBlockProcessingTime } ms".PadRight(20) + $"Throughput: { avgBlockProcessingThroughput } per second");
+            log.AppendLine("Blocks Processed".PadRight(LoggingConfiguration.ColumnLength) + $": Count  : {this.blocksProcessed}".PadRight(20) + $"Avg Time: { avgBlockProcessingTime } ms".PadRight(20) + $"Throughput: { avgBlockProcessingThroughput } per second");
             log.AppendLine("Member Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.MemberPolls().Count}".PadRight(20) + $"Approved: {approvedPolls.MemberPolls().Count}".PadRight(20) + $"Executed  : {executedPolls.MemberPolls().Count}");
             log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.WhitelistPolls().Count}".PadRight(20) + $"Approved: {approvedPolls.WhitelistPolls().Count}".PadRight(20) + $"Executed  : {executedPolls.WhitelistPolls().Count}");
             log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
