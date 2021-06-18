@@ -4,6 +4,7 @@ using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Signals;
@@ -334,6 +335,18 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public int? GetMultisigMinersApplicabilityHeight()
         {
+            IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
+
+            // Not always passed in tests.
+            if (consensusManager == null)
+                return 0;
+
+            if (this.network.MultisigMinersApplicabilityHeight == null)
+                return null;
+            
+            if (consensusManager.Tip.Height < this.network.MultisigMinersApplicabilityHeight)
+                return null;
+
             return this.network.MultisigMinersApplicabilityHeight;
         }
 
