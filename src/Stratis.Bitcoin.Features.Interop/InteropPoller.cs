@@ -27,9 +27,7 @@ namespace Stratis.Bitcoin.Features.Interop
     {
         /// <summary>1x10^24 wei = 1 000 000 tokens</summary>
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
-
-        public const string MintPlaceHolderRequestId = "00000000000000000000000000000000";
-
+        
         private readonly InteropSettings interopSettings;
         private readonly IETHClient ETHClientBase;
         private readonly Network network;
@@ -50,7 +48,6 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop conversionLoop;
 
         private bool firstPoll;
-        private bool minting;
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
@@ -569,6 +566,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData, gasPrice).ConfigureAwait(false);
 
+                this.logger.LogInformation("Multisig transaction ID of submission transaction: {0}", mintTransactionId);
+
                 // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                 // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
                 await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId).ConfigureAwait(false);
@@ -601,14 +600,19 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     this.logger.LogDebug("Non-orignator broadcasting id {0}.", ourTransactionId);
 
-                    this.coordinationManager.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
+                    if (ourTransactionId != BigInteger.MinusOne)
+                    {
+                        this.coordinationManager.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
-                    // Broadcast our vote.
-                    await this.BroadcastCoordinationAsync(mintRequestId, ourTransactionId).ConfigureAwait(false);
+                        // Broadcast our vote.
+                        await this.BroadcastCoordinationAsync(mintRequestId, ourTransactionId).ConfigureAwait(false);
+                    }
                 }
 
                 await Task.Delay(2000).ConfigureAwait(false);
             }
+
+            this.logger.LogInformation("Agreed transaction ID for replenishment transaction: {0}", agreedTransactionId);
 
             if (!originator)
             {
@@ -620,19 +624,27 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Non-originator will use a gas price of {0} to confirm the mint replenishment transaction.", gasPrice);
 
-                await this.ETHClientBase.ConfirmTransactionAsync(agreedTransactionId, gasPrice).ConfigureAwait(false);
+                string confirmation = await this.ETHClientBase.ConfirmTransactionAsync(agreedTransactionId, gasPrice).ConfigureAwait(false);
+
+                this.logger.LogInformation("ID of confirmation transaction: {0}", confirmation);
             }
 
-            while (await this.ETHClientBase.GetConfirmationCountAsync(mintTransactionId).ConfigureAwait(false) < this.interopSettings.ETHMultisigWalletQuorum)
+            while (true)
             {
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                    return;
+
+                BigInteger confirmationCount = await this.ETHClientBase.GetConfirmationCountAsync(agreedTransactionId).ConfigureAwait(false);
+
+                if (confirmationCount >= this.interopSettings.ETHMultisigWalletQuorum)
                     break;
 
-                this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction.");
+                this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction {0}, current count {1}", mintRequestId, confirmationCount);
+                // TODO: Maybe this should eventually age out?
                 await Task.Delay(5000).ConfigureAwait(false);
             }
 
-            this.logger.LogInformation("Mint replenishment transaction fully confirmed.");
+            this.logger.LogInformation("Mint replenishment transaction {0} fully confirmed.", mintTransactionId);
         }
 
         private async Task BroadcastCoordinationAsync(string requestId, BigInteger transactionId)
