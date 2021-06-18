@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Consensus.Rules;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 {
@@ -26,6 +28,8 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
         private Network network;
 
+        private HashHeightPair lastCheckPoint;
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -41,10 +45,17 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             this.network = this.Parent.Network;
 
             this.maxReorg = this.network.Consensus.MaxReorgLength;
+
+            KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
+            this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
         }
 
         public override async Task RunAsync(RuleContext context)
         {
+            // Only start validating at the last checkpoint block.
+            if (context.ValidationContext.ChainedHeaderToValidate.Height < (this.lastCheckPoint?.Height ?? 0))
+                return;
+
             ChainedHeader chainedHeader = context.ValidationContext.ChainedHeaderToValidate;
 
             var header = chainedHeader.Header as PoABlockHeader;
