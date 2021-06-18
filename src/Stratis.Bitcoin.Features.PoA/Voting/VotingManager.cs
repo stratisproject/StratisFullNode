@@ -522,10 +522,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                                 if (chainedHeader?.Header == null)
                                 {
-                                    this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
+                                    chainedHeader = this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash);
+                                    if (chainedHeader == null)
+                                    {
+                                        this.logger.LogWarning("Couldn't retrieve header for block at height-hash: {0}-{1}.", poll.PollStartBlockData.Height, poll.PollStartBlockData.Hash?.ToString());
 
-                                    Guard.NotNull(chainedHeader, nameof(chainedHeader));
-                                    Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
+                                        Guard.NotNull(chainedHeader, nameof(chainedHeader));
+                                        Guard.NotNull(chainedHeader.Header, nameof(chainedHeader.Header));
+                                    }
                                 }
 
                                 foreach (IFederationMember miner in modifiedFederation)
@@ -734,7 +738,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 10000 == 0)
                             {
-                                this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
+                               this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
                             }
                         }
 
