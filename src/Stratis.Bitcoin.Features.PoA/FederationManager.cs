@@ -4,6 +4,7 @@ using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Signals;
