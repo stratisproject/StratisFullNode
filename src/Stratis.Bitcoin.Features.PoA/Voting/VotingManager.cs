@@ -775,7 +775,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.PollsRepository.WithTransaction(transaction =>
                     {
                         this.ProcessBlock(transaction, blockConnected.ConnectedBlock);
-                        this.PollsRepository.SaveCurrentTip(transaction);
                         transaction.Commit();
                     });
                 }
@@ -791,7 +790,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.PollsRepository.WithTransaction(transaction =>
                     {
                         this.UnProcessBlock(transaction, blockDisconnected.DisconnectedBlock);
-                        this.PollsRepository.SaveCurrentTip(transaction);
                         transaction.Commit();
                     });
                 }
