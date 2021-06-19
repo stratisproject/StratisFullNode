@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Utilities;
 
@@ -39,6 +42,8 @@ namespace Stratis.Bitcoin.EventBus
             this.subscriptionErrorHandler = subscriptionErrorHandler ?? new DefaultSubscriptionErrorHandler(loggerFactory);
             this.subscriptions = new Dictionary<Type, List<ISubscription>>();
         }
+
+        private static ConcurrentDictionary<Guid, (int calledTimes, long executionTimesTicks, MethodInfo methodCalled)> signalDetailedStatistics = new ConcurrentDictionary<Guid, (int, long, MethodInfo)>();
 
         /// <inheritdoc />
         public SubscriptionToken Subscribe<TEvent>(Action<TEvent> handler) where TEvent : EventBase
@@ -99,6 +104,7 @@ namespace Stratis.Bitcoin.EventBus
             for (var index = 0; index < allSubscriptions.Count; index++)
             {
                 var subscription = allSubscriptions[index];
+                long flagFall = DateTime.Now.Ticks;
                 try
                 {
                     subscription.Publish(@event);
@@ -107,7 +113,59 @@ namespace Stratis.Bitcoin.EventBus
                 {
                     this.subscriptionErrorHandler?.Handle(@event, ex, subscription);
                 }
+                finally
+                {
+                    long elapsed = DateTime.Now.Ticks - flagFall;
+                    var actionField = subscription.GetType().GetField("action", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var action = actionField.GetValue(subscription);
+                    if (!signalDetailedStatistics.TryGetValue(subscription.SubscriptionToken.Token, out (int, long, MethodInfo) stats))
+                        stats = (0, 0, ((Action<TEvent>)action).Method);
+                    stats.Item1++;
+                    stats.Item2 += elapsed;
+                    signalDetailedStatistics[subscription.SubscriptionToken.Token] = stats;
+                }
             }
+        }
+
+        public static string GetBenchStats()
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine();
+            builder.AppendLine(">> \"OnBlockConnected\" Signals Bench");
+
+            if (signalDetailedStatistics.Count == 0 || signalDetailedStatistics.First().Value.calledTimes == 0)
+            {
+                builder.AppendLine("No samples...");
+                return builder.ToString();
+            }
+
+            long totalTimesTicks = 0;
+            foreach (var statistics in signalDetailedStatistics)
+            {
+                (_, long executionTimesTicks, _) = statistics.Value;
+                totalTimesTicks += executionTimesTicks;
+            }
+
+            foreach (var statistics in signalDetailedStatistics)
+            {
+                (int calledTimes, long executionTimesTicks, MethodInfo methodCalled) = statistics.Value;
+
+                if (calledTimes == 0)
+                {
+                    builder.AppendLine($"    {methodCalled.DeclaringType.Name.PadRight(50, '-')}{("No Samples").PadRight(12, '-')}");
+                    continue;
+                }
+
+                double avgExecutionTimeMs = Math.Round((TimeSpan.FromTicks(executionTimesTicks / calledTimes).TotalMilliseconds), 4);
+
+                // % from average execution time for the group.
+                double percentage = Math.Round(((double)executionTimesTicks / totalTimesTicks) * 100.0);
+
+                builder.AppendLine($"    {methodCalled.DeclaringType.Name.PadRight(50, '-')}{(avgExecutionTimeMs + " ms").PadRight(12, '-')}{percentage} %");
+            }
+
+            return builder.ToString();
         }
     }
 }
