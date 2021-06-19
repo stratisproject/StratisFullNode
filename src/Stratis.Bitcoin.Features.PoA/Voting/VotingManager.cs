@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public List<IFederationMember> GetModifiedFederation(ChainedHeader chainedHeader)
         {
-            return GetModifiedFederations(new[] { chainedHeader }).Single().federation;
+            return this.federationHistory.GetFederationForBlock(chainedHeader);
         }
 
         public IEnumerable<(List<IFederationMember> federation, HashSet<IFederationMember> whoJoined)> GetModifiedFederations(IEnumerable<ChainedHeader> chainedHeaders)
@@ -422,6 +422,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 lock (this.locker)
                 {
+                    bool pollsRepositoryModified = false;
+
                     foreach (Poll poll in this.GetApprovedPolls())
                     {
                         if (chBlock.ChainedHeader.Height != (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength))
@@ -432,6 +434,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         poll.PollExecutedBlockData = new HashHeightPair(chBlock.ChainedHeader);
                         this.PollsRepository.UpdatePoll(transaction, poll);
+
+                        pollsRepositoryModified = true;
                     }
 
                     if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
@@ -441,7 +445,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (rawVotingData == null)
                     {
-                        this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader);
+                        this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                         return;
                     }
 
@@ -450,6 +454,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         this.logger.LogError("The block was mined by a non-federation-member!");
                         this.logger.LogTrace("(-)[ALIEN_BLOCK]");
+
+                        this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                         return;
                     }
 
@@ -495,6 +501,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                                     this.polls.Add(poll);
                                     this.PollsRepository.AddPolls(transaction, poll);
+                                    pollsRepositoryModified = true;
 
                                     this.logger.LogDebug("New poll was created: '{0}'.", poll);
                                 });
@@ -503,6 +510,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             {
                                 poll.PubKeysHexVotedInFavor.Add(fedMemberKeyHex);
                                 this.PollsRepository.UpdatePoll(transaction, poll);
+                                pollsRepositoryModified = true;
 
                                 this.logger.LogDebug("Voted on existing poll: '{0}'.", poll);
                             }
@@ -554,10 +562,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader);
                             this.PollsRepository.UpdatePoll(transaction, poll);
+                            pollsRepositoryModified = true;
                         }
                     }
 
-                    this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader);
+                    this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                 }
             }
             catch (Exception ex)
@@ -806,6 +815,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.WhitelistPolls().Count}".PadRight(20) + $"Approved: {approvedPolls.WhitelistPolls().Count}".PadRight(20) + $"Executed  : {executedPolls.WhitelistPolls().Count}");
             log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
             log.AppendLine("Scheduled votes will be added to the next block this node mines.");
+            foreach (var x in InMemoryEventBus.SignalDetailedStatistics)
+            {
+                double perSecond = double.NaN;
+                if (x.Value.Item2 != 0)
+                    perSecond = Math.Round(x.Value.Item1 / (new TimeSpan(x.Value.Item2).TotalSeconds), 0);
+
+                log.AppendLine($"{x.Value.Item3.DeclaringType.Name}".PadRight(LoggingConfiguration.ColumnLength + 16) + $"Per Seconds: { perSecond }");
+            }
             log.AppendLine();
         }
 
