@@ -815,14 +815,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.WhitelistPolls().Count}".PadRight(20) + $"Approved: {approvedPolls.WhitelistPolls().Count}".PadRight(20) + $"Executed  : {executedPolls.WhitelistPolls().Count}");
             log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
             log.AppendLine("Scheduled votes will be added to the next block this node mines.");
-            foreach (var x in InMemoryEventBus.SignalDetailedStatistics)
-            {
-                double perSecond = double.NaN;
-                if (x.Value.Item2 != 0)
-                    perSecond = Math.Round(x.Value.Item1 / (new TimeSpan(x.Value.Item2).TotalSeconds), 0);
-
-                log.AppendLine($"{x.Value.Item3.DeclaringType.Name}".PadRight(LoggingConfiguration.ColumnLength + 16) + $"Per Seconds: { perSecond }");
-            }
             log.AppendLine();
         }
 
