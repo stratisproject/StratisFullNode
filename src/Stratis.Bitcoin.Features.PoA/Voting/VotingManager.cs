@@ -585,6 +585,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private void UnProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
         {
+            bool pollsRepositoryModified = false;
+
             lock (this.locker)
             {
                 foreach (Poll poll in this.polls.Where(x => !x.IsPending && x.PollExecutedBlockData?.Hash == chBlock.ChainedHeader.HashBlock).ToList())
@@ -594,6 +596,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     poll.PollExecutedBlockData = null;
                     this.PollsRepository.UpdatePoll(transaction, poll);
+                    pollsRepositoryModified = true;
                 }
 
                 if (this.federationManager.GetMultisigMinersApplicabilityHeight() == chBlock.ChainedHeader.Height)
@@ -606,7 +609,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.logger.LogTrace("(-)[NO_VOTING_DATA]");
 
-                this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader.Previous);
+                this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
                 return;
             }
 
@@ -636,6 +639,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         targetPoll.PollVotedInFavorBlockData = null;
 
                         this.PollsRepository.UpdatePoll(transaction, targetPoll);
+                        pollsRepositoryModified = true;
                     }
 
                     // Pub key of a fed member that created voting data.
@@ -647,12 +651,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         this.polls.Remove(targetPoll);
                         this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
+                        pollsRepositoryModified = true;
 
                         this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
                     }
                 }
 
-                this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader.Previous);
+                this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader.Previous);
             }
         }
 
