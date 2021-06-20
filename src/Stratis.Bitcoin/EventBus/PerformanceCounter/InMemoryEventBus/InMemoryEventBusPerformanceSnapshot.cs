@@ -41,8 +41,8 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
         public string GetEventStats(Type eventType)
         {
             var builder = new StringBuilder();
-            int totalExecutionsCount = 0;
             long totalDelayTicks = 0;
+            double avgTotalExecutionTime = 0;
 
             ConcurrentDictionary<MethodInfo, ExecutionsCountAndDelay> eventExecutionTime = null;
 
@@ -54,17 +54,15 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
                 foreach ((MethodInfo methodInfo, ExecutionsCountAndDelay executionsCountAndDelay) in eventExecutionTime)
                 {
                     totalDelayTicks += executionsCountAndDelay.GetTotalDelayTicks();
-                    totalExecutionsCount += executionsCountAndDelay.GetTotalExecutionsCount();
+                    avgTotalExecutionTime += executionsCountAndDelay.GetAvgExecutionTimeMs();
                 }
             }
 
-            if (totalExecutionsCount == 0)
+            if (totalDelayTicks == 0)
             {
                 builder.AppendLine($"\"{eventType.Name}\" has no samples...");
                 return builder.ToString();
             }
-
-            var avgTotalExecutionTime = Math.Round(new TimeSpan(totalDelayTicks / totalExecutionsCount).TotalMilliseconds, 4);
 
             builder.AppendLine($"\"{eventType.Name}\" average total execution time: {avgTotalExecutionTime} ms.");
 
