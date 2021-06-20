@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using Microsoft.Extensions.Logging;
-using Stratis.Bitcoin.EventBus.CoreEvents;
+using Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.EventBus
@@ -30,6 +27,9 @@ namespace Stratis.Bitcoin.EventBus
         /// </summary>
         private readonly object subscriptionsLock = new object();
 
+        /// <inheritdoc cref="InMemoryEventBusPerformanceCounter"/>
+        private readonly InMemoryEventBusPerformanceCounter performanceCounter;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryEventBus"/> class.
         /// </summary>
@@ -42,10 +42,8 @@ namespace Stratis.Bitcoin.EventBus
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.subscriptionErrorHandler = subscriptionErrorHandler ?? new DefaultSubscriptionErrorHandler(loggerFactory);
             this.subscriptions = new Dictionary<Type, List<ISubscription>>();
+            this.performanceCounter = new InMemoryEventBusPerformanceCounter();
         }
-
-        private static ConcurrentDictionary<Guid, (long executionTimesTicks, MethodInfo methodCalled)> blockConnectedStatistics = new ConcurrentDictionary<Guid, (long, MethodInfo)>();
-        private static int blockConnectedStatisticsCount = 0;
 
         /// <inheritdoc />
         public SubscriptionToken Subscribe<TEvent>(Action<TEvent> handler) where TEvent : EventBase
@@ -109,72 +107,24 @@ namespace Stratis.Bitcoin.EventBus
             for (var index = 0; index < allSubscriptions.Count; index++)
             {
                 var subscription = allSubscriptions[index];
-                long flagFall = DateTime.Now.Ticks;
-                try
+
+                using (this.performanceCounter.MeasureEventExecutionTime<TEvent>(subscription))
                 {
-                    subscription.Publish(@event);
-                }
-                catch (Exception ex)
-                {
-                    this.subscriptionErrorHandler?.Handle(@event, ex, subscription);
-                }
-                finally
-                {
-                    if (typeof(TEvent) == typeof(BlockConnected))
+                    try
                     {
-                        long elapsed = DateTime.Now.Ticks - flagFall;
-                        var actionField = subscription.GetType().GetField("action", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                        var action = actionField.GetValue(subscription);
-                        if (!blockConnectedStatistics.TryGetValue(subscription.SubscriptionToken.Token, out (long totalElapsedTicks, MethodInfo) stats))
-                            stats = (0, ((Action<TEvent>)action).Method);
-                        stats.totalElapsedTicks += elapsed;
-                        blockConnectedStatistics[subscription.SubscriptionToken.Token] = stats;
+                        subscription.Publish(@event);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.subscriptionErrorHandler?.Handle(@event, ex, subscription);
                     }
                 }
             }
-
-            if (typeof(TEvent) == typeof(BlockConnected))
-                blockConnectedStatisticsCount++;
         }
 
-        public static string GetBenchStats()
+        public InMemoryEventBusPerformanceCounter GetPerformanceCounter()
         {
-            var builder = new StringBuilder();
-
-            builder.AppendLine();
-            builder.AppendLine(">> Signals Bench");
-
-            int nIterations = blockConnectedStatisticsCount;
-            if (nIterations == 0)
-            {
-                builder.AppendLine("No samples...");
-                return builder.ToString();
-            }
-
-            long totalTimesTicks = 0;
-            foreach (var statistics in blockConnectedStatistics)
-            {
-                (long executionTimesTicks, _) = statistics.Value;
-                totalTimesTicks += executionTimesTicks;
-            }
-
-            builder.AppendLine($"\"OnBlockConnected\" block processing . Average total execution time: {Math.Round((new TimeSpan(totalTimesTicks / nIterations)).TotalMilliseconds, 4)} ms.");
-
-            foreach (var statistics in blockConnectedStatistics)
-            {
-                (long executionTimesTicks, MethodInfo methodCalled) = statistics.Value;
-
-                string methodName = $"{methodCalled.DeclaringType.Name}.{methodCalled.Name}";
-
-                double avgExecutionTimeMs = Math.Round((TimeSpan.FromTicks(executionTimesTicks / nIterations).TotalMilliseconds), 4);
-
-                // % from average execution time for the group.
-                double percentage = Math.Round(((double)executionTimesTicks / totalTimesTicks) * 100.0);
-
-                builder.AppendLine($"    {methodName.PadRight(60, '-')}{(avgExecutionTimeMs + " ms").PadRight(12, '-')}{percentage} %");
-            }
-
-            return builder.ToString();
+            return this.performanceCounter;
         }
     }
 }
