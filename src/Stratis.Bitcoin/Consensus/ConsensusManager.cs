@@ -1483,7 +1483,8 @@ namespace Stratis.Bitcoin.Consensus
         private void AddBenchStats(StringBuilder benchLog)
         {
             benchLog.Append(this.performanceCounter.TakeSnapshot().ToString());
-            benchLog.Append(InMemoryEventBus.GetBenchStats());
+            benchLog.AppendLine();
+            benchLog.AppendLine(((InMemoryEventBus)this.signals).GetPerformanceCounter().TakeSnapshot().GetEventStats(typeof(BlockConnected)));
         }
 
         [NoTrace]
