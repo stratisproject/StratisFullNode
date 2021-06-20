@@ -64,7 +64,7 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
                 return builder.ToString();
             }
 
-            builder.AppendLine($"\"{eventType.Name}\" average total execution time: {avgTotalExecutionTime} ms.");
+            builder.AppendLine($"\"{eventType.Name}\" average total execution time: {Math.Round(avgTotalExecutionTime, 4)} ms.");
 
             foreach ((MethodInfo methodInfo, ExecutionsCountAndDelay executionsCountAndDelay) in eventExecutionTime)
             {
