@@ -45,7 +45,7 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
             var builder = new StringBuilder();
             int totalExecutionsCount = 0;
             long totalDelayTicks = 0;
-            
+
             ConcurrentDictionary<MethodInfo, ExecutionsCountAndDelay> eventExecutionTime = null;
 
             if (this.EventExecutionTime.ContainsKey(eventType))
