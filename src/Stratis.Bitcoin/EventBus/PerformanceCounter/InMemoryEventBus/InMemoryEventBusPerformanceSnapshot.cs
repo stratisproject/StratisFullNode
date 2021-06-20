@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using NBitcoin;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
