@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
 
             if (totalExecutionsCount == 0)
             {
-                builder.AppendLine("No samples...");
+                builder.AppendLine($"\"{eventType.Name}\" has no samples...");
                 return builder.ToString();
             }
 
@@ -89,12 +89,22 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
         public override string ToString()
         {
             var builder = new StringBuilder();
-            foreach (Type type in this.EventExecutionTime.Keys)
+
+            builder.AppendLine(">> Signals Bench");
+
+            if (this.EventExecutionTime.Keys.Count == 0)
             {
-                builder.AppendLine(this.GetEventStats(type));
+                builder.AppendLine("No samples...");
+            }
+            else
+            {
+                foreach (Type type in this.EventExecutionTime.Keys)
+                {
+                    builder.AppendLine(this.GetEventStats(type));
+                }
             }
 
-            return string.Empty;
+            return builder.ToString();
         }
     }
 
