@@ -293,46 +293,49 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
-            // The federation members are knowable for up to MaxReOrgLength blocks beyond the polls repository tip.
-            // Take advantage of this fact by bulk processing and caching some "history" information ahead of time.
-            // Bulk processing allows the most CPU intensive parts to be parallelised over multiple blocks. Also,
-            // federations at multiple heights can be determined with a single scan of polls and headers.
-            ChainedHeader lastHeader = blockHeader;
-            int lastKnownFederationHeight = this.votingManager.LastKnownFederationHeight();
-            Guard.Assert(lastHeader.Height <= lastKnownFederationHeight);
-
-            uint prefetchThreshold = this.network.Consensus.MaxReorgLength / 2;
-
-            if ((lastKnownFederationHeight - lastHeader.Height) >= prefetchThreshold && this.chainIndexer.Tip.Height >= lastKnownFederationHeight)
-                lastHeader = this.chainIndexer[lastKnownFederationHeight];
-
             // Gather enough blocks to handle idle checking but nothing below the activation time.
             uint federationMemberActivationTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberActivationTime ?? 0;
-            uint maxInactiveTime = ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
-            uint minTime = Math.Max(blockHeader.Header.Time - maxInactiveTime, federationMemberActivationTime);
-            int start = this.lastActiveTip?.Height ?? 0;
+            uint minTime = blockHeader.Header.Time;
+            if (minTime >= federationMemberActivationTime)
+            {
+                minTime -= ((PoAConsensusOptions)this.network.Consensus.Options).FederationMemberMaxIdleTimeSeconds;
+                if (minTime < federationMemberActivationTime)
+                    minTime = federationMemberActivationTime;
+            }
 
-            Guard.Assert(lastHeader.Height >= start);
+            ChainedHeader GetHeader(int height)
+            {
+                if (height < this.chainIndexer.Tip.Height)
+                    return this.chainIndexer[height];
 
-            // Reduce the number of headers read from the db by performing a binary search instead of a scan.
-            int pos = BinarySearch.BinaryFindFirst(n => this.chainIndexer[n].Header.Time >= minTime, start, lastHeader.Height - start);
-            int take = (pos < 0) ? 0 : lastHeader.Height - pos + 1;
+                return blockHeader.GetAncestor(height);
+            }
+            
+            // Find the first block with Time >= minTime. We're not interested in re-reading any blocks below or at the last active tip though.
+            int pos = (this.lastActiveTip?.Height ?? 0) + 1;
+            pos = BinarySearch.BinaryFindFirst(n => GetHeader(n).Header.Time >= minTime, pos, blockHeader.Height - pos + 1);
 
+            // Calculate the number of blocks to read.
+            int take = (pos < 0) ? 0 : blockHeader.Height - pos + 1;
+
+            // If there is none then exit.
             if (take == 0)
             {
-                this.lastActiveTip = lastHeader;
+                this.lastActiveTip = blockHeader;
                 return;
             }
 
-            ChainedHeader[] headers = lastHeader
+            // Get the headers.
+            ChainedHeader[] headers = blockHeader
                 .EnumerateToGenesis()
                 .Take(take)
                 .Reverse()
                 .ToArray();
 
+            // Get the federation information related to the headers.
             (IFederationMember[] miners, (List<IFederationMember> members, HashSet<IFederationMember> whoJoined)[] federations) = this.GetFederationMembersForBlocks(headers);
 
-            // TODO: Should the headers be accessed in hash order to optimize the db read speed?
+            // TODO: Consider accessing the headers in hash order to optimize the db read speed.
             uint[] times = headers.Select(h => h.Header.Time).ToArray();
 
             for (int i = 0; i < headers.Length; i++)
@@ -343,6 +346,11 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 this.federationHistory[headerTime] = (federations[i].members, miners[i]);
 
+                // Don't record any activity before the federation activation time.
+                if (headerTime < federationMemberActivationTime)
+                    continue;
+
+                // Record mining activity.
                 if (miners[i] != null)
                 {
                     if (!this.lastActiveTimeByPubKey.TryGetValue(miners[i].PubKey, out List<uint> minerActivity))
@@ -355,6 +363,7 @@ namespace Stratis.Bitcoin.Features.PoA
                         minerActivity.Add(headerTime);
                 }
 
+                // Record joining activity.
                 foreach (IFederationMember member in federations[i].whoJoined)
                 {
                     if (!this.lastActiveTimeByPubKey.TryGetValue(member.PubKey, out List<uint> joinActivity))
@@ -368,7 +377,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
             }
 
-            this.lastActiveTip = lastHeader;
+            // Advance the tip.
+            this.lastActiveTip = blockHeader;
 
             DiscardActivityBelowTime(minTime);
         }
