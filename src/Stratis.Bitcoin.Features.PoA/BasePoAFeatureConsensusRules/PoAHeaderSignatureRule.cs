@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             var roundTime = this.slotsManager.GetRoundLength(this.federationHistory.GetFederationForBlock(chainedHeader).Count);
 
             // Quick check for optimisation.
-            this.federationHistory.GetLastActiveTime(federationMember, chainedHeader, out uint lastActiveTime);
+            this.federationHistory.GetLastActiveTime(federationMember, chainedHeader.Previous, out uint lastActiveTime);
             if ((chainedHeader.Header.Time - lastActiveTime) >= roundTime.TotalSeconds)
                 return;
 
