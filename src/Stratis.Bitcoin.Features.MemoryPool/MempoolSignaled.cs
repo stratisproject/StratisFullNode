@@ -7,6 +7,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Features.MemoryPool.Interfaces;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
@@ -48,6 +49,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         private readonly ISignals signals;
 
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
         private SubscriptionToken blockConnectedSubscription;
 
         /// <summary>
@@ -73,7 +76,8 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             ITxMempool memPool,
             IMempoolValidator validator,
             MempoolOrphans mempoolOrphans,
-            ISignals signals)
+            ISignals signals,
+            IInitialBlockDownloadState initialBlockDownloadState)
         {
             this.manager = manager;
             this.chainIndexer = chainIndexer;
@@ -85,6 +89,7 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.validator = validator;
             this.mempoolOrphans = mempoolOrphans;
             this.signals = signals;
+            this.initialBlockDownloadState = initialBlockDownloadState;
         }
 
         /// <summary>
@@ -94,9 +99,6 @@ namespace Stratis.Bitcoin.Features.MemoryPool
         /// <param name="blockHeight">Location of the block.</param>
         public Task RemoveForBlock(Block block, int blockHeight)
         {
-            //if (this.IsInitialBlockDownload)
-            //  return Task.CompletedTask;
-
             return this.mempoolLock.WriteAsync(() =>
             {
                 this.memPool.RemoveForBlock(block.Transactions, blockHeight);
@@ -136,6 +138,9 @@ namespace Stratis.Bitcoin.Features.MemoryPool
 
         private void OnBlockConnected(BlockConnected blockConnected)
         {
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                return;
+
             ChainedHeaderBlock chainedHeaderBlock = blockConnected.ConnectedBlock;
             ChainedHeader blockHeader = chainedHeaderBlock.ChainedHeader;
 
