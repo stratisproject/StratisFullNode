@@ -752,7 +752,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 10000 == 0)
                             {
-                               this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
+                                this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
                             }
                         }
 
@@ -769,7 +769,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private void OnBlockConnected(BlockConnected blockConnected)
         {
             this.PollsRepository.Synchronous(() =>
-            {                
+            {
                 if (this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous))
                 {
                     this.PollsRepository.WithTransaction(transaction =>
