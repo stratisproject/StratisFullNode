@@ -81,7 +81,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.lastActiveTimeByPubKey = new ConcurrentDictionary<PubKey, List<uint>>();
             this.federationHistory = new SortedDictionary<int, (List<IFederationMember>, HashSet<IFederationMember>, IFederationMember)>();
             this.lastActiveTip = null;
-            this.lastFederationTip = 0;
+            this.lastFederationTip = -1;
         }
 
         public void Initialize()
@@ -331,7 +331,7 @@ namespace Stratis.Bitcoin.Features.PoA
             }
             
             // Find the first block with Time >= minTime. We're not interested in re-reading any blocks below or at the last active tip though.
-            int startHeight = (this.lastActiveTip?.Height ?? 0) + 1;
+            int startHeight = (this.lastActiveTip?.Height ?? -1) + 1;
             startHeight = BinarySearch.BinaryFindFirst(n => GetHeader(n).Header.Time >= minTime, startHeight, blockHeader.Height - startHeight + 1);
 
             // Exclude anything in cache already.
