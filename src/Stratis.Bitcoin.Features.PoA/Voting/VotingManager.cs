@@ -319,7 +319,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationHistory.GetFederationForBlock(chainedHeader);
         }
 
-        public IEnumerable<(List<IFederationMember> federation, HashSet<IFederationMember> whoJoined)> GetModifiedFederations(IEnumerable<ChainedHeader> chainedHeaders)
+        public IEnumerable<(List<IFederationMember> federation, HashSet<IFederationMember> whoJoined)> GetFederationsForHeights(int startHeight, int endHeight)
         {
             lock (this.locker)
             {
@@ -330,19 +330,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 bool straxEra = false;
                 int? multisigMinersApplicabilityHeight = this.federationManager.GetMultisigMinersApplicabilityHeight();
 
-                foreach (ChainedHeader chainedHeader in chainedHeaders)
+                for (int height = startHeight; height <= endHeight; height++)
                 {
                     var whoJoined = new HashSet<IFederationMember>();
 
                     if (!(this.network.Consensus.ConsensusFactory is PoAConsensusFactory poaConsensusFactory))
                     {
                         yield return (new List<IFederationMember>(this.poaConsensusOptions.GenesisFederationMembers),
-                            new HashSet<IFederationMember>((chainedHeader.Height != 0) ? new List<IFederationMember>() : this.poaConsensusOptions.GenesisFederationMembers));
+                            new HashSet<IFederationMember>((height != 0) ? new List<IFederationMember>() : this.poaConsensusOptions.GenesisFederationMembers));
 
                         continue;
                     }
 
-                    if (!straxEra && (multisigMinersApplicabilityHeight != null && chainedHeader.Height >= multisigMinersApplicabilityHeight))
+                    if (!straxEra && (multisigMinersApplicabilityHeight != null && height >= multisigMinersApplicabilityHeight))
                     {
                         EnterStraxEra(modifiedFederation);
                         straxEra = true;
@@ -356,7 +356,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         // If it executed after the current height then exit this loop.
                         int pollExecutionHeight = poll.PollVotedInFavorBlockData.Height + (int)this.network.Consensus.MaxReorgLength;
-                        if (pollExecutionHeight > chainedHeader.Height)
+                        if (pollExecutionHeight > height)
                             break;
 
                         IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
@@ -373,7 +373,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                         collateralFederationMember.IsMultisigMember = shouldBeMultisigMember;
                                 }
 
-                                if (pollExecutionHeight == chainedHeader.Height)
+                                if (pollExecutionHeight == height)
                                     whoJoined.Add(federationMember);
 
                                 modifiedFederation.Add(federationMember);
