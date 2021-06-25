@@ -1504,13 +1504,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null)
+        public AccountHistory GetHistory(HdAccount account, string address, int limit, int offset, string txId = null)
         {
             Wallet wallet = account.AccountRoot.Wallet;
             WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, address, limit, offset, txId);
 
             // Filter ColdstakeUtxos
             result = result.Where(r =>
@@ -1539,14 +1539,14 @@ namespace Stratis.Features.SQLiteWalletRepository
             foreach (var item in result.Where(r => r.Type == (int)TransactionItemType.Send))
             {
                 // Cache the address.
-                if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
+                if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address2))
                 {
                     var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
-                    address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
-                    lookup.Add(item.SendToScriptPubkey, address);
+                    address2 = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+                    lookup.Add(item.SendToScriptPubkey, address2);
                 }
 
-                item.SendToAddress = address;
+                item.SendToAddress = address2;
             }
 
             return new AccountHistory()
