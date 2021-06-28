@@ -358,11 +358,11 @@ namespace Stratis.Bitcoin.Features.Interop
                 BigInteger balanceRemaining = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.ETHMultisigWalletAddress).ConfigureAwait(false);
 
                 // The request is denominated in satoshi and needs to be converted to wei.
-                BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
+                BigInteger conversionAmountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
 
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
-                //if (amountInWei >= balanceRemaining)
-                await this.PerformReplenishmentAsync(request, amountInWei, originator).ConfigureAwait(false);
+                //if (conversionAmountInWei >= balanceRemaining)
+                await this.PerformReplenishmentAsync(request, conversionAmountInWei, balanceRemaining, originator).ConfigureAwait(false);
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
                 switch (request.RequestStatus)
@@ -392,7 +392,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
                             // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                            string abiData = this.ETHClientBase.EncodeTransferParams(request.DestinationAddress, amountInWei);
+                            string abiData = this.ETHClientBase.EncodeTransferParams(request.DestinationAddress, conversionAmountInWei);
 
                             int gasPrice = this.externalApiPoller.GetGasPrice();
 
@@ -542,7 +542,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task PerformReplenishmentAsync(ConversionRequest request, BigInteger amountInWei, bool originator)
+        private async Task PerformReplenishmentAsync(ConversionRequest request, BigInteger amountInWei, BigInteger startBalance, bool originator)
         {
             // We need a 'request ID' for the minting that is a) different from the current request ID and b) always unique so that transaction ID votes are unique to this minting.
             string mintRequestId;
@@ -558,6 +558,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             // Only the originator initially knows what value this gets set to after submission until voting is concluded.
             BigInteger mintTransactionId = BigInteger.MinusOne;
+
             if (originator)
             {
                 this.logger.LogInformation("Insufficient reserve balance remaining, initiating mint transaction to replenish reserve.");
@@ -590,6 +591,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             // For non-originators to keep track of the ID they are intending to use.
             BigInteger ourTransactionId = BigInteger.MinusOne;
+
             while (true)
             {
                 agreedTransactionId = this.coordinationManager.GetAgreedTransactionId(mintRequestId, this.interopSettings.ETHMultisigWalletQuorum);
@@ -656,11 +658,27 @@ namespace Stratis.Bitcoin.Features.Interop
                     break;
 
                 this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction {0}, current count {1}", mintRequestId, confirmationCount);
+
                 // TODO: Maybe this should eventually age out?
                 await Task.Delay(5000).ConfigureAwait(false);
             }
 
             this.logger.LogInformation("Mint replenishment transaction {0} fully confirmed.", mintTransactionId);
+
+            while (true)
+            {
+                BigInteger balance = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.ETHMultisigWalletAddress).ConfigureAwait(false);
+
+                if (balance > startBalance)
+                {
+                    this.logger.LogInformation("The contract's balance has been replenished, new balance {0}.", balance);
+                    break;
+                }
+                else
+                    this.logger.LogInformation("The contract's balance is unchanged at {0}.", balance);
+
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            }
         }
 
         private async Task BroadcastCoordinationAsync(string requestId, BigInteger transactionId)
