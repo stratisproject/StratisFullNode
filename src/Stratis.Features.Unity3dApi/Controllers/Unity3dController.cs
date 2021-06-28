@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
 using Stratis.Bitcoin.Base;
-using Stratis.Bitcoin.Controllers;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
 using Stratis.Bitcoin.Features.BlockStore.Controllers;
@@ -75,7 +74,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
             IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null,
             IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null, 
-            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, LocalExecutor localExecutor = null)
+            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
