@@ -78,7 +78,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// <inheritdoc />
         public int DeleteConversionRequests()
         {
-            List<ConversionRequest> result = this.KeyValueStore.GetAll(ConversionRequestType.Mint, true);
+            List<ConversionRequest> result = this.KeyValueStore.GetAll();
 
             foreach (ConversionRequest request in result)
             {

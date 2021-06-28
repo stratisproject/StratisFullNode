@@ -11,6 +11,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
 {
     public interface IConversionRequestKeyValueStore : IKeyValueRepository
     {
+        List<ConversionRequest> GetAll();
         List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed);
 
         void Delete(string key);
@@ -35,6 +36,25 @@ namespace Stratis.Features.FederatedPeg.Conversion
             // Open a connection to a new DB and create if not found.
             var options = new Options { CreateIfMissing = true };
             this.leveldb = new DB(options, folder);
+        }
+
+        public List<ConversionRequest> GetAll()
+        {
+            var values = new List<ConversionRequest>();
+            IEnumerator<KeyValuePair<byte[], byte[]>> enumerator = this.leveldb.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                (byte[] key, byte[] value) = enumerator.Current;
+
+                if (value == null)
+                    continue;
+
+                ConversionRequest deserialized = this.dBreezeSerializer.Deserialize<ConversionRequest>(value);
+                values.Add(deserialized);
+            }
+
+            return values;
         }
 
         public List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed)
