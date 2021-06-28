@@ -27,7 +27,7 @@ namespace Stratis.Bitcoin.Features.Interop
     {
         /// <summary>1x10^24 wei = 1 000 000 tokens</summary>
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
-        
+
         private readonly InteropSettings interopSettings;
         private readonly IETHClient ETHClientBase;
         private readonly Network network;
@@ -352,7 +352,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
                 if (amountInWei >= balanceRemaining)
                 {
-                    await this.PerformReplenishmentAsync(request, amountInWei, originator);
+                    await this.PerformReplenishmentAsync(request, amountInWei, originator).ConfigureAwait(false);
                 }
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
@@ -566,7 +566,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData, gasPrice).ConfigureAwait(false);
 
-                this.logger.LogInformation("Multisig transaction ID of submission transaction: {0}", mintTransactionId);
+                this.logger.LogInformation("Originator adding its vote for mint transation id: {0}", mintTransactionId);
+
+                this.coordinationManager.AddVote(mintRequestId, mintTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                 // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                 // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
@@ -590,10 +592,9 @@ namespace Stratis.Bitcoin.Features.Interop
                     break;
 
                 // Just re-broadcast.
-                if (agreedTransactionId == BigInteger.MinusOne && originator)
+                if (originator)
                     await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId).ConfigureAwait(false);
-
-                if (agreedTransactionId == BigInteger.MinusOne && !originator)
+                else
                 {
                     if (ourTransactionId == BigInteger.MinusOne)
                         ourTransactionId = this.coordinationManager.GetCandidateTransactionId(mintRequestId);
