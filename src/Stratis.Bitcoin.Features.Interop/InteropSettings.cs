@@ -94,6 +94,8 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.InteropEnabled)
                 return;
 
+            this.OverrideOriginatorForRequestId = nodeSettings.ConfigReader.GetOrDefault("overrideoriginatorforrequestid", "");
+
             if (string.IsNullOrWhiteSpace(this.ETHMultisigWalletAddress))
                 throw new Exception($"Cannot initialize interoperability feature without -{MultisigWalletContractAddressKey} specified.");
 
