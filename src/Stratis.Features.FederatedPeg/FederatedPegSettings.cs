@@ -138,7 +138,7 @@ namespace Stratis.Features.FederatedPeg
 
             this.MinimumConfirmationsSmallDeposits = configReader.GetOrDefault(MinimumConfirmationsSmallDepositsParam, 25);
             this.MinimumConfirmationsNormalDeposits = configReader.GetOrDefault(MinimumConfirmationsNormalDepositsParam, 80);
-            this.MinimumConfirmationsLargeDeposits = 20; //(int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
+            this.MinimumConfirmationsLargeDeposits = 10; //(int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsConversionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
