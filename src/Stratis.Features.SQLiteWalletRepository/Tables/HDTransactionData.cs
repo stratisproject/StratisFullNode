@@ -231,7 +231,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
-        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId)
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, bool forSmartContracts = false)
         {
             string strLimit = DBParameter.Create(limit);
             string strOffset = DBParameter.Create(offset);
@@ -242,7 +242,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             var result = conn.Query<FlattenedHistoryItem>($@"
 
             -- Interwoven receives and spends
-SELECT * FROM
+            SELECT * FROM
             (
               -- Find all receives
               SELECT
@@ -293,7 +293,10 @@ SELECT * FROM
                     		SELECT p2.SpendTxTime
                     		,      p2.SpendTxId
                     		,      p2.SpendScriptPubKey
-                    		,      SUM(p2.SpendValue) SendValue
+                    		,      SUM(p2.SpendValue) SendValue{(!forSmartContracts ? "" : $@"
+                            JOIN   (SELECT DISTINCT p.SpendTxTime, p.SpendTxId FROM HDPayment p WHERE SpendScriptPubKey >= 'c0' AND SpendScriptPubKey < 'c2') p1
+                            ON     p1.SpendTxTime = td.SpendTxTime
+                            AND    p1.SpendTxId = td.SpendTxId")}
                     		FROM   (SELECT DISTINCT SpendTxTime, SpendTxId, SpendIndex, SpendValue, SpendScriptPubKey FROM HDPayment WHERE SpendIsChange = 0) p2
                     		LEFT   JOIN HDAddress a
                     		ON     a.WalletId = {strWalletId} -- That do not spend back to the same wallet

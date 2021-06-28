@@ -1504,13 +1504,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null)
+        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null, bool forSmartContracts = false)
         {
             Wallet wallet = account.AccountRoot.Wallet;
             WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId, forSmartContracts);
 
             // Filter ColdstakeUtxos
             result = result.Where(r =>

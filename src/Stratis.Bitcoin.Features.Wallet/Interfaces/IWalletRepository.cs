@@ -189,7 +189,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="offset">Offset the result set start point by this amount of records (used with paging).</param>
         /// <param name="txId">Optional transaction filter.</param>
         /// <returns>A history of all transactions in the wallet.</returns>
-        AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null);
+        AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null, bool forSmartContracts = false);
 
         /// <summary>
         /// Allows an unconfirmed transaction to be removed.

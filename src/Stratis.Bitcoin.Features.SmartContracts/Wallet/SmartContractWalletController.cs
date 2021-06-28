@@ -173,7 +173,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 HdAccount account = this.walletManager.GetAccounts(request.WalletName).First();
 
                 // Get a list of all the transactions found in an account (or in a wallet if no account is specified), with the addresses associated with them.
-                IEnumerable<AccountHistory> accountsHistory = this.walletManager.GetHistory(request.WalletName, account.Name, null);
+                IEnumerable<AccountHistory> accountsHistory = this.walletManager.GetHistory(request.WalletName, account.Name, null, forSmartContracts: true);
 
                 // Wallet manager returns only 1 when an account name is specified.
                 AccountHistory accountHistory = accountsHistory.First();
