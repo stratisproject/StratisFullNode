@@ -397,7 +397,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     // Check the wallet history.
                     Wallet wallet = repo.GetWallet(account.WalletName);
                     HdAccount hdAccount = repo.GetAccounts(wallet, account.AccountName).First();
-                    AccountHistory accountHistory = repo.GetHistory(hdAccount, 10, 0);
+                    AccountHistory accountHistory = repo.GetHistory(hdAccount, null, 10, 0);
                     List<FlattenedHistoryItem> history = accountHistory.History.ToList();
                     Assert.Equal(3, history.Count);
 
@@ -408,7 +408,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     Assert.Equal(Money.COIN * 30, history[2].Amount);
 
                     // Looking at the spending tx we see 90 coins sent out and 9 coins sent to internal change address.
-                    accountHistory = repo.GetHistory(hdAccount, 10, 0, history[0].Id);
+                    accountHistory = repo.GetHistory(hdAccount, null, 10, 0, history[0].Id);
                     List<FlattenedHistoryItemPayment> payments = accountHistory.History.First().Payments.Where(p => !p.IsChange).ToList();
                     List<FlattenedHistoryItemPayment> change = accountHistory.History.First().Payments.Where(p => p.IsChange).ToList();
                     Assert.Single(payments);
@@ -459,7 +459,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tests
                     Assert.Equal(Money.COIN * 70, (long)outputs1[1].Transaction.Amount);
 
                     // Check the wallet history.
-                    AccountHistory accountHistories2 = repo.GetHistory(hdAccount, 10, 0);
+                    AccountHistory accountHistories2 = repo.GetHistory(hdAccount, null, 10, 0);
                     List<FlattenedHistoryItem> history2 = accountHistories2.History.ToList();
                     Assert.Equal(2, history2.Count);
                     Assert.DoesNotContain(history2, h => h.Type == (int)TransactionItemType.Send);

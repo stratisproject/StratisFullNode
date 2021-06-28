@@ -770,7 +770,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             string walletName = "myWallet";
             var mockWalletManager = this.ConfigureMock<IWalletManager>(mock =>
-                mock.Setup(w => w.GetHistory("myWallet", WalletManager.DefaultAccount, null, 100, 0))
+                mock.Setup(w => w.GetHistory("myWallet", WalletManager.DefaultAccount, null, null, 100, 0))
                     .Throws(new InvalidOperationException("Issue retrieving wallets.")));
             mockWalletManager.Setup(w => w.GetWallet(walletName)).Returns(new Wallet());
 

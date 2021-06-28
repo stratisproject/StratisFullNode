@@ -264,7 +264,7 @@ SELECT * FROM
                     (
                         SELECT ttp.Value
                         FROM HDPayment p
-                        INNER JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = {strWalletId} AND ttp.AccountIndex = {strAccountIndex}
+                        INNER JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = {strWalletId} AND ttp.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND   ttp.Address = {strAddress}")}
                         WHERE p.SpendTxId = t.OutputTxId AND p.SpendIsChange = 0
                         LIMIT 1
                     ))
@@ -275,7 +275,7 @@ SELECT * FROM
                 t.OutputBlockHeight as BlockHeight
               FROM 
                 HDTransactionData AS t
-              WHERE t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((strAddress == null) ? "" : $@"
+              WHERE t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@"
               AND   t.Address = {strAddress}")}
               GROUP BY t.OutputTxId
             UNION ALL
@@ -316,7 +316,7 @@ SELECT * FROM
                     		,		SpendBlockHeight
                     		FROM	HDTransactionData
                     		WHERE   WalletId = {strWalletId}
-                    		AND     AccountIndex = {strAccountIndex}{((strAddress == null) ? "" : $@"
+                    		AND     AccountIndex = {strAccountIndex}{((address == null) ? "" : $@"
                             AND     Address = {strAddress}")}
                     		AND     SpendTxId IS NOT NULL
                             AND     SpendTxIsCoinbase = 0
