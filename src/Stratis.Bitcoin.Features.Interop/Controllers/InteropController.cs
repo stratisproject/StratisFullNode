@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Features.Interop.Models;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
@@ -18,13 +19,16 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly ICoordinationManager coordinationManager;
         private readonly ILogger logger;
+        private readonly Network network;
 
         public InteropController(
             IConversionRequestRepository conversionRequestRepository,
-            ICoordinationManager coordinationManager)
+            ICoordinationManager coordinationManager,
+            Network network)
         {
             this.conversionRequestRepository = conversionRequestRepository;
             this.coordinationManager = coordinationManager;
+            this.network = network;
 
             this.logger = LogManager.GetCurrentClassLogger();
         }
@@ -101,6 +105,22 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 this.logger.Error("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
+        }
+
+        [Route("requests/delete")]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DeleteConversionRequests()
+        {
+            if (this.network.IsTest() || this.network.IsRegTest())
+            {
+                var result = this.conversionRequestRepository.DeleteConversionRequests();
+                return this.Json($"{result} conversion requests has been deleted.");
+            }
+
+            return this.Json($"Deleting conversion requests is only available on test networks.");
         }
     }
 }

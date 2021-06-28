@@ -12,6 +12,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
     public interface IConversionRequestKeyValueStore : IKeyValueRepository
     {
         List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed);
+
+        void Delete(string key);
     }
 
     public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
@@ -126,6 +128,12 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void Dispose()
         {
             this.leveldb.Dispose();
+        }
+
+        public void Delete(string key)
+        {
+            byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+            this.leveldb.Delete(keyBytes);
         }
     }
 }

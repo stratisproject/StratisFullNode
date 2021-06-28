@@ -17,13 +17,24 @@ namespace Stratis.Features.FederatedPeg.Conversion
 
         /// <summary>Retrieves all burn requests.</summary>
         List<ConversionRequest> GetAllBurn(bool onlyUnprocessed);
+
+        /// <summary>
+        /// Deletes a particular conversion request.
+        /// </summary>
+        void DeleteConversionRequest(string requestId);
+
+        /// <summary>
+        /// Deletes all current unprocessed conversion requests.
+        /// </summary>
+        /// <returns>The amount unprocessed conversion requests that has been deleted.</returns>
+        int DeleteConversionRequests();
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
     {
         private IConversionRequestKeyValueStore KeyValueStore { get; }
 
-        private readonly NLog.ILogger logger;
+        private readonly ILogger logger;
 
         public ConversionRequestRepository(IConversionRequestKeyValueStore conversionRequestKeyValueStore)
         {
@@ -62,6 +73,25 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.logger.Debug($"Retrieving all burn requests from store, {nameof(onlyUnprocessed)}={onlyUnprocessed}");
 
             return this.KeyValueStore.GetAll(ConversionRequestType.Burn, onlyUnprocessed);
+        }
+
+        /// <inheritdoc />
+        public int DeleteConversionRequests()
+        {
+            List<ConversionRequest> result = this.KeyValueStore.GetAll(ConversionRequestType.Mint, true);
+
+            foreach (ConversionRequest request in result)
+            {
+                this.KeyValueStore.Delete(request.RequestId);
+            }
+
+            return result.Count;
+        }
+
+        /// <inheritdoc />
+        public void DeleteConversionRequest(string requestId)
+        {
+            this.KeyValueStore.Delete(requestId);
         }
     }
 }
