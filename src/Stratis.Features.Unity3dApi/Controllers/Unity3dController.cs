@@ -456,7 +456,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult GetReceiptAPI([FromQuery] string txHash)
+        public ReceiptResponse GetReceiptAPI([FromQuery] string txHash)
         {
             ReceiptResponse receiptResponse;
             uint256 txHashNum = new uint256(txHash);
@@ -482,7 +482,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
             }
             
-            return this.Json(receiptResponse);
+            return receiptResponse;
         }
 
 
@@ -506,36 +506,22 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
+        public LocalExecutionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
         {
-            if (!this.ModelState.IsValid)
-                return ModelStateErrors.BuildErrorResponse(this.ModelState);
-
             // Rewrite the method name to a property name
             this.RewritePropertyGetterName(request);
 
-            try
-            {
-                ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
+            ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
 
-                var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+            var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
 
-                ILocalExecutionResult result = this.localExecutor.Execute(
-                    height,
-                    request.Sender?.ToUint160(this.network) ?? new uint160(),
-                    string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
-                    txData);
+            ILocalExecutionResult result = this.localExecutor.Execute(
+                height,
+                request.Sender?.ToUint160(this.network) ?? new uint160(),
+                string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
+                txData);
 
-                return this.Json(result, new JsonSerializerSettings
-                {
-                    ContractResolver = new ContractParametersContractResolver(this.network)
-                });
-            }
-            catch (MethodParameterStringSerializerException e)
-            {
-                return this.Json(ErrorHelpers.BuildErrorResponse(HttpStatusCode.InternalServerError, e.Message,
-                    "Error deserializing method parameters"));
-            }
+            return result as LocalExecutionResult;
         }
 
 
