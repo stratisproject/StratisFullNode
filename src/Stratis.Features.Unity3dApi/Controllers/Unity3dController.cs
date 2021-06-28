@@ -445,10 +445,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <summary>
         /// Gets a smart contract transaction receipt. Receipts contain information about how a smart contract transaction was executed.
         /// This includes the value returned from a smart contract call and how much gas was used.  
-        /// </summary>
-        /// 
-        /// <param name="txHash">A hash of the smart contract transaction (the transaction ID).</param>
-        /// 
+        /// </summary> 
+        /// <param name="txHash">A hash of the smart contract transaction (the transaction ID).</param> 
         /// <returns>The receipt for the smart contract.</returns> 
         /// <response code="200">Returns transaction receipt</response>
         /// <response code="400">Transaction not found</response>
@@ -463,9 +461,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             Receipt receipt = this.receiptRepository.Retrieve(txHashNum);
 
             if (receipt == null)
-            {
                 return null;
-            }
 
             uint160 address = receipt.NewContractAddress ?? receipt.To;
 
@@ -476,7 +472,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
             else
             {
                 var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
-
                 List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
 
                 receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
@@ -484,8 +479,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             
             return receiptResponse;
         }
-
-
+        
         /// <summary>
         /// Makes a local call to a method on a smart contract that has been successfully deployed. A transaction 
         /// is not created as the call is never propagated across the network. All persistent data held by the   
@@ -493,10 +487,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// and the actual data is unaffected. Even if an amount of funds are specified to send with the call,
         /// no funds are in fact sent.
         /// The purpose of this function is to query and test methods. 
-        /// </summary>
-        /// 
-        /// <param name="request">An object containing the necessary parameters to build the transaction.</param>
-        /// 
+        /// </summary> 
+        /// <param name="request">An object containing the necessary parameters to build the transaction.</param> 
         /// <results>The result of the local call to the smart contract method.</results>
         /// <response code="200">Returns call response</response>
         /// <response code="400">Invalid request</response>
@@ -513,17 +505,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
 
-            var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+            ulong height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
 
-            ILocalExecutionResult result = this.localExecutor.Execute(
-                height,
-                request.Sender?.ToUint160(this.network) ?? new uint160(),
-                string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
-                txData);
+            ILocalExecutionResult result = this.localExecutor.Execute(height, request.Sender?.ToUint160(this.network) ?? new uint160(),
+                string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0, txData);
 
             return result as LocalExecutionResult;
         }
-
 
         /// <summary>
         /// If the call is to a property, rewrites the method name to the getter method's name.
@@ -546,9 +534,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 string propertyGetterName = contractModule.GetPropertyGetterMethodName(contractType, request.MethodName);
 
                 if (propertyGetterName != null)
-                {
                     request.MethodName = propertyGetterName;
-                }
             }
         }
     }
