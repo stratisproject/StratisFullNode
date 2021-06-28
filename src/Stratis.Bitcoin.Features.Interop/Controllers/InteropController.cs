@@ -6,6 +6,7 @@ using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Features.Interop.Models;
 using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 
@@ -13,21 +14,22 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
     [ApiVersion("1")]
     [Route("api/[controller]")]
-    public class InteropController : Controller
+    public sealed class InteropController : Controller
     {
-        private readonly Network network;
-
         private readonly IConversionRequestRepository conversionRequestRepository;
-
         private readonly ICoordinationManager coordinationManager;
-
         private readonly ILogger logger;
+        private readonly InteropSettings interopSettings;
 
-        public InteropController(Network network, IConversionRequestRepository conversionRequestRepository, ICoordinationManager coordinationManager)
+        public InteropController(
+            InteropSettings interopSettings,
+            IConversionRequestRepository conversionRequestRepository,
+            ICoordinationManager coordinationManager)
         {
-            this.network = network;
             this.conversionRequestRepository = conversionRequestRepository;
             this.coordinationManager = coordinationManager;
+            this.interopSettings = interopSettings;
+
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -97,6 +99,28 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 response.ReceivedVotes = receivedVotes;
 
                 return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("setoriginator")]
+        [HttpPut]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult SetNodeAsOriginator([FromBody] SetNodeAsOriginatorModel model)
+        {
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            try
+            {
+                this.interopSettings.OverrideOriginatorForRequestId = model.RequestId;
+                return this.Json($"This node has been set as originator for '{model.RequestId}'.");
             }
             catch (Exception e)
             {

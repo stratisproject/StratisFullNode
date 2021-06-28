@@ -15,7 +15,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public string InteropContractCirrusAddress { get; set; }
 
         private const string InteropContractCirrusAddressKey = "interopcontractcirrusaddress";
-        
+
         /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
         public string InteropContractETHAddress { get; set; }
 
@@ -63,6 +63,11 @@ namespace Stratis.Bitcoin.Features.Interop
         private const string ETHGasPriceKey = "ethereumgasprice";
 
         public int ETHMultisigWalletQuorum { get; set; }
+
+        /// <summary>
+        /// If this value is set, override this node as the originator for the given request Id.
+        /// </summary>
+        public string OverrideOriginatorForRequestId { get; set; }
 
         private const string ETHMultisigWalletContractQuorumKey = "ethereummultisigwalletquorum";
 

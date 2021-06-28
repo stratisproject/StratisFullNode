@@ -335,9 +335,20 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (multisig.Count == 0)
                     return;
 
-                IFederationMember designatedMember = multisig[request.BlockHeight % multisig.Count];
+                bool originator;
 
-                bool originator = designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
+                IFederationMember designatedMember;
+
+                if (!string.IsNullOrEmpty(this.interopSettings.OverrideOriginatorForRequestId) && this.interopSettings.OverrideOriginatorForRequestId == request.RequestId)
+                {
+                    designatedMember = this.federationManager.GetCurrentFederationMember();
+                    originator = true;
+                }
+                else
+                {
+                    designatedMember = multisig[request.BlockHeight % multisig.Count];
+                    originator = designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
+                }
 
                 // Regardless of whether we are the originator, this is a good time to check the multisig's remaining reserve
                 // token balance. It is necessary to maintain a reserve as mint transactions are many times more expensive than
@@ -351,14 +362,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
                 if (amountInWei >= balanceRemaining)
-                {
                     await this.PerformReplenishmentAsync(request, amountInWei, originator).ConfigureAwait(false);
-                }
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
                 switch (request.RequestStatus)
                 {
-                    case (ConversionRequestStatus.Unprocessed):
+                    case ConversionRequestStatus.Unprocessed:
                         {
                             if (originator)
                             {
@@ -377,7 +386,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             break;
                         }
 
-                    case (ConversionRequestStatus.OriginatorNotSubmitted):
+                    case ConversionRequestStatus.OriginatorNotSubmitted:
                         {
                             this.logger.LogInformation("Conversion not yet submitted, checking which gas price to use.");
 
@@ -407,7 +416,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             break;
                         }
 
-                    case (ConversionRequestStatus.OriginatorSubmitted):
+                    case ConversionRequestStatus.OriginatorSubmitted:
                         {
                             // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
                             // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
@@ -470,7 +479,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             break;
                         }
-                    case (ConversionRequestStatus.NotOriginator):
+                    case ConversionRequestStatus.NotOriginator:
                         {
                             // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
                             // Initially there will not be a quorum of nodes that agree on the transactionId.
