@@ -361,8 +361,8 @@ namespace Stratis.Bitcoin.Features.Interop
                 BigInteger amountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
 
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
-                if (amountInWei >= balanceRemaining)
-                    await this.PerformReplenishmentAsync(request, amountInWei, originator).ConfigureAwait(false);
+                //if (amountInWei >= balanceRemaining)
+                await this.PerformReplenishmentAsync(request, amountInWei, originator).ConfigureAwait(false);
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
                 switch (request.RequestStatus)
@@ -594,6 +594,8 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 agreedTransactionId = this.coordinationManager.GetAgreedTransactionId(mintRequestId, this.interopSettings.ETHMultisigWalletQuorum);
 
+                this.logger.LogDebug("Agreed transaction id '{0}'.", agreedTransactionId);
+
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     break;
 
@@ -602,7 +604,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Just re-broadcast.
                 if (originator)
+                {
+                    this.logger.LogDebug("Orignator broadcasting id {0}.", mintTransactionId);
+
                     await this.BroadcastCoordinationAsync(mintRequestId, mintTransactionId).ConfigureAwait(false);
+                }
                 else
                 {
                     if (ourTransactionId == BigInteger.MinusOne)
