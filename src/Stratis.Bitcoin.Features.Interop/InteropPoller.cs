@@ -335,14 +335,17 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (multisig.Count == 0)
                     return;
 
-                bool originator;
+                bool originator = false;
 
-                IFederationMember designatedMember;
+                IFederationMember designatedMember = null;
 
-                if (!string.IsNullOrEmpty(this.interopSettings.OverrideOriginatorForRequestId) && this.interopSettings.OverrideOriginatorForRequestId == request.RequestId)
+                if (this.network.IsTest() || this.network.IsRegTest())
                 {
-                    designatedMember = this.federationManager.GetCurrentFederationMember();
-                    originator = true;
+                    if (this.interopSettings.OverrideOriginator)
+                    {
+                        designatedMember = this.federationManager.GetCurrentFederationMember();
+                        originator = true;
+                    }
                 }
                 else
                 {
@@ -378,7 +381,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             }
                             else
                             {
-                                this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember.PubKey.ToHex());
+                                this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember == null ? "N/A (test)" : designatedMember.PubKey?.ToHex());
 
                                 request.RequestStatus = ConversionRequestStatus.NotOriginator;
                             }

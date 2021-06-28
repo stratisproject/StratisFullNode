@@ -65,9 +65,9 @@ namespace Stratis.Bitcoin.Features.Interop
         public int ETHMultisigWalletQuorum { get; set; }
 
         /// <summary>
-        /// If this value is set, override this node as the originator for the given request Id.
+        /// If this value is set, override this node as the originator.
         /// </summary>
-        public string OverrideOriginatorForRequestId { get; set; }
+        public bool OverrideOriginator { get; set; }
 
         private const string ETHMultisigWalletContractQuorumKey = "ethereummultisigwalletquorum";
 
@@ -94,7 +94,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.InteropEnabled)
                 return;
 
-            this.OverrideOriginatorForRequestId = nodeSettings.ConfigReader.GetOrDefault("overrideoriginatorforrequestid", "");
+            this.OverrideOriginator = nodeSettings.ConfigReader.GetOrDefault("overrideoriginator", false);
 
             if (string.IsNullOrWhiteSpace(this.ETHMultisigWalletAddress))
                 throw new Exception($"Cannot initialize interoperability feature without -{MultisigWalletContractAddressKey} specified.");
