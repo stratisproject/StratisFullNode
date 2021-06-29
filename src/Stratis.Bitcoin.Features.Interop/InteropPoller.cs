@@ -23,13 +23,13 @@ using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
-    public class InteropPoller : IDisposable
+    public sealed class InteropPoller : IDisposable
     {
         /// <summary>1x10^24 wei = 1 000 000 tokens</summary>
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
 
         /// <summary>The number of blocks deep a submission transaction needs to be before it should start getting confirmed by the non-originating nodes.</summary>
-        public BigInteger SubmissionConfirmationThreshold = 6;
+        public readonly BigInteger SubmissionConfirmationThreshold = 6;
 
         private readonly InteropSettings interopSettings;
         private readonly IETHClient ETHClientBase;
@@ -419,6 +419,9 @@ namespace Stratis.Bitcoin.Features.Interop
                                 // TODO: Submitting the transaction failed, this needs to be handled
                             }
 
+                            if (!await WaitForTransactionToBeConfirmedAsync(identifiers).ConfigureAwait(false))
+                                return;
+
                             this.logger.LogInformation("Originator submitted transaction to multisig in transaction {0} and was allocated transactionId {1}.", identifiers.TransactionHash, transactionId);
 
                             this.coordinationManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
@@ -556,6 +559,29 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
+        /// <summary>
+        /// Wait for the submission to be well-confirmed before initial vote & broadcast.
+        /// </summary>
+        /// <param name="identifiers">The transaction information to check.</param>
+        /// <returns><c>True if it succeeded</c>, <c>false</c> if the node is stopping.</returns>
+        private async Task<bool> WaitForTransactionToBeConfirmedAsync(MultisigTransactionIdentifiers identifiers)
+        {
+            while (true)
+            {
+                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                    return false;
+
+                this.logger.LogInformation("Waiting for the submission from the originator to be well-confirmed before broadcasting.");
+
+                if (await this.ETHClientBase.GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false) >= this.SubmissionConfirmationThreshold)
+                    break;
+
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            }
+
+            return true;
+        }
+
         private async Task PerformReplenishmentAsync(ConversionRequest request, BigInteger amountInWei, BigInteger startBalance, bool originator)
         {
             // We need a 'request ID' for the minting that is a) different from the current request ID and b) always unique so that transaction ID votes are unique to this minting.
@@ -598,11 +624,8 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     mintTransactionId = identifiers.TransactionId;
 
-                    // Wait for the submission to be well-confirmed before initial vote & broadcast.
-                    do
-                    {
-                        await Task.Delay(2000).ConfigureAwait(false);
-                    } while (await this.ETHClientBase.GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false) < this.SubmissionConfirmationThreshold);
+                    if (!await WaitForTransactionToBeConfirmedAsync(identifiers).ConfigureAwait(false))
+                        return;
                 }
 
                 this.logger.LogInformation("Originator adding its vote for mint transaction id: {0}", mintTransactionId);
@@ -623,12 +646,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
             while (true)
             {
+                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                    return;
+
                 agreedTransactionId = this.coordinationManager.GetAgreedTransactionId(mintRequestId, this.interopSettings.ETHMultisigWalletQuorum);
 
                 this.logger.LogDebug("Agreed transaction id '{0}'.", agreedTransactionId);
-
-                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
-                    break;
 
                 if (agreedTransactionId != BigInteger.MinusOne)
                     break;
@@ -658,7 +681,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     }
                 }
 
-                await Task.Delay(2000).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
             }
 
             this.logger.LogInformation("Agreed transaction ID for replenishment transaction: {0}", agreedTransactionId);
@@ -685,19 +708,22 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 BigInteger confirmationCount = await this.ETHClientBase.GetMultisigConfirmationCountAsync(agreedTransactionId).ConfigureAwait(false);
 
+                this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction {0}, current count {1}.", mintRequestId, confirmationCount);
+
                 if (confirmationCount >= this.interopSettings.ETHMultisigWalletQuorum)
                     break;
 
-                this.logger.LogInformation("Waiting for confirmation of mint replenishment transaction {0}, current count {1}", mintRequestId, confirmationCount);
-
                 // TODO: Maybe this should eventually age out?
-                await Task.Delay(5000).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
             }
 
             this.logger.LogInformation("Mint replenishment transaction {0} fully confirmed.", mintTransactionId);
 
             while (true)
             {
+                if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
+                    return;
+
                 BigInteger balance = await this.ETHClientBase.GetErc20BalanceAsync(this.interopSettings.ETHMultisigWalletAddress).ConfigureAwait(false);
 
                 if (balance > startBalance)
