@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -51,6 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop conversionLoop;
 
         private bool firstPoll;
+        private bool replenishmentPerformed;
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
@@ -367,8 +369,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 BigInteger conversionAmountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
 
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
-                //if (conversionAmountInWei >= balanceRemaining)
-                await this.PerformReplenishmentAsync(request, conversionAmountInWei, balanceRemaining, originator).ConfigureAwait(false);
+                // if (conversionAmountInWei >= balanceRemaining)
+                if (!this.replenishmentPerformed)
+                    await this.PerformReplenishmentAsync(request, conversionAmountInWei, balanceRemaining, originator).ConfigureAwait(false);
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
                 switch (request.RequestStatus)
@@ -563,15 +566,16 @@ namespace Stratis.Bitcoin.Features.Interop
         /// Wait for the submission to be well-confirmed before initial vote & broadcast.
         /// </summary>
         /// <param name="identifiers">The transaction information to check.</param>
+        /// <param name="caller">The caller that is waiting on the submission transaction's confirmation count.</param>
         /// <returns><c>True if it succeeded</c>, <c>false</c> if the node is stopping.</returns>
-        private async Task<bool> WaitForTransactionToBeConfirmedAsync(MultisigTransactionIdentifiers identifiers)
+        private async Task<bool> WaitForTransactionToBeConfirmedAsync(MultisigTransactionIdentifiers identifiers, [CallerMemberName] string caller = null)
         {
             while (true)
             {
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     return false;
 
-                this.logger.LogInformation("Waiting for the submission from the originator to be well-confirmed before broadcasting.");
+                this.logger.LogInformation($"[{caller}] Waiting for the submission from the originator to be well-confirmed before broadcasting.");
 
                 if (await this.ETHClientBase.GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false) >= this.SubmissionConfirmationThreshold)
                     break;
@@ -729,6 +733,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (balance > startBalance)
                 {
                     this.logger.LogInformation("The contract's balance has been replenished, new balance {0}.", balance);
+                    this.replenishmentPerformed = true;
                     break;
                 }
                 else
