@@ -165,9 +165,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             do
             {
-                if (conversionRequestSyncStart.AddMinutes(3) <= this.dateTimeProvider.GetUtcNow())
+                if (conversionRequestSyncStart.AddMinutes(2) <= this.dateTimeProvider.GetUtcNow())
                 {
-                    this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 3 minutes... ignoring.");
+                    this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 2 minutes... ignoring.");
                     interopConversionRequestFee.State = InteropFeeState.FailRevertToFallback;
                     this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequestFee);
                     break;
@@ -379,7 +379,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             if (feeAmount < (currentAverage - (currentAverage * FeeProposalRange)) ||
                 feeAmount > (currentAverage + (currentAverage * FeeProposalRange)))
             {
-                this.logger.Warn($"Conversion request '{requestId}' received from pubkey '{pubKey}' with amount {feeAmount} is out of range of the current average of {currentAverage}, skipping.");
+                this.logger.Debug($"Conversion request '{requestId}' received from pubkey '{pubKey}' with amount {feeAmount} is out of range of the current average of {currentAverage}, skipping.");
                 return false;
             }
 
