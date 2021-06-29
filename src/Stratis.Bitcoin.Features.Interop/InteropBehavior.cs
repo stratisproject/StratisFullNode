@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Features.Interop
             try
             {
                 // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ETHClient.GetConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+                confirmationCount = await this.ETHClient.GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
             }
             catch (Exception)
             {

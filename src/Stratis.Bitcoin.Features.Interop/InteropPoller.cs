@@ -28,6 +28,9 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <summary>1x10^24 wei = 1 000 000 tokens</summary>
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
 
+        /// <summary>The number of blocks deep a submission transaction needs to be before it should start getting confirmed by the non-originating nodes.</summary>
+        public BigInteger SubmissionConfirmationThreshold = 6;
+
         private readonly InteropSettings interopSettings;
         private readonly IETHClient ETHClientBase;
         private readonly Network network;
@@ -408,9 +411,15 @@ namespace Stratis.Bitcoin.Features.Interop
                             // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
                             // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
                             // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                            BigInteger transactionId = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData, gasPrice).ConfigureAwait(false);
+                            MultisigTransactionIdentifiers identifiers = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, abiData, gasPrice).ConfigureAwait(false);
+                            BigInteger transactionId = identifiers.TransactionId;
 
-                            this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
+                            if (transactionId == BigInteger.MinusOne)
+                            {
+                                // TODO: Submitting the transaction failed, this needs to be handled
+                            }
+
+                            this.logger.LogInformation("Originator submitted transaction to multisig in transaction {0} and was allocated transactionId {1}.", identifiers.TransactionHash, transactionId);
 
                             this.coordinationManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
 
@@ -454,7 +463,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
                                 // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
-                                BigInteger confirmationCount = await this.ETHClientBase.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
+                                BigInteger confirmationCount = await this.ETHClientBase.GetMultisigConfirmationCountAsync(transactionId3).ConfigureAwait(false);
 
                                 if (confirmationCount >= this.interopSettings.ETHMultisigWalletQuorum)
                                 {
@@ -493,6 +502,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             if (agreedUponId != BigInteger.MinusOne)
                             {
+                                // TODO: Should we check the number of confirmations for the submission transaction here too?
+
                                 this.logger.LogInformation("Quorum reached for conversion transaction {0} with transactionId {1}, submitting confirmation to contract.", request.RequestId, agreedUponId);
 
                                 int gasPrice = this.externalApiPoller.GetGasPrice();
@@ -559,7 +570,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 mintRequestId = hs.GetHash().ToString();
             }
 
-            // Only the originator initially knows what value this gets set to after submission until voting is concluded.
+            // Only the originator initially knows what value this gets set to after submission, until voting is concluded.
             BigInteger mintTransactionId = BigInteger.MinusOne;
 
             if (originator)
@@ -577,9 +588,24 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Originator will use a gas price of {0} to submit the mint replenishment transaction.", gasPrice);
 
-                mintTransactionId = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData, gasPrice).ConfigureAwait(false);
+                MultisigTransactionIdentifiers identifiers = await this.ETHClientBase.SubmitTransactionAsync(request.DestinationAddress, 0, mintData, gasPrice).ConfigureAwait(false);
 
-                this.logger.LogInformation("Originator adding its vote for mint transation id: {0}", mintTransactionId);
+                if (identifiers.TransactionId == BigInteger.MinusOne)
+                {
+                    // TODO: Submission failed, what should we do here? Note that retrying could incur additional transaction fees depending on the nature of the failure
+                }
+                else
+                {
+                    mintTransactionId = identifiers.TransactionId;
+
+                    // Wait for the submission to be well-confirmed before initial vote & broadcast.
+                    do
+                    {
+                        await Task.Delay(2000).ConfigureAwait(false);
+                    } while (await this.ETHClientBase.GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false) < this.SubmissionConfirmationThreshold);
+                }
+
+                this.logger.LogInformation("Originator adding its vote for mint transaction id: {0}", mintTransactionId);
 
                 this.coordinationManager.AddVote(mintRequestId, mintTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
@@ -623,6 +649,8 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     if (ourTransactionId != BigInteger.MinusOne)
                     {
+                        // Wait for the submission of the transaction to be confirmed on the actual chain.
+
                         this.coordinationManager.AddVote(mintRequestId, ourTransactionId, this.federationManager.CurrentFederationKey.PubKey);
 
                         // Broadcast our vote.
@@ -655,7 +683,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     return;
 
-                BigInteger confirmationCount = await this.ETHClientBase.GetConfirmationCountAsync(agreedTransactionId).ConfigureAwait(false);
+                BigInteger confirmationCount = await this.ETHClientBase.GetMultisigConfirmationCountAsync(agreedTransactionId).ConfigureAwait(false);
 
                 if (confirmationCount >= this.interopSettings.ETHMultisigWalletQuorum)
                     break;
