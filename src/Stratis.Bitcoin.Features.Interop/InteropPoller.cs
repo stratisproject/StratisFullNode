@@ -588,7 +588,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Originator will use a gas price of {0} to submit the mint replenishment transaction.", gasPrice);
 
-                MultisigTransactionIdentifiers identifiers = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHMultisigWalletAddress, 0, mintData, gasPrice).ConfigureAwait(false);
+                MultisigTransactionIdentifiers identifiers = await this.ETHClientBase.SubmitTransactionAsync(this.interopSettings.ETHWrappedStraxContractAddress, 0, mintData, gasPrice).ConfigureAwait(false);
 
                 if (identifiers.TransactionId == BigInteger.MinusOne)
                 {
