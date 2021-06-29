@@ -315,22 +315,19 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	GROUP   BY WalletId, AccountIndex, SpendTxTime, SpendTxId
                     	) t
                 ON		t.SpendTxTime = p.SpendTxTime 
-                AND 	t.SpendTxId = p.SpendTxId
-                ORDER 	BY p.SpendTxTime DESC";
+                AND 	t.SpendTxId = p.SpendTxId";
             
-            var result = conn.Query<FlattenedHistoryItem>($@"
+            var query = $@"
             -- Interwoven receives and spends
-            SELECT * FROM
-            (
-            {receives}{spends}
+            SELECT  * 
+            FROM    ({receives}{spends}
             ) as T
-            WHERE
-                T.Type IS NOT NULL {((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
-            ORDER BY
-                T.TimeStamp DESC
-            LIMIT {strLimit} OFFSET {strOffset}");
+            WHERE   T.Type IS NOT NULL {((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
+            ORDER   BY T.TimeStamp DESC
+            LIMIT   {strLimit} 
+            OFFSET  {strOffset}";
 
-            return result;
+            return conn.Query<FlattenedHistoryItem>(query);
         }
     }
 }
