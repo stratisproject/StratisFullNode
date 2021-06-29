@@ -575,9 +575,10 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (this.nodeLifetime.ApplicationStopping.IsCancellationRequested)
                     return false;
 
-                this.logger.LogInformation($"[{caller}] Waiting for the submission from the originator to be well-confirmed before broadcasting.");
+                BigInteger confirmationCount = await this.ETHClientBase.GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false);
+                this.logger.LogInformation($"[{caller}] Waiting for the submission from the originator to be confirmed before broadcasting, transaction id {identifiers.TransactionHash}, current confirmations: {confirmationCount}.");
 
-                if (await this.ETHClientBase.GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false) >= this.SubmissionConfirmationThreshold)
+                if (confirmationCount >= this.SubmissionConfirmationThreshold)
                     break;
 
                 await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
