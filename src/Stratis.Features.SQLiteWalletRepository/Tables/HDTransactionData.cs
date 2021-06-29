@@ -231,12 +231,13 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
-        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, bool forSmartContracts = false)
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false)
         {
             string strLimit = DBParameter.Create(limit);
             string strOffset = DBParameter.Create(offset);
             string strWalletId = DBParameter.Create(walletId);
             string strAccountIndex = DBParameter.Create(accountIndex);
+            string strAddress = DBParameter.Create(address);
             string strTransactionId = DBParameter.Create(txId);
 
             var result = conn.Query<FlattenedHistoryItem>($@"
@@ -273,7 +274,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                 t.OutputBlockHeight as BlockHeight
               FROM 
                 HDTransactionData AS t
-              WHERE t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}
+              WHERE t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = '{strAddress}'")}
               GROUP BY t.OutputTxId
             UNION ALL
                 SELECT * FROM 
@@ -316,7 +317,8 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     		,		SpendBlockHeight
                     		FROM	HDTransactionData
                     		WHERE   WalletId = {strWalletId}
-                    		AND     AccountIndex = {strAccountIndex}
+                    		AND     AccountIndex = {strAccountIndex}{((address == null) ? "" : $@"
+                            AND     Address = '{strAddress}'")}
                     		AND     SpendTxId IS NOT NULL
                             AND     SpendTxIsCoinbase = 0
                     		GROUP   BY WalletId, AccountIndex, SpendTxTime, SpendTxId
