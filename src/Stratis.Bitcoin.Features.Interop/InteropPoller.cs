@@ -52,7 +52,6 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop conversionLoop;
 
         private bool firstPoll;
-        private bool replenishmentPerformed;
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
@@ -369,8 +368,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 BigInteger conversionAmountInWei = this.CoinsToWei(Money.Satoshis(request.Amount));
 
                 // We expect that every node will eventually enter this area of the code when the reserve balance is depleted.
-                // if (conversionAmountInWei >= balanceRemaining)
-                if (!this.replenishmentPerformed)
+                if (conversionAmountInWei >= balanceRemaining)
                     await this.PerformReplenishmentAsync(request, conversionAmountInWei, balanceRemaining, originator).ConfigureAwait(false);
 
                 // TODO: Perhaps the transactionId coordination should actually be done within the multisig contract. This will however increase gas costs for each mint. Maybe a Cirrus contract instead?
@@ -734,7 +732,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (balance > startBalance)
                 {
                     this.logger.LogInformation("The contract's balance has been replenished, new balance {0}.", balance);
-                    this.replenishmentPerformed = true;
                     break;
                 }
                 else
