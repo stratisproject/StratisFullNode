@@ -322,8 +322,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             -- Interwoven receives and spends
             SELECT * FROM
             (
-            {receives}
-            {spends}
+            {receives}{spends}
             ) as T
             WHERE
                 T.Type IS NOT NULL {((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
