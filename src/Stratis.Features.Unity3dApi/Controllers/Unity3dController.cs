@@ -4,9 +4,11 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Controllers.Models;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
@@ -14,11 +16,23 @@ using Stratis.Bitcoin.Features.BlockStore.Controllers;
 using Stratis.Bitcoin.Features.BlockStore.Models;
 using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
+using Stratis.Bitcoin.Features.SmartContracts;
+using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
+using Stratis.Bitcoin.Utilities.ModelStateErrors;
+using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Caching;
+using Stratis.SmartContracts.CLR.Compilation;
+using Stratis.SmartContracts.CLR.Local;
+using Stratis.SmartContracts.CLR.Serialization;
+using Stratis.SmartContracts.Core.Receipts;
+using Stratis.SmartContracts.Core.State;
 
 namespace Stratis.Features.Unity3dApi.Controllers
 {
@@ -45,8 +59,22 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
+        private readonly IContractPrimitiveSerializer primitiveSerializer;
+
+        private readonly IStateRepositoryRoot stateRoot;
+
+        private readonly IContractAssemblyCache contractAssemblyCache;
+
+        private readonly IReceiptRepository receiptRepository;
+
+        private readonly ISmartContractTransactionService smartContractTransactionService;
+
+        private readonly ILocalExecutor localExecutor;
+
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null)
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null,
+            IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null, 
+            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -58,6 +86,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.walletController = Guard.NotNull(walletController, nameof(walletController));
             this.chainIndexer = Guard.NotNull(chainIndexer, nameof(chainIndexer));
             this.stakeChain = stakeChain;
+
+            this.primitiveSerializer = primitiveSerializer;
+            this.stateRoot = stateRoot;
+            this.contractAssemblyCache = contractAssemblyCache;
+            this.receiptRepository = receiptRepository;
+            this.smartContractTransactionService = smartContractTransactionService;
+            this.localExecutor = localExecutor;
         }
 
         /// <summary>
@@ -404,6 +439,102 @@ namespace Stratis.Features.Unity3dApi.Controllers
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return null;
+            }
+        }
+        
+        /// <summary>
+        /// Gets a smart contract transaction receipt. Receipts contain information about how a smart contract transaction was executed.
+        /// This includes the value returned from a smart contract call and how much gas was used.  
+        /// </summary> 
+        /// <param name="txHash">A hash of the smart contract transaction (the transaction ID).</param> 
+        /// <returns>The receipt for the smart contract.</returns> 
+        /// <response code="200">Returns transaction receipt</response>
+        /// <response code="400">Transaction not found</response>
+        [Route("api/[controller]/receipt")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public ReceiptResponse GetReceiptAPI([FromQuery] string txHash)
+        {
+            ReceiptResponse receiptResponse;
+            uint256 txHashNum = new uint256(txHash);
+            Receipt receipt = this.receiptRepository.Retrieve(txHashNum);
+
+            if (receipt == null)
+                return null;
+
+            uint160 address = receipt.NewContractAddress ?? receipt.To;
+
+            if (!receipt.Logs.Any())
+            {
+                receiptResponse = new ReceiptResponse(receipt, new List<LogResponse>(), this.network);
+            }
+            else
+            {
+                var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
+                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
+
+                receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
+            }
+            
+            return receiptResponse;
+        }
+        
+        /// <summary>
+        /// Makes a local call to a method on a smart contract that has been successfully deployed. A transaction 
+        /// is not created as the call is never propagated across the network. All persistent data held by the   
+        /// smart contract is copied before the call is made. Only this copy is altered by the call
+        /// and the actual data is unaffected. Even if an amount of funds are specified to send with the call,
+        /// no funds are in fact sent.
+        /// The purpose of this function is to query and test methods. 
+        /// </summary> 
+        /// <param name="request">An object containing the necessary parameters to build the transaction.</param> 
+        /// <results>The result of the local call to the smart contract method.</results>
+        /// <response code="200">Returns call response</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Unable to deserialize method parameters</response>
+        [Route("api/[controller]/local-call")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public LocalExecutionResult LocalCallSmartContractTransaction([FromBody] LocalCallContractRequest request)
+        {
+            // Rewrite the method name to a property name
+            this.RewritePropertyGetterName(request);
+
+            ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
+
+            ulong height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+
+            ILocalExecutionResult result = this.localExecutor.Execute(height, request.Sender?.ToUint160(this.network) ?? new uint160(),
+                string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0, txData);
+
+            return result as LocalExecutionResult;
+        }
+
+        /// <summary>
+        /// If the call is to a property, rewrites the method name to the getter method's name.
+        /// </summary>
+        private void RewritePropertyGetterName(LocalCallContractRequest request)
+        {
+            // Don't rewrite if there are params
+            if (request.Parameters != null && request.Parameters.Any())
+                return;
+
+            byte[] contractCode = this.stateRoot.GetCode(request.ContractAddress.ToUint160(this.network));
+
+            string contractType = this.stateRoot.GetContractType(request.ContractAddress.ToUint160(this.network));
+
+            Result<IContractModuleDefinition> readResult = ContractDecompiler.GetModuleDefinition(contractCode);
+
+            if (readResult.IsSuccess)
+            {
+                IContractModuleDefinition contractModule = readResult.Value;
+                string propertyGetterName = contractModule.GetPropertyGetterMethodName(contractType, request.MethodName);
+
+                if (propertyGetterName != null)
+                    request.MethodName = propertyGetterName;
             }
         }
     }
