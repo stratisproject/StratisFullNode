@@ -187,7 +187,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    var dynamicFeeActivationBlock = ((PoAConsensusOptions)this.network.Consensus.Options).DynamicFeeActivationBlock;
+                    var dynamicFeeActivationBlock = ((PoAConsensusOptions)this.network.Consensus.Options).ConversionRequestFeeActivationBlock;
                     if (dynamicFeeActivationBlock != 0 && this.chainIndexer.Tip.Height < dynamicFeeActivationBlock)
                     {
                         this.logger.Warn("Conversion transactions '{0}' will not be processed below activation height {1}.", potentialConversionTransaction.Id, dynamicFeeActivationBlock);
