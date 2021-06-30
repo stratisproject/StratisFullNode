@@ -22,21 +22,23 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IFederationManager federationManager;
 
         private readonly IConnectionManager connectionManager;
-        
+
         private readonly InteropPoller interopPoller;
-        
-        private readonly ICoordinationManager coordinationManager;
-        
+
+        private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
+        private readonly IConversionRequestFeeService conversionRequestFeeService;
+
         private readonly IETHClient ethereumClientBase;
 
         private readonly InteropSettings interopSettings;
 
         public InteropFeature(
-            Network network, 
+            Network network,
             IFederationManager federationManager,
             IConnectionManager connectionManager,
             InteropPoller interopPoller,
-            ICoordinationManager coordinationManager, 
+            IConversionRequestCoordinationService conversionRequestCoordinationService,
+            IConversionRequestFeeService conversionRequestFeeService,
             IETHClient ethereumClientBase,
             InteropSettings interopSettings,
             IFullNode fullNode)
@@ -45,7 +47,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.federationManager = federationManager;
             this.connectionManager = connectionManager;
             this.interopPoller = interopPoller;
-            this.coordinationManager = coordinationManager;
+            this.conversionRequestCoordinationService = conversionRequestCoordinationService;
+            this.conversionRequestFeeService = conversionRequestFeeService;
             this.ethereumClientBase = ethereumClientBase;
             this.interopSettings = interopSettings;
 
@@ -57,12 +60,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public override Task InitializeAsync()
         {
-            this.coordinationManager.RegisterConversionRequestQuorum(this.interopSettings.ETHMultisigWalletQuorum);
+            this.conversionRequestCoordinationService.RegisterConversionRequestQuorum(this.interopSettings.ETHMultisigWalletQuorum);
 
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.coordinationManager, this.ethereumClientBase, this.interopSettings));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.ethereumClientBase, this.interopSettings));
 
             return Task.CompletedTask;
         }
@@ -75,6 +78,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
     public static partial class IFullNodeBuilderExtensions
     {
+        /// <summary>
+        /// Adds chain Interoperability to the node.
+        /// </summary>
+        /// <param name="fullNodeBuilder">The full node builder instance.</param>
         public static IFullNodeBuilder AddInteroperability(this IFullNodeBuilder fullNodeBuilder)
         {
             LoggingConfiguration.RegisterFeatureNamespace<InteropFeature>("interop");
@@ -83,9 +90,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 features
                     .AddFeature<InteropFeature>()
                     .FeatureServices(services => services
-                    .AddSingleton<InteropSettings>()
-                    .AddSingleton<IETHClient, ETHClient.ETHClient>()
-                    .AddSingleton<InteropPoller>()
+                        .AddSingleton<InteropSettings>()
+                        .AddSingleton<IETHClient, ETHClient.ETHClient>()
+                        .AddSingleton<InteropPoller>()
                     ));
 
             return fullNodeBuilder;

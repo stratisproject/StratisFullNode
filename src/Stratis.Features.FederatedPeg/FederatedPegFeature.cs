@@ -283,8 +283,9 @@ namespace Stratis.Features.FederatedPeg
                         // The coordination manager only runs on the side chain.
                         if (!isMainChain)
                         {
-                            services.AddSingleton<ICoordinationManager, CoordinationManager>();
-                            services.AddSingleton<IInteropFeeCoordinationKeyValueStore, InteropFeeCoordinationKeyValueStore>();
+                            services.AddSingleton<IConversionRequestCoordinationService, ConversionRequestCoordinationService>();
+                            services.AddSingleton<IConversionRequestFeeService, ConversionRequestFeeService>();
+                            services.AddSingleton<IConversionRequestFeeKeyValueStore, ConversionRequestFeeKeyValueStore>();
                         }
 
                         services.AddSingleton<IMaturedBlocksSyncManager, MaturedBlocksSyncManager>();

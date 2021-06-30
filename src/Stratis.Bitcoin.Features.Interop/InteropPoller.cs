@@ -13,6 +13,7 @@ using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
+using Stratis.Bitcoin.Features.Interop.Exceptions;
 using Stratis.Bitcoin.Features.Interop.Payloads;
 using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Interfaces;
@@ -44,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private readonly IFederationHistory federationHistory;
         private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
         private readonly IConversionRequestRepository conversionRequestRepository;
-        private readonly ICoordinationManager coordinationManager;
+        private readonly IConversionRequestCoordinationService coordinationManager;
         private readonly Network counterChainNetwork;
         private readonly IExternalApiPoller externalApiPoller;
 
@@ -64,7 +65,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederationHistory federationHistory,
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IConversionRequestRepository conversionRequestRepository,
-            ICoordinationManager coordinationManager,
+            IConversionRequestCoordinationService coordinationManager,
             CounterChainNetworkWrapper counterChainNetworkWrapper,
             IExternalApiPoller externalApiPoller)
         {
@@ -301,61 +302,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Processing conversion mint request {0}, status {1}.", request.RequestId, request.RequestStatus);
 
-                // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
-                List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(request.BlockHeight));
-
-                var multisig = new List<CollateralFederationMember>();
-
-                var filtered = new List<PubKey>()
-                {
-                    new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
-                    new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
-                    new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
-                    new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
-                    new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
-                    new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
-                    new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92"),
-                    new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
-                    new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
-                    new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),
-                    new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e")
-                };
-
-                foreach (IFederationMember member in federation)
-                {
-                    if (!(member is CollateralFederationMember collateralMember))
-                        continue;
-
-                    if (!collateralMember.IsMultisigMember)
-                        continue;
-
-                    if (this.network.NetworkType == NetworkType.Mainnet && !filtered.Contains(collateralMember.PubKey))
-                        continue;
-
-                    multisig.Add(collateralMember);
-                }
-
-                // This should be impossible.
-                if (multisig.Count == 0)
-                    return;
-
-                bool originator = false;
-
-                IFederationMember designatedMember = null;
-
-                if (this.network.IsTest() || this.network.IsRegTest())
-                {
-                    if (this.interopSettings.OverrideOriginator)
-                    {
-                        designatedMember = this.federationManager.GetCurrentFederationMember();
-                        originator = true;
-                    }
-                }
-                else
-                {
-                    designatedMember = multisig[request.BlockHeight % multisig.Count];
-                    originator = designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
-                }
+                var originator = DetermineConversionRequestOriginator(request.BlockHeight, out IFederationMember designatedMember);
 
                 // Regardless of whether we are the originator, this is a good time to check the multisig's remaining reserve
                 // token balance. It is necessary to maintain a reserve as mint transactions are many times more expensive than
@@ -558,6 +505,72 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Currently the processing is done in the WithdrawalExtractor.
             }
+        }
+
+        /// <summary>
+        /// Determines the originator of the conversion request. It can either be this node or another multisig member.
+        /// <para>
+        /// Multisig members on CirrusTest can use the -overrideoriginator command line parameter to determine who
+        /// the originator is due to the fact that not all of the multisig members are online.
+        /// </para>
+        /// </summary>
+        /// <param name="blockHeight">The block height of the conversion request.</param>
+        /// <param name="designatedMember">The federatrion member who is assigned as the originator of this conversion transaction.</param>
+        /// <returns><c>true</c> if this node is selected as the originator.</returns>
+        private bool DetermineConversionRequestOriginator(int blockHeight, out IFederationMember designatedMember)
+        {
+            // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
+            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
+
+            var multisig = new List<CollateralFederationMember>();
+
+            var filtered = new List<PubKey>()
+            {
+                new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695"),
+                new PubKey("027e793fbf4f6d07de15b0aa8355f88759b8bdf92a9ffb8a65a87fa8ee03baeccd"),
+                new PubKey("03e8809be396745434ee8c875089e518a3eef40e31ade81869ce9cbef63484996d"),
+                new PubKey("03535a285d0919a9bd71df3b274cecb46e16b78bf50d3bf8b0a3b41028cf8a842d"),
+                new PubKey("0317abe6a28cc7af44a46de97e7c6120c1ccec78afb83efe18030f5c36e3016b32"),
+                new PubKey("03eb5db0b1703ea7418f0ad20582bf8de0b4105887d232c7724f43f19f14862488"),
+                new PubKey("038e1a76f0e33474144b61e0796404821a5150c00b05aad8a1cd502c865d8b5b92"),
+                new PubKey("0323033679aa439a0388f09f2883bf1ca6f50283b41bfeb6be6ddcc4e420144c16"),
+                new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),
+                new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),
+                new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e")
+            };
+
+            foreach (IFederationMember member in federation)
+            {
+                if (!(member is CollateralFederationMember collateralMember))
+                    continue;
+
+                if (!collateralMember.IsMultisigMember)
+                    continue;
+
+                if (this.network.NetworkType == NetworkType.Mainnet && !filtered.Contains(collateralMember.PubKey))
+                    continue;
+
+                multisig.Add(collateralMember);
+            }
+
+            // This should be impossible.
+            if (multisig.Count == 0)
+                throw new InteropException("There are no multisig members.");
+
+            bool originator;
+
+            if ((this.network.IsTest() || this.network.IsRegTest()) && this.interopSettings.OverrideOriginator)
+            {
+                designatedMember = this.federationManager.GetCurrentFederationMember();
+                originator = true;
+            }
+            else
+            {
+                designatedMember = multisig[blockHeight % multisig.Count];
+                originator = designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
+            }
+
+            return originator;
         }
 
         /// <summary>

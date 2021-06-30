@@ -44,7 +44,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly ChainIndexer chainIndexer;
         private readonly IExternalApiPoller externalApiPoller;
-        private readonly ICoordinationManager coordinationManager;
+        private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly Network network;
         private readonly IFederationManager federationManager;
 
@@ -74,7 +74,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             Network network,
             IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
-            ICoordinationManager coordinationManager = null)
+            IConversionRequestFeeService conversionRequestFeeService = null)
         {
             this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
@@ -87,7 +87,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestRepository = conversionRequestRepository;
             this.chainIndexer = chainIndexer;
             this.externalApiPoller = externalApiPoller;
-            this.coordinationManager = coordinationManager;
+            this.conversionRequestFeeService = conversionRequestFeeService;
             this.network = network;
             this.federationManager = federationManager;
 
@@ -234,19 +234,24 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    InteropConversionRequestFee interopConversionRequestFee = await this.coordinationManager.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
+                    InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
 
-                    if (interopConversionRequestFee == null ||
-                        (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                    // If the dynamix fee should be ignored, dont create a fallback or
+                    // check the amount as the fee was already processed.
+                    if (interopConversionRequestFee.State != InteropFeeState.Ignore)
                     {
-                        interopConversionRequestFee.Amount = CoordinationManager.FallBackFee;
-                        this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {CoordinationManager.FallBackFee} STRAX.");
-                    }
+                        if (interopConversionRequestFee == null ||
+                            (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
+                        {
+                            interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                            this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
+                        }
 
-                    if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
-                    {
-                        this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
-                        continue;
+                        if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
+                        {
+                            this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
+                            continue;
+                        }
                     }
 
                     // We insert the fee distribution as a deposit to be processed, albeit with a special address.

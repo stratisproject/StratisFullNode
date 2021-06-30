@@ -18,30 +18,33 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropBehavior : NetworkPeerBehavior
     {
+        private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
+        private readonly IConversionRequestFeeService conversionRequestFeeService;
+        private readonly IETHClient ETHClient;
+        private readonly IFederationManager federationManager;
+        private readonly InteropSettings interopSettings;
         private readonly ILogger logger;
-
         private readonly Network network;
 
-        private readonly IFederationManager federationManager;
-
-        private readonly ICoordinationManager coordinationManager;
-
-        private readonly IETHClient ETHClient;
-
-        private readonly InteropSettings interopSettings;
-
-        public InteropBehavior(Network network, IFederationManager federationManager, ICoordinationManager coordinationManager, IETHClient ETHClient, InteropSettings interopSettings)
+        public InteropBehavior(
+            Network network,
+            IFederationManager federationManager,
+            IConversionRequestCoordinationService conversionRequestCoordinationService,
+            IConversionRequestFeeService conversionRequestFeeService,
+            IETHClient ETHClient,
+            InteropSettings interopSettings)
         {
             Guard.NotNull(network, nameof(network));
             Guard.NotNull(federationManager, nameof(federationManager));
-            Guard.NotNull(coordinationManager, nameof(coordinationManager));
+            Guard.NotNull(conversionRequestCoordinationService, nameof(conversionRequestCoordinationService));
             Guard.NotNull(ETHClient, nameof(ETHClient));
             Guard.NotNull(interopSettings, nameof(interopSettings));
 
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
             this.federationManager = federationManager;
-            this.coordinationManager = coordinationManager;
+            this.conversionRequestCoordinationService = conversionRequestCoordinationService;
+            this.conversionRequestFeeService = conversionRequestFeeService;
             this.ETHClient = ETHClient;
             this.interopSettings = interopSettings;
         }
@@ -49,7 +52,7 @@ namespace Stratis.Bitcoin.Features.Interop
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.federationManager, this.coordinationManager, this.ETHClient, this.interopSettings);
+            return new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.ETHClient, this.interopSettings);
         }
 
         protected override void AttachCore()
@@ -160,7 +163,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
-            this.coordinationManager.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+            this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
         }
 
         private async Task ProcessFeeProposalAsync(FeeProposalPayload payload)
@@ -187,10 +190,8 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
-
             // Reply back to the peer with this node's amount.
-            FeeProposalPayload replyToPayload = this.coordinationManager.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
+            FeeProposalPayload replyToPayload = this.conversionRequestFeeService.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
             if (replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
@@ -220,7 +221,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // Reply back to the peer with this node's amount.
-            FeeAgreePayload replyToPayload = this.coordinationManager.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
+            FeeAgreePayload replyToPayload = this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
             if (replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }

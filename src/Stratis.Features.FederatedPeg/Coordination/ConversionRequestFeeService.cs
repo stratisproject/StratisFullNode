@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using NBitcoin;
@@ -16,49 +15,14 @@ using Stratis.Features.FederatedPeg.Payloads;
 
 namespace Stratis.Features.FederatedPeg.Coordination
 {
-    public interface ICoordinationManager
+    /// <summary>
+    /// Attempts to determine a dynamic fee for the incoming conversion request.
+    /// <para>
+    /// This fee will be paid to the multisig to cover the fees incurred during the conversion request.
+    /// </para>
+    /// </summary>
+    public interface IConversionRequestFeeService
     {
-        /// <summary>
-        /// Records a vote for a particular transactionId to be associated with the request.
-        /// The vote is recorded against the pubkey of the federation member that cast it.
-        /// </summary>
-        /// <param name="requestId">The identifier of the request.</param>
-        /// <param name="transactionId">The voted-for transactionId.</param>
-        /// <param name="pubKey">The pubkey of the federation member that signed the incoming message.</param>
-        void AddVote(string requestId, BigInteger transactionId, PubKey pubKey);
-
-        /// <summary>
-        /// If one of the transaction Ids being voted on has reached a quroum, this will return that transactionId.
-        /// </summary>
-        /// <param name="requestId">The identifier of the request.</param>
-        /// <param name="quorum">The number of votes required for a majority.</param>
-        /// <returns>The transactionId of the request that has reached a quorum of votes.</returns>
-        BigInteger GetAgreedTransactionId(string requestId, int quorum);
-
-        /// <summary>
-        /// Returns the currently highest-voted transactionId.
-        /// If there is a tie, one is picked randomly.
-        /// </summary>
-        /// <param name="requestId">The identifier of the request.</param>
-        /// <returns>The transactionId of the highest-voted request.</returns>
-        BigInteger GetCandidateTransactionId(string requestId);
-
-        /// <summary>Removes all votes associated with provided request Id.</summary>
-        /// <param name="requestId">The identifier of the request.</param>
-        void RemoveTransaction(string requestId);
-
-        /// <summary>Provides mapping of all request ids to pubkeys that have voted for them.</summary>
-        /// <returns>A dictionary of pubkeys that voted on a request.</returns>
-        Dictionary<string, HashSet<PubKey>> GetStatus();
-
-        /// <summary>
-        /// Registers the quorum for conversion request transactions, i.e. minimum amount of votes required to process it.
-        /// </summary>
-        /// <param name="quorum">The amount of votes required.</param>
-        void RegisterConversionRequestQuorum(int quorum);
-
-        int GetConversionRequestQuorum();
-
         /// <summary>
         /// Starts the process of first proposing a fee and then voting on said fee for an interop conversion request.
         /// <para>
@@ -81,7 +45,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <summary>
         /// Processes a fee proposal payload from another multisig.
         /// <para>
-        /// This checks that the node hasn't already proposed the fee amount and that it is within an acceptable range, <see cref="CoordinationManager.IsFeeWithinAcceptableRange(List{InterOpFeeToMultisig}, string, ulong, PubKey)"/>.
+        /// This checks that the node hasn't already proposed the fee amount and that it is within an acceptable range, <see cref="ConversionRequestCoordinationService.IsFeeWithinAcceptableRange(List{InterOpFeeToMultisig}, string, ulong, PubKey)"/>.
         /// </para>
         /// </summary>
         /// <param name="requestId">The deposit id associated with the conversion request.</param>
@@ -105,21 +69,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
         FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, PubKey pubKey);
     }
 
-    public sealed class CoordinationManager : ICoordinationManager
+    public sealed class ConversionRequestFeeService : IConversionRequestFeeService
     {
-        private readonly IDateTimeProvider dateTimeProvider;
-        private readonly IExternalApiPoller externalApiPoller;
-        private readonly IFederationManager federationManager;
-        private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
-        private readonly IFederatedPegSettings federatedPegSettings;
-        private readonly IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore;
-        private readonly INodeLifetime nodeLifetime;
-        private readonly ILogger logger;
-
-        /// <summary> Interflux transaction ID votes </summary>
-        private readonly Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
-        private readonly Dictionary<string, HashSet<PubKey>> receivedVotes;
-
         /// <summary> The amount of acceptable range another node can propose a fee in.</summary>
         private const decimal FeeProposalRange = 0.1m;
 
@@ -128,28 +79,39 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private readonly AsyncLock lockObject = new AsyncLock();
 
-        private int conversionRequestQuorum;
+        private readonly ChainIndexer chainIndexer;
+        private readonly IDateTimeProvider dateTimeProvider;
+        private readonly IExternalApiPoller externalApiPoller;
+        private readonly IFederationManager federationManager;
+        private readonly IFederatedPegBroadcaster federatedPegBroadcaster;
+        private readonly IFederatedPegSettings federatedPegSettings;
+        private readonly IConversionRequestFeeKeyValueStore interopRequestKeyValueStore;
+        private readonly ILogger logger;
+        private readonly Network network;
+        private readonly INodeLifetime nodeLifetime;
 
-        public CoordinationManager(
+        public ConversionRequestFeeService(
+            ChainIndexer chainIndexer,
             IDateTimeProvider dateTimeProvider,
             IExternalApiPoller externalApiPoller,
             IFederationManager federationManager,
             IFederatedPegSettings federatedPegSettings,
             IFederatedPegBroadcaster federatedPegBroadcaster,
-            IInteropFeeCoordinationKeyValueStore interopRequestKeyValueStore,
+            IConversionRequestFeeKeyValueStore interopRequestKeyValueStore,
             INodeLifetime nodeLifetime,
-            INodeStats nodeStats)
+            INodeStats nodeStats,
+            Network network)
         {
+            this.chainIndexer = chainIndexer;
             this.dateTimeProvider = dateTimeProvider;
-            this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
-            this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
-
             this.externalApiPoller = externalApiPoller;
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.federatedPegSettings = federatedPegSettings;
             this.interopRequestKeyValueStore = interopRequestKeyValueStore;
+            this.network = network;
             this.nodeLifetime = nodeLifetime;
+
             this.logger = LogManager.GetCurrentClassLogger();
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
@@ -158,6 +120,13 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <inheritdoc/>
         public async Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight)
         {
+            // First check if this request is older than max-reorg and if so, ignore.
+            if ((this.chainIndexer.Tip.Height - blockHeight) > this.network.Consensus.MaxReorgLength)
+            {
+                this.logger.Info("Ignoring dynamic fee for conversion request {0} at block {1} as it is older than the chain's tip less max reorg.", requestId, blockHeight);
+                return new InteropConversionRequestFee() { Amount = 0, State = InteropFeeState.Ignore };
+            }
+
             InteropConversionRequestFee interopConversionRequestFee = null;
 
             DateTime lastConversionRequestSync = this.dateTimeProvider.GetUtcNow();
@@ -425,7 +394,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             // Try and find the majority vote
             IEnumerable<IGrouping<decimal, decimal>> grouped = interopConversionRequestFee.FeeVotes.Select(v => Math.Truncate(Money.Satoshis(v.FeeAmount).ToDecimal(MoneyUnit.BTC))).GroupBy(s => s);
             IGrouping<decimal, decimal> majority = grouped.OrderByDescending(g => g.Count()).First();
-            if (majority.Count() >= (this.conversionRequestQuorum / 2) + 1)
+            if (majority.Count() >= (this.federatedPegSettings.MultiSigM / 2) + 1)
                 interopConversionRequestFee.Amount = Money.Coins(majority.Key);
             else
                 interopConversionRequestFee.Amount = FallBackFee;
@@ -436,130 +405,8 @@ namespace Stratis.Features.FederatedPeg.Coordination
             this.logger.Debug($"Voting on fee for request id '{interopConversionRequestFee.RequestId}' has concluded, amount: {new Money(interopConversionRequestFee.Amount)}");
         }
 
-        /// <inheritdoc/>
-        public void AddVote(string requestId, BigInteger transactionId, PubKey pubKey)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.receivedVotes.TryGetValue(requestId, out HashSet<PubKey> voted))
-                    voted = new HashSet<PubKey>();
-
-                // Ignore the vote if the pubkey has already submitted a vote.
-                if (voted.Contains(pubKey))
-                    return;
-
-                this.logger.Info("Pubkey {0} adding vote for request {1}, transactionId {2}.", pubKey.ToHex(), requestId, transactionId);
-
-                voted.Add(pubKey);
-
-                if (!this.activeVotes.TryGetValue(requestId, out Dictionary<BigInteger, int> transactionIdVotes))
-                    transactionIdVotes = new Dictionary<BigInteger, int>();
-
-                if (!transactionIdVotes.ContainsKey(transactionId))
-                    transactionIdVotes[transactionId] = 1;
-                else
-                    transactionIdVotes[transactionId]++;
-
-                this.activeVotes[requestId] = transactionIdVotes;
-                this.receivedVotes[requestId] = voted;
-            }
-        }
-
-        /// <inheritdoc/>
-        public BigInteger GetAgreedTransactionId(string requestId, int quorum)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.activeVotes.ContainsKey(requestId))
-                    return BigInteger.MinusOne;
-
-                BigInteger highestVoted = BigInteger.MinusOne;
-                int voteCount = 0;
-                foreach (KeyValuePair<BigInteger, int> vote in this.activeVotes[requestId])
-                {
-                    if (vote.Value > voteCount && vote.Value >= quorum)
-                    {
-                        highestVoted = vote.Key;
-                        voteCount = vote.Value;
-                    }
-                }
-
-                return highestVoted;
-            }
-        }
-
-        /// <inheritdoc/>
-        public BigInteger GetCandidateTransactionId(string requestId)
-        {
-            lock (this.lockObject)
-            {
-                if (!this.activeVotes.ContainsKey(requestId))
-                    return BigInteger.MinusOne;
-
-                BigInteger highestVoted = BigInteger.MinusOne;
-                int voteCount = 0;
-                foreach (KeyValuePair<BigInteger, int> vote in this.activeVotes[requestId])
-                {
-                    if (vote.Value > voteCount)
-                    {
-                        highestVoted = vote.Key;
-                        voteCount = vote.Value;
-                    }
-                }
-
-                return highestVoted;
-            }
-        }
-
-        /// <inheritdoc/>
-        public void RemoveTransaction(string requestId)
-        {
-            lock (this.lockObject)
-            {
-                this.activeVotes.Remove(requestId);
-                this.receivedVotes.Remove(requestId);
-            }
-        }
-
-        /// <inheritdoc/>
-        public Dictionary<string, HashSet<PubKey>> GetStatus()
-        {
-            lock (this.lockObject)
-            {
-                return this.receivedVotes;
-            }
-        }
-
-        /// <inheritdoc/>
-        public void RegisterConversionRequestQuorum(int conversionRequestQuorum)
-        {
-            this.conversionRequestQuorum = conversionRequestQuorum;
-        }
-
-        public int GetConversionRequestQuorum()
-        {
-            return this.conversionRequestQuorum;
-        }
-
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(">> Interop Conversion Request Votes (last 10):");
-
-            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.activeVotes.Take(10))
-            {
-                foreach (KeyValuePair<BigInteger, int> result in active.Value)
-                {
-                    benchLog.AppendLine($"Active Vote Id: {active.Key} Vote: {result.Key} Count: {result.Value}");
-                }
-            }
-
-            foreach (KeyValuePair<string, HashSet<PubKey>> received in this.receivedVotes.Take(10))
-            {
-                benchLog.AppendLine($"Received Vote Id: {received.Key} Votes: {received.Value.Count}");
-            }
-
-            benchLog.AppendLine();
-
             benchLog.AppendLine(">> Interop Fee Proposals / Votes (last 10):");
 
             IOrderedEnumerable<InteropConversionRequestFee> conversionRequests = this.interopRequestKeyValueStore.GetAllAsJson<InteropConversionRequestFee>().OrderByDescending(i => i.BlockHeight);
@@ -620,6 +467,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         ProposalInProgress,
         AgreeanceInProgress,
         AgreeanceConcluded,
-        FailRevertToFallback
+        FailRevertToFallback,
+        Ignore
     }
 }

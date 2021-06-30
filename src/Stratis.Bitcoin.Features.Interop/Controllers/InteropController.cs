@@ -17,13 +17,13 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
     public sealed class InteropController : Controller
     {
         private readonly IConversionRequestRepository conversionRequestRepository;
-        private readonly ICoordinationManager coordinationManager;
+        private readonly IConversionRequestCoordinationService coordinationManager;
         private readonly ILogger logger;
         private readonly Network network;
 
         public InteropController(
             IConversionRequestRepository conversionRequestRepository,
-            ICoordinationManager coordinationManager,
+            IConversionRequestCoordinationService coordinationManager,
             Network network)
         {
             this.conversionRequestRepository = conversionRequestRepository;
