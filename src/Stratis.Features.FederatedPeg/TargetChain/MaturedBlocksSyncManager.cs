@@ -208,31 +208,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    // Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
-                    // This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
-                    // TODO: This can probably be made more efficient than looping every time. 
-                    ChainedHeader header = this.chainIndexer.Tip;
-                    bool found = false;
-
-                    while (true)
-                    {
-                        if (header == this.chainIndexer.Genesis)
-                            break;
-
-                        if (header.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
-                        {
-                            found = true;
-                            break;
-                        }
-
-                        header = header.Previous;
-                    }
-
-                    if (!found)
-                    {
-                        this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+                    if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out ChainedHeader applicableHeader))
                         continue;
-                    }
 
                     InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
 
@@ -292,7 +269,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         RequestStatus = ConversionRequestStatus.Unprocessed,
                         // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
                         Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
-                        BlockHeight = header.Height,
+                        BlockHeight = applicableHeader.Height,
                         DestinationAddress = potentialConversionTransaction.TargetAddress,
                         DestinationChain = potentialConversionTransaction.TargetChain
                     });
@@ -312,6 +289,41 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             // If we received a portion of blocks we can ask for a new portion without any delay.
             RecordLatestMatureDepositsResult result = await this.crossChainTransferStore.RecordLatestMatureDepositsAsync(matureBlockDeposits.Value).ConfigureAwait(false);
             return !result.MatureDepositRecorded;
+        }
+
+        /// <summary>
+        /// Get the first block on this chain that has a timestamp after the deposit's block time on the counterchain.
+        /// This is so that we can assign a block height that the deposit 'arrived' on the sidechain.
+        /// TODO: This can probably be made more efficient than looping every time. 
+        /// </summary>
+        /// <param name="maturedBlockDeposit">The matured block deposit's block time to check against.</param>
+        /// <param name="potentialConversionTransaction">The conversion transaction we are currently working with.</param>
+        /// <param name="chainedHeader">The chained header to use.</param>
+        /// <returns><c>true</c> if found.</returns>
+        private bool FindApplicableConversionRequestHeader(MaturedBlockDepositsModel maturedBlockDeposit, IDeposit potentialConversionTransaction, out ChainedHeader chainedHeader)
+        {
+            chainedHeader = this.chainIndexer.Tip;
+
+            bool found = false;
+
+            while (true)
+            {
+                if (chainedHeader == this.chainIndexer.Genesis)
+                    break;
+
+                if (chainedHeader.Previous.Header.Time <= maturedBlockDeposit.BlockInfo.BlockTime)
+                {
+                    found = true;
+                    break;
+                }
+
+                chainedHeader = chainedHeader.Previous;
+            }
+
+            if (!found)
+                this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+
+            return found;
         }
 
         /// <inheritdoc />

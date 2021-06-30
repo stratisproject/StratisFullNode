@@ -79,7 +79,6 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private readonly AsyncLock lockObject = new AsyncLock();
 
-        private readonly ChainIndexer chainIndexer;
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly IExternalApiPoller externalApiPoller;
         private readonly IFederationManager federationManager;
@@ -87,11 +86,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IConversionRequestFeeKeyValueStore interopRequestKeyValueStore;
         private readonly ILogger logger;
-        private readonly Network network;
         private readonly INodeLifetime nodeLifetime;
 
         public ConversionRequestFeeService(
-            ChainIndexer chainIndexer,
             IDateTimeProvider dateTimeProvider,
             IExternalApiPoller externalApiPoller,
             IFederationManager federationManager,
@@ -99,17 +96,14 @@ namespace Stratis.Features.FederatedPeg.Coordination
             IFederatedPegBroadcaster federatedPegBroadcaster,
             IConversionRequestFeeKeyValueStore interopRequestKeyValueStore,
             INodeLifetime nodeLifetime,
-            INodeStats nodeStats,
-            Network network)
+            INodeStats nodeStats)
         {
-            this.chainIndexer = chainIndexer;
             this.dateTimeProvider = dateTimeProvider;
             this.externalApiPoller = externalApiPoller;
             this.federationManager = federationManager;
             this.federatedPegBroadcaster = federatedPegBroadcaster;
             this.federatedPegSettings = federatedPegSettings;
             this.interopRequestKeyValueStore = interopRequestKeyValueStore;
-            this.network = network;
             this.nodeLifetime = nodeLifetime;
 
             this.logger = LogManager.GetCurrentClassLogger();
@@ -121,11 +115,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         public async Task<InteropConversionRequestFee> AgreeFeeForConversionRequestAsync(string requestId, int blockHeight)
         {
             // First check if this request is older than max-reorg and if so, ignore.
-            if ((this.chainIndexer.Tip.Height - blockHeight) > this.network.Consensus.MaxReorgLength)
-            {
-                this.logger.Info("Ignoring dynamic fee for conversion request {0} at block {1} as it is older than the chain's tip less max reorg.", requestId, blockHeight);
-                return new InteropConversionRequestFee() { Amount = 0, State = InteropFeeState.Ignore };
-            }
+            // TODO: Find away to ignore old requests...
 
             InteropConversionRequestFee interopConversionRequestFee = null;
 
