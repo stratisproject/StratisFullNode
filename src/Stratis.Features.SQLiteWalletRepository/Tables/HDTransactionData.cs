@@ -281,7 +281,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    p.SpendScriptPubKey as SendToScriptPubkey,
                     	    NULL AS ReceiveAddress,
                     	    t.SpendBlockHeight as BlockHeight
-                    FROM	(     
+                    FROM    (     
                     	    -- Lists each individual sent amount. (280 ms)
                     	    SELECT p2.SpendTxTime
                     	    ,      p2.SpendTxId
@@ -289,17 +289,23 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    ,      SUM(p2.SpendValue) SendValue
                     	    FROM   (
                                    SELECT DISTINCT SpendTxTime, SpendTxId, SpendIndex, SpendValue, SpendScriptPubKey 
+                                   FROM   HDPayment
+                                   WHERE  SpendIsChange = 0
+                                   ) p2{(!forSmartContracts ? "" : $@"
+                    	    JOIN   (
+                                   SELECT DISTINCT SpendTxTime, SpendTxId 
                                    FROM   HDPayment 
-                                   WHERE SpendIsChange = 0{(!forSmartContracts ? "" : $@"
-                                   AND   SpendScriptPubKey >= 'c0' 
-                                   AND   SpendScriptPubKey < 'c2'")}
-                                   ) p2
+                                   WHERE  SpendScriptPubKey >= 'c0' 
+                                   AND    SpendScriptPubKey < 'c2'
+                                   ) p1
+                    	    ON     p1.SpendTxTime = p2.SpendTxTime 
+                    	    AND    p1.SpendTxId = p2.SpendTxId")} 
                     	    LEFT   JOIN HDAddress a
                     	    ON     a.WalletId = {strWalletId} -- That do not spend back to the same wallet
                     	    AND	   a.AccountIndex = {strAccountIndex}
                     	    AND	   a.ScriptPubKey = p2.SpendScriptPubKey	
                     	    WHERE  a.ScriptPubKey IS NULL
-                    	    GROUP  BY SpendTxTime, SpendTxId, p2.SpendScriptPubKey
+                    	    GROUP  BY p2.SpendTxTime, p2.SpendTxId, p2.SpendScriptPubKey
                     	    ) p	
                     JOIN    (	
                     	    -- Lists all the transaction ids with their fees. (70 ms)
