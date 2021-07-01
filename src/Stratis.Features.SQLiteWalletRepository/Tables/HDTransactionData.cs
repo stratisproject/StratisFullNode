@@ -266,7 +266,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.Address AS ReceiveAddress
                     ,       t.OutputBlockHeight as BlockHeight
                     FROM    HDTransactionData AS t
-                    WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = '{strAddress}'")}
+                    WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
                     GROUP   BY t.OutputTxId
                     UNION   ALL";
 
@@ -286,11 +286,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    SELECT p2.SpendTxTime
                     	    ,      p2.SpendTxId
                     	    ,      p2.SpendScriptPubKey
-                    	    ,      SUM(p2.SpendValue) SendValue{(!forSmartContracts ? "" : $@"
-                            JOIN   (SELECT DISTINCT p.SpendTxTime, p.SpendTxId FROM HDPayment p WHERE SpendScriptPubKey >= 'c0' AND SpendScriptPubKey < 'c2') p1
-                            ON     p1.SpendTxTime = td.SpendTxTime
-                            AND    p1.SpendTxId = td.SpendTxId")}
-                    	    FROM   (SELECT DISTINCT SpendTxTime, SpendTxId, SpendIndex, SpendValue, SpendScriptPubKey FROM HDPayment WHERE SpendIsChange = 0) p2
+                    	    ,      SUM(p2.SpendValue) SendValue
+                    	    FROM   (
+                                   SELECT DISTINCT SpendTxTime, SpendTxId, SpendIndex, SpendValue, SpendScriptPubKey 
+                                   FROM   HDPayment 
+                                   WHERE SpendIsChange = 0{(!forSmartContracts ? "" : $@"
+                                   AND   SpendScriptPubKey >= 'c0' 
+                                   AND   SpendScriptPubKey < 'c2'")}
+                                   ) p2
                     	    LEFT   JOIN HDAddress a
                     	    ON     a.WalletId = {strWalletId} -- That do not spend back to the same wallet
                     	    AND	   a.AccountIndex = {strAccountIndex}
@@ -310,13 +313,13 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    FROM	HDTransactionData
                     	    WHERE   WalletId = {strWalletId}
                     	    AND     AccountIndex = {strAccountIndex}{((address == null) ? "" : $@"
-                            AND     Address = '{strAddress}'")}
+                            AND     Address = {strAddress}")}
                     	    AND     SpendTxId IS NOT NULL
                             AND     SpendTxIsCoinbase = 0
                     	    GROUP   BY WalletId, AccountIndex, SpendTxTime, SpendTxId
                     	    ) t
-                    ON		t.SpendTxTime = p.SpendTxTime 
-                    AND 	t.SpendTxId = p.SpendTxId";
+                    ON      t.SpendTxTime = p.SpendTxTime 
+                    AND     t.SpendTxId = p.SpendTxId";
             
             var query = $@"
             -- Interwoven receives and spends
