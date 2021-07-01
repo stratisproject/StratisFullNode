@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 {
                     TransactionId = uint256.Parse(h.Id),
                     Fee = h.Fee,
-                    Outputs = h.Payments,
+                    SendToScriptPubKey = Script.FromHex(h.SendToScriptPubkey),
                     OutputAmount = h.Amount,
                     BlockHeight = h.BlockHeight
                 }).ToList();
@@ -195,11 +195,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                     var scTransaction = scTransactions[i];
                     Receipt receipt = receipts[i];
 
-                    // Consensus rules state that each transaction can have only one smart contract exec output.
-                    FlattenedHistoryItemPayment scPayment = scTransaction.Outputs.First(x => x.DestinationScriptPubKey.IsSmartContractExec());
-
                     // This will always give us a value - the transaction has to be serializable to get past consensus.
-                    Result<ContractTxData> txDataResult = this.callDataSerializer.Deserialize(scPayment.DestinationScriptPubKey.ToBytes());
+                    Result<ContractTxData> txDataResult = this.callDataSerializer.Deserialize(scTransaction.SendToScriptPubKey.ToBytes());
                     ContractTxData txData = txDataResult.Value;
 
                     // If the receipt is not available yet, we don't know how much gas was consumed so use the full gas budget.
@@ -212,19 +209,19 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
                     var result = new ContractTransactionItem
                     {
-                        Amount = scPayment.Amount.ToUnit(MoneyUnit.Satoshi),
+                        Amount = new Money(scTransaction.OutputAmount).ToUnit(MoneyUnit.Satoshi),
                         BlockHeight = scTransaction.BlockHeight,
                         Hash = scTransaction.TransactionId,
                         TransactionFee = transactionFee.ToUnit(MoneyUnit.Satoshi),
                         GasFee = gasFee
                     };
 
-                    if (scPayment.DestinationScriptPubKey.IsSmartContractCreate())
+                    if (scTransaction.SendToScriptPubKey.IsSmartContractCreate())
                     {
                         result.Type = ContractTransactionItemType.ContractCreate;
                         result.To = receipt?.NewContractAddress?.ToBase58Address(this.network) ?? string.Empty;
                     }
-                    else if (scPayment.DestinationScriptPubKey.IsSmartContractCall())
+                    else if (scTransaction.SendToScriptPubKey.IsSmartContractCall())
                     {
                         result.Type = ContractTransactionItemType.ContractCall;
                         result.To = txData.ContractAddress.ToBase58Address(this.network);

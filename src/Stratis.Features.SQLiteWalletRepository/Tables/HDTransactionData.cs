@@ -290,16 +290,10 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    FROM   (
                                    SELECT DISTINCT SpendTxTime, SpendTxId, SpendIndex, SpendValue, SpendScriptPubKey 
                                    FROM   HDPayment
-                                   WHERE  SpendIsChange = 0
-                                   ) p2{(!forSmartContracts ? "" : $@"
-                    	    JOIN   (
-                                   SELECT DISTINCT SpendTxTime, SpendTxId 
-                                   FROM   HDPayment 
-                                   WHERE  SpendScriptPubKey >= 'c0' 
-                                   AND    SpendScriptPubKey < 'c2'
-                                   ) p1
-                    	    ON     p1.SpendTxTime = p2.SpendTxTime 
-                    	    AND    p1.SpendTxId = p2.SpendTxId")} 
+                                   WHERE  SpendIsChange = 0{(!forSmartContracts ? "" : $@"
+                                   AND    SpendScriptPubKey >= 'c0' 
+                                   AND    SpendScriptPubKey < 'c2'")} 
+                                   ) p2
                     	    LEFT   JOIN HDAddress a
                     	    ON     a.WalletId = {strWalletId} -- That do not spend back to the same wallet
                     	    AND	   a.AccountIndex = {strAccountIndex}
