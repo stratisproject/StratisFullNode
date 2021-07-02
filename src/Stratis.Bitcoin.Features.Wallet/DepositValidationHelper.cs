@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             depositsToMultisig = transaction.Outputs.Where(output =>
                 output.ScriptPubKey == depositScript &&
                 output.Value >= crossChainTransferMinimum).ToList();
-            
+
             return depositsToMultisig.Any();
         }
 
@@ -61,7 +61,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 else
                     return false;
 
-                conversion = true;                
+                conversion = true;
             }
 
             return true;
