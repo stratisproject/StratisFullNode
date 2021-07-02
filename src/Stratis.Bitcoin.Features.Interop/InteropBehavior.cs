@@ -137,7 +137,6 @@ namespace Stratis.Bitcoin.Features.Interop
             catch (Exception)
             {
                 this.logger.Warn("Received malformed coordination payload for {0}.", payload.RequestId);
-
                 return;
             }
 
@@ -157,13 +156,15 @@ namespace Stratis.Bitcoin.Features.Interop
             if (confirmationCount < 1)
             {
                 this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
-
                 return;
             }
 
-            this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
+            this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request Id: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
             this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+
+            string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
+            await this.AttachedPeer.SendMessageAsync(new InteropCoordinationPayload(payload.RequestId, payload.TransactionId, signature)).ConfigureAwait(false);
         }
 
         private async Task ProcessFeeProposalAsync(FeeProposalPayload payload)
