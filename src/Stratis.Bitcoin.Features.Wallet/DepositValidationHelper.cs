@@ -52,13 +52,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             // Check the common case first.
             if (!opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
             {
-                byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
-
-                if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
-                {
-                    targetChain = destinationChain;
-                }
-                else
+                if (!opReturnDataReader.TryGetTargetETHAddress(transaction, out targetAddress))
                     return false;
 
                 conversion = true;
