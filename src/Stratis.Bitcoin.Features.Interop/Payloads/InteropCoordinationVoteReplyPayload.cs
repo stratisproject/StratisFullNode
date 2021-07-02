@@ -3,7 +3,7 @@ using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop.Payloads
 {
-    [Payload("coord")]
+    [Payload("coordreply")]
     public class InteropCoordinationVoteReplyPayload : Payload
     {
         private string requestId;
