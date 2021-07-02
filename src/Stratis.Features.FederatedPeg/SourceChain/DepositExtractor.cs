@@ -4,10 +4,9 @@ using System.Linq;
 using System.Net.Http;
 using NBitcoin;
 using NLog;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
-using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
@@ -15,15 +14,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public sealed class DepositExtractor : IDepositExtractor
     {
-        /// <summary>
-        /// This deposit extractor implementation only looks for a very specific deposit format.
-        /// Deposits will have 2 outputs when there is no change.
-        /// </summary>
-        private const int ExpectedNumberOfOutputsNoChange = 2;
-
-        /// <summary> Deposits will have 3 outputs when there is change.</summary>
-        private const int ExpectedNumberOfOutputsChange = 3;
-
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
