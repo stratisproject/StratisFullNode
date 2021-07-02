@@ -490,6 +490,8 @@ namespace Stratis.Bitcoin.Features.Interop
                             {
                                 BigInteger transactionId4 = this.conversionRequestCoordinationService.GetCandidateTransactionId(request.RequestId);
 
+                                this.logger.LogInformation("Not-Originator: Candidate transaction id for request id '{0}' is '{1}'.", request.RequestId, transactionId4);
+
                                 if (transactionId4 != BigInteger.MinusOne)
                                 {
                                     this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId4, request.RequestId);
