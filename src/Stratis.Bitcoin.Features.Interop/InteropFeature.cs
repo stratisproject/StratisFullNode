@@ -51,7 +51,8 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopSettings = interopSettings;
 
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
-            payloadProvider.AddPayload(typeof(InteropCoordinationPayload));
+            payloadProvider.AddPayload(typeof(InteropCoordinationVoteRequestPayload));
+            payloadProvider.AddPayload(typeof(InteropCoordinationVoteReplyPayload));
             payloadProvider.AddPayload(typeof(FeeProposalPayload));
             payloadProvider.AddPayload(typeof(FeeAgreePayload));
         }
