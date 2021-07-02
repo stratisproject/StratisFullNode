@@ -109,7 +109,10 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void ReadWrite(BitcoinStream s)
         {
             s.ReadWrite(ref this.requestId);
-            s.ReadWrite(ref this.requestEthTransactionHash);
+
+            if (!string.IsNullOrEmpty(this.requestEthTransactionHash))
+                s.ReadWrite(ref this.requestEthTransactionHash);
+
             s.ReadWrite(ref this.requestType);
             s.ReadWrite(ref this.requestStatus);
             s.ReadWrite(ref this.blockHeight);
