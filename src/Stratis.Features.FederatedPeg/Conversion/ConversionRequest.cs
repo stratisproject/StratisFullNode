@@ -110,12 +110,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void ReadWrite(BitcoinStream stream)
         {
             stream.ReadWrite(ref this.requestId);
-
-            if (stream.Serializing && string.IsNullOrEmpty(this.RequestEthTransactionHash))
-                this.RequestEthTransactionHash = "0";
-
-            stream.ReadWrite(ref this.requestEthTransactionHash);
-
             stream.ReadWrite(ref this.requestType);
             stream.ReadWrite(ref this.requestStatus);
             stream.ReadWrite(ref this.blockHeight);
@@ -125,6 +119,15 @@ namespace Stratis.Features.FederatedPeg.Conversion
             //s.ReadWrite(ref this.destinationChain);
             stream.ReadWrite(ref this.amount);
             stream.ReadWrite(ref this.processed);
+
+            //if (stream.Serializing && string.IsNullOrEmpty(this.RequestEthTransactionHash))
+            //    this.RequestEthTransactionHash = "0";
+
+            //if (!stream.Serializing)
+            //{
+            //    this.requestEthTransactionHash = "0";
+            //    stream.ReadWrite(ref this.requestEthTransactionHash);
+            //}
         }
     }
 }
