@@ -70,7 +70,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IInitialBlockDownloadState initialBlockDownloadState,
             InteropSettings interopSettings,
             NodeSettings nodeSettings,
-            NodeStats nodeStats,
+            INodeStats nodeStats,
             INodeLifetime nodeLifetime)
         {
             this.interopSettings = interopSettings;
