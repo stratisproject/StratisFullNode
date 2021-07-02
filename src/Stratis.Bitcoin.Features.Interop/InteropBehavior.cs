@@ -10,6 +10,7 @@ using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Payloads;
 using TracerAttributes;
@@ -20,6 +21,7 @@ namespace Stratis.Bitcoin.Features.Interop
     {
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHClient ETHClient;
         private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
@@ -31,6 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederationManager federationManager,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
+            IConversionRequestRepository conversionRequestRepository,
             IETHClient ETHClient,
             InteropSettings interopSettings)
         {
@@ -40,19 +43,21 @@ namespace Stratis.Bitcoin.Features.Interop
             Guard.NotNull(ETHClient, nameof(ETHClient));
             Guard.NotNull(interopSettings, nameof(interopSettings));
 
-            this.logger = LogManager.GetCurrentClassLogger();
-            this.network = network;
-            this.federationManager = federationManager;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.ETHClient = ETHClient;
+            this.federationManager = federationManager;
             this.interopSettings = interopSettings;
+            this.network = network;
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.ETHClient, this.interopSettings);
+            return new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ETHClient, this.interopSettings);
         }
 
         protected override void AttachCore()
@@ -161,7 +166,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
             this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request Id: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
 
-            this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+            // Only add votes if the conversion request has not already been finalized.
+            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(payload.RequestId);
+            if (conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised)
+                this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
 
             string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
             await this.AttachedPeer.SendMessageAsync(new InteropCoordinationPayload(payload.RequestId, payload.TransactionId, signature)).ConfigureAwait(false);
