@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -40,6 +41,28 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
 
     public class TransactionItemModel
     {
+        public TransactionItemModel(FlattenedHistoryItem historyItem)
+        {
+            this.Id = new uint256(historyItem.Id);
+            this.Type = (TransactionItemType)historyItem.Type;
+            this.Amount = new Money(historyItem.Amount);
+            this.Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp);
+            this.ConfirmedInBlock = historyItem.BlockHeight;
+
+            if (historyItem.Type != (int)TransactionItemType.Send)
+            {
+                this.ToAddress = historyItem.ReceiveAddress;
+            }
+
+            if (this.Type == TransactionItemType.Send)
+            {
+                this.ToAddress = historyItem.SendToAddress;
+                this.Amount = new Money(historyItem.Amount + historyItem.Fee);
+                this.Fee = historyItem.Fee;
+                this.Payments = historyItem.Payments.Select(p => new PaymentDetailModel() { Amount = p.Amount, DestinationAddress = p.DestinationAddress, IsChange = p.IsChange }).ToList();
+            }
+        }
+
         public TransactionItemModel()
         {
             this.Payments = new List<PaymentDetailModel>();
@@ -82,8 +105,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public DateTimeOffset Timestamp { get; set; }
 
         [JsonProperty(PropertyName = "txOutputTime")]
-        public long TxOutputTime => Timestamp.ToUnixTimeSeconds();
-        
+        public long TxOutputTime => this.Timestamp.ToUnixTimeSeconds();
+
         [JsonProperty(PropertyName = "txOutputIndex")]
         public int TxOutputIndex { get; set; }
 
@@ -108,12 +131,19 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         [JsonProperty(PropertyName = "amount")]
         [JsonConverter(typeof(MoneyJsonConverter))]
         public Money Amount { get; set; }
+
+        /// <summary>
+        /// Flag indicating that this amount was change.
+        /// </summary>
+        [JsonProperty(PropertyName = "isChange")]
+        public bool IsChange { get; set; }
     }
 
     public enum TransactionItemType
     {
         Received,
         Send,
-        Staked
+        Staked,
+        Mined
     }
 }

@@ -154,7 +154,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             this.MaxCacheSizeBytes = consensusSettings.MaxCoindbCacheInMB * 1024 * 1024;
             this.CacheFlushTimeIntervalSeconds = consensusSettings.CoindbIbdFlushMin * 60;
 
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
         }
 
         public HashHeightPair GetTipHash()
@@ -315,7 +316,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             if (!force)
             {
-                // Check if periodic flush is reuired.
+                // Check if periodic flush is required.
                 // Ideally this will flush less frequent and always be behind 
                 // blockstore which is currently set to 17 sec.
 

@@ -96,7 +96,8 @@ namespace Stratis.Bitcoin.Consensus
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.NodeDeployments = nodeDeployments;
 
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 500);
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 500);
         }
 
         /// <inheritdoc />

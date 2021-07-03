@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using NBitcoin;
 using Stratis.Bitcoin.Features.MemoryPool.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 
 namespace Stratis.SmartContracts.Networks
 {

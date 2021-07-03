@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
@@ -29,15 +30,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
 
         public ProvenBlockHeaderStoreTests() : base(new StraxTest())
         {
-            var nodeStats = new NodeStats(DateTimeProvider.Default, this.LoggerFactory.Object);
+            var nodeStats = new NodeStats(DateTimeProvider.Default, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object);
 
             var dBreezeSerializer = new DBreezeSerializer(this.Network.Consensus.ConsensusFactory);
 
             var ibdMock = new Mock<IInitialBlockDownloadState>();
             ibdMock.Setup(s => s.IsInitialBlockDownload()).Returns(false);
 
-            this.provenBlockHeaderRepository = new ProvenBlockHeaderRepository(this.Network, CreateTestDir(this), this.LoggerFactory.Object, dBreezeSerializer);
-
+            this.provenBlockHeaderRepository = new LevelDbProvenBlockHeaderRepository(this.Network, CreateTestDir(this), this.LoggerFactory.Object, dBreezeSerializer);
             this.provenBlockHeaderStore = new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, nodeStats, ibdMock.Object);
         }
 
@@ -341,9 +341,11 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         }
 
         [Fact]
-        public void AddToPending_Then_Reorg_New_Items_Not_Consecutive_Is_Not_Tip_Then_Save()
+        public async Task AddToPending_Then_Reorg_New_Items_Not_Consecutive_Is_Not_Tip_Then_Save_Async()
         {
             var chainWithHeaders = this.BuildProvenHeaderChain(21);
+
+            await this.provenBlockHeaderStore.InitializeAsync(chainWithHeaders).ConfigureAwait(false);
 
             var chainedHeaders = chainWithHeaders.EnumerateToGenesis().Reverse().ToList();
 
@@ -393,9 +395,13 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         }
 
         [Fact]
-        public void AddToPending_Then_Save_Incorrect_Sequence_Push_To_Store()
+        public async Task AddToPending_Then_Save_Incorrect_Sequence_Push_To_Store_Async()
         {
+            var genesis = this.BuildProvenHeaderChain(1);
+
             var inHeader = this.CreateNewProvenBlockHeaderMock();
+
+            await this.provenBlockHeaderStore.InitializeAsync(genesis).ConfigureAwait(false);
 
             // Add headers to pending batch in the wrong height order.
             for (int i = 1; i >= 0; i--)
@@ -414,6 +420,8 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
         {
             var chainWithHeaders = this.BuildProvenHeaderChain(3);
             SortedDictionary<int, ProvenBlockHeader> provenBlockheaders = this.ConvertToDictionaryOfProvenHeaders(chainWithHeaders);
+
+            await this.provenBlockHeaderStore.InitializeAsync(chainWithHeaders).ConfigureAwait(false);
 
             // Persist current chain.
             await this.provenBlockHeaderRepository.PutAsync(
@@ -445,7 +453,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.ProvenBlockHeaders
             var ibdMock = new Mock<IInitialBlockDownloadState>();
             ibdMock.Setup(s => s.IsInitialBlockDownload()).Returns(false);
 
-            return new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, new NodeStats(DateTimeProvider.Default, this.LoggerFactory.Object), ibdMock.Object);
+            return new ProvenBlockHeaderStore(DateTimeProvider.Default, this.LoggerFactory.Object, this.provenBlockHeaderRepository, new NodeStats(DateTimeProvider.Default, NodeSettings.Default(this.Network), new Mock<IVersionProvider>().Object), ibdMock.Object);
         }
 
         private static void WaitLoop(Func<bool> act, string failureReason = "Unknown Reason", int retryDelayInMiliseconds = 1000, CancellationToken cancellationToken = default(CancellationToken))

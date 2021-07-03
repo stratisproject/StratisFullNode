@@ -4,13 +4,12 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SignalR;
-using Stratis.Bitcoin.Features.SignalR.Broadcasters;
-using Stratis.Bitcoin.Features.SignalR.Events;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -20,6 +19,7 @@ using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.Features.Unity3dApi;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusD
@@ -36,11 +36,12 @@ namespace Stratis.CirrusD
             try
             {
                 // set the console window title to identify this as a Cirrus full node (for clarity when running Strax and Cirrus on the same machine)
-                Console.Title = "Cirrus Full Node";
                 var nodeSettings = new NodeSettings(networksSelector: CirrusNetwork.NetworksSelector, protocolVersion: ProtocolVersion.CIRRUS_VERSION, args: args)
                 {
                     MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
                 };
+
+                Console.Title = $"Cirrus Full Node {nodeSettings.Network.NetworkType}";
 
                 IFullNode node = GetSideChainFullNode(nodeSettings);
 
@@ -55,49 +56,35 @@ namespace Stratis.CirrusD
 
         private static IFullNode GetSideChainFullNode(NodeSettings nodeSettings)
         {
+            DbType dbType = nodeSettings.GetDbType();
+
             IFullNodeBuilder nodeBuilder = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
-                .UseMempool()
-                .AddSmartContracts(options =>
-                {
-                    options.UseReflectionExecutor();
-                    options.UsePoAWhitelistedContracts();
-                })
-                .AddPoAFeature()
-                .UsePoAConsensus()
-                .CheckCollateralCommitment()
-
-                // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
-                // Perhaps we can introduce a block height check rather?
-                .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
-
-                .UseSmartContractWallet()
-                .AddSQLiteWalletRepository()
-                .UseApi()
-                .AddRPC()
-                .UseDiagnosticFeature();
-
-            if (nodeSettings.EnableSignalR)
+            .UseNodeSettings(nodeSettings, dbType)
+            .UseBlockStore(dbType)
+            .UseMempool()
+            .AddSmartContracts(options =>
             {
-                nodeBuilder.AddSignalR(options =>
-                {
-                    options.EventsToHandle = new[]
-                    {
-                        (IClientEvent) new BlockConnectedClientEvent(),
-                        new TransactionReceivedClientEvent()
-                    };
+                options.UseReflectionExecutor();
+                options.UsePoAWhitelistedContracts();
+            })
+            .AddPoAFeature()
+            .UsePoAConsensus(dbType)
+            .CheckCollateralCommitment()
 
-                    options.ClientEventBroadcasters = new[]
-                    {
-                        (Broadcaster: typeof(CirrusWalletInfoBroadcaster),
-                            ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
-                            {
-                                BroadcastFrequencySeconds = 5
-                            })
-                    };
-                });
-            }
+            // This needs to be set so that we can check the magic bytes during the Strat to Strax changeover.
+            // Perhaps we can introduce a block height check rather?
+            .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
+
+            .UseSmartContractWallet()
+            .AddSQLiteWalletRepository()
+            .UseApi()
+            .UseUnity3dApi()
+            .AddRPC()
+            .AddSignalR(options =>
+            {
+                DaemonConfiguration.ConfigureSignalRForCirrus(options);
+            })
+            .UseDiagnosticFeature();
 
             return nodeBuilder.Build();
         }

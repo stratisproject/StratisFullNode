@@ -48,11 +48,8 @@ namespace Stratis.SmartContracts.Core.Receipts
 
         public static Log FromBytesRlp(byte[] bytes)
         {
-            RLPCollection list = RLP.Decode(bytes);
-            RLPCollection innerList = (RLPCollection)list[0];
-
-            RLPCollection topicList = RLP.Decode(innerList[1].RLPData);
-            RLPCollection innerTopicList = (RLPCollection)topicList[0];
+            RLPCollection innerList = (RLPCollection)RLP.Decode(bytes);
+            RLPCollection innerTopicList = (RLPCollection)RLP.Decode(innerList[1].RLPData);
             IList<byte[]> topics = innerTopicList.Select(x => x.RLPData).ToList();
 
             return new Log(

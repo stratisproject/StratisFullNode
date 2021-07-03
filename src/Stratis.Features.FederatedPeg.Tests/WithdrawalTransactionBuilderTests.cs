@@ -39,20 +39,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.signals = new Mock<ISignals>();
 
             this.logger = new Mock<ILogger>();
-            this.loggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
-                .Returns(this.logger.Object);
+            this.loggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(this.logger.Object);
 
-            this.federationGatewaySettings.Setup(x => x.GetWithdrawalTransactionFee(It.IsAny<int>()))
-                .Returns<int>((numInputs) =>
-                {
-                    return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-                });
+            this.federationWalletManager.Setup(x => x.Secret).Returns(new WalletSecret());
 
-            this.federationWalletManager.Setup(x => x.Secret)
-                .Returns(new WalletSecret());
-
-            this.federationWalletTransactionHandler.Setup(x => x.BuildTransaction(It.IsAny<TransactionBuildContext>()))
-                .Returns(this.network.CreateTransaction());
+            this.federationWalletTransactionHandler.Setup(x => x.BuildTransaction(It.IsAny<TransactionBuildContext>())).Returns(this.network.CreateTransaction());
         }
 
         [Fact]
@@ -103,12 +94,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Assert.NotNull(ret);
 
             // Fee taken from amount should be the total fee.
-            Money expectedAmountAfterFee = recipient.Amount - FederatedPegSettings.CrossChainTransferFee;
-            this.federationWalletTransactionHandler.Verify(x => x.BuildTransaction(It.Is<TransactionBuildContext>(y => y.Recipients.First().Amount == expectedAmountAfterFee)));
-
-            // Fee used to send transaction should be a smaller amount.
-            Money expectedTxFee = FederatedPegSettings.BaseTransactionFee + 1 * FederatedPegSettings.InputTransactionFee;
-            this.federationWalletTransactionHandler.Verify(x => x.BuildTransaction(It.Is<TransactionBuildContext>(y => y.TransactionFee == expectedTxFee)));
+            this.federationWalletTransactionHandler.Verify(x => x.BuildTransaction(It.Is<TransactionBuildContext>(y => y.Recipients.First().Amount < recipient.Amount && (recipient.Amount - y.Recipients.First().Amount > 0))));
         }
 
         [Fact]

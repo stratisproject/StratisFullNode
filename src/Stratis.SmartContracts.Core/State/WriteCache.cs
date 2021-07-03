@@ -173,6 +173,13 @@ namespace Stratis.SmartContracts.Core.State
                     Value value = curVal.GetValue();
                     if (value == null) // no idea
                     {
+                        // Could occur if the item has been deleted in the cache only
+                        // If this is the case then we should not return a value from the source.
+                        if (curVal.counter < 0)
+                        {
+                            return default(Value);
+                        }
+
                         return this.Source == null ? default(Value) : this.Source.Get(key);
                     }
                     else

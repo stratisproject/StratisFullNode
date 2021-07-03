@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using NBitcoin;
+using Xunit;
 
 namespace Stratis.SmartContracts.Core.Tests
 {

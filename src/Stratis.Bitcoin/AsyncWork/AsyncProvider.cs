@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using TracerAttributes;
@@ -266,11 +267,14 @@ namespace Stratis.Bitcoin.AsyncWork
                 return $"Running: {running} Faulted: {faulted}";
 
             var sb = new StringBuilder();
-            sb.AppendLine();
-            sb.AppendLine($"====== Async loops ======   [Running: {running}] [Faulted: {faulted}]");
+            sb.AppendLine($">> Async Loops");
+            sb.AppendLine($"Status".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {running} running [{faulted} faulted]");
 
             if (faultyOnly && faulted == 0)
+            {
+                sb.AppendLine();
                 return sb.ToString(); // If there are no faulty tasks and faultOnly is set to true, return just the header.
+            }
 
             var data =
                 from info in taskInformations
@@ -286,9 +290,9 @@ namespace Stratis.Bitcoin.AsyncWork
                     Exception = info.Exception?.Message
                 };
 
-            foreach (var item in this.benchmarkColumnsDefinition)
+            foreach (var (Name, Width) in this.benchmarkColumnsDefinition)
             {
-                sb.Append(item.Name.PadRight(item.Width));
+                sb.Append(Name.PadRight(Width));
             }
 
             sb.AppendLine();
@@ -316,6 +320,8 @@ namespace Stratis.Bitcoin.AsyncWork
             }
 
             sb.AppendLine("-".PadRight(this.benchmarkColumnsDefinition.Sum(column => column.Width), '-'));
+
+            sb.AppendLine();
 
             return sb.ToString();
         }
@@ -367,7 +373,6 @@ namespace Stratis.Bitcoin.AsyncWork
         ///  This method is called when a registered Task throws an unhandled exception.
         /// </summary>
         /// <param name="task">The task causing the exception.</param>
-        /// <param name="state">not used</param>
         private void OnRegisteredTaskUnhandledException(Task task)
         {
             AsyncTaskInfo delegateInfo;

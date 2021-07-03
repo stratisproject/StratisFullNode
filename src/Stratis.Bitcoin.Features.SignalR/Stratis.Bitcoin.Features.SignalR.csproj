@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>netcoreapp3.1</TargetFramework>
-		<Version>1.0.7.0</Version>
+		<Version>1.0.8.0</Version>
 		<PackageId>Stratis.Features.SignalR</PackageId>
 		<Product>Stratis.Features.SignalR</Product>
 		<Authors>Stratis Group Ltd.</Authors>
@@ -20,6 +20,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Stratis.Bitcoin.Features.Miner\Stratis.Bitcoin.Features.Miner.csproj" />
+		<ProjectReference Include="..\Stratis.Bitcoin.Features.PoA\Stratis.Bitcoin.Features.PoA.csproj" />
 		<ProjectReference Include="..\Stratis.Bitcoin.Features.Wallet\Stratis.Bitcoin.Features.Wallet.csproj" />
 		<ProjectReference Include="..\Stratis.Bitcoin\Stratis.Bitcoin.csproj" />
 	</ItemGroup>

@@ -1,5 +1,4 @@
 ﻿using NBitcoin;
-using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.InputConsolidation
 {

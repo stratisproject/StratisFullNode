@@ -53,5 +53,8 @@ namespace Stratis.Features.FederatedPeg.Models
 
         [JsonProperty(PropertyName = "isConnected")]
         public bool Connected { get; set; }
+
+        [JsonProperty(PropertyName = "isBanned")]
+        public bool IsBanned { get; set; }
     }
 }

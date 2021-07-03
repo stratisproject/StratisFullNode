@@ -12,7 +12,6 @@ using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
@@ -24,15 +23,6 @@ namespace Stratis.Sidechains.Networks
     public class CirrusRegTest : PoANetwork
     {
         public IList<Mnemonic> FederationMnemonics { get; }
-
-        /// <summary> The name of the root folder containing the different federated peg blockchains.</summary>
-        private const string NetworkRootFolderName = "fedpeg";
-
-        /// <summary> The default name used for the federated peg configuration file. </summary>
-        private const string NetworkDefaultConfigFilename = "fedpeg.conf";
-
-        // public IList<Mnemonic> FederationMnemonics { get; }
-        public IList<Key> FederationKeys { get; private set; }
 
         public CirrusRegTest()
         {
@@ -49,8 +39,8 @@ namespace Stratis.Sidechains.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = NetworkRootFolderName;
-            this.DefaultConfigFilename = NetworkDefaultConfigFilename;
+            this.RootFolderName = CirrusNetwork.NetworkRootFolderName;
+            this.DefaultConfigFilename = CirrusNetwork.NetworkDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
@@ -92,6 +82,9 @@ namespace Stratis.Sidechains.Networks
 
             var newFederationKeys = this.FederationMnemonics.Take(2).Concat(newFederationMemberMnemonics).Select(m => m.DeriveExtKey().PrivateKey).ToList();
             var newFederationPubKeys = newFederationKeys.Select(k => k.PubKey).ToList();
+
+            // The height at which the following list of members apply.
+            this.MultisigMinersApplicabilityHeight = 0;
 
             // Mining keys!
             this.StraxMiningMultisigMembers = newFederationPubKeys;

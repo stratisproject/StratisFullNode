@@ -55,9 +55,9 @@ namespace Stratis.Bitcoin.Utilities
             // get default Json serializer settings
             var settings = new JsonSerializerSettings
             {
-                NullValueHandling = this.SerializeNullValues ? NullValueHandling.Include : NullValueHandling.Ignore
+                NullValueHandling = this.SerializeNullValues ? NullValueHandling.Include : NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
             };
-            
             return settings;
         }
     }

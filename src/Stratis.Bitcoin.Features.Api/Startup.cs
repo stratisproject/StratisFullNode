@@ -1,11 +1,15 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System.Linq;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
+using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -27,6 +31,7 @@ namespace Stratis.Bitcoin.Features.Api
         }
 
         private IFullNode fullNode;
+        private SwaggerUIOptions uiOptions;
 
         public IConfigurationRoot Configuration { get; }
 
@@ -77,8 +82,20 @@ namespace Stratis.Bitcoin.Features.Api
                     }
                 })
                 // add serializers for NBitcoin objects
-                .AddNewtonsoftJson(options => Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings))
-                .AddControllers(this.fullNode.Services.Features, services);
+                .AddNewtonsoftJson(options => {
+                    Utilities.JsonConverters.Serializer.RegisterFrontConverters(options.SerializerSettings);
+                })
+                .AddControllers(this.fullNode.Services.Features, services)
+                .ConfigureApplicationPartManager(a =>
+                {
+                    foreach (ApplicationPart appPart in a.ApplicationParts.ToList())
+                    {
+                        if (appPart.Name != "Stratis.Features.Unity3dApi")
+                            continue;
+
+                        a.ApplicationParts.Remove(appPart);
+                    }
+                });
 
             // Enable API versioning.
             // Note much of this is borrowed from https://github.com/microsoft/aspnet-api-versioning/blob/master/samples/aspnetcore/SwaggerSample/Startup.cs
@@ -106,7 +123,14 @@ namespace Stratis.Bitcoin.Features.Api
             services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
             // Register the Swagger generator. This will use the options we injected just above.
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("contracts", new OpenApiInfo { Title = "Contract API", Version = "1" });
+            });
+            services.AddSwaggerGenNewtonsoftSupport(); // Use Newtonsoft JSON serializer with swagger. Needs to be placed after AddSwaggerGen()
+
+            // Hack to be able to access and modify the options object
+            services.AddSingleton(_ => this.uiOptions);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -137,6 +161,9 @@ namespace Stratis.Bitcoin.Features.Api
                 {
                     c.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
                 }
+
+                // Hack to be able to access and modify the options object configured here
+                this.uiOptions = c;
             });
         }
     }

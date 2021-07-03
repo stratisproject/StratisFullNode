@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder.Feature;
+using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.BlockStore;
@@ -21,9 +22,16 @@ namespace Stratis.Bitcoin.Features.ColdStaking
     /// <summary>
     /// Contains modified implementations of the <see cref="IWalletService"/> methods suitable for cold staking.
     /// </summary>
-    public class ColdStakingWalletService : WalletService
+    public sealed class ColdStakingWalletService : WalletService
     {
-        public ColdStakingWalletService(ILoggerFactory loggerFactory, IWalletManager walletManager, IConsensusManager consensusManager, IWalletTransactionHandler walletTransactionHandler, IWalletSyncManager walletSyncManager, IConnectionManager connectionManager, Network network, ChainIndexer chainIndexer, IBroadcasterManager broadcasterManager, IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer, IWalletFeePolicy walletFeePolicy) : base(loggerFactory, walletManager, consensusManager, walletTransactionHandler, walletSyncManager, connectionManager, network, chainIndexer, broadcasterManager, dateTimeProvider, utxoIndexer, walletFeePolicy)
+        public ColdStakingWalletService(
+            ILoggerFactory loggerFactory, IWalletManager walletManager,
+            IConsensusManager consensusManager, IWalletTransactionHandler walletTransactionHandler,
+            IWalletSyncManager walletSyncManager, IConnectionManager connectionManager,
+            Network network, ChainIndexer chainIndexer, IBroadcasterManager broadcasterManager,
+            IDateTimeProvider dateTimeProvider, IUtxoIndexer utxoIndexer,
+            IWalletFeePolicy walletFeePolicy, NodeSettings nodeSettings)
+            : base(loggerFactory, walletManager, consensusManager, walletTransactionHandler, walletSyncManager, connectionManager, network, chainIndexer, broadcasterManager, dateTimeProvider, utxoIndexer, walletFeePolicy, nodeSettings)
         {
         }
 
@@ -77,7 +85,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                         var coldAccountAddresses = coldAccount.GetCombinedAddresses();
                         hdAddress = coldAccountAddresses.FirstOrDefault(a => a.Address == address || a.Bech32Address == address);
                     }
-                    
+
                     // It is possible that the address is outside the gap limit. So if it is not found we optimistically presume the address descriptors will fill in the missing information later.
                     if (hdAddress != null)
                     {

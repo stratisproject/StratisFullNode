@@ -22,7 +22,7 @@ namespace Stratis.Bitcoin.Features.SignalR
         public Uri SignalRUri { get; set; }
 
         /// <summary>Port of node's Signal interface.</summary>
-        public int SignalPort { get; set; }
+        public int SignalRPort { get; set; }
 
         public SignalRSettings(NodeSettings nodeSettings)
         {
@@ -42,12 +42,12 @@ namespace Stratis.Bitcoin.Features.SignalR
             if (uri.IsDefaultPort)
             {
                 this.SignalRUri = new Uri($"{host}:{port}");
-                this.SignalPort = port;
+                this.SignalRPort = port;
             }
             else
             {
                 this.SignalRUri = uri;
-                this.SignalPort = uri.Port;
+                this.SignalRPort = uri.Port;
             }
         }
 

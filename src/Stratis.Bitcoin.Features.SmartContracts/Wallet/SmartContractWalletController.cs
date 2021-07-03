@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts.CLR;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Core.Receipts;
 
 namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
@@ -53,15 +52,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
             this.receiptRepository = receiptRepository;
             this.walletManager = walletManager;
             this.smartContractTransactionService = smartContractTransactionService;
-        }
-
-        private IEnumerable<HdAddress> GetAccountAddressesWithBalance(string walletName)
-        {
-            return this.walletManager
-                .GetSpendableTransactionsInWallet(walletName)
-                .GroupBy(x => x.Address)
-                .Where(grouping => grouping.Sum(x => x.Transaction.GetUnspentAmount(true)) > 0)
-                .Select(grouping => grouping.Key);
         }
 
         /// <summary>
@@ -103,7 +93,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             try
             {
-                IEnumerable<string> addresses = this.GetAccountAddressesWithBalance(walletName)
+                IEnumerable<string> addresses = this.walletManager.GetAccountAddressesWithBalance(walletName)
                     .Select(a => a.Address);
 
                 if (!addresses.Any())
@@ -188,7 +178,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
                 // Wallet manager returns only 1 when an account name is specified.
                 AccountHistory accountHistory = accountsHistory.First();
 
-                List<FlatHistory> items = accountHistory.History.Where(x => x.Address.Address == request.Address).ToList();
+                List<FlatHistory> items = new List<FlatHistory>();// accountHistory.History.ToList();//.Where(x => x.Address.Address == request.Address).ToList();
 
                 // Represents a sublist of transactions associated with receive addresses + a sublist of already spent transactions associated with change addresses.
                 // In effect, we filter out 'change' transactions that are not spent, as we don't want to show these in the history.

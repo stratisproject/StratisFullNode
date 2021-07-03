@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
                     })
                     .ReceiveJson();
 
-                TestHelper.SendCoins(miningNode, onlineNode, Money.Coins(5.0m));
+                TestHelper.SendCoins(miningNode, miningNode, new[] { onlineNode }, Money.Coins(5.0m));
                 TestHelper.MineBlocks(miningNode, 1);
 
                 // Build the offline signing template from the online node. No password is needed.

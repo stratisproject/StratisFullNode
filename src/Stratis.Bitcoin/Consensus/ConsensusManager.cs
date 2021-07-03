@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus.PerformanceCounters.ConsensusManager;
 using Stratis.Bitcoin.Consensus.ValidationResults;
 using Stratis.Bitcoin.Consensus.Validators;
+using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
@@ -216,7 +217,9 @@ namespace Stratis.Bitcoin.Consensus
 
             nodeStats.RegisterStats(this.AddInlineStats, StatsType.Inline, this.GetType().Name, 1000);
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 1000);
-            nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 1000);
+
+            if (nodeStats.DisplayBenchStats)
+                nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 1000);
         }
 
         /// <inheritdoc />
@@ -234,13 +237,13 @@ namespace Stratis.Bitcoin.Consensus
             // We should consider creating a consensus store class that will internally contain
             // coinview and it will abstract the methods `RewindAsync()` `GetBlockHashAsync()`
 
-            HashHeightPair consensusTipHash = this.ConsensusRules.GetBlockHash();
+            HashHeightPair coinViewTip = this.ConsensusRules.GetBlockHash();
 
             ChainedHeader pendingTip;
 
             while (true)
             {
-                pendingTip = chainTip.FindAncestorOrSelf(consensusTipHash.Hash);
+                pendingTip = chainTip.FindAncestorOrSelf(coinViewTip.Hash);
 
                 if ((pendingTip != null) && (this.chainState.BlockStoreTip.Height >= pendingTip.Height))
                     break;
@@ -250,7 +253,7 @@ namespace Stratis.Bitcoin.Consensus
                 // In case block store initialized behind, rewind until or before the block store tip.
                 // The node will complete loading before connecting to peers so the chain will never know if a reorg happened.
                 RewindState transitionState = await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
-                consensusTipHash = transitionState.BlockHash;
+                coinViewTip = transitionState.BlockHash;
             }
 
             this.chainedHeaderTree.Initialize(pendingTip);
@@ -259,6 +262,8 @@ namespace Stratis.Bitcoin.Consensus
 
             if (this.chainIndexer.Tip != pendingTip)
                 this.chainIndexer.Initialize(pendingTip);
+
+            this.logger.LogInformation("Consensus Manager initialized with tip '{0}'.", pendingTip);
 
             this.blockPuller.Initialize(this.BlockDownloaded);
 
@@ -901,9 +906,12 @@ namespace Stratis.Bitcoin.Consensus
             {
                 var badPeers = new List<int>();
 
-                lock (this.peerLock)
+                if (!validationContext.InsufficientHeaderInformation)
                 {
-                    badPeers = this.chainedHeaderTree.PartialOrFullValidationFailed(blockToConnect.ChainedHeader);
+                    lock (this.peerLock)
+                    {
+                        badPeers = this.chainedHeaderTree.PartialOrFullValidationFailed(blockToConnect.ChainedHeader);
+                    }
                 }
 
                 var failureResult = new ConnectBlocksResult(false)
@@ -1465,29 +1473,24 @@ namespace Stratis.Bitcoin.Consensus
                 if ((bestTip == null) || (bestTip.Height < this.Tip.Height))
                     bestTip = this.Tip;
 
-                string headersLog = "Headers.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + bestTip.Height.ToString().PadRight(8) +
-                                    " Headers.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + bestTip.HashBlock;
-
-                log.AppendLine(headersLog);
+                log.AppendLine("Headers Height".PadRight(LoggingConfiguration.ColumnLength) + $": {bestTip.Height}".PadRight(10) + $"(Hash: {bestTip.HashBlock})");
             }
 
-            string consensusLog = "Consensus.Height: ".PadRight(LoggingConfiguration.ColumnLength + 1) + this.Tip.Height.ToString().PadRight(8) +
-                                  " Consensus.Hash: ".PadRight(LoggingConfiguration.ColumnLength - 1) + this.Tip.HashBlock;
-
-            log.AppendLine(consensusLog);
+            log.AppendLine("Consensus Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.Tip.Height}".PadRight(10) + $"(Hash: {this.Tip.HashBlock})");
         }
 
         [NoTrace]
         private void AddBenchStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(this.performanceCounter.TakeSnapshot().ToString());
+            benchLog.Append(this.performanceCounter.TakeSnapshot().ToString());
+            benchLog.AppendLine();
+            benchLog.AppendLine(((InMemoryEventBus)this.signals).GetPerformanceCounter().TakeSnapshot().GetEventStats(typeof(BlockConnected)));
         }
 
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
-            log.AppendLine();
-            log.AppendLine("======Consensus Manager======");
+            log.AppendLine(">> Consensus Manager");
 
             lock (this.peerLock)
             {
@@ -1502,19 +1505,20 @@ namespace Stratis.Bitcoin.Consensus
                 long tipAge = currentTime - this.chainState.ConsensusTip.Header.BlockTime.ToUnixTimeSeconds();
                 long maxTipAge = this.consensusSettings.MaxTipAge;
 
-                log.AppendLine($"Tip Age: { TimeSpan.FromSeconds(tipAge).ToString(@"dd\.hh\:mm\:ss") } (maximum is { TimeSpan.FromSeconds(maxTipAge).ToString(@"dd\.hh\:mm\:ss") })");
-                log.AppendLine($"In IBD Stage: { (this.isIbd ? "Yes" : "No") }");
+                log.AppendLine("Tip Age".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { TimeSpan.FromSeconds(tipAge):dd\\.hh\\:mm\\:ss} (maximum is { TimeSpan.FromSeconds(maxTipAge):dd\\.hh\\:mm\\:ss})");
+                log.AppendLine("Synced with Network".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": { (this.isIbd ? "No" : "Yes") }");
 
                 string unconsumedBlocks = this.FormatBigNumber(this.chainedHeaderTree.UnconsumedBlocksCount);
 
                 double filledPercentage = Math.Round((this.chainedHeaderTree.UnconsumedBlocksDataBytes / (double)this.maxUnconsumedBlocksDataBytes) * 100, 2);
 
-                log.AppendLine($"Unconsumed blocks: {unconsumedBlocks} -- ({this.chainedHeaderTree.UnconsumedBlocksDataBytes.BytesToMegaBytes()} / {this.maxUnconsumedBlocksDataBytes.BytesToMegaBytes()} MB). Cache is filled by: {filledPercentage}%");
+                log.AppendLine("Unconsumed blocks".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {unconsumedBlocks} -- ({this.chainedHeaderTree.UnconsumedBlocksDataBytes.BytesToMegaBytes()} / {this.maxUnconsumedBlocksDataBytes.BytesToMegaBytes()} MB). Cache filled by: {filledPercentage}%");
 
                 int pendingDownloadCount = this.callbacksByBlocksRequestedHash.Count;
                 int currentlyDownloadingCount = this.expectedBlockSizes.Count;
 
-                log.AppendLine($"Downloading blocks: {currentlyDownloadingCount} queued out of {pendingDownloadCount} pending");
+                log.AppendLine("Downloading blocks".PadRight(LoggingConfiguration.ColumnLength, ' ') + $": {currentlyDownloadingCount} queued out of {pendingDownloadCount} pending");
+                log.AppendLine();
             }
         }
 
