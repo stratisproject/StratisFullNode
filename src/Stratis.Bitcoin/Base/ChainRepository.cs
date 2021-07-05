@@ -63,6 +63,11 @@ namespace Stratis.Bitcoin.Base
                     genesisHeader.SetChainStore(this.chainStore);
                     tip = genesisHeader;
                 }
+                else
+                {
+                    // Confirm that the tip exists in the chain table.
+                    this.chainStore.GetHeader(tip, tip.HashBlock);
+                }
 
                 this.locator = tip.GetLocator();
                 return tip;
