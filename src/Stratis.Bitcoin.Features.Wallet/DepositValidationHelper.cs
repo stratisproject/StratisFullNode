@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             depositsToMultisig = transaction.Outputs.Where(output =>
                 output.ScriptPubKey == depositScript &&
                 output.Value >= crossChainTransferMinimum).ToList();
-            
+
             return depositsToMultisig.Any();
         }
 
@@ -49,9 +49,10 @@ namespace Stratis.Bitcoin.Features.Wallet
             conversion = false;
             targetChain = 0 /* DestinationChain.STRAX */;
 
-            // Check the common case first.
+            // First check cross chain transfers from the STRAX to Cirrus network or vice versa.
             if (!opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
             {
+                // Else try and validate the destination adress by the destination chain.
                 byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 
                 if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
@@ -61,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 else
                     return false;
 
-                conversion = true;                
+                conversion = true;
             }
 
             return true;

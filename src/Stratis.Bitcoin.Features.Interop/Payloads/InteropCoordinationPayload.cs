@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
-using Stratis.Features.FederatedPeg.Conversion;
 
 namespace Stratis.Bitcoin.Features.Interop.Payloads
 {
@@ -13,9 +13,9 @@ namespace Stratis.Bitcoin.Features.Interop.Payloads
         private int destinationChain;
 
         public string RequestId => this.requestId;
-        
+
         public int TransactionId => this.transactionId;
-        
+
         public string Signature => this.signature;
 
         public DestinationChain DestinationChain { get { return (DestinationChain)this.destinationChain; } set { this.destinationChain = (int)value; } }

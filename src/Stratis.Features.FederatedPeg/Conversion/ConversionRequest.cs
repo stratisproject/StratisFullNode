@@ -1,4 +1,5 @@
 ﻿using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
@@ -21,17 +22,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
         NotOriginator
     }
 
-    /// <summary>Chains supported by InterFlux integration.</summary>
-    public enum DestinationChain
-    {
-        STRAX = 0, // Stratis
-        ETH, // Ethereum
-        BNB, // Binance
-
-        ETC, // Ethereum classic
-        AVAX, // Avalanche
-        ADA, // Cardano
-    }
 
     /// <summary>Request to mint or burn wSTRAX.</summary>
     /// <remarks>
