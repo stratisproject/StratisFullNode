@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Base
                 }
                 else
                 {
-                    // Confirm that the tip exists in the chain table.
+                    // Confirm that the chain tip exists in the headers table.
                     this.chainStore.GetHeader(tip, tip.HashBlock);
                 }
 
