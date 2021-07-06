@@ -22,16 +22,6 @@ namespace Stratis.Features.FederatedPeg.Conversion
         NotOriginator
     }
 
-    /// <summary>Chains supported by InterFlux integration.</summary>
-    public enum DestinationChain
-    {
-        STRAX = 0, // Stratis
-        ETH, // Ethereum
-        ETC, // Ethereum classic
-        AVAX, // Avalanche
-        ADA // Cardano
-    }
-
     /// <summary>Request to mint or burn wSTRAX.</summary>
     /// <remarks>
     /// When wSTRAX coins are minted and sent to <see cref="DestinationAddress"/> on ETH chain same amount of STRAX coins should be received by the multisig address.

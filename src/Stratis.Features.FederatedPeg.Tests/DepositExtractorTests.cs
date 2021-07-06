@@ -5,7 +5,6 @@ using System.Text;
 using FluentAssertions;
 using NBitcoin;
 using NSubstitute;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
@@ -168,11 +167,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Set amount to be less than the small threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
 
+            byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
+
             // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount, ethOpReturnBytes);
 
             // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount + 1, ethOpReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionNormal });
@@ -261,24 +262,22 @@ namespace Stratis.Features.FederatedPeg.Tests
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
-            // Create the target address.
-            BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
-            byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
+            byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
 
             // Set amount to be less than deposit minimum
-            CreateConversionTransaction(TargetETHAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
+            CreateConversionTransaction(block, FederatedPegSettings.CrossChainTransferMinimum - 1, ethOpReturnBytes);
 
             // Set amount to be less than the small threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount - 1, ethOpReturnBytes);
 
             // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount, opReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount, ethOpReturnBytes);
 
             // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount + 1, ethOpReturnBytes);
 
             // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount + 1, ethOpReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionSmall });
@@ -352,7 +351,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount, ethOpReturnBytes);
 
             // Set amount to be greater than the conversion deposit minimum amount.
-            CreateConversionTransaction(block, Money.Coins(DepositExtractor.ConversionTransactionMinimum + 1), ethOpReturnBytes);
+            CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount + 1, ethOpReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
