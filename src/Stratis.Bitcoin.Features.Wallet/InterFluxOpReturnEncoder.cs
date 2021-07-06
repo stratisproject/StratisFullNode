@@ -70,8 +70,8 @@ namespace Stratis.Bitcoin.Features.Wallet
         ETH = 1, // Ethereum
         BNB = 2, // Binance
 
-        ETC = 4, // Ethereum classic
-        AVAX = 5, // Avalanche
-        ADA = 6, // Cardano
+        ETC = 3, // Ethereum classic
+        AVAX = 4, // Avalanche
+        ADA = 5, // Cardano
     }
 }
