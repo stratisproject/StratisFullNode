@@ -67,11 +67,11 @@ namespace Stratis.Bitcoin.Features.Wallet
     public enum DestinationChain
     {
         STRAX = 0, // Stratis
-        ETH, // Ethereum
-        BNB, // Binance
+        ETH = 1, // Ethereum
+        BNB = 2, // Binance
 
-        ETC, // Ethereum classic
-        AVAX, // Avalanche
-        ADA, // Cardano
+        ETC = 4, // Ethereum classic
+        AVAX = 5, // Avalanche
+        ADA = 6, // Cardano
     }
 }
