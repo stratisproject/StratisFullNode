@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Bitcoin.Features.Interop.ETHClient
 {

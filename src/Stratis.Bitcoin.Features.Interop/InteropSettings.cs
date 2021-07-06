@@ -1,6 +1,6 @@
 ﻿using System;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
@@ -10,7 +10,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public BNBInteropSettings BNBSettings { get; set; }
 
-        
         public InteropSettings(NodeSettings nodeSettings)
         {
             this.ETHSettings = new ETHInteropSettings(nodeSettings);
@@ -22,13 +21,13 @@ namespace Stratis.Bitcoin.Features.Interop
             switch (chain)
             {
                 case DestinationChain.ETH:
-                {
-                    return this.ETHSettings;
-                }
+                    {
+                        return this.ETHSettings;
+                    }
                 case DestinationChain.BNB:
-                {
-                    return this.BNBSettings;
-                }
+                    {
+                        return this.BNBSettings;
+                    }
             }
 
             throw new NotImplementedException("Provided chain type not supported: " + chain);
@@ -56,7 +55,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
         /// <summary>Passphrase for the ethereum account.</summary>
         public string Passphrase { get; set; }
-        
+
         /// <summary>The gas limit for Ethereum interoperability transactions.</summary>
         public int GasLimit { get; set; }
 
@@ -67,10 +66,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
         /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
         public string InteropContractCirrusAddress { get; set; }
-        
+
         /// <summary>This is intended for future functionality and should therefore not be provided/set yet.</summary>
         public string InteropContractAddress { get; set; }
-        
+
         #endregion
 
         public ETHInteropSettings(NodeSettings nodeSettings)
@@ -105,7 +104,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (string.IsNullOrWhiteSpace(this.ClientUrl))
                 throw new Exception($"Cannot initialize interoperability feature without -{clientUrlKey} specified.");
         }
-        
+
         protected virtual string GetSettingsPrefix()
         {
             return "eth_";

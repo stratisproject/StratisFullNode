@@ -10,9 +10,10 @@ using Nethereum.Util;
 using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
-using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Payloads;
+using Stratis.Bitcoin.Features.PoA;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
@@ -77,7 +78,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.interopTransactionManager = interopTransactionManager;
             this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
-            
+
             this.eventFilterCreationRequired = new Dictionary<DestinationChain, bool>()
             {
                 {DestinationChain.ETH, true}
@@ -136,7 +137,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     {
                         foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.clientProvider.GetAllSupportedChains())
                             await this.CheckForContractEventsAsync(supportedChain.Key, supportedChain.Value).ConfigureAwait(false);
-                        
+
                         await this.ProcessConversionRequestsAsync().ConfigureAwait(false);
                     }
                     catch (Exception e)
@@ -225,7 +226,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 string destinationAddress = await chainClient.GetDestinationAddressAsync(transferEvent.Event.From).ConfigureAwait(false);
 
                 this.logger.LogInformation("Conversion burn transaction {0} has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
-                
+
                 try
                 {
                     // Validate that it is a mainchain address here before bothering to add it to the repository.
@@ -255,7 +256,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
                     BlockHeight = (int)blockHeight,
                     DestinationAddress = destinationAddress,
-                    DestinationChain = targetChain 
+                    DestinationChain = targetChain
                 });
             }
         }
@@ -383,147 +384,147 @@ namespace Stratis.Bitcoin.Features.Interop
                 switch (request.RequestStatus)
                 {
                     case ((int)ConversionRequestStatus.Unprocessed):
-                    {
-                        if (originator)
                         {
-                            // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
-                            this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
-
-                            request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
-                        }
-                        else
-                        {
-                            this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember.PubKey.ToHex());
-
-                            request.RequestStatus = ConversionRequestStatus.NotOriginator;
-                        }
-
-                        break;
-                    }
-
-                    case (ConversionRequestStatus.OriginatorNotSubmitted):
-                    {
-                        // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
-                        // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
-                        string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, amountInWei);
-
-                        // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
-                        // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
-                        // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
-                        BigInteger transactionId = await clientForDestChain.SubmitTransactionAsync(this.interopSettings.ETHSettings.WrappedStraxContractAddress, 0, abiData).ConfigureAwait(false);
-
-                        this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
-
-                        // TODO: Need to persist vote storage across node shutdowns
-                        this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
-
-                        request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
-
-                        break;
-                    }
-
-                    case (ConversionRequestStatus.OriginatorSubmitted):
-                    {
-                        // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
-                        // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
-                        // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation multisig node.
-                        // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
-                        // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
-
-                        BigInteger transactionId2 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
-
-                        if (transactionId2 != BigInteger.MinusOne)
-                        {
-                            await this.BroadcastCoordinationAsync(request.RequestId, transactionId2, request.DestinationChain).ConfigureAwait(false);
-
-                            BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
-
-                            if (agreedTransactionId != BigInteger.MinusOne)
+                            if (originator)
                             {
-                                this.logger.LogInformation("Transaction {0} has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
+                                // If this node is the designated transaction originator, it must create and submit the transaction to the multisig.
+                                this.logger.LogInformation("This node selected as originator for transaction {0}.", request.RequestId);
 
-                                request.RequestStatus = ConversionRequestStatus.VoteFinalised;
-                            }
-                        }
-
-                        break;
-                    }
-
-                    case (ConversionRequestStatus.VoteFinalised):
-                    {
-                        BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
-
-                        if (transactionId3 != BigInteger.MinusOne)
-                        {
-                            // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
-                            // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
-                            BigInteger confirmationCount = await clientForDestChain.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
-
-                            if (confirmationCount >= 6)
-                            {
-                                this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
-
-                                request.RequestStatus = ConversionRequestStatus.Processed;
-                                request.Processed = true;
-
-                                // We no longer need to track votes for this transaction.
-                                this.interopTransactionManager.RemoveTransaction(request.RequestId);
+                                request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
                             }
                             else
                             {
-                                this.logger.LogInformation("Transaction {0} has finished voting but does not yet have 8 confirmations, re-broadcasting votes to peers.", transactionId3);
+                                this.logger.LogInformation("This node was not selected as the originator for transaction {0}. The originator is: {1}.", request.RequestId, designatedMember.PubKey.ToHex());
 
-                                // There are not enough confirmations yet.
-                                // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
-                                // Nodes will simply ignore the messages if they are not relevant.
-
-                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId3, request.DestinationChain).ConfigureAwait(false);
-
-                                // No state transition here, we are waiting for sufficient confirmations.
+                                request.RequestStatus = ConversionRequestStatus.NotOriginator;
                             }
+
+                            break;
                         }
 
-                        break;
-                    }
-                    case (ConversionRequestStatus.NotOriginator):
-                    {
-                        // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
-                        // Initially there will not be a quorum of nodes that agree on the transactionId.
-                        // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
-                        // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
-                        // Each node must only ever confirm a single transactionId for a given conversion transaction.
-                        BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
-
-                        if (agreedUponId != BigInteger.MinusOne)
+                    case (ConversionRequestStatus.OriginatorNotSubmitted):
                         {
-                            this.logger.LogInformation("Quorum reached for conversion transaction {0} with transactionId {1}, submitting confirmation to contract.", request.RequestId, agreedUponId);
+                            // First construct the necessary transfer() transaction data, utilising the ABI of the wrapped STRAX ERC20 contract.
+                            // When this constructed transaction is actually executed, the transfer's source account will be the account executing the transaction i.e. the multisig contract address.
+                            string abiData = clientForDestChain.EncodeTransferParams(request.DestinationAddress, amountInWei);
 
-                            // Once a quorum is reached, each node confirms the agreed transactionId.
-                            // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
-                            string confirmationHash = await clientForDestChain.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+                            // Submit the unconfirmed transaction data to the multisig contract, returning a transactionId used to refer to it.
+                            // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
+                            // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
+                            BigInteger transactionId = await clientForDestChain.SubmitTransactionAsync(this.interopSettings.ETHSettings.WrappedStraxContractAddress, 0, abiData).ConfigureAwait(false);
 
-                            this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
+                            this.logger.LogInformation("Originator submitted transaction to multisig and was allocated transactionId {0}.", transactionId);
 
-                            request.RequestStatus = ConversionRequestStatus.VoteFinalised;
+                            // TODO: Need to persist vote storage across node shutdowns
+                            this.interopTransactionManager.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
+
+                            request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
+
+                            break;
                         }
-                        else
-                        {
-                            BigInteger transactionId4 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
 
-                            if (transactionId4 != BigInteger.MinusOne)
+                    case (ConversionRequestStatus.OriginatorSubmitted):
+                        {
+                            // It must then propagate the transactionId to the other nodes so that they know they should confirm it.
+                            // The reason why each node doesn't simply maintain its own transaction counter, is that it can't be guaranteed
+                            // that a transaction won't be submitted out-of-turn by a rogue or malfunctioning federation multisig node.
+                            // The coordination mechanism safeguards against this, as any such spurious transaction will not receive acceptance votes.
+                            // TODO: The transactionId should be accompanied by the hash of the submission transaction on the Ethereum chain so that it can be verified
+
+                            BigInteger transactionId2 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+
+                            if (transactionId2 != BigInteger.MinusOne)
                             {
-                                this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId4, request.RequestId);
+                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId2, request.DestinationChain).ConfigureAwait(false);
 
-                                this.interopTransactionManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
+                                BigInteger agreedTransactionId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
 
-                                await this.BroadcastCoordinationAsync(request.RequestId, transactionId4, request.DestinationChain).ConfigureAwait(false);
+                                if (agreedTransactionId != BigInteger.MinusOne)
+                                {
+                                    this.logger.LogInformation("Transaction {0} has received sufficient votes, it should now start getting confirmed by each peer.", agreedTransactionId);
+
+                                    request.RequestStatus = ConversionRequestStatus.VoteFinalised;
+                                }
                             }
 
-                            // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
+                            break;
                         }
 
-                        break;
-                    }
+                    case (ConversionRequestStatus.VoteFinalised):
+                        {
+                            BigInteger transactionId3 = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+
+                            if (transactionId3 != BigInteger.MinusOne)
+                            {
+                                // The originator isn't responsible for anything further at this point, except for periodically checking the confirmation count.
+                                // The non-originators also need to monitor the confirmation count so that they know when to mark the transaction as processed locally.
+                                BigInteger confirmationCount = await clientForDestChain.GetConfirmationCountAsync(transactionId3).ConfigureAwait(false);
+
+                                if (confirmationCount >= 6)
+                                {
+                                    this.logger.LogInformation("Transaction {0} has received at least 6 confirmations, it will be automatically executed by the multisig contract.", transactionId3);
+
+                                    request.RequestStatus = ConversionRequestStatus.Processed;
+                                    request.Processed = true;
+
+                                    // We no longer need to track votes for this transaction.
+                                    this.interopTransactionManager.RemoveTransaction(request.RequestId);
+                                }
+                                else
+                                {
+                                    this.logger.LogInformation("Transaction {0} has finished voting but does not yet have 8 confirmations, re-broadcasting votes to peers.", transactionId3);
+
+                                    // There are not enough confirmations yet.
+                                    // Even though the vote is finalised, other nodes may come and go. So we re-broadcast the finalised votes to all federation peers.
+                                    // Nodes will simply ignore the messages if they are not relevant.
+
+                                    await this.BroadcastCoordinationAsync(request.RequestId, transactionId3, request.DestinationChain).ConfigureAwait(false);
+
+                                    // No state transition here, we are waiting for sufficient confirmations.
+                                }
+                            }
+
+                            break;
+                        }
+                    case (ConversionRequestStatus.NotOriginator):
+                        {
+                            // If not the originator, this node needs to determine what multisig wallet transactionId it should confirm.
+                            // Initially there will not be a quorum of nodes that agree on the transactionId.
+                            // So each node needs to satisfy itself that the transactionId sent by the originator exists in the multisig wallet.
+                            // This is done within the InteropBehavior automatically, we just check each poll loop if a transaction has enough votes yet.
+                            // Each node must only ever confirm a single transactionId for a given conversion transaction.
+                            BigInteger agreedUponId = this.interopTransactionManager.GetAgreedTransactionId(request.RequestId, 6);
+
+                            if (agreedUponId != BigInteger.MinusOne)
+                            {
+                                this.logger.LogInformation("Quorum reached for conversion transaction {0} with transactionId {1}, submitting confirmation to contract.", request.RequestId, agreedUponId);
+
+                                // Once a quorum is reached, each node confirms the agreed transactionId.
+                                // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
+                                string confirmationHash = await clientForDestChain.ConfirmTransactionAsync(agreedUponId).ConfigureAwait(false);
+
+                                this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction {0} was {1}.", request.RequestId, confirmationHash);
+
+                                request.RequestStatus = ConversionRequestStatus.VoteFinalised;
+                            }
+                            else
+                            {
+                                BigInteger transactionId4 = this.interopTransactionManager.GetCandidateTransactionId(request.RequestId);
+
+                                if (transactionId4 != BigInteger.MinusOne)
+                                {
+                                    this.logger.LogInformation("Broadcasting vote (transactionId {0}) for conversion transaction {1}.", transactionId4, request.RequestId);
+
+                                    this.interopTransactionManager.AddVote(request.RequestId, transactionId4, this.federationManager.CurrentFederationKey.PubKey);
+
+                                    await this.BroadcastCoordinationAsync(request.RequestId, transactionId4, request.DestinationChain).ConfigureAwait(false);
+                                }
+
+                                // No state transition here, as we are waiting for the candidate transactionId to progress to an agreed upon transactionId via a quorum.
+                            }
+
+                            break;
+                        }
                 }
 
                 // Make sure that any state transitions are persisted to storage.
@@ -553,7 +554,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             return baseCurrencyUnits;
         }
-        
+
         /// <inheritdoc />
         public void Dispose()
         {
