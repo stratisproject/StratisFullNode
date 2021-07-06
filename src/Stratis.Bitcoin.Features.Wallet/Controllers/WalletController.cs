@@ -447,7 +447,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            request.OpReturnData = InterFluxOpReturnEncoder.Encode(request.DestinationChain, request.DestinationAddress);
+            request.OpReturnData = InterFluxOpReturnEncoder.Encode((DestinationChain)request.DestinationChain, request.DestinationAddress);
 
             return await this.Execute(request, cancellationToken,
                 async (req, token) => Json(await this.walletService.BuildTransaction(req, token)));

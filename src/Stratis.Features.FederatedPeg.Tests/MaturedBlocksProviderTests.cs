@@ -55,7 +55,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.addressHelper = new MultisigAddressHelper(this.network, this.mainChainNetwork);
             this.targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
-            this.opReturnBytes = Encoding.UTF8.GetBytes(this.targetAddress.ToString());
+            this.opReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.STRAX, this.targetAddress.ToString()));
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);

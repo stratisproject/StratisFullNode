@@ -1,4 +1,5 @@
 ﻿using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop.Payloads

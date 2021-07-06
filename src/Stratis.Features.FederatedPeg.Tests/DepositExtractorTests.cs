@@ -346,11 +346,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Set amount to be exactly the normal threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
-            // Set amount to be equal to the normal threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
+            byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
 
-            // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(TargetETHAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
+            // Set amount to be equal to the normal threshold amount.
+            CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount, ethOpReturnBytes);
+
+            // Set amount to be greater than the conversion deposit minimum amount.
+            CreateConversionTransaction(block, Money.Coins(DepositExtractor.ConversionTransactionMinimum + 1), ethOpReturnBytes);
 
             int blockHeight = 12345;
             IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
@@ -364,19 +366,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
         }
 
-        private Transaction CreateConversionTransaction(string targetETHAddress, Block block, Money depositAmount, byte[] opReturnBytes)
+        private Transaction CreateConversionTransaction(Block block, Money depositAmount, byte[] opReturnBytes)
         {
             // Create the conversion transaction.
             Transaction conversionTransaction = this.transactionBuilder.BuildOpReturnTransaction(this.addressHelper.SourceChainMultisigAddress, opReturnBytes, depositAmount);
 
             // Add the conversion transaction to the block.
             block.AddTransaction(conversionTransaction);
-
-            this.opReturnDataReader.TryGetTargetETHAddress(conversionTransaction, out string _).Returns(callInfo =>
-            {
-                callInfo[1] = targetETHAddress;
-                return true;
-            });
 
             return conversionTransaction;
         }

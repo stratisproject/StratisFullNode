@@ -1,4 +1,5 @@
 ﻿using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
