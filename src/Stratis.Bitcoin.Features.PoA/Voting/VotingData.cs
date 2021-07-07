@@ -65,7 +65,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             var item = obj as VotingData;
 
-            if (item == null)
+            if ((object)item == null)
             {
                 return false;
             }
@@ -76,7 +76,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return this.Data.GetHashCode() ^ this.key;
+            ulong hash = 17;
+
+            foreach (byte objByte in this.Data)
+            {
+                hash = (hash << 5) - hash + objByte;
+            }
+
+            return (int)hash ^ (int)this.Key;
         }
 
         /// <inheritdoc />

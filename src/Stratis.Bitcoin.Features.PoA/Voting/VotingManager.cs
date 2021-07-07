@@ -48,7 +48,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         /// <summary>In-memory collection of pending polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
-        private List<Poll> polls;
+        private PollsCollection polls;
 
         private SubscriptionToken blockConnectedSubscription;
         private SubscriptionToken blockDisconnectedSubscription;
@@ -476,7 +476,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (this.IsVotingOnMultisigMember(data))
                                 continue;
 
-                            Poll poll = this.polls.SingleOrDefault(x => x.VotingData == data && x.IsPending);
+                            Poll poll = this.polls.GetPendingPollByVotingData(data);
 
                             if (poll == null)
                             {
@@ -553,11 +553,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 continue;
 
                             poll.PollVotedInFavorBlockData = new HashHeightPair(chBlock.ChainedHeader);
+                            this.polls.OnPendingStatusChanged(poll);
+
                             this.PollsRepository.UpdatePoll(transaction, poll);
                         }
-                    }
 
-                    this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader);
+                        this.PollsRepository.SaveCurrentTip(null, chBlock.ChainedHeader);
+                    }
                 }
             }
             catch (Exception ex)
@@ -625,6 +627,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (targetPoll.PollVotedInFavorBlockData == new HashHeightPair(chBlock.ChainedHeader))
                     {
                         targetPoll.PollVotedInFavorBlockData = null;
+                        this.polls.OnPendingStatusChanged(targetPoll);
 
                         this.PollsRepository.UpdatePoll(transaction, targetPoll);
                     }
