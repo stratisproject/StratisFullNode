@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -9,8 +8,6 @@ using NBitcoin;
 using NBitcoin.Networks;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Signals;
-using Stratis.Bitcoin.Utilities;
-using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -47,33 +44,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationWalletManager.Setup(x => x.Secret).Returns(new WalletSecret());
 
             this.federationWalletTransactionHandler.Setup(x => x.BuildTransaction(It.IsAny<TransactionBuildContext>())).Returns(this.network.CreateTransaction());
-        }
-
-
-
-        [Fact]
-        public void TestX()
-        {
-            var serializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
-            var request = new ConversionRequest
-            {
-                RequestId = "123",
-                Amount = 0,
-                BlockHeight = 0,
-                DestinationAddress = "test",
-                DestinationChain = DestinationChain.STRAX,
-                RequestStatus = ConversionRequestStatus.Processed,
-                RequestType = ConversionRequestType.Burn
-            };
-            var serialized = serializer.Serialize(request);
-            //var serializedBytes = Encoding.UTF8.GetBytes(serialized, 0, serialized.Length);
-            // Saved
-
-            var stringBytes = @"\u0003123\u0001\0\0\0\u0002\0\0\0\0\0\0\0\u0004test\0\0\0\0\0\0\0\0\0";
-            var byteArray = Encoding.UTF8.GetBytes(stringBytes);
-            var deserialized = serializer.Deserialize<ConversionRequest>(byteArray);
-            //deserialized.RequestEthTransactionHash =
-
         }
 
         [Fact]

@@ -111,14 +111,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.amount);
             stream.ReadWrite(ref this.processed);
 
-            //if (stream.Serializing && string.IsNullOrEmpty(this.RequestEthTransactionHash))
-            //    this.RequestEthTransactionHash = "0";
-
-            //if (!stream.Serializing)
-            //{
-            //    this.requestEthTransactionHash = "0";
-            //    stream.ReadWrite(ref this.requestEthTransactionHash);
-            //}
+            // TODO Fix:
+            // stream.ReadWrite(ref this.requestEthTransactionHash);
         }
     }
 }
