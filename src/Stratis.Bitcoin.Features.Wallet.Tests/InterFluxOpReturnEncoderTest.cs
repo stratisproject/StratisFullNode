@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Text;
+using Xunit;
 
 namespace Stratis.Bitcoin.Features.Wallet.Tests
 {
@@ -17,6 +18,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Assert.True(success);
             Assert.Equal(chain, resultChain);
             Assert.Equal(address, resultAddress);
+
+
+            byte[] encodedBytes = Encoding.UTF8.GetBytes(encoded);
+            bool success2 = InterFluxOpReturnEncoder.TryDecode(encodedBytes, out int resultChain2, out string resultAddress2);
+
+            Assert.True(success2);
+            Assert.Equal(chain, resultChain2);
+            Assert.Equal(address, resultAddress2);
         }
 
         [Fact]

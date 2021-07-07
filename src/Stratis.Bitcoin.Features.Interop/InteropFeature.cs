@@ -16,39 +16,42 @@ using Stratis.Features.FederatedPeg.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop
 {
+    /// <summary>
+    /// A class containing all the related configuration to add chain interop functionality to the full node.
+    /// </summary>
     public sealed class InteropFeature : FullNodeFeature
     {
         private readonly IConnectionManager connectionManager;
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
         private readonly IConversionRequestRepository conversionRequestRepository;
-        private readonly IETHClient ethereumClientBase;
+        private readonly IETHCompatibleClientProvider ethClientProvider;
         private readonly IFederationManager federationManager;
         private readonly InteropPoller interopPoller;
         private readonly InteropSettings interopSettings;
         private readonly Network network;
 
         public InteropFeature(
-            Network network,
-            IFederationManager federationManager,
             IConnectionManager connectionManager,
-            InteropPoller interopPoller,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
             IConversionRequestRepository conversionRequestRepository,
-            IETHClient ethereumClientBase,
+            IETHCompatibleClientProvider ethCompatibleClientProvider,
+            IFederationManager federationManager,
+            IFullNode fullNode,
+            InteropPoller interopPoller,
             InteropSettings interopSettings,
-            IFullNode fullNode)
+            Network network)
         {
-            this.network = network;
-            this.federationManager = federationManager;
             this.connectionManager = connectionManager;
-            this.interopPoller = interopPoller;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
             this.conversionRequestRepository = conversionRequestRepository;
-            this.ethereumClientBase = ethereumClientBase;
+            this.ethClientProvider = ethCompatibleClientProvider;
+            this.federationManager = federationManager;
+            this.interopPoller = interopPoller;
             this.interopSettings = interopSettings;
+            this.network = network;
 
             var payloadProvider = (PayloadProvider)fullNode.Services.ServiceProvider.GetService(typeof(PayloadProvider));
             payloadProvider.AddPayload(typeof(InteropCoordinationVoteRequestPayload));
@@ -57,18 +60,22 @@ namespace Stratis.Bitcoin.Features.Interop
             payloadProvider.AddPayload(typeof(FeeAgreePayload));
         }
 
+        /// <inheritdoc/>
         public override Task InitializeAsync()
         {
-            this.conversionRequestCoordinationService.RegisterConversionRequestQuorum(this.interopSettings.ETHMultisigWalletQuorum);
+            // For now as only ethereum is supported we need set this to the quorum amount in the eth settings class.
+            // Refactor this to a base.
+            this.conversionRequestCoordinationService.RegisterConversionRequestQuorum(this.interopSettings.GetSettingsByChain(Wallet.DestinationChain.ETH).MultisigWalletQuorum);
 
             this.interopPoller?.Initialize();
 
             NetworkPeerConnectionParameters networkPeerConnectionParameters = this.connectionManager.Parameters;
-            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethereumClientBase, this.interopSettings));
+            networkPeerConnectionParameters.TemplateBehaviors.Add(new InteropBehavior(this.network, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ethClientProvider, this.federationManager));
 
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc/>
         public override void Dispose()
         {
             this.interopPoller?.Dispose();
@@ -89,9 +96,11 @@ namespace Stratis.Bitcoin.Features.Interop
                 features
                     .AddFeature<InteropFeature>()
                     .FeatureServices(services => services
-                        .AddSingleton<InteropSettings>()
-                        .AddSingleton<IETHClient, ETHClient.ETHClient>()
-                        .AddSingleton<InteropPoller>()
+                    .AddSingleton<InteropSettings>()
+                    .AddSingleton<IETHClient, ETHClient.ETHClient>()
+                    .AddSingleton<IBNBClient, BNBClient>()
+                    .AddSingleton<IETHCompatibleClientProvider, ETHCompatibleClientProvider>()
+                    .AddSingleton<InteropPoller>()
                     ));
 
             return fullNodeBuilder;
