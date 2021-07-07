@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
             this.transactionIdVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
 
-            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 251);
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 252);
         }
 
         /// <inheritdoc/>
