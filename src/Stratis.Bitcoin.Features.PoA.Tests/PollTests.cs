@@ -57,7 +57,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             for (int i = 0; i < poll.PubKeysHexVotedInFavor.Count; i++)
             {
-                Assert.Equal(poll.PubKeysHexVotedInFavor[i], deserializedPoll.PubKeysHexVotedInFavor[i]);
+                Assert.Equal(poll.PubKeysHexVotedInFavor[i].PubKey, deserializedPoll.PubKeysHexVotedInFavor[i].PubKey);
+                Assert.Equal(poll.PubKeysHexVotedInFavor[i].Height, deserializedPoll.PubKeysHexVotedInFavor[i].Height);
             }
         }
     }
