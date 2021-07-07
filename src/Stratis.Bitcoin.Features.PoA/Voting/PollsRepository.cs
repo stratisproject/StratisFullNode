@@ -60,23 +60,32 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
 
-                    Poll[] polls = data
-                        .Where(d => d.Key.Length == 4)
-                        .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
-                        .ToArray();
-
-                    this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
-
-                    Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
-
-                    if (rowTip.Exists)
+                    try
                     {
-                        this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                        if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
-                            this.CurrentTip = null;
+                        Poll[] polls = data
+                            .Where(d => d.Key.Length == 4)
+                            .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                            .ToArray();
+
+                        this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
+
+                        Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
+
+                        if (rowTip.Exists)
+                        {
+                            this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
+                            if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
+                                this.CurrentTip = null;
+                        }
+                        else
+                        {
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                        }
                     }
-                    else
+                    catch (Exception err) when (err.Message == "No more byte to read")
                     {
+                        // The polls repository requires an upgrade.
                         this.ResetLocked(transaction);
                         transaction.Commit();
                     }

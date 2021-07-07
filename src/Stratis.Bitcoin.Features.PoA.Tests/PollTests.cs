@@ -22,10 +22,10 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 },
                 PollVotedInFavorBlockData = new HashHeightPair(uint256.One, 1),
                 PollStartBlockData = new HashHeightPair(uint256.One, 1),
-                PubKeysHexVotedInFavor = new List<string>()
+                PubKeysHexVotedInFavor = new List<Vote>()
                 {
-                    "qwe",
-                    "rty"
+                    new Vote() { PubKey = "qwe" },
+                    new Vote() { PubKey = "rty" }
                 }
             };
 
