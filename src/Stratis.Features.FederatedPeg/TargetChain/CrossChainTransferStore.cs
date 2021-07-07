@@ -572,10 +572,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     // Ensure we get called for a retry by NOT advancing the chain A tip if the block
                                     // contained any suspended transfers.
                                     if (!haveSuspendedTransfers)
-                                    {
-                                        this.logger.Info("Suspended flag not set, saving mature height: '{0}'", this.NextMatureDepositHeight + 1);
                                         this.SaveNextMatureHeight(dbreezeTransaction, this.NextMatureDepositHeight + 1);
-                                    }
 
                                     dbreezeTransaction.Commit();
                                     this.UpdateLookups(tracker);

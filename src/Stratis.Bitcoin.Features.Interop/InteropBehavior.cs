@@ -10,6 +10,7 @@ using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol;
 using Stratis.Bitcoin.P2P.Protocol.Behaviors;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Coordination;
 using Stratis.Features.FederatedPeg.Payloads;
 using TracerAttributes;
@@ -20,6 +21,7 @@ namespace Stratis.Bitcoin.Features.Interop
     {
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestFeeService conversionRequestFeeService;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHClient ETHClient;
         private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
@@ -31,6 +33,7 @@ namespace Stratis.Bitcoin.Features.Interop
             IFederationManager federationManager,
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestFeeService conversionRequestFeeService,
+            IConversionRequestRepository conversionRequestRepository,
             IETHClient ETHClient,
             InteropSettings interopSettings)
         {
@@ -40,19 +43,21 @@ namespace Stratis.Bitcoin.Features.Interop
             Guard.NotNull(ETHClient, nameof(ETHClient));
             Guard.NotNull(interopSettings, nameof(interopSettings));
 
-            this.logger = LogManager.GetCurrentClassLogger();
-            this.network = network;
-            this.federationManager = federationManager;
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestFeeService = conversionRequestFeeService;
+            this.conversionRequestRepository = conversionRequestRepository;
             this.ETHClient = ETHClient;
+            this.federationManager = federationManager;
             this.interopSettings = interopSettings;
+            this.network = network;
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         [NoTrace]
         public override object Clone()
         {
-            return new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.ETHClient, this.interopSettings);
+            return new InteropBehavior(this.network, this.federationManager, this.conversionRequestCoordinationService, this.conversionRequestFeeService, this.conversionRequestRepository, this.ETHClient, this.interopSettings);
         }
 
         protected override void AttachCore()
@@ -91,8 +96,12 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 switch (message.Message.Payload)
                 {
-                    case InteropCoordinationPayload interopCoordinationPayload:
-                        await this.ProcessInteropCoordinationAsync(peer, interopCoordinationPayload).ConfigureAwait(false);
+                    case InteropCoordinationVoteRequestPayload coordinationRequest:
+                        await this.ProcessCoordinationVoteRequestAsync(peer, coordinationRequest).ConfigureAwait(false);
+                        break;
+
+                    case InteropCoordinationVoteReplyPayload coordinationReply:
+                        await this.ProcessCoordinationVoteReplyAsync(peer, coordinationReply).ConfigureAwait(false);
                         break;
 
                     case FeeProposalPayload feeProposalPayload:
@@ -110,12 +119,12 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task ProcessInteropCoordinationAsync(INetworkPeer peer, InteropCoordinationPayload payload)
+        private async Task ProcessCoordinationVoteRequestAsync(INetworkPeer peer, InteropCoordinationVoteRequestPayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.Debug("{0} received from '{1}':'{2}'. Request {3} proposing transaction ID {4}.", nameof(InteropCoordinationPayload), peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.Debug("Coordination vote request for id '{0}' received from '{1}':'{2}' proposing transaction ID {4}.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -137,7 +146,6 @@ namespace Stratis.Bitcoin.Features.Interop
             catch (Exception)
             {
                 this.logger.Warn("Received malformed coordination payload for {0}.", payload.RequestId);
-
                 return;
             }
 
@@ -157,13 +165,71 @@ namespace Stratis.Bitcoin.Features.Interop
             if (confirmationCount < 1)
             {
                 this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
-
                 return;
             }
 
-            this.logger.Info("Multisig wallet transaction {0} has {1} confirmations (request ID: {2}).", payload.TransactionId, confirmationCount, payload.RequestId);
+            // Only add votes if the conversion request has not already been finalized.
+            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(payload.RequestId);
+            if (conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised)
+                this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
 
-            this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
+            string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
+            await this.AttachedPeer.SendMessageAsync(new InteropCoordinationVoteReplyPayload(payload.RequestId, payload.TransactionId, signature)).ConfigureAwait(false);
+        }
+
+        private async Task ProcessCoordinationVoteReplyAsync(INetworkPeer peer, InteropCoordinationVoteReplyPayload payload)
+        {
+            if (!this.federationManager.IsFederationMember)
+                return;
+
+            this.logger.Debug("Coordination vote reply for id '{0}' received from '{1}':'{2}' proposing transaction ID {4}.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+
+            if (payload.TransactionId == BigInteger.MinusOne)
+                return;
+
+            // Check that the payload is signed by a multisig federation member.
+            PubKey pubKey;
+
+            try
+            {
+                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.TransactionId, payload.Signature);
+
+                if (!this.federationManager.IsMultisigMember(pubKey))
+                {
+                    this.logger.Warn("Received unverified coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                this.logger.Warn("Received malformed coordination payload for {0}.", payload.RequestId);
+                return;
+            }
+
+            BigInteger confirmationCount;
+
+            try
+            {
+                // Check that the transaction ID in the payload actually exists, and is unconfirmed.
+                confirmationCount = await this.ETHClient.GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
+            if (confirmationCount < 1)
+            {
+                this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
+                return;
+            }
+
+            // Only add votes if the conversion request has not already been finalized.
+            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(payload.RequestId);
+            if (conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised)
+                this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
         }
 
         private async Task ProcessFeeProposalAsync(FeeProposalPayload payload)

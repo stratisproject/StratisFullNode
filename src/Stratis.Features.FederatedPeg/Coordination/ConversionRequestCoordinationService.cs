@@ -59,17 +59,18 @@ namespace Stratis.Features.FederatedPeg.Coordination
         private readonly ILogger logger;
 
         /// <summary> Interflux transaction ID votes </summary>
-        private readonly Dictionary<string, Dictionary<BigInteger, int>> activeVotes;
+        private readonly Dictionary<string, Dictionary<BigInteger, int>> transactionIdVotes;
         private readonly Dictionary<string, HashSet<PubKey>> receivedVotes;
 
         public ConversionRequestCoordinationService(INodeStats nodeStats)
         {
-            this.activeVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
             this.lockObject = new object();
             this.logger = LogManager.GetCurrentClassLogger();
-            this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
 
-            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+            this.receivedVotes = new Dictionary<string, HashSet<PubKey>>();
+            this.transactionIdVotes = new Dictionary<string, Dictionary<BigInteger, int>>();
+
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 251);
         }
 
         /// <inheritdoc/>
@@ -77,27 +78,29 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
+                // If the request has not yet been voted on, create a voting list.
                 if (!this.receivedVotes.TryGetValue(requestId, out HashSet<PubKey> voted))
                     voted = new HashSet<PubKey>();
 
-                // Ignore the vote if the pubkey has already submitted a vote.
-                if (voted.Contains(pubKey))
-                    return;
+                // Check if the pubkey node has voted for this request.
+                if (!voted.Contains(pubKey))
+                {
+                    this.logger.Debug("Adding vote for request '{0}' (transactionId '{1}') from pubkey {2}.", requestId, transactionId, pubKey.ToHex());
 
-                this.logger.Info("Pubkey {0} adding vote for request {1}, transactionId {2}.", pubKey.ToHex(), requestId, transactionId);
+                    voted.Add(pubKey);
 
-                voted.Add(pubKey);
+                    // If the set of active votes does not contain the request, create a new list.
+                    if (!this.transactionIdVotes.TryGetValue(requestId, out Dictionary<BigInteger, int> transactionIdVotesForRequestId))
+                        transactionIdVotesForRequestId = new Dictionary<BigInteger, int>();
 
-                if (!this.activeVotes.TryGetValue(requestId, out Dictionary<BigInteger, int> transactionIdVotes))
-                    transactionIdVotes = new Dictionary<BigInteger, int>();
+                    if (!transactionIdVotesForRequestId.ContainsKey(transactionId))
+                        transactionIdVotesForRequestId[transactionId] = 1;
+                    else
+                        transactionIdVotesForRequestId[transactionId]++;
 
-                if (!transactionIdVotes.ContainsKey(transactionId))
-                    transactionIdVotes[transactionId] = 1;
-                else
-                    transactionIdVotes[transactionId]++;
-
-                this.activeVotes[requestId] = transactionIdVotes;
-                this.receivedVotes[requestId] = voted;
+                    this.transactionIdVotes[requestId] = transactionIdVotesForRequestId;
+                    this.receivedVotes[requestId] = voted;
+                }
             }
         }
 
@@ -106,12 +109,12 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
-                if (!this.activeVotes.ContainsKey(requestId))
+                if (!this.transactionIdVotes.ContainsKey(requestId))
                     return BigInteger.MinusOne;
 
                 BigInteger highestVoted = BigInteger.MinusOne;
                 int voteCount = 0;
-                foreach (KeyValuePair<BigInteger, int> vote in this.activeVotes[requestId])
+                foreach (KeyValuePair<BigInteger, int> vote in this.transactionIdVotes[requestId])
                 {
                     if (vote.Value > voteCount && vote.Value >= quorum)
                     {
@@ -129,12 +132,12 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
-                if (!this.activeVotes.ContainsKey(requestId))
+                if (!this.transactionIdVotes.ContainsKey(requestId))
                     return BigInteger.MinusOne;
 
                 BigInteger highestVoted = BigInteger.MinusOne;
                 int voteCount = 0;
-                foreach (KeyValuePair<BigInteger, int> vote in this.activeVotes[requestId])
+                foreach (KeyValuePair<BigInteger, int> vote in this.transactionIdVotes[requestId])
                 {
                     if (vote.Value > voteCount)
                     {
@@ -152,7 +155,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             lock (this.lockObject)
             {
-                this.activeVotes.Remove(requestId);
+                this.transactionIdVotes.Remove(requestId);
                 this.receivedVotes.Remove(requestId);
             }
         }
@@ -181,17 +184,12 @@ namespace Stratis.Features.FederatedPeg.Coordination
         {
             benchLog.AppendLine(">> Interop Conversion Request Votes (last 10):");
 
-            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.activeVotes.Take(10))
+            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.transactionIdVotes.Take(10))
             {
                 foreach (KeyValuePair<BigInteger, int> result in active.Value)
                 {
-                    benchLog.AppendLine($"Active Vote Id: {active.Key} Vote: {result.Key} Count: {result.Value}");
+                    benchLog.AppendLine($"Request Id: {active.Key} Transaction Id: {result.Key} Count: {result.Value}");
                 }
-            }
-
-            foreach (KeyValuePair<string, HashSet<PubKey>> received in this.receivedVotes.Take(10))
-            {
-                benchLog.AppendLine($"Received Vote Id: {received.Key} Votes: {received.Value.Count}");
             }
 
             benchLog.AppendLine();

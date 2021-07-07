@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             this.logger = LogManager.GetCurrentClassLogger();
 
-            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 252);
         }
 
         /// <inheritdoc/>
@@ -397,7 +397,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(">> Interop Fee Proposals / Votes (last 10):");
+            benchLog.AppendLine(">> Interop Fee Proposals (last 10):");
 
             IOrderedEnumerable<InteropConversionRequestFee> conversionRequests = this.interopRequestKeyValueStore.GetAllAsJson<InteropConversionRequestFee>().OrderByDescending(i => i.BlockHeight);
             foreach (InteropConversionRequestFee conversionRequest in conversionRequests.Take(10))
@@ -409,6 +409,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
                 benchLog.AppendLine($"Height: {conversionRequest.BlockHeight} Id: {conversionRequest.RequestId} Proposals: {conversionRequest.FeeProposals.Count} Proposal Amount (Avg): {averageProposal} Votes: {conversionRequest.FeeVotes.Count} Amount: {new Money(conversionRequest.Amount)} State: {conversionRequest.State}");
             }
+
             benchLog.AppendLine();
         }
     }

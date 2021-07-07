@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using NBitcoin;
 using NLog;
-using Stratis.Features.Collateral.CounterChain;
 using TracerAttributes;
 
-namespace Stratis.Features.FederatedPeg
+namespace Stratis.Bitcoin
 {
     /// <summary>
     /// OP_RETURN data can be a hash, an address or unknown.
@@ -27,8 +25,6 @@ namespace Stratis.Features.FederatedPeg
         /// <returns><c>true</c> if address was extracted; <c>false</c> otherwise.</returns>
         bool TryGetTargetAddress(Transaction transaction, out string address);
 
-        bool TryGetTargetETHAddress(Transaction transaction, out string address);
-
         /// <summary>
         /// Tries to find a single OP_RETURN output that can be interpreted as a transaction id.
         /// </summary>
@@ -45,10 +41,10 @@ namespace Stratis.Features.FederatedPeg
 
         private readonly Network counterChainNetwork;
 
-        public OpReturnDataReader(CounterChainNetworkWrapper counterChainNetworkWrapper)
+        public OpReturnDataReader(Network network)
         {
             this.logger = LogManager.GetCurrentClassLogger();
-            this.counterChainNetwork = counterChainNetworkWrapper.CounterChainNetwork;
+            this.counterChainNetwork = network;
         }
 
         /// <inheritdoc />
@@ -59,24 +55,6 @@ namespace Stratis.Features.FederatedPeg
                 .Where(s => s != null)
                 .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
 
-            if (opReturnAddresses.Count != 1)
-            {
-                address = null;
-                return false;
-            }
-
-            address = opReturnAddresses[0];
-            return true;
-        }
-
-        public bool TryGetTargetETHAddress(Transaction transaction, out string address)
-        {
-            var opReturnAddresses = SelectBytesContentFromOpReturn(transaction)
-                .Select(this.TryConvertValidOpReturnDataToETHAddress)
-                .Where(s => s != null)
-                .Distinct(StringComparer.InvariantCultureIgnoreCase).ToList();
-
-            // A standard OP_RETURN is not long enough to fit more than 1 Ethereum address, but a non-standard transaction could have multiple.
             if (opReturnAddresses.Count != 1)
             {
                 address = null;
@@ -105,7 +83,7 @@ namespace Stratis.Features.FederatedPeg
             return true;
         }
 
-        private static IEnumerable<byte[]> SelectBytesContentFromOpReturn(Transaction transaction)
+        public static IEnumerable<byte[]> SelectBytesContentFromOpReturn(Transaction transaction)
         {
             return transaction.Outputs
                 .Select(o => o.ScriptPubKey)
@@ -133,22 +111,6 @@ namespace Stratis.Features.FederatedPeg
                 this.logger.Debug("Address {destination} could not be converted to a valid address. Reason {message}.", destination, ex.Message);
                 return null;
             }
-        }
-
-        private string TryConvertValidOpReturnDataToETHAddress(byte[] data)
-        {
-            // After removing the RETURN operator, convert the remaining bytes to our candidate address.
-            string destination = Encoding.UTF8.GetString(data);
-
-            // Attempt to parse the string. An Ethereum address is 42 characters:
-            // 0x - initial prefix
-            // <20 bytes> - rightmost 20 bytes of the Keccak hash of a public key, encoded as hex
-            Match match = Regex.Match(destination, @"^0x([A-Fa-f0-9]{40})$", RegexOptions.IgnoreCase);
-
-            if (!match.Success)
-                return null;
-
-            return destination;
         }
 
         private string TryConvertValidOpReturnDataToHash(byte[] data)

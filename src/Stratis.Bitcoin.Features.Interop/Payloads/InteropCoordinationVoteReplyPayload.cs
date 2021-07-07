@@ -1,27 +1,28 @@
 ﻿using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 
 namespace Stratis.Bitcoin.Features.Interop.Payloads
 {
-    [Payload("coord")]
-    public class InteropCoordinationPayload : Payload
+    [Payload("coordreply")]
+    public class InteropCoordinationVoteReplyPayload : Payload
     {
         private string requestId;
         private int transactionId;
         private string signature;
 
         public string RequestId => this.requestId;
-        
+
         public int TransactionId => this.transactionId;
-        
+
         public string Signature => this.signature;
 
         /// <remarks>Needed for deserialization.</remarks>
-        public InteropCoordinationPayload()
+        public InteropCoordinationVoteReplyPayload()
         {
         }
 
-        public InteropCoordinationPayload(string requestId, int transactionId, string signature)
+        public InteropCoordinationVoteReplyPayload(string requestId, int transactionId, string signature)
         {
             this.requestId = requestId;
             this.transactionId = transactionId;
