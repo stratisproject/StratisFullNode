@@ -1,4 +1,5 @@
-﻿using NBitcoin;
+﻿using System;
+using NBitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 
 namespace Stratis.Features.FederatedPeg.Conversion
@@ -105,14 +106,20 @@ namespace Stratis.Features.FederatedPeg.Conversion
             stream.ReadWrite(ref this.requestStatus);
             stream.ReadWrite(ref this.blockHeight);
             stream.ReadWrite(ref this.destinationAddress);
-
-            // Temporarily disabled until migration is implemented
-            //s.ReadWrite(ref this.destinationChain);
             stream.ReadWrite(ref this.amount);
             stream.ReadWrite(ref this.processed);
 
-            // TODO Fix:
-            // stream.ReadWrite(ref this.requestEthTransactionHash);
+            try
+            {
+                // InterFlux v2 fields
+                stream.ReadWrite(ref this.destinationChain);
+                stream.ReadWrite(ref this.requestEthTransactionHash);
+
+            }
+            catch (Exception)
+            {
+                // The above fields were not present in InterFlux v1.
+            }
         }
     }
 }

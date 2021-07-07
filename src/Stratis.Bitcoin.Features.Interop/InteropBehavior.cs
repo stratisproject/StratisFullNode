@@ -237,6 +237,8 @@ namespace Stratis.Bitcoin.Features.Interop
             if (!this.federationManager.IsFederationMember)
                 return;
 
+            this.logger.Debug("FeeProposalPayload received for {0}.", payload.RequestId);
+
             // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;
 
@@ -266,6 +268,8 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             if (!this.federationManager.IsFederationMember)
                 return;
+
+            this.logger.Debug("FeeAgreePayload received for {0}.", payload.RequestId);
 
             // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;

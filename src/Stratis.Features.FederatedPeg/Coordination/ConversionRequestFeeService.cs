@@ -108,7 +108,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
             this.logger = LogManager.GetCurrentClassLogger();
 
-            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 252);
+            nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 251);
         }
 
         /// <inheritdoc/>
@@ -126,7 +126,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             {
                 if (conversionRequestSyncStart.AddMinutes(2) <= this.dateTimeProvider.GetUtcNow())
                 {
-                    this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 2 minutes... ignoring.");
+                    this.logger.Warn($"A fee for conversion request '{requestId}' failed to reach consensus after 2 minutes, ignoring.");
                     interopConversionRequestFee.State = InteropFeeState.FailRevertToFallback;
                     this.interopRequestKeyValueStore.SaveValueJson(requestId, interopConversionRequestFee);
                     break;
@@ -455,10 +455,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
     public enum InteropFeeState
     {
-        ProposalInProgress,
-        AgreeanceInProgress,
-        AgreeanceConcluded,
-        FailRevertToFallback,
-        Ignore
+        ProposalInProgress = 0,
+        AgreeanceInProgress = 1,
+        AgreeanceConcluded = 2,
+        FailRevertToFallback = 3
     }
 }

@@ -187,10 +187,10 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    var dynamicFeeActivationBlock = ((PoAConsensusOptions)this.network.Consensus.Options).ConversionRequestFeeActivationBlock;
-                    if (dynamicFeeActivationBlock != 0 && this.chainIndexer.Tip.Height < dynamicFeeActivationBlock)
+                    var interopV2ActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2ActivationHeight;
+                    if (interopV2ActivationHeight != 0 && this.chainIndexer.Tip.Height < interopV2ActivationHeight)
                     {
-                        this.logger.Warn("Conversion transactions '{0}' will not be processed below activation height {1}.", potentialConversionTransaction.Id, dynamicFeeActivationBlock);
+                        this.logger.Warn("Conversion transactions '{0}' will not be processed below activation height {1}.", potentialConversionTransaction.Id, interopV2ActivationHeight);
                         continue;
                     }
 
@@ -213,22 +213,18 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
 
-                    // If the dynamix fee should be ignored, dont create a fallback or
-                    // check the amount as the fee was already processed.
-                    if (interopConversionRequestFee.State != InteropFeeState.Ignore)
+                    // If a dynamic fee could not be determined, create a fallback fee.
+                    if (interopConversionRequestFee == null ||
+                        (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
                     {
-                        if (interopConversionRequestFee == null ||
-                            (interopConversionRequestFee != null && interopConversionRequestFee.State != InteropFeeState.AgreeanceConcluded))
-                        {
-                            interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
-                            this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
-                        }
+                        interopConversionRequestFee.Amount = ConversionRequestFeeService.FallBackFee;
+                        this.logger.Warn($"A dynamic fee for conversion request '{potentialConversionTransaction.Id}' could not be determined, using a fixed fee of {ConversionRequestFeeService.FallBackFee} STRAX.");
+                    }
 
-                        if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
-                        {
-                            this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
-                            continue;
-                        }
+                    if (Money.Satoshis(interopConversionRequestFee.Amount) >= potentialConversionTransaction.Amount)
+                    {
+                        this.logger.Warn("Conversion transaction '{0}' is no longer large enough to cover the fee.", potentialConversionTransaction.Id);
+                        continue;
                     }
 
                     // We insert the fee distribution as a deposit to be processed, albeit with a special address.
