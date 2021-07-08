@@ -21,6 +21,8 @@ namespace Stratis.Bitcoin.Features.Wallet
             destinationChain = -1;
             address = string.Empty;
 
+            // If the op_return data does not contain the "INTER" prefix,
+            // then this is not a interflux (conversion) transaction.
             if (prefixIndex == -1 || separatorIndex == -1)
                 return false;
 
