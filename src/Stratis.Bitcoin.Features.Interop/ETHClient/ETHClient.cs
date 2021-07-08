@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <returns>The number of confirmations.</returns>
         Task<BigInteger> GetMultisigConfirmationCountAsync(BigInteger transactionId);
 
-        Task<BigInteger> GetConfirmationsAsync(string transactionHash);
+        Task<(BigInteger ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string transactionHash);
 
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
 
@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public ETHClient(InteropSettings interopSettings)
         {
             this.SetupConfiguration(interopSettings);
-            
+
             if (!this.settings.InteropEnabled)
                 return;
 
@@ -172,14 +172,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         {
             var blockNumberHandler = new EthBlockNumber(this.web3.Client);
             HexBigInteger block = await blockNumberHandler.SendRequestAsync().ConfigureAwait(false);
-            
+
             return block.Value;
         }
 
         /// <inheritdoc />
         public async Task<BigInteger> GetBalanceAsync(string address)
         {
-            
+
             HexBigInteger balance = await this.web3.Eth.GetBalance.SendRequestAsync(address).ConfigureAwait(false);
 
             return balance.Value;
@@ -203,18 +203,18 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
-        public async Task<BigInteger> GetConfirmationsAsync(string transactionHash)
+        public async Task<(BigInteger ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string transactionHash)
         {
             Transaction transaction = await this.web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash).ConfigureAwait(false);
 
             if (transaction.BlockNumber == null)
-                return 0;
+                return (0, string.Empty);
 
             BigInteger currentBlockHeight = await this.GetBlockHeightAsync().ConfigureAwait(false);
 
             BigInteger confirmations = currentBlockHeight - transaction.BlockNumber.Value;
 
-            return confirmations > 0 ? confirmations : BigInteger.Zero;
+            return (confirmations > 0 ? confirmations : BigInteger.Zero, transaction.BlockHash);
         }
 
         public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
