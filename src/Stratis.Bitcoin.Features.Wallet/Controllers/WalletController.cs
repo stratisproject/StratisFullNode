@@ -445,7 +445,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request)
         {
             if (request.DestinationChain != (int)DestinationChain.ETH)
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid destination chain", "Only InterFlux transactions to the Ethereum chain is currently supported.");
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid destination chain", "Only InterFlux transactions to the Ethereum chain are currently supported.");
 
             request.OpReturnData = InterFluxOpReturnEncoder.Encode((DestinationChain)request.DestinationChain, request.DestinationAddress);
 
