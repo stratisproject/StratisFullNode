@@ -169,67 +169,10 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task ProcessCoordinationVoteReplyAsync(INetworkPeer peer, ConversionRequestPayload payload)
-        {
-            if (!this.federationManager.IsFederationMember)
-                return;
-
-            this.logger.Debug("Coordination vote reply for id '{0}' received from '{1}':'{2}' proposing transaction ID {4}.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
-
-            if (payload.TransactionId == BigInteger.MinusOne)
-                return;
-
-            // Check that the payload is signed by a multisig federation member.
-            PubKey pubKey;
-
-            try
-            {
-                pubKey = PubKey.RecoverFromMessage(payload.RequestId + payload.TransactionId, payload.Signature);
-
-                if (!this.federationManager.IsMultisigMember(pubKey))
-                {
-                    this.logger.Warn("Received unverified coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
-
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                this.logger.Warn("Received malformed coordination payload for {0}.", payload.RequestId);
-                return;
-            }
-
-            BigInteger confirmationCount;
-
-            try
-            {
-                // Check that the transaction ID in the payload actually exists, and is unconfirmed.
-                confirmationCount = await this.ethClientProvider.GetClientForChain(payload.DestinationChain).GetMultisigConfirmationCountAsync(payload.TransactionId).ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-                return;
-            }
-
-            // We presume that the initial submitter of the transaction must have at least confirmed it. Otherwise just ignore this coordination attempt.
-            if (confirmationCount < 1)
-            {
-                this.logger.Info("Multisig wallet transaction {0} has no confirmations.", payload.TransactionId);
-                return;
-            }
-
-            // Only add votes if the conversion request has not already been finalized.
-            ConversionRequest conversionRequest = this.conversionRequestRepository.Get(payload.RequestId);
-            if (conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised)
-                this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
-        }
-
         private async Task ProcessFeeProposalAsync(FeeProposalPayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
-
-            this.logger.Debug("FeeProposalPayload received for {0}.", payload.RequestId);
 
             // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;
@@ -240,7 +183,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified fee proposal payload for '{0}'. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.Warn("Received unverified fee proposal payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
                     return;
                 }
             }
@@ -251,7 +194,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // Reply back to the peer with this node's proposal.
-            FeeProposalPayload replyToPayload = this.conversionRequestFeeService.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
+            FeeProposalPayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberProposedInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
@@ -260,8 +203,6 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             if (!this.federationManager.IsFederationMember)
                 return;
-
-            this.logger.Debug("FeeAgreePayload received for {0}.", payload.RequestId);
 
             // Check that the payload is signed by a multisig federation member.
             PubKey pubKey;
@@ -272,7 +213,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified fee vote payload for '{0}'. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.Warn("Received unverified fee vote payload for '{0}' from pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
                     return;
                 }
             }
@@ -283,7 +224,7 @@ namespace Stratis.Bitcoin.Features.Interop
             }
 
             // Reply back to the peer with this node's amount.
-            FeeAgreePayload replyToPayload = this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
+            FeeAgreePayload replyToPayload = await this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFeeAsync(payload.RequestId, payload.FeeAmount, pubKey).ConfigureAwait(false);
             if (payload.IsRequesting && replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }

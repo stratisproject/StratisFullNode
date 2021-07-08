@@ -53,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <param name="pubKey">The pubkey of the node that proposed the fee.</param>
         /// 
         /// <returns>A fee proposal payload for THIS node.</returns>
-        FeeProposalPayload MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, PubKey pubKey);
+        Task<FeeProposalPayload> MultiSigMemberProposedInteropFeeAsync(string requestId, ulong feeAmount, PubKey pubKey);
 
         /// <summary>
         /// Processes a fee vote payload from another multisig.
@@ -66,7 +66,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <param name="pubKey">The pubkey of the node that voted on the fee.</param>
         /// 
         /// <returns>A fee vote payload for THIS node.</returns>
-        FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, PubKey pubKey);
+        Task<FeeAgreePayload> MultiSigMemberAgreedOnInteropFeeAsync(string requestId, ulong feeAmount, PubKey pubKey);
     }
 
     public sealed class ConversionRequestFeeService : IConversionRequestFeeService
@@ -77,7 +77,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         /// <summary> The fallback fee incase the nodes can't agree.</summary>
         public static readonly Money FallBackFee = Money.Coins(150);
 
-        private readonly AsyncLock lockObject = new AsyncLock();
+        private readonly AsyncLock asyncLockObject = new AsyncLock();
 
         private readonly IDateTimeProvider dateTimeProvider;
         private readonly IExternalApiPoller externalApiPoller;
@@ -139,7 +139,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 if (lastConversionRequestSync.AddMilliseconds(500) > this.dateTimeProvider.GetUtcNow())
                     continue;
 
-                using (await this.lockObject.LockAsync().ConfigureAwait(false))
+                using (await this.asyncLockObject.LockAsync().ConfigureAwait(false))
                 {
                     interopConversionRequestFee = CreateInteropConversionRequestFeeLocked(requestId, blockHeight);
 
@@ -189,7 +189,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <summary>
-        /// Submits this node's fee proposal. This methods must be called from within <see cref="lockObject"/>.
+        /// Submits this node's fee proposal. This methods must be called from within <see cref="asyncLockObject"/>.
         /// </summary>
         /// <param name="interopConversionRequestFee">The request we are currently processing.</param>
         /// <returns>The awaited task.</returns>
@@ -229,7 +229,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <summary>
-        /// Submits this node's fee vote. This methods must be called from within <see cref="lockObject"/>.
+        /// Submits this node's fee vote. This methods must be called from within <see cref="asyncLockObject"/>.
         /// </summary>
         /// <param name="interopConversionRequestFee">The request we are currently processing.</param>
         /// <returns>The awaited task.</returns>
@@ -266,9 +266,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <inheritdoc/>
-        public FeeProposalPayload MultiSigMemberProposedInteropFee(string requestId, ulong feeAmount, PubKey pubKey)
+        public async Task<FeeProposalPayload> MultiSigMemberProposedInteropFeeAsync(string requestId, ulong feeAmount, PubKey pubKey)
         {
-            lock (this.lockObject)
+            using (await this.asyncLockObject.LockAsync().ConfigureAwait(false))
             {
                 // If this node does not have the fee proposal, return and wait for the matured blocks sync manager to find and create it.
                 InteropConversionRequestFee interopConversionRequestFee = GetInteropConversionRequestFeeLocked(requestId);
@@ -296,9 +296,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
         }
 
         /// <inheritdoc/>
-        public FeeAgreePayload MultiSigMemberAgreedOnInteropFee(string requestId, ulong feeAmount, PubKey pubKey)
+        public async Task<FeeAgreePayload> MultiSigMemberAgreedOnInteropFeeAsync(string requestId, ulong feeAmount, PubKey pubKey)
         {
-            lock (this.lockObject)
+            using (await this.asyncLockObject.LockAsync().ConfigureAwait(false))
             {
                 // If this node does not have this conversion request fee, return and wait for the matured blocks sync manager to find it.
                 InteropConversionRequestFee interopConversionRequestFee = GetInteropConversionRequestFeeLocked(requestId);
