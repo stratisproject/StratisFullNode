@@ -89,12 +89,8 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 switch (message.Message.Payload)
                 {
-                    case InteropCoordinationVoteRequestPayload coordinationRequest:
-                        await this.ProcessCoordinationVoteRequestAsync(peer, coordinationRequest).ConfigureAwait(false);
-                        break;
-
-                    case InteropCoordinationVoteReplyPayload coordinationReply:
-                        await this.ProcessCoordinationVoteReplyAsync(peer, coordinationReply).ConfigureAwait(false);
+                    case ConversionRequestPayload conversionRequestPayload:
+                        await this.ProcessConversionRequestPayloadAsync(peer, conversionRequestPayload).ConfigureAwait(false);
                         break;
 
                     case FeeProposalPayload feeProposalPayload:
@@ -112,12 +108,12 @@ namespace Stratis.Bitcoin.Features.Interop
             }
         }
 
-        private async Task ProcessCoordinationVoteRequestAsync(INetworkPeer peer, InteropCoordinationVoteRequestPayload payload)
+        private async Task ProcessConversionRequestPayloadAsync(INetworkPeer peer, ConversionRequestPayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
 
-            this.logger.Debug("Coordination vote request for id '{0}' received from '{1}':'{2}' proposing transaction ID {4}.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
+            this.logger.Debug("Conversion request payload request for id '{0}' received from '{1}':'{2}' proposing transaction ID '{4}'.", payload.RequestId, peer.PeerEndPoint.Address, peer.RemoteSocketEndpoint.Address, payload.RequestId, payload.TransactionId);
 
             if (payload.TransactionId == BigInteger.MinusOne)
                 return;
@@ -131,14 +127,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 if (!this.federationManager.IsMultisigMember(pubKey))
                 {
-                    this.logger.Warn("Received unverified coordination payload for {0}. Computed pubkey {1}.", payload.RequestId, pubKey?.ToHex());
+                    this.logger.Warn("Conversion request payload for '{0}'. Computed pubkey '{1}'.", payload.RequestId, pubKey?.ToHex());
 
                     return;
                 }
             }
             catch (Exception)
             {
-                this.logger.Warn("Received malformed coordination payload for {0}.", payload.RequestId);
+                this.logger.Warn("Received malformed conversion request payload for '{0}'.", payload.RequestId);
                 return;
             }
 
@@ -166,11 +162,14 @@ namespace Stratis.Bitcoin.Features.Interop
             if (conversionRequest != null && conversionRequest.RequestStatus != ConversionRequestStatus.VoteFinalised)
                 this.conversionRequestCoordinationService.AddVote(payload.RequestId, payload.TransactionId, pubKey);
 
-            string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
-            await this.AttachedPeer.SendMessageAsync(new InteropCoordinationVoteReplyPayload(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain)).ConfigureAwait(false);
+            if (payload.IsRequesting)
+            {
+                string signature = this.federationManager.CurrentFederationKey.SignMessage(payload.RequestId + payload.TransactionId);
+                await this.AttachedPeer.SendMessageAsync(ConversionRequestPayload.Reply(payload.RequestId, payload.TransactionId, signature, payload.DestinationChain)).ConfigureAwait(false);
+            }
         }
 
-        private async Task ProcessCoordinationVoteReplyAsync(INetworkPeer peer, InteropCoordinationVoteReplyPayload payload)
+        private async Task ProcessCoordinationVoteReplyAsync(INetworkPeer peer, ConversionRequestPayload payload)
         {
             if (!this.federationManager.IsFederationMember)
                 return;
@@ -251,9 +250,9 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Reply back to the peer with this node's amount.
+            // Reply back to the peer with this node's proposal.
             FeeProposalPayload replyToPayload = this.conversionRequestFeeService.MultiSigMemberProposedInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
-            if (replyToPayload != null)
+            if (payload.IsRequesting && replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
 
@@ -285,7 +284,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
             // Reply back to the peer with this node's amount.
             FeeAgreePayload replyToPayload = this.conversionRequestFeeService.MultiSigMemberAgreedOnInteropFee(payload.RequestId, payload.FeeAmount, pubKey);
-            if (replyToPayload != null)
+            if (payload.IsRequesting && replyToPayload != null)
                 await this.AttachedPeer.SendMessageAsync(replyToPayload).ConfigureAwait(false);
         }
     }

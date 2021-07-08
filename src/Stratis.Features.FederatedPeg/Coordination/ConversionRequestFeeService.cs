@@ -225,7 +225,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             InterOpFeeToMultisig myProposal = interopConversionRequestFee.FeeProposals.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
             string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myProposal.FeeAmount);
 
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeProposalPayload(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).ConfigureAwait(false);
+            await this.federatedPegBroadcaster.BroadcastAsync(FeeProposalPayload.Request(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -262,7 +262,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
             InterOpFeeToMultisig myVote = interopConversionRequestFee.FeeVotes.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
             string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myVote.FeeAmount);
 
-            await this.federatedPegBroadcaster.BroadcastAsync(new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).ConfigureAwait(false);
+            await this.federatedPegBroadcaster.BroadcastAsync(FeeAgreePayload.Request(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature)).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
@@ -291,7 +291,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                 // This node would have proposed this fee if the InteropConversionRequestFee object exists.
                 InterOpFeeToMultisig myProposal = interopConversionRequestFee.FeeProposals.First(p => p.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex());
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myProposal.FeeAmount);
-                return new FeeProposalPayload(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature);
+                return FeeProposalPayload.Reply(interopConversionRequestFee.RequestId, myProposal.FeeAmount, interopConversionRequestFee.BlockHeight, signature);
             }
         }
 
@@ -320,7 +320,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
                     return null;
 
                 string signature = this.federationManager.CurrentFederationKey.SignMessage(interopConversionRequestFee.RequestId + myVote.FeeAmount);
-                return new FeeAgreePayload(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature);
+                return FeeAgreePayload.Reply(interopConversionRequestFee.RequestId, myVote.FeeAmount, interopConversionRequestFee.BlockHeight, signature);
             }
         }
 
