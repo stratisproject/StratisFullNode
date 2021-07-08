@@ -34,7 +34,7 @@ namespace Stratis.Bitcoin.Features.Interop
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
 
         /// <summary>The number of blocks deep a submission transaction needs to be before it should start getting confirmed by the non-originating nodes.</summary>
-        public readonly BigInteger SubmissionConfirmationThreshold = 6;
+        public readonly BigInteger SubmissionConfirmationThreshold = 12;
 
         private readonly IAsyncProvider asyncProvider;
         private readonly ChainIndexer chainIndexer;
