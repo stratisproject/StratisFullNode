@@ -470,9 +470,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     {
         /// <summary>Target chain that is supported by InterFlux integration.</summary>
         /// <remarks>See Stratis.Features.FederatedPeg.Conversion.DestinationChain enum.</remarks>
+        [Required]
         public int DestinationChain { get; set; }
 
         /// <summary>Address at destination chain at which coins should be deposited.</summary>
+        [Required]
         public string DestinationAddress { get; set; }
     }
 
