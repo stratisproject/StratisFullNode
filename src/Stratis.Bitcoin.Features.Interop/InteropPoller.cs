@@ -425,8 +425,11 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             request.RequestEthTransactionHash = identifiers.TransactionHash;
 
-                            if (!await WaitForTransactionToBeConfirmedAsync(identifiers, request.DestinationChain).ConfigureAwait(false))
-                                return;
+                            (BigInteger confirmationCount, string blockHash) = await this.ethClientProvider.GetClientForChain(request.DestinationChain).GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false);
+                            this.logger.LogInformation($"Originator confirming transaction id '{identifiers.TransactionHash}' '({identifiers.TransactionId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
+
+                            if (confirmationCount < this.SubmissionConfirmationThreshold)
+                                break;
 
                             this.logger.LogInformation("Originator submitted transaction to multisig in transaction '{0}' and was allocated transactionId '{1}'.", identifiers.TransactionHash, transactionId);
 
@@ -627,7 +630,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <param name="identifiers">The transaction information to check.</param>
         /// <param name="caller">The caller that is waiting on the submission transaction's confirmation count.</param>
         /// <returns><c>True if it succeeded</c>, <c>false</c> if the node is stopping.</returns>
-        private async Task<bool> WaitForTransactionToBeConfirmedAsync(MultisigTransactionIdentifiers identifiers, DestinationChain destinationChain, [CallerMemberName] string caller = null)
+        private async Task<bool> WaitForReplenishmentToBeConfirmedAsync(MultisigTransactionIdentifiers identifiers, DestinationChain destinationChain, [CallerMemberName] string caller = null)
         {
             while (true)
             {
@@ -688,7 +691,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 {
                     mintTransactionId = identifiers.TransactionId;
 
-                    if (!await WaitForTransactionToBeConfirmedAsync(identifiers, request.DestinationChain).ConfigureAwait(false))
+                    if (!await WaitForReplenishmentToBeConfirmedAsync(identifiers, request.DestinationChain).ConfigureAwait(false))
                         return;
                 }
 
