@@ -75,6 +75,28 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public BigInteger TransactionId { get; set; }
     }
 
+    /// <summary>
+    /// Adds an owner to the multisig wallet owner list.
+    /// <remarks>This has to be executed by the wallet contract itself and therefore should not be called directly.</remarks>
+    /// </summary>
+    [Function("addOwner")]
+    public class AddOwnerFunction : FunctionMessage
+    {
+        [Parameter("address", "owner", 1)]
+        public string Owner { get; set; }
+    }
+
+    /// <summary>
+    /// Removes an owner from the multisig wallet owner list.
+    /// <remarks>This has to be executed by the wallet contract itself and therefore should not be called directly.</remarks>
+    /// </summary>
+    [Function("removeOwner")]
+    public class RemoveOwnerFunction : FunctionMessage
+    {
+        [Parameter("address", "owner", 1)]
+        public string Owner { get; set; }
+    }
+
     public class MultisigTransactionIdentifiers
     {
         /// <summary>
@@ -84,6 +106,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         /// <summary>
         /// The related multisig contract transaction ID.
+        /// <remarks>This is an integer stored within the multisig wallet contract that uniquely identifies a particular transaction submission.</remarks>
         /// </summary>
         public BigInteger TransactionId { get; set; }
     }
@@ -160,6 +183,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// Normally the final mandatory confirmation will automatically call the execute.
         /// This is provided in case it has to be called again due to an error condition.
         /// </summary>
+        /// <returns>The transaction hash of the contract call transaction.</returns>
         public static async Task<string> ExecuteTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<ExecuteTransactionFunction> executionHandler = web3.Eth.GetContractTransactionHandler<ExecuteTransactionFunction>();
