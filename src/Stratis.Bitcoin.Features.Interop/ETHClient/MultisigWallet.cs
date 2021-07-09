@@ -75,28 +75,6 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public BigInteger TransactionId { get; set; }
     }
 
-    /// <summary>
-    /// Adds an owner to the multisig wallet owner list.
-    /// <remarks>This has to be executed by the wallet contract itself and therefore should not be called directly.</remarks>
-    /// </summary>
-    [Function("addOwner")]
-    public class AddOwnerFunction : FunctionMessage
-    {
-        [Parameter("address", "owner", 1)]
-        public string Owner { get; set; }
-    }
-
-    /// <summary>
-    /// Removes an owner from the multisig wallet owner list.
-    /// <remarks>This has to be executed by the wallet contract itself and therefore should not be called directly.</remarks>
-    /// </summary>
-    [Function("removeOwner")]
-    public class RemoveOwnerFunction : FunctionMessage
-    {
-        [Parameter("address", "owner", 1)]
-        public string Owner { get; set; }
-    }
-
     public class MultisigTransactionIdentifiers
     {
         /// <summary>
