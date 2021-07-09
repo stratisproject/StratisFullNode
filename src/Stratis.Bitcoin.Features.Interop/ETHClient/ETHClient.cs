@@ -240,7 +240,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         {
             Transaction transaction = await this.web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash).ConfigureAwait(false);
 
-            if (transaction == null || transaction.BlockNumber == null)
+            if (transaction.BlockNumber == null)
                 return (0, string.Empty);
 
             BigInteger currentBlockHeight = await this.GetBlockHeightAsync().ConfigureAwait(false);
