@@ -66,6 +66,12 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <returns>The number of confirmations.</returns>
         Task<BigInteger> GetConfirmationCountAsync(BigInteger transactionId);
 
+        /// <summary>
+        /// Gets the list of owners for the multisig wallet contract.
+        /// </summary>
+        /// <returns>The list of owner accounts.</returns>
+        Task<List<string>> GetOwnersAsync();
+
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
 
         /// <summary>
@@ -95,6 +101,27 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <param name="straxAddress">The destination address on the STRAX chain that the equivalent value of the burnt funds will be sent to.</param>
         /// <returns>The hex data of the encoded parameters.</returns>
         string EncodeBurnParams(BigInteger amount, string straxAddress);
+
+        /// <summary>
+        /// Constructs the data field for a transaction invoking the addOwner() method of the multisig wallet contract.
+        /// </summary>
+        /// <param name="newOwnerAddress">The account of the new owner to be added to the multisig owners list.</param>
+        /// <returns>The hex data of the encoded parameters.</returns>
+        string EncodeAddOwnerParams(string newOwnerAddress);
+
+        /// <summary>
+        /// Constructs the data field for a transaction invoking the removeOwner() method of the multisig wallet contract.
+        /// </summary>
+        /// <param name="existingOwnerAddress">The account of the existing owner to be removed from the multisig owners list.</param>
+        /// <returns>The hex data of the encoded parameters.</returns>
+        string EncodeRemoveOwnerParams(string existingOwnerAddress);
+
+        /// <summary>
+        /// Constructs the data field for a transaction invoking the changeRequirement() method of the multisig wallet contract.
+        /// </summary>
+        /// <param name="requirement">The new threshold for confirmations for a multisig transaction to be executed.</param>
+        /// <returns>The hex data of the encoded parameters.</returns>
+        string EncodeChangeRequirementParams(BigInteger requirement);
     }
 
     public class ETHClient : IETHClient
@@ -183,6 +210,12 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return await MultisigWallet.GetConfirmationCountAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
+        /// <inheritdoc />
+        public async Task<List<string>> GetOwnersAsync()
+        {
+            return await MultisigWallet.GetOwnersAsync(this.web3, this.settings.MultisigWalletAddress).ConfigureAwait(false);
+        }
+
         public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
         {
             return await WrappedStrax.GetErc20BalanceAsync(this.web3, this.settings.WrappedStraxContractAddress, addressToQuery).ConfigureAwait(false);
@@ -220,6 +253,42 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             var abiEncode = new ABIEncode();
             string result = BurnMethod + abiEncode.GetABIEncoded(new ABIValue("uint256", amount), new ABIValue("string", straxAddress)).ToHex();
+
+            return result;
+        }
+
+        /// <inheritdoc />
+        public string EncodeAddOwnerParams(string newOwnerAddress)
+        {
+            // TODO: Extract this directly from the ABI
+            const string AddOwnerMethod = "7065cb48";
+
+            var abiEncode = new ABIEncode();
+            string result = AddOwnerMethod + abiEncode.GetABIEncoded(new ABIValue("address", newOwnerAddress)).ToHex();
+
+            return result;
+        }
+
+        /// <inheritdoc />
+        public string EncodeRemoveOwnerParams(string existingOwnerAddress)
+        {
+            // TODO: Extract this directly from the ABI
+            const string RemoveOwnerMethod = "173825d9";
+
+            var abiEncode = new ABIEncode();
+            string result = RemoveOwnerMethod + abiEncode.GetABIEncoded(new ABIValue("address", existingOwnerAddress)).ToHex();
+
+            return result;
+        }
+
+        /// <inheritdoc />
+        public string EncodeChangeRequirementParams(BigInteger requirement)
+        {
+            // TODO: Extract this directly from the ABI
+            const string ChangeRequirementMethod = "ba51a6df";
+
+            var abiEncode = new ABIEncode();
+            string result = ChangeRequirementMethod + abiEncode.GetABIEncoded(new ABIValue("uint256", requirement)).ToHex();
 
             return result;
         }

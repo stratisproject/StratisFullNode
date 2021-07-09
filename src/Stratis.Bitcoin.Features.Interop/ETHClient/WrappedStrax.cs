@@ -100,25 +100,6 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public string StraxAddress { get; set; }
     }
 
-    public class TransferParamsInput
-    {
-        [Parameter("address", 1)] public string To { get; set; }
-
-        [Parameter("uint256", 2)] public BigInteger Value { get; set; }
-    }
-
-    public class MintParamsInput
-    {
-        [Parameter("address", 1)] public string Account { get; set; }
-
-        [Parameter("uint256", 2)] public BigInteger Amount { get; set; }
-    }
-
-    public class BurnParamsInput
-    {
-        [Parameter("uint256", 1)] public BigInteger Amount { get; set; }
-    }
-
     public class WrappedStrax
     {
         public static async Task<string> DeployContractAsync(Web3 web3, BigInteger totalSupply)
