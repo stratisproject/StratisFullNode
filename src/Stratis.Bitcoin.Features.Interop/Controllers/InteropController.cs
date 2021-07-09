@@ -171,7 +171,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data, gasPrice).GetAwaiter().GetResult());
+                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).GetAwaiter().GetResult());
             }
             catch (Exception e)
             {
@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data, gasPrice).GetAwaiter().GetResult());
+                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).GetAwaiter().GetResult());
             }
             catch (Exception e)
             {
@@ -239,7 +239,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json(client.ConfirmTransactionAsync(transactionId, gasPrice).GetAwaiter().GetResult());
+                return this.Json(client.ConfirmTransactionAsync(transactionId).GetAwaiter().GetResult());
             }
             catch (Exception e)
             {
@@ -277,7 +277,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data, gasPrice).GetAwaiter().GetResult());
+                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).GetAwaiter().GetResult());
             }
             catch (Exception e)
             {
