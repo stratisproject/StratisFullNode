@@ -416,24 +416,29 @@ namespace Stratis.Bitcoin.Features.Interop
                             // Once sufficient multisig owners have confirmed the transaction the multisig contract will execute it.
                             // Note that by submitting the transaction to the multisig wallet contract, the originator is implicitly granting it one confirmation.
                             MultisigTransactionIdentifiers identifiers = await clientForDestChain.SubmitTransactionAsync(this.interopSettings.GetSettingsByChain(request.DestinationChain).WrappedStraxContractAddress, 0, abiData, gasPrice).ConfigureAwait(false);
-                            BigInteger transactionId = identifiers.TransactionId;
 
-                            if (transactionId == BigInteger.MinusOne)
+                            if (identifiers.TransactionId == BigInteger.MinusOne)
                             {
                                 // TODO: Submitting the transaction failed, this needs to be handled
                             }
 
-                            request.RequestEthTransactionHash = identifiers.TransactionHash;
+                            request.ExternalChainTxHash = identifiers.TransactionHash;
+                            request.ExternalChainTxEventId = identifiers.TransactionId.ToString();
+                            request.RequestStatus = ConversionRequestStatus.OriginatorSubmitting;
 
-                            (BigInteger confirmationCount, string blockHash) = await this.ethClientProvider.GetClientForChain(request.DestinationChain).GetConfirmationsAsync(identifiers.TransactionHash).ConfigureAwait(false);
-                            this.logger.LogInformation($"Originator confirming transaction id '{identifiers.TransactionHash}' '({identifiers.TransactionId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
+                            break;
+                        }
+                    case ConversionRequestStatus.OriginatorSubmitting:
+                        {
+                            (BigInteger confirmationCount, string blockHash) = await this.ethClientProvider.GetClientForChain(request.DestinationChain).GetConfirmationsAsync(request.ExternalChainTxHash).ConfigureAwait(false);
+                            this.logger.LogInformation($"Originator confirming transaction id '{request.ExternalChainTxHash}' '({request.ExternalChainTxEventId})' before broadcasting; confirmations: {confirmationCount}; Block Hash {blockHash}.");
 
                             if (confirmationCount < this.SubmissionConfirmationThreshold)
                                 break;
 
-                            this.logger.LogInformation("Originator submitted transaction to multisig in transaction '{0}' and was allocated transactionId '{1}'.", identifiers.TransactionHash, transactionId);
+                            this.logger.LogInformation("Originator submitted transaction to multisig in transaction '{0}' and was allocated transactionId '{1}'.", request.ExternalChainTxHash, request.ExternalChainTxEventId);
 
-                            this.conversionRequestCoordinationService.AddVote(request.RequestId, transactionId, this.federationManager.CurrentFederationKey.PubKey);
+                            this.conversionRequestCoordinationService.AddVote(request.RequestId, BigInteger.Parse(request.ExternalChainTxEventId), this.federationManager.CurrentFederationKey.PubKey);
 
                             request.RequestStatus = ConversionRequestStatus.OriginatorSubmitted;
 
@@ -529,7 +534,7 @@ namespace Stratis.Bitcoin.Features.Interop
                                 // If the originator or some other nodes renege on their vote, the current node will not re-confirm a different transactionId.
                                 string confirmationHash = await clientForDestChain.ConfirmTransactionAsync(agreedUponId, gasPrice).ConfigureAwait(false);
 
-                                request.RequestEthTransactionHash = confirmationHash;
+                                request.ExternalChainTxHash = confirmationHash;
 
                                 this.logger.LogInformation("The hash of the confirmation transaction for conversion transaction '{0}' was '{1}'.", request.RequestId, confirmationHash);
 
@@ -825,7 +830,7 @@ namespace Stratis.Bitcoin.Features.Interop
             List<ConversionRequest> requests = this.conversionRequestRepository.GetAllMint(false).OrderByDescending(i => i.BlockHeight).Take(10).ToList();
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Eth Hash: {request.RequestEthTransactionHash}");
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();
