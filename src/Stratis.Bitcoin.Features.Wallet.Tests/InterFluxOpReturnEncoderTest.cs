@@ -13,17 +13,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             string encoded = InterFluxOpReturnEncoder.Encode((DestinationChain)chain, address);
 
-            bool success = InterFluxOpReturnEncoder.TryDecode(encoded, out int resultChain, out string resultAddress);
+            bool result = InterFluxOpReturnEncoder.TryDecode(encoded, out int resultChain, out string resultAddress);
 
-            Assert.True(success);
+            Assert.True(result);
             Assert.Equal(chain, resultChain);
             Assert.Equal(address, resultAddress);
 
 
             byte[] encodedBytes = Encoding.UTF8.GetBytes(encoded);
-            bool success2 = InterFluxOpReturnEncoder.TryDecode(encodedBytes, out int resultChain2, out string resultAddress2);
+            result = InterFluxOpReturnEncoder.TryDecode(encodedBytes, out int resultChain2, out string resultAddress2);
 
-            Assert.True(success2);
+            Assert.True(result);
             Assert.Equal(chain, resultChain2);
             Assert.Equal(address, resultAddress2);
         }
@@ -33,11 +33,28 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         {
             string address = "0xd2390da742872294BE05dc7359D7249d7C79460E";
             string encoded = InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, address);
-            bool success = InterFluxOpReturnEncoder.TryDecode(encoded, out int resultChain, out string resultAddress);
+            bool result = InterFluxOpReturnEncoder.TryDecode(encoded, out int resultChain, out string resultAddress);
 
-            Assert.True(success);
+            Assert.True(result);
             Assert.Equal(DestinationChain.ETH, (DestinationChain)resultChain);
             Assert.Equal(address, resultAddress);
+        }
+
+        [Fact]
+        public void EncodeAndDecodeETHAddressLegacy_Pass()
+        {
+            bool result = InterFluxOpReturnEncoder.TryDecode("0xd2390da742872294BE05dc7359D7249d7C79460E", out int resultChain, out string resultAddress);
+
+            Assert.True(result);
+            Assert.Equal(DestinationChain.ETH, (DestinationChain)resultChain);
+            Assert.Equal("0xd2390da742872294BE05dc7359D7249d7C79460E", resultAddress);
+        }
+
+        [Fact]
+        public void EncodeAndDecodeETHAddressLegacy_Fail()
+        {
+            bool result = InterFluxOpReturnEncoder.TryDecode("0xd2390da742872294BE05dc7359D7249d7C9460E", out int resultChain, out string resultAddress);
+            Assert.False(result);
         }
 
         [Fact]
