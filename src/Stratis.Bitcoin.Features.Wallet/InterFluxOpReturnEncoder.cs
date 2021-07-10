@@ -24,7 +24,19 @@ namespace Stratis.Bitcoin.Features.Wallet
             // If the op_return data does not contain the "INTER" prefix,
             // then this is not a interflux (conversion) transaction.
             if (prefixIndex == -1 || separatorIndex == -1)
+            {
+                // If there is no interflux prefix then this could potentially be a legacy ETH conversion.
+                // Conversion requests to ETH could be submitted from users on a previous versions of the wallet
+                // which will utilize the older OP_RETURN format (without the destination chain).
+                if (TryConvertValidOpReturnDataToETHAddress(opReturnData))
+                {
+                    address = opReturnData;
+                    destinationChain = (int)DestinationChain.ETH;
+                    return true;
+                }
+
                 return false;
+            }
 
             // Try and extract the destination chain.
             if (!int.TryParse(opReturnData.Substring(InterFluxPrefix.Length, separatorIndex - InterFluxPrefix.Length), out destinationChain))
