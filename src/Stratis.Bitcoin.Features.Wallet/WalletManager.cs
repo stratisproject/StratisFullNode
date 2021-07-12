@@ -839,7 +839,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         }
 
         /// <inheritdoc />
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int limit = int.MaxValue, int offset = 0)
+        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int limit = int.MaxValue, int offset = 0, string accountAddress = null, bool forSmartContracts = false)
         {
             Guard.NotEmpty(walletName, nameof(walletName));
 
@@ -866,14 +866,14 @@ namespace Stratis.Bitcoin.Features.Wallet
 
                 foreach (HdAccount account in accounts)
                 {
-                    accountsHistory.Add(this.GetHistoryForAccount(account, limit, offset, searchQuery));
+                    accountsHistory.Add(this.GetHistoryForAccount(account, limit, offset, searchQuery, accountAddress, forSmartContracts));
                 }
             }
 
             return accountsHistory;
         }
 
-        protected AccountHistory GetHistoryForAccount(HdAccount account, int limit, int offset, string searchQuery = null)
+        protected AccountHistory GetHistoryForAccount(HdAccount account, int limit, int offset, string searchQuery = null, string accountAddress = null, bool forSmartContracts = false)
         {
             Guard.NotNull(account, nameof(account));
 
@@ -881,7 +881,7 @@ namespace Stratis.Bitcoin.Features.Wallet
 
             lock (this.lockObject)
             {
-               return this.WalletRepository.GetHistory(account, limit, offset, searchQuery);
+               return this.WalletRepository.GetHistory(account, limit, offset, searchQuery, accountAddress, forSmartContracts);
             }
         }
 

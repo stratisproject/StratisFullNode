@@ -66,6 +66,8 @@ namespace Stratis.Bitcoin.Features.Wallet
 
     public sealed class FlattenedHistoryItemPayment
     {
+        public Script DestinationScriptPubKey { get; set; }
+
         public string DestinationAddress { get; set; }
 
         public Money Amount { get; set; }
