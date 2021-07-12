@@ -444,10 +444,17 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request)
+        public async Task<IActionResult> BuildInterFluxTransactionAsync([FromBody] BuildInterFluxTransactionRequest request)
         {
             if (request.DestinationChain != (int)DestinationChain.ETH)
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid destination chain", "Only InterFlux transactions to the Ethereum chain are currently supported.");
+
+            foreach (var recipient in request.Recipients)
+            {
+                Money amountToCheck = recipient.Amount;
+                if (amountToCheck < DepositValidationHelper.ConversionTransactionMinimum)
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid conversion amount", $"InterFlux transactions are required to be a minimum of {DepositValidationHelper.ConversionTransactionMinimum}.");
+            }
 
             request.OpReturnData = InterFluxOpReturnEncoder.Encode((DestinationChain)request.DestinationChain, request.DestinationAddress);
 

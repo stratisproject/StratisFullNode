@@ -115,6 +115,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             if (conversionTransaction)
             {
+                if (this.federatedPegSettings.IsMainChain && amount < DepositValidationHelper.ConversionTransactionMinimum)
+                {
+                    this.logger.Warn($"Ignoring conversion transaction '{transaction.GetHash()}' with amount {amount} which is below the threshold of {DepositValidationHelper.ConversionTransactionMinimum}.");
+                    return null;
+                }
+
                 // Instead of a fixed minimum, check that the deposit size at least covers the fee.
                 // It will be checked again when the interop poller processes the resulting conversion request.
                 string feeString;

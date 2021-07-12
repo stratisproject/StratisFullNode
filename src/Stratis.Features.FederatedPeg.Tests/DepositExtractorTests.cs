@@ -8,7 +8,6 @@ using NSubstitute;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
-using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
@@ -36,6 +35,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.addressHelper = new MultisigAddressHelper(this.network, new StraxRegTest());
 
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
+            this.federationSettings.IsMainChain.Returns(true);
             this.federationSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
             this.federationSettings.NormalDepositThresholdAmount.Returns(Money.Coins(20));
             this.federationSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
@@ -259,6 +259,28 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact]
+        public void ExtractConversionDeposits_BelowAndAboveThreshold()
+        {
+            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
+
+            byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
+
+            CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum - 1, ethOpReturnBytes);
+
+            CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum + 1, ethOpReturnBytes);
+
+            int blockHeight = 12345;
+            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionNormal });
+
+            // Should only be two, with the value just over the withdrawal fee.
+            extractedDeposits.Count.Should().Be(1);
+            foreach (IDeposit extractedDeposit in extractedDeposits)
+            {
+                Assert.True(extractedDeposit.Amount == DepositValidationHelper.ConversionTransactionMinimum + 1);
+            }
+        }
+
+        [Fact]
         public void ExtractSmallConversionDeposits_ReturnDeposits_BelowSmallThreshold_AboveMinimum()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
@@ -336,13 +358,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             // Create the target address.
             BitcoinPubKeyAddress targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
             byte[] opReturnBytes = Encoding.UTF8.GetBytes(targetAddress.ToString());
-            
+
             // Set amount to be less than deposit minimum
             CreateDepositTransaction(targetAddress, block, FederatedPegSettings.CrossChainTransferMinimum - 1, opReturnBytes);
-            
+
             // Set amount to be less than the small threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount - 1, opReturnBytes);
-            
+
             // Set amount to be exactly the normal threshold amount.
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount, opReturnBytes);
 
