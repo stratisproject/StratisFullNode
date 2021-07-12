@@ -10,6 +10,9 @@ namespace Stratis.Bitcoin.Features.Wallet
 {
     public static class DepositValidationHelper
     {
+        /// <summary> Conversion transaction deposits smaller than this threshold will be ignored. Denominated in STRAX.</summary>
+        public static readonly Money ConversionTransactionMinimum = Money.Coins(250);
+
         /// <summary>
         /// This deposit extractor implementation only looks for a very specific deposit format.
         /// Deposits will have 2 outputs when there is no change.
