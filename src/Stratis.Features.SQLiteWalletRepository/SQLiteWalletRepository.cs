@@ -1504,13 +1504,13 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null)
+        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null, string accountAddress = null, bool forSmartContracts = false)
         {
             Wallet wallet = account.AccountRoot.Wallet;
             WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId);
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId, accountAddress, forSmartContracts);
 
             // Filter ColdstakeUtxos
             result = result.Where(r =>
@@ -1528,7 +1528,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                     foreach (var group in grouped)
                     {
-                        result.First().Payments.Add(new FlattenedHistoryItemPayment() { Amount = group.First().Amount, DestinationAddress = group.First().DestinationAddress, IsChange = group.First().IsChange });
+                        result.First().Payments.Add(new FlattenedHistoryItemPayment() { Amount = group.First().Amount, DestinationScriptPubKey = group.First().DestinationScriptPubKey, DestinationAddress = group.First().DestinationAddress, IsChange = group.First().IsChange });
                     }
                 }
             }
