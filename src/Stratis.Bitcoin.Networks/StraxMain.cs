@@ -155,14 +155,15 @@ namespace Stratis.Bitcoin.Networks
                 { 500, new CheckpointInfo(new uint256("0xf88ead17d09223d914e5bdca27f27ff861c4c1e5bfb4ab3bc4a4627d4ddd442a"), new uint256("0xf6ea71dcc38a4dbf6c66dd1d3e54568269d6f7cd411c15304de6fce5394a9702")) },
                 { 800, new CheckpointInfo(new uint256("0x3bb02167ae32be4915c1a78150d5fc7ed9924be00c57c6e9693d7603d94970dc"), new uint256("0x995ff9e10f2ef8cddae35a9c40237bdd48fd7bc9982955d9aac50ee32d69d097")) },
                 { 1500, new CheckpointInfo(new uint256("0x0d28f45849a2e535a7ef72690fc49fc9a5c101494c5d5753fdeb1ac121ffb120"), new uint256("0x4a8a47deb226784606625bc4fd545bfaf5aa314c4a20076185cb86e524a36173")) },
-                { 10000, new CheckpointInfo(new uint256("0xc1c4b7d64b6669d32493c0ed08b42a8f193e07590a95f76a9212a86dc66057f0"), new uint256("0x10130e76efbf5f4cf093594430ea0d160728a3f3d6b5926887aaf7b674ad65b1")) },
-                { 20000, new CheckpointInfo(new uint256("0xeb493db4b643a3cfbc5912bcda5296532ff1bccbdcb320b863698c63ecfea174"), new uint256("0xb35462fd7f43709f59efb0e7225d961c2e8a7569fc44102db5c99400ba9ad6bd")) },
-                { 30000, new CheckpointInfo(new uint256("0x4d0f2a809ef915721ced21f5ec51b6177b684eee06cadd49bcedc57daa243b8b"), new uint256("0xd9b7f8c92f289d66cb35a517e0b5c11c3e7e23a6507ce8ba2f042642849dcba0")) },
-                { 40000, new CheckpointInfo(new uint256("0xdc10671e67350eda9518b220e329ca9f661cd98c0e12d246471f8ec4f8a81c71"), new uint256("0xeb13622df7b0fc95068c0146d718bb2eaf2fd8943b3bea89396d8d58f5af8c15")) },
-                { 50000, new CheckpointInfo(new uint256("0xe3398765bc0da5b481a5dfe60f0acf14f4b1fc8582bab8f7a166317aea9aa026"), new uint256("0x350db25ca3ff01ec589681c94c325f619e5013bdc06efcbefa981776f4dcca4f")) },
-                { 60000, new CheckpointInfo(new uint256("0x9cbc20fd1720529c59073ade6f5511ab5c2cf168556c9a10cb41ff9d8dac724f"), new uint256("0xe363394313d2e1af248a1c0d18b79e6074a08884dddbebfca90e8ae716edb645")) },
-                { 150000, new CheckpointInfo(new uint256("0x48bb4c2f08088da9990e23f19cb4b9a094bdf7791f86f77a98d08e5d2b06c1ce"), new uint256("0x14f80d627e7727f4da4a5945ddb77e2821369246c72f1c6ca754c6509a4eef60")) },
-                { 300000, new CheckpointInfo(new uint256("0x35cb635c4f286b233fab6252c30f3df7813c0a76ca7ea2a90249cad73958e2d3"), new uint256("0x42e5a29b035296e3dee4f675f92c5790e0ac6cd0c9390fcf6bac9ac28ccaa850")) }
+                { 10_000, new CheckpointInfo(new uint256("0xc1c4b7d64b6669d32493c0ed08b42a8f193e07590a95f76a9212a86dc66057f0"), new uint256("0x10130e76efbf5f4cf093594430ea0d160728a3f3d6b5926887aaf7b674ad65b1")) },
+                { 20_000, new CheckpointInfo(new uint256("0xeb493db4b643a3cfbc5912bcda5296532ff1bccbdcb320b863698c63ecfea174"), new uint256("0xb35462fd7f43709f59efb0e7225d961c2e8a7569fc44102db5c99400ba9ad6bd")) },
+                { 30_000, new CheckpointInfo(new uint256("0x4d0f2a809ef915721ced21f5ec51b6177b684eee06cadd49bcedc57daa243b8b"), new uint256("0xd9b7f8c92f289d66cb35a517e0b5c11c3e7e23a6507ce8ba2f042642849dcba0")) },
+                { 40_000, new CheckpointInfo(new uint256("0xdc10671e67350eda9518b220e329ca9f661cd98c0e12d246471f8ec4f8a81c71"), new uint256("0xeb13622df7b0fc95068c0146d718bb2eaf2fd8943b3bea89396d8d58f5af8c15")) },
+                { 50_000, new CheckpointInfo(new uint256("0xe3398765bc0da5b481a5dfe60f0acf14f4b1fc8582bab8f7a166317aea9aa026"), new uint256("0x350db25ca3ff01ec589681c94c325f619e5013bdc06efcbefa981776f4dcca4f")) },
+                { 60_000, new CheckpointInfo(new uint256("0x9cbc20fd1720529c59073ade6f5511ab5c2cf168556c9a10cb41ff9d8dac724f"), new uint256("0xe363394313d2e1af248a1c0d18b79e6074a08884dddbebfca90e8ae716edb645")) },
+                { 150_000, new CheckpointInfo(new uint256("0x48bb4c2f08088da9990e23f19cb4b9a094bdf7791f86f77a98d08e5d2b06c1ce"), new uint256("0x14f80d627e7727f4da4a5945ddb77e2821369246c72f1c6ca754c6509a4eef60")) },
+                { 300_000, new CheckpointInfo(new uint256("0x35cb635c4f286b233fab6252c30f3df7813c0a76ca7ea2a90249cad73958e2d3"), new uint256("0x42e5a29b035296e3dee4f675f92c5790e0ac6cd0c9390fcf6bac9ac28ccaa850")) },
+                { 450_000, new CheckpointInfo(new uint256("0xc08db6151e2f341360a28e6a796d9c4356e14085e81aed2338c05f1964ef3e27"), new uint256("0x0cfc40a07819297a39be5460f805ce391d7f9b8d5794b18c97384a6b832deb4b")) }
             };
 
             this.Bech32Encoders = new Bech32Encoder[2];
