@@ -6,13 +6,13 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using NSubstitute.Core;
+using Stratis.Bitcoin;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -53,7 +53,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.addressHelper = new MultisigAddressHelper(this.network, this.mainChainNetwork);
             this.targetAddress = this.addressHelper.GetNewTargetChainPubKeyAddress();
-            this.opReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode((int)DestinationChain.STRAX, this.targetAddress.ToString()));
+            this.opReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.STRAX, this.targetAddress.ToString()));
 
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
             this.federatedPegSettings.MultiSigRedeemScript.Returns(this.addressHelper.PayToMultiSig);
