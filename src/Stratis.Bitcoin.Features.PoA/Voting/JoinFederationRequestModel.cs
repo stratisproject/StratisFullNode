@@ -40,4 +40,50 @@ namespace Stratis.Features.PoA.Voting
         [JsonProperty(PropertyName = "walletAccount")]
         public string WalletAccount { get; set; }
     }
+
+    /// <summary>
+    /// Contains the collateral address for which we want to build the join message for signing.
+    /// </summary>
+    public sealed class GetJoinMessageModel
+    {
+        /// <summary>
+        /// The collateral address.
+        /// </summary>
+        [Required(ErrorMessage = "The collateral address is required.")]
+        [JsonProperty(PropertyName = "collateralAddress")]
+        public string CollateralAddress { get; set; }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for a join federation request with a signed message.
+    /// </summary>
+    public sealed class JoinFederationRequestWithSignature
+    {
+        /// <summary>
+        /// The collateral address.
+        /// </summary>
+        [Required(ErrorMessage = "The collateral address is required.")]
+        [JsonProperty(PropertyName = "collateralAddress")]
+        public string CollateralAddress { get; set; }
+
+        /// <summary>The name of the wallet which will supply the fee on the Cirrus network.</summary>
+        [Required(ErrorMessage = "The fee wallet name is required")]
+        [JsonProperty(PropertyName = "walletName")]
+        public string WalletName { get; set; }
+
+        /// <summary>The password of the wallet which will supply the fee on the Cirrus network.</summary>
+        [Required(ErrorMessage = "The fee wallet password is required")]
+        [JsonProperty(PropertyName = "walletPassword")]
+        public string WalletPassword { get; set; }
+
+        /// <summary>The account of the wallet which will supply the fee on the Cirrus network.</summary>
+        [Required(ErrorMessage = "The fee wallet account is required")]
+        [JsonProperty(PropertyName = "walletAccount")]
+        public string WalletAccount { get; set; }
+
+        /// <summary>The join federation message signature as signed by the collateral address key.</summary>
+        [Required(ErrorMessage = "The signature is required")]
+        [JsonProperty(PropertyName = "signature")]
+        public string Signature { get; set; }
+    }
 }
