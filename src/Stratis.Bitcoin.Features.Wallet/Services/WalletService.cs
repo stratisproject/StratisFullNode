@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NBitcoin.DataEncoders;
 using NBitcoin.Policy;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration;
@@ -20,7 +19,6 @@ using Stratis.Bitcoin.Features.Wallet.Broadcasting;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
-using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.Wallet.Services
@@ -553,8 +551,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
                 }
 
                 Transaction transactionResult = this.walletTransactionHandler.BuildTransaction(context);
-
-                DepositValidationHelper.ValidateCrossChainDeposit(this.network, transactionResult);
 
                 return new WalletBuildTransactionModel
                 {
