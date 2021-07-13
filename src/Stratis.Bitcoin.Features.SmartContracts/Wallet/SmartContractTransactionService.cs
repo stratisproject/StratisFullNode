@@ -188,8 +188,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Wallet
 
             Transaction transaction = this.walletTransactionHandler.BuildTransaction(context);
 
-            DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
-
             var model = new WalletBuildTransactionModel
             {
                 Hex = transaction.ToHex(),
