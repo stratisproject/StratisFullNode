@@ -5,12 +5,18 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
+    public class Vote
+    {
+        public string PubKey;
+        public int Height;
+    }
+
     /// <summary>Information about active poll.</summary>
     public class Poll : IBitcoinSerializable
     {
         public Poll()
         {
-            this.PubKeysHexVotedInFavor = new List<string>();
+            this.PubKeysHexVotedInFavor = new List<Vote>();
         }
 
         /// <summary>
@@ -36,7 +42,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         public HashHeightPair PollExecutedBlockData;
 
         /// <summary>List of fed member's public keys that voted in favor.</summary>
-        public List<string> PubKeysHexVotedInFavor;
+        public List<Vote> PubKeysHexVotedInFavor;
 
         /// <inheritdoc />
         public void ReadWrite(BitcoinStream stream)
@@ -49,16 +55,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (stream.Serializing)
             {
-                string[] arr = this.PubKeysHexVotedInFavor.ToArray();
+                string[] pubKeyArr = this.PubKeysHexVotedInFavor.Select(v => v.PubKey).ToArray();
 
-                stream.ReadWrite(ref arr);
+                stream.ReadWrite(ref pubKeyArr);
+
+                int[] heightArr = this.PubKeysHexVotedInFavor.Select(v => v.Height).ToArray();
+
+                stream.ReadWrite(ref heightArr);
+
             }
             else
             {
-                string[] arr = null;
-                stream.ReadWrite(ref arr);
+                string[] pubKeyArr = null;
+                stream.ReadWrite(ref pubKeyArr);
 
-                this.PubKeysHexVotedInFavor = arr.ToList();
+                int[] heightArr = null;
+                stream.ReadWrite(ref heightArr);
+
+                this.PubKeysHexVotedInFavor = pubKeyArr.Select((k, n) => new Vote() { PubKey = k, Height = heightArr[n] }).ToList();
 
                 if (this.PollExecutedBlockData.Hash == uint256.Zero)
                     this.PollExecutedBlockData = null;
@@ -114,7 +128,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.PollStartBlockDataHeight = poll.PollStartBlockData?.Height;
             this.PollExecutedBlockDataHash = poll.PollExecutedBlockData?.Hash;
             this.PollExecutedBlockDataHeight = poll.PollExecutedBlockData?.Height;
-            this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor;
+            this.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor.Select(v => v.PubKey).ToList();
             this.VotingDataString = executor.ConvertToString(poll.VotingData);
         }
     }

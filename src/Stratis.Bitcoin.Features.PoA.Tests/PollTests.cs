@@ -22,10 +22,10 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 },
                 PollVotedInFavorBlockData = new HashHeightPair(uint256.One, 1),
                 PollStartBlockData = new HashHeightPair(uint256.One, 1),
-                PubKeysHexVotedInFavor = new List<string>()
+                PubKeysHexVotedInFavor = new List<Vote>()
                 {
-                    "qwe",
-                    "rty"
+                    new Vote() { PubKey = "qwe" },
+                    new Vote() { PubKey = "rty" }
                 }
             };
 
@@ -57,7 +57,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             for (int i = 0; i < poll.PubKeysHexVotedInFavor.Count; i++)
             {
-                Assert.Equal(poll.PubKeysHexVotedInFavor[i], deserializedPoll.PubKeysHexVotedInFavor[i]);
+                Assert.Equal(poll.PubKeysHexVotedInFavor[i].PubKey, deserializedPoll.PubKeysHexVotedInFavor[i].PubKey);
+                Assert.Equal(poll.PubKeysHexVotedInFavor[i].Height, deserializedPoll.PubKeysHexVotedInFavor[i].Height);
             }
         }
     }
