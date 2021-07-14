@@ -47,9 +47,9 @@ namespace Stratis.Features.FederatedPeg.Distribution
         /// <remarks>TODO: Refactor to make this list dynamic.</remarks>
         private static readonly List<PubKey> InteropMultisigContractPubKeysTestNet = new List<PubKey>()
         {
-            new PubKey("021040ef28c82fcffb63028e69081605ed4712910c8384d5115c9ffeacd9dbcae4"), // Cirrus 1
-            new PubKey("032df4a2d62c0db12cd1d66201819a10788637c9b90a1cd2a5a3f5196fdab7a621"), // Cirrus 3
-            new PubKey("028ed190eb4ed6e46440ac6af21d8a67a537bd1bd7edb9cc5177d36d5a0972244d"), // Cirrus 4
+            new PubKey("03cfc06ef56352038e1169deb3b4fa228356e2a54255cf77c271556d2e2607c28c"), // Cirrus 1
+            new PubKey("02fc828e06041ae803ab5378b5ec4e0def3d4e331977a69e1b6ef694d67f5c9c13"), // Cirrus 3
+            new PubKey("02fd4f3197c40d41f9f5478d55844f522744258ca4093b5119571de1a5df1bc653"), // Cirrus 4
         };
     }
 }
