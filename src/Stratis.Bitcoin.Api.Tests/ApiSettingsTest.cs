@@ -14,8 +14,10 @@ namespace Stratis.Bitcoin.Api.Tests
     /// <summary>
     /// Tests the settings for the API features.
     /// </summary>
-    public class ApiSettingsTest : TestBase
+    public class ApiSettingsTest : TestBase, IDisposable
     {
+        private IFullNode fullNode;
+
         public ApiSettingsTest() : base(KnownNetworks.Main)
         {
         }
@@ -266,14 +268,20 @@ namespace Stratis.Bitcoin.Api.Tests
             settingsAction.Should().Throw<ConfigurationException>();
         }
 
-        private static ApiSettings FullNodeSetup(NodeSettings nodeSettings)
+        private ApiSettings FullNodeSetup(NodeSettings nodeSettings)
         {
-            return new FullNodeBuilder()
+            this.fullNode = new FullNodeBuilder()
                 .UseNodeSettings(nodeSettings)
                 .UseApi()
                 .UsePowConsensus()
-                .Build()
-                .NodeService<ApiSettings>();
+                .Build();
+
+            return this.fullNode.NodeService<ApiSettings>();
+        }
+
+        public void Dispose()
+        {
+            this.fullNode.NodeService<IChainStore>().Dispose();
         }
     }
 }

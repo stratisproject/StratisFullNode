@@ -10,7 +10,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
     /// <summary>
     /// Rocksdb implementation of the chain storage
     /// </summary>
-    public sealed class RocksDbChainStore : IChainStore, IDisposable
+    public sealed class RocksDbChainStore : IChainStore
     {
         internal static readonly byte ChainTableName = 1;
         internal static readonly byte HeaderTableName = 2;

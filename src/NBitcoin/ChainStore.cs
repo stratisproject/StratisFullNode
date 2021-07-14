@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace NBitcoin
 {
-    public interface IChainStore
+    public interface IChainStore : IDisposable
     {
         BlockHeader GetHeader(ChainedHeader chainedHeader, uint256 hash);
 
@@ -89,6 +89,10 @@ namespace NBitcoin
         {
             foreach (ChainDataItem item in items)
                 this.chainData.TryAdd(item.Height, item.Data);
+        }
+
+        public void Dispose()
+        {
         }
     }
 }
