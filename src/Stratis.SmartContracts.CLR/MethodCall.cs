@@ -14,6 +14,8 @@ namespace Stratis.SmartContracts.CLR
         /// </summary>
         public const string ReceiveHandlerName = nameof(SmartContract.Receive);
 
+        public const string CallHandlerName = "InvokeByName";
+
         /// <summary>
         /// Alias for the receive handler method name. Will cause the receive handler to be invoked
         /// if specified as the method name in a transaction.
