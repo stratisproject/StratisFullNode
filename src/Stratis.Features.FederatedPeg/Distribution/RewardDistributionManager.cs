@@ -5,7 +5,6 @@ using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA;
-using Stratis.Bitcoin.Primitives;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
 
@@ -63,49 +62,46 @@ namespace Stratis.Features.FederatedPeg.Distribution
 
         public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money fee)
         {
-            // Retrieve all the multisig members at the current block height
+            // Retrieve the federation at the given block height.
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
 
-            var multisigs = new List<CollateralFederationMember>();
-
-            foreach (IFederationMember member in federation)
-            {
-                if (!(member is CollateralFederationMember collateralMember))
-                    continue;
-
-                if (!collateralMember.IsMultisigMember)
-                    continue;
-
-                multisigs.Add(collateralMember);
-            }
-
-            // Inspect the last (size of current federation) less maxerorg blocks to determine
-            // which of them were mined by a multisig member.
             var multiSigMinerScripts = new List<Script>();
+
+            // Start checking if a multisig member mined a block at the current tip less max reorg blocks.
             var startHeight = this.chainIndexer.Tip.Height - this.epoch;
 
+            // Inspect the round of blocks equal to the federation size
+            // and determine if a multisig member mined the block.
+            // If so add the list of multisig members to pay.
             for (int i = federation.Count; i >= 0; i--)
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(startHeight - i);
 
                 var collateralFederationMember = this.federationHistory.GetFederationMemberForBlock(chainedHeader) as CollateralFederationMember;
-                if (collateralFederationMember != null && collateralFederationMember.IsMultisigMember)
-                {
-                    if (chainedHeader.Block == null)
-                        chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+                if (collateralFederationMember == null)
+                    continue;
 
-                    Transaction coinBase = chainedHeader.Block.Transactions[0];
+                if (!collateralFederationMember.IsMultisigMember)
+                    continue;
 
-                    Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
+                // Check if the multisig is an owner of the multisig contract.
+                if (!MultiSigMembers.IsContractOwner(this.network, collateralFederationMember.PubKey))
+                    continue;
 
-                    // If the POA miner at the time did not have a wallet address, the script length can be 0.
-                    // In this case the block shouldn't count as it was "not mined by anyone".
-                    if (Script.IsNullOrEmpty(minerScript))
-                        continue;
+                if (chainedHeader.Block == null)
+                    chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
 
-                    if (!multiSigMinerScripts.Contains(minerScript))
-                        multiSigMinerScripts.Add(minerScript);
-                }
+                Transaction coinBase = chainedHeader.Block.Transactions[0];
+
+                Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
+
+                // If the POA miner at the time did not have a wallet address, the script length can be 0.
+                // In this case the block shouldn't count as it was "not mined by anyone".
+                if (Script.IsNullOrEmpty(minerScript))
+                    continue;
+
+                if (!multiSigMinerScripts.Contains(minerScript))
+                    multiSigMinerScripts.Add(minerScript);
             }
 
             this.logger.Info("Fee reward to multisig node at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
@@ -122,9 +118,14 @@ namespace Stratis.Features.FederatedPeg.Distribution
                     Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
                     multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = p2pkh });
+
+                    this.logger.Debug($"Paying multisig member '{pubKey}' {feeReward} STRAX.");
                 }
                 else
+                {
                     multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = multiSigMinerScript });
+                    this.logger.Debug($"Paying multisig member '{multiSigMinerScript.ToHex()}' (hex) {feeReward} STRAX.");
+                }
 
             }
 
