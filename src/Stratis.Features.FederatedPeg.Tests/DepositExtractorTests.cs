@@ -8,6 +8,7 @@ using NSubstitute;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
@@ -21,6 +22,7 @@ namespace Stratis.Features.FederatedPeg.Tests
     {
         public const string TargetETHAddress = "0x4F26FfBe5F04ED43630fdC30A87638d53D0b0876";
 
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IFederatedPegSettings federationSettings;
         private readonly IOpReturnDataReader opReturnDataReader;
         private readonly DepositExtractor depositExtractor;
@@ -34,6 +36,8 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             this.addressHelper = new MultisigAddressHelper(this.network, new StraxRegTest());
 
+            this.conversionRequestRepository = Substitute.For<IConversionRequestRepository>();
+
             this.federationSettings = Substitute.For<IFederatedPegSettings>();
             this.federationSettings.IsMainChain.Returns(true);
             this.federationSettings.SmallDepositThresholdAmount.Returns(Money.Coins(10));
@@ -43,7 +47,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
-            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             this.transactionBuilder = new TestTransactionBuilder();
         }
 

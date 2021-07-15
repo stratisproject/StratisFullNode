@@ -609,7 +609,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var transaction = new PosTransaction(model.Hex);
             var counterChainNetwork = new CounterChainNetworkWrapper(CirrusNetwork.NetworksSelector.Testnet());
             var reader = new OpReturnDataReader(counterChainNetwork.CounterChainNetwork);
-            var extractor = new DepositExtractor(this.federatedPegSettings, this.network, reader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var extractor = new DepositExtractor(Substitute.For<IConversionRequestRepository>(), this.federatedPegSettings, this.network, reader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             IDeposit deposit = extractor.ExtractDepositFromTransaction(transaction, 2, 1);
 
             Assert.NotNull(deposit);

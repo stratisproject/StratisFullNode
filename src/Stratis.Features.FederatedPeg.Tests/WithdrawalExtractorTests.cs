@@ -54,7 +54,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.transactionBuilder = new TestMultisigTransactionBuilder(this.addressHelper);
 
             this.withdrawalExtractor = new WithdrawalExtractor(
-                this.settings, this.repository, this.opReturnDataReader, this.network);
+                this.settings, this.opReturnDataReader, this.network);
         }
 
         // TODO: Will depend on decision made on backlog issue https://github.com/stratisproject/FederatedSidechains/issues/124

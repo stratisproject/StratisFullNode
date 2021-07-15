@@ -28,6 +28,7 @@ namespace Stratis.Features.FederatedPeg.Tests
     public sealed class MaturedBlocksProviderTests
     {
         private readonly MultisigAddressHelper addressHelper;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IConsensusManager consensusManager;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILoggerFactory loggerFactory;
@@ -45,6 +46,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
+            this.conversionRequestRepository = Substitute.For<IConversionRequestRepository>();
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.network = new CirrusRegTest();
             this.mainChainNetwork = new StraxRegTest();
@@ -142,7 +144,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return hashes.Select((hash) => this.blocks.Single(x => x.ChainedHeader.HashBlock == hash && x.ChainedHeader.Height <= this.consensusManager.Tip.Height)).ToArray();
             });
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             int nextMaturedBlockHeight = 1;
@@ -202,7 +204,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
@@ -254,7 +256,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
@@ -310,7 +312,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
@@ -366,7 +368,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
@@ -421,7 +423,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
@@ -482,7 +484,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
@@ -544,7 +546,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
