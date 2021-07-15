@@ -33,7 +33,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly ISignals signals;
         private readonly IRewardDistributionManager distributionManager;
         private int previousDistributionHeight;
-        private int previousConversionFeeDistributionHeight;
 
         public WithdrawalTransactionBuilder(
             Network network,
@@ -58,7 +57,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                 this.conversionTransactionFeeDistributionScriptPubKey = BitcoinAddress.Create(this.network.ConversionTransactionFeeDistributionDummyAddress).ScriptPubKey;
 
             this.previousDistributionHeight = 0;
-            this.previousConversionFeeDistributionHeight = 0;
         }
 
         /// <inheritdoc />
@@ -99,14 +97,11 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         this.previousDistributionHeight = blockHeight;
                     }
 
-                    if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey && this.previousConversionFeeDistributionHeight != blockHeight)
+                    if (recipient.ScriptPubKey == this.conversionTransactionFeeDistributionScriptPubKey)
                     {
                         this.logger.Debug("Generating recipient list for conversion transaction fee distribution.");
 
                         multiSigContext.Recipients = this.distributionManager.DistributeToMultisigNodes(blockHeight, recipient.WithPaymentReducedByFee(FederatedPegSettings.CrossChainTransferFee).Amount);
-
-                        // Similarly to the regular distributions, this prevents distribution occurring multiple times in a given block.
-                        this.previousConversionFeeDistributionHeight = blockHeight;
                     }
 
                 }
