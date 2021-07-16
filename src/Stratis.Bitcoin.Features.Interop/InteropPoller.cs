@@ -263,10 +263,10 @@ namespace Stratis.Bitcoin.Features.Interop
                 // Thus will round up to the nearest 100 then add another another 100.
                 // In this way, burns will always be scheduled at a predictable future time across the multisig.
                 // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
-                ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 100) + 200);
+                ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 50) + 100);
 
                 if (blockHeight <= 0)
-                    blockHeight = 10;
+                    blockHeight = 100;
 
                 this.conversionRequestRepository.Save(new ConversionRequest()
                 {
@@ -277,7 +277,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
                     BlockHeight = (int)blockHeight,
                     DestinationAddress = destinationAddress,
-                    DestinationChain = targetChain
+                    DestinationChain = DestinationChain.STRAX
                 });
             }
         }

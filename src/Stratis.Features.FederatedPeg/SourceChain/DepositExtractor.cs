@@ -115,15 +115,15 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (burnRequests == null)
                 return;
 
-            this.logger.Debug($"{burnRequests.Count} burn requests will be processed.");
-
-            IEnumerable<ConversionRequest> applicable = burnRequests.Where(b => b.BlockHeight == blockHeight);
-
-            this.logger.Debug($"{applicable.Count()} burn requests will be added at height {blockHeight}.");
-
-            foreach (ConversionRequest burnRequest in applicable)
+            foreach (ConversionRequest burnRequest in burnRequests)
             {
-                this.logger.Debug($"Processing burn request with external chain hash '{burnRequest.RequestId}' for address '{burnRequest.DestinationAddress}' and amount {burnRequest.Amount}.");
+                if (burnRequest.BlockHeight == blockHeight)
+                    this.logger.Info($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX.");
+                else
+                {
+                    this.logger.Info($"Burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX, will be processed at height {burnRequest.BlockHeight}.");
+                    continue;
+                }
 
                 // We use the transaction ID from the Ethereum chain as the request ID for the withdrawal.
                 // To parse it into a uint256 we need to trim the leading hex marker from the string.
