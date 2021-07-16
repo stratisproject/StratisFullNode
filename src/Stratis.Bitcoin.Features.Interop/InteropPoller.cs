@@ -259,10 +259,11 @@ namespace Stratis.Bitcoin.Features.Interop
                     continue;
                 }
 
-                // Schedule this transaction to be processed at the next block height that is divisible by 10. If the current block height is divisible by 10, add a further 10 to it.
+                // Schedule this transaction to be processed at the next block height that is divisible by 100. 
+                // Thus will round up to the nearest 100 then add another another 100.
                 // In this way, burns will always be scheduled at a predictable future time across the multisig.
                 // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
-                ulong blockHeight = (ulong)this.chainIndexer.Tip.Height - ((ulong)this.chainIndexer.Tip.Height % 10) + 10;
+                ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 100) + 200);
 
                 if (blockHeight <= 0)
                     blockHeight = 10;

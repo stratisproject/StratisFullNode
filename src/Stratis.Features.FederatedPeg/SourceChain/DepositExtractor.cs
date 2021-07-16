@@ -76,7 +76,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             else
                 deposits = new List<IDeposit>();
 
-            ProcessInterFluxBurnRequests(deposits, blockHeight);
+            // Only the sidechain interacts with burn requests from the multisig contract.
+            if (!this.federatedPegSettings.IsMainChain)
+                ProcessInterFluxBurnRequests(deposits, blockHeight);
 
             foreach (IDeposit deposit in deposits)
             {
