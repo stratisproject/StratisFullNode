@@ -97,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult GetMaturedBlockDeposits([FromQuery(Name = "blockHeight")] int blockHeight)
+        public async Task<IActionResult> GetMaturedBlockDepositsAsync([FromQuery(Name = "blockHeight")] int blockHeight)
         {
             if (!this.ModelState.IsValid)
             {
@@ -107,7 +107,7 @@ namespace Stratis.Features.FederatedPeg.Controllers
 
             try
             {
-                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = this.maturedBlocksProvider.RetrieveDeposits(blockHeight);
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await this.maturedBlocksProvider.RetrieveDepositsAsync(blockHeight).ConfigureAwait(false);
                 return this.Json(depositsResult);
             }
             catch (Exception e)

@@ -1,17 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using FluentAssertions;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin;
+using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.SourceChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
-using Stratis.Features.PoA.Collateral.CounterChain;
 using Stratis.Sidechains.Networks;
 using Xunit;
 
@@ -43,13 +43,15 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
-            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network, this.opReturnDataReader, Substitute.For<ICounterChainSettings>(), Substitute.For<IHttpClientFactory>());
+            IExternalApiClient externalClient = Substitute.For<IExternalApiClient>();
+            externalClient.EstimateConversionTransactionFeeAsync().Returns("1.0");
+            this.depositExtractor = new DepositExtractor(this.federationSettings, this.network, this.opReturnDataReader, externalClient);
             this.transactionBuilder = new TestTransactionBuilder();
         }
 
         // Normal Deposits
         [Fact]
-        public void ExtractNormalDeposits_Should_Only_Find_Deposits_To_Multisig()
+        public async Task ExtractNormalDeposits_Should_Only_Find_Deposits_To_Multisig()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -71,7 +73,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             block.AddTransaction(nonDepositTransactionToOtherAddress);
 
             int blockHeight = 230;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             extractedDeposits.Count.Should().Be(1);
             IDeposit extractedTransaction = extractedDeposits[0];
@@ -85,7 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         // Normal Deposits
         [Fact]
-        public void ExtractNormalDeposits_ShouldCreate_OneDepositPerTransaction_ToMultisig()
+        public async Task ExtractNormalDeposits_ShouldCreate_OneDepositPerTransaction_ToMultisig()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -104,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             Transaction thirdDepositTransaction = CreateDepositTransaction(newTargetAddress, block, Money.Coins(12), newOpReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             extractedDeposits.Count.Should().Be(3);
             extractedDeposits.Select(d => d.BlockNumber).Should().AllBeEquivalentTo(blockHeight);
@@ -130,7 +132,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         // Normal Deposits
         [Fact]
-        public void ExtractNormalDeposits_ReturnDeposits_AboveFasterThreshold()
+        public async Task ExtractNormalDeposits_ReturnDeposits_AboveFasterThreshold()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -147,7 +149,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.SmallDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
@@ -158,7 +160,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact]
-        public void ExtractNormalConversionDeposits_ReturnDeposits_AboveFasterThreshold()
+        public async Task ExtractNormalConversionDeposits_ReturnDeposits_AboveFasterThresholdAsync()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -171,13 +173,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
 
             // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount, ethOpReturnBytes);
+            CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum - 1, ethOpReturnBytes);
 
             // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount + 1, ethOpReturnBytes);
+            CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum + 1, ethOpReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionNormal });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
 
             // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
@@ -189,7 +191,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         // Normal Deposits
         [Fact]
-        public void ExtractNormalDeposits_ReturnDeposits_AboveSmallThreshold_BelowEqualToNormalThreshold()
+        public async Task ExtractNormalDeposits_ReturnDeposits_AboveSmallThreshold_BelowEqualToNormalThreshold()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -212,7 +214,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Normal });
 
             // Should be 2, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(2);
@@ -224,7 +226,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         // Small Deposits
         [Fact]
-        public void ExtractSmallDeposits_ReturnDeposits_BelowSmallThreshold_AboveMinimum()
+        public async Task ExtractSmallDeposits_ReturnDeposits_BelowSmallThreshold_AboveMinimum()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -248,7 +250,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Small });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Small });
 
             // Should only be two, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(2);
@@ -259,7 +261,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         }
 
         [Fact]
-        public void ExtractConversionDeposits_BelowAndAboveThreshold()
+        public async Task ExtractConversionDeposits_BelowAndAboveThresholdAsync()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -270,7 +272,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum + 1, ethOpReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionNormal });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
 
             // Should only be two, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
@@ -280,42 +282,9 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
         }
 
-        [Fact]
-        public void ExtractSmallConversionDeposits_ReturnDeposits_BelowSmallThreshold_AboveMinimum()
-        {
-            Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
-
-            byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
-
-            // Set amount to be less than deposit minimum
-            CreateConversionTransaction(block, FederatedPegSettings.CrossChainTransferMinimum - 1, ethOpReturnBytes);
-
-            // Set amount to be less than the small threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount - 1, ethOpReturnBytes);
-
-            // Set amount to be exactly the small threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount, ethOpReturnBytes);
-
-            // Set amount to be greater than the small threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.SmallDepositThresholdAmount + 1, ethOpReturnBytes);
-
-            // Set amount to be greater than the normal threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount + 1, ethOpReturnBytes);
-
-            int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionSmall });
-
-            // Should only be two, with the value just over the withdrawal fee.
-            extractedDeposits.Count.Should().Be(2);
-            foreach (IDeposit extractedDeposit in extractedDeposits)
-            {
-                Assert.True(extractedDeposit.Amount <= this.federationSettings.SmallDepositThresholdAmount);
-            }
-        }
-
         // Large Deposits
         [Fact]
-        public void ExtractLargeDeposits_ReturnDeposits_AboveNormalThreshold()
+        public async Task ExtractLargeDeposits_ReturnDeposits_AboveNormalThresholdAsync()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -339,7 +308,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             CreateDepositTransaction(targetAddress, block, this.federationSettings.NormalDepositThresholdAmount + 1, opReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Large });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.Large });
 
             // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
@@ -351,7 +320,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
         // Conversion deposits
         [Fact]
-        public void ExtractLargeConversionDeposits_ReturnDeposits_AboveNormalThreshold()
+        public async Task ExtractLargeConversionDeposits_ReturnDeposits_AboveNormalThresholdAsync()
         {
             Block block = this.network.Consensus.ConsensusFactory.CreateBlock();
 
@@ -371,13 +340,13 @@ namespace Stratis.Features.FederatedPeg.Tests
             byte[] ethOpReturnBytes = Encoding.UTF8.GetBytes(InterFluxOpReturnEncoder.Encode(DestinationChain.ETH, TargetETHAddress));
 
             // Set amount to be equal to the normal threshold amount.
-            CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount, ethOpReturnBytes);
+            CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum - 1, ethOpReturnBytes);
 
             // Set amount to be greater than the conversion deposit minimum amount.
-            CreateConversionTransaction(block, this.federationSettings.NormalDepositThresholdAmount + 1, ethOpReturnBytes);
+            CreateConversionTransaction(block, DepositValidationHelper.ConversionTransactionMinimum + 1, ethOpReturnBytes);
 
             int blockHeight = 12345;
-            IReadOnlyList<IDeposit> extractedDeposits = this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
+            IReadOnlyList<IDeposit> extractedDeposits = await this.depositExtractor.ExtractDepositsFromBlock(block, blockHeight, new[] { DepositRetrievalType.ConversionLarge });
 
             // Should only be 1, with the value just over the withdrawal fee.
             extractedDeposits.Count.Should().Be(1);
