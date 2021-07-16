@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
+using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin;
@@ -9,7 +9,6 @@ using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
-using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
@@ -19,20 +18,17 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
-        private readonly ICounterChainSettings counterChainSettings;
-        private readonly IHttpClientFactory httpClientFactory;
-        private readonly ExternalApiClient externalApiClient;
+        private readonly IExternalApiClient externalApiClient;
         private readonly ILogger logger;
 
-        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, ICounterChainSettings counterChainSettings, IHttpClientFactory httpClientFactory)
+        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, IExternalApiClient externalApiClient)
         {
             this.conversionRequestRepository = conversionRequestRepository;
+            this.externalApiClient = externalApiClient;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
-            this.counterChainSettings = counterChainSettings;
-            this.httpClientFactory = httpClientFactory;
-            this.externalApiClient = new ExternalApiClient(this.counterChainSettings.CounterChainApiHost, this.counterChainSettings.CounterChainApiPort, this.httpClientFactory);
+
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -67,7 +63,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         };
 
         /// <inheritdoc />
-        public IReadOnlyList<IDeposit> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType[] depositRetrievalTypes)
+        public async Task<IReadOnlyList<IDeposit>> ExtractDepositsFromBlock(Block block, int blockHeight, DepositRetrievalType[] depositRetrievalTypes)
         {
             List<IDeposit> deposits;
 
@@ -92,7 +88,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 foreach (Transaction transaction in block.Transactions)
                 {
-                    IDeposit deposit = this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash);
+                    IDeposit deposit = await this.ExtractDepositFromTransaction(transaction, blockHeight, blockHash).ConfigureAwait(false);
 
                     if (deposit == null)
                         continue;
@@ -162,7 +158,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         }
 
         /// <inheritdoc />
-        public IDeposit ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
+        public async Task<IDeposit> ExtractDepositFromTransaction(Transaction transaction, int blockHeight, uint256 blockHash)
         {
             // If there are no deposits to the multsig (i.e. cross chain transfers) do nothing.
             if (!DepositValidationHelper.TryGetDepositsToMultisig(this.network, transaction, FederatedPegSettings.CrossChainTransferMinimum, out List<TxOut> depositsToMultisig))
@@ -189,7 +185,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                 string feeString;
                 try
                 {
-                    feeString = this.externalApiClient.EstimateConversionTransactionFeeAsync().GetAwaiter().GetResult();
+                    feeString = await this.externalApiClient.EstimateConversionTransactionFeeAsync().ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
