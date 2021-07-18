@@ -72,6 +72,25 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <returns>The list of owner accounts.</returns>
         Task<List<string>> GetOwnersAsync();
 
+        /// <summary>
+        /// Gets a transaction out of the transactions mapping on the contract and decodes it.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction to retrieve.</param>
+        /// <returns>A decoded multisig transaction object.</returns>
+        Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId);
+
+        /// <summary>
+        /// Gets a transaction out of the transactions mapping on the contract without decoding it.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction to retrieve.</param>
+        /// <returns>Raw hex data.</returns>
+        Task<string> GetRawMultisigTransactionAsync(BigInteger transactionId);
+
+        /// <summary>
+        /// Retrieves the wSTRAX balance associated with an account.
+        /// </summary>
+        /// <param name="addressToQuery">The account to retrieve the ERC20 balance of.</param>
+        /// <returns>The balance of the account.</returns>
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
 
         /// <summary>
@@ -214,6 +233,16 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public async Task<List<string>> GetOwnersAsync()
         {
             return await MultisigWallet.GetOwnersAsync(this.web3, this.settings.MultisigWalletAddress).ConfigureAwait(false);
+        }
+
+        public async Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId)
+        {
+            return await MultisigWallet.GetTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
+        }
+
+        public async Task<string> GetRawMultisigTransactionAsync(BigInteger transactionId)
+        {
+            return await MultisigWallet.GetRawTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
         public async Task<BigInteger> GetErc20BalanceAsync(string addressToQuery)
