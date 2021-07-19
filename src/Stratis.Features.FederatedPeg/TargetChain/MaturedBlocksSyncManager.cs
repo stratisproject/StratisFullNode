@@ -203,7 +203,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     this.logger.Info("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
 
                     ChainedHeader applicableHeader = null;
-                    var conversionExists = false;
+                    bool conversionExists = false;
                     if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
                     {
                         this.logger.Warn("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
