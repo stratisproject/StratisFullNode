@@ -202,14 +202,19 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     this.logger.Info("Conversion transaction '{0}' received.", potentialConversionTransaction.Id);
 
+                    ChainedHeader applicableHeader = null;
+                    bool conversionExists = false;
                     if (this.conversionRequestRepository.Get(potentialConversionTransaction.Id.ToString()) != null)
                     {
                         this.logger.Warn("Conversion transaction '{0}' already exists, ignoring.", potentialConversionTransaction.Id);
-                        continue;
+                        conversionExists = true;
                     }
-
-                    if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out ChainedHeader applicableHeader))
-                        continue;
+                    else
+                    {
+                        // This should ony happen if the conversion does't exist yet.
+                        if (!FindApplicableConversionRequestHeader(maturedBlockDeposit, potentialConversionTransaction, out applicableHeader))
+                            continue;
+                    }
 
                     InteropConversionRequestFee interopConversionRequestFee = await this.conversionRequestFeeService.AgreeFeeForConversionRequestAsync(potentialConversionTransaction.Id.ToString(), maturedBlockDeposit.BlockInfo.BlockHeight).ConfigureAwait(false);
 
@@ -256,20 +261,23 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         potentialConversionTransaction.BlockNumber,
                         potentialConversionTransaction.BlockHash));
 
-                    this.logger.Debug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
-
-                    this.conversionRequestRepository.Save(new ConversionRequest()
+                    if (!conversionExists)
                     {
-                        RequestId = potentialConversionTransaction.Id.ToString(),
-                        RequestType = ConversionRequestType.Mint,
-                        Processed = false,
-                        RequestStatus = ConversionRequestStatus.Unprocessed,
-                        // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
-                        Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
-                        BlockHeight = applicableHeader.Height,
-                        DestinationAddress = potentialConversionTransaction.TargetAddress,
-                        DestinationChain = potentialConversionTransaction.TargetChain
-                    });
+                        this.logger.Debug("Adding conversion request for transaction '{0}' to repository.", potentialConversionTransaction.Id);
+
+                        this.conversionRequestRepository.Save(new ConversionRequest()
+                        {
+                            RequestId = potentialConversionTransaction.Id.ToString(),
+                            RequestType = ConversionRequestType.Mint,
+                            Processed = false,
+                            RequestStatus = ConversionRequestStatus.Unprocessed,
+                            // We do NOT convert to wei here yet. That is done when the minting transaction is submitted on the Ethereum network.
+                            Amount = (ulong)(potentialConversionTransaction.Amount - Money.Satoshis(interopConversionRequestFee.Amount)).Satoshi,
+                            BlockHeight = applicableHeader.Height,
+                            DestinationAddress = potentialConversionTransaction.TargetAddress,
+                            DestinationChain = potentialConversionTransaction.TargetChain
+                        });
+                    }
                 }
 
                 maturedBlockDeposit.Deposits = tempDepositList.AsReadOnly();
