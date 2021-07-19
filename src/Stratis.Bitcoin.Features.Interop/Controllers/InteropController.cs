@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -127,7 +128,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult Owners(DestinationChain destinationChain)
+        public async Task<IActionResult> OwnersAsync(DestinationChain destinationChain)
         {
             try
             {
@@ -136,7 +137,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json(client.GetOwnersAsync().GetAwaiter().GetResult());
+                return this.Json(await client.GetOwnersAsync().ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -159,7 +160,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult AddOwner(DestinationChain destinationChain, string newOwnerAddress, int gasPrice)
+        public async Task<IActionResult> AddOwnerAsync(DestinationChain destinationChain, string newOwnerAddress, int gasPrice)
         {
             try
             {
@@ -172,7 +173,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).GetAwaiter().GetResult());
+                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -195,7 +196,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult RemoveOwner(DestinationChain destinationChain, string existingOwnerAddress, int gasPrice)
+        public async Task<IActionResult> RemoveOwnerAsync(DestinationChain destinationChain, string existingOwnerAddress, int gasPrice)
         {
             try
             {
@@ -208,7 +209,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).GetAwaiter().GetResult());
+                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -231,7 +232,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ConfirmTransaction(DestinationChain destinationChain, int transactionId, int gasPrice)
+        public async Task<IActionResult> ConfirmTransactionAsync(DestinationChain destinationChain, int transactionId, int gasPrice)
         {
             try
             {
@@ -241,7 +242,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.ConfirmTransactionAsync(transactionId).GetAwaiter().GetResult());
+                return this.Json(await client.ConfirmTransactionAsync(transactionId).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -265,7 +266,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ChangeRequirement(DestinationChain destinationChain, int requirement, int gasPrice)
+        public async Task<IActionResult> ChangeRequirementAsync(DestinationChain destinationChain, int requirement, int gasPrice)
         {
             try
             {
@@ -279,7 +280,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).GetAwaiter().GetResult());
+                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -301,7 +302,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult MultisigTransaction(DestinationChain destinationChain, int transactionId, bool raw)
+        public async Task<IActionResult> MultisigTransactionAsync(DestinationChain destinationChain, int transactionId, bool raw)
         {
             try
             {
@@ -311,9 +312,9 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
                 if (raw)
-                    return this.Json(client.GetRawMultisigTransactionAsync(transactionId).GetAwaiter().GetResult());
+                    return this.Json(await client.GetRawMultisigTransactionAsync(transactionId).ConfigureAwait(false));
 
-                TransactionDTO transaction = client.GetMultisigTransactionAsync(transactionId).GetAwaiter().GetResult();
+                TransactionDTO transaction = await client.GetMultisigTransactionAsync(transactionId).ConfigureAwait(false);
 
                 var response = new TransactionResponseModel()
                 {
@@ -344,7 +345,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult Balance(DestinationChain destinationChain, string account)
+        public async Task<IActionResult> BalanceAsync(DestinationChain destinationChain, string account)
         {
             try
             {
@@ -353,7 +354,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                return this.Json(client.GetErc20BalanceAsync(account).GetAwaiter().GetResult().ToString());
+                return this.Json((await client.GetErc20BalanceAsync(account).ConfigureAwait(false)).ToString());
             }
             catch (Exception e)
             {
