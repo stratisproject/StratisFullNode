@@ -286,16 +286,25 @@ namespace Stratis.Bitcoin.Features.PoA
                 this.lastActiveTimeByPubKey.Remove(pubKey, out _);
         }
 
+
+        /// <summary>
+        /// Updates this object with recent federation history up to the passed <paramref name="blockHeader"/>.
+        /// Recent federation history includes all blocks within the last <see cref="PoAConsensusOptions.FederationMemberActivationTime"/> seconds.
+        /// </summary>
+        /// <param name="blockHeader">The block up to which we require recent history.</param>
         private void UpdateTip(ChainedHeader blockHeader)
         {
+            // If there is already information recorded.
             if (this.lastActiveTip != null)
             {
+                // If the information recorded is current then exit.
                 if (blockHeader == this.lastActiveTip)
                     return;
 
+                // Find the fork point between the recorded information and the block of interest.
                 ChainedHeader fork = this.lastActiveTip.FindFork(blockHeader);
 
-                // If the current chain includes the block then do nothing.
+                // If the recorded history includes the block then do nothing.
                 if (fork == blockHeader)
                     return;
 
@@ -322,6 +331,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     minTime = federationMemberActivationTime;
             }
 
+            // This method works even if the block header height relate to blocks being connected above the consensus tip.
             ChainedHeader GetHeader(int height)
             {
                 if (height < this.chainIndexer.Tip.Height)
@@ -337,16 +347,20 @@ namespace Stratis.Bitcoin.Features.PoA
             // Exclude anything in cache already.
             int fedStartHeight = Math.Max(startHeight, this.lastFederationTip + 1);
 
-            // Write to cache for later use.
+            // If we need to determine more federation make-ups to catch up with the blockHeader height...
             if (fedStartHeight <= blockHeader.Height)
             {
+                // Determine as many federations as we can, possibly pre-fetching beyond the blockHeader.
                 IEnumerable<(List<IFederationMember> federation, HashSet<IFederationMember> whoJoined)> federations = GetFederationsForHeightsNoCache(fedStartHeight, endHeight);
+
+                // Record the info.
                 foreach ((List<IFederationMember> federation, HashSet<IFederationMember> whoJoined) in federations)
                     this.federationHistory[fedStartHeight++] = (federation, whoJoined, null); // Miner not known yet.
+
                 this.lastFederationTip = endHeight;
             }
 
-            // Get the miners.
+            // Determine the miners.
             IFederationMember[] miners = this.GetFederationMembersForBlocks(blockHeader, blockHeader.Height - startHeight + 1);
 
             foreach (ChainedHeader header in blockHeader.EnumerateToGenesis().Take(miners.Length).Reverse())
