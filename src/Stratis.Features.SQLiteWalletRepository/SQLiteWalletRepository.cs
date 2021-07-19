@@ -733,7 +733,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = walletContainer.Conn;
 
-            walletContainer.WriteLockWait();
+            const int minAddressesPerSecond = 20;
+
+            walletContainer.WriteLockWait(true, 120 + count / minAddressesPerSecond);
 
             try
             {
