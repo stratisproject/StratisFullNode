@@ -32,6 +32,10 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
         Task<BurnFunction> GetBurnTransactionAsync(string transactionHash);
 
+        Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
+
+        Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
+
         /// <summary>
         /// Queries the previously created event filter for any new events matching the filter criteria.
         /// </summary>
@@ -93,6 +97,25 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// <returns>The list of owner accounts.</returns>
         Task<List<string>> GetOwnersAsync();
 
+        /// <summary>
+        /// Gets a transaction out of the transactions mapping on the contract and decodes it.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction to retrieve.</param>
+        /// <returns>A decoded multisig transaction object.</returns>
+        Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId);
+
+        /// <summary>
+        /// Gets a transaction out of the transactions mapping on the contract without decoding it.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction to retrieve.</param>
+        /// <returns>Raw hex data.</returns>
+        Task<string> GetRawMultisigTransactionAsync(BigInteger transactionId);
+
+        /// <summary>
+        /// Retrieves the wSTRAX balance associated with an account.
+        /// </summary>
+        /// <param name="addressToQuery">The account to retrieve the ERC20 balance of.</param>
+        /// <returns>The balance of the account.</returns>
         Task<BigInteger> GetErc20BalanceAsync(string addressToQuery);
 
         /// <summary>
@@ -214,6 +237,49 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return tx.DecodeTransactionToFunctionMessage<BurnFunction>();
         }
 
+        public async Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber)
+        {
+            return await this.web3.Eth.Blocks.GetBlockWithTransactionsByNumber.SendRequestAsync(new HexBigInteger(blockNumber)).ConfigureAwait(false);
+        }
+
+        public async Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block)
+        {
+            var burns = new List<(string TransactionHash, BurnFunction Burn)>();
+
+            foreach (Transaction tx in block.Transactions)
+            {
+                if (!tx.IsTo(this.settings.WrappedStraxContractAddress))
+                    continue;
+
+                BurnFunction burn;
+
+                try
+                {
+                    burn = tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (burn.Amount == BigInteger.Zero)
+                {
+                    // Ignoring zero-valued burn transaction.
+                    continue;
+                }
+
+                if (burn.Amount < BigInteger.Zero)
+                {
+                    // Ignoring negative-valued burn transaction.
+                    continue;
+                }
+
+                burns.Add((tx.TransactionHash, burn));
+            }
+
+            return burns;
+        }
+
         /// <inheritdoc />
         public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
         {
@@ -277,6 +343,16 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public async Task<List<string>> GetOwnersAsync()
         {
             return await MultisigWallet.GetOwnersAsync(this.web3, this.settings.MultisigWalletAddress).ConfigureAwait(false);
+        }
+
+        public async Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId)
+        {
+            return await MultisigWallet.GetTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
+        }
+
+        public async Task<string> GetRawMultisigTransactionAsync(BigInteger transactionId)
+        {
+            return await MultisigWallet.GetRawTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
         }
 
         public async Task<(BigInteger ConfirmationCount, string BlockHash)> GetConfirmationsAsync(string transactionHash)
