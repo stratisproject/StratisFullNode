@@ -1080,7 +1080,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     {
                         WalletContainer walletContainer = this.Wallets[walletName];
 
-                        if (walletContainer.WriteLockWait(true))
+                        if (walletContainer.WriteLockWait(false))
                             return;
 
                         this.logger.LogDebug("Could not obtain lock for wallet '{0}'.", walletName);
