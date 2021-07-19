@@ -73,7 +73,12 @@ namespace Stratis.Features.FederatedPeg.Distribution
             // Inspect the round of blocks equal to the federation size
             // and determine if a multisig member mined the block.
             // If so add the list of multisig members to pay.
-            for (int i = federation.Count; i >= 0; i--)
+
+            // Look back at least 4 federation sizes to ensure that we collect enough data on the multisig
+            // members that mined.
+            var inspectionRange = federation.Count * 4;
+
+            for (int i = inspectionRange; i >= 0; i--)
             {
                 ChainedHeader chainedHeader = this.chainIndexer.GetHeader(startHeight - i);
 
