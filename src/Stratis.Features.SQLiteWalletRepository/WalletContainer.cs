@@ -65,7 +65,8 @@ namespace Stratis.Features.SQLiteWalletRepository
             // Only take the write lock if there are no readers.
             while (true)
             {
-                this.LockUpdateWallet.Wait();
+                if (!this.LockUpdateWallet.Wait(!dontWait))
+                    return false;
                 if (this.ReaderCount == 0)
                     return true;
                 this.LockUpdateWallet.Release();
