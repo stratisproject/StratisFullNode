@@ -36,6 +36,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
 
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
+            this.federationWalletManager.IsFederationWalletActive().Returns(true);
             this.federationWalletManager.WalletTipHeight.Returns(0);
 
             this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
