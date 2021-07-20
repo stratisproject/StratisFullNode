@@ -764,7 +764,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.ExecuteAsAsync(model, cancellationToken, (req, token) =>
             {
-                ChainedHeader block = this.chainIndexer.GetHeader(uint256.Parse(model.Hash));
+                ChainedHeader block = this.chainIndexer.GetHeaderByHash(uint256.Parse(model.Hash));
                 if (block == null)
                 {
                     return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest,

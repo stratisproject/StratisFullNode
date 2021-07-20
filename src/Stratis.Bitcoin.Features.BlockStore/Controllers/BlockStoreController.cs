@@ -131,7 +131,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Controllers
             {
                 uint256 blockId = uint256.Parse(query.Hash);
 
-                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(blockId);
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHash(blockId);
 
                 if (chainedHeader == null)
                     return this.Ok("Block not found");

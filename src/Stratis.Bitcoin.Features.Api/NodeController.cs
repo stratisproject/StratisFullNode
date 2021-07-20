@@ -233,7 +233,7 @@ namespace Stratis.Bitcoin.Features.Api
                 }
 
                 BlockHeaderModel model = null;
-                BlockHeader blockHeader = this.chainIndexer?.GetHeader(uint256.Parse(hash))?.Header;
+                BlockHeader blockHeader = this.chainIndexer?.GetHeaderByHash(uint256.Parse(hash))?.Header;
                 if (blockHeader != null)
                 {
                     model = new BlockHeaderModel(blockHeader);
@@ -692,7 +692,7 @@ namespace Stratis.Bitcoin.Features.Api
             uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);
             if (blockid != null)
             {
-                block = chain?.GetHeader(blockid);
+                block = chain?.GetHeaderByHash(blockid);
             }
 
             return block;
@@ -714,7 +714,7 @@ namespace Stratis.Bitcoin.Features.Api
 
             uint256 blockid = this.blockStore?.GetBlockIdByTransactionId(trxid);
             if (blockid != null)
-                block = this.chainIndexer?.GetHeader(blockid);
+                block = this.chainIndexer?.GetHeaderByHash(blockid);
 
             return block;
         }

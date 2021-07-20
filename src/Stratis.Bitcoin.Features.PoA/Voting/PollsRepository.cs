@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     if (rowTip.Exists)
                     {
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                        if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
+                        if (this.chainIndexer != null && this.chainIndexer.GetHeaderByHash(this.CurrentTip.Hash) == null)
                             this.CurrentTip = null;
                     }
                     else

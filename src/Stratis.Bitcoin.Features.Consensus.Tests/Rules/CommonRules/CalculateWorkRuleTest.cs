@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
             this.ruleContext.ValidationContext = new ValidationContext()
             {
                 BlockToValidate = block,
-                ChainedHeaderToValidate = new ChainedHeader(block.Header, block.Header.GetHash(), this.ChainIndexer.GetHeader(block.Header.HashPrevBlock))
+                ChainedHeaderToValidate = new ChainedHeader(block.Header, block.Header.GetHash(), this.ChainIndexer.GetHeaderByHash(block.Header.HashPrevBlock))
             };
 
             var exception = Assert.Throws<ConsensusErrorException>(() =>

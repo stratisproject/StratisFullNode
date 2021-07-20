@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Notifications
             {
                 this.ReSync = true;
 
-                ChainedHeader startBlock = this.ChainIndexer.GetHeader(startHash);
+                ChainedHeader startBlock = this.ChainIndexer.GetHeaderByHash(startHash);
                 if (startBlock != null)
                 {
                     // Sets the location of the puller to the block preceding the one we want to receive.
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.Notifications
                 return Task.CompletedTask;
 
             // Not syncing until the chain is downloaded at least up to this block.
-            ChainedHeader startBlock = this.ChainIndexer.GetHeader(this.StartHash);
+            ChainedHeader startBlock = this.ChainIndexer.GetHeaderByHash(this.StartHash);
             if (startBlock == null)
                 return Task.CompletedTask;
 
@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.Features.Notifications
                 // In reorg we reset the puller to the fork.
                 // When a reorg happens the puller is pushed back and continues from the current fork.
                 // Find the location of the fork.
-                while (this.ChainIndexer.GetHeader(this.tip.HashBlock) == null)
+                while (this.ChainIndexer.GetHeaderByHash(this.tip.HashBlock) == null)
                     this.tip = this.tip.Previous;
 
                 // Set the puller to the fork location.

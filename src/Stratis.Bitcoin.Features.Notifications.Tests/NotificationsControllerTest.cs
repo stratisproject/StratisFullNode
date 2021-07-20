@@ -89,7 +89,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
 
             var chainedHeader = new ChainedHeader(this.network.Consensus.ConsensusFactory.CreateBlockHeader(), hash, null);
             var chain = new Mock<ChainIndexer>();
-            chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns(chainedHeader);
+            chain.Setup(c => c.GetHeaderByHash(uint256.Parse(hashLocation))).Returns(chainedHeader);
             ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();
@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.Features.Notifications.Tests
             string hashLocation = "000000000000000000c03dbe6ee5fedb25877a12e32aa95bc1d3bd480d7a93f9";
 
             var chain = new Mock<ChainIndexer>();
-            chain.Setup(c => c.GetHeader(uint256.Parse(hashLocation))).Returns((ChainedHeader)null);
+            chain.Setup(c => c.GetHeaderByHash(uint256.Parse(hashLocation))).Returns((ChainedHeader)null);
             ConsensusManager consensusManager = ConsensusManagerHelper.CreateConsensusManager(this.network);
 
             var loggerFactory = new Mock<LoggerFactory>();

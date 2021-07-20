@@ -204,7 +204,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns((List<uint256> blockHashes) => blockHashes.Select(h => blockDict[h]).ToList());
 
             // Set 4th block of the old chain as tip. 2 ahead of the fork thus not being on the right chain.
-            this.walletManager.Object.RewindWallet(this.walletName, leftChainIndexer.GetHeader(result.LeftForkBlocks[3].Header.GetHash()));
+            this.walletManager.Object.RewindWallet(this.walletName, leftChainIndexer.GetHeaderByHash(result.LeftForkBlocks[3].Header.GetHash()));
 
             // Rewind identifies height 2 as the last common block instead.
             Assert.Equal(2, this.walletTip.Height);

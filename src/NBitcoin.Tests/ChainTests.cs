@@ -98,14 +98,14 @@ namespace NBitcoin.Tests
             Assert.Equal(cchain.Tip, chain.Tip);
 
             Assert.Equal(cchain.GetHeaderByHeight(5), chain.Tip);
-            Assert.Equal(cchain.GetHeader(b5.HashBlock), chain.Tip);
+            Assert.Equal(cchain.GetHeaderByHash(b5.HashBlock), chain.Tip);
 
             Assert.Equal(cchain.SetTip(b1), b1);
-            Assert.Null(cchain.GetHeader(b5.HashBlock));
-            Assert.Null(cchain.GetHeader(b2.HashBlock));
+            Assert.Null(cchain.GetHeaderByHash(b5.HashBlock));
+            Assert.Null(cchain.GetHeaderByHash(b2.HashBlock));
 
             Assert.Equal(cchain.SetTip(b5), b1);
-            Assert.Equal(cchain.GetHeader(b5.HashBlock), chain.Tip);
+            Assert.Equal(cchain.GetHeaderByHash(b5.HashBlock), chain.Tip);
 
             chain.SetTip(b2);
             this.AddBlock(chain);
@@ -115,8 +115,8 @@ namespace NBitcoin.Tests
 
             Assert.Equal(cchain.SetTip(b6b), b2);
 
-            Assert.Null(cchain.GetHeader(b5.HashBlock));
-            Assert.Equal(cchain.GetHeader(b2.HashBlock), b2);
+            Assert.Null(cchain.GetHeaderByHash(b5.HashBlock));
+            Assert.Equal(cchain.GetHeaderByHash(b2.HashBlock), b2);
             Assert.Equal(cchain.GetHeaderByHeight(6), b6b);
             Assert.Equal(cchain.GetHeaderByHeight(5), b5b);
         }
@@ -127,7 +127,7 @@ namespace NBitcoin.Tests
             header.Nonce = RandomUtils.GetUInt32();
             header.HashPrevBlock = chainIndexer.Tip.HashBlock;
             chainIndexer.SetTip(header);
-            return chainIndexer.GetHeader(header.GetHash());
+            return chainIndexer.GetHeaderByHash(header.GetHash());
         }
 
         [Fact]
