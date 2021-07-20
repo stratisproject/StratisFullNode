@@ -119,7 +119,14 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         /// <returns><c>true</c> if delay between next time we should ask for blocks is required; <c>false</c> otherwise.</returns>
         protected async Task<bool> SyncDepositsAsync()
         {
-            // First ensure that we the node is out of IBD.
+            // First ensure that the federation wallet is active.
+            if (!this.federationWalletManager.IsFederationWalletActive())
+            {
+                this.logger.Info("The CCTS will start processing deposits once the federation wallet has been activated.");
+                return true;
+            }
+
+            // Then ensure that the node is out of IBD.
             if (this.initialBlockDownloadState.IsInitialBlockDownload())
             {
                 this.logger.Info("The CCTS will start processing deposits once the node is out of IBD.");

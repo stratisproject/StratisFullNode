@@ -180,42 +180,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     return null;
                 }
 
-                // Instead of a fixed minimum, check that the deposit size at least covers the fee.
-                // It will be checked again when the interop poller processes the resulting conversion request.
-                string feeString;
-                try
-                {
-                    feeString = await this.externalApiClient.EstimateConversionTransactionFeeAsync().ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    this.logger.Error("Error accessing fee API: " + e);
-
-                    return null;
-                }
-
-                if (!decimal.TryParse(feeString, out decimal minimumDeposit))
-                {
-                    this.logger.Warn("Failed to retrieve estimated fee from API. Ignoring deposit.");
-
-                    return null;
-                }
-
-                if (minimumDeposit == decimal.MinusOne)
-                {
-                    this.logger.Warn("Estimated fee information currently unavailable. Ignoring deposit.");
-
-                    return null;
-                }
-
-                if (amount < Money.Coins(minimumDeposit))
-                {
-                    this.logger.Warn("Received deposit of {0}, but computed minimum deposit fee is {1}. Ignoring deposit.", amount, minimumDeposit);
-
-                    return null;
-                }
-
-                this.logger.Info("Received conversion transaction deposit of {0}, subtracting estimated fee of {1}.", amount, minimumDeposit);
+                this.logger.Info("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
 
                 if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
                     depositRetrievalType = DepositRetrievalType.ConversionLarge;
