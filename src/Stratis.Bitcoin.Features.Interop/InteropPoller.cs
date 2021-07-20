@@ -313,7 +313,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 IETHClient clientForDestChain = this.clientProvider.GetClientForChain(request.DestinationChain);
 
                 // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
-                List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(request.BlockHeight));
+                List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeaderByHeight(request.BlockHeight));
 
                 var multisig = new List<CollateralFederationMember>();
 

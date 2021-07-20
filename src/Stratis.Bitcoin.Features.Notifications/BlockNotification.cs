@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.Features.Notifications
                 if (startBlock != null)
                 {
                     // Sets the location of the puller to the block preceding the one we want to receive.
-                    ChainedHeader previousBlock = this.ChainIndexer.GetHeader(startBlock.Height > 0 ? startBlock.Height - 1 : 0);
+                    ChainedHeader previousBlock = this.ChainIndexer.GetHeaderByHeight(startBlock.Height > 0 ? startBlock.Height - 1 : 0);
                    // this.Puller.SetLocation(previousBlock);
                     this.tip = previousBlock;
 
@@ -118,7 +118,7 @@ namespace Stratis.Bitcoin.Features.Notifications
                 return Task.CompletedTask;
 
             // Sets the location of the puller to the block preceding the one we want to receive.
-            ChainedHeader previousBlock = this.ChainIndexer.GetHeader(startBlock.Height > 0 ? startBlock.Height - 1 : 0);
+            ChainedHeader previousBlock = this.ChainIndexer.GetHeaderByHeight(startBlock.Height > 0 ? startBlock.Height - 1 : 0);
            // this.Puller.SetLocation(previousBlock);
             this.tip = previousBlock;
 

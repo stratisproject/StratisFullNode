@@ -402,7 +402,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             // Try to recover it.
             int? lastBlockSyncedHeight = (int)deletedWallet.wallet.AccountsRoot.First().LastBlockSyncedHeight;
             Wallet recoveredWallet = walletManager.RecoverWallet(password, walletName, deletedWallet.mnemonic.ToString(), DateTime.Now.AddDays(1), passphrase,
-                (lastBlockSyncedHeight == null) ? null : chainIndexer.GetHeader((int)lastBlockSyncedHeight));
+                (lastBlockSyncedHeight == null) ? null : chainIndexer.GetHeaderByHeight((int)lastBlockSyncedHeight));
 
             Wallet expectedWallet = deletedWallet.wallet;
 
@@ -505,7 +505,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             // try to recover it.
             int? lastBlockSyncedHeight = (int)deletedWallet.wallet.AccountsRoot.First().LastBlockSyncedHeight;
             Wallet recoveredWallet = walletManager.RecoverWallet(password, walletName, deletedWallet.mnemonic.ToString(), DateTime.Now.AddDays(1), password,
-                (lastBlockSyncedHeight == null) ? null : chainIndexer.GetHeader((int)lastBlockSyncedHeight));
+                (lastBlockSyncedHeight == null) ? null : chainIndexer.GetHeaderByHeight((int)lastBlockSyncedHeight));
 
             Wallet expectedWallet = deletedWallet.wallet;
 
@@ -1082,7 +1082,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 {
                     foreach (TransactionData transactionData in address.Transactions)
                     {
-                        Block block = chainIndexer.GetHeader((int)transactionData.BlockHeight).Block;
+                        Block block = chainIndexer.GetHeaderByHeight((int)transactionData.BlockHeight).Block;
 
                         Transaction tx = this.Network.CreateTransaction();
                         tx.Outputs.Add(new TxOut(transactionData.Amount, transactionData.ScriptPubKey));
@@ -2157,7 +2157,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             walletRepository.ProcessBlock(block0, header0);
             for (int i = 1; i <= concurrentchain.Height; i++)
             {
-                ChainedHeader header = concurrentchain.GetHeader(i);
+                ChainedHeader header = concurrentchain.GetHeaderByHeight(i);
                 walletRepository.ProcessBlock(this.Network.CreateBlock(), header);
             }
         }
@@ -3101,7 +3101,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             // Generate a spendable transaction.
             (uint256 blockhash, Block block) = WalletTestsHelpers.CreateFirstBlockWithPaymentToAddress(chain, this.Network, spendingAddress);
-            walletManager.ProcessBlock(block, chain.GetHeader(1));
+            walletManager.ProcessBlock(block, chain.GetHeaderByHeight(1));
 
             (Money totalAmount2, Money confirmedAmount2, Money spendableAmount2) = walletRepository.GetAccountBalance(new WalletAccountReference("myWallet1", "account1"), chain.Tip.Height);
             Assert.NotEqual(Money.Zero, totalAmount2);
@@ -3156,7 +3156,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             // Generate a spendable transaction.
             (uint256 blockhash, Block block) = WalletTestsHelpers.CreateFirstBlockWithPaymentToAddress(chain, this.Network, spendingAddress);
-            walletManager.ProcessBlock(block, chain.GetHeader(1));
+            walletManager.ProcessBlock(block, chain.GetHeaderByHeight(1));
 
             // Refresh wallet fields.
             wallet = walletManager.GetWallet(wallet.Name);

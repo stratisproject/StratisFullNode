@@ -177,10 +177,10 @@ namespace Stratis.Bitcoin.Features.Wallet
                     throw new WalletException("Can't start sync beyond end of chain");
 
                 if (walletName != null)
-                    this.walletManager.RewindWallet(walletName, this.chainIndexer.GetHeader(height - 1));
+                    this.walletManager.RewindWallet(walletName, this.chainIndexer.GetHeaderByHeight(height - 1));
                 else
                     foreach (string wallet in this.walletManager.GetWalletsNames())
-                        this.walletManager.RewindWallet(wallet, this.chainIndexer.GetHeader(height - 1));
+                        this.walletManager.RewindWallet(wallet, this.chainIndexer.GetHeaderByHeight(height - 1));
             }
         }
 
@@ -204,7 +204,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 var hashes = new List<uint256>();
                 for (int i = 0; i < 100; i++)
                 {
-                    ChainedHeader header = this.chainIndexer.GetHeader(height + i);
+                    ChainedHeader header = this.chainIndexer.GetHeaderByHeight(height + i);
                     if (header == null)
                         break;
 
@@ -224,7 +224,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 var buffer = new List<(ChainedHeader, Block)>();
                 for (int i = 0; i < blocks.Count && !this.syncCancellationToken.IsCancellationRequested; height++, i++)
                 {
-                    ChainedHeader header = this.chainIndexer.GetHeader(height);
+                    ChainedHeader header = this.chainIndexer.GetHeaderByHeight(height);
                     yield return ((header, blocks[i]));
                 }
             }

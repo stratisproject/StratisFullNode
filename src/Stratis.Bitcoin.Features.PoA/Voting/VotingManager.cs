@@ -712,7 +712,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var headers = new List<ChainedHeader>();
                 for (int height = (repoTip?.Height ?? 0) + 1; height <= newTip.Height; height++)
                 {
-                    ChainedHeader header = this.chainIndexer.GetHeader(height);
+                    ChainedHeader header = this.chainIndexer.GetHeaderByHeight(height);
                     headers.Add(header);
                 }
 

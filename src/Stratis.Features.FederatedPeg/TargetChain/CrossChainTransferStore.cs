@@ -115,7 +115,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.dBreezeSerializer = dBreezeSerializer;
             this.lockObj = new object();
             this.logger = LogManager.GetCurrentClassLogger();
-            this.TipHashAndHeight = this.chainIndexer.GetHeader(0);
+            this.TipHashAndHeight = this.chainIndexer.GetHeaderByHeight(0);
             this.NextMatureDepositHeight = 1;
             this.cancellation = new CancellationTokenSource();
             this.settings = settings;
@@ -881,7 +881,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (this.TipHashAndHeight.Height > tipToChase.Height || this.chainIndexer.GetHeader(this.TipHashAndHeight.HashBlock)?.Height != this.TipHashAndHeight.Height)
             {
                 // We are ahead of the current chain or on the wrong chain.
-                ChainedHeader fork = this.chainIndexer.FindFork(this.TipHashAndHeight.GetLocator()) ?? this.chainIndexer.GetHeader(0);
+                ChainedHeader fork = this.chainIndexer.FindFork(this.TipHashAndHeight.GetLocator()) ?? this.chainIndexer.GetHeaderByHeight(0);
 
                 // Must not exceed wallet height otherwise transaction validations may fail.
                 while (fork.Height > tipToChase.Height)

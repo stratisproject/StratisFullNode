@@ -71,11 +71,11 @@ namespace NBitcoin.Tests
             cchain.Load(bytes);
 
             Assert.Equal(cchain.Tip, chain.Tip);
-            Assert.NotNull(cchain.GetHeader(0));
+            Assert.NotNull(cchain.GetHeaderByHeight(0));
 
             cchain = new ChainIndexer(this.networkTest);
             cchain.Load(cchain.ToBytes());
-            Assert.NotNull(cchain.GetHeader(0));
+            Assert.NotNull(cchain.GetHeaderByHeight(0));
         }
 
         [Fact]
@@ -97,7 +97,7 @@ namespace NBitcoin.Tests
             Assert.Equal(cchain.SetTip(chain.Tip), b0);
             Assert.Equal(cchain.Tip, chain.Tip);
 
-            Assert.Equal(cchain.GetHeader(5), chain.Tip);
+            Assert.Equal(cchain.GetHeaderByHeight(5), chain.Tip);
             Assert.Equal(cchain.GetHeader(b5.HashBlock), chain.Tip);
 
             Assert.Equal(cchain.SetTip(b1), b1);
@@ -117,8 +117,8 @@ namespace NBitcoin.Tests
 
             Assert.Null(cchain.GetHeader(b5.HashBlock));
             Assert.Equal(cchain.GetHeader(b2.HashBlock), b2);
-            Assert.Equal(cchain.GetHeader(6), b6b);
-            Assert.Equal(cchain.GetHeader(5), b5b);
+            Assert.Equal(cchain.GetHeaderByHeight(6), b6b);
+            Assert.Equal(cchain.GetHeaderByHeight(5), b5b);
         }
 
         private ChainedHeader AddBlock(ChainIndexer chainIndexer)
@@ -158,10 +158,10 @@ namespace NBitcoin.Tests
                 int height = int.Parse(history.Split(',')[0]);
                 var expectedTarget = new Target(new BouncyCastle.Math.BigInteger(history.Split(',')[1], 10));
 
-                BlockHeader block = main.GetHeader(height).Header;
+                BlockHeader block = main.GetHeaderByHeight(height).Header;
 
                 Assert.Equal(expectedTarget, block.Bits);
-                Target target = main.GetHeader(height).GetWorkRequired(network);
+                Target target = main.GetHeaderByHeight(height).GetWorkRequired(network);
                 Assert.Equal(expectedTarget, target);
             }
         }

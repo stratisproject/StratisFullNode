@@ -182,7 +182,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
 
-            ChainedHeader chainedHeader = this.chainIndexer.GetHeader((int)height);
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight((int)height);
 
             var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
 

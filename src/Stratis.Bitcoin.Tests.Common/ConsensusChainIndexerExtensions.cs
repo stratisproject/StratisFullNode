@@ -143,7 +143,7 @@ namespace Stratis.Bitcoin.Tests.Common
 
             for (int i = 0; i < chainIndexer.Tip.Height + 1; i++)
             {
-                ChainedHeader block = chainIndexer.GetHeader(i);
+                ChainedHeader block = chainIndexer.GetHeaderByHeight(i);
                 stream.ReadWrite(block.HashBlock.AsBitcoinSerializable());
                 stream.ReadWrite(block.Header);
             }

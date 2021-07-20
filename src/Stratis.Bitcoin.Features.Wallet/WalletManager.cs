@@ -498,7 +498,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     // Import the wallet to the database.
                     int lastBlock = 0;
                     var lastBlockSynced = new HashHeightPair(this.network.GenesisHash, lastBlock);
-                    var blockLocator = this.ChainIndexer.GetHeader(lastBlock).GetLocator();
+                    var blockLocator = this.ChainIndexer.GetHeaderByHeight(lastBlock).GetLocator();
 
                     ITransactionContext transactionContext = this.WalletRepository.BeginTransaction(jsonWallet.Name);
                     try

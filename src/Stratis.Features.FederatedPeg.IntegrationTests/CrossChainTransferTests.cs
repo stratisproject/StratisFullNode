@@ -41,7 +41,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 TestHelper.WaitForNodeToSync(context.SideUser, context.FedSide1, context.FedSide2, context.FedSide3);
 
                 // Ensure that coinbase contains premine reward and it goes to the fed.
-                Block block = context.SideUser.FullNode.ChainIndexer.GetHeader((int)context.SideChainNetwork.Consensus.PremineHeight).Block;
+                Block block = context.SideUser.FullNode.ChainIndexer.GetHeaderByHeight((int)context.SideChainNetwork.Consensus.PremineHeight).Block;
                 Transaction coinbase = block.Transactions[0];
                 Assert.Equal(FederatedPegBlockDefinition.FederationWalletOutputs, coinbase.Outputs.Count);
                 for (int i = 0; i < FederatedPegBlockDefinition.FederationWalletOutputs; i++)
@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 // Let sidechain progress to point where fed has the premine
                 await context.FedSide1.MineBlocksAsync((int)context.SideChainNetwork.Consensus.PremineHeight);
                 TestHelper.WaitForNodeToSync(context.SideUser, context.FedSide1);
-                Block block = context.SideUser.FullNode.ChainIndexer.GetHeader((int)context.SideChainNetwork.Consensus.PremineHeight).Block;
+                Block block = context.SideUser.FullNode.ChainIndexer.GetHeaderByHeight((int)context.SideChainNetwork.Consensus.PremineHeight).Block;
                 Transaction coinbase = block.Transactions[0];
                 Assert.Equal(FederatedPegBlockDefinition.FederationWalletOutputs, coinbase.Outputs.Count);
 
@@ -147,7 +147,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests
                 // Let sidechain progress to point where fed has the premine
                 TestBase.WaitLoop(() => context.SideUser.FullNode.ChainIndexer.Height >= context.SideUser.FullNode.Network.Consensus.PremineHeight);
                 TestHelper.WaitForNodeToSync(context.SideUser, context.FedSide1);
-                Block block = context.SideUser.FullNode.ChainIndexer.GetHeader((int)context.SideChainNetwork.Consensus.PremineHeight).Block;
+                Block block = context.SideUser.FullNode.ChainIndexer.GetHeaderByHeight((int)context.SideChainNetwork.Consensus.PremineHeight).Block;
                 Transaction coinbase = block.Transactions[0];
                 Assert.Single(coinbase.Outputs);
                 Assert.Equal(context.SideChainNetwork.Consensus.PremineReward, coinbase.Outputs[0].Value);

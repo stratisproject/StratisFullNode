@@ -333,7 +333,7 @@ namespace Stratis.Bitcoin.Features.LightWallet
         private void StartSync(int height)
         {
             // TODO add support for the case where there is a reorg, like in the initialize method
-            ChainedHeader chainedHeader = this.chainIndexer.GetHeader(height);
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeaderByHeight(height);
             this.walletTip = this.walletManager.WalletCommonTip(chainedHeader ?? throw new WalletException("Invalid block height"));
             this.blockNotification.SyncFrom(chainedHeader.HashBlock);
         }

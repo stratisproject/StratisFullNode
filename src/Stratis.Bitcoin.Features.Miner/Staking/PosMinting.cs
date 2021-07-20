@@ -473,7 +473,7 @@ namespace Stratis.Bitcoin.Features.Miner.Staking
                 if ((utxo == null) || (utxo.Value < this.MinimumStakingCoinValue))
                     continue;
 
-                uint256 hashBlock = this.chainIndexer.GetHeader((int)coinSet.Coins.Height)?.HashBlock;
+                uint256 hashBlock = this.chainIndexer.GetHeaderByHeight((int)coinSet.Coins.Height)?.HashBlock;
                 if (hashBlock == null)
                     continue;
 

@@ -207,7 +207,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             lock (this.lockObject)
             {
-                ChainedHeader tip = this.lastActiveTip ?? this.chainIndexer.GetHeader(0);
+                ChainedHeader tip = this.lastActiveTip ?? this.chainIndexer.GetHeaderByHeight(0);
 
                 List<IFederationMember> federationMembers = this.GetFederationForBlock(tip);
 
