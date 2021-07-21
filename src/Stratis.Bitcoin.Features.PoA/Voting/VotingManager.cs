@@ -232,7 +232,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (approvedPolls.Any(x => !x.IsExecuted &&
                   x.VotingData.Key == voteKey && x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
-                  x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+                  x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {
                 // We've already voted in a finished poll that's only awaiting execution.
                 return true;
@@ -242,7 +242,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (pendingPolls.Any(x => x.VotingData.Key == voteKey &&
                                        x.VotingData.Data.SequenceEqual(federationMemberBytes) &&
-                                       x.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToHex())))
+                                       x.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToHex())))
             {
                 // We've already voted in a pending poll.
                 return true;
@@ -490,7 +490,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                         PollExecutedBlockData = null,
                                         PollStartBlockData = new HashHeightPair(chBlock.ChainedHeader),
                                         VotingData = data,
-                                        PubKeysHexVotedInFavor = new List<string>() { fedMemberKeyHex }
+                                        PubKeysHexVotedInFavor = new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } }
                                     };
 
                                     this.polls.Add(poll);
@@ -499,9 +499,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                     this.logger.LogDebug("New poll was created: '{0}'.", poll);
                                 });
                             }
-                            else if (!poll.PubKeysHexVotedInFavor.Contains(fedMemberKeyHex))
+                            else if (!poll.PubKeysHexVotedInFavor.Any(v => v.PubKey == fedMemberKeyHex))
                             {
-                                poll.PubKeysHexVotedInFavor.Add(fedMemberKeyHex);
+                                poll.PubKeysHexVotedInFavor.Add(new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height });
                                 this.PollsRepository.UpdatePoll(transaction, poll);
 
                                 this.logger.LogDebug("Voted on existing poll: '{0}'.", poll);
@@ -543,7 +543,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             // It is possible that there is a vote from a federation member that was deleted from the federation.
                             // Do not count votes from entities that are not active fed members.
-                            int validVotesCount = poll.PubKeysHexVotedInFavor.Count(x => fedMembersHex.Contains(x));
+                            int validVotesCount = poll.PubKeysHexVotedInFavor.Count(x => fedMembersHex.Contains(x.PubKey));
 
                             int requiredVotesCount = (fedMembersHex.Count / 2) + 1;
 
@@ -634,15 +634,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     // Pub key of a fed member that created voting data.
                     string fedMemberKeyHex = this.federationHistory.GetFederationMemberForBlock(chBlock.ChainedHeader).PubKey.ToHex();
-
-                    targetPoll.PubKeysHexVotedInFavor.Remove(fedMemberKeyHex);
-
-                    if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
+                    int voteIndex = targetPoll.PubKeysHexVotedInFavor.FindIndex(v => v.PubKey == fedMemberKeyHex);
+                    if (voteIndex >= 0)
                     {
-                        this.polls.Remove(targetPoll);
-                        this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
+                        targetPoll.PubKeysHexVotedInFavor.RemoveAt(voteIndex);
 
-                        this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
+                        if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
+                        {
+                            this.polls.Remove(targetPoll);
+                            this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
+
+                            this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
+                        }
                     }
                 }
 

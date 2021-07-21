@@ -124,7 +124,7 @@ namespace Stratis.Features.Collateral
                 List<Poll> pendingAddFederationMemberPolls = this.votingManager.GetPendingPolls().Where(p => p.VotingData.Key == VoteKey.AddFederationMember).ToList();
 
                 // Filter all polls where this federation number has not voted on.
-                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Contains(this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
+                pendingAddFederationMemberPolls = pendingAddFederationMemberPolls.Where(p => !p.PubKeysHexVotedInFavor.Any(v => v.PubKey == this.federationManager.CurrentFederationKey.PubKey.ToString())).ToList();
 
                 if (!pendingAddFederationMemberPolls.Any())
                     return;
