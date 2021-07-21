@@ -733,7 +733,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = walletContainer.Conn;
 
-            walletContainer.WriteLockWait();
+            const int minAddressesPerSecond = 20;
+
+            walletContainer.WriteLockWait(true, 120 + count / minAddressesPerSecond);
 
             try
             {
@@ -1080,7 +1082,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     {
                         WalletContainer walletContainer = this.Wallets[walletName];
 
-                        if (walletContainer.WriteLockWait(true))
+                        if (walletContainer.WriteLockWait(false))
                             return;
 
                         this.logger.LogDebug("Could not obtain lock for wallet '{0}'.", walletName);
