@@ -5,10 +5,17 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
 {
-    public class Vote
+    public class Vote : IBitcoinSerializable
     {
         public string PubKey;
         public int Height;
+
+        /// <inheritdoc />
+        public void ReadWrite(BitcoinStream stream)
+        {
+            stream.ReadWrite(ref this.PubKey);
+            stream.ReadWrite(ref this.Height);
+        }
     }
 
     /// <summary>Information about active poll.</summary>
@@ -55,24 +62,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             if (stream.Serializing)
             {
-                string[] pubKeyArr = this.PubKeysHexVotedInFavor.Select(v => v.PubKey).ToArray();
-
-                stream.ReadWrite(ref pubKeyArr);
-
-                int[] heightArr = this.PubKeysHexVotedInFavor.Select(v => v.Height).ToArray();
-
-                stream.ReadWrite(ref heightArr);
-
+                stream.ReadWrite(ref this.PubKeysHexVotedInFavor);
             }
             else
             {
-                string[] pubKeyArr = null;
-                stream.ReadWrite(ref pubKeyArr);
-
-                int[] heightArr = null;
-                stream.ReadWrite(ref heightArr);
-
-                this.PubKeysHexVotedInFavor = pubKeyArr.Select((k, n) => new Vote() { PubKey = k, Height = heightArr[n] }).ToList();
+                stream.ReadWrite(ref this.PubKeysHexVotedInFavor);
 
                 if (this.PollExecutedBlockData.Hash == uint256.Zero)
                     this.PollExecutedBlockData = null;
