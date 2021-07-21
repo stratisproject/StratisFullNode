@@ -541,7 +541,10 @@ namespace Stratis.Features.FederatedPeg.Wallet
             bool walletUpdated = false;
 
             if (this.network.Consensus.MaxReorgLength == 0 || this.Wallet.MultiSigAddress.Transactions.Count <= MinimumRetainedTransactions)
+            {
+                this.logger.Debug("Skipping clean up of federation wallet. {0}={1};{2}={3}", nameof(this.network.Consensus.MaxReorgLength), this.network.Consensus.MaxReorgLength, nameof(this.Wallet.MultiSigAddress.Transactions), this.Wallet.MultiSigAddress.Transactions.Count);
                 return walletUpdated;
+            }
 
             int heightToCleanFrom = crossChainTransferStoreTip - (int)this.network.Consensus.MaxReorgLength;
             var transactionsPastMaxReorg = new List<TransactionData>();
