@@ -248,7 +248,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="limit">Limit the result set by this amount (primarily used for pagination).</param>
         /// <param name="offset">Skip (offset) the result set by this amount (primarily used for pagination).</param>
         /// <returns>Collection of address history and transaction pairs.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int limit = int.MaxValue, int offset = 0);
+        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int limit = int.MaxValue, int offset = 0, string accountAddress = null, bool forSmartContracts = false);
 
         /// <summary>
         /// Gets the balance of transactions contained in an account.

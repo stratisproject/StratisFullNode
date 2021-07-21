@@ -40,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             depositsToMultisig = transaction.Outputs.Where(output =>
                 output.ScriptPubKey == depositScript &&
                 output.Value >= crossChainTransferMinimum).ToList();
-            
+
             return depositsToMultisig.Any();
         }
 
@@ -49,9 +49,10 @@ namespace Stratis.Bitcoin.Features.Wallet
             conversion = false;
             targetChain = 0 /* DestinationChain.STRAX */;
 
-            // Check the common case first.
+            // First check cross chain transfers from the STRAX to Cirrus network or vice versa.
             if (!opReturnDataReader.TryGetTargetAddress(transaction, out targetAddress))
             {
+                // Else try and validate the destination adress by the destination chain.
                 byte[] opReturnBytes = OpReturnDataReader.SelectBytesContentFromOpReturn(transaction).FirstOrDefault();
 
                 if (opReturnBytes != null && InterFluxOpReturnEncoder.TryDecode(opReturnBytes, out int destinationChain, out targetAddress))
@@ -61,7 +62,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 else
                     return false;
 
-                conversion = true;                
+                conversion = true;
             }
 
             return true;
@@ -76,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         /// <exception cref="FeatureException">If the address is invalid or inappropriate for the target network.</exception>
         public static bool ValidateCrossChainDeposit(Network network, Transaction transaction)
         {
-            if (!DepositValidationHelper.TryGetDepositsToMultisig(network, transaction, Money.Zero, out List<TxOut> depositsToMultisig))
+            if (!TryGetDepositsToMultisig(network, transaction, Money.Zero, out List<TxOut> depositsToMultisig))
                 return false;
 
             if (depositsToMultisig.Any(d => d.Value < Money.COIN))
@@ -101,7 +102,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             }
 
             IOpReturnDataReader opReturnDataReader = new OpReturnDataReader(targetNetwork);
-            if (!DepositValidationHelper.TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
+            if (!TryGetTarget(transaction, opReturnDataReader, out _, out _, out _))
             {
                 throw new FeatureException(HttpStatusCode.BadRequest, "No valid target address.",
                     $"The cross-chain transfer transaction contains no valid target address for the target network.");
