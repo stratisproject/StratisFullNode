@@ -127,6 +127,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                       null,
                       chainIndexer,
                       null,
+                      null,
                       null)
             {
             }

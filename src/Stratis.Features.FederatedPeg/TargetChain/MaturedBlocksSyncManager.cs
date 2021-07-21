@@ -37,6 +37,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         private readonly IAsyncProvider asyncProvider;
         private readonly ICrossChainTransferStore crossChainTransferStore;
         private readonly IFederationGatewayClient federationGatewayClient;
+        private readonly IFederatedPegSettings federatedPegSettings;
         private readonly IFederationWalletManager federationWalletManager;
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly ILogger logger;
@@ -72,6 +73,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             IConversionRequestRepository conversionRequestRepository,
             ChainIndexer chainIndexer,
             Network network,
+            IFederatedPegSettings federatedPegSettings,
             IFederationManager federationManager = null,
             IExternalApiPoller externalApiPoller = null,
             IConversionRequestFeeService conversionRequestFeeService = null)
@@ -81,6 +83,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             this.conversionRequestRepository = conversionRequestRepository;
             this.crossChainTransferStore = crossChainTransferStore;
             this.federationGatewayClient = federationGatewayClient;
+            this.federatedPegSettings = federatedPegSettings;
             this.federationWalletManager = federationWalletManager;
             this.initialBlockDownloadState = initialBlockDownloadState;
             this.nodeLifetime = nodeLifetime;
@@ -194,16 +197,16 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                         continue;
                     }
 
-                    var interopV2ActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2ActivationHeight;
-                    if (interopV2ActivationHeight != 0 && this.chainIndexer.Tip.Height < interopV2ActivationHeight)
+                    if (this.federatedPegSettings.IsMainChain)
                     {
-                        this.logger.Warn("Conversion transactions '{0}' will not be processed below activation height {1}.", potentialConversionTransaction.Id, interopV2ActivationHeight);
+                        this.logger.Warn("Conversion transactions do not get actioned by the main chain.");
                         continue;
                     }
 
-                    if (this.externalApiPoller == null)
+                    var interFluxV2MainChainActivationHeight = ((PoAConsensusOptions)this.network.Consensus.Options).InterFluxV2MainChainActivationHeight;
+                    if (interFluxV2MainChainActivationHeight != 0 && maturedBlockDeposit.BlockInfo.BlockHeight < interFluxV2MainChainActivationHeight)
                     {
-                        this.logger.Warn("Conversion transactions do not get actioned by the main chain.");
+                        this.logger.Warn("Conversion transactions '{0}' will not be processed below the main chain activation height of {1}.", potentialConversionTransaction.Id, interFluxV2MainChainActivationHeight);
                         continue;
                     }
 
