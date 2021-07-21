@@ -650,18 +650,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     int voteIndex = targetPoll.PubKeysHexVotedInFavor.FindIndex(v => v.PubKey == fedMemberKeyHex);
                     if (voteIndex >= 0)
                     {
-<<<<<<< HEAD
-                        this.polls.Remove(targetPoll);
-                        this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
-                        pollsRepositoryModified = true;
-=======
                         targetPoll.PubKeysHexVotedInFavor.RemoveAt(voteIndex);
->>>>>>> master
 
                         if (targetPoll.PubKeysHexVotedInFavor.Count == 0)
                         {
                             this.polls.Remove(targetPoll);
                             this.PollsRepository.RemovePolls(transaction, targetPoll.Id);
+                            pollsRepositoryModified = true;
 
                             this.logger.LogDebug("Poll with Id {0} was removed.", targetPoll.Id);
                         }
