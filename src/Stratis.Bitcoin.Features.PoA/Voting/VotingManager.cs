@@ -566,6 +566,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             this.PollsRepository.UpdatePoll(transaction, poll);
                             pollsRepositoryModified = true;
                         }
+                    }
 
                     this.PollsRepository.SaveCurrentTip(pollsRepositoryModified ? transaction : null, chBlock.ChainedHeader);
                 }
