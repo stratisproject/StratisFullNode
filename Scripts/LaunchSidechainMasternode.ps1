@@ -265,10 +265,6 @@ if ( $NodeType -eq "50K" )
 		$varError = $true 
 	}
 }
-	ElseIf ( -not ( $miningPassword ) ) 
-	{ 
-		$varError = $true 
-	}
 
 if ( -not ( $mainChainDataDir )  ) { $varError = $true }
 if ( -not ( $sideChainDataDir )  ) { $varError = $true }
@@ -300,28 +296,31 @@ if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $sideChainAPIPort )
     Shutdown-SidechainNode
 }
 
-Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
-if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
-{
-    Write-Host (Get-TimeStamp) "WARNING: A node is already running, please gracefully close GETH with CTRL+C to avoid forceful shutdown" -ForegroundColor DarkYellow
-    ""
-    While ( $shutdownCounter -le "30" )
+if ( $NodeType -eq "50K" ) 
+{    
+    Write-Host (Get-TimeStamp) "Checking for running GETH Node" -ForegroundColor Cyan
+    if ( Test-Connection -TargetName 127.0.0.1 -TCPPort $gethAPIPort )
     {
+        Write-Host (Get-TimeStamp) "WARNING: A node is already running, please gracefully close GETH with CTRL+C to avoid forceful shutdown" -ForegroundColor DarkYellow
+        ""
+        While ( $shutdownCounter -le "30" )
+        {
+            if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
+            {
+                Start-Sleep 3
+                Write-Host (Get-TimeStamp) "Waiting for graceful shutdown ( CTRL+C )..."
+                $shutdownCounter++
+            }
+                Else
+                {
+                    $shutdownCounter = "31"
+                }
+        }
         if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
         {
-            Start-Sleep 3
-            Write-Host (Get-TimeStamp) "Waiting for graceful shutdown ( CTRL+C )..."
-            $shutdownCounter++
+            Write-Host (Get-TimeStamp) "WARNING: A node is still running, performing a forced shutdown" -ForegroundColor DarkYellow
+            Stop-Process -ProcessName geth -Force -ErrorAction SilentlyContinue
         }
-            Else
-            {
-                $shutdownCounter = "31"
-            }
-    }
-    if ( Get-Process -Name geth -ErrorAction SilentlyContinue )
-    {
-        Write-Host (Get-TimeStamp) "WARNING: A node is still running, performing a forced shutdown" -ForegroundColor DarkYellow
-        Stop-Process -ProcessName geth -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -490,11 +489,11 @@ if ( $NodeType -eq "50K" )
 {
     if ( $ethGasPrice )
     {
-        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract -ethereumgasprice=$ethGasPrice -ethereumgas=$ethGasLimit" -PassThru
+        $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract -eth_gasprice=$ethGasPrice -eth_gas=$ethGasLimit" -PassThru
     }
         Else
         {
-            $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -interop=1 -ethereumaccount=$ethAddress -ethereumpassphrase=$ethPassword -multisigwalletcontractaddress=$ethMultiSigContract -wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
+            $StartNode = Start-Process dotnet -ArgumentList "run -c Release -- -sidechain -apiport=$sideChainAPIPort -counterchainapiport=$mainChainAPIPort -redeemscript=""$redeemscript"" -publickey=$multiSigPublicKey -federationips=$federationIPs -eth_interopenabled=1 -eth_account=$ethAddress -eth_passphrase=$ethPassword -eth_multisigwalletcontractaddress=$ethMultiSigContract -eth_wrappedstraxcontractaddress=$ethWrappedStraxContract" -PassThru
         }
 }
     Else
@@ -572,6 +571,7 @@ if ( $WalletNames -eq $null )
         }
             Else
             {
+                $miningPassword = ( Read-Host "Please Enter the Passphrase used to Protect the Mining Wallet" )
                 $Body.Add("password",$miningPassword)
                 $Body.Add("passphrase",$miningPassword)
                 $Body = $Body | ConvertTo-Json
