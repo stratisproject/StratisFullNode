@@ -144,7 +144,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return hashes.Select((hash) => this.blocks.Single(x => x.ChainedHeader.HashBlock == hash && x.ChainedHeader.Height <= this.consensusManager.Tip.Height)).ToArray();
             });
 
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             int nextMaturedBlockHeight = 1;
@@ -204,7 +204,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(5);
@@ -256,7 +256,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
@@ -312,7 +312,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
@@ -368,7 +368,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
@@ -423,7 +423,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
@@ -484,7 +484,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
@@ -546,7 +546,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);

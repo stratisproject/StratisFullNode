@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
@@ -18,13 +17,11 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly Network network;
         private readonly IOpReturnDataReader opReturnDataReader;
-        private readonly IExternalApiClient externalApiClient;
         private readonly ILogger logger;
 
-        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader, IExternalApiClient externalApiClient)
+        public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
         {
             this.conversionRequestRepository = conversionRequestRepository;
-            this.externalApiClient = externalApiClient;
             this.federatedPegSettings = federatedPegSettings;
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;

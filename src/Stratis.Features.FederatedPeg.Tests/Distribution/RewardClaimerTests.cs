@@ -91,7 +91,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, network: this.network, chainIndexer: this.chainIndexer, withCoinbaseAndCoinStake: true, createCirrusReward: true);
             using (var rewardClaimer = new RewardClaimer(this.broadCasterManager, this.chainIndexer, this.consensusManager, this.initialBlockDownloadState, keyValueRepository, this.network, this.signals))
             {
-                var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+                var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
 
                 // Add 5 distribution deposits from block 11 through to 15.
                 for (int i = 11; i <= 15; i++)
@@ -127,7 +127,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Distribution
                 Assert.Equal(2, rewardTransaction.Outputs.Count);
                 Assert.Equal(Money.Coins(90), rewardTransaction.TotalOut);
 
-                var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader, Substitute.For<IExternalApiClient>());
+                var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
                 IDeposit deposit = await depositExtractor.ExtractDepositFromTransaction(rewardTransaction, 30, this.blocks[30].Block.GetHash());
                 Assert.Equal(Money.Coins(90), deposit.Amount);
             }

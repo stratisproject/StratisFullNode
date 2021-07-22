@@ -49,7 +49,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             IExternalApiClient externalClient = Substitute.For<IExternalApiClient>();
             externalClient.EstimateConversionTransactionFeeAsync().Returns("1.0");
-            this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader, externalClient);
+            this.depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federationSettings, this.network, this.opReturnDataReader);
             this.transactionBuilder = new TestTransactionBuilder();
         }
 
