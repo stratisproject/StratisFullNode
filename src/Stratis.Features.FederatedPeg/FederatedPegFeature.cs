@@ -19,7 +19,6 @@ using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.P2P.Protocol.Payloads;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.FederatedPeg.Controllers;
 using Stratis.Features.FederatedPeg.Conversion;
@@ -82,8 +81,7 @@ namespace Stratis.Features.FederatedPeg
             MempoolCleaner mempoolCleaner,
             ISignedMultisigTransactionBroadcaster signedBroadcaster,
             IMaturedBlocksSyncManager maturedBlocksSyncManager,
-            IInputConsolidator inputConsolidator,
-            ICollateralChecker collateralChecker = null)
+            IInputConsolidator inputConsolidator)
         {
             this.connectionManager = connectionManager;
             this.federatedPegSettings = federatedPegSettings;

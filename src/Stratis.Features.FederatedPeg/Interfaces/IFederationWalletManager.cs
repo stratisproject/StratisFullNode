@@ -163,5 +163,11 @@ namespace Stratis.Features.FederatedPeg.Interfaces
         /// </summary>
         /// <returns>A tuple containing the confirmed and unconfirmed balances.</returns>
         (Money ConfirmedAmount, Money UnConfirmedAmount) GetSpendableAmount();
+
+        /// <summary>
+        /// Determines if the federation wallet is synced with the chain.
+        /// </summary>
+        /// <returns>Returns <c>true</c> if within <see cref="FederationWalletManager.FederationWalletTipSyncBuffer"/> blocks of the chain's tip.</returns>
+        bool IsSyncedWithChain();
     }
 }
