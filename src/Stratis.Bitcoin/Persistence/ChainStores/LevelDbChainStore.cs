@@ -7,7 +7,7 @@ using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Persistence.ChainStores
 {
-    public class LevelDbChainStore : IChainStore, IDisposable
+    public class LevelDbChainStore : IChainStore
     {
         private readonly Network network;
 
