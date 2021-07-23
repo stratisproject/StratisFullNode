@@ -81,6 +81,13 @@ namespace Stratis.Features.FederatedPeg
             if (!(message.Message.Payload is RequestPartialTransactionPayload payload))
                 return;
 
+            // Don't process payloads whilst the federation wallet and cross chain store is syncing.
+            if (!this.federationWalletManager.IsSyncedWithChain())
+            {
+                this.logger.Debug($"Federation payloads will only be processed once the federation wallet is synced; current height {this.federationWalletManager.WalletTipHeight}");
+                return;
+            }
+
             // Is a consolidation request.
             if (payload.DepositId == RequestPartialTransactionPayload.ConsolidationDepositId)
             {

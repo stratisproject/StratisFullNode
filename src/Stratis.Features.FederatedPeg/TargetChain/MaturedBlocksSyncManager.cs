@@ -51,11 +51,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
         private IAsyncLoop requestDepositsTask;
 
-        /// <summary>
-        /// If the federation wallet tip is within this amount of blocks from the chain's tip, consider it synced.
-        /// </summary>
-        private const int FederationWalletTipSyncBuffer = 10;
-
         /// <summary>When we are fully synced we stop asking for more blocks for this amount of time.</summary>
         private const int RefreshDelaySeconds = 10;
 
@@ -137,7 +132,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             }
 
             // Then ensure that the federation wallet is synced with the chain.
-            if (this.federationWalletManager.WalletTipHeight < this.chainIndexer.Tip.Height - FederationWalletTipSyncBuffer)
+            if (!this.federationWalletManager.IsSyncedWithChain())
             {
                 this.logger.Info($"The CCTS will start processing deposits once the federation wallet is synced with the chain; height {this.federationWalletManager.WalletTipHeight}");
                 return true;

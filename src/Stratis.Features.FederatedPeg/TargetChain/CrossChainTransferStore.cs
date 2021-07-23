@@ -1010,7 +1010,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                             // Doing this from the federation wallet manager could mean transactions
                             // are cleaned before they are processed by the CCTS (which means they will
                             // be wrongly added back).
-                            if (this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
+                            if (this.federationWalletManager.IsSyncedWithChain() && this.federationWalletManager.CleanTransactionsPastMaxReorg(this.TipHashAndHeight.Height))
                                 this.federationWalletManager.SaveWallet();
 
                             return true;

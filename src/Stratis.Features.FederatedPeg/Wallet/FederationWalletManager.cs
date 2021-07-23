@@ -51,6 +51,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
     /// </summary>
     public class FederationWalletManager : LockProtected, IFederationWalletManager
     {
+        /// <summary>
+        /// If the federation wallet tip is within this amount of blocks from the chain's tip, consider it synced.
+        /// </summary>
+        public const int FederationWalletTipSyncBuffer = 10;
+
         /// <summary>Timer for saving wallet files to the file system.</summary>
         private const int WalletSavetimeIntervalInMinutes = 5;
 
@@ -1301,6 +1306,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 return (confirmed, total - confirmed);
             }
+        }
+
+        /// <inheritdoc />
+        public bool IsSyncedWithChain()
+        {
+            return this.WalletTipHeight >= this.chainIndexer.Tip.Height - FederationWalletTipSyncBuffer;
         }
 
         private void AddInlineStats(StringBuilder benchLogs)
