@@ -10,6 +10,9 @@ namespace Stratis.Bitcoin.Features.Interop
 
         public BNBInteropSettings BNBSettings { get; set; }
 
+        /// <summary> If this value is set, enable the override originator logic.</summary>
+        public bool OverrideOriginatorEnabled { get; set; }
+
         /// <summary> If this value is set, override this node as the originator.</summary>
         public bool OverrideOriginator { get; set; }
 
@@ -18,6 +21,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.ETHSettings = new ETHInteropSettings(nodeSettings);
             this.BNBSettings = new BNBInteropSettings(nodeSettings);
 
+            this.OverrideOriginatorEnabled = nodeSettings.ConfigReader.GetOrDefault("overrideoriginatorenabled", false);
             this.OverrideOriginator = nodeSettings.ConfigReader.GetOrDefault("overrideoriginator", false);
         }
 
