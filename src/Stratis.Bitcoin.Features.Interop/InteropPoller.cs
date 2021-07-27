@@ -598,9 +598,6 @@ namespace Stratis.Bitcoin.Features.Interop
             if (multisig.Count == 0)
                 throw new InteropException("There are no multisig members.");
 
-            // Ensure that the list is deterministic.
-            multisig = multisig.OrderBy(m => m.PubKey.ToHex()).ToList();
-
             designatedMember = multisig[blockHeight % multisig.Count];
             return designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
         }
