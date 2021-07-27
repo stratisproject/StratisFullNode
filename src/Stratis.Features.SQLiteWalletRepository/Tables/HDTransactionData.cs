@@ -267,6 +267,10 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.OutputBlockHeight as BlockHeight
                     FROM    HDTransactionData AS t
                     WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
+					AND     (t.OutputTxIsCoinbase != 0 OR t.AddressType != 0 OR NOT EXISTS( -- Only funds not received as a result of our own spends (i.e. change)
+					        SELECT	*
+							FROM	HDPayment p
+							WHERE   p.SpendTxId = t.OutputTxId))                    
                     GROUP   BY t.OutputTxId
                     UNION   ALL";
 
