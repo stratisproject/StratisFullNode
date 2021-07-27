@@ -316,6 +316,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             bool found = false;
 
+            this.logger.Debug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
+
             while (true)
             {
                 if (chainedHeader == this.chainIndexer.Genesis)
