@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
@@ -91,14 +92,16 @@ namespace Stratis.Features.FederatedPeg.Conversion
         {
             ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
             if (request == null)
-                throw new System.Exception($"{requestId} does not exist.");
+                throw new Exception($"{requestId} does not exist.");
 
-            if (request.RequestStatus != ConversionRequestStatus.NotOriginator)
-                throw new System.Exception($"Only a request with a status of '{ConversionRequestStatus.NotOriginator}' can be set as the originator/submittor.");
+            if (request.RequestStatus == ConversionRequestStatus.NotOriginator || request.RequestStatus == ConversionRequestStatus.OriginatorNotSubmitted)
+            {
+                request.Processed = false;
+                request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
 
-            request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
-
-            this.KeyValueStore.SaveValue(request.RequestId, request, true);
+                this.KeyValueStore.SaveValue(request.RequestId, request, true);
+            }
+            throw new Exception($"Only a request with a status of '{ConversionRequestStatus.NotOriginator}' can be set as the originator/submittor.");
         }
     }
 }
