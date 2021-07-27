@@ -100,7 +100,10 @@ namespace Stratis.Features.FederatedPeg.Conversion
                 request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
 
                 this.KeyValueStore.SaveValue(request.RequestId, request, true);
+
+                return;
             }
+
             throw new Exception($"Only a request with a status of '{ConversionRequestStatus.NotOriginator}' can be set as the originator/submittor.");
         }
     }
