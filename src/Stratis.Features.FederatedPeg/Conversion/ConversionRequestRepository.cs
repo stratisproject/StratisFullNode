@@ -27,6 +27,12 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// </summary>
         /// <returns>The amount unprocessed conversion requests that has been deleted.</returns>
         int DeleteConversionRequests();
+
+        /// <summary>
+        /// Set this node as the originator for a given conversion request.
+        /// </summary>
+        /// <param name="requestId">The request Id to set the state for.</param>
+        void SetOriginatorForConversionRequest(string requestId);
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
@@ -79,6 +85,20 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void DeleteConversionRequest(string requestId)
         {
             this.KeyValueStore.Delete(requestId);
+        }
+
+        public void SetOriginatorForConversionRequest(string requestId)
+        {
+            ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
+            if (request == null)
+                throw new System.Exception($"{requestId} does not exist.");
+
+            if (request.RequestStatus != ConversionRequestStatus.NotOriginator)
+                throw new System.Exception($"Only a request with a status of '{ConversionRequestStatus.NotOriginator}' can be set as the originator/submittor.");
+
+            request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
+
+            this.KeyValueStore.SaveValue(request.RequestId, request, true);
         }
     }
 }

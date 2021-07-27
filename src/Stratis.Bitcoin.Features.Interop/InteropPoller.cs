@@ -573,22 +573,6 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns><c>true</c> if this node is selected as the originator.</returns>
         private bool DetermineConversionRequestOriginator(int blockHeight, out IFederationMember designatedMember)
         {
-            // For test networks we temporarily use an override to set the originator.
-            // Once the test multisig has all its members running we can revert this.
-            if (this.network.IsTest() || this.network.IsRegTest())
-            {
-                if (this.interopSettings.OverrideOriginator)
-                {
-                    designatedMember = this.federationManager.GetCurrentFederationMember();
-                    return true;
-                }
-                else
-                {
-                    designatedMember = null;
-                    return false;
-                }
-            }
-
             // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
 
@@ -615,7 +599,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 throw new InteropException("There are no multisig members.");
 
             // Ensure that the list is deterministic.
-            multisig = multisig.OrderBy(m => m.PubKey).ToList();
+            multisig = multisig.OrderBy(m => m.PubKey.ToHex()).ToList();
 
             designatedMember = multisig[blockHeight % multisig.Count];
             return designatedMember.Equals(this.federationManager.GetCurrentFederationMember());

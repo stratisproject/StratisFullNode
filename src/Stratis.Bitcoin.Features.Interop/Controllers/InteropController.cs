@@ -303,5 +303,29 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
             return this.Json($"Deleting conversion requests is only available on test networks.");
         }
+
+        /// <summary>
+        /// Endpoint that allows the multsig operator to set itself as the originator (submittor) for a given request id.
+        /// </summary>
+        /// <param name="requestId">The request id in question.</param>
+        [Route("requests/setoriginator")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult SetOriginatorForRequest([FromBody] string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.SetOriginatorForConversionRequest(requestId);
+                return this.Json($"This node has been set as the originator for request '{requestId}'.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting this node as originator for request id '{0}' : {1}.", requestId, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
     }
 }
