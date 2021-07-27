@@ -592,6 +592,8 @@ namespace Stratis.Bitcoin.Features.Interop
             // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
 
+            this.logger.LogInformation($"Federation retrieved at height '{blockHeight}', size {federation.Count} members.");
+
             var multisig = new List<CollateralFederationMember>();
 
             foreach (IFederationMember member in federation)
@@ -611,6 +613,9 @@ namespace Stratis.Bitcoin.Features.Interop
             // This should be impossible.
             if (multisig.Count == 0)
                 throw new InteropException("There are no multisig members.");
+
+            // Ensure that the list is deterministic.
+            multisig = multisig.OrderBy(m => m.PubKey).ToList();
 
             designatedMember = multisig[blockHeight % multisig.Count];
             return designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
