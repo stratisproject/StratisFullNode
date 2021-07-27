@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Interop
             foreach (ConversionRequest request in mintRequests)
             {
                 // Ignore old conversion requests for the time being.
-                if ((this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                if (request.RequestStatus == ConversionRequestStatus.Unprocessed && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
                 {
                     this.logger.LogInformation("Ignoring old conversion mint request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
