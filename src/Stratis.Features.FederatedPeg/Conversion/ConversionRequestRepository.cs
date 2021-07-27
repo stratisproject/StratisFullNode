@@ -33,7 +33,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// Set this node as the originator for a given conversion request.
         /// </summary>
         /// <param name="requestId">The request Id to set the state for.</param>
-        void SetOriginatorForConversionRequest(string requestId);
+        /// <param name="requestStatus">The status to set the request to.</param>
+        void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus);
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
@@ -88,23 +89,23 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.KeyValueStore.Delete(requestId);
         }
 
-        public void SetOriginatorForConversionRequest(string requestId)
+        public void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus)
         {
             ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
             if (request == null)
                 throw new Exception($"{requestId} does not exist.");
 
-            if (request.RequestStatus == ConversionRequestStatus.NotOriginator || request.RequestStatus == ConversionRequestStatus.OriginatorNotSubmitted)
-            {
-                request.Processed = false;
-                request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
+            if (request.RequestStatus == ConversionRequestStatus.VoteFinalised ||
+                request.RequestStatus == ConversionRequestStatus.OriginatorSubmitting ||
+                request.RequestStatus == ConversionRequestStatus.OriginatorSubmitted ||
+                request.RequestStatus == ConversionRequestStatus.Processed)
 
-                this.KeyValueStore.SaveValue(request.RequestId, request, true);
+                throw new Exception($"Request with a status of '{request.RequestStatus}' can not be set to { requestStatus}.");
 
-                return;
-            }
+            request.Processed = false;
+            request.RequestStatus = requestStatus;
 
-            throw new Exception($"Only a request with a status of '{ConversionRequestStatus.NotOriginator}' can be set as the originator/submittor.");
+            this.KeyValueStore.SaveValue(request.RequestId, request, true);
         }
     }
 }
