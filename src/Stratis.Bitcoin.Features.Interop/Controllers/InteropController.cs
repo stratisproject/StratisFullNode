@@ -322,9 +322,9 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception occurred setting this node as originator for request id '{0}' : {1}.", requestId, e.ToString());
+                this.logger.Error("Exception setting this node as originator for request id '{0}' : {1}.", requestId, e.ToString());
 
-                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"An exception occurred setting this node as the originator for request id {requestId}.", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
         }
     }
