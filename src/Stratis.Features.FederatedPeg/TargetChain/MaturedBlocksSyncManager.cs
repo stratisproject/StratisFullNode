@@ -335,6 +335,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
             if (!found)
                 this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
 
+            this.logger.Debug($"Applicable header selected '{chainedHeader}'");
+
             return found;
         }
 
