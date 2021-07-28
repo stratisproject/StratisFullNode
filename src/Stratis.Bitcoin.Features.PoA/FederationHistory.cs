@@ -100,8 +100,11 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             lock (this.lockObject)
             {
-                if (this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
+                if ((this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= chainedHeader.Height) &&
+                    this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
+                {
                     return item.modifiedFederation;
+                }
 
                 this.UpdateTip(chainedHeader);
 
@@ -129,8 +132,12 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             lock (this.lockObject)
             {
-                if (this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember>, IFederationMember miner) item) && item.miner != null)
+                if ((this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= chainedHeader.Height) &&
+                    this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember>, IFederationMember miner) item) &&
+                    item.miner != null)
+                {
                     return item.miner;
+                }
 
                 this.UpdateTip(chainedHeader);
 
@@ -313,6 +320,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 {
                     DiscardActivityAboveTime(fork.Header.Time);
                     this.lastActiveTip = fork;
+                    this.lastFederationTip = fork.Height;
                 }
             }
 
