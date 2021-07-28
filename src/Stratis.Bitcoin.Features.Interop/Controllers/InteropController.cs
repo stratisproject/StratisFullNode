@@ -372,6 +372,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             try
             {
                 this.conversionRequestCoordinationService.AddVote(model.RequestId, BigInteger.Parse(model.EventId), this.federationManager.CurrentFederationKey.PubKey);
+                this.conversionRequestRepository.SetConversionRequestState(model.RequestId, ConversionRequestStatus.OriginatorSubmitted);
                 return this.Json($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
             }
             catch (Exception e)
