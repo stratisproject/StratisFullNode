@@ -95,8 +95,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             if (request == null)
                 throw new Exception($"{requestId} does not exist.");
 
-            if (request.RequestStatus == ConversionRequestStatus.VoteFinalised ||
-                request.RequestStatus == ConversionRequestStatus.OriginatorSubmitting ||
+            if (request.RequestStatus == ConversionRequestStatus.OriginatorSubmitting ||
                 request.RequestStatus == ConversionRequestStatus.Processed)
 
                 throw new Exception($"Request with a status of '{request.RequestStatus}' can not be set to { requestStatus}.");
