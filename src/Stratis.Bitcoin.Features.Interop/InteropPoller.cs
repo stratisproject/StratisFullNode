@@ -814,7 +814,7 @@ namespace Stratis.Bitcoin.Features.Interop
             if (this.interopSettings.OverrideOriginatorEnabled)
             {
                 var isOriginatorOverridden = this.interopSettings.OverrideOriginator ? "Yes" : "No";
-                benchLog.AppendLine($">> Interop Mint Requests (last 5) [Originator Overridden : {isOriginatorOverridden}");
+                benchLog.AppendLine($">> Interop Mint Requests (last 5) [Originator Overridden : {isOriginatorOverridden}]");
             }
             else
                 benchLog.AppendLine(">> Interop Mint Requests (last 5) [Dynamic Originator]");
