@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -22,6 +25,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
         private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
+        private readonly IFederationManager federationManager;
         private readonly InteropSettings interopSettings;
         private readonly ILogger logger;
         private readonly Network network;
@@ -31,11 +35,13 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestRepository conversionRequestRepository,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
+            IFederationManager federationManager,
             InteropSettings interopSettings)
         {
             this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestRepository = conversionRequestRepository;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
+            this.federationManager = federationManager;
             this.interopSettings = interopSettings;
             this.logger = LogManager.GetCurrentClassLogger();
             this.network = network;
@@ -70,7 +76,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                     });
                 }
 
-                response.MintRequests = mintRequests;
+                response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
 
                 var burnRequests = new List<ConversionRequestModel>();
 
@@ -90,7 +96,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                     });
                 }
 
-                response.BurnRequests = burnRequests;
+                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
 
                 var receivedVotes = new Dictionary<string, List<string>>();
 
@@ -305,7 +311,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         }
 
         /// <summary>
-        /// Endpoint that allows the multsig operator to set itself as the originator (submittor) for a given request id.
+        /// Endpoint that allows the multisig operator to set itself as the originator (submittor) for a given request id.
         /// </summary>
         /// <param name="requestId">The request id in question.</param>
         [Route("requests/setoriginator")]
@@ -329,7 +335,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         }
 
         /// <summary>
-        /// Endpoint that allows the multsig operator to reset the request as NotOriginator.
+        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
         /// </summary>
         /// <param name="requestId">The request id in question.</param>
         [Route("requests/setnotoriginator")]
@@ -347,6 +353,30 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             catch (Exception e)
             {
                 this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to manually add a vote if they are originator of the request.
+        /// </summary>
+        /// <param name="model">The request id and vote in question.</param>
+        [Route("requests/pushvote")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult PushVoteManually([FromBody] PushManualVoteForRequest model)
+        {
+            try
+            {
+                this.conversionRequestCoordinationService.AddVote(model.RequestId, BigInteger.Parse(model.EventId), this.federationManager.CurrentFederationKey.PubKey);
+                return this.Json($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception manual pushing vote for conversion request '{0}' : {1}.", model.RequestId, e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
