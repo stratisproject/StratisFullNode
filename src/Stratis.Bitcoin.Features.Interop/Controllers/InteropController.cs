@@ -317,12 +317,36 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         {
             try
             {
-                this.conversionRequestRepository.SetOriginatorForConversionRequest(requestId);
-                return this.Json($"This node has been set as the originator for request '{requestId}'.");
+                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.OriginatorNotSubmitted);
+                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.OriginatorNotSubmitted}.");
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception setting this node as originator for request id '{0}' : {1}.", requestId, e.ToString());
+                this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.OriginatorNotSubmitted);
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multsig operator to reset the request as NotOriginator.
+        /// </summary>
+        /// <param name="requestId">The request id in question.</param>
+        [Route("requests/setnotoriginator")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ResetConversionRequestAsNotOriginator([FromBody] string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.NotOriginator);
+                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.NotOriginator}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }

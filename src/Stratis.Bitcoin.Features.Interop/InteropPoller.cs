@@ -329,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Interop
             foreach (ConversionRequest request in mintRequests)
             {
                 // Ignore old conversion requests for the time being.
-                if ((this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                if (request.RequestStatus == ConversionRequestStatus.Unprocessed && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
                 {
                     this.logger.LogInformation("Ignoring old conversion mint request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
@@ -375,7 +375,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             }
                             else
                             {
-                                this.logger.LogInformation("This node was not selected as the originator for transaction '{0}'. The originator is: '{1}'.", request.RequestId, designatedMember == null ? "N/A (test)" : designatedMember.PubKey?.ToHex());
+                                this.logger.LogInformation("This node was not selected as the originator for transaction '{0}'. The originator is: '{1}'.", request.RequestId, designatedMember == null ? "N/A (Overridden)" : designatedMember.PubKey?.ToHex());
 
                                 request.RequestStatus = ConversionRequestStatus.NotOriginator;
                             }
@@ -573,6 +573,19 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns><c>true</c> if this node is selected as the originator.</returns>
         private bool DetermineConversionRequestOriginator(int blockHeight, out IFederationMember designatedMember)
         {
+            designatedMember = null;
+
+            if (this.interopSettings.OverrideOriginatorEnabled)
+            {
+                if (this.interopSettings.OverrideOriginator)
+                {
+                    designatedMember = this.federationManager.GetCurrentFederationMember();
+                    return true;
+                }
+
+                return false;
+            }
+
             // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
             List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
 
@@ -597,9 +610,6 @@ namespace Stratis.Bitcoin.Features.Interop
             // This should be impossible.
             if (multisig.Count == 0)
                 throw new InteropException("There are no multisig members.");
-
-            // Ensure that the list is deterministic.
-            multisig = multisig.OrderBy(m => m.PubKey.ToHex()).ToList();
 
             designatedMember = multisig[blockHeight % multisig.Count];
             return designatedMember.Equals(this.federationManager.GetCurrentFederationMember());

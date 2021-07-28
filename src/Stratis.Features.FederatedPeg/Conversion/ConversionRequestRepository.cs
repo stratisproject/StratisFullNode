@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
@@ -32,7 +33,8 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// Set this node as the originator for a given conversion request.
         /// </summary>
         /// <param name="requestId">The request Id to set the state for.</param>
-        void SetOriginatorForConversionRequest(string requestId);
+        /// <param name="requestStatus">The status to set the request to.</param>
+        void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus);
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
@@ -87,16 +89,21 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.KeyValueStore.Delete(requestId);
         }
 
-        public void SetOriginatorForConversionRequest(string requestId)
+        public void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus)
         {
             ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
             if (request == null)
-                throw new System.Exception($"{requestId} does not exist.");
+                throw new Exception($"{requestId} does not exist.");
 
-            if (request.RequestStatus != ConversionRequestStatus.NotOriginator)
-                throw new System.Exception($"Only a request with a status of '{ConversionRequestStatus.NotOriginator}' can be set as the originator/submittor.");
+            if (request.RequestStatus == ConversionRequestStatus.VoteFinalised ||
+                request.RequestStatus == ConversionRequestStatus.OriginatorSubmitting ||
+                request.RequestStatus == ConversionRequestStatus.OriginatorSubmitted ||
+                request.RequestStatus == ConversionRequestStatus.Processed)
 
-            request.RequestStatus = ConversionRequestStatus.OriginatorNotSubmitted;
+                throw new Exception($"Request with a status of '{request.RequestStatus}' can not be set to { requestStatus}.");
+
+            request.Processed = false;
+            request.RequestStatus = requestStatus;
 
             this.KeyValueStore.SaveValue(request.RequestId, request, true);
         }
