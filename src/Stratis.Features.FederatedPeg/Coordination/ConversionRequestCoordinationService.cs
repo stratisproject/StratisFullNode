@@ -182,9 +182,9 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(">> Interop Conversion Request Votes (last 10):");
+            benchLog.AppendLine(">> Interop Conversion Request Votes (last 5):");
 
-            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.transactionIdVotes.Take(10))
+            foreach (KeyValuePair<string, Dictionary<BigInteger, int>> active in this.transactionIdVotes.Take(5))
             {
                 foreach (KeyValuePair<BigInteger, int> result in active.Value)
                 {
