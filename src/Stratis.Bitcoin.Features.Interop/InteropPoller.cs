@@ -858,10 +858,10 @@ namespace Stratis.Bitcoin.Features.Interop
             if (this.interopSettings.OverrideOriginatorEnabled)
             {
                 var isOriginatorOverridden = this.interopSettings.OverrideOriginator ? "Yes" : "No";
-                benchLog.AppendLine($">> Interop Mint Requests (last 5) [Originator Overridden : {isOriginatorOverridden}]");
+                benchLog.AppendLine($">> InterFlux Mint Requests (last 5) [Originator Overridden : {isOriginatorOverridden}]");
             }
             else
-                benchLog.AppendLine(">> Interop Mint Requests (last 5) [Dynamic Originator]");
+                benchLog.AppendLine(">> InterFlux Mint Requests (last 5) [Dynamic Originator]");
 
             List<ConversionRequest> requests;
             lock (this.repositoryLock)
@@ -871,7 +871,19 @@ namespace Stratis.Bitcoin.Features.Interop
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Proc: {request.Processed} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
+            }
+
+            benchLog.AppendLine();
+            benchLog.AppendLine(">> InterFlux Burn Requests (last 5)");
+
+            lock (this.repositoryLock)
+            {
+                requests = this.conversionRequestRepository.GetAllBurn(false).OrderByDescending(i => i.BlockHeight).Take(5).ToList();
+            }
+            foreach (ConversionRequest request in requests)
+            {
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Processed: {request.Processed} Amount: {new Money(request.Amount)} Height: {request.BlockHeight}");
             }
 
             benchLog.AppendLine();
