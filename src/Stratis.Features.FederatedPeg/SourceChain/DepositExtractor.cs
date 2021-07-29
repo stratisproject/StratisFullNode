@@ -19,6 +19,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
         private readonly IOpReturnDataReader opReturnDataReader;
         private readonly ILogger logger;
 
+        private readonly List<uint256> depositsBeingProcessedWithinMaturingWindow;
+
         public DepositExtractor(IConversionRequestRepository conversionRequestRepository, IFederatedPegSettings federatedPegSettings, Network network, IOpReturnDataReader opReturnDataReader)
         {
             this.conversionRequestRepository = conversionRequestRepository;
@@ -26,6 +28,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             this.network = network;
             this.opReturnDataReader = opReturnDataReader;
 
+            this.depositsBeingProcessedWithinMaturingWindow = new List<uint256>();
             this.logger = LogManager.GetCurrentClassLogger();
         }
 
@@ -180,9 +183,17 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                         if (deposit == null)
                             continue;
 
+                        if (this.depositsBeingProcessedWithinMaturingWindow.Contains(deposit.Id))
+                        {
+                            this.logger.Debug($"Burn request '{burnRequest.RequestId}' is already being processed within the maturity window.");
+                            continue;
+                        }
+
                         deposits.Add(deposit);
 
-                        this.logger.Info($"Resetting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' to be reprocessed at height {burnRequest.BlockHeight}.");
+                        this.depositsBeingProcessedWithinMaturingWindow.Add(deposit.Id);
+
+                        this.logger.Info($"Re-injecting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' that was processed at {burnRequest.BlockHeight} and will mature at {burnRequest.BlockHeight + requiredConfirmations}.");
 
                         continue;
                     }
