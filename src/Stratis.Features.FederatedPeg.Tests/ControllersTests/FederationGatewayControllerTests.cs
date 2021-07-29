@@ -155,8 +155,8 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
             ChainedHeader earlierBlock = tip.GetAncestor(minConfirmations);
 
             int depositExtractorCallCount = 0;
-            this.depositExtractor.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<DepositRetrievalType[]>()).Returns(new List<IDeposit>());
-            this.depositExtractor.When(x => x.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<DepositRetrievalType[]>())).Do(info =>
+            this.depositExtractor.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<Dictionary<DepositRetrievalType, int>>()).Returns(new List<IDeposit>());
+            this.depositExtractor.When(x => x.ExtractDepositsFromBlock(Arg.Any<Block>(), Arg.Any<int>(), Arg.Any<Dictionary<DepositRetrievalType, int>>())).Do(info =>
             {
                 depositExtractorCallCount++;
             });

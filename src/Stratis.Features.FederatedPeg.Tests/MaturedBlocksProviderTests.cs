@@ -9,7 +9,6 @@ using NSubstitute;
 using NSubstitute.Core;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Consensus;
-using Stratis.Bitcoin.Features.ExternalApi;
 using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
@@ -40,6 +39,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly byte[] opReturnBytes;
         private readonly BitcoinPubKeyAddress targetAddress;
         private List<ChainedHeaderBlock> blocks;
+        private Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
 
         public MaturedBlocksProviderTests()
         {
@@ -78,6 +78,18 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 return this.blocks.SkipWhile(x => x.ChainedHeader.Height <= chainedHeader.Height).Where(x => x.ChainedHeader.Height <= this.consensusManager.Tip.Height).ToArray();
             });
+
+            this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
+            {
+                [DepositRetrievalType.Small] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits,
+                [DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits,
+                [DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits,
+            };
+
+            this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+            this.retrievalTypeConfirmations[DepositRetrievalType.ConversionSmall] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits;
+            this.retrievalTypeConfirmations[DepositRetrievalType.ConversionNormal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
+            this.retrievalTypeConfirmations[DepositRetrievalType.ConversionLarge] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
         }
 
         [Fact]
@@ -94,7 +106,7 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // Set the first block up to return 100 normal deposits.
             IDepositExtractor depositExtractor = Substitute.For<IDepositExtractor>();
-            depositExtractor.ExtractDepositsFromBlock(this.blocks.First().Block, this.blocks.First().ChainedHeader.Height, new[] { DepositRetrievalType.Normal }).ReturnsForAnyArgs(deposits);
+            depositExtractor.ExtractDepositsFromBlock(this.blocks.First().Block, this.blocks.First().ChainedHeader.Height, this.retrievalTypeConfirmations).ReturnsForAnyArgs(deposits);
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.

@@ -47,12 +47,52 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.network = network;
         }
 
-        [Route("status")]
+        [Route("status/burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult InteropStatus()
+        public IActionResult InteropStatusBurnRequests()
+        {
+            try
+            {
+                var response = new InteropStatusResponseModel();
+
+                var burnRequests = new List<ConversionRequestModel>();
+
+                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
+                {
+                    burnRequests.Add(new ConversionRequestModel()
+                    {
+                        RequestId = request.RequestId,
+                        RequestType = request.RequestType,
+                        RequestStatus = request.RequestStatus,
+                        BlockHeight = request.BlockHeight,
+                        DestinationAddress = request.DestinationAddress,
+                        DestinationChain = request.DestinationChain.ToString(),
+                        Amount = request.Amount,
+                        Processed = request.Processed,
+                        Status = request.RequestStatus.ToString(),
+                    });
+                }
+
+                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
+
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("status/mints")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusMintRequests()
         {
             try
             {
@@ -78,25 +118,25 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
 
-                var burnRequests = new List<ConversionRequestModel>();
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
 
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
-                {
-                    burnRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        Amount = request.Amount,
-                        Processed = request.Processed,
-                        Status = request.RequestStatus.ToString(),
-                    });
-                }
-
-                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
+        [Route("status/votes")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusVotes()
+        {
+            try
+            {
+                var response = new InteropStatusResponseModel();
 
                 var receivedVotes = new Dictionary<string, List<string>>();
 
@@ -353,6 +393,30 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             catch (Exception e)
             {
                 this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
+        /// </summary>
+        /// <param name="requestId">The request id in question.</param>
+        [Route("requests/reprocessburn")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ReprocessBurnRequest([FromBody] string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.SetBurnRequestState(requestId, ConversionRequestStatus.Unprocessed);
+                return this.Json($"Burn request '{requestId}' has been reset to {ConversionRequestStatus.Unprocessed}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting burn request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
