@@ -146,7 +146,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     DepositRetrievalType retrievalType = DetermineDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
                     var requiredConfirmations = confirmationsByRetrievalType[retrievalType];
 
-                    // If the inspection height has is now equal to the burn request's processing height plus
+                    // If the inspection height is now equal to the burn request's processing height plus
                     // the required confirmations, set it to processed.
                     if (inspectForDepositsAtHeight == burnRequest.BlockHeight + requiredConfirmations)
                     {

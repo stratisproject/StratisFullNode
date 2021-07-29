@@ -399,6 +399,30 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         }
 
         /// <summary>
+        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
+        /// </summary>
+        /// <param name="requestId">The request id in question.</param>
+        [Route("requests/reprocessburn")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ReprocessBurnRequest([FromBody] string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.SetBurnRequestState(requestId, ConversionRequestStatus.Unprocessed);
+                return this.Json($"Burn request '{requestId}' has been reset to {ConversionRequestStatus.Unprocessed}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting burn request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
         /// Endpoint that allows the multisig operator to manually add a vote if they are originator of the request.
         /// </summary>
         /// <param name="model">The request id and vote in question.</param>

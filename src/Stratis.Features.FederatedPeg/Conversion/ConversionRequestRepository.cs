@@ -35,6 +35,13 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// <param name="requestId">The request Id to set the state for.</param>
         /// <param name="requestStatus">The status to set the request to.</param>
         void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus);
+
+        /// <summary>
+        /// Sets a burn requests state.
+        /// </summary>
+        /// <param name="requestId">The request Id to set the state for.</param>
+        /// <param name="requestStatus">The status to set the burn request to.</param>
+        void SetBurnRequestState(string requestId, ConversionRequestStatus requestStatus);
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
@@ -87,6 +94,21 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void DeleteConversionRequest(string requestId)
         {
             this.KeyValueStore.Delete(requestId);
+        }
+
+        public void SetBurnRequestState(string requestId, ConversionRequestStatus requestStatus)
+        {
+            ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
+            if (request == null)
+                throw new Exception($"{requestId} does not exist.");
+
+            if (request.RequestType == ConversionRequestType.Mint)
+                throw new Exception($"{requestId} is not a burn request.");
+
+            request.Processed = false;
+            request.RequestStatus = requestStatus;
+
+            this.KeyValueStore.SaveValue(request.RequestId, request, true);
         }
 
         public void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus)
