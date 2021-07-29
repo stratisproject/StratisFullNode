@@ -15,8 +15,9 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         /// <summary>Determines if the federation for a specified block can be determined based on the available poll information.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <param name="offset">If non-zero this identifies a block relative to <paramref name="chainedHeader"/>.</param>
         /// <returns><c>True</c> if the federation can be determined and <c>false</c> otherwise.</returns>
-        bool CanGetFederationForBlock(ChainedHeader chainedHeader);
+        bool CanGetFederationForBlock(ChainedHeader chainedHeader, int offset = 0);
 
         /// <summary>Gets the federation member for a specified block by first looking at a cache 
         /// and then the signature in <see cref="PoABlockHeader.BlockSignature"/>.</summary>
@@ -27,8 +28,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
         /// <summary>Gets the federation for a specified block.</summary>
         /// <param name="chainedHeader">Identifies the block and timestamp.</param>
+        /// <param name="offset">If non-zero this identifies a block relative to <paramref name="chainedHeader"/>.</param>
         /// <returns>The federation member or <c>null</c> if the member could not be determined.</returns>
-        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader);
+        List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, int offset = 0);
 
         /// <summary>
         /// Determines when a federation member was last active. This includes mining or joining.
@@ -90,23 +92,26 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <inheritdoc />
-        public bool CanGetFederationForBlock(ChainedHeader chainedHeader)
+        public bool CanGetFederationForBlock(ChainedHeader chainedHeader, int offset = 0)
         {
-            return this.votingManager.CanGetFederationForBlock(chainedHeader);
+            return this.votingManager.CanGetFederationForBlock(chainedHeader, offset);
         }
 
         /// <inheritdoc />
-        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader)
+        public List<IFederationMember> GetFederationForBlock(ChainedHeader chainedHeader, int offset = 0)
         {
             lock (this.lockObject)
             {
-                if ((this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= chainedHeader.Height) &&
-                    this.federationHistory.TryGetValue(chainedHeader.Height, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
+                if ((this.lastActiveTip == chainedHeader || this.lastActiveTip?.FindFork(chainedHeader)?.Height >= (chainedHeader.Height + offset)) &&
+                    this.federationHistory.TryGetValue(chainedHeader.Height + offset, out (List<IFederationMember> modifiedFederation, HashSet<IFederationMember> whoJoined, IFederationMember miner) item))
                 {
                     return item.modifiedFederation;
                 }
 
                 this.UpdateTip(chainedHeader);
+
+                if (offset != 0 && !CanGetFederationForBlock(chainedHeader, offset))
+                    return null;
 
                 if (this.federationHistory.TryGetValue(chainedHeader.Height, out item))
                     return item.modifiedFederation;

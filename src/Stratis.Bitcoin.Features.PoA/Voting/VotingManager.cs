@@ -291,9 +291,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return (this.PollsRepository.CurrentTip?.Height ?? 0) + (int)this.network.Consensus.MaxReorgLength - 1;
         }
 
-        public bool CanGetFederationForBlock(ChainedHeader chainedHeader)
+        public bool CanGetFederationForBlock(ChainedHeader chainedHeader, int offset = 0)
         {
-            return chainedHeader.Height <= LastKnownFederationHeight();
+            return (chainedHeader.Height + offset) <= LastKnownFederationHeight();
         }
 
         private Dictionary<uint256, List<IFederationMember>> cachedFederations = new Dictionary<uint256, List<IFederationMember>>();

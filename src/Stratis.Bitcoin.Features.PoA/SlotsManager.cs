@@ -44,6 +44,8 @@ namespace Stratis.Bitcoin.Features.PoA
             to itself and multiply that with the target spacing to arrive at its mining timestamp.
             */
             List<IFederationMember> federationMembersAtMinedBlock = this.federationHistory.GetFederationForBlock(tip, 1);
+            if (federationMembersAtMinedBlock == null)
+                throw new Exception($"Could not determine the federation at block { tip.Height } + 1.");
 
             int myIndex = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
             if (myIndex < 0)
