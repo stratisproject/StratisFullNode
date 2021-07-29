@@ -165,7 +165,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     // so that it can be injected later.
                     if (inspectForDepositsAtHeight > burnRequest.BlockHeight + requiredConfirmations)
                     {
-                        int blockHeight = inspectForDepositsAtHeight - ((inspectForDepositsAtHeight % 50) + 100);
+                        int blockHeight = inspectForDepositsAtHeight - (inspectForDepositsAtHeight % 50) + 100;
 
                         if (blockHeight <= 0)
                             blockHeight = 100;
