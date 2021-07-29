@@ -25,7 +25,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var tool = new KeyTool(new DataFolder(string.Empty));
             this.key = tool.GeneratePrivateKey();
 
-            var pubKeys = new List<PubKey>() { this.key.PubKey, tool.GeneratePrivateKey().PubKey, tool.GeneratePrivateKey().PubKey };
+            var pubKeys = new List<PubKey>() { tool.GeneratePrivateKey().PubKey, this.key.PubKey, tool.GeneratePrivateKey().PubKey };
             var members = pubKeys.Select(p => (IFederationMember)(new FederationMember(p))).ToList();
             this.network = new TestPoANetwork(pubKeys);
 
@@ -39,7 +39,8 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             var settings = new NodeSettings(this.network);
 
-            var res = PoATestsBase.CreateFederationManager(this);
+            var res = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null));
+
             this.federationManager = res.federationManager;
             var federationHistory = new FederationHistory(this.federationManager, this.network, res.votingManager, this.chainIndexer.Object, settings);
             federationHistory.SetPrivateVariableValue("federationHistory", new SortedDictionary<int, (List<IFederationMember>, HashSet<IFederationMember>, IFederationMember)>()
