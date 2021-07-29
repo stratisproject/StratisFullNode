@@ -397,10 +397,10 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(">> Interop Fee Proposals (last 10):");
+            benchLog.AppendLine(">> Interop Fee Proposals (last 5):");
 
             IOrderedEnumerable<InteropConversionRequestFee> conversionRequests = this.interopRequestKeyValueStore.GetAllAsJson<InteropConversionRequestFee>().OrderByDescending(i => i.BlockHeight);
-            foreach (InteropConversionRequestFee conversionRequest in conversionRequests.Take(10))
+            foreach (InteropConversionRequestFee conversionRequest in conversionRequests.Take(5))
             {
                 IEnumerable<long> proposals = conversionRequest.FeeProposals.Select(s => Convert.ToInt64(s.FeeAmount));
                 IEnumerable<long> votes = conversionRequest.FeeVotes.Select(s => Convert.ToInt64(s.FeeAmount));

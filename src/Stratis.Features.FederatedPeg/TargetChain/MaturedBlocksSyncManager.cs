@@ -316,6 +316,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             bool found = false;
 
+            this.logger.Debug($"Finding applicable header for deposit with block time '{maturedBlockDeposit.BlockInfo.BlockTime}'; chain tip '{this.chainIndexer.Tip}'.");
+
             while (true)
             {
                 if (chainedHeader == this.chainIndexer.Genesis)
@@ -332,6 +334,8 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             if (!found)
                 this.logger.Warn("Unable to determine timestamp for conversion transaction '{0}', ignoring.", potentialConversionTransaction.Id);
+
+            this.logger.Debug($"Applicable header selected '{chainedHeader}'");
 
             return found;
         }

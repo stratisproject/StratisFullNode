@@ -308,7 +308,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         Processed = false,
                         RequestStatus = ConversionRequestStatus.Unprocessed,
                         Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
-                        BlockHeight = (int) blockHeight,
+                        BlockHeight = (int)blockHeight,
                         DestinationAddress = destinationAddress,
                         DestinationChain = DestinationChain.STRAX
                     });
@@ -367,7 +367,7 @@ namespace Stratis.Bitcoin.Features.Interop
             foreach (ConversionRequest request in mintRequests)
             {
                 // Ignore old conversion requests for the time being.
-                if ((this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
+                if (request.RequestStatus == ConversionRequestStatus.Unprocessed && (this.chainIndexer.Tip.Height - request.BlockHeight) > this.network.Consensus.MaxReorgLength)
                 {
                     this.logger.LogInformation("Ignoring old conversion mint request '{0}' with status {1} from block height {2}.", request.RequestId, request.RequestStatus, request.BlockHeight);
 
@@ -416,7 +416,7 @@ namespace Stratis.Bitcoin.Features.Interop
                             }
                             else
                             {
-                                this.logger.LogInformation("This node was not selected as the originator for transaction '{0}'. The originator is: '{1}'.", request.RequestId, designatedMember == null ? "N/A (test)" : designatedMember.PubKey?.ToHex());
+                                this.logger.LogInformation("This node was not selected as the originator for transaction '{0}'. The originator is: '{1}'.", request.RequestId, designatedMember == null ? "N/A (Overridden)" : designatedMember.PubKey?.ToHex());
 
                                 request.RequestStatus = ConversionRequestStatus.NotOriginator;
                             }
@@ -617,20 +617,17 @@ namespace Stratis.Bitcoin.Features.Interop
         /// <returns><c>true</c> if this node is selected as the originator.</returns>
         private bool DetermineConversionRequestOriginator(int blockHeight, out IFederationMember designatedMember)
         {
-            // For test networks we temporarily use an override to set the originator.
-            // Once the test multisig has all its members running we can revert this.
-            if (this.network.IsTest() || this.network.IsRegTest())
+            designatedMember = null;
+
+            if (this.interopSettings.OverrideOriginatorEnabled)
             {
                 if (this.interopSettings.OverrideOriginator)
                 {
                     designatedMember = this.federationManager.GetCurrentFederationMember();
                     return true;
                 }
-                else
-                {
-                    designatedMember = null;
-                    return false;
-                }
+
+                return false;
             }
 
             // We are not able to simply use the entire federation member list, as only multisig nodes can be transaction originators.
@@ -657,9 +654,6 @@ namespace Stratis.Bitcoin.Features.Interop
             // This should be impossible.
             if (multisig.Count == 0)
                 throw new InteropException("There are no multisig members.");
-
-            // Ensure that the list is deterministic.
-            multisig = multisig.OrderBy(m => m.PubKey).ToList();
 
             designatedMember = multisig[blockHeight % multisig.Count];
             return designatedMember.Equals(this.federationManager.GetCurrentFederationMember());
@@ -861,17 +855,23 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(">> Interop Mint Requests (last 10):");
+            if (this.interopSettings.OverrideOriginatorEnabled)
+            {
+                var isOriginatorOverridden = this.interopSettings.OverrideOriginator ? "Yes" : "No";
+                benchLog.AppendLine($">> Interop Mint Requests (last 5) [Originator Overridden : {isOriginatorOverridden}]");
+            }
+            else
+                benchLog.AppendLine(">> Interop Mint Requests (last 5) [Dynamic Originator]");
 
             List<ConversionRequest> requests;
             lock (this.repositoryLock)
             {
-                requests = this.conversionRequestRepository.GetAllMint(false).OrderByDescending(i => i.BlockHeight).Take(10).ToList();
+                requests = this.conversionRequestRepository.GetAllMint(false).OrderByDescending(i => i.BlockHeight).Take(5).ToList();
             }
 
             foreach (ConversionRequest request in requests)
             {
-                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
+                benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Proc: {request.Processed} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
             }
 
             benchLog.AppendLine();

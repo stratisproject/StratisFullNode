@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Stratis.Features.FederatedPeg.Conversion
 {
@@ -27,6 +28,13 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// </summary>
         /// <returns>The amount unprocessed conversion requests that has been deleted.</returns>
         int DeleteConversionRequests();
+
+        /// <summary>
+        /// Set this node as the originator for a given conversion request.
+        /// </summary>
+        /// <param name="requestId">The request Id to set the state for.</param>
+        /// <param name="requestStatus">The status to set the request to.</param>
+        void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus);
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
@@ -79,6 +87,23 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void DeleteConversionRequest(string requestId)
         {
             this.KeyValueStore.Delete(requestId);
+        }
+
+        public void SetConversionRequestState(string requestId, ConversionRequestStatus requestStatus)
+        {
+            ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
+            if (request == null)
+                throw new Exception($"{requestId} does not exist.");
+
+            if (request.RequestStatus == ConversionRequestStatus.OriginatorSubmitting ||
+                request.RequestStatus == ConversionRequestStatus.Processed)
+
+                throw new Exception($"Request with a status of '{request.RequestStatus}' can not be set to { requestStatus}.");
+
+            request.Processed = false;
+            request.RequestStatus = requestStatus;
+
+            this.KeyValueStore.SaveValue(request.RequestId, request, true);
         }
     }
 }
