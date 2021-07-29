@@ -397,7 +397,7 @@ namespace Stratis.Features.FederatedPeg.Coordination
 
         private void AddComponentStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(">> Interop Fee Proposals (last 5):");
+            benchLog.AppendLine(">> InterFlux Fee Proposals (last 5):");
 
             IOrderedEnumerable<InteropConversionRequestFee> conversionRequests = this.interopRequestKeyValueStore.GetAllAsJson<InteropConversionRequestFee>().OrderByDescending(i => i.BlockHeight);
             foreach (InteropConversionRequestFee conversionRequest in conversionRequests.Take(5))
