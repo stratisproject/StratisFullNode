@@ -134,6 +134,10 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                     deposits.Add(deposit);
 
+                    // It shouldn't be in here but just check anyway.
+                    if (!this.depositsBeingProcessedWithinMaturingWindow.Contains(deposit.Id))
+                        this.depositsBeingProcessedWithinMaturingWindow.Add(deposit.Id);
+
                     continue;
                 }
 
