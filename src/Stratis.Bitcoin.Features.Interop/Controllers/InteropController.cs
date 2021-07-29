@@ -47,12 +47,52 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             this.network = network;
         }
 
-        [Route("status")]
+        [Route("status/burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult InteropStatus()
+        public IActionResult InteropStatusBurnRequests()
+        {
+            try
+            {
+                var response = new InteropStatusResponseModel();
+
+                var burnRequests = new List<ConversionRequestModel>();
+
+                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
+                {
+                    burnRequests.Add(new ConversionRequestModel()
+                    {
+                        RequestId = request.RequestId,
+                        RequestType = request.RequestType,
+                        RequestStatus = request.RequestStatus,
+                        BlockHeight = request.BlockHeight,
+                        DestinationAddress = request.DestinationAddress,
+                        DestinationChain = request.DestinationChain.ToString(),
+                        Amount = request.Amount,
+                        Processed = request.Processed,
+                        Status = request.RequestStatus.ToString(),
+                    });
+                }
+
+                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
+
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("status/mint")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusMintRequests()
         {
             try
             {
@@ -78,25 +118,25 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
 
-                var burnRequests = new List<ConversionRequestModel>();
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
 
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
-                {
-                    burnRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        Amount = request.Amount,
-                        Processed = request.Processed,
-                        Status = request.RequestStatus.ToString(),
-                    });
-                }
-
-                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
+        [Route("status/votes")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusVotes()
+        {
+            try
+            {
+                var response = new InteropStatusResponseModel();
 
                 var receivedVotes = new Dictionary<string, List<string>>();
 
