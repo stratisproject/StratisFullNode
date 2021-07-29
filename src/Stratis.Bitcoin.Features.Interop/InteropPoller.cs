@@ -55,8 +55,12 @@ namespace Stratis.Bitcoin.Features.Interop
 
         private IAsyncLoop interopLoop;
         private IAsyncLoop conversionLoop;
+        private IAsyncLoop conversionBurnLoop;
 
         private readonly Dictionary<DestinationChain, bool> eventFilterCreationRequired;
+
+        /// <summary>Both the <see cref="conversionLoop"/> and <see cref="conversionBurnLoop"/> need to access the repository, so access to it should be locked to ensure consistency.</summary>
+        private readonly object repositoryLock;
 
         public InteropPoller(NodeSettings nodeSettings,
             InteropSettings interopSettings,
@@ -94,6 +98,8 @@ namespace Stratis.Bitcoin.Features.Interop
             {
                 {DestinationChain.ETH, true}
             };
+
+            this.repositoryLock = new object();
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name, 250);
         }
@@ -151,9 +157,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 try
                 {
-                    foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
-                        await this.CheckForContractEventsAsync(supportedChain.Key, supportedChain.Value).ConfigureAwait(false);
-
                     await this.ProcessConversionRequestsAsync().ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -166,6 +169,31 @@ namespace Stratis.Bitcoin.Features.Interop
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
+
+            this.conversionBurnLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicPollConversionBurns", async (cancellation) =>
+                {
+                    if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                        return;
+
+                    this.logger.LogTrace("Beginning conversion burn transaction polling loop.");
+
+                    try
+                    {
+                        // We need to regularly check for contract events, otherwise the created filter can time out and need to be recreated.
+                        // This is done separately to the conversion request processing as transaction submission there can take an arbitrarily long length of time.
+                        foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
+                            await this.CheckForContractEventsAsync(supportedChain.Key, supportedChain.Value).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.logger.LogWarning($"Exception raised when polling for conversion burn transactions. {e}");
+                    }
+
+                    this.logger.LogTrace("Finishing conversion burn transaction polling loop.");
+                },
+                this.nodeLifetime.ApplicationStopping,
+                repeatEvery: TimeSpans.TenSeconds,
+                startAfter: TimeSpans.Second);
         }
 
         /// <summary>Retrieves the current chain heights of interop enabled chains via the RPC interface.</summary>
@@ -218,11 +246,14 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 this.logger.LogInformation("Conversion burn transaction '{0}' received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
 
-                if (this.conversionRequestRepository.Get(transferEvent.Log.TransactionHash) != null)
+                lock (this.repositoryLock)
                 {
-                    this.logger.LogInformation("Conversion burn transaction '{0}' already exists, ignoring.", transferEvent.Log.TransactionHash);
+                    if (this.conversionRequestRepository.Get(transferEvent.Log.TransactionHash) != null)
+                    {
+                        this.logger.LogInformation("Conversion burn transaction '{0}' already exists, ignoring.", transferEvent.Log.TransactionHash);
 
-                    continue;
+                        continue;
+                    }
                 }
 
                 if (transferEvent.Event.Value == BigInteger.Zero)
@@ -268,17 +299,20 @@ namespace Stratis.Bitcoin.Features.Interop
                 if (blockHeight <= 0)
                     blockHeight = 100;
 
-                this.conversionRequestRepository.Save(new ConversionRequest()
+                lock (this.repositoryLock)
                 {
-                    RequestId = transferEvent.Log.TransactionHash,
-                    RequestType = ConversionRequestType.Burn,
-                    Processed = false,
-                    RequestStatus = ConversionRequestStatus.Unprocessed,
-                    Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
-                    BlockHeight = (int)blockHeight,
-                    DestinationAddress = destinationAddress,
-                    DestinationChain = DestinationChain.STRAX
-                });
+                    this.conversionRequestRepository.Save(new ConversionRequest()
+                    {
+                        RequestId = transferEvent.Log.TransactionHash,
+                        RequestType = ConversionRequestType.Burn,
+                        Processed = false,
+                        RequestStatus = ConversionRequestStatus.Unprocessed,
+                        Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
+                        BlockHeight = (int)blockHeight,
+                        DestinationAddress = destinationAddress,
+                        DestinationChain = DestinationChain.STRAX
+                    });
+                }
             }
         }
 
@@ -316,7 +350,11 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         private async Task ProcessConversionRequestsAsync()
         {
-            List<ConversionRequest> mintRequests = this.conversionRequestRepository.GetAllMint(true);
+            List<ConversionRequest> mintRequests;
+            lock (this.repositoryLock)
+            {
+                mintRequests = this.conversionRequestRepository.GetAllMint(true);
+            }
 
             if (mintRequests == null)
             {
@@ -335,7 +373,10 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     request.Processed = true;
 
-                    this.conversionRequestRepository.Save(request);
+                    lock (this.repositoryLock)
+                    {
+                        this.conversionRequestRepository.Save(request);
+                    }
 
                     continue;
                 }
@@ -548,7 +589,10 @@ namespace Stratis.Bitcoin.Features.Interop
                 }
 
                 // Make sure that any state transitions are persisted to storage.
-                this.conversionRequestRepository.Save(request);
+                lock (this.repositoryLock)
+                {
+                    this.conversionRequestRepository.Save(request);
+                }
 
                 // Unlike the mint requests, burns are not initiated by the multisig wallet.
                 // Instead they are initiated by the user, via a contract call to the burn() method on the WrappedStrax contract.
@@ -717,7 +761,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 // Just re-broadcast.
                 if (originator)
                 {
-                    this.logger.LogDebug("Orignator broadcasting id {0}.", mintTransactionId);
+                    this.logger.LogDebug("Originator broadcasting id {0}.", mintTransactionId);
 
                     await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain).ConfigureAwait(false);
                 }
@@ -726,7 +770,7 @@ namespace Stratis.Bitcoin.Features.Interop
                     if (ourTransactionId == BigInteger.MinusOne)
                         ourTransactionId = this.conversionRequestCoordinationService.GetCandidateTransactionId(mintRequestId);
 
-                    this.logger.LogDebug("Non-orignator broadcasting id {0}.", ourTransactionId);
+                    this.logger.LogDebug("Non-originator broadcasting id {0}.", ourTransactionId);
 
                     if (ourTransactionId != BigInteger.MinusOne)
                     {
@@ -819,7 +863,12 @@ namespace Stratis.Bitcoin.Features.Interop
             else
                 benchLog.AppendLine(">> Interop Mint Requests (last 5) [Dynamic Originator]");
 
-            List<ConversionRequest> requests = this.conversionRequestRepository.GetAllMint(false).OrderByDescending(i => i.BlockHeight).Take(5).ToList();
+            List<ConversionRequest> requests;
+            lock (this.repositoryLock)
+            {
+                requests = this.conversionRequestRepository.GetAllMint(false).OrderByDescending(i => i.BlockHeight).Take(5).ToList();
+            }
+
             foreach (ConversionRequest request in requests)
             {
                 benchLog.AppendLine($"Destination: {request.DestinationAddress.Substring(0, 10)}... Id: {request.RequestId} Status: {request.RequestStatus} Proc: {request.Processed} Amount: {new Money(request.Amount)} Eth Hash: {request.ExternalChainTxHash}");
@@ -833,6 +882,7 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             this.interopLoop?.Dispose();
             this.conversionLoop?.Dispose();
+            this.conversionBurnLoop?.Dispose();
         }
     }
 }
