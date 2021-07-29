@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
             }
         }
 
-        [Route("status/mint")]
+        [Route("status/mints")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
