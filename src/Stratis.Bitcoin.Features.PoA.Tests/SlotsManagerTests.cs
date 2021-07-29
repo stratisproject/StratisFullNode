@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -17,35 +18,52 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         private readonly PoAConsensusOptions consensusOptions;
         private readonly IFederationManager federationManager;
         private Mock<ChainIndexer> chainIndexer;
+        private Key key;
 
         public SlotsManagerTests()
         {
-            this.network = new TestPoANetwork();
+            var tool = new KeyTool(new DataFolder(string.Empty));
+            this.key = tool.GeneratePrivateKey();
+
+            var pubKeys = new List<PubKey>() { this.key.PubKey, tool.GeneratePrivateKey().PubKey, tool.GeneratePrivateKey().PubKey };
+            var members = pubKeys.Select(p => (IFederationMember)(new FederationMember(p))).ToList();
+            this.network = new TestPoANetwork(pubKeys);
+
             this.consensusOptions = this.network.ConsensusOptions;
 
-            this.federationManager = PoATestsBase.CreateFederationManager(this).federationManager;
-            var federationHistory = new FederationHistory(this.federationManager, this.network);
+            // Set up a scenario where one block has been mined by the first member of the federation.
+
+            var header = new PoABlockHeader();
             this.chainIndexer = new Mock<ChainIndexer>();
+            this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
+
+            var settings = new NodeSettings(this.network);
+
+            var res = PoATestsBase.CreateFederationManager(this);
+            this.federationManager = res.federationManager;
+            var federationHistory = new FederationHistory(this.federationManager, this.network, res.votingManager, this.chainIndexer.Object, settings);
+            federationHistory.SetPrivateVariableValue("federationHistory", new SortedDictionary<int, (List<IFederationMember>, HashSet<IFederationMember>, IFederationMember)>()
+            {
+                {0, (members, new HashSet<IFederationMember>() { }, members[0]) },
+                {1, (members, new HashSet<IFederationMember>() { }, null) }
+            });
+
+            federationHistory.SetPrivateVariableValue("lastActiveTip", this.chainIndexer.Object.Tip);
+            federationHistory.SetPrivateVariableValue("lastFederationTip", 0);
             this.slotsManager = new SlotsManager(this.network, this.federationManager, federationHistory);
+
+            IFederationManager fedManager = res.federationManager;
+            this.slotsManager = new SlotsManager(this.network, fedManager, federationHistory);
         }
-        
+
         [Fact]
         public void GetMiningTimestamp()
         {
-            var tool = new KeyTool(new DataFolder(string.Empty));
-            Key key = tool.GeneratePrivateKey();
-            this.network = new TestPoANetwork(new List<PubKey>() { key.PubKey, tool.GeneratePrivateKey().PubKey, tool.GeneratePrivateKey().PubKey });
-
-            IFederationManager fedManager = PoATestsBase.CreateFederationManager(this, this.network, new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null)).federationManager;
-            var header = new BlockHeader();
-            this.chainIndexer.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            this.slotsManager = new SlotsManager(this.network, fedManager, new FederationHistory(fedManager, this.network));
-
-            List<IFederationMember> federationMembers = fedManager.GetFederationMembers();
+            List<IFederationMember> federationMembers = this.federationManager.GetFederationMembers();
             DateTimeOffset roundStart = DateTimeOffset.FromUnixTimeSeconds(this.consensusOptions.TargetSpacingSeconds * (uint)federationMembers.Count * 5);
 
-            fedManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(IFederationManager.CurrentFederationKey), key);
-            fedManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(this.federationManager.IsFederationMember), true);
+            this.federationManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(IFederationManager.CurrentFederationKey), this.key);
+            this.federationManager.SetPrivatePropertyValue(typeof(FederationManager), nameof(this.federationManager.IsFederationMember), true);
 
             TimeSpan targetSpacing = TimeSpan.FromSeconds(this.consensusOptions.TargetSpacingSeconds);
 

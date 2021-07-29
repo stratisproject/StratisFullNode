@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             IDateTimeProvider dateTimeProvider = new DateTimeProvider();
             this.consensusSettings = new ConsensusSettings(NodeSettings.Default(this.network));
 
-            (this.federationManager, this.federationHistory) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
+            (this.federationManager, this.federationHistory, this.votingManager) = CreateFederationManager(this, this.network, this.loggerFactory, this.signals);
 
             this.chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
@@ -73,11 +73,6 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
-            this.votingManager = new VotingManager(this.federationManager, this.loggerFactory, this.resultExecutorMock.Object, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object),
-                 dataFolder, this.dBreezeSerializer, this.signals, this.network, null, this.chainIndexerMock.Object);
-
-            this.votingManager.Initialize(this.federationHistory);
-
             this.chainState = new ChainState();
 
             this.rulesEngine = new PoAConsensusRuleEngine(this.network, this.loggerFactory, new DateTimeProvider(), this.ChainIndexer, new NodeDeployments(this.network, this.ChainIndexer),
@@ -90,7 +85,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.currentHeader = headers.Last();
         }
 
-        public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
+        public static (IFederationManager federationManager, IFederationHistory federationHistory, VotingManager votingManager) CreateFederationManager(object caller, Network network, LoggerFactory loggerFactory, ISignals signals)
         {
             string dir = TestBase.CreateTestDir(caller);
 
@@ -125,21 +120,21 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return members[chainedHeader.Height % members.Count];
             });
 
-            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>())).Returns<ChainedHeader>((chainedHeader) =>
+            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>())).Returns<ChainedHeader, int>((chainedHeader, offset) =>
             {
                 return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });
 
-            federationHistory.Setup(x => x.CanGetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>())).Returns<ChainedHeader>((chainedHeader) => true);
+            federationHistory.Setup(x => x.CanGetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>())).Returns<ChainedHeader, int>((chainedHeader, offset) => true);
 
             votingManager.Initialize(federationHistory.Object);
             fullNode.Setup(x => x.NodeService<VotingManager>(It.IsAny<bool>())).Returns(votingManager);
             federationManager.Initialize();
 
-            return (federationManager, federationHistory.Object);
+            return (federationManager, federationHistory.Object, votingManager);
         }
 
-        public static (IFederationManager federationManager, IFederationHistory federationHistory) CreateFederationManager(object caller)
+        public static (IFederationManager federationManager, IFederationHistory federationHistory, VotingManager votingManager) CreateFederationManager(object caller)
         {
             return CreateFederationManager(caller, new TestPoANetwork(), new ExtendedLoggerFactory(), new Signals.Signals(new LoggerFactory(), null));
         }

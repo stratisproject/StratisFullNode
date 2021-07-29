@@ -356,6 +356,8 @@ namespace Stratis.Bitcoin.Features.PoA
             // Find the first block with Time >= minTime. We're not interested in re-reading any blocks below or at the last active tip though.
             int startHeight = (this.lastActiveTip?.Height ?? -1) + 1;
             startHeight = BinarySearch.BinaryFindFirst(n => GetHeader(n).Header.Time >= minTime, startHeight, blockHeader.Height - startHeight + 1);
+            if (startHeight < 0)
+                startHeight = 0;
 
             // Exclude anything in cache already.
             int fedStartHeight = Math.Max(startHeight, this.lastFederationTip + 1);
