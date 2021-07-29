@@ -139,7 +139,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 if (inspectForDepositsAtHeight > burnRequest.BlockHeight)
                 {
-                    DepositRetrievalType retrievalType = DetermineConversionDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
+                    DepositRetrievalType retrievalType = DetermineDepositRetrievalType(Money.Satoshis(burnRequest.Amount));
                     var requiredConfirmations = confirmationsByRetrievalType[retrievalType];
 
                     // If the inspection height has is now equal to the burn request's processing height plus
@@ -253,7 +253,12 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
                 this.logger.Info("Received conversion deposit transaction '{0}' for an amount of {1}.", transaction.GetHash(), amount);
 
-                depositRetrievalType = DetermineConversionDepositRetrievalType(amount);
+                if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.ConversionLarge;
+                else if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
+                    depositRetrievalType = DepositRetrievalType.ConversionNormal;
+                else
+                    depositRetrievalType = DepositRetrievalType.ConversionSmall;
             }
             else
             {
@@ -266,17 +271,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             }
 
             return new Deposit(transaction.GetHash(), depositRetrievalType, amount, targetAddress, (DestinationChain)targetChain, blockHeight, blockHash);
-        }
-
-        private DepositRetrievalType DetermineConversionDepositRetrievalType(Money amount)
-        {
-            if (amount > this.federatedPegSettings.NormalDepositThresholdAmount)
-                return DepositRetrievalType.ConversionLarge;
-
-            if (amount > this.federatedPegSettings.SmallDepositThresholdAmount)
-                return DepositRetrievalType.ConversionNormal;
-
-            return DepositRetrievalType.ConversionSmall;
         }
 
         private DepositRetrievalType DetermineDepositRetrievalType(Money amount)
