@@ -135,10 +135,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var response = exception.Call.Response;
 
             // Assert.
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("Invalid language 'Klingon'. Choices are: English, French, Spanish, Japanese, ChineseSimplified and ChineseTraditional.");
         }
@@ -428,10 +428,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var response = exception.Call.Response;
 
             // Assert.
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("A password is required.");
         }
@@ -538,10 +538,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Contain("Cannot create this wallet as a wallet with the same private key already exists.");
         }
@@ -581,10 +581,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Contain($"Wallet with name '{walletName}' already exists.");
         }
@@ -609,10 +609,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             Assert.Throws<WalletException>(() => walletManager.SaveWallet(walletName));
 
             // Assert.
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            response.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("This wallet was not found at the specified location.");
         }
@@ -630,7 +630,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             });
 
             // Assert.
-            response.StatusCode = HttpStatusCode.Accepted;
+            response.ResponseMessage.StatusCode = HttpStatusCode.Accepted;
 
             // Check the wallet is loaded.
             var getAccountsResponse = await $"http://localhost:{this.fixture.Node.ApiPort}/api"
@@ -645,7 +645,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
         public async Task LoadWalletWithWrongPasswordAsync()
         {
             // Arrange.
-            
+
             // Act.
             Func<Task> act = async () => await $"http://localhost:{this.fixture.Node.ApiPort}/api".AppendPathSegment("wallet/load").PostJsonAsync(new WalletLoadRequest
             {
@@ -657,10 +657,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("Wrong password, please try again.");
         }
@@ -684,10 +684,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var response = exception.Call.Response;
 
             // Assert.
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("Word count should be equals to 12,15,18,21 or 24");
         }
@@ -710,10 +710,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var response = exception.Call.Response;
 
             // Assert.
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("A mnemonic is required.");
         }
@@ -736,10 +736,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var response = exception.Call.Response;
 
             // Assert.
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be("A password is required.");
         }
@@ -883,10 +883,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            response.StatusCode.Should().Be((int)HttpStatusCode.Conflict);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Contain("Cannot create this wallet as a wallet with the same private key already exists.");
         }
@@ -927,10 +927,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No wallet with name '{walletName}' could be found.");
         }
@@ -948,10 +948,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No account with the name 'account 1' could be found.");
         }
@@ -998,10 +998,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"Address '{address}' not found in wallets.");
         }
@@ -1043,10 +1043,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No wallet with name '{walletName}' could be found.");
         }
@@ -1067,10 +1067,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No account with the name '{accountName}' could be found.");
         }
@@ -1123,10 +1123,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No wallet with name '{walletName}' could be found.");
         }
@@ -1162,10 +1162,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No wallet with name '{walletName}' could be found.");
         }
@@ -1185,10 +1185,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No account with the name '{accountName}' could be found.");
         }
@@ -1223,7 +1223,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             generalInfoModel.ConnectedNodes.Should().Be(0);
             generalInfoModel.CreationTime.ToUnixTimeSeconds().Should().Be(1470467001);
             generalInfoModel.IsDecrypted.Should().BeTrue();
-            generalInfoModel.Network.Name.Should().Be(new StraxRegTest().Name);
+            generalInfoModel.Network.Should().Be(new StraxRegTest().Name);
             //generalInfoModel.WalletFilePath.Should().Be(this.fixture.WalletWithFundsFilePath);
         }
 
@@ -1362,10 +1362,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"The query parameters '{nameof(BuildTransactionRequest.FeeAmount)}' and '{nameof(BuildTransactionRequest.FeeType)}' cannot be set at the same time. " +
                     $"Please use '{nameof(BuildTransactionRequest.FeeAmount)}' if you'd like to set the fee manually, or '{nameof(BuildTransactionRequest.FeeType)}' if you want the wallet to calculate it for you.");
@@ -1395,10 +1395,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"One of parameters '{nameof(BuildTransactionRequest.FeeAmount)}' and '{nameof(BuildTransactionRequest.FeeType)}' is required. " +
                     $"Please use '{nameof(BuildTransactionRequest.FeeAmount)}' if you'd like to set the fee manually, or '{nameof(BuildTransactionRequest.FeeType)}' if you want the wallet to calculate it for you.");
@@ -1484,10 +1484,10 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
             var exception = act.Should().Throw<FlurlHttpException>().Which;
             var response = exception.Call.Response;
 
-            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.Content.ReadAsStringAsync());
+            ErrorResponse errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(await response.ResponseMessage.Content.ReadAsStringAsync());
             List<ErrorModel> errors = errorResponse.Errors;
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
             errors.Should().ContainSingle();
             errors.First().Message.Should().Be($"No wallet with name '{walletName}' could be found.");
         }

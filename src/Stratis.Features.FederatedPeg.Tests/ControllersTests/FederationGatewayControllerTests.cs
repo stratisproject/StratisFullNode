@@ -87,6 +87,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 this.federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             return controller;
@@ -218,6 +219,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 federatedPegSettings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();
@@ -227,7 +229,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var model = ((JsonResult)result).Value as FederationGatewayInfoModel;
             model.IsMainChain.Should().BeFalse();
-            model.FederationMiningPubKeys.Should().Equal(((PoAConsensusOptions)CirrusNetwork.NetworksSelector.Regtest().Consensus.Options).GenesisFederationMembers.Select(keys => keys.ToString()));
+            model.FederationMiningPubKeys.Should().Equal(this.federationManager.GetFederationMembers().Select(keys => keys.ToString()));
             model.MultiSigRedeemScript.Should().Be(redeemScript);
             string.Join(",", model.FederationNodeIpEndPoints).Should().Be(federationIps);
             model.IsActive.Should().BeTrue();
@@ -242,7 +244,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
 
             var counterChainSettings = new CounterChainSettings(nodeSettings, new CounterChainNetworkWrapper(new StraxRegTest()));
 
-            this.federationManager = new FederationManager(counterChainSettings, fullNode.Object, this.network, NodeSettings.Default(this.network), this.loggerFactory, this.signals);
+            this.federationManager = new FederationManager(fullNode.Object, this.network, NodeSettings.Default(this.network), this.signals, counterChainSettings);
 
             VotingManager votingManager = InitializeVotingManager(nodeSettings);
 
@@ -255,15 +257,13 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
         {
             var dbreezeSerializer = new DBreezeSerializer(this.network.Consensus.ConsensusFactory);
             var asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
-            var finalizedBlockRepo = new FinalizedBlockInfoRepository(new LevelDbKeyValueRepository(nodeSettings.DataFolder, dbreezeSerializer), this.loggerFactory, asyncProvider);
-            finalizedBlockRepo.LoadFinalizedBlockInfoAsync(this.network).GetAwaiter().GetResult();
 
             var chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
 
-            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, finalizedBlockRepo, this.network);
-            var federationHistory = new FederationHistory(this.federationManager, votingManager);
+            var votingManager = new VotingManager(this.federationManager, this.loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, this.signals, this.network);
+            var federationHistory = new FederationHistory(this.federationManager, this.network, votingManager);
             votingManager.Initialize(federationHistory);
 
             return votingManager;
@@ -312,6 +312,7 @@ namespace Stratis.Features.FederatedPeg.Tests.ControllersTests
                 settings,
                 this.federationWalletManager,
                 Substitute.For<IFullNode>(),
+                Substitute.For<IPeerBanning>(),
                 this.federationManager);
 
             IActionResult result = controller.GetInfo();

@@ -90,6 +90,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
         [JsonConverter(typeof(DateTimeOffsetConverter))]
         public DateTimeOffset CreationTime { get; set; }
 
+
         [JsonProperty(PropertyName = "scriptPubKey")]
         [JsonConverter(typeof(ScriptJsonConverter))]
         public Script ScriptPubKey { get; set; }
@@ -131,9 +132,29 @@ namespace Stratis.Features.FederatedPeg.Wallet
             return this.BlockHeight != null;
         }
 
+        /// <summary>
+        /// Determines if the transaction is spent and confirmed.
+        /// </summary>
+        /// <returns><c>true</c> if spending details is not null and block height is set on spending details.</returns>
+        [NoTrace]
+        public bool IsSpentAndConfirmed()
+        {
+            if (this.spendingDetails == null)
+                return false;
+
+            return this.spendingDetails.BlockHeight != null;
+        }
+
+        /// <summary>
+        /// Determines whether the transaction is spendable.
+        /// </summary>
+        /// <returns><c>true</c> if the amount is more than the dust threshold and spending details are null.</returns>
         [NoTrace]
         public bool IsSpendable()
         {
+            if (this.Amount < Money.Coins(FederatedPegSettings.UtxoAmountThreshold))
+                return false;
+
             // TODO: Coinbase maturity check?
             return this.SpendingDetails == null;
         }
@@ -143,12 +164,11 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             // This method only returns a UTXO that has no spending output.
             // If a spending output exists (even if its not confirmed) this will return as zero balance.
-            if (!this.IsSpendable()) return Money.Zero;
+            if (!this.IsSpendable())
+                return Money.Zero;
 
             if (confirmedOnly && !this.IsConfirmed())
-            {
                 return Money.Zero;
-            }
 
             return this.Amount;
         }

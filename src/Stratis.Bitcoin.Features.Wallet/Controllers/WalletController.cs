@@ -291,20 +291,16 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         /// or a single account if one is specified.
         /// </summary>
         /// <param name="request">An object containing the parameters used to retrieve a wallet's history.</param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>A JSON object containing the wallet history.</returns>
         /// <response code="200">Returns wallet history</response>
         /// <response code="400">Invalid request or unexpected exception occurred</response>
         /// <response code="500">Request is null</response>
         [Route("history")]
         [HttpGet]
-        public async Task<IActionResult> GetHistory([FromQuery] WalletHistoryRequest request,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public IActionResult GetHistory([FromQuery] WalletHistoryRequest request)
         {
-            return await this.Execute(request, cancellationToken,
-                async (req, token) => this.Json(await this.walletService.GetHistory(req, token)));
+            return this.Execute(request, (req) => this.Json(this.walletService.GetHistory(req)));
         }
-
 
         /// <summary>
         /// Gets the balance of a wallet in STRAT (or sidechain coin). Both the confirmed and unconfirmed balance are returned.
@@ -436,6 +432,24 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.Execute(request, cancellationToken,
                 async (req, token) => Json(await this.walletService.BuildTransaction(req, token)));
+        }
+
+        /// <summary>
+        /// Same as <see cref="BuildTransaction"/> but overrides OP_RETURN data and encodes destination chain and address for InterFlux transaction.
+        /// </summary>
+        [Route("build-interflux-transaction")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> BuildInterFluxTransaction([FromBody] BuildInterFluxTransactionRequest request)
+        {
+            if (request.DestinationChain != (int)DestinationChain.ETH)
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Invalid destination chain", "Only InterFlux transactions to the Ethereum chain are currently supported.");
+
+            request.OpReturnData = InterFluxOpReturnEncoder.Encode((DestinationChain)request.DestinationChain, request.DestinationAddress);
+
+            return await this.Execute(request, default, async (req, token) => Json(await this.walletService.BuildTransaction(req, token)));
         }
 
         /// <summary>
@@ -875,17 +889,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
         {
             return await this.Execute(request, cancellationToken,
                 async (req, token) => this.Json(await this.walletService.Consolidate(req, token)));
-        }
-
-        private TransactionItemModel FindSimilarReceivedTransactionOutput(List<TransactionItemModel> items,
-            TransactionData transaction)
-        {
-            TransactionItemModel existingTransaction = items.FirstOrDefault(i => i.Id == transaction.Id &&
-                                                                                 i.Type == TransactionItemType
-                                                                                     .Received &&
-                                                                                 i.ConfirmedInBlock ==
-                                                                                 transaction.BlockHeight);
-            return existingTransaction;
         }
     }
 }

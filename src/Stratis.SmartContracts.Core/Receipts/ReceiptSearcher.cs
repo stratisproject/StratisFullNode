@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using NBitcoin;
 using Stratis.Bitcoin.Interfaces;
-using Stratis.SmartContracts.Core.Interfaces;
 
 namespace Stratis.SmartContracts.Core.Receipts
 {

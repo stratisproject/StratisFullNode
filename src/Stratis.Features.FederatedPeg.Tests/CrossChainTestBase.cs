@@ -20,6 +20,7 @@ using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Collateral.CounterChain;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Wallet;
@@ -46,6 +47,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         protected IFullNode fullNode;
         protected IFederationWalletManager federationWalletManager;
         protected IFederatedPegSettings federatedPegSettings;
+        protected IConversionRequestRepository repository;
         protected IFederationWalletSyncManager federationWalletSyncManager;
         protected IFederationWalletTransactionHandler FederationWalletTransactionHandler;
         protected IWithdrawalTransactionBuilder withdrawalTransactionBuilder;
@@ -90,14 +92,15 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
             this.dateTimeProvider = DateTimeProvider.Default;
-            this.opReturnDataReader = new OpReturnDataReader(this.counterChainNetworkWrapper);
+            this.opReturnDataReader = new OpReturnDataReader(this.counterChainNetworkWrapper.CounterChainNetwork);
             this.blockRepository = Substitute.For<IBlockRepository>();
             this.fullNode = Substitute.For<IFullNode>();
             this.withdrawalTransactionBuilder = Substitute.For<IWithdrawalTransactionBuilder>();
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
             this.federationWalletSyncManager = Substitute.For<IFederationWalletSyncManager>();
             this.FederationWalletTransactionHandler = Substitute.For<IFederationWalletTransactionHandler>();
-            this.walletFeePolicy = Substitute.For<IWalletFeePolicy>();
+            this.walletFeePolicy = new WalletFeePolicy(NodeSettings.Default(this.network));
+
             this.connectionManager = Substitute.For<IConnectionManager>();
             this.federatedPegBroadcaster = Substitute.For<IFederatedPegBroadcaster>();
             this.inputConsolidator = Substitute.For<IInputConsolidator>();
@@ -105,13 +108,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.ibdState = Substitute.For<IInitialBlockDownloadState>();
             this.wallet = null;
             this.federatedPegSettings = Substitute.For<IFederatedPegSettings>();
+            this.repository = Substitute.For<IConversionRequestRepository>();
             this.ChainIndexer = new ChainIndexer(this.network);
-            this.federatedPegSettings.GetWithdrawalTransactionFee(Arg.Any<int>()).ReturnsForAnyArgs((x) =>
-            {
-                int numInputs = x.ArgAt<int>(0);
-
-                return FederatedPegSettings.BaseTransactionFee + FederatedPegSettings.InputTransactionFee * numInputs;
-            });
 
             // Generate the keys used by the federation members for our tests.
             this.federationKeys = new[]
@@ -167,7 +165,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federatedPegSettings.MultiSigAddress.Returns(this.redeemScript.Hash.GetAddress(this.network));
             this.federatedPegSettings.PublicKey.Returns(this.extendedKey.PrivateKey.PubKey.ToHex());
             this.federatedPegSettings.MaximumPartialTransactionThreshold.Returns(CrossChainTransferStore.MaximumPartialTransactions);
-            this.withdrawalExtractor = new WithdrawalExtractor(this.federatedPegSettings, this.opReturnDataReader, this.network);
+            this.withdrawalExtractor = new WithdrawalExtractor(this.federatedPegSettings, this.repository, this.opReturnDataReader, this.network);
         }
 
         protected (Transaction, ChainedHeader) AddFundingTransaction(Money[] amounts)

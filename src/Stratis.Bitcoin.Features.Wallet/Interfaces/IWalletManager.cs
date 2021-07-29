@@ -245,28 +245,10 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="walletName">The wallet name.</param>
         /// <param name="accountName">The account name.</param>
         /// <param name="searchQuery">For now this can only be a transaction Id.</param>
+        /// <param name="limit">Limit the result set by this amount (primarily used for pagination).</param>
+        /// <param name="offset">Skip (offset) the result set by this amount (primarily used for pagination).</param>
         /// <returns>Collection of address history and transaction pairs.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null);
-
-        /// <summary>
-        /// Gets the history of transactions contained in an account.
-        /// If no account name is specified, history will be returned for all accounts in the wallet.
-        /// </summary>
-        /// <param name="walletName">The wallet name.</param>
-        /// <param name="accountName">The account name.</param>
-        /// <param name="prevOutputTxTime">Previous OutputTxTime, used for pagination</param>
-        /// <param name="prevOutputIndex">Previous prevOutputIndex, used for pagination</param>
-        /// <param name="take">Number of records to Take</param>
-        /// <param name="searchQuery">For now this can only be a transaction Id.</param>
-        /// <returns>Collection of address history and transaction pairs.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, long? prevOutputTxTime = null, int? prevOutputIndex = null, int? take = int.MaxValue, string searchQuery = null);
-
-        /// <summary>
-        /// Gets the history of the transactions in addresses contained in this account.
-        /// </summary>
-        /// <param name="account">The account for which to get history.</param>
-        /// <returns>The history for this account.</returns>
-        AccountHistory GetHistory(HdAccount account);
+        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null, string searchQuery = null, int limit = int.MaxValue, int offset = 0, string accountAddress = null, bool forSmartContracts = false);
 
         /// <summary>
         /// Gets the balance of transactions contained in an account.

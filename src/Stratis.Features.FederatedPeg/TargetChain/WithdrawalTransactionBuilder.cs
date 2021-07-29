@@ -60,7 +60,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             try
             {
-                this.logger.Debug("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
+                this.logger.Info("BuildDeterministicTransaction depositId(opReturnData)={0}; recipient.ScriptPubKey={1}; recipient.Amount={2}; height={3}", depositId, recipient.ScriptPubKey, recipient.Amount, blockHeight);
 
                 // Build the multisig transaction template.
                 uint256 opReturnData = depositId;
@@ -105,7 +105,6 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                     return null;
                 }
 
-                multiSigContext.TransactionFee = this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count); // The "actual fee". Everything else goes to the fed.
                 multiSigContext.SelectedInputs = unspentOutputs.Select(u => u.ToOutPoint()).ToList();
                 multiSigContext.AllowOtherInputs = false;
 

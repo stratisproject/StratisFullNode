@@ -199,8 +199,11 @@ namespace Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers
                 node.Kill();
 
             // Logs are static so clear them after every run.
-            LogManager.Configuration.LoggingRules.Clear();
-            LogManager.ReconfigExistingLoggers();
+            if (LogManager.Configuration != null)
+            {
+                LogManager.Configuration.LoggingRules.Clear();
+                LogManager.ReconfigExistingLoggers();
+            }
         }
 
         /// <summary>

@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             if (!force)
             {
-                // Check if periodic flush is reuired.
+                // Check if periodic flush is required.
                 // Ideally this will flush less frequent and always be behind 
                 // blockstore which is currently set to 17 sec.
 

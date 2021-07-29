@@ -16,6 +16,8 @@ using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Caching;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.PoW;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.SmartContracts;
@@ -29,7 +31,6 @@ using Stratis.SmartContracts.CLR.ResultProcessors;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.CLR.Validation;
 using Stratis.SmartContracts.Core;
-using Stratis.SmartContracts.Core.Interfaces;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Core.Util;
@@ -62,6 +63,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts
 
             this.logger.LogInformation("Smart Contract Feature Injected.");
             return Task.CompletedTask;
+        }
+
+        public override void Dispose()
+        {
         }
     }
 
@@ -128,13 +133,13 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                         services.AddSingleton<IMethodParameterStringSerializer, MethodParameterStringSerializer>();
                         services.AddSingleton<ICallDataSerializer, CallDataSerializer>();
 
-                        // Registers the ScriptAddressReader concrete type and replaces the IScriptAddressReader implementation
-                        // with SmartContractScriptAddressReader, which depends on the ScriptAddressReader concrete type.
-                        services.AddSingleton<ScriptAddressReader>();
-                        services.Replace(new ServiceDescriptor(typeof(IScriptAddressReader), typeof(SmartContractScriptAddressReader), ServiceLifetime.Singleton));
-
                         // After setting up, invoke any additional options which can replace services as required.
                         options?.Invoke(new SmartContractOptions(services, fullNodeBuilder.Network));
+
+                        // Controllers, necessary for DIing into the dynamic controller api.
+                        // Use AddScoped for instance-per-request lifecycle, ref. https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection?view=aspnetcore-2.2#scoped
+                        services.AddScoped<SmartContractsController>();
+                        services.AddScoped<SmartContractWalletController>();
                     });
             });
 
@@ -152,7 +157,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 {
                     services.AddSingleton<IPoAMiner, PoAMiner>();
                     services.AddSingleton<MinerSettings>();
-                    services.AddSingleton<PoAMinerSettings>();
                     services.AddSingleton<BlockDefinition, T>();
                     services.AddSingleton<IBlockBufferGenerator, BlockBufferGenerator>();
                 });

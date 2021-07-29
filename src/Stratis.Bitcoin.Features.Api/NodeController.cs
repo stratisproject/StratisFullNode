@@ -71,6 +71,8 @@ namespace Stratis.Bitcoin.Features.Api
         /// <summary>An interface implementation used to retrieve unspent transactions.</summary>
         private readonly IGetUnspentTransaction getUnspentTransaction;
 
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
+
         /// <summary>Specification of the network the node runs on.</summary>
         private Network network; // Not readonly because of ValidateAddress
 
@@ -97,6 +99,7 @@ namespace Stratis.Bitcoin.Features.Api
             ISelfEndpointTracker selfEndpointTracker,
             IConsensusManager consensusManager,
             IBlockStore blockStore,
+            IInitialBlockDownloadState initialBlockDownloadState,
             IGetUnspentTransaction getUnspentTransaction = null,
             INetworkDifficulty networkDifficulty = null,
             IPooledGetUnspentTransaction pooledGetUnspentTransaction = null,
@@ -127,6 +130,7 @@ namespace Stratis.Bitcoin.Features.Api
             this.consensusManager = consensusManager;
             this.blockStore = blockStore;
             this.getUnspentTransaction = getUnspentTransaction;
+            this.initialBlockDownloadState = initialBlockDownloadState;
             this.networkDifficulty = networkDifficulty;
             this.pooledGetUnspentTransaction = pooledGetUnspentTransaction;
             this.pooledTransaction = pooledTransaction;
@@ -158,7 +162,8 @@ namespace Stratis.Bitcoin.Features.Api
                 RunningTime = this.dateTimeProvider.GetUtcNow() - this.fullNode.StartTime,
                 CoinTicker = this.network.CoinTicker,
                 State = this.fullNode.State.ToString(),
-                BestPeerHeight = this.chainState.BestPeerTip?.Height
+                BestPeerHeight = this.chainState.BestPeerTip?.Height,
+                InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
             };
 
             // Add the list of features that are enabled.
@@ -656,6 +661,19 @@ namespace Stratis.Bitcoin.Features.Api
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
+        }
+
+        /// <summary>
+        /// Schedules data folder storing chain state in the <see cref="DataFolder"/> for deletion on the next graceful shutdown.
+        /// </summary>
+        /// <returns></returns>
+        [HttpDelete]
+        [Route("datafolder/chain")]
+        public IActionResult DeleteChain()
+        {
+            this.nodeSettings.DataFolder.ScheduleChainDeletion();
+
+            return Ok();
         }
 
         /// <summary>

@@ -1,7 +1,6 @@
 ﻿using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
-using Stratis.SmartContracts.Core;
 using Stratis.SmartContracts.Networks;
 using Xunit;
 

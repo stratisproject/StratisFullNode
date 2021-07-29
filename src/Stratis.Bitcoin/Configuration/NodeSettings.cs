@@ -11,6 +11,7 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin.Builder.Feature;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Configuration
@@ -34,6 +35,11 @@ namespace Stratis.Bitcoin.Configuration
     /// </summary>
     public class NodeSettings : IDisposable
     {
+        /// <summary>
+        /// String value that defines the devmode flag in config.
+        /// </summary>
+        public const string DevModeParam = "devmode";
+
         /// <summary>The version of the protocol supported by the current implementation of the Full Node.</summary>
         public const ProtocolVersion SupportedProtocolVersion = ProtocolVersion.SENDHEADERS_VERSION;
 
@@ -109,9 +115,13 @@ namespace Stratis.Bitcoin.Configuration
         public FeeRate MinRelayTxFeeRate { get; private set; }
 
         /// <summary>
-        /// If true then the node will add and start the SignalR feature.
+        /// A flag that allows node to start in developer (dev) mode.
+        /// <para>
+        /// This is primarily in situations where the node is required to mine and/or send and build transactions
+        /// whilst in a closed (no connections) environment.
+        /// </para>
         /// </summary>
-        public bool EnableSignalR { get; private set; }
+        public DevModeNodeRole? DevMode { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the object.
@@ -212,7 +222,10 @@ namespace Stratis.Bitcoin.Configuration
             }
 
             // Set the data folder.
-            this.DataFolder = new DataFolder(this.DataDir);
+            if (this.GetDbType() == DbType.Leveldb)
+                this.DataFolder = new DataFolder(this.DataDir);
+            else
+                this.DataFolder = new DataFolder(this.DataDir, this.GetDbType());
 
             // Attempt to load NLog configuration from the DataFolder.
             this.LogSettings = new LogSettings();
@@ -230,13 +243,23 @@ namespace Stratis.Bitcoin.Configuration
                     this.ReadConfigurationFile();
             }
 
-            this.EnableSignalR = this.ConfigReader.GetOrDefault<bool>("enableSignalR", false, this.Logger);
-
             // Create the custom logger factory.
             this.LoggerFactory.AddFilters(this.LogSettings, this.DataFolder);
 
             // Load the configuration.
             this.LoadConfiguration();
+
+            // Set the devmode flag.
+            var devmode = this.ConfigReader.GetOrDefault<string>(DevModeParam, null);
+            if (devmode != null)
+            {
+                if (devmode == DevModeNodeRole.Default.ToString().ToLowerInvariant())
+                    this.DevMode = DevModeNodeRole.Default;
+                else if (devmode == DevModeNodeRole.Miner.ToString().ToLowerInvariant())
+                    this.DevMode = DevModeNodeRole.Miner;
+                else
+                    throw new ConfigurationException("Invalid devmode option specified (either 'default' or 'miner' permitted.");
+            }
         }
 
         /// <summary>Determines whether to print help and exit.</summary>
@@ -426,5 +449,21 @@ namespace Stratis.Bitcoin.Configuration
         {
             this.LoggerFactory.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Determines the type of node that will be started in developer (dev) mode.
+    /// </summary>
+    public enum DevModeNodeRole
+    {
+        /// <summary>
+        /// This role allows the node to join the dev mode network as a miner (currently only one miner is allowed).
+        /// </summary>
+        Miner,
+
+        /// <summary>
+        /// This role specifies that the node will join the network as a non-miner (normal node).
+        /// </summary>
+        Default
     }
 }

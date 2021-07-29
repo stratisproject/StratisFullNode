@@ -390,23 +390,31 @@ namespace Stratis.Bitcoin.Base
                     services.AddSingleton<ISignals, Signals.Signals>();
                     services.AddSingleton<ISubscriptionErrorHandler, DefaultSubscriptionErrorHandler>();
                     services.AddSingleton<FullNode>().AddSingleton((provider) => { return provider.GetService<FullNode>() as IFullNode; });
-                    services.AddSingleton(new ChainIndexer(fullNodeBuilder.Network));
-                    services.AddSingleton(DateTimeProvider.Default);
-                    services.AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>();
-                    services.AddSingleton<IChainState, ChainState>();
-                    services.AddSingleton<IChainRepository, ChainRepository>();
+
+                    ChainIndexer chainIndexer = new ChainIndexer(fullNodeBuilder.Network);
+                    IChainStore chainStore = null;
 
                     if (dbType == DbType.Leveldb)
                     {
-                        services.AddSingleton<IChainStore, LevelDbChainStore>();
+                        chainStore = new LevelDbChainStore(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
                         services.AddSingleton<IKeyValueRepository, LevelDbKeyValueRepository>();
                     }
 
                     if (dbType == DbType.RocksDb)
                     {
-                        services.AddSingleton<IChainStore, RocksDbChainStore>();
+                        chainStore = new RocksDbChainStore(fullNodeBuilder.Network, fullNodeBuilder.NodeSettings.DataFolder, chainIndexer);
                         services.AddSingleton<IKeyValueRepository, RocksDbKeyValueRepository>();
                     }
+
+                    chainIndexer[0].SetChainStore(chainStore);
+
+                    services.AddSingleton(chainStore);
+                    services.AddSingleton(chainIndexer);
+
+                    services.AddSingleton(DateTimeProvider.Default);
+                    services.AddSingleton<IInvalidBlockHashStore, InvalidBlockHashStore>();
+                    services.AddSingleton<IChainState, ChainState>();
+                    services.AddSingleton<IChainRepository, ChainRepository>();
 
                     services.AddSingleton<IFinalizedBlockInfoRepository, FinalizedBlockInfoRepository>();
                     services.AddSingleton<ITimeSyncBehaviorState, TimeSyncBehaviorState>();

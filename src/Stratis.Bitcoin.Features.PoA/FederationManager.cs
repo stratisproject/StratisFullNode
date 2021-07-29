@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.PoA.Events;
 using Stratis.Bitcoin.Features.PoA.Voting;
-using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
-using Stratis.Features.PoA.Collateral;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
 namespace Stratis.Bitcoin.Features.PoA
@@ -47,10 +45,12 @@ namespace Stratis.Bitcoin.Features.PoA
         void RemoveFederationMember(IFederationMember federationMember);
 
         /// <summary>Gets the height at which the Strax-era started.</summary>
+        /// <returns>The block height at which the Strax era started.</returns>
         /// <remarks>This is the height for which <see cref="PoANetwork.StraxMiningMultisigMembers"/> is applicable.</remarks>
         int? GetMultisigMinersApplicabilityHeight();
 
         /// <summary>Provides federation member of this node or <c>null</c> if <see cref="IsFederationMember"/> is <c>false</c>.</summary>
+        /// <returns>The current federation member instance.</returns>
         IFederationMember GetCurrentFederationMember();
     }
 
@@ -62,6 +62,9 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <inheritdoc />
         public Key CurrentFederationKey { get; private set; }
 
+        /// <summary>
+        /// This can be null if the side chain node is started in dev mode.
+        /// </summary>
         private readonly ICounterChainSettings counterChainSettings;
 
         /// <summary>Collection of all active federation members as determined by the genesis members and all executed polls.</summary>
@@ -77,16 +80,12 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly NodeSettings nodeSettings;
         private readonly ISignals signals;
 
-        private int? multisigMinersApplicabilityHeight;
-        private ChainedHeader lastBlockChecked;
-
         public FederationManager(
-            ICounterChainSettings counterChainSettings,
             IFullNode fullNode,
             Network network,
             NodeSettings nodeSettings,
-            ILoggerFactory loggerFactory,
-            ISignals signals)
+            ISignals signals,
+            ICounterChainSettings counterChainSettings = null)
         {
             this.counterChainSettings = counterChainSettings;
             this.fullNode = fullNode;
@@ -94,7 +93,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.nodeSettings = Guard.NotNull(nodeSettings, nameof(nodeSettings));
             this.signals = Guard.NotNull(signals, nameof(signals));
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.locker = new object();
         }
 
@@ -102,55 +101,71 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             var genesisFederation = new List<IFederationMember>(this.network.ConsensusOptions.GenesisFederationMembers);
 
-            this.logger.LogInformation("Genesis federation contains {0} members. Their public keys are: {1}", genesisFederation.Count, $"{Environment.NewLine}{string.Join(Environment.NewLine, genesisFederation)}");
+            this.logger.Info("Genesis federation contains {0} members. Their public keys are: {1}", genesisFederation.Count, $"{Environment.NewLine}{string.Join(Environment.NewLine, genesisFederation)}");
 
             // Load federation from the db.
             this.LoadFederation();
 
             if (this.federationMembers == null)
             {
-                this.logger.LogDebug("Federation members are not stored in the db. Loading genesis federation members.");
+                this.logger.Debug("Federation members are not stored in the database, using genesis federation members.");
                 this.federationMembers = genesisFederation;
             }
 
             // Display federation.
-            this.logger.LogInformation("Current federation contains {0} members. Their public keys are: {1}",
-                this.federationMembers.Count, Environment.NewLine + string.Join(Environment.NewLine, this.federationMembers));
+            this.logger.Info("Current federation contains {0} members. Their public keys are: {1}", this.federationMembers.Count, Environment.NewLine + string.Join(Environment.NewLine, this.federationMembers));
 
-            // Load key.
-            Key key = new KeyTool(this.nodeSettings.DataFolder).LoadPrivateKey();
-            if (key == null)
-            {
-                this.logger.LogWarning("No federation key was loaded from 'federationKey.dat'.");
+            // Set the current federation member's key.
+            if (!InitializeFederationMemberKey())
                 return;
-            }
-
-            this.CurrentFederationKey = key;
-            this.SetIsFederationMember();
-
-            if (this.CurrentFederationKey == null)
-            {
-                this.logger.LogTrace("(-)[NOT_FED_MEMBER]");
-                return;
-            }
 
             // Loaded key has to be a key for current federation.
             if (!this.federationMembers.Any(x => x.PubKey == this.CurrentFederationKey.PubKey))
             {
-                this.logger.LogWarning("Key provided is not registered on the network.");
+                this.logger.Warn("Key provided is not registered on the network.");
             }
 
             // TODO This will be removed once we remove the distinction between FederationMember and CollateralFederationMember
-            CheckCollateralMembers();
+            if (this.federationMembers.Any(f => f is CollateralFederationMember))
+                CheckCollateralMembers();
 
-            this.logger.LogInformation("Federation key pair was successfully loaded. Your public key is: '{0}'.", this.CurrentFederationKey.PubKey);
+            this.logger.Info("Federation key pair was successfully loaded. Your public key is: '{0}'.", this.CurrentFederationKey.PubKey);
+        }
+
+        private bool InitializeFederationMemberKey()
+        {
+            if (this.nodeSettings.DevMode == null)
+            {
+                // Load key.
+                Key key = new KeyTool(this.nodeSettings.DataFolder).LoadPrivateKey();
+                if (key == null)
+                {
+                    this.logger.Warn("No federation key was loaded from 'federationKey.dat'.");
+                    return false;
+                }
+
+                this.CurrentFederationKey = key;
+                this.SetIsFederationMember();
+
+                if (this.CurrentFederationKey == null)
+                {
+                    this.logger.Trace("(-)[NOT_FED_MEMBER]");
+                    return false;
+                }
+
+                return true;
+            }
+            else
+            {
+                var keyIndex = this.nodeSettings.ConfigReader.GetOrDefault("fedmemberindex", 0);
+                this.CurrentFederationKey = this.network.FederationKeys[keyIndex];
+                this.SetIsFederationMember();
+                return true;
+            }
         }
 
         private void CheckCollateralMembers()
         {
-            if (!this.federationMembers.Any(f => f is CollateralFederationMember))
-                return;
-
             IEnumerable<CollateralFederationMember> collateralFederationMembers = this.federationMembers.Cast<CollateralFederationMember>().Where(x => x.CollateralAmount != null && x.CollateralAmount > 0);
 
             if (collateralFederationMembers.Any(x => x.CollateralMainchainAddress == null))
@@ -209,15 +224,19 @@ namespace Stratis.Bitcoin.Features.PoA
                 // Update member types by using the multisig mining keys supplied on the command-line. Don't add/remove members.
                 foreach (CollateralFederationMember federationMember in this.federationMembers)
                 {
+                    bool shouldBeMultisigMember;
                     if (straxEra)
                     {
-                        federationMember.IsMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
+                        shouldBeMultisigMember = this.network.StraxMiningMultisigMembers.Contains(federationMember.PubKey);
                     }
                     else
                     {
-                        federationMember.IsMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
+                        shouldBeMultisigMember = ((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers
                             .Any(m => m.PubKey == federationMember.PubKey && ((CollateralFederationMember)m).IsMultisigMember);
                     }
+
+                    if (federationMember.IsMultisigMember != shouldBeMultisigMember)
+                        federationMember.IsMultisigMember = shouldBeMultisigMember;
                 }
             }
         }
@@ -273,13 +292,13 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 if (this.federationMembers.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
                 {
-                    this.logger.LogTrace("(-)[DUPLICATED_COLLATERAL_ADDR]");
+                    this.logger.Trace("(-)[DUPLICATED_COLLATERAL_ADDR]");
                     return;
                 }
 
                 if (this.federationMembers.Contains(federationMember))
                 {
-                    this.logger.LogTrace("(-)[ALREADY_EXISTS]");
+                    this.logger.Trace("(-)[ALREADY_EXISTS]");
                     return;
                 }
             }
@@ -288,7 +307,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.SetIsFederationMember();
 
-            this.logger.LogInformation("Federation member '{0}' was added.", federationMember);
+            this.logger.Info("Federation member '{0}' was added.", federationMember);
         }
 
         public void RemoveFederationMember(IFederationMember federationMember)
@@ -299,7 +318,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 this.SetIsFederationMember();
 
-                this.logger.LogInformation("Federation member '{0}' was removed.", federationMember);
+                this.logger.Info("Federation member '{0}' was removed.", federationMember);
             }
 
             this.signals.Publish(new FedMemberKicked(federationMember));
@@ -310,44 +329,25 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
             this.federationMembers = votingManager.GetFederationFromExecutedPolls();
-            this.UpdateMultisigMiners(this.multisigMinersApplicabilityHeight != null);
+            this.UpdateMultisigMiners(this.GetMultisigMinersApplicabilityHeight() != null);
         }
 
         /// <inheritdoc />
         public int? GetMultisigMinersApplicabilityHeight()
         {
             IConsensusManager consensusManager = this.fullNode.NodeService<IConsensusManager>();
-            ChainedHeader fork = (this.lastBlockChecked == null) ? null : consensusManager.Tip.FindFork(this.lastBlockChecked);
 
-            if (this.multisigMinersApplicabilityHeight != null && fork?.HashBlock == this.lastBlockChecked?.HashBlock)
-                return this.multisigMinersApplicabilityHeight;
+            // Not always passed in tests.
+            if (consensusManager == null)
+                return 0;
 
-            this.lastBlockChecked = fork;
-            this.multisigMinersApplicabilityHeight = null;
-            var commitmentHeightEncoder = new CollateralHeightCommitmentEncoder();
+            if (this.network.MultisigMinersApplicabilityHeight == null)
+                return null;
+            
+            if (consensusManager.Tip.Height < this.network.MultisigMinersApplicabilityHeight)
+                return null;
 
-            ChainedHeader[] headers = consensusManager.Tip.EnumerateToGenesis().TakeWhile(h => h != this.lastBlockChecked && h.Height >= this.network.CollateralCommitmentActivationHeight).Reverse().ToArray();
-
-            ChainedHeader first = BinarySearch.BinaryFindFirst<ChainedHeader>(headers, (chainedHeader) =>
-            {
-                ChainedHeaderBlock block = consensusManager.GetBlockData(chainedHeader.HashBlock);
-                if (block == null)
-                    return null;
-
-                // Finding the height of the first STRAX collateral commitment height.
-                (int? commitmentHeight, uint? magic) = commitmentHeightEncoder.DecodeCommitmentHeight(block.Block.Transactions.First());
-                if (commitmentHeight == null)
-                    return null;
-
-                return magic == this.counterChainSettings.CounterChainNetwork.Magic;
-            });
-
-            this.lastBlockChecked = headers.LastOrDefault();
-            this.multisigMinersApplicabilityHeight = first?.Height;
-
-            this.UpdateMultisigMiners(first != null);
-
-            return this.multisigMinersApplicabilityHeight;
+            return this.network.MultisigMinersApplicabilityHeight;
         }
 
         public bool IsMultisigMember(PubKey pubKey)

@@ -85,6 +85,9 @@ namespace Stratis.Bitcoin
         Disposing,
 
         /// <summary>Assigned when <see cref="IFullNode.Dispose"/> finished executing.</summary>
-        Disposed
+        Disposed,
+
+        /// <summary>Assigned when one of the full node features failed to start.</summary>
+        Failed,
     }
 }

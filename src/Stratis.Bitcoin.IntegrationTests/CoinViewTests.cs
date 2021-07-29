@@ -282,11 +282,15 @@ namespace Stratis.Bitcoin.IntegrationTests
             var chain = new ChainIndexer(this.regTest);
             var data = new DataFolder(TestBase.CreateTestDir(this));
 
-            using (var repo = new ChainRepository(new LevelDbChainStore(this.network, data, chain)))
+            var chainStore = new LevelDbChainStore(this.network, data, chain);
+            chain[0].SetChainStore(chainStore);
+
+            using (var repo = new ChainRepository(chainStore))
             {
                 chain.SetTip(repo.LoadAsync(chain.Genesis).GetAwaiter().GetResult());
                 Assert.True(chain.Tip == chain.Genesis);
                 chain = new ChainIndexer(this.regTest);
+                chain[0].SetChainStore(chainStore);
                 ChainedHeader tip = this.AppendBlock(chain);
                 repo.SaveAsync(chain).GetAwaiter().GetResult();
                 var newChain = new ChainIndexer(this.regTest);

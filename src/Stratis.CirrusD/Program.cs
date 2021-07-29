@@ -10,8 +10,6 @@ using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SignalR;
-using Stratis.Bitcoin.Features.SignalR.Broadcasters;
-using Stratis.Bitcoin.Features.SignalR.Events;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
@@ -21,6 +19,7 @@ using Stratis.Features.Collateral;
 using Stratis.Features.Collateral.CounterChain;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.Features.Unity3dApi;
 using Stratis.Sidechains.Networks;
 
 namespace Stratis.CirrusD
@@ -79,29 +78,13 @@ namespace Stratis.CirrusD
             .UseSmartContractWallet()
             .AddSQLiteWalletRepository()
             .UseApi()
+            .UseUnity3dApi()
             .AddRPC()
-            .UseDiagnosticFeature();
-
-            if (nodeSettings.EnableSignalR)
+            .AddSignalR(options =>
             {
-                nodeBuilder.AddSignalR(options =>
-                {
-                    options.EventsToHandle = new[]
-                    {
-                        (IClientEvent) new BlockConnectedClientEvent(),
-                        new TransactionReceivedClientEvent()
-                    };
-
-                    options.ClientEventBroadcasters = new[]
-                    {
-                        (Broadcaster: typeof(CirrusWalletInfoBroadcaster),
-                            ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
-                            {
-                                BroadcastFrequencySeconds = 5
-                            })
-                    };
-                });
-            }
+                DaemonConfiguration.ConfigureSignalRForCirrus(options);
+            })
+            .UseDiagnosticFeature();
 
             return nodeBuilder.Build();
         }

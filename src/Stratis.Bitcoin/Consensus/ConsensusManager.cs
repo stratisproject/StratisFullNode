@@ -14,6 +14,7 @@ using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus.PerformanceCounters.ConsensusManager;
 using Stratis.Bitcoin.Consensus.ValidationResults;
 using Stratis.Bitcoin.Consensus.Validators;
+using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.EventBus.CoreEvents;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P.Peer;
@@ -236,13 +237,13 @@ namespace Stratis.Bitcoin.Consensus
             // We should consider creating a consensus store class that will internally contain
             // coinview and it will abstract the methods `RewindAsync()` `GetBlockHashAsync()`
 
-            HashHeightPair consensusTipHash = this.ConsensusRules.GetBlockHash();
+            HashHeightPair coinViewTip = this.ConsensusRules.GetBlockHash();
 
             ChainedHeader pendingTip;
 
             while (true)
             {
-                pendingTip = chainTip.FindAncestorOrSelf(consensusTipHash.Hash);
+                pendingTip = chainTip.FindAncestorOrSelf(coinViewTip.Hash);
 
                 if ((pendingTip != null) && (this.chainState.BlockStoreTip.Height >= pendingTip.Height))
                     break;
@@ -252,7 +253,7 @@ namespace Stratis.Bitcoin.Consensus
                 // In case block store initialized behind, rewind until or before the block store tip.
                 // The node will complete loading before connecting to peers so the chain will never know if a reorg happened.
                 RewindState transitionState = await this.ConsensusRules.RewindAsync().ConfigureAwait(false);
-                consensusTipHash = transitionState.BlockHash;
+                coinViewTip = transitionState.BlockHash;
             }
 
             this.chainedHeaderTree.Initialize(pendingTip);
@@ -261,6 +262,8 @@ namespace Stratis.Bitcoin.Consensus
 
             if (this.chainIndexer.Tip != pendingTip)
                 this.chainIndexer.Initialize(pendingTip);
+
+            this.logger.LogInformation("Consensus Manager initialized with tip '{0}'.", pendingTip);
 
             this.blockPuller.Initialize(this.BlockDownloaded);
 
@@ -903,9 +906,12 @@ namespace Stratis.Bitcoin.Consensus
             {
                 var badPeers = new List<int>();
 
-                lock (this.peerLock)
+                if (!validationContext.InsufficientHeaderInformation)
                 {
-                    badPeers = this.chainedHeaderTree.PartialOrFullValidationFailed(blockToConnect.ChainedHeader);
+                    lock (this.peerLock)
+                    {
+                        badPeers = this.chainedHeaderTree.PartialOrFullValidationFailed(blockToConnect.ChainedHeader);
+                    }
                 }
 
                 var failureResult = new ConnectBlocksResult(false)
@@ -1476,7 +1482,9 @@ namespace Stratis.Bitcoin.Consensus
         [NoTrace]
         private void AddBenchStats(StringBuilder benchLog)
         {
-            benchLog.AppendLine(this.performanceCounter.TakeSnapshot().ToString());
+            benchLog.Append(this.performanceCounter.TakeSnapshot().ToString());
+            benchLog.AppendLine();
+            benchLog.AppendLine(((InMemoryEventBus)this.signals).GetPerformanceCounter().TakeSnapshot().GetEventStats(typeof(BlockConnected)));
         }
 
         [NoTrace]

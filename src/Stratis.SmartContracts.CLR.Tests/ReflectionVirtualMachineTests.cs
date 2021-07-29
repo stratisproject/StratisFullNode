@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reflection;
 using System.Text;
-using CSharpFunctionalExtensions;
 using Moq;
 using NBitcoin;
 using Stratis.SmartContracts.CLR.Caching;

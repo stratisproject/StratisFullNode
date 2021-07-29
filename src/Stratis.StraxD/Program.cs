@@ -13,12 +13,11 @@ using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.RPC;
 using Stratis.Bitcoin.Features.SignalR;
-using Stratis.Bitcoin.Features.SignalR.Broadcasters;
-using Stratis.Bitcoin.Features.SignalR.Events;
 using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.Diagnostic;
 using Stratis.Features.SQLiteWalletRepository;
+using Stratis.Features.Unity3dApi;
 
 namespace Stratis.StraxD
 {
@@ -47,32 +46,13 @@ namespace Stratis.StraxD
                     .AddSQLiteWalletRepository()
                     .AddPowPosMining(true)
                     .UseApi()
+                    .UseUnity3dApi()
                     .AddRPC()
-                    .UseDiagnosticFeature();
-
-                if (nodeSettings.EnableSignalR)
-                {
-                    nodeBuilder.AddSignalR(options =>
+                    .AddSignalR(options =>
                     {
-                        options.EventsToHandle = new[]
-                        {
-                            (IClientEvent) new BlockConnectedClientEvent(),
-                            new TransactionReceivedClientEvent()
-                        };
-
-                        options.ClientEventBroadcasters = new[]
-                        {
-                            (Broadcaster: typeof(StakingBroadcaster), ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
-                                {
-                                    BroadcastFrequencySeconds = 5
-                                }),
-                            (Broadcaster: typeof(WalletInfoBroadcaster), ClientEventBroadcasterSettings: new ClientEventBroadcasterSettings
-                                {
-                                    BroadcastFrequencySeconds = 5
-                                })
-                        };
-                    });
-                }
+                        DaemonConfiguration.ConfigureSignalRForStrax(options);
+                    })
+                    .UseDiagnosticFeature();
 
                 IFullNode node = nodeBuilder.Build();
 

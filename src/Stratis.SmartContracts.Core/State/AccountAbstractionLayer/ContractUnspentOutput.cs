@@ -29,8 +29,7 @@ namespace Stratis.SmartContracts.Core.State.AccountAbstractionLayer
 
         public ContractUnspentOutput(byte[] bytes)
         {
-            RLPCollection list = RLP.Decode(bytes);
-            RLPCollection innerList = (RLPCollection)list[0];
+            RLPCollection innerList = (RLPCollection)RLP.Decode(bytes);
             this.Hash = new uint256(innerList[0].RLPData);
             this.Nvout = BitConverter.ToUInt32(innerList[1].RLPData, 0);
             this.Value = BitConverter.ToUInt64(innerList[2].RLPData, 0);
