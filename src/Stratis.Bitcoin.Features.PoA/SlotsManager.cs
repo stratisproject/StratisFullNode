@@ -42,7 +42,11 @@ namespace Stratis.Bitcoin.Features.PoA
             A miner can calculate when its expected to mine by looking at the ordered list of federation members
             and the last block that was mined and by whom. It can count the number of mining slots from that member
             to itself and multiply that with the target spacing to arrive at its mining timestamp.
-            */
+
+            The fact that the federation can change at any time adds a little complexity to this basic approach. 
+            The miner that mined the last block may no longer exist when the next block is about to be mined. As such
+            we may need to look a bit further back to find a "reference miner" that still occurs in the latest federation.
+             */
             List<IFederationMember> federationMembersAtMinedBlock = this.federationHistory.GetFederationForBlock(tip, 1);
             if (federationMembersAtMinedBlock == null)
                 throw new Exception($"Could not determine the federation at block { tip.Height } + 1.");
@@ -51,38 +55,37 @@ namespace Stratis.Bitcoin.Features.PoA
             if (myIndex < 0)
                 throw new NotAFederationMemberException();
 
-            var roundTime = this.GetRoundLength(federationMembersAtMinedBlock.Count);
-
-            // Determine the index of the miner that mined the last block.
-            IFederationMember lastMiner = this.federationHistory.GetFederationMemberForBlock(tip);
-            List<IFederationMember> federationMembersAtTip = this.federationHistory.GetFederationForBlock(tip);
-            int lastMinerIndex = federationMembersAtTip.FindIndex(m => m.PubKey == lastMiner.PubKey);
-            if (lastMinerIndex < 0)
-                throw new Exception($"The miner ('{lastMiner.PubKey.ToHex()}') of the block at height {tip.Height} could not be located in federation.");
-
-            int index = -1;
-
-            // Looking back, find the first member in common between the old and new federation.
-            for (int i = federationMembersAtTip.Count; i >= 1 && index < 0; i--)
+            // Find a "reference miner" to determine our slot against.
+            ChainedHeader referenceMinerBlock = tip;
+            IFederationMember referenceMiner = null;
+            int referenceMinerIndex = -1;
+            int referenceMinerDepth = 0;
+            for (int i = 0; i < federationMembersAtMinedBlock.Count; i++, referenceMinerDepth++)
             {
-                PubKey keyToFind = federationMembersAtTip[(i + lastMinerIndex) % federationMembersAtTip.Count].PubKey;
-                index = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == keyToFind);
+                referenceMiner = this.federationHistory.GetFederationMemberForBlock(referenceMinerBlock);
+                referenceMinerIndex = federationMembersAtMinedBlock.FindIndex(m => m.PubKey == referenceMiner.PubKey);
+                if (referenceMinerIndex >= 0)
+                    break;
             }
-            
-            if (index < 0)
+
+            if (referenceMinerIndex < 0)
                 throw new Exception("Could not find a member in common between the old and new federation");
 
-            // Found a member that occurs in both old and new federation.
-            // Determine "distance" apart in new federation.
-            int diff = myIndex - index;
-            while (diff < 0)
-                diff += federationMembersAtMinedBlock.Count;
+            // Found a reference miner that also occurs in the latest federation.
+            // Determine how many blocks before our mining slot.
+            int blocksFromTipToMiningSlot = myIndex - referenceMinerIndex - referenceMinerDepth;
+            while (blocksFromTipToMiningSlot < 0)
+                blocksFromTipToMiningSlot += federationMembersAtMinedBlock.Count;
 
+            var roundTime = this.GetRoundLength(federationMembersAtMinedBlock.Count);
+
+            // Advance the tip time for any rounds that may not have been mined.
             DateTimeOffset tipTime = tip.Header.BlockTime;
             while ((tipTime + roundTime) < timeNow)
                 tipTime += roundTime;
 
-            DateTimeOffset timeToMine = tipTime + roundTime * diff / federationMembersAtMinedBlock.Count;
+            // Determine the time to mine by adding a fraction of the round time according to how far our slots is "into" the round.
+            DateTimeOffset timeToMine = tipTime + roundTime * blocksFromTipToMiningSlot / federationMembersAtMinedBlock.Count;
             if (timeToMine < timeNow)
                 timeToMine += roundTime;
 
