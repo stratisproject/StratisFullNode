@@ -116,7 +116,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (burnRequests == null)
                 return;
 
-            foreach (ConversionRequest burnRequest in burnRequests.Where(b => b.BlockHeight >= inspectForDepositsAtHeight))
+            foreach (ConversionRequest burnRequest in burnRequests.Where(b => inspectForDepositsAtHeight >= b.BlockHeight))
             {
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
