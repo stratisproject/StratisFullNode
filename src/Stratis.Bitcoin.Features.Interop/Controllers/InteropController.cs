@@ -401,22 +401,24 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <summary>
         /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
         /// </summary>
-        /// <param name="requestId">The request id in question.</param>
+        /// <param name="model">The request id and height at which to reprocess the burn request at.</param>
         [Route("requests/reprocessburn")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult ReprocessBurnRequest([FromBody] string requestId)
+        public IActionResult ReprocessBurnRequest([FromBody] ReprocessBurnRequestModel model)
         {
             try
             {
-                this.conversionRequestRepository.SetBurnRequestState(requestId, ConversionRequestStatus.Unprocessed);
-                return this.Json($"Burn request '{requestId}' has been reset to {ConversionRequestStatus.Unprocessed}.");
+                this.conversionRequestRepository.ReprocessBurnRequest(model.RequestId, model.BlockHeight, ConversionRequestStatus.Unprocessed);
+                this.logger.Info($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
+
+                return this.Json($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
             }
             catch (Exception e)
             {
-                this.logger.Error("Exception setting burn request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+                this.logger.Error("Exception setting burn request '{0}' to be reprocessed : {1}.", model.RequestId, e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }

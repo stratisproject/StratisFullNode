@@ -40,8 +40,9 @@ namespace Stratis.Features.FederatedPeg.Conversion
         /// Sets a burn requests state.
         /// </summary>
         /// <param name="requestId">The request Id to set the state for.</param>
+        /// <param name="blockHeight">The block height at which to reprocess the burn request.</param>
         /// <param name="requestStatus">The status to set the burn request to.</param>
-        void SetBurnRequestState(string requestId, ConversionRequestStatus requestStatus);
+        void ReprocessBurnRequest(string requestId, int blockHeight, ConversionRequestStatus requestStatus);
     }
 
     public class ConversionRequestRepository : IConversionRequestRepository
@@ -96,7 +97,7 @@ namespace Stratis.Features.FederatedPeg.Conversion
             this.KeyValueStore.Delete(requestId);
         }
 
-        public void SetBurnRequestState(string requestId, ConversionRequestStatus requestStatus)
+        public void ReprocessBurnRequest(string requestId, int blockHeight, ConversionRequestStatus requestStatus)
         {
             ConversionRequest request = this.KeyValueStore.LoadValue<ConversionRequest>(requestId);
             if (request == null)
@@ -105,6 +106,10 @@ namespace Stratis.Features.FederatedPeg.Conversion
             if (request.RequestType == ConversionRequestType.Mint)
                 throw new Exception($"{requestId} is not a burn request.");
 
+            if (blockHeight == 0)
+                throw new Exception($"Block height cannot be 0.");
+
+            request.BlockHeight = blockHeight;
             request.Processed = false;
             request.RequestStatus = requestStatus;
 

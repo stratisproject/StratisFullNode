@@ -499,7 +499,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
                                     else if ((tracker.Count(t => t.Value == CrossChainTransferStatus.Partial) + this.depositsIdsByStatus[CrossChainTransferStatus.Partial].Count) >= this.settings.MaximumPartialTransactionThreshold)
                                     {
                                         haveSuspendedTransfers = true;
-                                        this.logger.Info($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
+                                        this.logger.Warn($"Partial transaction limit of {this.settings.MaximumPartialTransactionThreshold} reached, processing of deposits will continue once the partial transaction count falls below this value.");
                                     }
                                     else
                                     {
