@@ -116,14 +116,8 @@ namespace Stratis.Features.FederatedPeg.SourceChain
             if (burnRequests == null)
                 return;
 
-            foreach (ConversionRequest burnRequest in burnRequests)
+            foreach (ConversionRequest burnRequest in burnRequests.Where(b => b.BlockHeight >= inspectForDepositsAtHeight))
             {
-                if (inspectForDepositsAtHeight < burnRequest.BlockHeight)
-                {
-                    this.logger.Info($"Burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX, will be processed at height {burnRequest.BlockHeight}.");
-                    continue;
-                }
-
                 if (inspectForDepositsAtHeight == burnRequest.BlockHeight)
                 {
                     this.logger.Info($"Processing burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' for {new Money(burnRequest.Amount)} STRAX at height {inspectForDepositsAtHeight}.");
@@ -156,24 +150,6 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                         this.conversionRequestRepository.Save(burnRequest);
 
                         this.logger.Info($"Marking burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' as processed at height {inspectForDepositsAtHeight}.");
-
-                        continue;
-                    }
-
-                    // If the inspection height has passed the burn request's processing height plus
-                    // the required confirmations and it is still unprocessed for some reason, reset the blockheight
-                    // so that it can be injected later.
-                    if (inspectForDepositsAtHeight > burnRequest.BlockHeight + requiredConfirmations)
-                    {
-                        int blockHeight = inspectForDepositsAtHeight - (inspectForDepositsAtHeight % 50) + 100;
-
-                        if (blockHeight <= 0)
-                            blockHeight = 100;
-
-                        burnRequest.BlockHeight = blockHeight;
-                        this.conversionRequestRepository.Save(burnRequest);
-
-                        this.logger.Info($"Resetting burn request '{burnRequest.RequestId}' to '{burnRequest.DestinationAddress}' to be reprocessed at height {burnRequest.BlockHeight}.");
 
                         continue;
                     }
