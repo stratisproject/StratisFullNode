@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.PoA
             The fact that the federation can change at any time adds extra complexity to this basic approach. 
             The miner that mined the last block may no longer exist when the next block is about to be mined. As such
             we may need to look a bit further back to find a "reference miner" that still occurs in the latest federation.
-             */
+            */
             ChainedHeader tip = this.chainIndexer.Tip;
             List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);
             if (federationMembers == null)
@@ -92,12 +92,18 @@ namespace Stratis.Bitcoin.Features.PoA
             // Round length in seconds.
             uint roundTime = (uint)this.GetRoundLength(federationMembers.Count).TotalSeconds;
 
+            // Get the tip time and make is a valid time if required.
+            uint tipTime = tip.Header.Time;
+            if (!IsValidTimestamp(tipTime))
+                tipTime += (this.consensusOptions.TargetSpacingSeconds - tipTime % this.consensusOptions.TargetSpacingSeconds);
+
             // Check if we have missed our turn for this round.
             // We still consider ourselves "in a turn" if we are in the first half of the turn and we haven't mined there yet.
             // This might happen when starting the node for the first time or if there was a problem when mining.
-            uint nextTimestampForMining = (uint)(tip.Header.Time + blocksFromTipToMiningSlot * this.consensusOptions.TargetSpacingSeconds);
+
+            uint nextTimestampForMining = (uint)(tipTime + blocksFromTipToMiningSlot * this.consensusOptions.TargetSpacingSeconds);
             while (currentTime > nextTimestampForMining + (this.consensusOptions.TargetSpacingSeconds / 2) // We are closer to the next turn than our own
-                  || this.chainIndexer.Tip.Header.Time == nextTimestampForMining)
+                  || tipTime == nextTimestampForMining)
                 nextTimestampForMining += roundTime;
 
             return nextTimestampForMining;

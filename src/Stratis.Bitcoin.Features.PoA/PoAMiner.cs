@@ -429,43 +429,60 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
+            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader, 1);
 
             int maxDepth = modifiedFederation.Count;
 
             log.AppendLine($"Mining information for the last { maxDepth } blocks.");
             log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
 
-            uint timeHeader = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
-            timeHeader -= timeHeader % this.network.ConsensusOptions.TargetSpacingSeconds;
-            if (timeHeader < currentHeader.Header.Time)
-                timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
+            uint currentSlotTime = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+            currentSlotTime -= currentSlotTime % this.network.ConsensusOptions.TargetSpacingSeconds;
+            if (currentHeader.Header.Time > currentSlotTime)
+                currentSlotTime = currentHeader.Header.Time;
+
+            // Determine the number of slots before this node will mine.
+            uint slotOffset = (this.slotsManager.GetMiningTimestamp(currentSlotTime) - currentSlotTime) / this.network.ConsensusOptions.TargetSpacingSeconds;
+
+            // Determine the current slot from that.
+            int mySlotIndex = modifiedFederation.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
+            int currentSlot = (int)(mySlotIndex - slotOffset + modifiedFederation.Count) % modifiedFederation.Count;
+
+            // Determine the public key of the current slot.
+            PubKey pubKey = modifiedFederation[currentSlot].PubKey;
 
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
             {
-                int headerSlot = (int)(timeHeader / this.network.ConsensusOptions.TargetSpacingSeconds) % modifiedFederation.Count;
-
-                PubKey pubKey = modifiedFederation[headerSlot].PubKey;
-
                 string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
                 // Mined in this slot?
-                if (timeHeader == currentHeader.Header.Time)
+                if (currentHeader.Header.Time == currentSlotTime)
                 {
                     log.Append($"[{ pubKeyRepresentation }] ");
 
                     currentHeader = currentHeader.Previous;
-                    hitCount++;
-
                     modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
+                    hitCount++;
                 }
                 else
                 {
                     log.Append($"<{ pubKeyRepresentation }> ");
                 }
 
-                timeHeader -= this.network.ConsensusOptions.TargetSpacingSeconds;
+                // Determine previous miner.
+                int index = modifiedFederation.FindIndex(m => m.PubKey.ToHex() == pubKey.ToHex());
+                if (index < 0)
+                {
+                    // Federation changed.
+                    log.Append($"(Federation changed)");
+                    break;
+                }
+
+                index = (index > 0) ? (index - 1) : (modifiedFederation.Count - 1);
+                pubKey = modifiedFederation[index].PubKey;
+
+                currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
 
                 if ((i % 20) == 19)
                     log.AppendLine();
