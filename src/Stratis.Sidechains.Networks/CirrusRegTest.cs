@@ -106,7 +106,10 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true
-            );
+            )
+            {
+                GetMiningTimestampV2ActivationHeight = 100
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {

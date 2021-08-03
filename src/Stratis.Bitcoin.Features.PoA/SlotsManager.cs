@@ -59,6 +59,9 @@ namespace Stratis.Bitcoin.Features.PoA
             we may need to look a bit further back to find a "reference miner" that still occurs in the latest federation.
             */
             ChainedHeader tip = this.chainIndexer.Tip;
+            if (tip.Height < this.consensusOptions.GetMiningTimestampV2ActivationHeight)
+                return GetMiningTimestampLegacy(currentTime);
+
             List<IFederationMember> federationMembers = this.federationHistory.GetFederationForBlock(tip, 1);
             if (federationMembers == null)
                 throw new Exception($"Could not determine the federation at block { tip.Height } + 1.");

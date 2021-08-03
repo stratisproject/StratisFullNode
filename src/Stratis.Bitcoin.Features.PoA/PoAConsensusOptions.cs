@@ -45,6 +45,13 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int VotingManagerV2ActivationHeight { get; set; }
 
+        /// <summary>
+        /// The height at which inituitive mining slots become active.
+        /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
+        /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
+        /// </summary>
+        public int GetMiningTimestampV2ActivationHeight { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
