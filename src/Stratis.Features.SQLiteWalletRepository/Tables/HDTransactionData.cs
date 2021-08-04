@@ -232,7 +232,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
-        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false)
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false, bool forCirrus = false)
         {
             string strLimit = DBParameter.Create(limit);
             string strOffset = DBParameter.Create(offset);
@@ -271,7 +271,8 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                             SELECT  *
                             FROM    HDPayment p
                             INNER   JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = t.WalletId AND ttp.AccountIndex = t.AccountIndex AND ttp.Address = t.Address
-                            WHERE   p.SpendTxId = t.OutputTxId))                    
+                            WHERE   p.SpendTxId = t.OutputTxId)){(!forCirrus ? "" : $@"
+                    AND     t.OutputTxIsCoinbase = 0")}
                     GROUP   BY t.OutputTxId
                     UNION   ALL";
 
