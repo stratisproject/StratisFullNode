@@ -284,7 +284,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                             WHEN p.SpendScriptPubKey >= 'c0' AND p.SpendScriptPubKey < 'c2'
                             THEN 4
                             ELSE 1 
-							END as Type,
+                            END as Type,
                             t.SpendTxTime as TimeStamp,
                     	    IFNULL(p.SendValue, 0) AS Amount,
                     	    t.Fee,
