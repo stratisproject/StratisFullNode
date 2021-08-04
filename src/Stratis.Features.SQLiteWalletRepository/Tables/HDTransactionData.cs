@@ -251,14 +251,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                             END Type                 
                     ,       t.OutputTxTime as TimeStamp
                     ,       CASE    WHEN t.OutputTxIsCoinbase = 0 THEN t.Value                                  -- Received
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value            -- Mined
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN (SUM(t.Value) - ( -- Staked
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN SUM(t.Value)       -- Mined
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN SUM(t.Value) - IFNULL(( -- Staked
                                         SELECT ttp.Value
                                         FROM HDPayment p
                                         INNER JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = {strWalletId} AND ttp.AccountIndex = {strAccountIndex}
                                         WHERE p.SpendTxId = t.OutputTxId AND p.SpendIsChange = 0
                                         LIMIT 1
-                                    ))
+                                    ), 0)
                             END Amount
                     ,       NULL as Fee
                     ,       NULL as SendToScriptPubkey
