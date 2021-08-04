@@ -245,7 +245,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     -- Find all receives
                     SELECT  t.OutputTxId as Id
                     ,       t.RedeemScript
-                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 THEN 0                                       -- Received
+                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0                 -- Received
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3                 -- Mined
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2                -- Staked
                             END Type                 
@@ -266,7 +266,6 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.OutputBlockHeight as BlockHeight
                     FROM    HDTransactionData AS t
                     WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
-                    AND     t.AddressType = 0
                     AND     (t.OutputTxIsCoinbase != 0 OR NOT EXISTS( -- Where funds were received to an address ensure that the source transaction does not include utxo's from the same address.
                             SELECT  *
                             FROM    HDPayment p
