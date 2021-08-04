@@ -252,6 +252,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.OutputTxTime as TimeStamp
                     ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value            -- Received
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN SUM(t.Value)       -- Mined
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN SUM(t.Value) - IFNULL(( -- Staked
                                         SELECT ttp.Value
                                         FROM HDPayment p
