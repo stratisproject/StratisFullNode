@@ -279,8 +279,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     -- Find all spends
                     SELECT  t.SpendTxId as Id,
                     	    t.RedeemScript,
-                    	    1 as Type,
-                    	    t.SpendTxTime as TimeStamp,
+                    	    CASE
+							WHEN p.SpendScriptPubKey >= 'c0' AND p.SpendScriptPubKey < 'c2'
+							THEN 4
+							ELSE 1 
+							END as Type,
+                            t.SpendTxTime as TimeStamp,
                     	    IFNULL(p.SendValue, 0) AS Amount,
                     	    t.Fee,
                     	    p.SpendScriptPubKey as SendToScriptPubkey,
