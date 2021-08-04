@@ -273,7 +273,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                             INNER   JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = t.WalletId AND ttp.AccountIndex = t.AccountIndex AND ttp.Address = t.Address
                             WHERE   p.SpendTxId = t.OutputTxId)){(!forCirrus ? "" : $@"
                     AND     t.OutputTxIsCoinbase = 0")}
-                    GROUP   BY t.OutputTxId, t.RedeemScript, t.OutputTxIsCoinbase, t.OutputIndex, t.Address, t.OutputBlockHeight
+                    GROUP   BY t.OutputTxId -- TODO: Fix this: , t.RedeemScript, t.OutputTxIsCoinbase, t.OutputIndex, t.Address, t.OutputBlockHeight
                     UNION   ALL";
 
             string spends = $@"
