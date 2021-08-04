@@ -252,7 +252,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.OutputTxTime as TimeStamp
                     ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value            -- Received
                                     WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN ((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - t.Value)
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN SUM(t.Value)       -- Mined                             
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value            -- Mined                             
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN SUM(t.Value) - IFNULL(( -- Staked
                                         SELECT ttp.Value
                                         FROM HDPayment p
@@ -273,17 +273,17 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                             INNER   JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = t.WalletId AND ttp.AccountIndex = t.AccountIndex AND ttp.Address = t.Address
                             WHERE   p.SpendTxId = t.OutputTxId)){(!forCirrus ? "" : $@"
                     AND     t.OutputTxIsCoinbase = 0")}
-                    GROUP   BY t.OutputTxId -- TODO: Fix this: , t.RedeemScript, t.OutputTxIsCoinbase, t.OutputIndex, t.Address, t.OutputBlockHeight
+                    GROUP   BY t.OutputTxId
                     UNION   ALL";
 
             string spends = $@"
                     -- Find all spends
                     SELECT  t.SpendTxId as Id,
                     	    t.RedeemScript,
-                    	    CASE
-							WHEN p.SpendScriptPubKey >= 'c0' AND p.SpendScriptPubKey < 'c2'
-							THEN 4
-							ELSE 1 
+                            CASE
+                            WHEN p.SpendScriptPubKey >= 'c0' AND p.SpendScriptPubKey < 'c2'
+                            THEN 4
+                            ELSE 1 
 							END as Type,
                             t.SpendTxTime as TimeStamp,
                     	    IFNULL(p.SendValue, 0) AS Amount,
