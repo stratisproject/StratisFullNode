@@ -184,10 +184,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <summary>
         /// Returns a history of all transactions in the wallet.
         /// </summary>
-        /// <param name="walletName">The name of the wallet to return the transactions of.</param>
-        /// <param name="accountName">An optional account name to limit the results to a particular account.</param>
+        /// <param name="account">An optional account name to limit the results to a particular account.</param>
+        /// <param name="limit">Limit the result set by this amount of records (used with paging).</param>
+        /// <param name="offset">Offset the result set start point by this amount of records (used with paging).</param>
+        /// <param name="txId">Optional transaction filter.</param>
+        /// <param name="address">An optional account address filter to limit the results to a particular address.</param>
+        /// <param name="forSmartContracts">If set, gets the smart contract history.</param>
         /// <returns>A history of all transactions in the wallet.</returns>
-        IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null);
+        AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null, string address = null, bool forSmartContracts = false);
 
         /// <summary>
         /// Allows an unconfirmed transaction to be removed.
@@ -324,6 +328,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <returns>Returns the payment or change details.</returns>
         IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, TransactionData transactionData, bool isChange);
 
+        IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, string transactionId);
+
         /// <summary>
         /// Adds watch-only addresses.
         /// </summary>
@@ -356,6 +362,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// <param name="accountName">The Account Name to Query</param>
         /// <returns>The Transaction Count</returns>
         int GetTransactionCount(string walletName, string accountName = null);
+
+        /// <summary>
+        /// Returns transaction data and address based on a transaction id.
+        /// </summary>
+        /// <param name="walletName">The wallet to query</param>
+        /// <param name="transactionId">The id of the transaction to find.</param>
+        /// <returns>The requested transaction data as well as the address it relates to.</returns>
+        IEnumerable<(HdAddress, IEnumerable<TransactionData>)> GetTransactionsById(string walletName, uint256 transactionId);
 
         Func<string, string> Bech32AddressFunc { get; set; }
     }

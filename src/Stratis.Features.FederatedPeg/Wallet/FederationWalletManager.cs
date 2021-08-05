@@ -117,7 +117,9 @@ namespace Stratis.Features.FederatedPeg.Wallet
         /// </summary>
         private Dictionary<OutPoint, TransactionData> outpointLookup => this.Wallet.MultiSigAddress.Transactions.GetOutpointLookup();
 
-        // Gateway settings picked up from the node config.
+        /// <summary>
+        /// Gateway settings picked up from the node config.
+        /// </summary>
         private readonly IFederatedPegSettings federatedPegSettings;
 
         public FederationWalletManager(
@@ -322,16 +324,12 @@ namespace Stratis.Features.FederatedPeg.Wallet
         {
             lock (this.lockObject)
             {
-
                 if (this.Wallet == null)
                 {
                     return Enumerable.Empty<UnspentOutputReference>();
                 }
 
-                UnspentOutputReference[] res;
-                res = this.GetSpendableTransactions(this.chainIndexer.Tip.Height, confirmations).ToArray();
-
-                return res;
+                return this.GetSpendableTransactions(this.chainIndexer.Tip.Height, confirmations).ToArray();
             }
         }
 
@@ -424,8 +422,6 @@ namespace Stratis.Features.FederatedPeg.Wallet
                     if (trxFound)
                         walletUpdated = true;
                 }
-
-                walletUpdated |= this.CleanTransactionsPastMaxReorg(chainedHeader.Height);
 
                 // Update the wallets with the last processed block height.
                 // It's important that updating the height happens after the block processing is complete,
@@ -539,26 +535,27 @@ namespace Stratis.Features.FederatedPeg.Wallet
             }
         }
 
-        private bool CleanTransactionsPastMaxReorg(int height)
+        /// <inheritdoc />
+        public bool CleanTransactionsPastMaxReorg(int crossChainTransferStoreTip)
         {
             bool walletUpdated = false;
 
             if (this.network.Consensus.MaxReorgLength == 0 || this.Wallet.MultiSigAddress.Transactions.Count <= MinimumRetainedTransactions)
                 return walletUpdated;
 
-            int finalisedHeight = height - (int)this.network.Consensus.MaxReorgLength;
-            var pastMaxReorg = new List<TransactionData>();
+            int heightToCleanFrom = crossChainTransferStoreTip - (int)this.network.Consensus.MaxReorgLength;
+            var transactionsPastMaxReorg = new List<TransactionData>();
 
-            foreach ((_, List<TransactionData> txList) in this.Wallet.MultiSigAddress.Transactions.SpentTransactionsBeforeHeight(finalisedHeight))
+            // Only want to remove transactions that are spent, and the spend must have passed max reorg too
+            foreach ((_, List<TransactionData> txList) in this.Wallet.MultiSigAddress.Transactions.SpentTransactionsBeforeHeight(heightToCleanFrom))
             {
                 foreach (TransactionData transactionData in txList)
                 {
-                    // Only want to remove transactions that are spent, and the spend must have passed max reorg too
-                    pastMaxReorg.Add(transactionData);
+                    transactionsPastMaxReorg.Add(transactionData);
                 }
             }
 
-            foreach (TransactionData transactionData in pastMaxReorg)
+            foreach (TransactionData transactionData in transactionsPastMaxReorg)
             {
                 this.Wallet.MultiSigAddress.Transactions.Remove(transactionData);
                 walletUpdated = true;
@@ -566,6 +563,8 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 if (this.Wallet.MultiSigAddress.Transactions.Count <= MinimumRetainedTransactions)
                     break;
             }
+
+            this.logger.Debug("Cleaned {0} transactions older than the CCTS tip less max reorg of {1}.", transactionsPastMaxReorg.Count, crossChainTransferStoreTip);
 
             return walletUpdated;
         }
@@ -674,29 +673,23 @@ namespace Stratis.Features.FederatedPeg.Wallet
             Guard.NotNull(utxo, nameof(utxo));
             Guard.Assert(blockHash == (blockHash ?? block?.GetHash()));
 
-            uint256 transactionHash = transaction.GetHash();
-
-            // Get the collection of transactions to add to.
-            Script script = utxo.ScriptPubKey;
-
             // Check if a similar UTXO exists or not (same transaction ID and same index).
             // New UTXOs are added, existing ones are updated.
+            uint256 transactionHash = transaction.GetHash();
             int index = transaction.Outputs.IndexOf(utxo);
-            Money amount = utxo.Value;
-            TransactionData foundTransaction = this.Wallet.MultiSigAddress.Transactions.FirstOrDefault(t => (t.Id == transactionHash) && (t.Index == index));
-            if (foundTransaction == null)
+            if (!this.Wallet.MultiSigAddress.Transactions.TryGetTransaction(transactionHash, index, out TransactionData foundTransaction))
             {
                 this.logger.Debug("Transaction '{0}-{1}' not found, creating. BlockHeight={2}, BlockHash={3}", transactionHash, index, blockHeight, blockHash);
 
                 TransactionData newTransaction = new TransactionData
                 {
-                    Amount = amount,
+                    Amount = utxo.Value,
                     BlockHeight = blockHeight,
                     BlockHash = blockHash,
                     Id = transactionHash,
                     CreationTime = DateTimeOffset.FromUnixTimeSeconds(block?.Header.Time ?? this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp()),
                     Index = index,
-                    ScriptPubKey = script
+                    ScriptPubKey = utxo.ScriptPubKey
                 };
 
                 this.Wallet.MultiSigAddress.Transactions.Add(newTransaction);
@@ -1045,7 +1038,10 @@ namespace Stratis.Features.FederatedPeg.Wallet
 
                 // Verify that the transaction has valid UTXOs.
                 if (!this.TransactionHasValidUTXOs(transaction, coins))
+                {
+                    this.logger.Error($"Transaction '{transaction.GetHash()}' does not have valid UTXOs.");
                     return ValidateTransactionResult.Failed("Transaction does not have valid UTXOs.");
+                }
 
                 // Verify that there are no earlier unspent UTXOs.
                 var comparer = Comparer<TransactionData>.Create(DeterministicCoinOrdering.CompareTransactionData);
@@ -1058,7 +1054,10 @@ namespace Stratis.Features.FederatedPeg.Wallet
                                                              .OrderByDescending(t => t, comparer)
                                                              .FirstOrDefault();
                     if (oldestInput != null && DeterministicCoinOrdering.CompareTransactionData(earliestUnspent, oldestInput) < 0)
+                    {
+                        this.logger.Error($"Earlier unspent UTXOs exist for tx '{transaction.GetHash()}'");
                         return ValidateTransactionResult.Failed("Earlier unspent UTXOs exist.");
+                    }
                 }
 
                 // Verify that all inputs are signed.
@@ -1066,13 +1065,21 @@ namespace Stratis.Features.FederatedPeg.Wallet
                 {
                     TransactionBuilder builder = new TransactionBuilder(this.Wallet.Network).AddCoins(coins);
 
-                    if (builder.Verify(transaction, this.federatedPegSettings.GetWithdrawalTransactionFee(coins.Count), out TransactionPolicyError[] errors))
+                    var verifyResult = builder.Verify(transaction, transaction.GetFee(coins.ToArray()), out TransactionPolicyError[] errors);
+                    if (verifyResult)
+                        return ValidateTransactionResult.Valid();
+
+                    // Ignore any fee related errors here as the BuildTransaction method in FederationWalletTransactionHandler would have already
+                    // verified the transaction's fee. Fee errors could occur here as the signatures (secrets) aren't added to the builder when calling
+                    // the verify method.
+                    IEnumerable<TransactionPolicyError> filteredErrors = errors.Where(a => a.GetType() != typeof(FeeTooLowPolicyError));
+                    if (!filteredErrors.Any())
                         return ValidateTransactionResult.Valid();
 
                     var errorList = new List<string>();
 
                     // Trace the reason validation failed. Note that failure here doesn't mean an error necessarily. Just that the transaction is not fully signed.
-                    foreach (TransactionPolicyError transactionPolicyError in errors)
+                    foreach (TransactionPolicyError transactionPolicyError in filteredErrors)
                     {
                         this.logger.Debug("{0} FAILED - {1}", nameof(TransactionBuilder.Verify), transactionPolicyError.ToString());
                         errorList.Add(transactionPolicyError.ToString());
@@ -1298,7 +1305,7 @@ namespace Stratis.Features.FederatedPeg.Wallet
             string hash = this.Wallet?.LastBlockSyncedHash == null ? "N/A" : this.Wallet.LastBlockSyncedHash.ToString();
             string height = this.Wallet?.LastBlockSyncedHeight == null ? "N/A" : this.Wallet.LastBlockSyncedHeight.ToString();
 
-            benchLogs.AppendLine("Fed.Wallet.Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height.PadRight(10)} (Hash : {hash})");
+            benchLogs.AppendLine("Fed.Wallet.Height".PadRight(LoggingConfiguration.ColumnLength) + $": {height}".PadRight(10) + $"(Hash: {hash})");
         }
 
         private void AddComponentStats(StringBuilder benchLog)

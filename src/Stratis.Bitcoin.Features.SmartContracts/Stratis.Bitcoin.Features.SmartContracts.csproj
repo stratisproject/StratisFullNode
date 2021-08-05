@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>    
-    <Version>1.0.7.2</Version>
+    <Version>1.0.9.0</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Features.SmartContracts</PackageId>
     <Product>Stratis.Features.SmartContracts</Product>
@@ -13,8 +13,13 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="1.10.0" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="3.0.1" />
+    <PackageReference Include="Nethereum.Web3" Version="3.8.0" />
     <PackageReference Include="Stratis.SmartContracts" Version="2.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.1.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.1.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.1.2" />
   </ItemGroup>
 
   <ItemGroup>

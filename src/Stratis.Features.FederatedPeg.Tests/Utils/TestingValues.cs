@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
@@ -60,7 +61,7 @@ namespace Stratis.Features.FederatedPeg.Tests.Utils
             Money depositAmount = GetMoney();
             string targetAddress = GetString();
 
-            return new Deposit(depositId, DepositRetrievalType.Normal, depositAmount, targetAddress, hashHeightPair.Height, hashHeightPair.Hash);
+            return new Deposit(depositId, DepositRetrievalType.Normal, depositAmount, targetAddress, DestinationChain.STRAX, hashHeightPair.Height, hashHeightPair.Hash);
         }
 
         public static MaturedBlockDepositsModel GetMaturedBlockDeposits(int depositCount = 0, HashHeightPair fixedHashHeight = null)

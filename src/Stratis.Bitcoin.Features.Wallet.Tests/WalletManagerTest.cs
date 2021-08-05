@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
 using NBitcoin.Protocol;
-using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
@@ -46,7 +45,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -151,7 +150,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -260,7 +259,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                                                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                                                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -302,7 +301,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(loggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                                                  dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                                                  dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -331,7 +330,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                                                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                                                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -361,7 +360,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                                                 dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                                                 dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.Start();
 
@@ -384,7 +383,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 DataFolder oldDataFolder = CreateDataFolder(this, callingMethod: "RecoverWalletOnlyWithPasswordWalletRecoversWallet2");
                 IWalletRepository oldWalletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, oldDataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var oldWalletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                    oldDataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), oldWalletRepository);
+                    oldDataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, oldWalletRepository);
 
                 oldWalletManager.Start();
 
@@ -396,7 +395,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -488,7 +487,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 DataFolder oldDataFolder = CreateDataFolder(this, callingMethod: "RecoverWalletOnlyWithPasswordWalletRecoversWallet2");
                 IWalletRepository oldWalletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, oldDataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var oldWalletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                    oldDataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), oldWalletRepository);
+                    oldDataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, oldWalletRepository);
 
                 oldWalletManager.Start();
 
@@ -499,7 +498,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             // create a fresh manager.
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -586,7 +585,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.GetUnusedAccount("nonexisting", "password");
             });
@@ -600,7 +599,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -621,7 +620,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -641,7 +640,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -661,7 +660,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -678,7 +677,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             DataFolder dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -704,7 +703,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
 
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -732,7 +731,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.Start();
 
@@ -750,7 +749,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.Start();
 
@@ -769,7 +768,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -785,7 +784,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var pubKey2 = account.ExternalAddresses.Skip(1).First().ScriptPubKey;
 
             account.ExternalAddresses.First().Transactions.Add(
-                new TransactionData() {
+                new TransactionData()
+                {
                     Id = (uint256)0,
                     ScriptPubKey = pubKey1
                 });
@@ -801,7 +801,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             DataFolder dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -821,7 +821,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Directory.CreateDirectory(dataFolder.WalletPath);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -844,7 +844,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             Directory.CreateDirectory(dataFolder.WalletPath);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -886,101 +886,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
         }
 
         [Fact]
-        public void GetHistoryByNameWithExistingWalletReturnsAllAddressesWithTransactions()
-        {
-            var dataFolder = CreateDataFolder(this);
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader())
-            {
-                TestMode = true
-            };
-
-            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                CreateDataFolder(this), new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
-
-            walletManager.Start();
-
-            (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            HdAccount account = wallet.AddNewAccount("password", 0, "account 0");
-
-            var tx1 = this.Network.CreateTransaction();
-            tx1.Outputs.Add(new TxOut(new Money(1.0m, MoneyUnit.BTC), account.ExternalAddresses.ElementAt(0).ScriptPubKey));
-            walletRepository.ProcessTransaction("myWallet", tx1);
-
-            var tx2 = this.Network.CreateTransaction();
-            tx2.Outputs.Add(new TxOut(new Money(1.0m, MoneyUnit.BTC), account.InternalAddresses.ElementAt(0).ScriptPubKey));
-            walletRepository.ProcessTransaction("myWallet", tx2);
-
-            List<AccountHistory> result = walletManager.GetHistory("myWallet").ToList();
-
-            Assert.NotEmpty(result);
-            Assert.Single(result);
-            AccountHistory accountHistory = result.ElementAt(0);
-            Assert.NotNull(accountHistory.Account);
-            Assert.Equal("account 0", accountHistory.Account.Name);
-            Assert.NotEmpty(accountHistory.History);
-            Assert.Equal(2, accountHistory.History.Count());
-
-            FlatHistory historyAddress = accountHistory.History.ElementAt(0);
-            Assert.Equal(account.ExternalAddresses.ElementAt(0).ScriptPubKey, historyAddress.Address.ScriptPubKey);
-            historyAddress = accountHistory.History.ElementAt(1);
-            Assert.Equal(account.InternalAddresses.ElementAt(0).ScriptPubKey, historyAddress.Address.ScriptPubKey);
-        }
-
-        [Fact]
-        public void GetHistoryByAccountWithExistingAccountReturnsAllAddressesWithTransactions()
-        {
-            var dataFolder = CreateDataFolder(this);
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader())
-            {
-                TestMode = true
-            };
-
-            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
-
-            walletManager.Start();
-
-            (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            HdAccount account = wallet.AddNewAccount("password", 0, "myAccount");
-
-            WalletTestsHelpers.AddEmptyTransactionToAddress(account, 0, 0);
-            WalletTestsHelpers.AddEmptyTransactionToAddress(account, 1, 0);
-
-            AccountHistory accountHistory = walletManager.GetHistory(account);
-
-            Assert.NotNull(accountHistory);
-            Assert.NotNull(accountHistory.Account);
-            Assert.Equal("myAccount", accountHistory.Account.Name);
-            Assert.Equal(2, accountHistory.History.Count());
-
-            FlatHistory historyAddress = accountHistory.History.ElementAt(0);
-            Assert.Equal(account.ExternalAddresses.ElementAt(0).Address, historyAddress.Address.Address);
-            historyAddress = accountHistory.History.ElementAt(1);
-            Assert.Equal(account.InternalAddresses.ElementAt(0).Address, historyAddress.Address.Address);
-        }
-
-        [Fact]
-        public void GetHistoryByAccountWithoutHavingAddressesWithTransactionsReturnsEmptyList()
-        {
-            var dataFolder = CreateDataFolder(this);
-            IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
-
-            var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
-
-            walletManager.Start();
-
-            (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet", "password", walletRepository);
-            HdAccount account = wallet.AddNewAccount("password", accountName: "myAccount");
-
-            AccountHistory result = walletManager.GetHistory(account);
-
-            Assert.NotNull(result.Account);
-            Assert.Equal("myAccount", result.Account.Name);
-            Assert.Empty(result.History);
-        }
-
-        [Fact]
         public void GetHistoryByWalletNameWithoutExistingWalletThrowsWalletException()
         {
             Assert.Throws<WalletException>(() =>
@@ -988,8 +893,8 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
-                walletManager.GetHistory("noname");
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
+                walletManager.GetHistory("noname", "account 0", null);
             });
         }
 
@@ -999,7 +904,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1018,7 +923,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
                 walletManager.GetWallet((string)"noname");
             }));
         }
@@ -1029,7 +934,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1050,7 +955,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1069,7 +974,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.GetAccounts("myWallet");
             });
@@ -1090,7 +995,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             int result = walletManager.LastBlockHeight();
 
@@ -1103,7 +1008,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1130,7 +1035,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             uint256 result = walletManager.LastReceivedBlockInfo().Hash;
 
@@ -1148,7 +1053,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1202,7 +1107,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1235,7 +1140,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             WalletTestsHelpers.CreateUnspentTransactionOfBlockHeight(account1.InternalAddresses.First(), this.Network, 8);
             WalletTestsHelpers.CreateUnspentTransactionOfBlockHeight(account1.InternalAddresses.First(), this.Network, 9);
             WalletTestsHelpers.CreateUnspentTransactionOfBlockHeight(account1.InternalAddresses.First(), this.Network, 10);
-            
+
             (Wallet wallet2, ExtKey extKey2) = WalletTestsHelpers.GenerateBlankWalletWithExtKey("myWallet2", "password", walletRepository);
 
             accountIndex = 2;
@@ -1312,7 +1217,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1374,7 +1279,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.GetSpendableTransactionsInWallet("myWallet", confirmations: 1);
             });
@@ -1391,7 +1296,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1410,7 +1315,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             WalletTestsHelpers.CreateSpentTransactionOfBlockHeight(account.InternalAddresses.First(), this.Network, 2);
             WalletTestsHelpers.CreateSpentTransactionOfBlockHeight(account.InternalAddresses.First(), this.Network, 9);
             WalletTestsHelpers.CreateSpentTransactionOfBlockHeight(account.InternalAddresses.First(), this.Network, 10);
-            
+
             IEnumerable<UnspentOutputReference> result = walletManager.GetSpendableTransactionsInWallet("myWallet1", confirmations: 1);
 
             Assert.Empty(result);
@@ -1424,7 +1329,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 Wallet wallet = walletManager.GetWallet((string)"mywallet");
                 Key key = wallet.GetExtendedPrivateKeyForAddress("password", new HdAddress()).PrivateKey;
@@ -1437,7 +1342,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1458,7 +1363,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 var dataFolder = CreateDataFolder(this);
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.Start();
 
@@ -1498,7 +1403,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1560,7 +1465,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1620,7 +1525,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1680,7 +1585,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1742,7 +1647,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1790,7 +1695,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -1862,7 +1767,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2348,7 +2253,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, concurrentchain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2374,7 +2279,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2504,7 +2409,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2552,12 +2457,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
             (Wallet wallet, ExtKey walletExtKey) = this.walletFixture.GenerateBlankWallet("myWallet1", "password", walletRepository);
-            
+
             (ExtKey ExtKey, string ExtPubKey) accountKeys1 = WalletTestsHelpers.GenerateAccountKeys(wallet, "password", "m/44'/0'/0'");
             var account = wallet.AddNewAccount(accountKeys1.ExtKey.Neuter(), accountName: "account 1");
 
@@ -2614,7 +2519,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2650,7 +2555,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2686,7 +2591,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2728,7 +2633,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2840,7 +2745,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             string result = walletManager.GetWalletFileExtension();
 
@@ -2854,7 +2759,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -2874,7 +2779,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             var dataFolder = CreateDataFolder(this);
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             IOrderedEnumerable<string> result = walletManager.GetWalletsNames().OrderBy(w => w);
 
@@ -3016,7 +2921,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -3065,7 +2970,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -3103,7 +3008,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -3175,7 +3080,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -3211,7 +3116,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             // Rewind the chain.
             chain = new ChainIndexer(this.Network);
             walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
             walletManager.Start();
 
             (Money totalAmount3, Money confirmedAmount3, Money spendableAmount3) = walletRepository.GetAccountBalance(new WalletAccountReference("myWallet1", "account1"), chain.Tip.Height);
@@ -3239,7 +3144,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
                 .Returns(new Money(5000));
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chain, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, walletFeePolicy.Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, walletFeePolicy.Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -3299,7 +3204,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             };
 
             var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, new Mock<ChainIndexer>().Object, new WalletSettings(NodeSettings.Default(this.Network)),
-                dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
             walletManager.Start();
 
@@ -3547,7 +3452,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, network, DateTimeProvider.Default, new ScriptAddressReader());
 
             return new WalletManager(this.LoggerFactory.Object, network, new ChainIndexer(network),
-                walletSettings, dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                walletSettings, dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
         }
 
         private (Mnemonic mnemonic, Wallet wallet) CreateWalletOnDiskAndDeleteWallet(DataFolder dataFolder, string password, string passphrase, string walletName, ChainIndexer chainIndexer)
@@ -3557,7 +3462,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Tests
             {
                 IWalletRepository walletRepository = new SQLiteWalletRepository(this.LoggerFactory.Object, dataFolder, this.Network, DateTimeProvider.Default, new ScriptAddressReader());
                 var walletManager = new WalletManager(this.LoggerFactory.Object, this.Network, chainIndexer, new WalletSettings(NodeSettings.Default(this.Network)),
-                    dataFolder, new Mock<IWalletFeePolicy>().Object, new Mock<IAsyncProvider>().Object, new NodeLifetime(), DateTimeProvider.Default, new ScriptAddressReader(), walletRepository);
+                    dataFolder, new Mock<IWalletFeePolicy>().Object, DateTimeProvider.Default, walletRepository);
 
                 walletManager.Start();
 

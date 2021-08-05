@@ -58,37 +58,48 @@ namespace Stratis.Bitcoin.Features.Wallet
             const int maxRetries = 5;
             int retryCount = 0;
 
-            TransactionPolicyError[] errors = {};
+            TransactionPolicyError[] errors = { };
             while (retryCount <= maxRetries)
             {
                 if (context.Shuffle)
                     context.TransactionBuilder.Shuffle();
 
                 Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
-                ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
 
-                // Here we reserve the UTXO OutPoint(s) so that they can't be selected again.
-                if (spentCoins.Any())
-                    this.reserveUtxoService.ReserveUtxos(spentCoins.Select(c => c.Outpoint));
+                // If there are cross chain deposits, try and validate them before
+                // we continue with signing and verification.
+                DepositValidationHelper.ValidateCrossChainDeposit(this.network, transaction);
+
+                ICoin[] spentCoins = context.TransactionBuilder.FindSpentCoins(transaction);
 
                 if (context.Sign)
                 {
                     // TODO: Improve this as we already have secrets when running a retry iteration.
                     this.AddSecrets(context, spentCoins);
+
                     context.TransactionBuilder.SignTransactionInPlace(transaction);
 
                     if (context.TransactionBuilder.Verify(transaction, out errors))
+                    {
+                        // Only reserve the UTXOs if the transaction was successfully built.
+                        this.reserveUtxoService.ReserveUtxos(spentCoins.Select(c => c.Outpoint));
+
                         return transaction;
+                    }
                 }
                 else
                 {
+                    // Only reserve the UTXOs if the transaction was successfully built.
+                    this.reserveUtxoService.ReserveUtxos(spentCoins.Select(c => c.Outpoint));
+
                     // If we aren't being asked to sign then it is not really meaningful to perform the Verify step.
                     // TODO: Do we still need to check for FeeTooLowPolicyError in this case?
                     return transaction;
                 }
 
                 // Retry only if error is of type 'FeeTooLowPolicyError'.
-                if (!errors.Any(e => e is FeeTooLowPolicyError)) break;
+                if (!errors.Any(e => e is FeeTooLowPolicyError))
+                    break;
 
                 retryCount++;
             }
@@ -217,7 +228,7 @@ namespace Stratis.Bitcoin.Features.Wallet
         public int EstimateSize(TransactionBuildContext context)
         {
             this.InitializeTransactionBuilder(context);
-            
+
             Transaction transaction = context.TransactionBuilder.BuildTransaction(false);
 
             return context.TransactionBuilder.EstimateSize(transaction, true);
@@ -301,7 +312,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             if (context.ChangeScript != null)
             {
                 context.TransactionBuilder.SetChange(context.ChangeScript);
-                
+
                 return;
             }
 

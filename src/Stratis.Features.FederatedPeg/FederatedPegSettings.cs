@@ -15,6 +15,9 @@ namespace Stratis.Features.FederatedPeg
     /// <inheritdoc />
     public sealed class FederatedPegSettings : IFederatedPegSettings
     {
+        /// <summary>The amount to filter inputs by.</summary>
+        public const decimal UtxoAmountThreshold = 0.001m;
+
         public const string WalletSyncFromHeightParam = "walletsyncfromheight";
 
         public const string RedeemScriptParam = "redeemscript";
@@ -51,16 +54,6 @@ namespace Stratis.Features.FederatedPeg
         /// Only look for deposits above a certain value. This avoids issues with dust lingering around or fees not being covered.
         /// </summary>
         public static readonly Money CrossChainTransferMinimum = Money.Coins(1m);
-
-        /// <summary>
-        /// The fee always given to a withdrawal transaction.
-        /// </summary>
-        public static readonly Money BaseTransactionFee = Money.Coins(0.0003m);
-
-        /// <summary>
-        /// The extra fee given to a withdrawal transaction per input it spends. This number should be high enough such that the built transactions are always valid, yet low enough such that the federation can turn a profit.
-        /// </summary>
-        public static readonly Money InputTransactionFee = Money.Coins(0.00012m);
 
         /// <summary>
         /// Fee applied to consolidating transactions.
@@ -147,6 +140,7 @@ namespace Stratis.Features.FederatedPeg
             this.MinimumConfirmationsNormalDeposits = configReader.GetOrDefault(MinimumConfirmationsNormalDepositsParam, 80);
             this.MinimumConfirmationsLargeDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
             this.MinimumConfirmationsDistributionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
+            this.MinimumConfirmationsConversionDeposits = (int)nodeSettings.Network.Consensus.MaxReorgLength + 1;
 
             this.MaximumPartialTransactionThreshold = configReader.GetOrDefault(MaximumPartialTransactionsParam, CrossChainTransferStore.MaximumPartialTransactions);
             this.WalletSyncFromHeight = configReader.GetOrDefault(WalletSyncFromHeightParam, 0);
@@ -168,6 +162,8 @@ namespace Stratis.Features.FederatedPeg
         public int MinimumConfirmationsLargeDeposits { get; }
 
         public int MinimumConfirmationsDistributionDeposits { get; }
+
+        public int MinimumConfirmationsConversionDeposits { get; }
 
         /// <inheritdoc />
         public Money SmallDepositThresholdAmount { get; }
@@ -195,16 +191,6 @@ namespace Stratis.Features.FederatedPeg
 
         /// <inheritdoc/>
         public int MultiSigN { get; }
-
-        /// <inheritdoc/>
-        /// <remarks>
-        /// TODO: In future we need to look at dynamically calculating the fee by also including
-        /// the number of outputs in the calculation.
-        /// </remarks>
-        public Money GetWithdrawalTransactionFee(int numInputs)
-        {
-            return BaseTransactionFee + numInputs * InputTransactionFee;
-        }
 
         /// <inheritdoc/>
         public int CounterChainDepositStartBlock { get; }

@@ -11,7 +11,6 @@ using Stratis.Bitcoin.Features.PoA.Policies;
 using Stratis.Bitcoin.Features.PoA.Voting.ConsensusRules;
 using Stratis.Bitcoin.Features.SmartContracts.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA;
-using Stratis.Bitcoin.Features.SmartContracts.PoA.MempoolRules;
 using Stratis.Bitcoin.Features.SmartContracts.PoA.Rules;
 using Stratis.Bitcoin.Features.SmartContracts.Rules;
 
@@ -22,12 +21,6 @@ namespace Stratis.Sidechains.Networks
     /// </summary>
     public class CirrusTest : PoANetwork
     {
-        /// <summary> The name of the root folder containing the different federated peg blockchains.</summary>
-        private const string NetworkRootFolderName = "cirrus";
-
-        /// <summary> The default name used for the federated peg configuration file. </summary>
-        private const string NetworkDefaultConfigFilename = "cirrus.conf";
-
         public CirrusTest()
         {
             this.Name = "CirrusTest";
@@ -44,8 +37,8 @@ namespace Stratis.Sidechains.Networks
             this.MinTxFee = 10000;
             this.FallbackFee = 10000;
             this.MinRelayTxFee = 10000;
-            this.RootFolderName = NetworkRootFolderName;
-            this.DefaultConfigFilename = NetworkDefaultConfigFilename;
+            this.RootFolderName = CirrusNetwork.NetworkRootFolderName;
+            this.DefaultConfigFilename = CirrusNetwork.NetworkDefaultConfigFilename;
             this.MaxTimeOffsetSeconds = 25 * 60;
             this.DefaultBanTimeSeconds = 1920; // 240 (MaxReorg) * 16 (TargetSpacing) / 2 = 32 Minutes
 
@@ -212,17 +205,18 @@ namespace Stratis.Sidechains.Networks
                 { 700000, new CheckpointInfo(new uint256("0x6d5addc975a93eb323933bcdf2c3b7e098e324e8b205232a490cd585aceb1518")) },
                 { 800000, new CheckpointInfo(new uint256("0x6ff2a00696e1601efba88b98ef63e691e8da7acffd5703614e971c932d93af80")) },
                 { 900000, new CheckpointInfo(new uint256("0x84b550eafbfe777d28321eabed9a118a3175bcd607481bbfe24dc5fa2a9de0cf")) },
-                { 1000000, new CheckpointInfo(new uint256("0xc3da5b782bdf6b9d0606147996479b0ea621322d9df1d239cbbd814175f4ed61")) },
-                { 1100000, new CheckpointInfo(new uint256("0xbb2d946fa7101c14c6374b0e40993ef73401a360e74652e1677d8d6b3b4be01c")) },
-                { 1200000, new CheckpointInfo(new uint256("0x8b7c48e0e814afbedb0d6e67dc71aaa395886db58e17fd622e571e1d140fbbb3")) },
-                { 1300000, new CheckpointInfo(new uint256("0xe4aecd9ecdbf4e55b08255ed6d8a98e811fbd3e7c72ef267c26ebfae4e315990")) },
-                { 1400000, new CheckpointInfo(new uint256("0x7165b03c170869b318253d470aa904f9c674c0d0f4ca2e9a64416b1d42beecc5")) },
-                { 1500000, new CheckpointInfo(new uint256("0xb458117f195f936d7767f7299d0976ad90700e321870c18ec1e3481924f2afc3")) },
-                { 1600000, new CheckpointInfo(new uint256("0x696cd64ec08b67ed3a3ec1e3add77c0e8203d8d6c0bb7df96dd9508dda4ba67e")) },
-                { 1700000, new CheckpointInfo(new uint256("0xf42564107701d81e847e5dc6bd95da6bf32cb54e762d84118a7764349b414e68")) },
-                { 1800000, new CheckpointInfo(new uint256("0x57a3119de52cf43b66d6e805a644c20fdee63557038cd68c429d47b21d111084")) },
-                { 1950000, new CheckpointInfo(new uint256("0xf64b399a0c22cb0641c2aee63c60ced5bc65992ed08ddcec6f061e8bfb3b6b70")) },
-                { 2150000, new CheckpointInfo(new uint256("0x7bcb5e1df4b7ee287cc59a534183af263a8bd19ffe11f818c565af33008ed2aa")) }
+                { 1_000_000, new CheckpointInfo(new uint256("0xc3da5b782bdf6b9d0606147996479b0ea621322d9df1d239cbbd814175f4ed61")) },
+                { 1_100_000, new CheckpointInfo(new uint256("0xbb2d946fa7101c14c6374b0e40993ef73401a360e74652e1677d8d6b3b4be01c")) },
+                { 1_200_000, new CheckpointInfo(new uint256("0x8b7c48e0e814afbedb0d6e67dc71aaa395886db58e17fd622e571e1d140fbbb3")) },
+                { 1_300_000, new CheckpointInfo(new uint256("0xe4aecd9ecdbf4e55b08255ed6d8a98e811fbd3e7c72ef267c26ebfae4e315990")) },
+                { 1_400_000, new CheckpointInfo(new uint256("0x7165b03c170869b318253d470aa904f9c674c0d0f4ca2e9a64416b1d42beecc5")) },
+                { 1_500_000, new CheckpointInfo(new uint256("0xb458117f195f936d7767f7299d0976ad90700e321870c18ec1e3481924f2afc3")) },
+                { 1_600_000, new CheckpointInfo(new uint256("0x696cd64ec08b67ed3a3ec1e3add77c0e8203d8d6c0bb7df96dd9508dda4ba67e")) },
+                { 1_700_000, new CheckpointInfo(new uint256("0xf42564107701d81e847e5dc6bd95da6bf32cb54e762d84118a7764349b414e68")) },
+                { 1_800_000, new CheckpointInfo(new uint256("0x57a3119de52cf43b66d6e805a644c20fdee63557038cd68c429d47b21d111084")) },
+                { 1_900_000, new CheckpointInfo(new uint256("0xd413f3aed50f4a1a4580e7c506223a605e222849da9649ca6d43ad7aac5c5af5")) },
+                { 2_050_000, new CheckpointInfo(new uint256("0x543511cdefc38ee4fc272872543427cf08c6406ab602799b47138e418aa195fc")) },
+                { 2_300_000, new CheckpointInfo(new uint256("0x8e189e0c38cb55c795276d13cc7f6d9c6825eb85324f38ec94a9d4df5d5b5938")) },
             };
 
             this.DNSSeeds = new List<DNSSeedData>

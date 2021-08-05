@@ -89,7 +89,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
     /// </summary>
     public class WalletRecoveryRequest : RequestModel
     {
-
         /// <summary>
         /// The mnemonic that was used to create the wallet.
         /// </summary>
@@ -211,16 +210,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// wallet history records are retrieved.
         /// </summary>  
         public int? Take { get; set; }
-
-        /// <summary>
-        /// Optional, Previous OutputTxTime, used for pagination
-        /// </summary>
-        public int? PrevOutputTxTime { get; set; }
-
-        /// <summary>
-        /// Optional, Previous PrevOutputIndex, used for pagination
-        /// </summary>
-        public int? PrevOutputIndex { get; set; }
 
         /// <summary>
         /// An optional string that can be used to match different data in the transaction records.
@@ -472,6 +461,21 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
                     new[] { $"{nameof(this.FeeType)}" });
             }
         }
+    }
+
+    /// <summary>
+    /// A class containing the necessary parameters for a InterFlux transaction request.
+    /// </summary>
+    public class BuildInterFluxTransactionRequest : BuildTransactionRequest
+    {
+        /// <summary>Target chain that is supported by InterFlux integration.</summary>
+        /// <remarks>See Stratis.Features.FederatedPeg.Conversion.DestinationChain enum.</remarks>
+        [Required]
+        public int DestinationChain { get; set; }
+
+        /// <summary>Address at destination chain at which coins should be deposited.</summary>
+        [Required]
+        public string DestinationAddress { get; set; }
     }
 
     /// <summary>

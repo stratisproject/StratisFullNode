@@ -81,6 +81,31 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             transaction.Insert<byte[], int>(TableName, RepositoryHighestIndexKey, this.highestPollId);
         }
 
+        /// <summary>Removes polls for the provided ids.</summary>
+        public void DeletePollsAndSetHighestPollId(params int[] ids)
+        {
+            lock (this.lockObject)
+            {
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                {
+                    foreach (int pollId in ids.OrderBy(a => a))
+                    {
+                        transaction.RemoveKey<byte[]>(TableName, pollId.ToBytes());
+                    }
+
+                    transaction.Commit();
+                }
+
+                List<Poll> polls = GetAllPolls();
+                this.highestPollId = (polls.Count == 0) ? -1 : polls.Max(a => a.Id);
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                {
+                    SaveHighestPollId(transaction);
+                    transaction.Commit();
+                }
+            }
+        }
+
         /// <summary>Removes polls under provided ids.</summary>
         public void RemovePolls(params int[] ids)
         {
@@ -189,9 +214,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(TableName, i.ToBytes());
 
-                        Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
-
-                        polls.Add(poll);
+                        if (row.Exists)
+                        {
+                            Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
+                            polls.Add(poll);
+                        }
                     }
 
                     return polls;

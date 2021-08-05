@@ -7,9 +7,11 @@ using NBitcoin.Protocol;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Builder;
 using Stratis.Bitcoin.Configuration;
+using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Api;
 using Stratis.Bitcoin.Features.BlockStore;
 using Stratis.Bitcoin.Features.Consensus;
+using Stratis.Bitcoin.Features.Interop;
 using Stratis.Bitcoin.Features.MemoryPool;
 using Stratis.Bitcoin.Features.Miner;
 using Stratis.Bitcoin.Features.Notifications;
@@ -82,9 +84,11 @@ namespace Stratis.CirrusPegD
 
             NetworkType networkType = nodeSettings.Network.NetworkType;
 
+            DbType dbType = nodeSettings.GetDbType();
+
             IFullNode node = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
                 .SetCounterChainNetwork(SidechainNetworks[nodeSettings.Network.NetworkType]())
                 .AddFederatedPeg(isMainChain: true)
                 .UseTransactionNotification()
@@ -92,7 +96,7 @@ namespace Stratis.CirrusPegD
                 .UseApi()
                 .UseMempool()
                 .AddRPC()
-                .UsePosConsensus()
+                .UsePosConsensus(dbType)
                 .UseWallet()
                 .AddSQLiteWalletRepository()
                 .AddPowPosMining(true)
@@ -108,14 +112,16 @@ namespace Stratis.CirrusPegD
                 MinProtocolVersion = ProtocolVersion.ALT_PROTOCOL_VERSION
             };
 
+            DbType dbType = nodeSettings.GetDbType();
+
             IFullNode node = new FullNodeBuilder()
-                .UseNodeSettings(nodeSettings)
-                .UseBlockStore()
+                .UseNodeSettings(nodeSettings, dbType)
+                .UseBlockStore(dbType)
                 .SetCounterChainNetwork(StraxNetwork.MainChainNetworks[nodeSettings.Network.NetworkType]())
                 .AddPoAFeature()
-                .UsePoAConsensus()
+                .UsePoAConsensus(dbType)
                 .AddFederatedPeg()
-                .AddPoACollateralMiningCapability()
+                .AddPoACollateralMiningCapability<FederatedPegBlockDefinition>()
                 .CheckCollateralCommitment()
                 .AddDynamicMemberhip()
                 .UseTransactionNotification()
@@ -128,6 +134,7 @@ namespace Stratis.CirrusPegD
                     options.UseReflectionExecutor();
                     options.UsePoAWhitelistedContracts();
                 })
+                .AddInteroperability()
                 .UseSmartContractWallet()
                 .AddSQLiteWalletRepository()
                 .Build();

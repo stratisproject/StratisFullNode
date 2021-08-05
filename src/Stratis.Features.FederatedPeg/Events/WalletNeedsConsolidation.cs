@@ -1,5 +1,4 @@
-﻿using System;
-using NBitcoin;
+﻿using NBitcoin;
 using Stratis.Bitcoin.EventBus;
 
 namespace Stratis.Features.FederatedPeg.Events
@@ -7,7 +6,7 @@ namespace Stratis.Features.FederatedPeg.Events
     public class WalletNeedsConsolidation : EventBase
     {
         /// <summary>
-        /// The amount required for the next withdrawal transaction..
+        /// The amount required for the next withdrawal transaction.
         /// </summary>
         public Money Amount { get; }
 

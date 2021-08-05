@@ -14,7 +14,7 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <Version>1.0.7.2</Version>
+    <Version>1.0.9.0</Version>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <Authors>Stratis Group Ltd.</Authors>
   </PropertyGroup>
@@ -28,7 +28,7 @@
     <PackageReference Include="LevelDB.Standard" Version="2.1.6.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
     <PackageReference Include="Microsoft.FASTER" Version="2020.2.1.1" />
-    <PackageReference Include="Stratis.RocksDB" Version="0.0.9.4-alpha" />
+    <PackageReference Include="Stratis.RocksDB" Version="0.0.9.7-alpha" />
   </ItemGroup>
 
   <ItemGroup>

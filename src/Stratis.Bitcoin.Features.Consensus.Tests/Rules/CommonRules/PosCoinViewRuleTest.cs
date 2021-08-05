@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         private async Task<ConsensusManager> CreateConsensusManagerAsync(Dictionary<OutPoint, UnspentOutput> unspentOutputs)
         {
             this.consensusSettings = new ConsensusSettings(Configuration.NodeSettings.Default(this.network));
-            var initialBlockDownloadState = new InitialBlockDownloadState(this.chainState.Object, this.network, this.consensusSettings, new Checkpoints(), this.loggerFactory.Object, DateTimeProvider.Default);
+            var initialBlockDownloadState = new InitialBlockDownloadState(this.chainState.Object, this.network, this.consensusSettings, new Checkpoints(), DateTimeProvider.Default);
             var signals = new Signals.Signals(this.loggerFactory.Object, null);
             var asyncProvider = new AsyncProvider(this.loggerFactory.Object, signals);
 

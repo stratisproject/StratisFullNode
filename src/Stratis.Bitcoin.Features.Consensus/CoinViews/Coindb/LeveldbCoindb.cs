@@ -11,7 +11,7 @@ using Stratis.Bitcoin.Utilities;
 namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 {
     /// <summary>
-    /// Persistent implementation of coinview using dBreeze database.
+    /// Persistent implementation of coinview using the dBreeze database engine.
     /// </summary>
     public class LevelDbCoindb : ICoindb, IStakedb, IDisposable
     {
@@ -23,6 +23,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private static readonly byte rewindTable = 3;
         private static readonly byte stakeTable = 4;
 
+        private readonly string dataFolder;
+
         /// <summary>Instance logger.</summary>
         private readonly ILogger logger;
 
@@ -30,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Network network;
 
         /// <summary>Hash of the block which is currently the tip of the coinview.</summary>
-        private HashHeightPair blockHash;
+        private HashHeightPair persistedCoinviewTip;
 
         /// <summary>Performance counter to measure performance of the database insert and query operations.</summary>
         private readonly BackendPerformanceCounter performanceCounter;
@@ -38,7 +40,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private BackendPerformanceSnapshot latestPerformanceSnapShot;
 
         /// <summary>Access to dBreeze database.</summary>
-        private readonly DB leveldb;
+        private DB leveldb;
 
         private readonly DBreezeSerializer dBreezeSerializer;
 
@@ -48,20 +50,15 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
         }
 
-        public LevelDbCoindb(Network network, string folder, IDateTimeProvider dateTimeProvider,
+        public LevelDbCoindb(Network network, string dataFolder, IDateTimeProvider dateTimeProvider,
             ILoggerFactory loggerFactory, INodeStats nodeStats, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotNull(network, nameof(network));
-            Guard.NotEmpty(folder, nameof(folder));
+            Guard.NotEmpty(dataFolder, nameof(dataFolder));
 
+            this.dataFolder = dataFolder;
             this.dBreezeSerializer = dBreezeSerializer;
-
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-
-            // Open a connection to a new DB and create if not found
-            var options = new Options { CreateIfMissing = true };
-            this.leveldb = new DB(options, folder);
-
             this.network = network;
             this.performanceCounter = new BackendPerformanceCounter(dateTimeProvider);
 
@@ -71,33 +68,37 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public void Initialize()
         {
+            // Open a connection to a new DB and create if not found
+            var options = new Options { CreateIfMissing = true };
+            this.leveldb = new DB(options, this.dataFolder);
+
             Block genesis = this.network.GetGenesis();
 
             if (this.GetTipHash() == null)
-            {
                 this.SetBlockHash(new HashHeightPair(genesis.GetHash(), 0));
-            }
+
+            this.logger.LogInformation("Coinview initialized with tip '{0}'.", this.persistedCoinviewTip);
         }
 
         private void SetBlockHash(HashHeightPair nextBlockHash)
         {
-            this.blockHash = nextBlockHash;
+            this.persistedCoinviewTip = nextBlockHash;
             this.leveldb.Put(new byte[] { blockTable }.Concat(blockHashKey).ToArray(), nextBlockHash.ToBytes());
         }
 
         public HashHeightPair GetTipHash()
         {
-            if (this.blockHash == null)
+            if (this.persistedCoinviewTip == null)
             {
                 var row = this.leveldb.Get(new byte[] { blockTable }.Concat(blockHashKey).ToArray());
                 if (row != null)
                 {
-                    this.blockHash = new HashHeightPair();
-                    this.blockHash.FromBytes(row);
+                    this.persistedCoinviewTip = new HashHeightPair();
+                    this.persistedCoinviewTip.FromBytes(row);
                 }
             }
 
-            return this.blockHash;
+            return this.persistedCoinviewTip;
         }
 
         public FetchCoinsResponse FetchCoins(OutPoint[] utxos)
@@ -113,7 +114,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     byte[] row = this.leveldb.Get(new byte[] { coinsTable }.Concat(outPoint.ToBytes()).ToArray());
                     Coins outputs = row != null ? this.dBreezeSerializer.Deserialize<Coins>(row) : null;
 
-                    this.logger.LogTrace("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
+                    this.logger.LogDebug("Outputs for '{0}' were {1}.", outPoint, outputs == null ? "NOT loaded" : "loaded");
 
                     res.UnspentOutputs.Add(outPoint, new UnspentOutput(outPoint, outputs));
                 }
@@ -196,9 +197,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height)).ToArray());
 
                 if (row == null)
-                {
                     throw new InvalidOperationException($"No rewind data found for block `{current}`");
-                }
 
                 batch.Delete(BitConverter.GetBytes(current.Height));
 

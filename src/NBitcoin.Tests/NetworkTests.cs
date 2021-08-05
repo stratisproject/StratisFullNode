@@ -324,7 +324,6 @@ namespace NBitcoin.Tests
         {
             Network network = this.straxMain;
 
-            Assert.Equal(15, network.Checkpoints.Count);
             Assert.Equal(2, network.DNSSeeds.Count);
             Assert.Empty(network.SeedNodes);
 
@@ -399,7 +398,6 @@ namespace NBitcoin.Tests
         {
             Network network = this.straxTest;
 
-            Assert.Equal(7, network.Checkpoints.Count);
             Assert.Single(network.SeedNodes);
 
             Assert.Equal("StraxTest", network.Name);
@@ -522,7 +520,7 @@ namespace NBitcoin.Tests
             Assert.Equal(TimeSpan.FromSeconds(45), network.Consensus.TargetSpacing);
             Assert.True(network.Consensus.PowAllowMinDifficultyBlocks);
             Assert.True(network.Consensus.PowNoRetargeting);
-            Assert.Equal(2016, network.Consensus.MinerConfirmationWindow);
+            Assert.Equal(144, network.Consensus.MinerConfirmationWindow);
             Assert.Equal(12500, network.Consensus.LastPOWBlock);
             Assert.True(network.Consensus.IsProofOfStake);
             Assert.Equal(1, network.Consensus.CoinType);

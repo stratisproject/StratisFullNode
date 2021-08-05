@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Flurl;
@@ -204,7 +203,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 {
                     Password = "password",
                     Mnemonic = this.mnemonics[i].ToString()
-                }).Result.StatusCode.Should().Be(HttpStatusCode.OK);
+                }).Result.StatusCode.Should().Be((int)HttpStatusCode.OK);
             }
         }
 
@@ -213,7 +212,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
         /// </summary>
         public async Task DepositToSideChain(CoreNode node, decimal amount, string sidechainDepositAddress)
         {
-            HttpResponseMessage depositTransaction = await $"http://localhost:{node.ApiPort}/api"
+            IFlurlResponse depositTransaction = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/build-transaction")
                 .PostJsonAsync(new
                 {
@@ -233,10 +232,10 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     }
                 });
 
-            string result = await depositTransaction.Content.ReadAsStringAsync();
+            string result = await depositTransaction.ResponseMessage.Content.ReadAsStringAsync();
             WalletBuildTransactionModel walletBuildTxModel = JsonConvert.DeserializeObject<WalletBuildTransactionModel>(result);
 
-            HttpResponseMessage sendTransactionResponse = await $"http://localhost:{node.ApiPort}/api"
+            IFlurlResponse sendTransactionResponse = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/send-transaction")
                 .PostJsonAsync(new
                 {
@@ -246,7 +245,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
 
         public async Task WithdrawToMainChain(CoreNode node, decimal amount, string mainchainWithdrawAddress)
         {
-            HttpResponseMessage withdrawTransaction = await $"http://localhost:{node.ApiPort}/api"
+            IFlurlResponse withdrawTransaction = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/build-transaction")
                 .PostJsonAsync(new
                 {
@@ -265,10 +264,10 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                     }
                 });
 
-            string result = await withdrawTransaction.Content.ReadAsStringAsync();
+            string result = await withdrawTransaction.ResponseMessage.Content.ReadAsStringAsync();
             WalletBuildTransactionModel walletBuildTxModel = JsonConvert.DeserializeObject<WalletBuildTransactionModel>(result);
 
-            HttpResponseMessage sendTransactionResponse = await $"http://localhost:{node.ApiPort}/api"
+            IFlurlResponse sendTransactionResponse = await $"http://localhost:{node.ApiPort}/api"
                 .AppendPathSegment("wallet/send-transaction")
                 .PostJsonAsync(new
                 {

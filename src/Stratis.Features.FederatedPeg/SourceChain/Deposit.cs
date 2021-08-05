@@ -1,17 +1,19 @@
 ﻿using NBitcoin;
 using Newtonsoft.Json;
+using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Features.FederatedPeg.Interfaces;
 
 namespace Stratis.Features.FederatedPeg.SourceChain
 {
     public class Deposit : IDeposit
     {
-        public Deposit(uint256 id, DepositRetrievalType retrievalType, Money amount, string targetAddress, int blockNumber, uint256 blockHash)
+        public Deposit(uint256 id, DepositRetrievalType retrievalType, Money amount, string targetAddress, DestinationChain targetChain, int blockNumber, uint256 blockHash)
         {
             this.Id = id;
             this.RetrievalType = retrievalType;
             this.Amount = amount;
             this.TargetAddress = targetAddress;
+            this.TargetChain = targetChain;
             this.BlockNumber = blockNumber;
             this.BlockHash = blockHash;
         }
@@ -24,6 +26,9 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
         /// <inheritdoc />
         public string TargetAddress { get; }
+
+        /// <inheritdoc />
+        public DestinationChain TargetChain { get; }
 
         /// <inheritdoc />
         public int BlockNumber { get; }

@@ -11,8 +11,11 @@ using NBitcoin;
 using NBitcoin.DataEncoders;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Features.Wallet.Events;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
+using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Interfaces;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Features.SQLiteWalletRepository.External;
 using Stratis.Features.SQLiteWalletRepository.Tables;
@@ -60,6 +63,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         private readonly IDateTimeProvider dateTimeProvider;
         private ProcessBlocksInfo processBlocksInfo;
         private object lockObj;
+        private readonly ISignals signals;
         internal const int MaxBatchDurationSeconds = 10;
         internal const int MaxDataRowsProcessed = 10000;
 
@@ -68,7 +72,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
         public Func<string, string> Bech32AddressFunc { get; set; } = null;
 
-        public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader)
+        public SQLiteWalletRepository(ILoggerFactory loggerFactory, DataFolder dataFolder, Network network, IDateTimeProvider dateTimeProvider, IScriptAddressReader scriptAddressReader, ISignals signals = null)
         {
             this.TestMode = false;
             this.Network = network;
@@ -78,6 +82,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             this.WriteMetricsToFile = false;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.lockObj = new object();
+            this.signals = signals;
 
             Reset();
         }
@@ -583,7 +588,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 throw;
             }
-            finally 
+            finally
             {
                 walletContainer.WriteLockRelease();
             }
@@ -998,7 +1003,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                     // Determine the scripts for creating temporary tables and inserting the block's information into them.
                     ITransactionsToLists transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, round, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(block.Transactions, new HashHeightPair(chainedHeader), blockTime: block.Header.BlockTime.ToUnixTimeSeconds()))
+                    {
+                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                        // was processed.
+                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
+
                         this.Metrics.ProcessCount++;
+                    }
 
                     this.Metrics.BlockTime += (DateTime.Now.Ticks - flagFall2);
 
@@ -1204,7 +1215,13 @@ namespace Stratis.Features.SQLiteWalletRepository
                 IEnumerable<IEnumerable<string>> txToScript;
                 {
                     var transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, processBlocksInfo, this.dateTimeProvider);
-                    transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId);
+                    if (transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId))
+                    {
+                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                        // was processed.
+                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
+                    }
+
                     txToScript = (new[] { processBlocksInfo.Outputs, processBlocksInfo.PrevOuts }).Select(list => list.CreateScript());
                 }
 
@@ -1328,18 +1345,46 @@ namespace Stratis.Features.SQLiteWalletRepository
             SpendingDetails spendingDetails = transactionData.SpendingDetails;
 
             var res = HDPayment.GetAllPayments(conn,
-                spendingDetails.TransactionId.ToString(),
-                transactionData.Id.ToString(),
-                transactionData.Index,
-                transactionData.AddressScriptPubKey.ToHex())
-                .Where(p => p.SpendIsChange == (isChange ? 1 : 0)).Select(p => new PaymentDetails()
-                {
-                    Amount = new Money(p.SpendValue),
-                    DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
-                    OutputIndex = p.SpendIndex
-                }).ToList();
+                 transactionData.SpendingDetails.TransactionId.ToString(),
+                 transactionData.Id.ToString(),
+                 transactionData.Index,
+                 transactionData.AddressScriptPubKey.ToHex())
+                 .Where(p => p.SpendIsChange == (isChange ? 1 : 0)).Select(p => new PaymentDetails()
+                 {
+                     Amount = new Money(p.SpendValue),
+                     DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
+                     OutputIndex = p.SpendIndex
+                 }).ToList();
 
             if (transactionData.SpendingDetails == null || this.ScriptAddressReader == null)
+                return res;
+
+            var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
+            foreach (Script script in lookup.Keys.ToList())
+                lookup[script] = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+
+            foreach (PaymentDetails paymentDetails in res)
+                paymentDetails.DestinationAddress = lookup[paymentDetails.DestinationScriptPubKey];
+
+            return res;
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<PaymentDetails> GetPaymentDetails(string walletName, string transactionId)
+        {
+            WalletContainer walletContainer = this.GetWalletContainer(walletName);
+
+            DBConnection conn = walletContainer.Conn;
+
+            var res = HDPayment.GetPaymentsForTransactionId(conn, transactionId).ToList().Select(p => new PaymentDetails()
+            {
+                Amount = new Money(p.SpendValue),
+                DestinationScriptPubKey = new Script(Encoders.Hex.DecodeData(p.SpendScriptPubKey)),
+                OutputIndex = p.SpendIndex,
+                IsChange = p.SpendIsChange == 1 ? true : false
+            }).ToList();
+
+            if (this.ScriptAddressReader == null)
                 return res;
 
             var lookup = res.Select(d => d.DestinationScriptPubKey).Distinct().ToDictionary(d => d, d => (string)null);
@@ -1382,7 +1427,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = this.GetConnection(walletName);
 
-            HDAccount account = conn.GetAccountByName(walletName, accountName);
+            HDAccount account = (accountName == null) ? null : conn.GetAccountByName(walletName, accountName);
 
             return HDTransactionData.GetTransactionCount(conn, walletId, account.AccountIndex);
         }
@@ -1447,71 +1492,56 @@ namespace Stratis.Features.SQLiteWalletRepository
         }
 
         /// <inheritdoc />
-        public AccountHistory GetHistory(HdAccount account)
+        public AccountHistory GetHistory(HdAccount account, int limit, int offset, string txId = null, string accountAddress = null, bool forSmartContracts = false)
         {
-            Wallet hdWallet = account.AccountRoot.Wallet;
-            WalletContainer walletContainer = this.GetWalletContainer(hdWallet.Name);
-            (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
+            Wallet wallet = account.AccountRoot.Wallet;
+            WalletContainer walletContainer = this.GetWalletContainer(wallet.Name);
+            (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
-            var history = new List<FlatHistory>();
+            var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId, accountAddress, forSmartContracts);
 
-            foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.External, int.MaxValue)
-                .Concat(conn.GetUsedAddresses(wallet.WalletId, account.Index, HDAddress.Internal, int.MaxValue)))
+            // Filter ColdstakeUtxos
+            result = result.Where(r =>
             {
-                HdAddress hdAddress = this.ToHdAddress(address, this.Network);
+                var scriptPubKey = new Script(Encoders.Hex.DecodeData(r.RedeemScript));
+                return !scriptPubKey.IsScriptType(ScriptType.ColdStaking);
+            });
 
-                hdAddress.AddressCollection = (address.AddressType == 0) ? account.ExternalAddresses : account.InternalAddresses;
-
-                foreach (var transaction in conn.GetTransactionsForAddress(wallet.WalletId, account.Index, address.AddressType, address.AddressIndex))
+            if (!string.IsNullOrWhiteSpace(txId) && uint256.TryParse(txId, out uint256 _))
+            {
+                if (result.Any() && result.First().Type == (int)TransactionItemType.Send)
                 {
-                    history.Add(new FlatHistory()
+                    var payments = this.GetPaymentDetails(account.AccountRoot.Wallet.Name, txId);
+                    var grouped = payments.GroupBy(p => p.DestinationScriptPubKey);
+
+                    foreach (var group in grouped)
                     {
-                        Address = hdAddress,
-                        Transaction = this.ToTransactionData(transaction, hdAddress.Transactions)
-                    });
+                        result.First().Payments.Add(new FlattenedHistoryItemPayment() { Amount = group.First().Amount, DestinationScriptPubKey = group.First().DestinationScriptPubKey, DestinationAddress = group.First().DestinationAddress, IsChange = group.First().IsChange });
+                    }
                 }
+            }
+
+            var lookup = new Dictionary<string, string>();
+
+            // Update sent to and mine/stake addresses.
+            foreach (var item in result.Where(r => r.Type == (int)TransactionItemType.Send))
+            {
+                // Cache the address.
+                if (!lookup.TryGetValue(item.SendToScriptPubkey, out string address))
+                {
+                    var script = new Script(Encoders.Hex.DecodeData(item.SendToScriptPubkey));
+                    address = this.ScriptAddressReader.GetAddressFromScriptPubKey(this.Network, script);
+                    lookup.Add(item.SendToScriptPubkey, address);
+                }
+
+                item.SendToAddress = address;
             }
 
             return new AccountHistory()
             {
                 Account = account,
-                History = history
+                History = result
             };
-        }
-
-        /// <inheritdoc />
-        public IEnumerable<AccountHistory> GetHistory(string walletName, string accountName = null)
-        {
-            WalletContainer walletContainer = this.GetWalletContainer(walletName);
-            (HDWallet wallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
-
-            var accounts = new List<HDAccount>();
-
-            foreach (HDAccount account in conn.GetAccounts(wallet.WalletId, accountName))
-            {
-                var history = new List<FlatHistory>();
-
-                foreach (HDAddress address in conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.External, int.MaxValue)
-                    .Concat(conn.GetUsedAddresses(wallet.WalletId, account.AccountIndex, HDAddress.Internal, int.MaxValue)))
-                {
-                    HdAddress hdAddress = this.ToHdAddress(address, this.Network);
-
-                    foreach (var transaction in conn.GetTransactionsForAddress(wallet.WalletId, account.AccountIndex, address.AddressType, address.AddressIndex))
-                    {
-                        history.Add(new FlatHistory()
-                        {
-                            Address = hdAddress,
-                            Transaction = this.ToTransactionData(transaction, hdAddress.Transactions)
-                        });
-                    }
-                }
-
-                yield return new AccountHistory()
-                {
-                    Account = this.ToHdAccount(account),
-                    History = history
-                };
-            }
         }
 
         /// <inheritdoc />
@@ -1722,6 +1752,20 @@ namespace Stratis.Features.SQLiteWalletRepository
                 }
 
                 yield return addressBase58s;
+            }
+        }
+
+        /// <inheritdoc />
+        public IEnumerable<(HdAddress, IEnumerable<TransactionData>)> GetTransactionsById(string walletName, uint256 transactionId)
+        {
+            WalletContainer walletContainer = this.GetWalletContainer(walletName);
+            var hdTransactionData = HDTransactionData.GetTransactionsById(walletContainer.Conn, walletContainer.Wallet.WalletId, transactionId.ToString());
+            var grouped = hdTransactionData.GroupBy(x => x.Address);
+
+            foreach (var group in grouped)
+            {
+                var hdAddress = new HdAddress() { Address = group.Key, AddressType = group.First().AddressType };
+                yield return (hdAddress, group.Select(t => this.ToTransactionData(t, null)));
             }
         }
     }

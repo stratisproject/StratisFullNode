@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.1" />
     <PackageReference Include="Stratis.SmartContracts.Standards" Version="2.0.0" />
     <PackageReference Include="Stratis.XUnitRetry" Version="1.0.1" />
   </ItemGroup>
@@ -65,6 +65,9 @@
     </Compile>
     <Compile Update="SmartContracts\BasicTransfer.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="SmartContracts\BehaviourTest.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Update="SmartContracts\CallContract.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
