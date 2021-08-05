@@ -232,7 +232,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
-        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false)
+        internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false, bool forCirrus = false)
         {
             string strLimit = DBParameter.Create(limit);
             string strOffset = DBParameter.Create(offset);
@@ -245,21 +245,21 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     -- Find all receives
                     SELECT  t.OutputTxId as Id
                     ,       t.RedeemScript
-                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2
+                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN 0                 -- Received
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN 3                 -- Mined
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2                -- Staked
                             END Type                 
                     ,       t.OutputTxTime as TimeStamp
-                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value
+                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value            -- Received
                                     WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN ((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - t.Value)
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value
-                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN (SUM(t.Value) - (                                                                
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value            -- Mined                             
+                                    WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN SUM(t.Value) - IFNULL(( -- Staked
                                         SELECT ttp.Value
                                         FROM HDPayment p
                                         INNER JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = {strWalletId} AND ttp.AccountIndex = {strAccountIndex}
                                         WHERE p.SpendTxId = t.OutputTxId AND p.SpendIsChange = 0
                                         LIMIT 1
-                                    ))
+                                    ), 0)
                             END Amount
                     ,       NULL as Fee
                     ,       NULL as SendToScriptPubkey
@@ -267,6 +267,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.OutputBlockHeight as BlockHeight
                     FROM    HDTransactionData AS t
                     WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
+                    AND     (t.OutputTxIsCoinbase != 0 OR NOT EXISTS( -- Where funds were received to an address ensure that the source transaction does not include utxo's from the same address.
+                            SELECT  *
+                            FROM    HDPayment p
+                            INNER   JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = t.WalletId AND ttp.AccountIndex = t.AccountIndex AND ttp.Address = t.Address
+                            WHERE   p.SpendTxId = t.OutputTxId)){(!forCirrus ? "" : $@"
+                    AND     t.OutputTxIsCoinbase = 0")}
                     GROUP   BY t.OutputTxId
                     UNION   ALL";
 
@@ -274,8 +280,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     -- Find all spends
                     SELECT  t.SpendTxId as Id,
                     	    t.RedeemScript,
-                    	    1 as Type,
-                    	    t.SpendTxTime as TimeStamp,
+                            CASE
+                            WHEN p.SpendScriptPubKey >= 'c0' AND p.SpendScriptPubKey < 'c2'
+                            THEN 4
+                            ELSE 1 
+                            END as Type,
+                            t.SpendTxTime as TimeStamp,
                     	    IFNULL(p.SendValue, 0) AS Amount,
                     	    t.Fee,
                     	    p.SpendScriptPubKey as SendToScriptPubkey,
