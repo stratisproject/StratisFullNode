@@ -119,6 +119,11 @@ namespace Stratis.Bitcoin.Tests.Builder.Feature
                 throw new NotImplementedException();
             }
 
+            public Task RewindAsync()
+            {
+                throw new NotImplementedException();
+            }
+
             public void Dispose()
             {
                 throw new NotImplementedException();

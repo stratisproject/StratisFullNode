@@ -75,6 +75,35 @@ namespace Stratis.Bitcoin.Builder
         }
 
         /// <inheritdoc />
+        public void Rewind()
+        {
+            try
+            {
+                this.logger.Info("Rewinding fullnode features.");
+                this.Execute(feature =>
+                {
+                    feature.State = FeatureInitializationState.Rewinding;
+                    this.signals.Publish(new FullNodeEvent() { Message = $"Rewinding feature '{feature.GetType().Name}'.", State = FullNodeState.Rewinding.ToString() });
+                });
+                this.Execute(feature =>
+                {
+                    feature.RewindAsync().GetAwaiter().GetResult();
+                });
+                this.Execute(feature =>
+                {
+                    feature.State = FeatureInitializationState.Rewound;
+                    this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' rewound.", State = FullNodeState.Rewound.ToString() });
+                });
+            }
+            catch (Exception ex)
+            {
+                this.logger.Error($"An error occurred resuming the application: {ex}");
+                this.logger.Trace("(-)[RESUME_EXCEPTION]");
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
         public void Dispose()
         {
             try

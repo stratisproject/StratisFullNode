@@ -10,7 +10,9 @@ namespace Stratis.Bitcoin.Builder.Feature
         Initializing,
         Initialized,
         Disposing,
-        Disposed
+        Disposed,
+        Rewinding,
+        Rewound
     }
 
     /// <summary>
@@ -32,6 +34,11 @@ namespace Stratis.Bitcoin.Builder.Feature
         /// Triggered when the FullNode host has fully started.
         /// </summary>
         Task InitializeAsync();
+
+        /// <summary>
+        /// Triggered to request the FullNode feature to rewind to the current consensus manager tip.
+        /// </summary>
+        Task RewindAsync();
 
         /// <summary>
         /// Validates the feature's required dependencies are all present.
@@ -67,6 +74,9 @@ namespace Stratis.Bitcoin.Builder.Feature
 
         /// <inheritdoc />
         public abstract Task InitializeAsync();
+
+        /// <inheritdoc />
+        public virtual Task RewindAsync() { return Task.CompletedTask; }
 
         /// <inheritdoc />
         public virtual void Dispose()

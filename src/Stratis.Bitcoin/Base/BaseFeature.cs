@@ -244,6 +244,11 @@ namespace Stratis.Bitcoin.Base
             ((IBlockStoreQueue)this.blockStore).ReindexChain(this.consensusManager, this.nodeLifetime.ApplicationStopping);
         }
 
+        /// <inheritdoc />
+        public override async Task RewindAsync()
+        {
+        }
+
         /// <summary>
         /// Initializes node's chain repository.
         /// Creates periodic task to persist changes to the database.

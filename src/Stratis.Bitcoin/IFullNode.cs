@@ -89,5 +89,9 @@ namespace Stratis.Bitcoin
 
         /// <summary>Assigned when one of the full node features failed to start.</summary>
         Failed,
+
+        Rewinding,
+
+        Rewound
     }
 }

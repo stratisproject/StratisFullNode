@@ -73,6 +73,12 @@ namespace Stratis.Bitcoin.Tests.Builder
             }
 
             /// <inheritdoc />
+            public Task RewindAsync()
+            {
+                throw new NotImplementedException();
+            }
+
+            /// <inheritdoc />
             public void Dispose()
             {
                 throw new NotImplementedException();
@@ -107,6 +113,11 @@ namespace Stratis.Bitcoin.Tests.Builder
 
             /// <inheritdoc />
             public Task InitializeAsync()
+            {
+                throw new NotImplementedException();
+            }
+
+            public Task RewindAsync()
             {
                 throw new NotImplementedException();
             }

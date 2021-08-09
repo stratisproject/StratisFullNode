@@ -93,6 +93,12 @@ namespace Stratis.Bitcoin.Features.MemoryPool
             this.blocksDisconnectedSignaled.Initialize();
         }
 
+        /// <inheritdoc />
+        public override Task RewindAsync()
+        {
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Prints command-line help.
         /// </summary>
