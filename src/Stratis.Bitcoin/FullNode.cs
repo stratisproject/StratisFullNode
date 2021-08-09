@@ -240,6 +240,22 @@ namespace Stratis.Bitcoin
             this.Signals.Publish(new FullNodeEvent() { Message = $"Full node started on {this.Network.Name}.", State = this.State.ToString() });
         }
 
+        /// <inheritdoc />
+        public void Rewind(int rewindHeight)
+        {
+            if (this.fullNodeFeatureExecutor == null)
+                throw new InvalidOperationException($"{nameof(FullNodeFeatureExecutor)} must be set.");
+
+            if (this.State != FullNodeState.Started)
+                throw new InvalidOperationException($"Fullnode must be started.");
+
+            var consensusManager = this.Services.ServiceProvider.GetRequiredService<IConsensusManager>();
+
+            consensusManager.RewindAsync(rewindHeight).GetAwaiter().GetResult();
+
+            this.fullNodeFeatureExecutor.Rewind();
+        }
+
         /// <summary>
         /// Starts a loop to periodically log statistics about node's status very couple of seconds.
         /// <para>

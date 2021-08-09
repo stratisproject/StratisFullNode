@@ -701,6 +701,16 @@ namespace Stratis.Bitcoin.Consensus
             return reconnectionResult;
         }
 
+        public Task RewindAsync(int rewindHeight)
+        {
+            using (this.reorgLock.LockAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+            {
+                ChainedHeader fork = this.Tip.GetAncestor(rewindHeight);
+                this.RewindToForkPointAsync(fork, this.Tip).GetAwaiter().GetResult();
+                return Task.CompletedTask;
+            }
+        }
+
         /// <summary>Rewinds to fork point.</summary>
         /// <param name="fork">The fork point. It can't be ahead of <paramref name="oldTip"/>.</param>
         /// <param name="oldTip">The old tip.</param>

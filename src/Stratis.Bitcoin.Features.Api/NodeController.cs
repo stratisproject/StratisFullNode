@@ -517,6 +517,14 @@ namespace Stratis.Bitcoin.Features.Api
             return this.Ok();
         }
 
+        [HttpPost]
+        [Route("rewind")]
+        public IActionResult Rewind([FromBody] int rewindHeight)
+        {
+            this.fullNode?.Rewind(rewindHeight);
+            return this.Ok();
+        }
+
         /// <summary>
         /// Changes the log levels for the specified loggers.
         /// </summary>

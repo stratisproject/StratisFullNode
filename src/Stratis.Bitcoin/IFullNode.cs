@@ -40,6 +40,11 @@ namespace Stratis.Bitcoin
         void Start();
 
         /// <summary>
+        /// Rewinds the full node and all its features.
+        /// </summary>
+        void Rewind(int rewindHeight);
+
+        /// <summary>
         /// Initializes DI services that the node needs.
         /// </summary>
         /// <param name="serviceProvider">Provider of DI services.</param>
