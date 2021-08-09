@@ -18,6 +18,11 @@ namespace Stratis.Bitcoin.Builder
         /// Starts all registered features of the associated full node.
         /// </summary>
         void Initialize();
+
+        /// <summary>
+        /// Rewinds all registered features to the consensus manager tip.
+        /// </summary>
+        void Rewind();
     }
 
     /// <summary>
@@ -80,20 +85,16 @@ namespace Stratis.Bitcoin.Builder
             try
             {
                 this.logger.Info("Rewinding fullnode features.");
+                this.signals.Publish(new FullNodeEvent() { Message = $"Rewinding.", State = FullNodeState.Rewinding.ToString() });
+
                 this.Execute(feature =>
                 {
                     feature.State = FeatureInitializationState.Rewinding;
-                    this.signals.Publish(new FullNodeEvent() { Message = $"Rewinding feature '{feature.GetType().Name}'.", State = FullNodeState.Rewinding.ToString() });
-                });
-                this.Execute(feature =>
-                {
                     feature.RewindAsync().GetAwaiter().GetResult();
+                    feature.State = FeatureInitializationState.Initialized;
                 });
-                this.Execute(feature =>
-                {
-                    feature.State = FeatureInitializationState.Rewound;
-                    this.signals.Publish(new FullNodeEvent() { Message = $"Feature '{feature.GetType().Name}' rewound.", State = FullNodeState.Rewound.ToString() });
-                });
+
+                this.signals.Publish(new FullNodeEvent() { Message = $"Rewound.", State = FullNodeState.Rewound.ToString() });
             }
             catch (Exception ex)
             {

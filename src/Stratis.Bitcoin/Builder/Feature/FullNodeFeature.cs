@@ -11,8 +11,7 @@ namespace Stratis.Bitcoin.Builder.Feature
         Initialized,
         Disposing,
         Disposed,
-        Rewinding,
-        Rewound
+        Rewinding
     }
 
     /// <summary>
