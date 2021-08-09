@@ -266,12 +266,14 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     ,       t.Address AS ReceiveAddress
                     ,       t.OutputBlockHeight as BlockHeight
                     FROM    HDTransactionData AS t
+                    LEFT    JOIN (
+                            SELECT  DISTINCT SpendTxId, Address 
+                            FROM    HDTransactionData AS t2
+                            WHERE   t2.WalletId = {strWalletId} AND t2.SpendTxId is not null and t2.AccountIndex = {strAccountIndex}) t2					
+                    ON      t2.SpendTxId = t.OutputTxId
+                    AND     t2.Address = t.Address
                     WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
-                    AND     (t.OutputTxIsCoinbase != 0 OR NOT EXISTS( -- Where funds were received to an address ensure that the source transaction does not include utxo's from the same address.
-                            SELECT  *
-                            FROM    HDPayment p
-                            INNER   JOIN HDTransactionData ttp ON ttp.OutputTxId = p.OutputTxId AND ttp.OutputIndex = p.OutputIndex AND ttp.WalletId = t.WalletId AND ttp.AccountIndex = t.AccountIndex AND ttp.Address = t.Address
-                            WHERE   p.SpendTxId = t.OutputTxId)){(!forCirrus ? "" : $@"
+                    AND     (t.OutputTxIsCoinbase != 0 OR t2.SpendTxId IS NULL){(!forCirrus ? "" : $@"
                     AND     t.OutputTxIsCoinbase = 0")}
                     GROUP   BY t.OutputTxId
                     UNION   ALL";
