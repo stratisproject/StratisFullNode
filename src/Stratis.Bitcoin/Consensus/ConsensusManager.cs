@@ -706,7 +706,13 @@ namespace Stratis.Bitcoin.Consensus
             using (this.reorgLock.LockAsync().ConfigureAwait(false).GetAwaiter().GetResult())
             {
                 ChainedHeader fork = this.Tip.GetAncestor(rewindHeight);
-                this.RewindToForkPointAsync(fork, this.Tip).GetAwaiter().GetResult();
+                List<ChainedHeaderBlock> disconnectedBlocks = this.RewindToForkPointAsync(fork, this.Tip).GetAwaiter().GetResult();
+
+                foreach (ChainedHeaderBlock disconnectedBlock in disconnectedBlocks)
+                {
+                    this.chainedHeaderTree.BlockRewinded(disconnectedBlock);
+                }
+
                 return Task.CompletedTask;
             }
         }

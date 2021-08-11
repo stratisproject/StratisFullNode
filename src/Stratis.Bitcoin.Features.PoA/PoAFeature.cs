@@ -152,6 +152,13 @@ namespace Stratis.Bitcoin.Features.PoA
             return Task.CompletedTask;
         }
 
+        public override Task RewindAsync()
+        {
+            this.votingManager.Rewind(this.consensusManager.Tip);
+
+            return Task.CompletedTask;
+        }
+
         /// <summary>Replaces default <see cref="ConsensusManagerBehavior"/> with <see cref="PoAConsensusManagerBehavior"/>.</summary>
         private void ReplaceConsensusManagerBehavior(NetworkPeerConnectionParameters connectionParameters)
         {

@@ -134,6 +134,14 @@ namespace Stratis.Bitcoin.Tests.Base
 
         private class testTipProvider : ITipProvider
         {
+            /// <inheritdoc/>
+            public IEnumerable<ITipProvider> GetDependencies() { yield break; }
+
+            /// <inheritdoc/>
+            public bool Rewind(ChainedHeader newTip) { return true; }
+
+            /// <inheritdoc/>
+            public ChainedHeader GetCurrentTip() { return null; }
         }
     }
 }

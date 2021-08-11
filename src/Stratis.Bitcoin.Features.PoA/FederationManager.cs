@@ -325,7 +325,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Loads saved collection of federation members from the database.</summary>
-        private void LoadFederation()
+        public void LoadFederation()
         {
             VotingManager votingManager = this.fullNode.NodeService<VotingManager>();
             this.federationMembers = votingManager.GetFederationFromExecutedPolls();

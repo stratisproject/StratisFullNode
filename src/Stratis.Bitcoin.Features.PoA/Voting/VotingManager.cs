@@ -111,6 +111,24 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger.LogDebug("VotingManager initialized.");
         }
 
+        public void Rewind(ChainedHeader newTip)
+        {
+            this.PollsRepository.Rewind(newTip);
+
+            this.PollsRepository.Initialize();
+
+            this.PollsRepository.WithTransaction(transaction => this.polls = this.PollsRepository.GetAllPolls(transaction));
+
+            this.federationManager.Initialize();
+
+            //this.whitelistedHashesRepository.Initialize();
+
+            if (!this.Synchronize(newTip))
+                throw new System.OperationCanceledException();
+
+            this.federationHistory.Initialize();
+        }
+
         /// <summary>Schedules a vote for the next time when the block will be mined.</summary>
         /// <exception cref="InvalidOperationException">Thrown in case caller is not a federation member.</exception>
         public void ScheduleVote(VotingData votingData)
@@ -678,18 +696,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return new List<IFederationMember>(((PoAConsensusOptions)this.network.Consensus.Options).GenesisFederationMembers);
 
             return this.GetModifiedFederation(repoTip);
-        }
-
-        public List<IFederationMember> GetLastKnownFederation()
-        {
-            // If too far behind to accurately determine the federation then just take the last known federation. 
-            if (((this.PollsRepository.CurrentTip?.Height ?? 0) + this.network.Consensus.MaxReorgLength) <= this.chainIndexer.Tip.Height)
-            {
-                ChainedHeader chainedHeader = this.chainIndexer.Tip.GetAncestor((int)(this.PollsRepository.CurrentTip?.Height ?? 0) + (int)this.network.Consensus.MaxReorgLength - 1);
-                return this.GetModifiedFederation(chainedHeader);
-            }
-
-            return this.GetModifiedFederation(this.chainIndexer.Tip);
         }
 
         internal bool Synchronize(ChainedHeader newTip)

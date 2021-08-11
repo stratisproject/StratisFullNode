@@ -13,6 +13,14 @@ namespace Stratis.Bitcoin.Base
     /// <summary>Interface that every tip provider that uses <see cref="ITipsManager"/> should implement.</summary>
     public interface ITipProvider
     {
+        /// <summary>If any of the tip providers listed here are rewound then this tip provider may have to be rewound as well.</summary>
+        IEnumerable<ITipProvider> GetDependencies();
+
+        /// <summary>Rewinds the tip to the given height.</summary>
+        bool Rewind(ChainedHeader newTip);
+
+        /// <summary>Gets the current tip.</summary>
+        ChainedHeader GetCurrentTip();
     }
 
     /// <summary>Component that keeps track of highest common tip between components that can have a tip.</summary>
@@ -81,6 +89,11 @@ namespace Stratis.Bitcoin.Base
             if (this.commonTipPersistingTask != null)
                 throw new Exception("Already initialized.");
 
+            foreach (ITipProvider provider in this.tipsByProvider.Values)
+            {
+                this.CheckRewind(provider);
+            }
+
             var commonTipHashHeight = this.keyValueRepo.LoadValue<HashHeightPair>(CommonTipKey);
 
             if (commonTipHashHeight != null)
@@ -92,6 +105,18 @@ namespace Stratis.Bitcoin.Base
             this.logger.LogDebug("Tips manager initialized at '{0}'.", this.lastCommonTip);
 
             this.commonTipPersistingTask = this.PersistCommonTipContinuouslyAsync();
+        }
+
+        private void CheckRewind(ITipProvider provider)
+        {
+            ChainedHeader tip = provider.GetCurrentTip();
+            ChainedHeader fork = tip;
+
+            foreach (ITipProvider dependency in provider.GetDependencies())
+                fork = fork.FindFork(dependency.GetCurrentTip());
+
+            if (fork != tip)
+                provider.Rewind(fork);
         }
 
         /// <summary>Continuously persists <see cref="lastCommonTip"/> to hard drive.</summary>

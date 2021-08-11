@@ -113,6 +113,63 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
             }
         }
+
+        public void Rewind(ChainedHeader newTip)
+        {
+            lock (this.lockObject)
+            {
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
+                {
+                    // Read all polls.
+                    Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
+                    Poll[] polls = data
+                        .Where(d => d.Key.Length == 4)
+                        .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                        .ToArray();
+
+                    // Trim poll information to CM tip.
+                    HashSet<Poll> pollsToDelete = new HashSet<Poll>();
+                    foreach (Poll poll in polls)
+                    {
+                        if (poll.PollStartBlockData.Height > newTip.Height)
+                        {
+                            pollsToDelete.Add(poll);
+                            continue;
+                        }
+
+                        bool modified = false;
+
+                        if (poll.PubKeysHexVotedInFavor.Any(v => v.Height > newTip.Height))
+                        {
+                            poll.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor.Where(v => v.Height <= newTip.Height).ToList();
+                            modified = true;
+                        }
+
+                        if (poll.PollExecutedBlockData?.Height > newTip.Height)
+                        {
+                            poll.PollExecutedBlockData = null;
+                            modified = true;
+                        }
+
+                        if (poll.PollVotedInFavorBlockData?.Height > newTip.Height)
+                        {
+                            poll.PollVotedInFavorBlockData = null;
+                            modified = true;
+                        }
+
+                        if (modified)
+                            UpdatePoll(transaction, poll);
+                    }
+
+                    DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
+
+                    transaction.Commit();
+
+                    this.CurrentTip = new HashHeightPair(newTip);
+                }
+            }
+        }
+
         public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
         {
             SaveCurrentTip(transaction, (tip == null) ? null : new HashHeightPair(tip));
