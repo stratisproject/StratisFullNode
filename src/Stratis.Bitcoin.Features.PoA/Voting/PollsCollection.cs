@@ -9,12 +9,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     /// </summary>
     public class PollsCollection : IEnumerable<Poll>
     {
-        private List<Poll> polls; // Ordered by PollVotedInFavorBlockData?
+        private HashSet<Poll> polls;
         private ConcurrentDictionary<VotingData, Poll> pendingPollsByVotingData;
 
         public PollsCollection(IEnumerable<Poll> polls)
         {
-            this.polls = new List<Poll>();
+            this.polls = new HashSet<Poll>();
             this.pendingPollsByVotingData = new ConcurrentDictionary<VotingData, Poll>();
             foreach (Poll poll in polls)
                 this.Add(poll);
@@ -37,6 +37,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public void Add(Poll poll)
         {
+            Guard.Assert(!this.polls.Contains(poll));
+
             if (poll.IsPending)
             {
                 // Can't insert another pending poll for the same.

@@ -67,6 +67,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
                             .ToArray();
 
+                        // If the polls repository contains duplicate polls then reset and rebuild it.
+                        var uniquePolls = new HashSet<Poll>(polls);
+                        if (uniquePolls.Count != polls.Length)
+                        {
+                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Length - uniquePolls.Count);
+
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
+
                         this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
 
                         Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
