@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using SQLite;
 using Stratis.Bitcoin.Features.Wallet;
 
@@ -250,7 +249,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN 2                -- Staked
                             END Type                 
                     ,       t.OutputTxTime as TimeStamp
-                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN t.Value            -- Received
+                    ,       CASE    WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 0 THEN SUM(t.Value)      -- Received
                                     WHEN t.OutputTxIsCoinbase = 0 AND t.AddressType = 1 THEN ((SELECT sum(tt.Value) FROM HDTransactionData tt WHERE tt.SpendTxId = t.OutputTxId) - t.Value)
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex = 0 THEN t.Value            -- Mined                             
                                     WHEN t.OutputTxIsCoinbase = 1 AND t.OutputIndex != 0 THEN SUM(t.Value) - IFNULL(( -- Staked
@@ -332,7 +331,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    ) t
                     ON      t.SpendTxTime = p.SpendTxTime 
                     AND     t.SpendTxId = p.SpendTxId";
-            
+
             var query = $@"
             -- Interwoven receives and spends
             SELECT  * 
