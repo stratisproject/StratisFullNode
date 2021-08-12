@@ -62,9 +62,9 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
         {
             this.repository.WithTransaction(transaction =>
             {
-                this.repository.AddPolls(transaction, new Poll() { Id = 0 });
-                this.repository.AddPolls(transaction, new Poll() { Id = 1 });
-                this.repository.AddPolls(transaction, new Poll() { Id = 2 });
+                this.repository.AddPolls(transaction, new Poll() { Id = 0, PollStartBlockData = new HashHeightPair(1, 1) });
+                this.repository.AddPolls(transaction, new Poll() { Id = 1, PollStartBlockData = new HashHeightPair(2, 2) });
+                this.repository.AddPolls(transaction, new Poll() { Id = 2, PollStartBlockData = new HashHeightPair(3, 3) });
 
                 this.repository.SaveCurrentTip(transaction, new HashHeightPair(0, 0));
 
