@@ -17,6 +17,7 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
@@ -67,10 +68,13 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly ILocalExecutor localExecutor;
 
+        private readonly SmartContractsController smartContractsController;
+
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
             IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null,
             IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null, 
-            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
+            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null,
+            SmartContractsController smartContractsController = null)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -89,6 +93,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.receiptRepository = receiptRepository;
             this.smartContractTransactionService = smartContractTransactionService;
             this.localExecutor = localExecutor;
+            this.smartContractsController = smartContractsController;
         }
 
         /// <summary>
@@ -509,6 +514,32 @@ namespace Stratis.Features.Unity3dApi.Controllers
                 string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0, txData);
 
             return result as LocalExecutionResult;
+        }
+
+        /// <summary>
+        /// Searches a smart contract's receipts for those which match a specific event. The SmartContract.Log() function
+        /// is capable of storing C# structs, and structs are used to store information about different events occurring 
+        /// on the smart contract. For example, a "TransferLog" struct could contain "From" and "To" fields and be used to log
+        /// when a smart contract makes a transfer of funds from one wallet to another. The log entries are held inside the smart contract,
+        /// indexed using the name of the struct, and are linked to individual transaction receipts.
+        /// Therefore, it is possible to return a smart contract's transaction receipts
+        /// which match a specific event (as defined by the struct name).  
+        /// </summary>
+        /// 
+        /// <param name="contractAddress">The contract address from which events were raised.</param>
+        /// <param name="eventName">The name of the event raised.</param>
+        /// <param name="topics">The topics to search. All specified topics must be present.</param>
+        /// <param name="fromBlock">The block number from which to start searching.</param>
+        /// <param name="toBlock">The block number where searching finishes.</param>
+        /// 
+        /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
+        [Route("api/[controller]/receipt-search")]
+        [HttpGet]
+        public async Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
+        {
+            List<ReceiptResponse> result = this.smartContractsController.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+
+            return result;
         }
 
         /// <summary>
