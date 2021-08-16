@@ -242,9 +242,9 @@ namespace Stratis.Bitcoin.Base
                 {
                     initializedAt = initializedAt.GetAncestor(rewindHeight);
                     this.logger.LogInformation($"Rewinding to block at height {rewindHeight}.");
-
-                    SetRewindFlag(this.nodeSettings, -1);
                 }
+
+                SetRewindFlag(this.nodeSettings, -1);
             }
 
             if (this.chainIndexer.Tip.Height != initializedAt.Height)
