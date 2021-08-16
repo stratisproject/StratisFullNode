@@ -56,6 +56,8 @@ namespace Stratis.Bitcoin.Base
     /// </summary>
     public sealed class BaseFeature : FullNodeFeature
     {
+        public const string RewindFlag = "rewind";
+
         /// <summary>Global application life cycle control - triggers when application shuts down.</summary>
         private readonly INodeLifetime nodeLifetime;
 
@@ -189,14 +191,22 @@ namespace Stratis.Bitcoin.Base
 
             await this.StartChainAsync().ConfigureAwait(false);
 
+            ChainedHeader initializedAt = this.chainIndexer.Tip;
+
             if (this.provenBlockHeaderStore != null)
             {
                 // If we find at this point that proven header store is behind chain we can rewind chain (this will cause a ripple effect and rewind block store and consensus)
                 // This problem should go away once we implement a component to keep all tips up to date
                 // https://github.com/stratisproject/StratisBitcoinFullNode/issues/2503
-                ChainedHeader initializedAt = await this.provenBlockHeaderStore.InitializeAsync(this.chainIndexer.Tip);
-                this.chainIndexer.Initialize(initializedAt);
+                initializedAt = await this.provenBlockHeaderStore.InitializeAsync(this.chainIndexer.Tip);
             }
+
+            var mustRewind = this.nodeSettings.ConfigReader.GetOrDefault<int>(BaseFeature.RewindFlag, -1);
+            if (mustRewind >= 0 && mustRewind < initializedAt.Height)
+                initializedAt = initializedAt.GetAncestor(mustRewind);
+
+            if (this.chainIndexer.Tip.Height != initializedAt.Height)
+                this.chainIndexer.Initialize(initializedAt);
 
             NetworkPeerConnectionParameters connectionParameters = this.connectionManager.Parameters;
             connectionParameters.IsRelay = this.connectionManager.ConnectionSettings.RelayTxes;

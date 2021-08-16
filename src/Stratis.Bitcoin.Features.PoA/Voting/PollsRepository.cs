@@ -88,9 +88,52 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
                                 this.CurrentTip = null;
                         }
-                        else
+
+                        if (this.CurrentTip == null)
                         {
                             this.ResetLocked(transaction);
+                            transaction.Commit();
+                        }
+                        else
+                        {
+                            // Trim poll information to chain indexer tip.
+                            ChainedHeader newTip = this.chainIndexer.Tip;
+
+                            HashSet<Poll> pollsToDelete = new HashSet<Poll>();
+                            foreach (Poll poll in polls)
+                            {
+                                if (poll.PollStartBlockData.Height > newTip.Height)
+                                {
+                                    pollsToDelete.Add(poll);
+                                    continue;
+                                }
+
+                                bool modified = false;
+
+                                if (poll.PubKeysHexVotedInFavor.Any(v => v.Height > newTip.Height))
+                                {
+                                    poll.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor.Where(v => v.Height <= newTip.Height).ToList();
+                                    modified = true;
+                                }
+
+                                if (poll.PollExecutedBlockData?.Height > newTip.Height)
+                                {
+                                    poll.PollExecutedBlockData = null;
+                                    modified = true;
+                                }
+
+                                if (poll.PollVotedInFavorBlockData?.Height > newTip.Height)
+                                {
+                                    poll.PollVotedInFavorBlockData = null;
+                                    modified = true;
+                                }
+
+                                if (modified)
+                                    UpdatePoll(transaction, poll);
+                            }
+
+                            DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
+
                             transaction.Commit();
                         }
                     }
@@ -124,6 +167,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
             }
         }
+
         public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
         {
             SaveCurrentTip(transaction, (tip == null) ? null : new HashHeightPair(tip));
