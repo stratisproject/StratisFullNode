@@ -525,11 +525,11 @@ namespace Stratis.Bitcoin.Features.Api
         [HttpPut]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public IActionResult Rewind()
+        public IActionResult Rewind([FromQuery] int height)
         {
             try
             {
-                BaseFeature.SetRewindFlag(this.nodeSettings, true);
+                BaseFeature.SetRewindFlag(this.nodeSettings, height);
 
                 return Json("Rewind flag set, please restart the node.");
             }
