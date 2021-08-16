@@ -184,6 +184,29 @@ namespace Stratis.Bitcoin.Base
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
+        public static void SetRewindFlag(NodeSettings nodeSettings, bool rewindOnStartup)
+        {
+            string[] configLines = File.ReadAllLines(nodeSettings.ConfigurationFile);
+
+            if (configLines.Any(c => c.Contains(BaseFeature.RewindFlag)))
+            {
+                for (int i = 0; i < configLines.Length; i++)
+                {
+                    if (configLines[i].Contains(BaseFeature.RewindFlag))
+                        configLines[i] = $"{BaseFeature.RewindFlag}={rewindOnStartup}";
+                }
+
+                File.WriteAllLines(nodeSettings.ConfigurationFile, configLines);
+            }
+            else
+            {
+                using (StreamWriter sw = File.AppendText(nodeSettings.ConfigurationFile))
+                {
+                    sw.WriteLine($"{BaseFeature.RewindFlag}={rewindOnStartup}");
+                };
+            }
+        }
+
         /// <inheritdoc />
         public override async Task InitializeAsync()
         {
@@ -219,6 +242,8 @@ namespace Stratis.Bitcoin.Base
                 {
                     initializedAt = initializedAt.GetAncestor(rewindHeight);
                     this.logger.LogInformation($"Rewinding to block at height {rewindHeight}.");
+
+                    SetRewindFlag(this.nodeSettings, false);
                 }
             }
 
