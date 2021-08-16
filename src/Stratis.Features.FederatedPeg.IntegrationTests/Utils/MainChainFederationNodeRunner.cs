@@ -49,6 +49,7 @@ namespace Stratis.Features.FederatedPeg.IntegrationTests.Utils
                 .UsePosConsensus()
                 .UseWallet()
                 .AddSQLiteWalletRepository()
+                // TODO: Change to true and fix tests
                 .AddPowPosMining(false)
                 .MockIBD()
                 .Build();

@@ -1,13 +1,10 @@
 ﻿using System.Linq;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
 using Stratis.Bitcoin;
 using Stratis.Bitcoin.Networks;
-using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
-using Stratis.Features.FederatedPeg.TargetChain;
 using Stratis.Features.FederatedPeg.Tests.Utils;
 using Stratis.Sidechains.Networks;
 
@@ -17,14 +14,7 @@ namespace Stratis.Features.FederatedPeg.Tests
     {
         private readonly IFederatedPegSettings settings;
 
-        private readonly IConversionRequestRepository repository;
-
         private readonly IOpReturnDataReader opReturnDataReader;
-
-        private readonly ILoggerFactory loggerFactory;
-
-        private WithdrawalExtractor withdrawalExtractor;
-
         private readonly Network network;
 
         private readonly Network counterChainNetwork;
@@ -38,9 +28,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.network = CirrusNetwork.NetworksSelector.Regtest();
             this.counterChainNetwork = Networks.Stratis.Regtest();
 
-            this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.settings = Substitute.For<IFederatedPegSettings>();
-            this.repository = Substitute.For<IConversionRequestRepository>();
             this.opReturnDataReader = Substitute.For<IOpReturnDataReader>();
 
             this.addressHelper = new MultisigAddressHelper(this.network, this.counterChainNetwork);
@@ -52,9 +40,6 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.opReturnDataReader.TryGetTargetAddress(null, out string address).Returns(callInfo => { callInfo[1] = null; return false; });
 
             this.transactionBuilder = new TestMultisigTransactionBuilder(this.addressHelper);
-
-            this.withdrawalExtractor = new WithdrawalExtractor(
-                this.settings, this.repository, this.opReturnDataReader, this.network);
         }
 
         // TODO: Will depend on decision made on backlog issue https://github.com/stratisproject/FederatedSidechains/issues/124

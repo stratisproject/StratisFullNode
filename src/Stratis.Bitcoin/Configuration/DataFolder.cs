@@ -36,6 +36,7 @@ namespace Stratis.Bitcoin.Configuration
             this.ChainPath = Path.Combine(databasePath, "chain");
             this.KeyValueRepositoryPath = Path.Combine(databasePath, "common");
             this.InteropRepositoryPath = Path.Combine(rootPath, "interop");
+            this.InteropFeeRepositoryPath = Path.Combine(rootPath, "interopfee");
             this.ConversionRepositoryPath = Path.Combine(rootPath, "conversion");
             this.BlockPath = Path.Combine(databasePath, "blocks");
             this.PollsPath = Path.Combine(rootPath, "polls");
@@ -69,6 +70,8 @@ namespace Stratis.Bitcoin.Configuration
         public string KeyValueRepositoryPath { get; internal set; }
 
         public string InteropRepositoryPath { get; internal set; }
+
+        public string InteropFeeRepositoryPath { get; internal set; }
 
         public string ConversionRepositoryPath { get; internal set; }
 
