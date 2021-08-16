@@ -335,7 +335,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         /// <inheritdoc />
         public int GetMinRewindHeight()
-        {
+        {          
             using (var session = this.db.NewSession())
             {
                 var wrapper = new Types.SessionWrapper { Session = session };
@@ -343,9 +343,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 HashHeightPair current = this.GetTipHash(wrapper);
                 Types.StoreContext context = new Types.StoreContext();
 
-                int minHeight = BinarySearch.BinaryFindFirst(h =>
+                int minHeight = current?.Height ?? -1;
+
+                while (minHeight > 0)
                 {
-                    var readKey = new Types.StoreKey { tableType = "Rewind", key = BitConverter.GetBytes(h) };
+                    var readKey = new Types.StoreKey { tableType = "Rewind", key = BitConverter.GetBytes(minHeight) };
                     Types.StoreInput input1 = new Types.StoreInput();
                     Types.StoreOutput output1 = new Types.StoreOutput();
                     var addStatus = session.Read(ref readKey, ref input1, ref output1, context, 1);
@@ -356,8 +358,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                         context.FinalizeRead(ref addStatus, ref output1);
                     }
 
-                    return addStatus == Status.OK;
-                }, 1, current.Height);
+                    if (addStatus != Status.OK)
+                        break;
+
+                    minHeight--;
+                };
 
                 return minHeight;
             }
