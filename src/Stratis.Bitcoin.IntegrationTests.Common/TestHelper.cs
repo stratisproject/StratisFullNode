@@ -505,7 +505,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             return total == amount;
         }
 
-        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode[] receivers, Money amount, List<OutPoint> outPoints= null, int? utxoCount = 1)
+        public static void SendCoins(CoreNode miner, CoreNode sender, CoreNode[] receivers, Money amount, List<OutPoint> outPoints = null, int? utxoCount = 1)
         {
             var recipients = new List<Recipient>(receivers.Length);
 
@@ -535,7 +535,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Common
             //    TestBase.WaitLoop(() => CheckWalletBalance(receiver, amount));
         }
 
-        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations, List<OutPoint> outPoints = null)
+        private static TransactionBuildContext CreateContext(Network network, WalletAccountReference accountReference, string password, List<Recipient> recipients, FeeType feeType, int minConfirmations, List<OutPoint> outPoints)
         {
             return new TransactionBuildContext(network)
             {
