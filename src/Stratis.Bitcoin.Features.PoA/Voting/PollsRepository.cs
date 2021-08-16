@@ -134,6 +134,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
 
+                            SaveCurrentTip(transaction, newTip);
+
                             transaction.Commit();
                         }
                     }

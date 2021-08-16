@@ -187,6 +187,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
+        public int GetMinRewindHeight()
+        {
+            HashHeightPair current = this.GetTipHash();
+
+            int minHeight = BinarySearch.BinaryFindFirst(h => this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(h)).ToArray()) != null, 1, current.Height);
+
+            return minHeight;
+        }
+
+        /// <inheritdoc />
         public HashHeightPair Rewind()
         {
             HashHeightPair res = null;
