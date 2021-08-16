@@ -518,7 +518,7 @@ namespace Stratis.Bitcoin.Features.Api
         }
 
         /// <summary>
-        /// Signals the node to rebuild the federation via cleabning and rebuilding executed polls.
+        /// Signals the node to rewind to the specified height.
         /// This will be done via writing a flag to the .conf file so that on startup it be executed.
         /// </summary>
         [Route("rewind")]
