@@ -177,7 +177,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             HashHeightPair current = this.GetTipHash();
 
-            int minHeight = BinarySearch.BinaryFindFirst(h => this.rocksDb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(h)).ToArray()) != null, 1, current.Height);
+            int minHeight = current?.Height ?? -1;
+
+            while (minHeight > 0 && this.rocksDb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(minHeight)).ToArray()) != null)
+                minHeight--;
 
             return minHeight;
         }
