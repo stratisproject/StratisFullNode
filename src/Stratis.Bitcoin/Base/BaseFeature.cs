@@ -225,23 +225,30 @@ namespace Stratis.Bitcoin.Base
             }
 
             var rewindHeight = this.nodeSettings.ConfigReader.GetOrDefault<int>(BaseFeature.RewindFlag, -1);
-            if (rewindHeight >= 0 && rewindHeight < initializedAt.Height)
+            if (rewindHeight >= 0)
             {
-                // Ensure that we don't try to rewind further than the coin view is capable of doing.
-                var utxoSet = ((dynamic)this.consensusRules).UtxoSet;
-                var coinDatabase = ((dynamic)utxoSet).ICoindb;
-                ((dynamic)coinDatabase).Initialize();
-                int minRewindHeight = ((dynamic)coinDatabase).GetMinRewindHeight();
-                ((dynamic)coinDatabase).Dispose();
-
-                if (minRewindHeight == -1 || rewindHeight < minRewindHeight)
+                if (rewindHeight < initializedAt.Height)
                 {
-                    this.logger.LogWarning($"Can't rewind below block at height {minRewindHeight}. Rewind ignored.");
+                    // Ensure that we don't try to rewind further than the coin view is capable of doing.
+                    var utxoSet = ((dynamic)this.consensusRules).UtxoSet;
+                    var coinDatabase = ((dynamic)utxoSet).ICoindb;
+                    ((dynamic)coinDatabase).Initialize();
+                    int minRewindHeight = ((dynamic)coinDatabase).GetMinRewindHeight();
+                    ((dynamic)coinDatabase).Dispose();
+
+                    if (minRewindHeight == -1 || rewindHeight < minRewindHeight)
+                    {
+                        this.logger.LogWarning($"Can't rewind below block at height {minRewindHeight}. Rewind ignored.");
+                    }
+                    else
+                    {
+                        initializedAt = initializedAt.GetAncestor(rewindHeight);
+                        this.logger.LogInformation($"Rewinding to block at height {rewindHeight}.");
+                    }
                 }
                 else
                 {
-                    initializedAt = initializedAt.GetAncestor(rewindHeight);
-                    this.logger.LogInformation($"Rewinding to block at height {rewindHeight}.");
+                    this.logger.LogWarning($"Can't rewind to block at height {rewindHeight}. Rewind ignored.");
                 }
 
                 SetRewindFlag(this.nodeSettings, -1);
