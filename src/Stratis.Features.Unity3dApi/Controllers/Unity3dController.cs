@@ -17,7 +17,6 @@ using Stratis.Bitcoin.Features.Consensus;
 using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.SmartContracts;
 using Stratis.Bitcoin.Features.SmartContracts.Models;
-using Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers;
 using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Models;
@@ -68,13 +67,10 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly ILocalExecutor localExecutor;
 
-        private readonly SmartContractsController smartContractsController;
-
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
             IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null,
             IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null, 
-            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null,
-            SmartContractsController smartContractsController = null)
+            IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
@@ -93,7 +89,6 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.receiptRepository = receiptRepository;
             this.smartContractTransactionService = smartContractTransactionService;
             this.localExecutor = localExecutor;
-            this.smartContractsController = smartContractsController;
         }
 
         /// <summary>
@@ -537,7 +532,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         public async Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
-            List<ReceiptResponse> result = this.smartContractsController.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+            List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
 
             return result;
         }
