@@ -2,7 +2,6 @@
   "profiles": {
     "Stratis.StraxD": {
       "commandName": "Project",
-      "commandLineArgs": "-datadir=D:\\Stratis\\StraxNodeMainNet\\Data"
     },
     "Stratis.StraxD Test": {
       "commandName": "Project",
