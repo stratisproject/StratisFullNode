@@ -86,7 +86,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
                 coinViewTip = coinDatabase.Rewind();
             }
 
-            this.logger.LogInformation("Coin view rewound to '{0}'.", coinDatabase.GetTipHash());
+            this.logger.LogInformation("Coin view initialized at '{0}'.", coinDatabase.GetTipHash());
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)
@@ -107,11 +107,10 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
         {
             this.prefetcher.Dispose();
 
-            var cache = this.UtxoSet as CachedCoinView;
-            if (cache != null)
+            if (this.UtxoSet is CachedCoinView cache)
             {
                 this.logger.LogInformation("Flushing Cache CoinView.");
-                cache.Flush();
+                cache.FlushAsync().GetAwaiter().GetResult();
             }
 
             ((IDisposable)((CachedCoinView)this.UtxoSet).ICoindb).Dispose();

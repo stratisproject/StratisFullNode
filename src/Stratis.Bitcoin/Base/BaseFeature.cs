@@ -93,13 +93,10 @@ namespace Stratis.Bitcoin.Base
         private readonly ITimeSyncBehaviorState timeSyncBehaviorState;
 
         /// <summary>Manager of node's network peers.</summary>
-        private IPeerAddressManager peerAddressManager;
+        private readonly IPeerAddressManager peerAddressManager;
 
         /// <summary>Periodic task to save list of peers to disk.</summary>
         private IAsyncLoop flushAddressManagerLoop;
-
-        /// <summary>Periodic task to save the chain to the database.</summary>
-        private IAsyncLoop flushChainLoop;
 
         /// <summary>A handler that can manage the lifetime of network peers.</summary>
         private readonly IPeerBanning peerBanning;
@@ -107,7 +104,6 @@ namespace Stratis.Bitcoin.Base
         /// <summary>Provider of IBD state.</summary>
         private readonly IInitialBlockDownloadState initialBlockDownloadState;
 
-        /// <inheritdoc cref="Network"/>
         private readonly Network network;
         private readonly INodeStats nodeStats;
         private readonly IProvenBlockHeaderStore provenBlockHeaderStore;
@@ -270,17 +266,6 @@ namespace Stratis.Bitcoin.Base
             this.chainIndexer.Initialize(chainTip);
 
             this.logger.LogInformation("Chain loaded at height {0}.", this.chainIndexer.Height);
-
-            this.flushChainLoop = this.asyncProvider.CreateAndRunAsyncLoop("FlushChain", async token =>
-            {
-                await this.chainRepository.SaveAsync(this.chainIndexer).ConfigureAwait(false);
-
-                if (this.provenBlockHeaderStore != null)
-                    await this.provenBlockHeaderStore.SaveAsync().ConfigureAwait(false);
-            },
-            this.nodeLifetime.ApplicationStopping,
-            repeatEvery: TimeSpan.FromMinutes(2),
-            startAfter: TimeSpan.FromMinutes(2));
         }
 
         /// <summary>
@@ -317,12 +302,6 @@ namespace Stratis.Bitcoin.Base
 
             this.logger.LogInformation("Disposing peer address manager.");
             this.peerAddressManager.Dispose();
-
-            if (this.flushChainLoop != null)
-            {
-                this.logger.LogInformation("Flushing headers chain.");
-                this.flushChainLoop.Dispose();
-            }
 
             this.logger.LogInformation("Disposing time sync behavior.");
             this.timeSyncBehaviorState.Dispose();

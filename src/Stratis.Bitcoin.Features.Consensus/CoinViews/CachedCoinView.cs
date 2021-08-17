@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Stratis.Bitcoin.Base;
+using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Features.Consensus.ProvenBlockHeaders;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.Extensions;
 using TracerAttributes;
@@ -54,6 +58,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
+        /// <summary>Access to the database of blocks.</summary>
+        private readonly IChainRepository chainRepository;
+
         /// <summary>
         /// Length of the coinview cache flushing interval in seconds, in case of a crash up to that number of seconds of syncing blocks are lost.
         /// </summary>
@@ -87,6 +94,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>All access to this object has to be protected by <see cref="lockobj"/>.</remarks>
         private HashHeightPair innerBlockHash;
 
+        private readonly ChainIndexer chainIndexer;
+
         /// <summary>Coin view at one layer below this implementaiton.</summary>
         private readonly ICoindb coindb;
 
@@ -117,6 +126,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>The getter violates the lock contract on <see cref="cachedRewindData"/>, but the lock here is unnecessary as the <see cref="cachedRewindData"/> is marked as readonly.</remarks>
         private int rewindDataCount => this.cachedRewindData.Count;
 
+        private readonly IProvenBlockHeaderStore provenBlockHeaderStore;
+
         private long dirtyCacheCount;
         private long cacheSizeBytes;
         private long rewindDataSizeBytes;
@@ -130,12 +141,16 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         private readonly Random random;
 
-        public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats, ConsensusSettings consensusSettings, StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null)
+        public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats,
+            ConsensusSettings consensusSettings, ChainIndexer chainIndexer, IChainRepository chainRepository, IProvenBlockHeaderStore provenBlockHeaderStore, StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
+            this.chainIndexer = chainIndexer;
+            this.chainRepository = chainRepository;
             this.coindb = coindb;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.provenBlockHeaderStore = provenBlockHeaderStore;
             this.network = network;
             this.checkpoints = checkpoints;
             this.dateTimeProvider = dateTimeProvider;
@@ -153,6 +168,8 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             this.MaxCacheSizeBytes = consensusSettings.MaxCoindbCacheInMB * 1024 * 1024;
             this.CacheFlushTimeIntervalSeconds = consensusSettings.CoindbIbdFlushMin * 60;
+
+            nodeStats.RegisterStats(this.AddInlineState, StatsType.Inline, this.GetType().Name, 900);
 
             if (nodeStats.DisplayBenchStats)
                 nodeStats.RegisterStats(this.AddBenchStats, StatsType.Benchmark, this.GetType().Name, 300);
@@ -312,7 +329,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// WARNING: This method can only be run from <see cref="ConsensusLoop.Execute(System.Threading.CancellationToken)"/> thread context
         /// or when consensus loop is stopped. Otherwise, there is a risk of race condition when the consensus loop accepts new block.
         /// </remarks>
-        public void Flush(bool force = true)
+        public async Task FlushAsync(bool force = true)
         {
             if (!force)
             {
@@ -336,6 +353,12 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 this.logger.LogDebug("Flushing, reasons flushTimeLimit={0} flushSizeLimit={1}.", flushTimeLimit, flushSizeLimit);
             }
+
+            // Flush the chain repository and proven header block store
+            await this.chainRepository.SaveAsync(this.chainIndexer).ConfigureAwait(false);
+
+            if (this.provenBlockHeaderStore != null)
+                await this.provenBlockHeaderStore.SaveAsync().ConfigureAwait(false);
 
             // Before flushing the coinview persist the stake store
             // the stake store depends on the last block hash
@@ -615,7 +638,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
 
             // Flush the entire cache before rewinding
-            this.Flush(true);
+            this.FlushAsync(true).GetAwaiter().GetResult();
 
             lock (this.lockobj)
             {
@@ -652,6 +675,13 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 return existingRewindData;
 
             return this.coindb.GetRewindData(height);
+        }
+
+        [NoTrace]
+        private void AddInlineState(StringBuilder log)
+        {
+            log.AppendLine("Coin Cache Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.blockHash.Height}".PadRight(10) + $"(Hash: {this.blockHash.Hash})");
+            log.AppendLine("Coin Store Height".PadRight(LoggingConfiguration.ColumnLength) + $": {this.innerBlockHash.Height}".PadRight(10) + $"(Hash: {this.innerBlockHash.Hash})");
         }
 
         [NoTrace]

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using DBreeze.DataTypes;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -55,7 +56,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 chained = this.MakeNext(this.MakeNext(genesisChainedHeader, ctx.Network), ctx.Network);
                 ctx.Coindb.SaveChanges(new List<UnspentOutput>(), new HashHeightPair(previous), new HashHeightPair(chained));
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
-                ctx.ReloadPersistentCoinView(network);
+                ctx.ReloadPersistentCoinView(this.network);
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint() }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -63,7 +64,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void TestCacheCoinView()
+        public async Task TestCacheCoinViewAsync()
         {
             using (NodeContext ctx = NodeContext.Create(this))
             {
@@ -72,7 +73,9 @@ namespace Stratis.Bitcoin.IntegrationTests
                 ChainedHeader chained = this.MakeNext(genesisChainedHeader, ctx.Network);
                 var dateTimeProvider = new DateTimeProvider();
 
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
+                var chainStore = new ChainStore();
+                var chainRepository = new ChainRepository(chainStore);
+                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(), chainRepository, null);
 
                 cacheCoinView.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
                 Assert.NotNull(cacheCoinView.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -81,7 +84,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 Assert.Null(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Equal(chained.Previous.HashBlock, ctx.Coindb.GetTipHash().Hash);
-                cacheCoinView.Flush();
+                await cacheCoinView.FlushAsync();
                 Assert.NotNull(ctx.Coindb.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
                 Assert.Equal(chained.HashBlock, ctx.Coindb.GetTipHash().Hash);
                 //Assert.Null(ctx.PersistentCoinView.FetchCoinsAsync(new[] { new uint256() }).Result.UnspentOutputs[0]);
@@ -99,18 +102,21 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void CanRewind()
+        public async Task CanRewindAsync()
         {
             using (NodeContext nodeContext = NodeContext.Create(this))
             {
                 var dateTimeProvider = new DateTimeProvider();
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)));
+
+                var chainStore = new ChainStore();
+                var chainRepository = new ChainRepository(chainStore);
+                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(), chainRepository, null);
                 var tester = new CoinViewTester(cacheCoinView);
 
                 List<(Coins, OutPoint)> coinsA = tester.CreateCoins(5);
                 List<(Coins, OutPoint)> coinsB = tester.CreateCoins(1);
                 tester.NewBlock();
-                cacheCoinView.Flush();
+                await cacheCoinView.FlushAsync();
                 Assert.True(tester.Exists(coinsA[2]));
                 Assert.True(tester.Exists(coinsB[0]));
 
@@ -143,7 +149,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 tester.Spend(coinsA[2]);
                 tester.Spend(coinsB[0]);
                 tester.NewBlock();
-                cacheCoinView.Flush();
+                await cacheCoinView.FlushAsync();
                 Assert.False(tester.Exists(coinsA[2]));
                 Assert.False(tester.Exists(coinsB[0]));
 
@@ -162,7 +168,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 Assert.True(tester.Exists(coinsD[1]));
                 Assert.False(tester.Exists(coinsD[0]));
-                cacheCoinView.Flush();
+                await cacheCoinView.FlushAsync();
 
                 // Creates another empty RewindData instance.
                 tester.NewBlock();
@@ -192,7 +198,7 @@ namespace Stratis.Bitcoin.IntegrationTests
         }
 
         [Fact]
-        public void CanHandleReorgs()
+        public async Task CanHandleReorgsAsync()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
@@ -209,7 +215,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 coreNode2.FindBlock(20).Last();
                 TestHelper.ConnectAndSync(stratisNode, coreNode2);
                 TestHelper.Disconnect(stratisNode, coreNode2);
-                ((CachedCoinView)stratisNode.FullNode.CoinView()).Flush();
+                await ((CachedCoinView)stratisNode.FullNode.CoinView()).FlushAsync();
 
                 //Core1 discovers 30 blocks, sends to stratis
                 coreNode1.FindBlock(30).Last();
@@ -220,7 +226,7 @@ namespace Stratis.Bitcoin.IntegrationTests
                 coreNode2.FindBlock(50).Last();
                 TestHelper.ConnectAndSync(stratisNode, coreNode2);
                 TestHelper.Disconnect(stratisNode, coreNode2);
-                ((CachedCoinView)stratisNode.FullNode.CoinView()).Flush();
+                await ((CachedCoinView)stratisNode.FullNode.CoinView()).FlushAsync();
 
                 TestBase.WaitLoop(() => TestHelper.AreNodesSynced(stratisNode, coreNode2));
             }

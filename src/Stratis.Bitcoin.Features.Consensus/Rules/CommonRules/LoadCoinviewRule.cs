@@ -44,15 +44,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         }
 
         /// <inheritdoc />
-        public override Task RunAsync(RuleContext context)
+        public override async Task RunAsync(RuleContext context)
         {
             if (this.PowParent.UtxoSet is CachedCoinView cachedCoinView)
             {
                 bool inIBD = this.initialBlockDownloadState.IsInitialBlockDownload();
-                cachedCoinView.Flush(force: !inIBD);
+                await cachedCoinView.FlushAsync(force: !inIBD).ConfigureAwait(false);
             }
 
-            return Task.CompletedTask;
+            return;
         }
     }
 
@@ -94,15 +94,15 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
     public class SaveCoinviewRule : PushCoinviewRule
     {
         /// <inheritdoc />
-        public override Task RunAsync(RuleContext context)
+        public override async Task RunAsync(RuleContext context)
         {
-            base.RunAsync(context);
+            await base.RunAsync(context).ConfigureAwait(false);
 
             // Use the default flush condition to decide if flush is required (currently set to every 60 seconds)
             if (this.PowParent.UtxoSet is CachedCoinView cachedCoinView)
-                cachedCoinView.Flush(false);
+                await cachedCoinView.FlushAsync(false).ConfigureAwait(false);
 
-            return Task.CompletedTask;
+            return;
         }
     }
 

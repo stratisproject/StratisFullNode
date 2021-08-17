@@ -152,7 +152,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var inMemoryCoinView = new InMemoryCoinView(new HashHeightPair(this.ChainIndexer.Tip));
                 var nodeStats = new NodeStats(dateTimeProvider, nodeSettings, new Mock<IVersionProvider>().Object);
-                this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings);
+                this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), inMemoryCoinView, dateTimeProvider, new LoggerFactory(), nodeStats, consensusSettings, this.ChainIndexer, new ChainRepository(new ChainStore()), null);
 
                 var signals = new Signals.Signals(loggerFactory, null);
                 var asyncProvider = new AsyncProvider(loggerFactory, signals);

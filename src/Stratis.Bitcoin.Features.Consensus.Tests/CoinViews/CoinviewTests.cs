@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Base;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
 using Stratis.Bitcoin.Configuration.Settings;
@@ -46,12 +47,14 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.coindb.Initialize();
 
             this.chainIndexer = new ChainIndexer(this.network);
+            var chainStore = new ChainStore();
+            var chainRepository = new ChainRepository(chainStore);
             this.stakeChainStore = new StakeChainStore(this.network, this.chainIndexer, (IStakedb)this.coindb, this.loggerFactory);
             this.stakeChainStore.Load();
 
             this.rewindDataIndexCache = new RewindDataIndexCache(this.dateTimeProvider, this.network, new FinalizedBlockInfoRepository(new HashHeightPair()), new Checkpoints());
 
-            this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), this.coindb, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new ConsensusSettings(new NodeSettings(this.network)), this.stakeChainStore, this.rewindDataIndexCache);
+            this.cachedCoinView = new CachedCoinView(this.network, new Checkpoints(), this.coindb, this.dateTimeProvider, this.loggerFactory, this.nodeStats, new ConsensusSettings(new NodeSettings(this.network)), this.chainIndexer, chainRepository, null, this.stakeChainStore, this.rewindDataIndexCache);
 
             this.rewindDataIndexCache.Initialize(this.chainIndexer.Height, this.cachedCoinView);
 
@@ -74,7 +77,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.CoinViews
             this.SaveChanges(outputsList, currentHeight + 1);
             currentHeight++;
 
-            this.cachedCoinView.Flush(true);
+            await this.cachedCoinView.FlushAsync(true);
 
             HashHeightPair tipAfterOriginalCoinsCreation = this.cachedCoinView.GetTipHash();
 
