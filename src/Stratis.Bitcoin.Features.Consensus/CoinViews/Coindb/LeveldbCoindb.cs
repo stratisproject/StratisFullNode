@@ -224,14 +224,19 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <inheritdoc />
         public int GetMinRewindHeight()
         {
-            // Trim all rewind blocks prior to last checkpoint.
+            // Find the first row with a rewind table key prefix.
             using (var iterator = this.leveldb.CreateIterator())
             {
                 iterator.Seek(new byte[] { rewindTable });
                 if (!iterator.IsValid())
                     return -1;
 
-                return BitConverter.ToInt32(iterator.Key().Reverse().ToArray());
+                byte[] key = iterator.Key();
+
+                if (key.Length != 5 || key[0] != rewindTable)
+                    return -1;
+
+                return BitConverter.ToInt32(key.SafeSubarray(1, 4).Reverse().ToArray());
             }
         }
 
