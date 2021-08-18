@@ -190,6 +190,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         public HashHeightPair Rewind()
         {
             HashHeightPair res = null;
+
             using (var batch = new WriteBatch())
             {
                 HashHeightPair current = this.GetTipHash();
