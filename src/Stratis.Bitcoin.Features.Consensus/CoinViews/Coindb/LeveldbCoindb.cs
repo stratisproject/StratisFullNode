@@ -85,19 +85,34 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                     this.logger.LogInformation("Fixing the coin db.");
 
                     var rows = new Dictionary<int, byte[]>();
-                    for (int height = 1; height <= current.Height; height++)
+
+                    using (var iterator = this.leveldb.CreateIterator())
                     {
-                        rows[height] = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
+                        iterator.Seek(new byte[] { rewindTable });
+
+                        while (iterator.IsValid())
+                        {
+                            byte[] key = iterator.Key();
+
+                            if (key.Length != 5 || key[0] != rewindTable)
+                                break;
+
+                            int height = BitConverter.ToInt32(key, 1);
+
+                            rows[height] = iterator.Value();
+
+                            iterator.Next();
+                        }
                     }
 
                     using (var batch = new WriteBatch())
                     {
-                        for (int height = 1; height <= current.Height; height++)
+                        foreach (int height in rows.Keys.OrderBy(k => k))
                         {
                             batch.Delete(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
                         }
 
-                        for (int height = 1; height <= current.Height; height++)
+                        foreach (int height in rows.Keys.OrderBy(k => k))
                         {
                             batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray(), rows[height]);
                         }
