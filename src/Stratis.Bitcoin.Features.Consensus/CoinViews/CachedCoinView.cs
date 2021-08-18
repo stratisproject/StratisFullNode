@@ -371,6 +371,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                 this.coindb.SaveChanges(modify, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
 
+                // All the cached utxos are now on disk so we can clear the cached entry list.
+                this.cachedUtxoItems.Clear();
+                this.cacheSizeBytes = 0;
+
                 this.cachedRewindData.Clear();
                 this.rewindDataSizeBytes = 0;
                 this.dirtyCacheCount = 0;
