@@ -74,50 +74,53 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
             // Check if key bytes are in the wrong endian order.
             HashHeightPair current = this.GetTipHash();
-            byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height)).ToArray());
-            // Fix the table if required.
-            if (row != null)
+            if (current != null)
             {
-                // To be sure, check the next height too.
-                byte[] row2 = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height - 1)).ToArray());
-                if (row2 != null)
+                byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height)).ToArray());
+                // Fix the table if required.
+                if (row != null)
                 {
-                    this.logger.LogInformation("Fixing the coin db.");
-
-                    var rows = new Dictionary<int, byte[]>();
-
-                    using (var iterator = this.leveldb.CreateIterator())
+                    // To be sure, check the next height too.
+                    byte[] row2 = (current.Height > 1) ? this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height - 1)).ToArray()) : new byte[] { };
+                    if (row2 != null)
                     {
-                        iterator.Seek(new byte[] { rewindTable });
+                        this.logger.LogInformation("Fixing the coin db.");
 
-                        while (iterator.IsValid())
+                        var rows = new Dictionary<int, byte[]>();
+
+                        using (var iterator = this.leveldb.CreateIterator())
                         {
-                            byte[] key = iterator.Key();
+                            iterator.Seek(new byte[] { rewindTable });
 
-                            if (key.Length != 5 || key[0] != rewindTable)
-                                break;
+                            while (iterator.IsValid())
+                            {
+                                byte[] key = iterator.Key();
 
-                            int height = BitConverter.ToInt32(key, 1);
+                                if (key.Length != 5 || key[0] != rewindTable)
+                                    break;
 
-                            rows[height] = iterator.Value();
+                                int height = BitConverter.ToInt32(key, 1);
 
-                            iterator.Next();
-                        }
-                    }
+                                rows[height] = iterator.Value();
 
-                    using (var batch = new WriteBatch())
-                    {
-                        foreach (int height in rows.Keys.OrderBy(k => k))
-                        {
-                            batch.Delete(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
-                        }
-
-                        foreach (int height in rows.Keys.OrderBy(k => k))
-                        {
-                            batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray(), rows[height]);
+                                iterator.Next();
+                            }
                         }
 
-                        this.leveldb.Write(batch, new WriteOptions() { Sync = true });
+                        using (var batch = new WriteBatch())
+                        {
+                            foreach (int height in rows.Keys.OrderBy(k => k))
+                            {
+                                batch.Delete(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
+                            }
+
+                            foreach (int height in rows.Keys.OrderBy(k => k))
+                            {
+                                batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray(), rows[height]);
+                            }
+
+                            this.leveldb.Write(batch, new WriteOptions() { Sync = true });
+                        }
                     }
                 }
             }
