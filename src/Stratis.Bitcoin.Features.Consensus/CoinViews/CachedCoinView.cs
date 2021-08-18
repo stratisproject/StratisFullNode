@@ -142,7 +142,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         private readonly Random random;
 
         public CachedCoinView(Network network, ICheckpoints checkpoints, ICoindb coindb, IDateTimeProvider dateTimeProvider, ILoggerFactory loggerFactory, INodeStats nodeStats,
-            ConsensusSettings consensusSettings, ChainIndexer chainIndexer, IChainRepository chainRepository, IProvenBlockHeaderStore provenBlockHeaderStore, StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null)
+            ConsensusSettings consensusSettings, ChainIndexer chainIndexer, IChainRepository chainRepository, IProvenBlockHeaderStore provenBlockHeaderStore = null, StakeChainStore stakeChainStore = null, IRewindDataIndexCache rewindDataIndexCache = null)
         {
             Guard.NotNull(coindb, nameof(CachedCoinView.coindb));
 
