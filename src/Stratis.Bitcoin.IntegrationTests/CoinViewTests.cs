@@ -75,7 +75,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var chainStore = new ChainStore();
                 var chainRepository = new ChainRepository(chainStore);
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(), chainRepository, null);
+                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), ctx.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(this.network), chainRepository, null);
 
                 cacheCoinView.SaveChanges(new UnspentOutput[] { new UnspentOutput(new OutPoint(genesis.Transactions[0], 0), new Coins(0, genesis.Transactions[0].Outputs.First(), true)) }, new HashHeightPair(genesisChainedHeader), new HashHeightPair(chained));
                 Assert.NotNull(cacheCoinView.FetchCoins(new[] { new OutPoint(genesis.Transactions[0], 0) }).UnspentOutputs.Values.FirstOrDefault().Coins);
@@ -110,7 +110,7 @@ namespace Stratis.Bitcoin.IntegrationTests
 
                 var chainStore = new ChainStore();
                 var chainRepository = new ChainRepository(chainStore);
-                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(), chainRepository, null);
+                var cacheCoinView = new CachedCoinView(this.network, new Checkpoints(), nodeContext.Coindb, dateTimeProvider, this.loggerFactory, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), new ConsensusSettings(new NodeSettings(this.network)), new ChainIndexer(this.network), chainRepository, null);
                 var tester = new CoinViewTester(cacheCoinView);
 
                 List<(Coins, OutPoint)> coinsA = tester.CreateCoins(5);
