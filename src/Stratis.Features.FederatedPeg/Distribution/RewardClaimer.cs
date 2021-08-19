@@ -175,7 +175,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 return null;
             }
 
-            this.logger.Info($"Reward distribution transaction built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
+            this.logger.Info($"Reward distribution transaction '{builtTransaction.GetHash()}' built; sending {builtTransaction.TotalOut} to federation '{this.network.Federations.GetOnlyFederation().MultisigScript.PaymentScript}'.");
             return builtTransaction;
         }
 

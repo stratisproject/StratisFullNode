@@ -45,6 +45,8 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "CPqxvnzfXngDi75xBJKqi4e6YrFsinrJka";
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "CXK1AhmK8XhmBWHUrCKRt5WMhz1CcYeguF";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -174,6 +176,7 @@ namespace Stratis.Sidechains.Networks
                 EnforceMinProtocolVersionAtBlockHeight = 384675, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 FederationMemberActivationTime = 1605862800, // Friday, November 20, 2020 9:00:00 AM
+                InterFluxV2MainChainActivationHeight = 460_000,
                 VotingManagerV2ActivationHeight = 1_683_000 // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
             };
 

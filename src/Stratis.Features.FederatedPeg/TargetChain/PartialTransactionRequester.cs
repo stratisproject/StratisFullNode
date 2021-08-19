@@ -81,7 +81,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
             foreach (ICrossChainTransfer transfer in partialtransfers)
             {
-                await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId).AddPartial(transfer.PartialTransaction));
+                await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(transfer.DepositTransactionId).AddPartial(transfer.PartialTransaction)).ConfigureAwait(false);
                 this.logger.Debug("Partial template requested for deposit Id '{0}'", transfer.DepositTransactionId);
             }
 
@@ -96,7 +96,7 @@ namespace Stratis.Features.FederatedPeg.TargetChain
 
                     if (toSign != null)
                     {
-                        await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(RequestPartialTransactionPayload.ConsolidationDepositId).AddPartial(toSign.PartialTransaction));
+                        await this.federatedPegBroadcaster.BroadcastAsync(new RequestPartialTransactionPayload(RequestPartialTransactionPayload.ConsolidationDepositId).AddPartial(toSign.PartialTransaction)).ConfigureAwait(false);
                         this.logger.Debug("Partial consolidating transaction requested for '{0}'.", toSign.PartialTransaction.GetHash());
                     }
                 }
