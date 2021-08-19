@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly HashSet<Poll> polls;
         private readonly ConcurrentDictionary<VotingData, Poll> pendingPollsByVotingData;
 
-        public PollsCollection(IEnumerable<Poll> polls, ILogger logger)
+        public PollsCollection(IEnumerable<Poll> polls)
         {
             this.polls = new HashSet<Poll>();
             this.pendingPollsByVotingData = new ConcurrentDictionary<VotingData, Poll>();
@@ -35,7 +35,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.GetEnumerator();
         }
 
-        public bool Add(Poll poll)
+        public void Add(Poll poll)
         {
             if (this.polls.Contains(poll))
             {
@@ -51,8 +51,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             this.polls.Add(poll);
-
-            return true;
         }
 
         public bool Remove(Poll poll)
