@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
             this.scheduledVotingData = new List<VotingData>();
-            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings);
+            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
