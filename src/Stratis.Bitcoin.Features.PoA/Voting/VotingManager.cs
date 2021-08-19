@@ -68,8 +68,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Network network,
             IBlockRepository blockRepository = null,
             ChainIndexer chainIndexer = null,
-            INodeLifetime nodeLifetime = null,
-            NodeSettings nodeSettings = null)
+            INodeLifetime nodeLifetime = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
             this.pollResultExecutor = Guard.NotNull(pollResultExecutor, nameof(pollResultExecutor));
@@ -79,7 +78,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.locker = new object();
             this.votingDataEncoder = new VotingDataEncoder(loggerFactory);
             this.scheduledVotingData = new List<VotingData>();
-            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings);
+            this.PollsRepository = new PollsRepository(dataFolder, loggerFactory, dBreezeSerializer, chainIndexer);
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
@@ -99,7 +98,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.PollsRepository.Initialize();
 
-            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.PollsRepository.GetAllPolls(transaction), this.logger));
+            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.PollsRepository.GetAllPolls(transaction)));
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
@@ -295,8 +294,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             return chainedHeader.Height <= LastKnownFederationHeight();
         }
-
-        private Dictionary<uint256, List<IFederationMember>> cachedFederations = new Dictionary<uint256, List<IFederationMember>>();
 
         public void EnterStraxEra(List<IFederationMember> modifiedFederation)
         {
@@ -499,8 +496,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                         PubKeysHexVotedInFavor = new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } }
                                     };
 
-                                    if (!this.polls.Add(poll))
-                                        this.logger.LogWarning("The poll already exists: '{0}'.", poll);
+                                    this.polls.Add(poll);
 
                                     this.PollsRepository.AddPolls(transaction, poll);
                                     pollsRepositoryModified = true;
@@ -760,7 +756,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 10000 == 0)
                             {
-                               this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
+                                this.logger.LogInformation($"Synchronizing voting data at height {header.Height}.");
                             }
                         }
 
@@ -777,7 +773,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private void OnBlockConnected(BlockConnected blockConnected)
         {
             this.PollsRepository.Synchronous(() =>
-            {                
+            {
                 if (this.Synchronize(blockConnected.ConnectedBlock.ChainedHeader.Previous))
                 {
                     this.PollsRepository.WithTransaction(transaction =>
