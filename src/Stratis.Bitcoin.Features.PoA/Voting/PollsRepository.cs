@@ -97,7 +97,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             this.ResetLocked(transaction);
                             transaction.Commit();
                         }
-                        else
+                        else if (this.chainIndexer != null)
                         {
                             // Trim poll information to chain indexer tip.
                             ChainedHeader newTip = this.chainIndexer.Tip;
