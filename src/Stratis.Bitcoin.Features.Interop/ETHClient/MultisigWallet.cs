@@ -108,6 +108,19 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public bool Executed { get; set; }
     }
 
+    public class MultisigTransactionIdentifiers
+    {
+        /// <summary>
+        /// The hash of the Ethereum transaction containing the multisig contract call.
+        /// </summary>
+        public string TransactionHash { get; set; }
+
+        /// <summary>
+        /// The related multisig contract transaction ID.
+        /// </summary>
+        public BigInteger TransactionId { get; set; }
+    }
+
     [Function("transactions", typeof(TransactionDTO))]
     public class TransactionsFunction : FunctionMessage
     {
@@ -189,7 +202,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             return Encoders.Hex.EncodeData(rawTransaction);
         }
 
-        public static async Task<BigInteger> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
+        public static async Task<MultisigTransactionIdentifiers> SubmitTransactionAsync(Web3 web3, string contractAddress, string destination, BigInteger value, string data, BigInteger gas, BigInteger gasPrice)
         {
             IContractTransactionHandler<SubmitTransactionFunction> submitHandler = web3.Eth.GetContractTransactionHandler<SubmitTransactionFunction>();
             
@@ -207,9 +220,9 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
 
             // Use -1 as an error indicator.
             if (submission == null)
-                return BigInteger.MinusOne;
+                return new MultisigTransactionIdentifiers() { TransactionId = BigInteger.MinusOne };
 
-            return submission.Event.TransactionId;
+            return new MultisigTransactionIdentifiers() { TransactionHash = submitTransactionReceipt.TransactionHash, TransactionId = submission.Event.TransactionId };
         }
 
         public static async Task<string> ConfirmTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, BigInteger gas, BigInteger gasPrice)

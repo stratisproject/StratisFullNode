@@ -44,6 +44,8 @@ namespace Stratis.Sidechains.Networks
 
             this.CirrusRewardDummyAddress = "tGXZrZiU44fx3SQj8tAQ3Zexy2VuELZtoh";
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "tUAzRBe1CaKaZnrxWPLVv7F4owHHKXAtbj";
+
             var consensusFactory = new SmartContractCollateralPoAConsensusFactory();
 
             // Create the genesis block.
@@ -123,6 +125,7 @@ namespace Stratis.Sidechains.Networks
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 3 // 3 Hours
             )
             {
+                InterFluxV2MainChainActivationHeight = 500_000,
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 VotingManagerV2ActivationHeight = 1_999_500

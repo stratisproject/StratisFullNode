@@ -99,7 +99,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.PollsRepository.Initialize();
 
-            this.PollsRepository.WithTransaction(transaction => this.polls = this.PollsRepository.GetAllPolls(transaction));
+            this.PollsRepository.WithTransaction(transaction => this.polls = new PollsCollection(this.PollsRepository.GetAllPolls(transaction), this.logger));
 
             this.blockConnectedSubscription = this.signals.Subscribe<BlockConnected>(this.OnBlockConnected);
             this.blockDisconnectedSubscription = this.signals.Subscribe<BlockDisconnected>(this.OnBlockDisconnected);
@@ -499,7 +499,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                         PubKeysHexVotedInFavor = new List<Vote>() { new Vote() { PubKey = fedMemberKeyHex, Height = chBlock.ChainedHeader.Height } }
                                     };
 
-                                    this.polls.Add(poll);
+                                    if (!this.polls.Add(poll))
+                                        this.logger.LogWarning("The poll already exists: '{0}'.", poll);
+
                                     this.PollsRepository.AddPolls(transaction, poll);
                                     pollsRepositoryModified = true;
 
