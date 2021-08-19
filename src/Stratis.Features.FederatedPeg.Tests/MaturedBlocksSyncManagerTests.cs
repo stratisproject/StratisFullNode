@@ -36,6 +36,8 @@ namespace Stratis.Features.FederatedPeg.Tests
             this.federationGatewayClient = Substitute.For<IFederationGatewayClient>();
 
             this.federationWalletManager = Substitute.For<IFederationWalletManager>();
+            this.federationWalletManager.IsFederationWalletActive().Returns(true);
+            this.federationWalletManager.IsSyncedWithChain().Returns(true);
             this.federationWalletManager.WalletTipHeight.Returns(0);
 
             this.initialBlockDownloadState = Substitute.For<IInitialBlockDownloadState>();
@@ -124,7 +126,10 @@ namespace Stratis.Features.FederatedPeg.Tests
                       initialBlockDownloadState,
                       nodeLifetime,
                       null,
-                      chainIndexer)
+                      chainIndexer,
+                      null,
+                      null,
+                      null)
             {
             }
 
