@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
@@ -12,19 +13,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private HashSet<Poll> polls;
         private ConcurrentDictionary<VotingData, Poll> pendingPollsByVotingData;
 
-        public PollsCollection(IEnumerable<Poll> polls)
+        public PollsCollection(IEnumerable<Poll> polls, ILogger logger)
         {
             this.polls = new HashSet<Poll>();
             this.pendingPollsByVotingData = new ConcurrentDictionary<VotingData, Poll>();
             foreach (Poll poll in polls)
-                this.Add(poll);
+                if (!this.Add(poll))
+                    logger.LogWarning("The poll already exists: '{0}'.", poll);
         }
-
-        public static implicit operator PollsCollection(List<Poll> polls)
-        {
-            return new PollsCollection(polls);
-        }
-
+        
         public IEnumerator<Poll> GetEnumerator()
         {
             return ((IEnumerable<Poll>)this.polls).GetEnumerator();
@@ -35,9 +32,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.GetEnumerator();
         }
 
-        public void Add(Poll poll)
+        public bool Add(Poll poll)
         {
-            Guard.Assert(!this.polls.Contains(poll));
+            if (this.polls.Contains(poll))
+                return false;
 
             if (poll.IsPending)
             {
@@ -47,6 +45,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
 
             this.polls.Add(poll);
+
+            return true;
         }
 
         public bool Remove(Poll poll)
