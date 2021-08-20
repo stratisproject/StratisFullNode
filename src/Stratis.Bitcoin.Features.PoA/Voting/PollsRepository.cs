@@ -32,13 +32,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings)
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
         {
         }
 
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
@@ -66,6 +66,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             .Where(d => d.Key.Length == 4)
                             .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
                             .ToArray();
+
+                        // If the polls repository contains duplicate polls then reset the highest poll id and 
+                        // set the tip to null.
+                        // This will trigger the VotingManager to rebuild the voting and polls repository as the
+                        // polls repository tip is null. This happens later during startup, see VotingManager.Synchronize()
+                        var uniquePolls = new HashSet<Poll>(polls);
+                        if (uniquePolls.Count != polls.Length)
+                        {
+                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Length - uniquePolls.Count);
+
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
 
                         this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
 
@@ -180,7 +194,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                using (var transaction = this.dbreeze.GetTransaction())
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     return func(transaction);
                 }
@@ -191,7 +205,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                using (var transaction = this.dbreeze.GetTransaction())
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     action(transaction);
                 }

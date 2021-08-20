@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using NLog;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA.Voting
@@ -9,20 +10,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     /// </summary>
     public class PollsCollection : IEnumerable<Poll>
     {
-        private List<Poll> polls; // Ordered by PollVotedInFavorBlockData?
-        private ConcurrentDictionary<VotingData, Poll> pendingPollsByVotingData;
+        private readonly ILogger logger;
+        private readonly HashSet<Poll> polls;
+        private readonly ConcurrentDictionary<VotingData, Poll> pendingPollsByVotingData;
 
         public PollsCollection(IEnumerable<Poll> polls)
         {
-            this.polls = new List<Poll>();
+            this.polls = new HashSet<Poll>();
             this.pendingPollsByVotingData = new ConcurrentDictionary<VotingData, Poll>();
+
+            this.logger = LogManager.GetCurrentClassLogger();
+
             foreach (Poll poll in polls)
                 this.Add(poll);
-        }
-
-        public static implicit operator PollsCollection(List<Poll> polls)
-        {
-            return new PollsCollection(polls);
         }
 
         public IEnumerator<Poll> GetEnumerator()
@@ -37,6 +37,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public void Add(Poll poll)
         {
+            if (this.polls.Contains(poll))
+            {
+                this.logger.Warn("The poll already exists: '{0}'.", poll);
+                return;
+            }
+
             if (poll.IsPending)
             {
                 // Can't insert another pending poll for the same.
