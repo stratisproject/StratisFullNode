@@ -276,9 +276,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
 
                     if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                        federation.Add(federationMember);
+                    {
+                        if (!federation.Any(m => m is CollateralFederationMember colMember && federationMember is CollateralFederationMember colMember2 && colMember.CollateralMainchainAddress == colMember2.CollateralMainchainAddress))
+                            federation.Add(federationMember);
+                    }
                     else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    {
                         federation.Remove(federationMember);
+                    }
                 }
 
                 return federation;
@@ -365,6 +370,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             {
                                 if (straxEra && federationMember is CollateralFederationMember collateralFederationMember)
                                 {
+                                    if (modifiedFederation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
+                                        continue;
+
                                     bool shouldBeMultisigMember = ((PoANetwork)this.network).StraxMiningMultisigMembers.Contains(federationMember.PubKey);
                                     if (collateralFederationMember.IsMultisigMember != shouldBeMultisigMember)
                                         collateralFederationMember.IsMultisigMember = shouldBeMultisigMember;
