@@ -342,7 +342,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (poll.VotingData.Key == VoteKey.AddFederationMember)
                     {
-                        if (federationMember is CollateralFederationMember collateralFederationMember && !federationMembers.IsCollateralAddressRegistered(this.logger, collateralFederationMember.CollateralMainchainAddress))
+                        if (federationMember is CollateralFederationMember collateralFederationMember && !federationMembers.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
                             federationMembers.Add(federationMember);
                     }
                     else if (poll.VotingData.Key == VoteKey.KickFederationMember)
@@ -375,7 +375,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         // Addition/removal.
                         if (poll.VotingData.Key == VoteKey.AddFederationMember)
                         {
-                            if (federationMember is CollateralFederationMember collateralFederationMember && !modifiedFederation.IsCollateralAddressRegistered(this.logger, collateralFederationMember.CollateralMainchainAddress))
+                            if (federationMember is CollateralFederationMember collateralFederationMember && !modifiedFederation.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
                                 modifiedFederation.Add(federationMember);
                         }
                         else if (poll.VotingData.Key == VoteKey.KickFederationMember)
