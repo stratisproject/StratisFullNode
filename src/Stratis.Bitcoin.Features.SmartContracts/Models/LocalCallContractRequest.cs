@@ -11,6 +11,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
     public class LocalCallContractRequest 
     {
         /// <summary>
+        /// The height at which to query the contract's state. If unset, will default to the current chain tip.
+        /// </summary>
+        public ulong? BlockHeight { get; set; }
+
+        /// <summary>
         /// The address of the smart contract containing the method.
         /// </summary>
         [Required(ErrorMessage = "A destination address is required.")]

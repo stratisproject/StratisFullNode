@@ -23,6 +23,7 @@ using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Compilation;
 using Stratis.SmartContracts.CLR.Decompilation;
 using Stratis.SmartContracts.CLR.Local;
@@ -56,6 +57,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private readonly ILocalExecutor localExecutor;
         private readonly ISmartContractTransactionService smartContractTransactionService;
         private readonly IConnectionManager connectionManager;
+        private readonly IContractAssemblyCache contractAssemblyCache;
         private readonly NodeSettings nodeSettings;
 
         public SmartContractsController(IBroadcasterManager broadcasterManager,
@@ -72,6 +74,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             ILocalExecutor localExecutor,
             ISmartContractTransactionService smartContractTransactionService,
             IConnectionManager connectionManager,
+            IContractAssemblyCache contractAssemblyCache,
             NodeSettings nodeSettings)
         {
             this.stateRoot = stateRoot;
@@ -88,6 +91,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.localExecutor = localExecutor;
             this.smartContractTransactionService = smartContractTransactionService;
             this.connectionManager = connectionManager;
+            this.contractAssemblyCache = contractAssemblyCache;
             this.nodeSettings = nodeSettings;
         }
 
@@ -176,8 +180,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return ModelStateErrors.BuildErrorResponse(this.ModelState);
             }
 
+            var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+
+            ChainedHeader chainedHeader = this.chainIndexer.GetHeader((int)height);
+
+            var scHeader = chainedHeader?.Header as ISmartContractBlockHeader;
+
+            IStateRepositoryRoot stateAtHeight = this.stateRoot.GetSnapshotTo(scHeader.HashStateRoot.ToBytes());
+
             uint160 addressNumeric = request.ContractAddress.ToUint160(this.network);
-            byte[] storageValue = this.stateRoot.GetStorageValue(addressNumeric, Encoding.UTF8.GetBytes(request.StorageKey));
+            byte[] storageValue = stateAtHeight.GetStorageValue(addressNumeric, Encoding.UTF8.GetBytes(request.StorageKey));
 
             if (storageValue == null)
             {
@@ -215,13 +227,9 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 return new ReceiptResponse(receipt, new List<LogResponse>(), this.network);
             }
 
-            byte[] contractCode = this.stateRoot.GetCode(address);
+            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
 
-            Assembly assembly = Assembly.Load(contractCode);
-
-            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network);
-
-            List<LogResponse> logResponses = this.MapLogResponses(receipt, assembly, deserializer);
+            List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
 
             return new ReceiptResponse(receipt, logResponses, this.network);
         }
@@ -280,9 +288,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
 
-            Assembly assembly = Assembly.Load(contractCode);
 
-            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network);
+            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
 
             var receiptSearcher = new ReceiptSearcher(this.chainIndexer, this.blockStore, this.receiptRepository, this.network);
 
@@ -292,7 +299,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             foreach (Receipt receipt in receipts)
             {
-                List<LogResponse> logResponses = this.MapLogResponses(receipt, assembly, deserializer);
+                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
 
                 var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
 
@@ -335,40 +342,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             }
 
             return this.Json(result);
-        }
-
-        private List<LogResponse> MapLogResponses(Receipt receipt, Assembly assembly, ApiLogDeserializer deserializer)
-        {
-            var logResponses = new List<LogResponse>();
-
-            foreach (Log log in receipt.Logs)
-            {
-                var logResponse = new LogResponse(log, this.network);
-
-                logResponses.Add(logResponse);
-
-                if (log.Topics.Count == 0)
-                    continue;
-
-                // Get receipt struct name
-                string eventTypeName = Encoding.UTF8.GetString(log.Topics[0]);
-
-                // Find the type in the module def
-                Type eventType = assembly.DefinedTypes.FirstOrDefault(t => t.Name == eventTypeName);
-
-                if (eventType == null)
-                {
-                    // Couldn't match the type, continue?
-                    continue;
-                }
-
-                // Deserialize it
-                dynamic deserialized = deserializer.DeserializeLogData(log.Data, eventType);
-
-                logResponse.Log = deserialized;
-            }
-
-            return logResponses;
         }
 
         /// <summary>
@@ -630,8 +603,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             {
                 ContractTxData txData = this.smartContractTransactionService.BuildLocalCallTxData(request);
 
+                var height = request.BlockHeight.HasValue ? request.BlockHeight.Value : (ulong)this.chainIndexer.Height;
+
                 ILocalExecutionResult result = this.localExecutor.Execute(
-                    (ulong)this.chainIndexer.Height,
+                    height,
                     request.Sender?.ToUint160(this.network) ?? new uint160(),
                     string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
                     txData);

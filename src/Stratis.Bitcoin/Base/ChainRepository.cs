@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NBitcoin;
+using NLog;
+using Stratis.Bitcoin.EventBus;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Base
@@ -20,12 +23,17 @@ namespace Stratis.Bitcoin.Base
     public class ChainRepository : IChainRepository
     {
         private readonly IChainStore chainStore;
+        private readonly Logger logger;
+        private readonly ISignals signals;
 
         private BlockLocator locator;
 
-        public ChainRepository(IChainStore chainStore)
+        public ChainRepository(IChainStore chainStore, ISignals signals = null)
         {
             this.chainStore = chainStore;
+            this.signals = signals;
+
+            this.logger = LogManager.GetCurrentClassLogger();
         }
 
         /// <inheritdoc />
@@ -45,17 +53,28 @@ namespace Stratis.Bitcoin.Base
 
                 Guard.Assert(data.Hash == genesisHeader.HashBlock); // can't swap networks
 
-                int index = 0;
+                int height = 0;
+
                 while (true)
                 {
-                    data = this.chainStore.GetChainData((index));
+                    data = this.chainStore.GetChainData(height);
 
                     if (data == null)
                         break;
 
                     tip = new ChainedHeader(data.Hash, data.Work, tip);
-                    if (tip.Height == 0) tip.SetChainStore(this.chainStore);
-                    index++;
+                    if (tip.Height == 0)
+                        tip.SetChainStore(this.chainStore);
+
+                    if (height % 50_000 == 0)
+                    {
+                        if (this.signals != null)
+                            this.signals.Publish(new FullNodeEvent() { Message = $"Loading chain at height {height}.", State = FullNodeState.Initializing.ToString() });
+
+                        this.logger.Info($"Loading chain at height {height}.");
+                    }
+
+                    height++;
                 }
 
                 if (tip == null)

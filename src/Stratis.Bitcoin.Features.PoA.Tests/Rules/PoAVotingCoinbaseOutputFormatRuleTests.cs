@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests.Rules
         [Fact]
         public void ThrowsIfEmptyList()
         {
-            var encoder = new VotingDataEncoder(new ExtendedLoggerFactory());
+            var encoder = new VotingDataEncoder();
             byte[] bytes = encoder.Encode(new List<VotingData>());
 
             List<byte> votingData = new List<byte>(VotingDataEncoder.VotingOutputPrefixBytes);
