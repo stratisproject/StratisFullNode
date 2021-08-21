@@ -5,7 +5,7 @@ using System.Linq;
 using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
-using Microsoft.Extensions.Logging;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -27,19 +27,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         private int highestPollId;
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer)
+        public PollsRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer)
+            : this(dataFolder.PollsPath, dBreezeSerializer)
         {
         }
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer)
+        public PollsRepository(string folder, DBreezeSerializer dBreezeSerializer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
             Directory.CreateDirectory(folder);
             this.dbreeze = new DBreezeEngine(folder);
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.dBreezeSerializer = dBreezeSerializer;
         }
 
@@ -59,7 +59,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
             }
 
-            this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
+            this.logger.Debug("Polls repo initialized with highest id: {0}.", this.highestPollId);
         }
 
         /// <summary>Provides Id of the most recently added poll.</summary>

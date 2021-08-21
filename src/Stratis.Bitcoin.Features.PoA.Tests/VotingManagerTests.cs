@@ -19,7 +19,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
 
         public VotingManagerTests()
         {
-            this.encoder = new VotingDataEncoder(this.loggerFactory);
+            this.encoder = new VotingDataEncoder();
             this.changesApplied = new List<VotingData>();
             this.changesReverted = new List<VotingData>();
 
