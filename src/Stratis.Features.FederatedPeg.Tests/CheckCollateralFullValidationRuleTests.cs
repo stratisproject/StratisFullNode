@@ -46,7 +46,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var loggerFactory = new ExtendedLoggerFactory();
             ILogger logger = loggerFactory.CreateLogger(this.GetType().FullName);
 
-            var votingDataEncoder = new VotingDataEncoder(loggerFactory);
+            var votingDataEncoder = new VotingDataEncoder();
             var votes = new List<VotingData>
             {
                 new VotingData()
