@@ -374,7 +374,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         // Addition/removal.
                         if (poll.VotingData.Key == VoteKey.AddFederationMember)
-                            modifiedFederation.Add(federationMember);
+                        {
+                            if (federationMember is CollateralFederationMember collateralFederationMember && !modifiedFederation.IsCollateralAddressRegistered(this.logger, collateralFederationMember.CollateralMainchainAddress))
+                                modifiedFederation.Add(federationMember);
+                        }
                         else if (poll.VotingData.Key == VoteKey.KickFederationMember)
                             modifiedFederation.Remove(federationMember);
                     }
