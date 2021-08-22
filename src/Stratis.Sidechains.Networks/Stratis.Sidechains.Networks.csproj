@@ -5,7 +5,7 @@
     
     <DebugType>Full</DebugType>
     <CodeAnalysisRuleSet>..\None.ruleset</CodeAnalysisRuleSet>
-    <Version>1.0.9.0</Version>
+    <Version>1.0.9.3</Version>
     <Authors>Stratis Group Ltd.</Authors>
     <PackageId>Stratis.Sidechains.Networks</PackageId>
   </PropertyGroup>
