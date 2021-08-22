@@ -199,13 +199,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     {
                         IFederationMember memberToKick = this.federationManager.GetFederationMembers().SingleOrDefault(x => x.PubKey == fedMemberToActiveTime.Key);
 
-                        // If the federation member doesn't exist any more, remove it and continue.
+                        // If the federation member is not present in the federation, remove it and continue.
                         if (memberToKick == null)
                         {
                             this.fedPubKeysByLastActiveTime.Remove(fedMemberToActiveTime.Key, out _);
                             continue;
-
                         }
+
                         byte[] federationMemberBytes = this.consensusFactory.SerializeFederationMember(memberToKick);
 
                         bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
