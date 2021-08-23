@@ -193,11 +193,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 this.SaveMembersByLastActiveTime();
 
                 // Check if any fed member was idle for too long. Use the timestamp of the mined block.
-                foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.fedPubKeysByLastActiveTime)
+                foreach (KeyValuePair<PubKey, uint> fedMemberToActiveTime in this.fedPubKeysByLastActiveTime.ToList())
                 {
                     if (this.ShouldMemberBeKicked(fedMemberToActiveTime.Key, consensusTip.Header.Time, out uint inactiveForSeconds))
                     {
                         IFederationMember memberToKick = this.federationManager.GetFederationMembers().SingleOrDefault(x => x.PubKey == fedMemberToActiveTime.Key);
+
+                        // If the federation member is not present in the federation, remove it and continue.
+                        if (memberToKick == null)
+                        {
+                            this.fedPubKeysByLastActiveTime.Remove(fedMemberToActiveTime.Key, out _);
+                            continue;
+                        }
 
                         byte[] federationMemberBytes = this.consensusFactory.SerializeFederationMember(memberToKick);
 
