@@ -277,8 +277,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (poll.VotingData.Key == VoteKey.AddFederationMember)
                     {
-                        if (!federation.Any(m => m is CollateralFederationMember colMember && federationMember is CollateralFederationMember colMember2 && colMember.CollateralMainchainAddress == colMember2.CollateralMainchainAddress))
-                            federation.Add(federationMember);
+                        if (federationMember is CollateralFederationMember colMember2 && federation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == colMember2.CollateralMainchainAddress))
+                        {
+                            this.logger.LogDebug("Not adding member '{0}' with duplicate collateral address '{1}'.", federationMember.PubKey.ToHex(), colMember2.CollateralMainchainAddress);
+                            continue;
+                        }
+
+                        federation.Add(federationMember);
                     }
                     else if (poll.VotingData.Key == VoteKey.KickFederationMember)
                     {
