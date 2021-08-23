@@ -376,7 +376,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                                 if (straxEra && federationMember is CollateralFederationMember collateralFederationMember)
                                 {
                                     if (modifiedFederation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
+                                    {
+                                        this.logger.LogDebug("Not adding member '{0}' with duplicate collateral address '{1}'.", collateralFederationMember.PubKey.ToHex(), collateralFederationMember.CollateralMainchainAddress);
                                         continue;
+                                    }
 
                                     bool shouldBeMultisigMember = ((PoANetwork)this.network).StraxMiningMultisigMembers.Contains(federationMember.PubKey);
                                     if (collateralFederationMember.IsMultisigMember != shouldBeMultisigMember)
