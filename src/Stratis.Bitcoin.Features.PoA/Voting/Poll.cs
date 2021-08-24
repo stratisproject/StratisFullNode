@@ -88,6 +88,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                    $"{nameof(this.PollExecutedBlockData)}:{this.PollExecutedBlockData?.ToString() ?? "null"}, " +
                    $"{nameof(this.PubKeysHexVotedInFavor)}:{string.Join(" ", this.PubKeysHexVotedInFavor)}";
         }
+
+        public override int GetHashCode()
+        {
+            return this.VotingData.GetHashCode() ^ this.PollStartBlockData.Height;
+        }
+
+        public override bool Equals(object obj)
+        {
+            // Only compare enough fields to determine if uniqueness constraints are violated.
+            // I.e. this method could be used to determine if two polls require different ids.
+            return ((Poll)obj).VotingData == this.VotingData && ((Poll)obj).PollStartBlockData.Height == this.PollStartBlockData.Height;
+        }
     }
 
     public class PollViewModel
