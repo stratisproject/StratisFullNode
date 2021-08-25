@@ -234,10 +234,11 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Tests
                 this.loggerFactory, DateTimeProvider.Default, walletRepository);
 
             var reserveUtxoService = new ReserveUtxoService(this.loggerFactory, new Mock<ISignals>().Object);
+            var walletFeePolicy = new Mock<IWalletFeePolicy>().Object;
+            var broadcasterManager = new Mock<IBroadcasterManager>().Object;
+            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, walletFeePolicy, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
 
-            var walletTransactionHandler = new WalletTransactionHandler(this.loggerFactory, this.coldStakingManager, new Mock<IWalletFeePolicy>().Object, this.Network, new StandardTransactionPolicy(this.Network), reserveUtxoService);
-
-            this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler);
+            this.coldStakingController = new ColdStakingController(this.loggerFactory, this.coldStakingManager, walletTransactionHandler, walletFeePolicy, broadcasterManager);
 
             this.asyncProvider = new AsyncProvider(this.loggerFactory, new Mock<ISignals>().Object);
 
