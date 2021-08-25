@@ -276,9 +276,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
 
                     if (poll.VotingData.Key == VoteKey.AddFederationMember)
+                    {
+                        if (federationMember is CollateralFederationMember colMember2 && federation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == colMember2.CollateralMainchainAddress))
+                        {
+                            this.logger.LogDebug("Not adding member '{0}' with duplicate collateral address '{1}'.", federationMember.PubKey.ToHex(), colMember2.CollateralMainchainAddress);
+                            continue;
+                        }
+
                         federation.Add(federationMember);
+                    }
                     else if (poll.VotingData.Key == VoteKey.KickFederationMember)
+                    {
                         federation.Remove(federationMember);
+                    }
                 }
 
                 return federation;
@@ -365,6 +375,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             {
                                 if (straxEra && federationMember is CollateralFederationMember collateralFederationMember)
                                 {
+                                    if (modifiedFederation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
+                                    {
+                                        this.logger.LogDebug("Not adding member '{0}' with duplicate collateral address '{1}'.", collateralFederationMember.PubKey.ToHex(), collateralFederationMember.CollateralMainchainAddress);
+                                        continue;
+                                    }
+
                                     bool shouldBeMultisigMember = ((PoANetwork)this.network).StraxMiningMultisigMembers.Contains(federationMember.PubKey);
                                     if (collateralFederationMember.IsMultisigMember != shouldBeMultisigMember)
                                         collateralFederationMember.IsMultisigMember = shouldBeMultisigMember;
