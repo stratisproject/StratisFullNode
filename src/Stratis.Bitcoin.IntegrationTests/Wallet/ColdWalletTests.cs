@@ -245,7 +245,7 @@ namespace Stratis.Bitcoin.IntegrationTests.Wallet
 
                 Transaction misspentTransaction = stratisColdStake.CreateRPCClient().GetRawTransaction(mempoolTransactionId[0]);
 
-                // Now retrieve the funds sent to the cold address. They will reappear in a normal account on the cold staking node.
+                // Now retrieve the UTXO sent to the cold address. The funds will reappear in a normal account on the cold staking node.
                 stratisColdStake.FullNode.NodeController<ColdStakingController>().RetrieveFilteredUtxos(new RetrieveFilteredUtxosRequest() { WalletName = stratisColdStake.WalletName, WalletPassword = stratisColdStake.WalletPassword, Hex = misspentTransaction.ToHex(), WalletAccount = null, Broadcast = true});
 
                 TestBase.WaitLoop(() => stratisColdStake.FullNode.WalletManager().GetBalances(WalletName, Account).Sum(a => a.AmountUnconfirmed + a.AmountUnconfirmed) > 0);
