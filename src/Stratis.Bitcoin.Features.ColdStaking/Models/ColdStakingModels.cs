@@ -315,4 +315,38 @@ namespace Stratis.Bitcoin.Features.ColdStaking.Models
             return $"{nameof(this.TransactionHex)}={this.TransactionHex}";
         }
     }
+
+    public class RetrieveFilteredUtxosRequest
+    {
+        /// <summary>The wallet name.</summary>
+        [Required]
+        [JsonProperty(PropertyName = "walletName")]
+        public string WalletName { get; set; }
+
+        /// <summary>The wallet password.</summary>
+        [Required]
+        [JsonProperty(PropertyName = "walletPassword")]
+        public string WalletPassword { get; set; }
+
+        /// <summary>
+        /// The (optional) account for the retrieved UTXOs to be sent back to.
+        /// If this is not specified, the first available non-coldstaking account will be used.
+        /// </summary>
+        [JsonProperty(PropertyName = "walletAccount")]
+        public string WalletAccount { get; set; }
+
+        /// <summary>
+        /// The hex of the transaction to retrieve the UTXOs for.
+        /// Only UTXOs sent to addresses within the supplied wallet can be reclaimed.
+        /// </summary>
+        [Required]
+        [JsonProperty(PropertyName = "hex")]
+        public string Hex { get; set; }
+
+        /// <summary>
+        /// Indicate whether the built transactions should be sent to the network immediately after being built.
+        /// </summary>
+        [JsonProperty(PropertyName = "broadcast")]
+        public bool Broadcast { get; set; }
+    }
 }
