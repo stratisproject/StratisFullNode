@@ -89,14 +89,19 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         {
                             this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
                             if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                            {
+                                this.logger.LogWarning("The polls repository tip was not found in the consensus chain.");
                                 return;
+                            }
                         }
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
                     {
                         // Suppress this error. The polls repository will be rebuilt.
+                        this.logger.LogWarning("There was an error reading the polls repository.");
                     }
 
+                    this.logger.LogInformation("Clearing polls repository in preparation to re-build.");
                     this.CurrentTip = null;
                     // The polls repository requires an upgrade.
                     this.ResetLocked(transaction);
