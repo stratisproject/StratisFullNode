@@ -90,9 +90,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
                             if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
                             {
-                                this.logger.LogWarning("The polls repository tip was not found in the consensus chain.");
                                 return;
                             }
+
+                            this.logger.LogWarning("The polls repository tip was not found in the consensus chain.");
                         }
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
