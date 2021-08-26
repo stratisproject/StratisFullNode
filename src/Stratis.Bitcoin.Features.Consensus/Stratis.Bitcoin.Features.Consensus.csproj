@@ -27,7 +27,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.0.1" />
     <PackageReference Include="Microsoft.FASTER" Version="2020.2.1.1" />
-    <PackageReference Include="Stratis.LevelDB.Standard" Version="1.24.0" />
+    <PackageReference Include="Stratis.LevelDB.Standard" Version="1.25.0" />
     <PackageReference Include="Stratis.RocksDB" Version="0.0.9.7-alpha" />
   </ItemGroup>
 
