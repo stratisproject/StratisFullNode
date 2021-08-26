@@ -163,7 +163,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         }
 
                         DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
-
+                        SaveCurrentTip(transaction, this.CurrentTip);
                         transaction.Commit();
 
                         this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
