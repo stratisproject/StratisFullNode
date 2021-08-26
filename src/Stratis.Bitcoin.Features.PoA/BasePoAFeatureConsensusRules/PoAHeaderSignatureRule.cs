@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -45,7 +46,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
 
             this.maxReorg = this.network.Consensus.MaxReorgLength;
 
-            var lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
+            KeyValuePair<int, CheckpointInfo> lastCheckPoint = engine.Network.Checkpoints.LastOrDefault();
             this.lastCheckPoint = (lastCheckPoint.Value != null) ? new HashHeightPair(lastCheckPoint.Value.Hash, lastCheckPoint.Key) : null;
         }
 
@@ -82,7 +83,7 @@ namespace Stratis.Bitcoin.Features.PoA.BasePoAFeatureConsensusRules
             }
 
             // Look at the last round of blocks to find the previous time that the miner mined.
-            var roundTime = this.slotsManager.GetRoundLength(federation.Count);
+            System.TimeSpan roundTime = this.slotsManager.GetRoundLength(federation.Count);
             int blockCounter = 0;
 
             for (ChainedHeader prevHeader = chainedHeader.Previous; prevHeader.Previous != null; prevHeader = prevHeader.Previous)
