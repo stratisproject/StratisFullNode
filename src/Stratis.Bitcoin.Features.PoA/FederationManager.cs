@@ -291,9 +291,12 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             if (federationMember is CollateralFederationMember collateralFederationMember)
             {
-                if (this.federationMembers.IsCollateralAddressRegistered(this.logger, collateralFederationMember.CollateralMainchainAddress))
+                if (this.federationMembers.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
+                {
+                    this.logger.Warn($"Federation member with address '{collateralFederationMember.CollateralMainchainAddress}' already exists.");
                     return;
-
+                }
+                
                 if (this.federationMembers.Contains(federationMember))
                 {
                     this.logger.Trace("(-)[ALREADY_EXISTS]");
@@ -379,15 +382,13 @@ namespace Stratis.Bitcoin.Features.PoA
         /// Checks to see if a particular collateral address is already present in the current set of 
         /// federation members.
         /// </summary>
+        /// <param name="federationMembers">The list of federation members to check against.</param>
         /// <param name="collateralAddress">The collateral address to verify.</param>
         /// <returns><c>true</c> if present, <c>false</c> otherwise.</returns>
-        public static bool IsCollateralAddressRegistered(this List<IFederationMember> federationMembers, ILogger logger, string collateralAddress)
+        public static bool IsCollateralAddressRegistered(this List<IFederationMember> federationMembers, string collateralAddress)
         {
             if (federationMembers.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralAddress))
-            {
-                logger.Warn($"Federation member with address '{collateralAddress}' already exists.");
                 return true;
-            }
 
             return false;
         }

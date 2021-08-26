@@ -13,7 +13,7 @@
 		<GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
 		<GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
 		<GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-		<Version>1.0.9.0</Version>
+		<Version>1.0.9.4</Version>
 		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
 	</PropertyGroup>
 

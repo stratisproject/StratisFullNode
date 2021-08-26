@@ -49,7 +49,7 @@ namespace Stratis.Features.PoA.Voting
         public async Task<PubKey> JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)
         {
             // First ensure that this collateral address isnt already present in the federation.
-            if (this.federationManager.GetFederationMembers().IsCollateralAddressRegistered(this.logger, request.CollateralAddress))
+            if (this.federationManager.GetFederationMembers().IsCollateralAddressRegistered(request.CollateralAddress))
                 throw new Exception($"The provided collateral address '{request.CollateralAddress}' is already present in the federation.");
 
             // Get the address pub key hash.
