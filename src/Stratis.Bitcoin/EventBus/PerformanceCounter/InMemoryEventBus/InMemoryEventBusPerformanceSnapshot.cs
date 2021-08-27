@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using TracerAttributes;
 
 namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
@@ -14,7 +15,13 @@ namespace Stratis.Bitcoin.EventBus.PerformanceCounters.InMemoryEventBus
         {
             var actionField = subscription.GetType().GetField("action", BindingFlags.NonPublic | BindingFlags.Instance);
             var action = actionField.GetValue(subscription);
-            MethodInfo methodInfo = ((Action<TEvent>)action).Method;
+
+            MethodInfo methodInfo = null;
+            if (action is Action<TEvent> actionEvent)
+                methodInfo = actionEvent.Method;
+
+            if (action is Func<EventBase, Task> actionFunc)
+                methodInfo = actionFunc.Method;
 
             if (!this.EventExecutionTime.TryGetValue(typeof(TEvent), out ConcurrentDictionary<MethodInfo, ExecutionsCountAndDelay> eventExecutionCountsAndDelay))
             {
