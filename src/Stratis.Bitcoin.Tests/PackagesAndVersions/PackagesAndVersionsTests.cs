@@ -4,8 +4,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Xml;
 using Microsoft.Build.Construction;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Stratis.Bitcoin.Tests.PackagesAndVersions
@@ -35,6 +37,8 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
             var projectFiles = projectsByPath.ToDictionary(p => p.Key, p => { XmlDocument doc = new XmlDocument(); doc.Load(p.Key); return doc; });
             var referencedVersions = projectFiles.ToDictionary(p => p.Key, p => p.Value.SelectSingleNode("Project/PropertyGroup/Version")?.InnerText);
             var projectsToCheck = new List<string>(projectsByPath.Keys);
+
+            var debugLog = new StringBuilder();
 
             while (projectsToCheck.Count > 0)
             {
@@ -135,6 +139,8 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                         if (cmpVersion != referencedVersions[includeFullPath])
                         {
+                            string msg = $"Comparing the local project '{project.ProjectName}' version {version} with its published package, '{targetName}', the published package references version '{cmpVersion}' of '{name3}' while the local project references version '{referencedVersions[includeFullPath]}'.";
+                            debugLog.AppendLine(msg);
                             versionsMatch = false;
                             break;
                         }
@@ -148,7 +154,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                 referencedVersions[projectFolder] = "mismatch";
             }
 
-            Assert.Empty(modifiedPackages);
+            Assert.True(modifiedPackages.Count == 0, $"{debugLog.ToString()} Affected packages: {string.Join(", ", modifiedPackages)}");
         }
 
         static bool DirectoryEquals(string directory1, string directory2)
