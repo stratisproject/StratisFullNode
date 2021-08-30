@@ -55,6 +55,8 @@ namespace Stratis.Bitcoin.Features.ColdStaking
         /// <summary>Provider of time functions.</summary>
         private readonly IDateTimeProvider dateTimeProvider;
 
+        private readonly IScriptAddressReader scriptAddressReader;
+
         /// <summary>
         /// Constructs the cold staking manager which is used by the cold staking controller.
         /// </summary>
@@ -96,6 +98,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.dateTimeProvider = dateTimeProvider;
+            this.scriptAddressReader = scriptAddressReader;
         }
 
         /// <summary>
@@ -737,6 +740,62 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             }
 
             return retrievalTransactions;
+        }
+
+
+        /// <summary>Creates a transaction to recover funds sent to a cold/hot staking address instead of a cold staking script.</summary>
+        /// <remarks>If funds were sent to a cold/hot staking address then they have to be recovered using the wallet that controls the address.</remarks>
+        /// <param name="walletAccountReference">The wallet that controls the address where funds were inadvertently sent to.</param>
+        /// <param name="password">The password of the wallet specified in <paramref name="walletAccountReference"/>.</param>
+        /// <param name="spendTransaction">The incorrect spend transaction.</param>
+        /// <param name="address">The incorrect address to recover the funds from.</param>
+        /// <param name="redirectAddress">The address to redirect the funds to.</param>
+        /// <returns>A transaction that can be used to redirect the misdirected funds to a different address.</returns>
+        public Transaction RecoverFundsSentToColdStakingAddress(WalletAccountReference walletAccountReference, string password, Transaction spendTransaction, string address, string redirectAddress, TransactionBuilder builder)
+        {
+            Guard.NotNull(walletAccountReference, nameof(walletAccountReference));
+
+            Wallet.Wallet wallet = this.GetWallet(walletAccountReference.WalletName);
+            lock (this.lockObject)
+            {
+                HdAccount account = wallet.GetAccount(walletAccountReference.AccountName);
+
+                if (account == null)
+                {
+                    this.logger.LogTrace("(-)[ACT_NOT_FOUND]");
+                    throw new WalletException(
+                        $"Account '{walletAccountReference.AccountName}' in wallet '{walletAccountReference.WalletName}' not found.");
+                }
+
+                HdAddress hdAddress = wallet.GetAllAddresses(a => a.Index == ColdWalletAccountIndex || a.Index == HotWalletAccountIndex).FirstOrDefault(a => a.Address == address);
+                if (hdAddress == null)
+                    throw new WalletException($"Address '{address}' not found in hot or cold wallet accounts of wallet '{walletAccountReference.WalletName}' not found.");
+
+                var incorrectSpends = spendTransaction.Outputs.Where(o => this.scriptAddressReader.GetAddressFromScriptPubKey(this.network, o.ScriptPubKey) == address)
+                    .Select((o, n) => new Coin(spendTransaction, (uint)n)).ToList();
+
+                if (incorrectSpends.Count == 0)
+                    throw new WalletException($"The transaction contains no spends to hot or cold wallet accounts of the wallet '{walletAccountReference.WalletName}'.");
+
+                var bitcoinAddress = BitcoinAddress.Create(redirectAddress, this.network);
+                Money amount = incorrectSpends.Sum(s => s.Amount);
+                Money fee = new Money(0.1m, MoneyUnit.BTC);
+                Key privateKey = Key.Parse(wallet.EncryptedSeed, password, wallet.Network);
+
+                Transaction transaction = builder
+                    .AddCoins(incorrectSpends)
+                    .AddKeys(new ExtKey(privateKey, wallet.ChainCode).Derive(new KeyPath(hdAddress.HdPath)).GetWif(wallet.Network))
+                    .Send(bitcoinAddress.ScriptPubKey, amount - fee)
+                    .SendFees(fee)
+                    .BuildTransaction(true);
+
+                if (!builder.Verify(transaction))
+                {
+                    throw new WalletException("Could not build transaction, please make sure you entered the correct data.");
+                }
+
+                return transaction;
+            }
         }
     }
 }
