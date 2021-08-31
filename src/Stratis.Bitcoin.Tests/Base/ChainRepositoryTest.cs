@@ -77,15 +77,20 @@ namespace Stratis.Bitcoin.Tests.Base
                             new ChainRepository.ChainRepositoryData()
                             { Hash = block.HashBlock, Work = block.ChainWorkBytes }
                                 .ToBytes(this.Network.Consensus.ConsensusFactory));
+
+                        ConsensusFactory consensusFactory = KnownNetworks.StraxRegTest.Consensus.ConsensusFactory;
+                        batch.Put(2, block.Header.GetHash().ToBytes(), block.Header.ToBytes(consensusFactory));
                     }
 
                     engine.Write(batch);
                 }
             }
 
-            using (var repo = new ChainRepository(new LevelDbChainStore(chain.Network, new DataFolder(dir), chain)))
+            var chainStore = new LevelDbChainStore(chain.Network, new DataFolder(dir), chain);
+            using (var repo = new ChainRepository(chainStore))
             {
                 var testChain = new ChainIndexer(KnownNetworks.StraxRegTest);
+                testChain[0].SetChainStore(chainStore);
                 testChain.SetTip(repo.LoadAsync(testChain.Genesis).GetAwaiter().GetResult());
                 Assert.Equal(tip, testChain.Tip);
             }
