@@ -14,5 +14,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Events
     /// </summary>
     public sealed class WalletProcessedTransactionOfInterestEvent : EventBase
     {
+        public string Source { get; set; }
     }
 }
