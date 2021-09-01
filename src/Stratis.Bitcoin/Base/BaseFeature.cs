@@ -188,11 +188,11 @@ namespace Stratis.Bitcoin.Base
         {
             string[] configLines = File.ReadAllLines(nodeSettings.ConfigurationFile);
 
-            if (configLines.Any(c => c.Contains(BaseFeature.RewindFlag)))
+            if (configLines.Any(c => c.StartsWith($"{BaseFeature.RewindFlag}=")))
             {
                 for (int i = 0; i < configLines.Length; i++)
                 {
-                    if (configLines[i].Contains(BaseFeature.RewindFlag))
+                    if (configLines[i].StartsWith($"{BaseFeature.RewindFlag}="))
                         configLines[i] = $"{BaseFeature.RewindFlag}={height}";
                 }
 
