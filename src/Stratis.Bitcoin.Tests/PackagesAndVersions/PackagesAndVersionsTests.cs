@@ -125,7 +125,7 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                     XmlDocument doc2 = new XmlDocument();
                     doc2.Load(nuspecFile);
 
-                    bool versionsMatch = true;
+                    bool referencedPackagesMatch = true;
                     foreach (XmlNode x in doc.SelectNodes("/Project/ItemGroup/ProjectReference"))
                     {
                         string includePath = x.Attributes["Include"].Value;
@@ -133,6 +133,8 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                         XmlDocument doc3 = projectFiles[includeFullPath];
                         string name3 = doc3.SelectSingleNode("Project/PropertyGroup/PackageId")?.InnerText;
+                        if (name3 == null)
+                            continue;
 
                         XmlNode depNode = doc2.SelectSingleNode($"//*[name()='dependency' and @id='{name3}']");
                         string cmpVersion = depNode.Attributes["version"].Value;
@@ -141,17 +143,20 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
                         {
                             string msg = $"Comparing the local project '{project.ProjectName}' version {version} with its published package, '{targetName}', the published package references version '{cmpVersion}' of '{name3}' while the local project references version '{referencedVersions[includeFullPath]}'.";
                             debugLog.AppendLine(msg);
-                            versionsMatch = false;
+                            referencedPackagesMatch = false;
                             break;
                         }
                     }
 
-                    if (versionsMatch)
+                    if (referencedPackagesMatch)
                         continue;
                 }
 
+                string msg2 = $"The project '{project.ProjectName}' has been modified since it was published but its local version {version} remains unchanged.";
+                debugLog.AppendLine(msg2);
+
                 modifiedPackages.Add(project.ProjectName);
-                referencedVersions[projectFolder] = "mismatch";
+                referencedVersions[projectFolder] += " (modified)";
             }
 
             Assert.True(modifiedPackages.Count == 0, $"{debugLog.ToString()} Affected packages: {string.Join(", ", modifiedPackages)}");
@@ -184,7 +189,9 @@ namespace Stratis.Bitcoin.Tests.PackagesAndVersions
 
                 foreach (string line in File.ReadLines(fileName1))
                 {
-                    if (source.Take(1).FirstOrDefault() != line)
+                    string compare = source.Take(1).FirstOrDefault();
+
+                    if (compare?.Trim() != line.Trim())
                         return false;
 
                     source = source.Skip(1);
