@@ -149,7 +149,7 @@ namespace Stratis.Features.FederatedPeg.SourceChain
 
             int maxConfirmations = this.retrievalTypeConfirmations.Values.Max();
 
-            var deposits = new SortedDictionary<int, IDeposit>();
+            var deposits = new SortedDictionary<int, List<IDeposit>>();
 
             for (int offset = -maxConfirmations; offset < 0; offset++)
             {
@@ -159,12 +159,23 @@ namespace Stratis.Features.FederatedPeg.SourceChain
                     {
                         int blocksBeforeMature = (deposit.BlockNumber + this.retrievalTypeConfirmations[deposit.RetrievalType]) - tip.Height;
                         if (blocksBeforeMature >= 0)
-                            deposits[blocksBeforeMature] = deposit;
+                        {
+                            if (!deposits.TryGetValue(blocksBeforeMature, out List<IDeposit> depositList))
+                            {
+                                depositList = new List<IDeposit>();
+                                deposits[blocksBeforeMature] = depositList;
+                            }
+
+                            depositList.Add(deposit);
+                        }
                     }
                 }
             }
 
-            return deposits.Keys.Take(maxToReturn).Select(d => (d, deposits[d])).ToArray();
+            return deposits
+                .SelectMany(d => d.Value, (beforeMature, deposit) => (beforeMature.Key, deposit))
+                .Take(maxToReturn)
+                .ToArray();
         }
 
         private async Task RecordBlockDepositsAsync(ChainedHeaderBlock chainedHeaderBlock, Dictionary<DepositRetrievalType, int> retrievalTypes)
