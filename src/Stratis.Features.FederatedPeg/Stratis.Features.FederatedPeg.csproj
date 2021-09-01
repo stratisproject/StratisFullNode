@@ -12,7 +12,8 @@
     <DebugType>Full</DebugType>
     <CodeAnalysisRuleSet>..\None.ruleset</CodeAnalysisRuleSet>
     <Authors>Stratis Group Ltd.</Authors>
-    <Version>4.0.3.0</Version>
+    <Version>4.0.4.0</Version>
+    <PackageId>Stratis.Features.FederatedPeg</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
