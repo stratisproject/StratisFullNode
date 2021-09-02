@@ -79,12 +79,13 @@ namespace Stratis.Bitcoin.Features.SignalR
 
         public async Task SendToClientsAsync(IClientEvent @event)
         {
-            // Check if any there are any connected clients
-            if (this.Clients == null) return;
+            // Check if any there are any connected clients.
+            if (this.Clients == null)
+                return;
 
             try
             {
-                await this.Clients.All.SendAsync("receiveEvent", @event);
+                await this.Clients.All.SendAsync("receiveEvent", @event).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
