@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Stratis.Bitcoin.EventBus
 {
@@ -8,12 +9,20 @@ namespace Stratis.Bitcoin.EventBus
     public interface IEventBus
     {
         /// <summary>
-        /// Subscribes to the specified event type with the specified action
+        /// Subscribes to the specified event type with the specified action.
         /// </summary>
         /// <typeparam name="TEventBase">The type of event</typeparam>
         /// <param name="action">The Action to invoke when an event of this type is published</param>
         /// <returns>A <see cref="SubscriptionToken"/> to be used when calling <see cref="Unsubscribe"/></returns>
         SubscriptionToken Subscribe<TEventBase>(Action<TEventBase> action) where TEventBase : EventBase;
+
+        /// <summary>
+        /// Subscribes to the specified event type with the specified function.
+        /// </summary>
+        /// <param name="eventType">The type of event</typeparam>
+        /// <param name="handler">The Function to invoke when an event of this type is published</param>
+        /// <returns>A <see cref="SubscriptionToken"/> to be used when calling <see cref="Unsubscribe"/></returns>
+        SubscriptionToken Subscribe(Type eventType, Func<EventBase, Task> handler);
 
         /// <summary>
         /// Unsubscribe from the Event type related to the specified <see cref="SubscriptionToken"/>

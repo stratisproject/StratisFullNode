@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.Utilities;
 
@@ -38,6 +39,26 @@ namespace Stratis.Bitcoin.EventBus
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.subscriptionErrorHandler = subscriptionErrorHandler ?? new DefaultSubscriptionErrorHandler(loggerFactory);
             this.subscriptions = new Dictionary<Type, List<ISubscription>>();
+        }
+
+        /// <inheritdoc />
+        public SubscriptionToken Subscribe(Type eventType, Func<EventBase, Task> handler)
+        {
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            lock (this.subscriptionsLock)
+            {
+                if (!this.subscriptions.ContainsKey(eventType))
+                {
+                    this.subscriptions.Add(eventType, new List<ISubscription>());
+                }
+
+                var subscriptionToken = new SubscriptionToken(this, eventType);
+                this.subscriptions[eventType].Add(new Subscription(handler, subscriptionToken));
+
+                return subscriptionToken;
+            }
         }
 
         /// <inheritdoc />
