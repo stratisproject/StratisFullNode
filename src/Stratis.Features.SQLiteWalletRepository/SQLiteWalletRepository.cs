@@ -857,7 +857,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                         Parallel.ForEach(rounds, round =>
                         {
-                            if (!ParallelProcessBlock(round, block, chainedHeader))
+                            if (!ParallelProcessBlock(round, block, chainedHeader, out bool _))
                                 done = true;
                         });
 
@@ -871,18 +871,34 @@ namespace Stratis.Features.SQLiteWalletRepository
                 ProcessBlocksInfo round = (walletName != null) ? this.Wallets[walletName] : this.processBlocksInfo;
 
                 if (this.StartBatch(round, blocks.First().header))
+                {
+                    bool signalUI = false;
+
                     foreach ((ChainedHeader chainedHeader, Block block) in blocks.Append((null, null)))
                     {
                         this.logger.LogDebug("Processing '{0}'.", chainedHeader);
 
-                        if (!ParallelProcessBlock(round, block, chainedHeader))
+                        if (!ParallelProcessBlock(round, block, chainedHeader, out bool transactionOfInterestProcessed))
                             break;
+
+                        if (transactionOfInterestProcessed)
+                            signalUI = true;
                     }
+
+                    if (signalUI)
+                    {
+                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                        // was processed.
+                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent() { Source = "processblock" });
+                    }
+                }
             }
         }
 
-        private bool ParallelProcessBlock(ProcessBlocksInfo round, Block block, ChainedHeader chainedHeader)
+        private bool ParallelProcessBlock(ProcessBlocksInfo round, Block block, ChainedHeader chainedHeader, out bool transactionOfInterestProcessed)
         {
+            transactionOfInterestProcessed = false;
+
             try
             {
                 HDWallet wallet = round.Wallet;
@@ -1004,10 +1020,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     ITransactionsToLists transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, round, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(block.Transactions, new HashHeightPair(chainedHeader), blockTime: block.Header.BlockTime.ToUnixTimeSeconds()))
                     {
-                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
-                        // was processed.
-                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
-
+                        transactionOfInterestProcessed = true;
                         this.Metrics.ProcessCount++;
                     }
 
@@ -1210,17 +1223,15 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             ProcessBlocksInfo processBlocksInfo = walletContainer;
 
+            bool notifyWallet = false;
+
             try
             {
                 IEnumerable<IEnumerable<string>> txToScript;
                 {
                     var transactionsToLists = new TransactionsToLists(this.Network, this.ScriptAddressReader, processBlocksInfo, this.dateTimeProvider);
                     if (transactionsToLists.ProcessTransactions(new[] { transaction }, null, fixedTxId))
-                    {
-                        // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
-                        // was processed.
-                        this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
-                    }
+                        notifyWallet = true;
 
                     txToScript = (new[] { processBlocksInfo.Outputs, processBlocksInfo.PrevOuts }).Select(list => list.CreateScript());
                 }
@@ -1263,6 +1274,13 @@ namespace Stratis.Features.SQLiteWalletRepository
 
                 walletContainer.LockProcessBlocks.Release();
                 walletContainer.WriteLockRelease();
+            }
+
+            if (notifyWallet)
+            {
+                // We only want to raise events for the UI (via SignalR) to query the wallet balance if a transaction pertaining to the wallet 
+                // was processed.
+                this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent() { Source = "processtx" });
             }
         }
 
@@ -1499,7 +1517,7 @@ namespace Stratis.Features.SQLiteWalletRepository
             (HDWallet HDWallet, DBConnection conn) = (walletContainer.Wallet, walletContainer.Conn);
 
             var result = HDTransactionData.GetHistory(conn, HDWallet.WalletId, account.Index, limit, offset, txId, accountAddress, forSmartContracts, this.Network.Name.Contains("Cirrus"));
-            
+
             // Filter ColdstakeUtxos
             result = result.Where(r =>
             {
