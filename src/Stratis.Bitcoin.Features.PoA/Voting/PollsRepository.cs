@@ -32,13 +32,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings)
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
         {
         }
 
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
@@ -67,6 +67,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
                             .ToArray();
 
+                        // If the polls repository contains duplicate polls then reset the highest poll id and 
+                        // set the tip to null.
+                        // This will trigger the VotingManager to rebuild the voting and polls repository as the
+                        // polls repository tip is null. This happens later during startup, see VotingManager.Synchronize()
+                        var uniquePolls = new HashSet<Poll>(polls);
+                        if (uniquePolls.Count != polls.Length)
+                        {
+                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Length - uniquePolls.Count);
+
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
+
                         this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
 
                         Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
@@ -74,21 +88,25 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         if (rowTip.Exists)
                         {
                             this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                            if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
-                                this.CurrentTip = null;
-                        }
-                        else
-                        {
-                            this.ResetLocked(transaction);
-                            transaction.Commit();
+                            if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                            {
+                                return;
+                            }
+
+                            this.logger.LogWarning("The polls repository tip was not found in the consensus chain.");
                         }
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
                     {
-                        // The polls repository requires an upgrade.
-                        this.ResetLocked(transaction);
-                        transaction.Commit();
+                        // Suppress this error. The polls repository will be rebuilt.
+                        this.logger.LogWarning("There was an error reading the polls repository.");
                     }
+
+                    this.logger.LogInformation("Clearing polls repository in preparation to re-build.");
+                    this.CurrentTip = null;
+                    // The polls repository requires an upgrade.
+                    this.ResetLocked(transaction);
+                    transaction.Commit();
                 }
             }
 
@@ -180,7 +198,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                using (var transaction = this.dbreeze.GetTransaction())
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     return func(transaction);
                 }
@@ -191,7 +209,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                using (var transaction = this.dbreeze.GetTransaction())
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     action(transaction);
                 }

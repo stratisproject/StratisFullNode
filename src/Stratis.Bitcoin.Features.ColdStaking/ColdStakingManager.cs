@@ -692,5 +692,51 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             this.logger.LogTrace("(-):*.Count={0}", res.Count());
             return res;
         }
+
+        public List<Transaction> RetrieveFilteredUtxos(string walletName, string walletPassword, string transactionHex, FeeRate feeRate, string walletAccount = null)
+        {
+            var retrievalTransactions = new List<Transaction>();
+
+            Transaction transactionToReclaim = this.network.Consensus.ConsensusFactory.CreateTransaction(transactionHex);
+
+            foreach (TxOut output in transactionToReclaim.Outputs)
+            {
+                Wallet.Wallet wallet = this.GetWallet(walletName);
+
+                HdAddress address = wallet.GetAllAddresses(Wallet.Wallet.AllAccounts).FirstOrDefault(a => a.ScriptPubKey == output.ScriptPubKey);
+
+                // The address is not in the wallet so ignore this output.
+                if (address == null)
+                    continue;
+
+                HdAccount destinationAccount = wallet.GetAccounts(Wallet.Wallet.NormalAccounts).First();
+
+                // This shouldn't really happen unless the user has no proper accounts in the wallet.
+                if (destinationAccount == null)
+                    continue;
+
+                Script destination = destinationAccount.GetFirstUnusedReceivingAddress().ScriptPubKey;
+
+                ISecret extendedPrivateKey = wallet.GetExtendedPrivateKeyForAddress(walletPassword, address);
+
+                Key privateKey = extendedPrivateKey.PrivateKey;
+
+                var builder = new TransactionBuilder(this.network);
+
+                var coin = new Coin(transactionToReclaim, output);
+
+                builder.AddCoins(coin);
+                builder.AddKeys(privateKey);
+                builder.Send(destination, output.Value);
+                builder.SubtractFees();
+                builder.SendEstimatedFees(feeRate);
+
+                Transaction builtTransaction = builder.BuildTransaction(true);
+
+                retrievalTransactions.Add(builtTransaction);
+            }
+
+            return retrievalTransactions;
+        }
     }
 }

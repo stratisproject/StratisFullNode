@@ -34,6 +34,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
             new PubKey("028e1d9fd64b84a2ec85fac7185deb2c87cc0dd97270cf2d8adc3aa766dde975a7"),//
             new PubKey("036437789fac0ab74cda93d98b519c28608a48ef86c3bd5e8227af606c1e025f61"),//
             new PubKey("03f5de5176e29e1e7d518ae76c1e020b1da18b57a3713ac81b16015026e232748e"),//
+            new PubKey("03a37019d2e010b046ef9d0459e4844a015758007602ddfbdc9702534924a23695")
         };
 
         /// <summary>

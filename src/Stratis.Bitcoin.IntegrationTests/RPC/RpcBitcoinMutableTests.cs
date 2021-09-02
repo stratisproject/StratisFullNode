@@ -7,8 +7,12 @@ using System.Threading.Tasks;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using Stratis.Bitcoin.Features.RPC;
+using Stratis.Bitcoin.IntegrationTests.Common;
 using Stratis.Bitcoin.IntegrationTests.Common.EnvironmentMockUpHelpers;
+using Stratis.Bitcoin.Networks;
+using Stratis.Bitcoin.Networks.Deployments;
 using Stratis.Bitcoin.Tests.Common;
+using Stratis.Bitcoin.Utilities.Extensions;
 using Xunit;
 
 namespace Stratis.Bitcoin.IntegrationTests.RPC
@@ -45,8 +49,22 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 // generate 101 blocks
                 node.GenerateAsync(101).GetAwaiter().GetResult();
 
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).Start();
+
+                TestHelper.ConnectAndSync(node, sfn);
+
                 uint256 txid = rpcClient.SendToAddress(new Key().PubKey.GetAddress(rpcClient.Network), Money.Coins(1.0m), "hello", "world");
+
                 uint256[] ids = rpcClient.GetRawMempool();
+                Assert.Single(ids);
+                Assert.Equal(txid, ids[0]);
+
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+
+                // It seems to take a while for the transaction to actually propagate, so we have to wait for it before checking the txid is correct.
+                TestBase.WaitLoop(() => sfnRpc.GetRawMempool().Length == 1);
+
+                ids = sfnRpc.GetRawMempool();
                 Assert.Single(ids);
                 Assert.Equal(txid, ids[0]);
             }
@@ -106,6 +124,13 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 RPCResponse response = rpcClient.SendCommand(RPCOperations.getinfo);
                 Assert.NotNull(response.Result);
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).Start();
+
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+
+                response = sfnRpc.SendCommand(RPCOperations.getinfo);
+                Assert.NotNull(response.Result);
             }
         }
 
@@ -122,6 +147,16 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 string actualGenesis = (string)response.Result;
                 Assert.Equal(this.regTest.GetGenesis().GetHash().ToString(), actualGenesis);
                 Assert.Equal(this.regTest.GetGenesis().GetHash(), rpcClient.GetBestBlockHash());
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).Start();
+                TestHelper.ConnectAndSync(node, sfn);
+
+                rpcClient = sfn.CreateRPCClient();
+
+                response = rpcClient.SendCommand(RPCOperations.getblockhash, 0);
+                actualGenesis = (string)response.Result;
+                Assert.Equal(this.regTest.GetGenesis().GetHash().ToString(), actualGenesis);
+                Assert.Equal(this.regTest.GetGenesis().GetHash(), rpcClient.GetBestBlockHash());
             }
         }
 
@@ -130,16 +165,45 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateBitcoinCoreNode(version: BitcoinCoreVersion15).Start();
+                CoreNode node = builder.CreateBitcoinCoreNode(version: "0.18.0", useNewConfigStyle: true).Start();
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).WithWallet().Start();
+
+                TestHelper.ConnectAndSync(node, sfn);
 
                 RPCClient rpcClient = node.CreateRPCClient();
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+
+                // Need one block per node so they can each fund a transaction.
+                rpcClient.Generate(1);
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                sfnRpc.Generate(1);
+
+                TestHelper.ConnectAndSync(node, sfn);
+                
+                // And then enough blocks mined on top for the coinbases to mature.
                 rpcClient.Generate(101);
+
+                TestHelper.ConnectAndSync(node, sfn);
 
                 var tx = new Transaction();
                 tx.Outputs.Add(new TxOut(Money.Coins(1.0m), new Key()));
-                FundRawTransactionResponse funded = node.CreateRPCClient().FundRawTransaction(tx);
-                Transaction signed = node.CreateRPCClient().SignRawTransaction(funded.Transaction);
-                node.CreateRPCClient().SendRawTransaction(signed);
+                FundRawTransactionResponse funded = rpcClient.FundRawTransaction(tx);
+
+                // signrawtransaction was removed in 0.18. So just use its equivalent so that we can test SFN's ability to call signrawtransaction.
+                RPCResponse response = rpcClient.SendCommand("signrawtransactionwithwallet", tx.ToHex());
+                
+                Assert.NotNull(response.Result["hex"]);
+
+                sfnRpc.WalletPassphrase(sfn.WalletPassword, 60);
+
+                tx = new Transaction();
+                tx.Outputs.Add(new TxOut(Money.Coins(1.0m), new Key()));
+                funded = sfnRpc.FundRawTransaction(tx);
+                Transaction signed = sfnRpc.SignRawTransaction(funded.Transaction);
+                rpcClient.SendRawTransaction(signed);
             }
         }
 
@@ -171,9 +235,17 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 RPCClient rpcClient = node.CreateRPCClient();
 
                 BlockHeader response = rpcClient.GetBlockHeader(0);
-                Assert.Equal(this.regTest.GetGenesis().Header.ToBytes(), response.ToBytes());
 
-                response = rpcClient.GetBlockHeader(0);
+                Assert.Equal(this.regTest.GetGenesis().Header.ToBytes(), response.ToBytes());
+                Assert.Equal(this.regTest.GenesisHash, response.GetHash());
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).Start();
+
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+
+                response = sfnRpc.GetBlockHeader(0);
+
+                Assert.Equal(this.regTest.GetGenesis().Header.ToBytes(), response.ToBytes());
                 Assert.Equal(this.regTest.GenesisHash, response.GetHash());
             }
         }
@@ -187,9 +259,12 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
 
                 RPCClient rpcClient = node.CreateRPCClient();
 
-                // RegTest
                 BitcoinAddress pkh = rpcClient.GetNewAddress();
                 Assert.True(rpcClient.ValidateAddress(pkh).IsValid);
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).Start();
+
+                Assert.True(sfn.CreateRPCClient().ValidateAddress(pkh).IsValid);
             }
         }
 
@@ -211,12 +286,21 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
             {
-                CoreNode node = builder.CreateBitcoinCoreNode(version: BitcoinCoreVersion15).Start();
+                CoreNode node = builder.CreateBitcoinCoreNode(version: "0.18.0", useNewConfigStyle: true).Start();
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest).Start();
+
+                TestHelper.ConnectAndSync(node, sfn);
 
                 RPCClient rpcClient = node.CreateRPCClient();
+                RPCClient sfnRpc = sfn.CreateRPCClient();
 
                 uint256 txid = rpcClient.Generate(1).Single();
                 UnspentTransaction resultTxOut = rpcClient.GetTxOut(txid, 0, true);
+                Assert.Null(resultTxOut);
+
+                TestHelper.ConnectAndSync(node, sfn);
+
+                resultTxOut = sfnRpc.GetTxOut(txid, 0, true);
                 Assert.Null(resultTxOut);
             }
         }
@@ -237,6 +321,37 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         }
 
         [Fact]
+        public void CanGetRawTransaction()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateBitcoinCoreNode(version: "0.18.0", useNewConfigStyle: true).Start();
+
+                RPCClient rpcClient = node.CreateRPCClient();
+
+                rpcClient.Generate(101);
+
+                CoreNode sfn = builder.CreateStratisPowNode(this.regTest);
+                sfn.Start();
+                TestHelper.ConnectAndSync(node, sfn);
+
+                uint256 txid = rpcClient.SendToAddress(new Key().PubKey.GetAddress(rpcClient.Network), Money.Coins(1.0m));
+
+                TestBase.WaitLoop(() => node.CreateRPCClient().GetRawMempool().Length == 1);
+
+                Transaction tx = rpcClient.GetRawTransaction(txid);
+
+                RPCClient sfnRpc = sfn.CreateRPCClient();
+
+                TestBase.WaitLoop(() => sfnRpc.GetRawMempool().Length == 1);
+
+                Transaction tx2 = sfnRpc.GetRawTransaction(txid);
+
+                Assert.Equal(tx.ToHex(), tx2.ToHex());
+            }
+        }
+
+        [Fact]
         public void RawTransactionIsConformsToRPC()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
@@ -251,6 +366,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
                 Assert.True(JToken.DeepEquals(tx.ToString(this.testNet, RawFormat.Satoshi), tx2.ToString(this.testNet, RawFormat.Satoshi)));
             }
         }
+
         [Fact]
         public void CanUseBatchedRequests()
         {
