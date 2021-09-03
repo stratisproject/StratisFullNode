@@ -98,6 +98,10 @@ namespace Stratis.Bitcoin.Features.ExternalApi
                     {
                         await this.coinGeckoClient.PriceDataRetrievalAsync().ConfigureAwait(false);
                     }
+                    catch (HttpRequestException e2) when (e2.InnerException is SocketException socketException && socketException.ErrorCode == 11001)
+                    {
+                        this.logger.LogWarning("Unable to retrieve price data. Are you offline?");
+                    }
                     catch (Exception e)
                     {
                         this.logger.LogWarning("Exception raised when checking current prices. {0}", e);
