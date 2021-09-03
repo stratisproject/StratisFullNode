@@ -73,7 +73,7 @@ namespace Stratis.Bitcoin.Features.ColdStaking
 
                         if (address == null)
                             throw new FeatureException(HttpStatusCode.BadRequest, "Could not resolve address.",
-                                $"Could not resolve address from UTXO's scriptPubKey '{ scriptPubKey.ToHex() }'.");
+                                $"Could not resolve address from UTXO's scriptPubKey '{scriptPubKey.ToHex()}'.");
                     }
 
                     var accounts = this.walletManager.GetAccounts(request.WalletName);
