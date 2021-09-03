@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net.Http;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
@@ -67,6 +69,10 @@ namespace Stratis.Bitcoin.Features.ExternalApi
                     try
                     {
                         await this.etherscanClient.GasOracle(true).ConfigureAwait(false);
+                    }
+                    catch (HttpRequestException e2) when (e2.InnerException is SocketException socketException && socketException.ErrorCode == 11001)
+                    {
+                        this.logger.LogWarning("Unable to contact gas oracle. Are you offline?");
                     }
                     catch (Exception e)
                     {
