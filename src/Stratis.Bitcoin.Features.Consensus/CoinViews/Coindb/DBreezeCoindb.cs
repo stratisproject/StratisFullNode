@@ -242,6 +242,22 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
+        public int GetMinRewindHeight()
+        {
+            using (DBreeze.Transactions.Transaction transaction = this.CreateTransaction())
+            {
+                Row<int, byte[]> row = transaction.SelectForward<int, byte[]>("Rewind").FirstOrDefault();
+
+                if (!row.Exists)
+                {
+                    return -1;
+                }
+
+                return row.Key;
+            }
+        }
+
+        /// <inheritdoc />
         public HashHeightPair Rewind()
         {
             HashHeightPair res = null;
