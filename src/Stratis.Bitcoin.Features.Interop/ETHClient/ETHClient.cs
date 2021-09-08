@@ -84,6 +84,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         Task<List<string>> GetOwnersAsync();
 
         /// <summary>
+        /// Checks if the given address confirmed the given multisig transaction.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction.</param>
+        /// <param name="address">The address to check the confirmation status of.</param>
+        /// <returns>True if the address has confirmed the transaction in question.</returns>
+        Task<bool> AddressConfirmedTransactionAsync(BigInteger transactionId, string address);
+
+        /// <summary>
         /// Gets a transaction out of the transactions mapping on the contract and decodes it.
         /// </summary>
         /// <param name="transactionId">The identifier of the transaction to retrieve.</param>
@@ -259,6 +267,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public async Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId)
         {
             return await MultisigWallet.GetTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> AddressConfirmedTransactionAsync(BigInteger transactionId, string address)
+        {
+            ConfirmationsDTO result = await MultisigWallet.AddressConfirmedTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId, address).ConfigureAwait(false);
+
+            return result.Confirmed;
         }
 
         /// <inheritdoc />
