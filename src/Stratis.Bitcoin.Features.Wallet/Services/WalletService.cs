@@ -721,6 +721,11 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
         {
             return await Task.Run(() =>
             {
+                if (!string.IsNullOrEmpty(request.SingleDestinationAddress) && request.UseUniqueAddressPerUtxo)
+                {
+                    throw new FeatureException(HttpStatusCode.BadRequest, "Cannot have single destination and address per UTXO", "Single destination address and unique address per UTXO cannot be specified simultaneously.");
+                }
+
                 var model = new DistributeUtxoModel()
                 {
                     WalletName = request.WalletName,
@@ -739,20 +744,34 @@ namespace Stratis.Bitcoin.Features.Wallet.Services
 
                 var addresses = new List<HdAddress>();
 
-                if (request.ReuseAddresses)
+                if (!string.IsNullOrEmpty(request.SingleDestinationAddress))
                 {
-                    addresses = this.walletManager.GetUnusedAddresses(walletReference,
-                        request.UseUniqueAddressPerUtxo ? request.UtxosCount : 1, request.UseChangeAddresses).ToList();
+                    HdAddress address = account.GetCombinedAddresses().FirstOrDefault(a => a.Address == request.SingleDestinationAddress);
+                    
+                    if (address == null)
+                    {
+                        throw new FeatureException(HttpStatusCode.BadRequest, "Single destination address not found", "Single destination address was not found in the given wallet.");
+                    }
+
+                    addresses.Add(address);
                 }
-                else if (request.UseChangeAddresses)
+                else
                 {
-                    addresses = account.InternalAddresses.Take(request.UseUniqueAddressPerUtxo ? request.UtxosCount : 1)
-                        .ToList();
-                }
-                else if (!request.UseChangeAddresses)
-                {
-                    addresses = account.ExternalAddresses.Take(request.UseUniqueAddressPerUtxo ? request.UtxosCount : 1)
-                        .ToList();
+                    if (request.ReuseAddresses)
+                    {
+                        addresses = this.walletManager.GetUnusedAddresses(walletReference,
+                            request.UseUniqueAddressPerUtxo ? request.UtxosCount : 1, request.UseChangeAddresses).ToList();
+                    }
+                    else if (request.UseChangeAddresses)
+                    {
+                        addresses = account.InternalAddresses.Take(request.UseUniqueAddressPerUtxo ? request.UtxosCount : 1)
+                            .ToList();
+                    }
+                    else if (!request.UseChangeAddresses)
+                    {
+                        addresses = account.ExternalAddresses.Take(request.UseUniqueAddressPerUtxo ? request.UtxosCount : 1)
+                            .ToList();
+                    }
                 }
 
                 IEnumerable<UnspentOutputReference> spendableTransactions =
