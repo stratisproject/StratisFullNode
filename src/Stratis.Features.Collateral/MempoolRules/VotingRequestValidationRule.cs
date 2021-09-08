@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
             {
                 this.votingRequestFullValidationRule.CheckTransaction(context.Transaction);
             }
-            catch (ConsensusErrorException err) when (err.ConsensusError == PoAConsensusErrors.VotingRequestInvalidMultisig)
+            catch (ConsensusErrorException err) when (err.ConsensusError == PoAConsensusErrors.InvalidVotingOnMultiSig)
             {
                 context.State.Fail(MempoolErrors.VotingRequestInvalidMultisig, $"{context.Transaction.GetHash()} has an invalid voting request for a multisig member.").Throw();
             }

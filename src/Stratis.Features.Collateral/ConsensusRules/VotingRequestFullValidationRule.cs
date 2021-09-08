@@ -58,8 +58,9 @@ namespace Stratis.Features.Collateral.ConsensusRules
 
             if (this.federationManager.IsMultisigMember(request.PubKey))
             {
-                this.Logger.LogTrace("(-)[INVALID_MULTISIG_VOTING]");
-                PoAConsensusErrors.VotingRequestInvalidMultisig.Throw();
+                // Can't cast votes in relation to a multisig member.
+                this.Logger.LogTrace("(-)[INVALID_VOTING_ON_MULTISIG_MEMBER]");
+                PoAConsensusErrors.InvalidVotingOnMultiSig.Throw();
             }
 
             // Check collateral amount.
@@ -75,7 +76,7 @@ namespace Stratis.Features.Collateral.ConsensusRules
             Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
             string collateralAddress = script.GetDestinationAddress(this.counterChainNetwork).ToString();
             CollateralFederationMember owner = this.federationManager.CollateralAddressOwner(this.votingManager, VoteKey.AddFederationMember, collateralAddress);
-            if (owner != null && owner.PubKey != request.PubKey)
+            if (owner != null)
             {
                 this.Logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");
                 PoAConsensusErrors.VotingRequestInvalidCollateralReuse.Throw();
