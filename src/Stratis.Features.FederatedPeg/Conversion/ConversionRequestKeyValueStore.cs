@@ -11,7 +11,10 @@ namespace Stratis.Features.FederatedPeg.Conversion
 {
     public interface IConversionRequestKeyValueStore : IKeyValueRepository
     {
+        List<ConversionRequest> GetAll();
         List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed);
+
+        void Delete(string key);
     }
 
     public class ConversionRequestKeyValueStore : IConversionRequestKeyValueStore
@@ -33,6 +36,25 @@ namespace Stratis.Features.FederatedPeg.Conversion
             // Open a connection to a new DB and create if not found.
             var options = new Options { CreateIfMissing = true };
             this.leveldb = new DB(options, folder);
+        }
+
+        public List<ConversionRequest> GetAll()
+        {
+            var values = new List<ConversionRequest>();
+            IEnumerator<KeyValuePair<byte[], byte[]>> enumerator = this.leveldb.GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                (byte[] key, byte[] value) = enumerator.Current;
+
+                if (value == null)
+                    continue;
+
+                ConversionRequest deserialized = this.dBreezeSerializer.Deserialize<ConversionRequest>(value);
+                values.Add(deserialized);
+            }
+
+            return values;
         }
 
         public List<ConversionRequest> GetAll(ConversionRequestType type, bool onlyUnprocessed)
@@ -61,19 +83,24 @@ namespace Stratis.Features.FederatedPeg.Conversion
             return values;
         }
 
-        public void SaveBytes(string key, byte[] bytes)
+        public List<T> GetAllAsJson<T>()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void SaveBytes(string key, byte[] bytes, bool overWrite = false)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(key);
 
             this.leveldb.Put(keyBytes, bytes);
         }
 
-        public void SaveValue<T>(string key, T value)
+        public void SaveValue<T>(string key, T value, bool overWrite = false)
         {
             this.SaveBytes(key, this.dBreezeSerializer.Serialize(value));
         }
 
-        public void SaveValueJson<T>(string key, T value)
+        public void SaveValueJson<T>(string key, T value, bool overWrite = false)
         {
             string json = Serializer.ToString(value);
             byte[] jsonBytes = Encoding.ASCII.GetBytes(json);
@@ -121,6 +148,12 @@ namespace Stratis.Features.FederatedPeg.Conversion
         public void Dispose()
         {
             this.leveldb.Dispose();
+        }
+
+        public void Delete(string key)
+        {
+            byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+            this.leveldb.Delete(keyBytes);
         }
     }
 }

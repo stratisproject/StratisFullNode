@@ -23,6 +23,8 @@ namespace Stratis.Features.Collateral
 
         public override async Task InitializeAsync()
         {
+            // Note that the node's startup can remain here for a while as it retrieves the collateral for all federation members.
+            // This is in contrast with other features' async startup methods that are not required to complete before proceeding.
             await this.collateralChecker.InitializeAsync().ConfigureAwait(false);
         }
 

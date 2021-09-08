@@ -32,13 +32,13 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer, nodeSettings)
+        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
         {
         }
 
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer, NodeSettings nodeSettings)
+        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
@@ -67,32 +67,115 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
                             .ToArray();
 
-                        this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
-
-                        Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
-
-                        if (rowTip.Exists)
+                        // If the polls repository contains duplicate polls then reset the highest poll id and 
+                        // set the tip to null.
+                        // This will trigger the VotingManager to rebuild the voting and polls repository as the
+                        // polls repository tip is null. This happens later during startup, see VotingManager.Synchronize()
+                        var uniquePolls = new HashSet<Poll>(polls);
+                        if (uniquePolls.Count != polls.Length)
                         {
-                            this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                            if (this.chainIndexer != null && this.chainIndexer.GetHeader(this.CurrentTip.Hash) == null)
-                                this.CurrentTip = null;
-                        }
-                        else
-                        {
+                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Length - uniquePolls.Count);
+
                             this.ResetLocked(transaction);
                             transaction.Commit();
+                            return;
                         }
+
+                        Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
+                        if (!rowTip.Exists)
+                        {
+                            this.logger.LogInformation("The polls repository tip is unknown. Will re-build the repo.");
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
+
+                        this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
+                        if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                        {
+                            this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
+                            return;
+                        }
+
+                        this.logger.LogInformation("The polls repository tip {0} was not found in the consensus chain. Determining fork.", this.CurrentTip);
+
+                        // == Find fork.
+                        // The polls repository tip could not be found in the consenus chain.
+                        // Look at all other known hash/height pairs to find something in common with the consensus chain.
+                        // We will take that as the last known valid height.
+
+                        int maxGoodHeight = -1;
+
+                        foreach (Poll poll in polls)
+                        {
+                            if (poll.PollStartBlockData.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash) != null)
+                                maxGoodHeight = poll.PollStartBlockData.Height;
+                            if (poll.PollExecutedBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
+                                maxGoodHeight = poll.PollStartBlockData.Height;
+                            if (poll.PollVotedInFavorBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
+                                maxGoodHeight = poll.PollStartBlockData.Height;
+                        }
+
+                        if (maxGoodHeight == -1)
+                        {
+                            this.logger.LogInformation("No common blocks found. Will rebuild the repo from scratch.");
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
+
+                        this.CurrentTip = new HashHeightPair(this.chainIndexer.GetHeader(maxGoodHeight));
+
+                        this.logger.LogInformation("Common block found at height {0}. Will re-build the repo from there.", this.CurrentTip.Height);
+
+                        // Trim polls to tip.
+                        HashSet<Poll> pollsToDelete = new HashSet<Poll>();
+                        foreach (Poll poll in polls)
+                        {
+                            if (poll.PollStartBlockData.Height > this.CurrentTip.Height)
+                            {
+                                pollsToDelete.Add(poll);
+                                continue;
+                            }
+
+                            bool modified = false;
+
+                            if (poll.PubKeysHexVotedInFavor.Any(v => v.Height > this.CurrentTip.Height))
+                            {
+                                poll.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor.Where(v => v.Height <= this.CurrentTip.Height).ToList();
+                                modified = true;
+                            }
+
+                            if (poll.PollExecutedBlockData?.Height > this.CurrentTip.Height)
+                            {
+                                poll.PollExecutedBlockData = null;
+                                modified = true;
+                            }
+
+                            if (poll.PollVotedInFavorBlockData?.Height > this.CurrentTip.Height)
+                            {
+                                poll.PollVotedInFavorBlockData = null;
+                                modified = true;
+                            }
+
+                            if (modified)
+                                UpdatePoll(transaction, poll);
+                        }
+
+                        DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
+                        SaveCurrentTip(transaction, this.CurrentTip);
+                        transaction.Commit();
+
+                        this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
                     {
-                        // The polls repository requires an upgrade.
+                        this.logger.LogWarning("There was an error reading the polls repository. Will rebuild it.");
                         this.ResetLocked(transaction);
                         transaction.Commit();
                     }
                 }
             }
-
-            this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
         }
 
         private void ResetLocked(DBreeze.Transactions.Transaction transaction)
@@ -113,6 +196,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
             }
         }
+
         public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
         {
             SaveCurrentTip(transaction, (tip == null) ? null : new HashHeightPair(tip));
@@ -180,7 +264,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                using (var transaction = this.dbreeze.GetTransaction())
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     return func(transaction);
                 }
@@ -191,7 +275,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                using (var transaction = this.dbreeze.GetTransaction())
+                using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
                     action(transaction);
                 }

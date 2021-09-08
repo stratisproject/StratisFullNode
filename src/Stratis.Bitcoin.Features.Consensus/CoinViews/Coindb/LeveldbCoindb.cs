@@ -72,6 +72,59 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             var options = new Options { CreateIfMissing = true };
             this.leveldb = new DB(options, this.dataFolder);
 
+            // Check if key bytes are in the wrong endian order.
+            HashHeightPair current = this.GetTipHash();
+            if (current != null)
+            {
+                byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height)).ToArray());
+                // Fix the table if required.
+                if (row != null)
+                {
+                    // To be sure, check the next height too.
+                    byte[] row2 = (current.Height > 1) ? this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height - 1)).ToArray()) : new byte[] { };
+                    if (row2 != null)
+                    {
+                        this.logger.LogInformation("Fixing the coin db.");
+
+                        var rows = new Dictionary<int, byte[]>();
+
+                        using (var iterator = this.leveldb.CreateIterator())
+                        {
+                            iterator.Seek(new byte[] { rewindTable });
+
+                            while (iterator.IsValid())
+                            {
+                                byte[] key = iterator.Key();
+
+                                if (key.Length != 5 || key[0] != rewindTable)
+                                    break;
+
+                                int height = BitConverter.ToInt32(key, 1);
+
+                                rows[height] = iterator.Value();
+
+                                iterator.Next();
+                            }
+                        }
+
+                        using (var batch = new WriteBatch())
+                        {
+                            foreach (int height in rows.Keys.OrderBy(k => k))
+                            {
+                                batch.Delete(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
+                            }
+
+                            foreach (int height in rows.Keys.OrderBy(k => k))
+                            {
+                                batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray(), rows[height]);
+                            }
+
+                            this.leveldb.Write(batch, new WriteOptions() { Sync = true });
+                        }
+                    }
+                }
+            }
+
             Block genesis = this.network.GetGenesis();
 
             if (this.GetTipHash() == null)
@@ -172,7 +225,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
                             this.logger.LogDebug("Rewind state #{0} created.", nextRewindIndex);
 
-                            batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(nextRewindIndex)).ToArray(), this.dBreezeSerializer.Serialize(rewindData));
+                            batch.Put(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(nextRewindIndex).Reverse()).ToArray(), this.dBreezeSerializer.Serialize(rewindData));
                         }
                     }
 
@@ -187,6 +240,25 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         }
 
         /// <inheritdoc />
+        public int GetMinRewindHeight()
+        {
+            // Find the first row with a rewind table key prefix.
+            using (var iterator = this.leveldb.CreateIterator())
+            {
+                iterator.Seek(new byte[] { rewindTable });
+                if (!iterator.IsValid())
+                    return -1;
+
+                byte[] key = iterator.Key();
+
+                if (key.Length != 5 || key[0] != rewindTable)
+                    return -1;
+
+                return BitConverter.ToInt32(key.SafeSubarray(1, 4).Reverse().ToArray());
+            }
+        }
+
+        /// <inheritdoc />
         public HashHeightPair Rewind()
         {
             HashHeightPair res = null;
@@ -194,7 +266,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             {
                 HashHeightPair current = this.GetTipHash();
 
-                byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height)).ToArray());
+                byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(current.Height).Reverse()).ToArray());
 
                 if (row == null)
                     throw new InvalidOperationException($"No rewind data found for block `{current}`");
@@ -227,7 +299,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
 
         public RewindData GetRewindData(int height)
         {
-            byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height)).ToArray());
+            byte[] row = this.leveldb.Get(new byte[] { rewindTable }.Concat(BitConverter.GetBytes(height).Reverse()).ToArray());
             return row != null ? this.dBreezeSerializer.Deserialize<RewindData>(row) : null;
         }
 

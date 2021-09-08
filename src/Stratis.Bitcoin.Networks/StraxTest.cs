@@ -38,6 +38,8 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 166200;
             this.RewardClaimerBlockInterval = 100;
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "tUAzRBe1CaKaZnrxWPLVv7F4owHHKXAtbj";
+
             var consensusFactory = new PosConsensusFactory();
 
             // Create the genesis block.

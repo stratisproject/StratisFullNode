@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NSubstitute;
@@ -13,6 +14,7 @@ using Stratis.Bitcoin.Networks;
 using Stratis.Bitcoin.Primitives;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
+using Stratis.Features.FederatedPeg.Conversion;
 using Stratis.Features.FederatedPeg.Interfaces;
 using Stratis.Features.FederatedPeg.Models;
 using Stratis.Features.FederatedPeg.SourceChain;
@@ -25,6 +27,7 @@ namespace Stratis.Features.FederatedPeg.Tests
     public sealed class MaturedBlocksProviderTests
     {
         private readonly MultisigAddressHelper addressHelper;
+        private readonly IConversionRequestRepository conversionRequestRepository;
         private readonly IConsensusManager consensusManager;
         private readonly IFederatedPegSettings federatedPegSettings;
         private readonly ILoggerFactory loggerFactory;
@@ -36,12 +39,14 @@ namespace Stratis.Features.FederatedPeg.Tests
         private readonly byte[] opReturnBytes;
         private readonly BitcoinPubKeyAddress targetAddress;
         private List<ChainedHeaderBlock> blocks;
+        private Dictionary<DepositRetrievalType, int> retrievalTypeConfirmations;
 
         public MaturedBlocksProviderTests()
         {
             this.loggerFactory = Substitute.For<ILoggerFactory>();
             this.logger = Substitute.For<ILogger>();
             this.loggerFactory.CreateLogger(null).ReturnsForAnyArgs(this.logger);
+            this.conversionRequestRepository = Substitute.For<IConversionRequestRepository>();
             this.consensusManager = Substitute.For<IConsensusManager>();
             this.network = new CirrusRegTest();
             this.mainChainNetwork = new StraxRegTest();
@@ -73,10 +78,22 @@ namespace Stratis.Features.FederatedPeg.Tests
 
                 return this.blocks.SkipWhile(x => x.ChainedHeader.Height <= chainedHeader.Height).Where(x => x.ChainedHeader.Height <= this.consensusManager.Tip.Height).ToArray();
             });
+
+            this.retrievalTypeConfirmations = new Dictionary<DepositRetrievalType, int>
+            {
+                [DepositRetrievalType.Small] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits,
+                [DepositRetrievalType.Normal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits,
+                [DepositRetrievalType.Large] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits,
+            };
+
+            this.retrievalTypeConfirmations[DepositRetrievalType.Distribution] = this.federatedPegSettings.MinimumConfirmationsDistributionDeposits;
+            this.retrievalTypeConfirmations[DepositRetrievalType.ConversionSmall] = this.federatedPegSettings.MinimumConfirmationsSmallDeposits;
+            this.retrievalTypeConfirmations[DepositRetrievalType.ConversionNormal] = this.federatedPegSettings.MinimumConfirmationsNormalDeposits;
+            this.retrievalTypeConfirmations[DepositRetrievalType.ConversionLarge] = this.federatedPegSettings.MinimumConfirmationsLargeDeposits;
         }
 
         [Fact]
-        public void GetMaturedBlocksReturnsDeposits()
+        public async Task GetMaturedBlocksReturnsDepositsAsync()
         {
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(10, true, this.mainChainNetwork);
 
@@ -89,13 +106,13 @@ namespace Stratis.Features.FederatedPeg.Tests
 
             // Set the first block up to return 100 normal deposits.
             IDepositExtractor depositExtractor = Substitute.For<IDepositExtractor>();
-            depositExtractor.ExtractDepositsFromBlock(this.blocks.First().Block, this.blocks.First().ChainedHeader.Height, new[] { DepositRetrievalType.Normal }).ReturnsForAnyArgs(deposits);
+            depositExtractor.ExtractDepositsFromBlock(this.blocks.First().Block, this.blocks.First().ChainedHeader.Height, this.retrievalTypeConfirmations).ReturnsForAnyArgs(deposits);
             this.consensusManager.Tip.Returns(tip);
 
             // Makes every block a matured block.
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(0);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(0);
 
             Assert.Equal(11, depositsResult.Value.Count);
         }
@@ -114,7 +131,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 4 faster deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsDataToAdvanceNextMaturedBlockHeight()
+        public async Task RetrieveDeposits_ReturnsDataToAdvanceNextMaturedBlockHeightAsync()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
@@ -139,8 +156,7 @@ namespace Stratis.Features.FederatedPeg.Tests
                 return hashes.Select((hash) => this.blocks.Single(x => x.ChainedHeader.HashBlock == hash && x.ChainedHeader.Height <= this.consensusManager.Tip.Height)).ToArray();
             });
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
             int nextMaturedBlockHeight = 1;
@@ -148,7 +164,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             {
                 this.consensusManager.Tip.Returns(this.blocks[i].ChainedHeader);
 
-                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(nextMaturedBlockHeight);
+                SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(nextMaturedBlockHeight);
 
                 if (depositsResult?.Value != null && nextMaturedBlockHeight == depositsResult.Value.Min(b => b.BlockInfo.BlockHeight))
                 {
@@ -174,7 +190,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 4 faster deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario2()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario2()
         {
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
@@ -200,11 +216,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(5);
 
             // Total deposits
             Assert.Equal(10, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -233,7 +248,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 5 normal deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario3()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario3()
         {
             // Create a "chain" of 30 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
@@ -253,12 +268,11 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
 
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(5);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(5);
 
             // Total deposits
             Assert.Equal(11, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -284,7 +298,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 0 small deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario4()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(30, true, this.mainChainNetwork);
@@ -310,11 +324,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
 
             // Total deposits
             Assert.Equal(10, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -341,7 +354,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 0 small deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario5()
+        public async Task RetrieveDeposits_ReturnsSmallAndNormalDeposits_Scenario5()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
@@ -367,11 +380,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
 
             // Total deposits
             Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -396,7 +408,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 0 large deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsLargeDeposits_Scenario6()
+        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario6()
         {
             // Create a "chain" of 20 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(20, true, this.mainChainNetwork);
@@ -423,12 +435,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             }
 
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
-
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
 
             // Total deposits
             Assert.Equal(4, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -453,7 +463,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 6 large deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsLargeDeposits_Scenario7()
+        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario7()
         {
             // Create a "chain" of 40 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, true, this.mainChainNetwork);
@@ -486,11 +496,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
 
             // Total deposits
             Assert.Equal(16, depositsResult.Value.SelectMany(b => b.Deposits).Count());
@@ -523,7 +532,7 @@ namespace Stratis.Features.FederatedPeg.Tests
         /// Returns 7 large deposits
         /// </summary>
         [Fact]
-        public void RetrieveDeposits_ReturnsLargeDeposits_Scenario8()
+        public async Task RetrieveDeposits_ReturnsLargeDeposits_Scenario8()
         {
             // Create a "chain" of 40 blocks.
             this.blocks = ChainedHeadersHelper.CreateConsecutiveHeadersAndBlocks(40, true, this.mainChainNetwork);
@@ -549,11 +558,10 @@ namespace Stratis.Features.FederatedPeg.Tests
             });
             this.consensusManager.Tip.Returns(this.blocks.Last().ChainedHeader);
 
-            var depositExtractor = new DepositExtractor(this.federatedPegSettings, this.network, this.opReturnDataReader);
-
+            var depositExtractor = new DepositExtractor(this.conversionRequestRepository, this.federatedPegSettings, this.network, this.opReturnDataReader);
             var maturedBlocksProvider = new MaturedBlocksProvider(this.consensusManager, depositExtractor, this.federatedPegSettings);
 
-            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = maturedBlocksProvider.RetrieveDeposits(10);
+            SerializableResult<List<MaturedBlockDepositsModel>> depositsResult = await maturedBlocksProvider.RetrieveDepositsAsync(10);
 
             // Total deposits
             Assert.Equal(13, depositsResult.Value.SelectMany(b => b.Deposits).Count());

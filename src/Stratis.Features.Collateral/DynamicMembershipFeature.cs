@@ -31,7 +31,7 @@ namespace Stratis.Features.Collateral
             if (options.VotingEnabled)
             {
                 if (options.AutoKickIdleMembers)
-                    await this.joinFederationRequestMonitor.InitializeAsync();
+                    await this.joinFederationRequestMonitor.InitializeAsync().ConfigureAwait(false);
             }
         }
 

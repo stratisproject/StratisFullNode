@@ -78,6 +78,9 @@ namespace Stratis.Bitcoin.Features.RPC
                 {
                     // Single request, invoke single request and return single response object.
                     response = await this.InvokeSingleAsync(httpContext, token as JObject);
+
+                    if (response == null)
+                        response = JValue.CreateNull();
                 }
                 else
                 {
@@ -231,8 +234,17 @@ namespace Stratis.Bitcoin.Features.RPC
             {
                 await this.next.Invoke(context).ConfigureAwait(false);
 
+                // There are two possible cases: either the RPC method did indeed not exist, or the RPC controller endpoint returned null.
+                // We are supposed to return a JSON null in the RPC response in that case.
                 if (responseMemoryStream.Length == 0)
+                {
+                    if (context.Response.StatusCode == (int)HttpStatusCode.NoContent)
+                    {
+                        return null;
+                    }
+
                     throw new Exception("Method not found");
+                }
 
                 responseMemoryStream.Position = 0;
                 using (var streamReader = new StreamReader(responseMemoryStream))
