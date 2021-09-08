@@ -95,6 +95,11 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
             }
         }
 
+        public int GetMinRewindHeight()
+        {
+            throw new NotImplementedException();
+        }
+
         public HashHeightPair Rewind()
         {
             throw new NotImplementedException();

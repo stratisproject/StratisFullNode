@@ -4,6 +4,7 @@ using System.Linq;
 using NBitcoin;
 using NLog;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Features.FederatedPeg.Wallet;
 using Stratis.Features.PoA.Collateral;
 
@@ -24,6 +25,7 @@ namespace Stratis.Features.FederatedPeg.Distribution
         private readonly int epochWindow;
         private readonly ILogger logger;
         private readonly Network network;
+        private readonly IFederationHistory federationHistory;
 
         private readonly Dictionary<Script, long> blocksMinedEach = new Dictionary<Script, long>();
         private readonly Dictionary<uint256, Transaction> commitmentTransactionByHashDictionary = new Dictionary<uint256, Transaction>();
@@ -35,12 +37,13 @@ namespace Stratis.Features.FederatedPeg.Distribution
         // We pay no attention to whether a miner has been kicked since the last distribution or not.
         // If they produced an accepted block, they get their reward.
 
-        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager)
+        public RewardDistributionManager(Network network, ChainIndexer chainIndexer, IConsensusManager consensusManager, IFederationHistory federationHistory)
         {
             this.network = network;
             this.chainIndexer = chainIndexer;
             this.consensusManager = consensusManager;
             this.logger = LogManager.GetCurrentClassLogger();
+            this.federationHistory = federationHistory;
 
             this.encoder = new CollateralHeightCommitmentEncoder();
             this.epoch = this.network.Consensus.MaxReorgLength == 0 ? DefaultEpoch : (int)this.network.Consensus.MaxReorgLength;
@@ -55,6 +58,83 @@ namespace Stratis.Features.FederatedPeg.Distribution
                 if (sidechainAdvancement > this.epoch)
                     this.epoch = sidechainAdvancement;
             }
+        }
+
+        public List<Recipient> DistributeToMultisigNodes(int blockHeight, Money fee)
+        {
+            // Retrieve the federation at the given block height.
+            List<IFederationMember> federation = this.federationHistory.GetFederationForBlock(this.chainIndexer.GetHeader(blockHeight));
+
+            var multiSigMinerScripts = new List<Script>();
+
+            // Start checking if a multisig member mined a block at the current tip less max reorg blocks.
+            var startHeight = this.chainIndexer.Tip.Height - this.epoch;
+
+            // Inspect the round of blocks equal to the federation size
+            // and determine if a multisig member mined the block.
+            // If so add the list of multisig members to pay.
+
+            // Look back at least 4 federation sizes to ensure that we collect enough data on the multisig
+            // members that mined.
+            var inspectionRange = federation.Count * 4;
+
+            for (int i = inspectionRange; i >= 0; i--)
+            {
+                ChainedHeader chainedHeader = this.chainIndexer.GetHeader(startHeight - i);
+
+                var collateralFederationMember = this.federationHistory.GetFederationMemberForBlock(chainedHeader) as CollateralFederationMember;
+                if (collateralFederationMember == null)
+                    continue;
+
+                if (!collateralFederationMember.IsMultisigMember)
+                    continue;
+
+                // Check if the multisig is an owner of the multisig contract.
+                if (!MultiSigMembers.IsContractOwner(this.network, collateralFederationMember.PubKey))
+                    continue;
+
+                if (chainedHeader.Block == null)
+                    chainedHeader.Block = this.consensusManager.GetBlockData(chainedHeader.HashBlock).Block;
+
+                Transaction coinBase = chainedHeader.Block.Transactions[0];
+
+                Script minerScript = coinBase.Outputs.First(o => !o.ScriptPubKey.IsUnspendable).ScriptPubKey;
+
+                // If the POA miner at the time did not have a wallet address, the script length can be 0.
+                // In this case the block shouldn't count as it was "not mined by anyone".
+                if (Script.IsNullOrEmpty(minerScript))
+                    continue;
+
+                if (!multiSigMinerScripts.Contains(minerScript))
+                    multiSigMinerScripts.Add(minerScript);
+            }
+
+            this.logger.Info("Fee reward to multisig node at main chain height {0} will distribute {1} STRAX between {2} multisig mining keys.", blockHeight, fee, multiSigMinerScripts.Count);
+
+            Money feeReward = fee / multiSigMinerScripts.Count;
+
+            var multiSigRecipients = new List<Recipient>();
+
+            foreach (Script multiSigMinerScript in multiSigMinerScripts)
+            {
+                if (multiSigMinerScript.IsScriptType(ScriptType.P2PK))
+                {
+                    PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(multiSigMinerScript);
+                    Script p2pkh = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
+
+                    multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = p2pkh });
+
+                    this.logger.Debug($"Paying multisig member '{pubKey}' {feeReward} STRAX.");
+                }
+                else
+                {
+                    multiSigRecipients.Add(new Recipient() { Amount = feeReward, ScriptPubKey = multiSigMinerScript });
+                    this.logger.Debug($"Paying multisig member '{multiSigMinerScript.ToHex()}' (hex) {feeReward} STRAX.");
+                }
+
+            }
+
+            return multiSigRecipients;
         }
 
         /// <inheritdoc />

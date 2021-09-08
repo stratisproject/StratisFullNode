@@ -37,6 +37,8 @@ namespace Stratis.Bitcoin.Networks
             this.RewardClaimerBatchActivationHeight = 119_200; // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
             this.RewardClaimerBlockInterval = 100;
 
+            this.ConversionTransactionFeeDistributionDummyAddress = "CXK1AhmK8XhmBWHUrCKRt5WMhz1CcYeguF";
+
             // To successfully process the OP_FEDERATION opcode the federations should be known.
             this.Federations = new Federations();
             this.Federations.RegisterFederation(new Federation(new[]

@@ -10,7 +10,7 @@ using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Util;
 using Nethereum.Web3;
 
-namespace Stratis.Bitcoin.Features.Interop.ETHClient.ContractSource
+namespace Stratis.Bitcoin.Features.Interop.EthereumClient.ContractSource
 {
     public class GnosisSafeProxyDeployment : ContractDeploymentMessage
     {
@@ -63,7 +63,7 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient.ContractSource
 
         [Parameter("uint256", "value", 2)]
         public BigInteger Value { get; set; }
-        
+
         [Parameter("bytes", "data", 3)]
         public byte[] Data { get; set; }
 
@@ -152,13 +152,13 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient.ContractSource
                 SafeTxGas = safeTxGas,
                 BaseGas = baseGas,
                 GasPrice = Web3.Convert.ToWei(gasPrice, UnitConversion.EthUnit.Gwei),
-                GasToken = ETHClient.ZeroAddress,
-                RefundReceiver = ETHClient.ZeroAddress,
+                GasToken = ETHClient.ETHClient.ZeroAddress,
+                RefundReceiver = ETHClient.ETHClient.ZeroAddress,
                 Signatures = signatures
             };
 
             TransactionReceipt execTransactionReceipt = await execHandler.SendRequestAndWaitForReceiptAsync(proxyContract, execTransactionFunctionMessage).ConfigureAwait(false);
-            
+
             return execTransactionReceipt.TransactionHash;
         }
 

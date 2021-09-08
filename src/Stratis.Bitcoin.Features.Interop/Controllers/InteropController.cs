@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
@@ -8,48 +10,90 @@ using NBitcoin.DataEncoders;
 using NLog;
 using Stratis.Bitcoin.Features.Interop.ETHClient;
 using Stratis.Bitcoin.Features.Interop.Models;
+using Stratis.Bitcoin.Features.PoA;
 using Stratis.Bitcoin.Features.Wallet;
+using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Features.FederatedPeg.Conversion;
+using Stratis.Features.FederatedPeg.Coordination;
 
 namespace Stratis.Bitcoin.Features.Interop.Controllers
 {
     [ApiVersion("1")]
     [Route("api/[controller]")]
-    public class InteropController : Controller
+    public sealed class InteropController : Controller
     {
+        private readonly IConversionRequestCoordinationService conversionRequestCoordinationService;
+        private readonly IConversionRequestRepository conversionRequestRepository;
+        private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
+        private readonly IFederationManager federationManager;
+        private readonly InteropSettings interopSettings;
+        private readonly ILogger logger;
         private readonly Network network;
 
-        private readonly IConversionRequestRepository conversionRequestRepository;
-
-        private readonly IInteropTransactionManager interopTransactionManager;
-
-        private readonly IETHCompatibleClientProvider ethCompatibleClientProvider;
-
-        private readonly InteropSettings interopSettings;
-
-        private readonly ILogger logger;
-
-        public InteropController(Network network,
+        public InteropController(
+            Network network,
+            IConversionRequestCoordinationService conversionRequestCoordinationService,
             IConversionRequestRepository conversionRequestRepository,
-            IInteropTransactionManager interopTransactionManager,
             IETHCompatibleClientProvider ethCompatibleClientProvider,
+            IFederationManager federationManager,
             InteropSettings interopSettings)
         {
-            this.network = network;
+            this.conversionRequestCoordinationService = conversionRequestCoordinationService;
             this.conversionRequestRepository = conversionRequestRepository;
-            this.interopTransactionManager = interopTransactionManager;
             this.ethCompatibleClientProvider = ethCompatibleClientProvider;
+            this.federationManager = federationManager;
             this.interopSettings = interopSettings;
             this.logger = LogManager.GetCurrentClassLogger();
+            this.network = network;
         }
 
-        [Route("status")]
+        [Route("status/burns")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult InteropStatus()
+        public IActionResult InteropStatusBurnRequests()
+        {
+            try
+            {
+                var response = new InteropStatusResponseModel();
+
+                var burnRequests = new List<ConversionRequestModel>();
+
+                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
+                {
+                    burnRequests.Add(new ConversionRequestModel()
+                    {
+                        RequestId = request.RequestId,
+                        RequestType = request.RequestType,
+                        RequestStatus = request.RequestStatus,
+                        BlockHeight = request.BlockHeight,
+                        DestinationAddress = request.DestinationAddress,
+                        DestinationChain = request.DestinationChain.ToString(),
+                        Amount = request.Amount,
+                        Processed = request.Processed,
+                        Status = request.RequestStatus.ToString(),
+                    });
+                }
+
+                response.BurnRequests = burnRequests.OrderByDescending(m => m.BlockHeight).ToList();
+
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("status/mints")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusMintRequests()
         {
             try
             {
@@ -68,34 +112,36 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                         DestinationAddress = request.DestinationAddress,
                         DestinationChain = request.DestinationChain.ToString(),
                         Amount = request.Amount,
-                        Processed = request.Processed
+                        Processed = request.Processed,
+                        Status = request.RequestStatus.ToString(),
                     });
                 }
 
-                response.MintRequests = mintRequests;
+                response.MintRequests = mintRequests.OrderByDescending(m => m.BlockHeight).ToList();
 
-                var burnRequests = new List<ConversionRequestModel>();
+                return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
 
-                foreach (ConversionRequest request in this.conversionRequestRepository.GetAllBurn(false))
-                {
-                    burnRequests.Add(new ConversionRequestModel()
-                    {
-                        RequestId = request.RequestId,
-                        RequestType = request.RequestType,
-                        RequestStatus = request.RequestStatus,
-                        BlockHeight = request.BlockHeight,
-                        DestinationAddress = request.DestinationAddress,
-                        DestinationChain = request.DestinationChain.ToString(),
-                        Amount = request.Amount,
-                        Processed = request.Processed
-                    });
-                }
-
-                response.MintRequests = burnRequests;
+        [Route("status/votes")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult InteropStatusVotes()
+        {
+            try
+            {
+                var response = new InteropStatusResponseModel();
 
                 var receivedVotes = new Dictionary<string, List<string>>();
 
-                foreach ((string requestId, HashSet<PubKey> pubKeys) in this.interopTransactionManager.GetStatus())
+                foreach ((string requestId, HashSet<PubKey> pubKeys) in this.conversionRequestCoordinationService.GetStatus())
                 {
                     var pubKeyList = new List<string>();
 
@@ -173,7 +219,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).ConfigureAwait(false));
+                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -209,7 +255,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).ConfigureAwait(false));
+                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -241,8 +287,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
-                // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(await client.ConfirmTransactionAsync(transactionId).ConfigureAwait(false));
+                return this.Json(await client.ConfirmTransactionAsync(transactionId, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -260,7 +305,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="destinationChain">The chain the multisig wallet contract is deployed to.</param>
         /// <param name="requirement">The new threshold for confirmations on the multisig wallet contract. Can usually be numOwners / 2 rounded up.</param>
         /// <param name="gasPrice">The gas price to use for submitting the contract call transaction.</param>
-        /// <returns>The multisig wallet transactionId of the changerequirement call.</returns>
+        /// <returns>The on-chain transaction hash of the contract call transaction.</returns>
         [Route("changerequirement")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -280,7 +325,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 ETHInteropSettings settings = this.interopSettings.GetSettingsByChain(destinationChain);
 
                 // TODO: Maybe for convenience the gas price could come from the external API poller
-                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data).ConfigureAwait(false));
+                return this.Json(await client.SubmitTransactionAsync(settings.MultisigWalletAddress, 0, data, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
             {
@@ -361,6 +406,121 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 this.logger.Error("Exception occurred: {0}", e.ToString());
 
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        [Route("requests/delete")]
+        [HttpDelete]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult DeleteConversionRequests()
+        {
+            if (this.network.IsTest() || this.network.IsRegTest())
+            {
+                var result = this.conversionRequestRepository.DeleteConversionRequests();
+                return this.Json($"{result} conversion requests have been deleted.");
+            }
+
+            return this.Json($"Deleting conversion requests is only available on test networks.");
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to set itself as the originator (submittor) for a given request id.
+        /// </summary>
+        /// <param name="requestId">The request id in question.</param>
+        [Route("requests/setoriginator")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult SetOriginatorForRequest([FromBody] string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.OriginatorNotSubmitted);
+                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.OriginatorNotSubmitted}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.OriginatorNotSubmitted);
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
+        /// </summary>
+        /// <param name="requestId">The request id in question.</param>
+        [Route("requests/setnotoriginator")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ResetConversionRequestAsNotOriginator([FromBody] string requestId)
+        {
+            try
+            {
+                this.conversionRequestRepository.SetConversionRequestState(requestId, ConversionRequestStatus.NotOriginator);
+                return this.Json($"Conversion request '{requestId}' has been reset to {ConversionRequestStatus.NotOriginator}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting conversion request '{0}' to {1} : {2}.", requestId, e.ToString(), ConversionRequestStatus.NotOriginator);
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to reset the request as NotOriginator.
+        /// </summary>
+        /// <param name="model">The request id and height at which to reprocess the burn request at.</param>
+        [Route("requests/reprocessburn")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult ReprocessBurnRequest([FromBody] ReprocessBurnRequestModel model)
+        {
+            try
+            {
+                this.conversionRequestRepository.ReprocessBurnRequest(model.RequestId, model.BlockHeight, ConversionRequestStatus.Unprocessed);
+                this.logger.Info($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
+
+                return this.Json($"Burn request '{model.RequestId}' will be reprocessed at height {model.BlockHeight}.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception setting burn request '{0}' to be reprocessed : {1}.", model.RequestId, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint that allows the multisig operator to manually add a vote if they are originator of the request.
+        /// </summary>
+        /// <param name="model">The request id and vote in question.</param>
+        [Route("requests/pushvote")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult PushVoteManually([FromBody] PushManualVoteForRequest model)
+        {
+            try
+            {
+                this.conversionRequestCoordinationService.AddVote(model.RequestId, BigInteger.Parse(model.EventId), this.federationManager.CurrentFederationKey.PubKey);
+                this.conversionRequestRepository.SetConversionRequestState(model.RequestId, ConversionRequestStatus.OriginatorSubmitted);
+                return this.Json($"Manual vote pushed for request '{model.RequestId}' with event id '{model.EventId}'.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception manual pushing vote for conversion request '{0}' : {1}.", model.RequestId, e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Error", e.Message);
             }
         }
     }

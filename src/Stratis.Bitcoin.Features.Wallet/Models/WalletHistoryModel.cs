@@ -49,12 +49,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
             this.Timestamp = DateTimeOffset.FromUnixTimeSeconds(historyItem.Timestamp);
             this.ConfirmedInBlock = historyItem.BlockHeight;
 
-            if (historyItem.Type != (int)TransactionItemType.Send)
+            if (historyItem.Type != (int)TransactionItemType.Send && historyItem.Type != (int)TransactionItemType.CreateOrCall)
             {
                 this.ToAddress = historyItem.ReceiveAddress;
             }
 
-            if (this.Type == TransactionItemType.Send)
+            if (this.Type == TransactionItemType.Send || this.Type == TransactionItemType.CreateOrCall)
             {
                 this.ToAddress = historyItem.SendToAddress;
                 this.Amount = new Money(historyItem.Amount + historyItem.Fee);
@@ -144,6 +144,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         Received,
         Send,
         Staked,
-        Mined
+        Mined,
+        CreateOrCall
     }
 }
