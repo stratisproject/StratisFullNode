@@ -104,8 +104,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             {
                 new UrlDescriptor
                 {
-                    Name = $"Contract {address}",
-                    Url = $"/swagger/contracts/{address}"
+                    Name = $"Contract {address.Address}",
+                    Url = $"/swagger/contracts/{address.Address}"
                 }
             };
 
