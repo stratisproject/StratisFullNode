@@ -21,7 +21,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
     /// <summary>
     /// Controller for dynamically generating swagger documents for smart contract assemblies.
     /// </summary>
-    [Route("api/swagger/contracts")]
     public class ContractSwaggerController : Controller
     {
         private readonly SwaggerGeneratorOptions options;
@@ -53,7 +52,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The contract's address.</param>
         /// <returns>A <see cref="SwaggerDocument"/> model.</returns>
         /// <exception cref="Exception"></exception>
-        [Route("{address}")]
+        [Route("swagger/contracts/{address}")]
         [HttpGet]
         public async Task<IActionResult> ContractSwaggerDoc(string address)
         {
@@ -92,6 +91,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         /// <param name="address">The contract's address.</param>
         /// <returns>A success response.</returns>
         [HttpPost]
+        [Route("api/swagger/contracts")]
         public async Task<IActionResult> AddContractToSwagger([FromBody] AddContractRequest address)
         {
             // Check that the contract exists
@@ -105,7 +105,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 new UrlDescriptor
                 {
                     Name = $"Contract {address.Address}",
-                    Url = $"/swagger/contracts/{address.Address}"
+                    Url = $"contracts/{address.Address}"
                 }
             };
 
