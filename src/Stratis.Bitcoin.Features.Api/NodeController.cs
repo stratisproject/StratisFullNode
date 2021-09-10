@@ -518,6 +518,29 @@ namespace Stratis.Bitcoin.Features.Api
         }
 
         /// <summary>
+        /// Signals the node to rewind to the specified height.
+        /// This will be done via writing a flag to the .conf file so that on startup it be executed.
+        /// </summary>
+        [Route("rewind")]
+        [HttpPut]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult Rewind([FromQuery] int height)
+        {
+            try
+            {
+                BaseFeature.SetRewindFlag(this.nodeSettings, height);
+
+                return Json("Rewind flag set, please restart the node.");
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Changes the log levels for the specified loggers.
         /// </summary>
         /// <param name="request">The request containing the loggers to modify.</param>

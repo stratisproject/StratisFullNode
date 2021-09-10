@@ -69,7 +69,11 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                     else
                     {
                         // We assume that if it wasn't a cold staking scriptPubKey then it must have been P2PKH.
-                        address = scriptPubKey.GetDestinationAddress(this.network).ToString();
+                        address = scriptPubKey.GetDestinationAddress(this.network)?.ToString();
+
+                        if (address == null)
+                            throw new FeatureException(HttpStatusCode.BadRequest, "Could not resolve address.",
+                                $"Could not resolve address from UTXO's scriptPubKey '{scriptPubKey.ToHex()}'.");
                     }
 
                     var accounts = this.walletManager.GetAccounts(request.WalletName);

@@ -63,6 +63,14 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// </summary>
         /// <param name="height">The height of the block.</param>
         RewindData GetRewindData(int height);
+
+        /// <summary>Gets the minimum rewind height.</summary>
+        /// <returns>
+        /// <para>
+        /// The minimum rewind height or -1 if rewind is not possible.
+        /// </para>
+        /// </returns>
+        int GetMinRewindHeight();
     }
 
     public interface IStakedb : ICoindb

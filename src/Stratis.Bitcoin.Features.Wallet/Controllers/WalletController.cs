@@ -848,7 +848,6 @@ namespace Stratis.Bitcoin.Features.Wallet.Controllers
                 async (req, token) => this.Json(await this.walletService.SplitCoins(req, token)));
         }
 
-
         /// <summary>Splits and distributes UTXOs across wallet addresses</summary>
         /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
         /// <param name="request">An object containing the necessary parameters.</param>
