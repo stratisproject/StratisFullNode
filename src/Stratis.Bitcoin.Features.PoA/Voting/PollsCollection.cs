@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using NLog;
 using Stratis.Bitcoin.Utilities;
 
@@ -21,8 +22,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             this.logger = LogManager.GetCurrentClassLogger();
 
-            foreach (Poll poll in polls)
-                this.Add(poll);
+            foreach (Poll poll in polls.OrderBy(p => p.PollStartBlockData.Height))
+                this.Add(poll, true);
         }
 
         public IEnumerator<Poll> GetEnumerator()
@@ -35,7 +36,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.GetEnumerator();
         }
 
-        public void Add(Poll poll)
+        public void Add(Poll poll, bool force = false)
         {
             if (this.polls.Contains(poll))
             {
@@ -46,7 +47,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (poll.IsPending)
             {
                 // Can't insert another pending poll for the same.
-                Guard.Assert(!this.pendingPollsByVotingData.ContainsKey(poll.VotingData));
+                Guard.Assert(force || !this.pendingPollsByVotingData.ContainsKey(poll.VotingData));
                 this.pendingPollsByVotingData[poll.VotingData] = poll;
             }
 
