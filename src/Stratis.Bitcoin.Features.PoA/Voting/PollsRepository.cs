@@ -106,9 +106,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (poll.PollStartBlockData.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash) != null)
                                 maxGoodHeight = poll.PollStartBlockData.Height;
                             if (poll.PollExecutedBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
-                                maxGoodHeight = poll.PollStartBlockData.Height;
+                                maxGoodHeight = poll.PollExecutedBlockData.Height;
                             if (poll.PollVotedInFavorBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
-                                maxGoodHeight = poll.PollStartBlockData.Height;
+                                maxGoodHeight = poll.PollVotedInFavorBlockData.Height;
                         }
 
                         if (maxGoodHeight == -1)
