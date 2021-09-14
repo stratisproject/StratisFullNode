@@ -287,6 +287,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
+                // TODO: Maybe for convenience the gas price could come from the external API poller
                 return this.Json(await client.ConfirmTransactionAsync(transactionId, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
@@ -305,7 +306,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="destinationChain">The chain the multisig wallet contract is deployed to.</param>
         /// <param name="requirement">The new threshold for confirmations on the multisig wallet contract. Can usually be numOwners / 2 rounded up.</param>
         /// <param name="gasPrice">The gas price to use for submitting the contract call transaction.</param>
-        /// <returns>The on-chain transaction hash of the contract call transaction.</returns>
+        /// <returns>The multisig wallet transactionId of the changerequirement call.</returns>
         [Route("changerequirement")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]

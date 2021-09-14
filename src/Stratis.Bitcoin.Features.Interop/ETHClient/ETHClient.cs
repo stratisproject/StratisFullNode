@@ -22,6 +22,20 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         Task CreateTransferEventFilterAsync();
 
+        Task<Transaction> GetTransactionAsync(string transactionHash);
+
+        Task<SubmitTransactionFunction> GetSubmitTransactionAsync(string transactionHash);
+
+        Task<ConfirmTransactionFunction> GetConfirmTransactionAsync(string transactionHash);
+
+        Task<MintFunction> GetMintTransactionAsync(string transactionHash);
+
+        Task<BurnFunction> GetBurnTransactionAsync(string transactionHash);
+
+        Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
+
+        Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
+
         /// <summary>
         /// Queries the previously created event filter for any new events matching the filter criteria.
         /// </summary>
@@ -196,6 +210,82 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             this.transferEventHandler = this.web3.Eth.GetEvent<TransferEventDTO>(this.settings.WrappedStraxContractAddress);
             this.filterAllTransferEventsForContract = this.transferEventHandler.CreateFilterInput();
             this.filterId = await this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).ConfigureAwait(false);
+        }
+
+        public async Task<Transaction> GetTransactionAsync(string transactionHash)
+        {
+            return await this.web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash).ConfigureAwait(false);
+        }
+
+        public async Task<SubmitTransactionFunction> GetSubmitTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<SubmitTransactionFunction>();
+        }
+
+        public async Task<ConfirmTransactionFunction> GetConfirmTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<ConfirmTransactionFunction>();
+        }
+
+        public async Task<MintFunction> GetMintTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<MintFunction>();
+        }
+
+        public async Task<BurnFunction> GetBurnTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+        }
+
+        public async Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber)
+        {
+            return await this.web3.Eth.Blocks.GetBlockWithTransactionsByNumber.SendRequestAsync(new HexBigInteger(blockNumber)).ConfigureAwait(false);
+        }
+
+        public async Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block)
+        {
+            var burns = new List<(string TransactionHash, BurnFunction Burn)>();
+
+            foreach (Transaction tx in block.Transactions)
+            {
+                if (!tx.IsTo(this.settings.WrappedStraxContractAddress))
+                    continue;
+
+                BurnFunction burn;
+
+                try
+                {
+                    burn = tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (burn.Amount == BigInteger.Zero)
+                {
+                    // Ignoring zero-valued burn transaction.
+                    continue;
+                }
+
+                if (burn.Amount < BigInteger.Zero)
+                {
+                    // Ignoring negative-valued burn transaction.
+                    continue;
+                }
+
+                burns.Add((tx.TransactionHash, burn));
+            }
+
+            return burns;
         }
 
         /// <inheritdoc />
