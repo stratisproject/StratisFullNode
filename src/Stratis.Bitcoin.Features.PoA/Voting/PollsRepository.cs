@@ -58,23 +58,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
-                    Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
-
                     try
                     {
-                        Poll[] polls = data
-                            .Where(d => d.Key.Length == 4)
-                            .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
-                            .ToArray();
+                        var polls = GetAllPolls(transaction);
 
                         // If the polls repository contains duplicate polls then reset the highest poll id and 
                         // set the tip to null.
                         // This will trigger the VotingManager to rebuild the voting and polls repository as the
                         // polls repository tip is null. This happens later during startup, see VotingManager.Synchronize()
                         var uniquePolls = new HashSet<Poll>(polls);
-                        if (uniquePolls.Count != polls.Length)
+                        if (uniquePolls.Count != polls.Count)
                         {
-                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Length - uniquePolls.Count);
+                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Count - uniquePolls.Count);
 
                             this.ResetLocked(transaction);
                             transaction.Commit();
@@ -93,7 +88,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
                         if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
                         {
-                            this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
+                            this.highestPollId = (polls.Count > 0) ? polls.Max(p => p.Id) : -1;
                             return;
                         }
 
@@ -111,9 +106,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (poll.PollStartBlockData.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash) != null)
                                 maxGoodHeight = poll.PollStartBlockData.Height;
                             if (poll.PollExecutedBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
-                                maxGoodHeight = poll.PollStartBlockData.Height;
+                                maxGoodHeight = poll.PollExecutedBlockData.Height;
                             if (poll.PollVotedInFavorBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
-                                maxGoodHeight = poll.PollStartBlockData.Height;
+                                maxGoodHeight = poll.PollVotedInFavorBlockData.Height;
                         }
 
                         if (maxGoodHeight == -1)
@@ -340,20 +335,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                var polls = new List<Poll>(this.highestPollId + 1);
+                Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
 
-                for (int i = 0; i < this.highestPollId + 1; i++)
-                {
-                    Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(DataTable, i.ToBytes());
-
-                    if (row.Exists)
-                    {
-                        Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
-                        polls.Add(poll);
-                    }
-                }
-
-                return polls;
+                return data
+                    .Where(d => d.Key.Length == 4)
+                    .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                    .ToList();
             }
         }
 
