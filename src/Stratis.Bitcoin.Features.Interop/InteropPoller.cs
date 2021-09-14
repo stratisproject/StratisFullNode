@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
-using Nethereum.Contracts;
+using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Util;
 using Nethereum.Web3;
 using Stratis.Bitcoin.AsyncWork;
@@ -57,7 +57,7 @@ namespace Stratis.Bitcoin.Features.Interop
         private IAsyncLoop conversionLoop;
         private IAsyncLoop conversionBurnLoop;
 
-        private readonly Dictionary<DestinationChain, bool> eventFilterCreationRequired;
+        private readonly Dictionary<DestinationChain, BigInteger> lastPolledBlock;
 
         /// <summary>Both the <see cref="conversionLoop"/> and <see cref="conversionBurnLoop"/> need to access the repository, so access to it should be locked to ensure consistency.</summary>
         private readonly object repositoryLock;
@@ -94,10 +94,7 @@ namespace Stratis.Bitcoin.Features.Interop
             this.externalApiPoller = externalApiPoller;
             this.logger = nodeSettings.LoggerFactory.CreateLogger(this.GetType().FullName);
 
-            this.eventFilterCreationRequired = new Dictionary<DestinationChain, bool>()
-            {
-                {DestinationChain.ETH, true}
-            };
+            this.lastPolledBlock = new Dictionary<DestinationChain, BigInteger>();
 
             this.repositoryLock = new object();
 
@@ -105,9 +102,9 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Initializes the poller by starting the periodic loops thats checks for and processes the conversion requests.
+        /// Initializes the poller by starting the periodic loops that check for and process the conversion requests.
         /// </summary>
-        public void Initialize()
+        public async Task InitializeAsync()
         {
             if (!this.ethClientProvider.GetAllSupportedChains().Any())
             {
@@ -121,6 +118,8 @@ namespace Stratis.Bitcoin.Features.Interop
                 this.logger.LogDebug("Not a federation member.");
                 return;
             }
+
+            this.lastPolledBlock[DestinationChain.ETH] = await this.ethClientProvider.GetClientForChain(DestinationChain.ETH).GetBlockHeightAsync().ConfigureAwait(false);
 
             this.logger.LogInformation($"Interoperability enabled, initializing periodic loop.");
 
@@ -179,10 +178,26 @@ namespace Stratis.Bitcoin.Features.Interop
 
                     try
                     {
-                        // We need to regularly check for contract events, otherwise the created filter can time out and need to be recreated.
-                        // This is done separately to the conversion request processing as transaction submission there can take an arbitrarily long length of time.
                         foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
-                            await this.CheckForContractEventsAsync(supportedChain.Key, supportedChain.Value).ConfigureAwait(false);
+                        {
+                            BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
+
+                            // We are giving a reorg window of 12 blocks here, so burns right at the tip won't be processed until they have 12 confirmations.
+                            if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - 12))
+                            {
+                                this.logger.LogTrace("Polling {0} block at height {1} for burn transactions.", supportedChain.Key, blockHeight);
+
+                                BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
+                                List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetBurnsFromBlock(block).ConfigureAwait(false);
+
+                                foreach ((string TransactionHash, BurnFunction Burn) burn in burns)
+                                {
+                                    this.ProcessBurn(block.BlockHash, burn.TransactionHash, burn.Burn);
+                                }
+
+                                this.lastPolledBlock[supportedChain.Key] += 1;
+                            }
+                        }
                     }
                     catch (Exception e)
                     {
@@ -219,116 +234,63 @@ namespace Stratis.Bitcoin.Features.Interop
         }
 
         /// <summary>
-        /// Retrieves any Transfer events from the logs of the Wrapped Strax contract deployed on specified chain.
-        /// Transfers with the zero (0x0000...) address as their destination can be considered to be burn transactions and are saved for processing as withdrawals on the mainchain.
+        /// Processes burn() contract calls made against the Wrapped Strax contract deployed on a specific chain.
         /// </summary>
-        private async Task CheckForContractEventsAsync(DestinationChain targetChain, IETHClient chainClient)
+        private void ProcessBurn(string blockHash, string transactionHash, BurnFunction burn)
         {
-            await this.CreateEventFiltersIfRequiredAsync(targetChain, chainClient).ConfigureAwait(false);
+            this.logger.LogInformation("Conversion burn transaction '{0}' received from polled block '{1}', sender {2}.", transactionHash, blockHash, burn.FromAddress);
 
-            // Check for all Transfer events against the WrappedStrax contract since the last time we checked.
-            // In future this could also poll for other events as the need arises.
-            List<EventLog<TransferEventDTO>> transferEvents = await chainClient.GetTransferEventsForWrappedStraxAsync().ConfigureAwait(false);
-
-            foreach (EventLog<TransferEventDTO> transferEvent in transferEvents)
+            lock (this.repositoryLock)
             {
-                // Will probably never be the case, but check anyway.
-                if (string.IsNullOrWhiteSpace(transferEvent.Log.TransactionHash))
-                    continue;
-
-                // These could be mints or something else, either way ignore them.
-                if (transferEvent.Event.From == ETHClient.ETHClient.ZeroAddress)
-                    continue;
-
-                // Transfers can only be burns if they are made with the zero address as the destination.
-                if (transferEvent.Event.To != ETHClient.ETHClient.ZeroAddress)
-                    continue;
-
-                this.logger.LogInformation("Conversion burn transaction '{0}' received from contract events, sender {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.From);
-
-                lock (this.repositoryLock)
+                if (this.conversionRequestRepository.Get(transactionHash) != null)
                 {
-                    if (this.conversionRequestRepository.Get(transferEvent.Log.TransactionHash) != null)
-                    {
-                        this.logger.LogInformation("Conversion burn transaction '{0}' already exists, ignoring.", transferEvent.Log.TransactionHash);
+                    this.logger.LogInformation("Conversion burn transaction '{0}' already exists, ignoring.", transactionHash);
 
-                        continue;
-                    }
-                }
-
-                if (transferEvent.Event.Value == BigInteger.Zero)
-                {
-                    this.logger.LogInformation("Ignoring zero-valued burn transaction '{0}'.", transferEvent.Log.TransactionHash);
-
-                    continue;
-                }
-
-                if (transferEvent.Event.Value < BigInteger.Zero)
-                {
-                    this.logger.LogInformation("Ignoring negative-valued burn transaction '{0}'.", transferEvent.Log.TransactionHash);
-
-                    continue;
-                }
-
-                this.logger.LogInformation("Conversion burn transaction '{0}' has value {1}.", transferEvent.Log.TransactionHash, transferEvent.Event.Value);
-
-                // Look up the desired destination address for this account.
-                string destinationAddress = await chainClient.GetDestinationAddressAsync(transferEvent.Event.From).ConfigureAwait(false);
-
-                this.logger.LogInformation("Conversion burn transaction '{0}' has destination address {1}.", transferEvent.Log.TransactionHash, destinationAddress);
-
-                // Validate that it is a mainchain address here before bothering to add it to the repository.
-                BitcoinAddress parsedAddress;
-                try
-                {
-                    parsedAddress = BitcoinAddress.Create(destinationAddress, this.counterChainNetwork);
-                }
-                catch (Exception)
-                {
-                    this.logger.LogWarning("Error validating destination address '{0}' for transaction '{1}'.", destinationAddress, transferEvent.Log.TransactionHash);
-
-                    continue;
-                }
-
-                // Schedule this transaction to be processed at the next block height that is divisible by 100. 
-                // Thus will round up to the nearest 100 then add another another 100.
-                // In this way, burns will always be scheduled at a predictable future time across the multisig.
-                // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
-                ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 50) + 100);
-
-                if (blockHeight <= 0)
-                    blockHeight = 100;
-
-                lock (this.repositoryLock)
-                {
-                    this.conversionRequestRepository.Save(new ConversionRequest()
-                    {
-                        RequestId = transferEvent.Log.TransactionHash,
-                        RequestType = ConversionRequestType.Burn,
-                        Processed = false,
-                        RequestStatus = ConversionRequestStatus.Unprocessed,
-                        Amount = this.ConvertWeiToSatoshi(transferEvent.Event.Value),
-                        BlockHeight = (int)blockHeight,
-                        DestinationAddress = destinationAddress,
-                        DestinationChain = DestinationChain.STRAX
-                    });
+                    return;
                 }
             }
-        }
 
-        /// <summary>
-        /// Creates filters that the RPC interfaces uses to listen for events against the desired contract.
-        /// In this case the filter is specifically listening for Transfer events emitted by the wrapped strax
-        /// contracts deployed on supported chains.
-        /// </summary>
-        private async Task CreateEventFiltersIfRequiredAsync(DestinationChain targetChain, IETHClient chainClient)
-        {
-            if (this.eventFilterCreationRequired[DestinationChain.ETH])
+            this.logger.LogInformation("Conversion burn transaction '{0}' has value {1}.", transactionHash, burn.Amount);
+
+            // Get the destination address recorded in the contract call itself. This has the benefit that subsequent burn calls from the same account providing different addresses will not interfere with this call.
+            string destinationAddress = burn.StraxAddress;
+
+            this.logger.LogInformation("Conversion burn transaction '{0}' has destination address {1}.", transactionHash, destinationAddress);
+
+            // Validate that it is a mainchain address here before bothering to add it to the repository.
+            try
             {
-                // The filter should only be set up once IBD completes.
-                await chainClient.CreateTransferEventFilterAsync().ConfigureAwait(false);
+                BitcoinAddress.Create(destinationAddress, this.counterChainNetwork);
+            }
+            catch (Exception)
+            {
+                this.logger.LogWarning("Error validating destination address '{0}' for transaction '{1}'.", destinationAddress, transactionHash);
 
-                this.eventFilterCreationRequired[targetChain] = false;
+                return;
+            }
+
+            // Schedule this transaction to be processed at the next block height that is divisible by 100. 
+            // Thus will round up to the nearest 100 then add another another 100.
+            // In this way, burns will always be scheduled at a predictable future time across the multisig.
+            // This is because we cannot predict exactly when each node is polling the Ethereum chain for events.
+            ulong blockHeight = (ulong)(this.chainIndexer.Tip.Height - (this.chainIndexer.Tip.Height % 50) + 100);
+
+            if (blockHeight <= 0)
+                blockHeight = 100;
+
+            lock (this.repositoryLock)
+            {
+                this.conversionRequestRepository.Save(new ConversionRequest()
+                {
+                    RequestId = transactionHash,
+                    RequestType = ConversionRequestType.Burn,
+                    Processed = false,
+                    RequestStatus = ConversionRequestStatus.Unprocessed,
+                    Amount = this.ConvertWeiToSatoshi(burn.Amount),
+                    BlockHeight = (int)blockHeight,
+                    DestinationAddress = destinationAddress,
+                    DestinationChain = DestinationChain.STRAX
+                });
             }
         }
 
@@ -600,8 +562,6 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Properly processing burn transactions requires emulating a withdrawal on the main chain from the multisig wallet.
                 // It will be easier when conversion can be done directly to and from a Cirrus contract instead.
-
-                // Currently the processing is done in the WithdrawalExtractor.
             }
         }
 
@@ -613,7 +573,7 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </para>
         /// </summary>
         /// <param name="blockHeight">The block height of the conversion request.</param>
-        /// <param name="designatedMember">The federatrion member who is assigned as the originator of this conversion transaction.</param>
+        /// <param name="designatedMember">The federation member who is assigned as the originator of this conversion transaction.</param>
         /// <returns><c>true</c> if this node is selected as the originator.</returns>
         private bool DetermineConversionRequestOriginator(int blockHeight, out IFederationMember designatedMember)
         {
@@ -736,6 +696,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                 // Now we need to broadcast the mint transactionId to the other multisig nodes so that they can sign it off.
                 // TODO: The other multisig nodes must be careful not to blindly trust that any given transactionId relates to a mint transaction. Need to validate the recipient
+
                 await this.BroadcastCoordinationVoteRequestAsync(mintRequestId, mintTransactionId, request.DestinationChain).ConfigureAwait(false);
             }
             else
