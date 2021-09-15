@@ -32,7 +32,7 @@ namespace Stratis.Bitcoin.Features.Interop
 {
     public sealed class InteropPoller : IDisposable
     {
-        private const string LastPolledBlockKey = "interopLastPolledBlock";
+        private const string LastPolledBlockKey = "LastPolledBlock_{0}";
 
         /// <summary>1x10^24 wei = 1 000 000 tokens</summary>
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
@@ -192,7 +192,7 @@ namespace Stratis.Bitcoin.Features.Interop
                         // We are giving a reorg window of 12 blocks here, so burns right at the tip won't be processed until they have 12 confirmations.
                         if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - 12))
                         {
-                            this.logger.Debug("Polling {0} block at height {1} for burn transactions.", supportedChain.Key, blockHeight);
+                            this.logger.Info("Polling {0} block at height {1} for burn transactions.", supportedChain.Key, blockHeight);
 
                             BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
                             List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetBurnsFromBlock(block).ConfigureAwait(false);
@@ -204,7 +204,7 @@ namespace Stratis.Bitcoin.Features.Interop
 
                             this.lastPolledBlock[supportedChain.Key] += 1;
 
-                            SaveLastPolledBlock();
+                            SaveLastPolledBlock(supportedChain.Key);
                         }
                     }
                 }
@@ -225,22 +225,24 @@ namespace Stratis.Bitcoin.Features.Interop
         /// </summary>
         private async Task LoadLastPolledBlockAsync()
         {
-            // For now we will only focus on ETH.
-            var loaded = this.keyValueRepository.LoadValueJson<int>(LastPolledBlockKey);
+            foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
+            {
+                var loaded = this.keyValueRepository.LoadValueJson<int>(string.Format(LastPolledBlockKey, supportedChain.Key));
 
-            // If this has never been loaded, set this to the current height of the applicable chain.
-            if (loaded == 0)
-                this.lastPolledBlock[DestinationChain.ETH] = await this.ethClientProvider.GetClientForChain(DestinationChain.ETH).GetBlockHeightAsync().ConfigureAwait(false);
-            else
-                this.lastPolledBlock[DestinationChain.ETH] = loaded;
+                // If this has never been loaded, set this to the current height of the applicable chain.
+                if (loaded == 0)
+                    this.lastPolledBlock[supportedChain.Key] = await this.ethClientProvider.GetClientForChain(supportedChain.Key).GetBlockHeightAsync().ConfigureAwait(false);
+                else
+                    this.lastPolledBlock[supportedChain.Key] = loaded;
 
-            this.logger.Info($"Last polled block set to {this.lastPolledBlock[DestinationChain.ETH]}.");
+                this.logger.Info($"Last polled block for {supportedChain.Key} set to {this.lastPolledBlock[supportedChain.Key]}.");
+            }
         }
 
-        private void SaveLastPolledBlock()
+        private void SaveLastPolledBlock(DestinationChain destinationChain)
         {
-            this.keyValueRepository.SaveValueJson(LastPolledBlockKey, this.lastPolledBlock[DestinationChain.ETH]);
-            this.logger.Info($"Last polled block saved as {this.lastPolledBlock[DestinationChain.ETH]}.");
+            this.keyValueRepository.SaveValueJson(string.Format(LastPolledBlockKey, destinationChain), this.lastPolledBlock[destinationChain]);
+            this.logger.Info($"Last polled block for {destinationChain} saved as {this.lastPolledBlock[destinationChain]}.");
         }
 
         /// <summary>Retrieves the current chain heights of interop enabled chains via the RPC interface.</summary>
