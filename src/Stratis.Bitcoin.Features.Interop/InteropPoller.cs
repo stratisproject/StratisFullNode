@@ -34,6 +34,17 @@ namespace Stratis.Bitcoin.Features.Interop
     {
         private const string LastPolledBlockKey = "LastPolledBlock_{0}";
 
+        /// <summary>
+        /// We are giving a reorg window of 12 blocks here, so burns right at the tip won't be processed until they have 12 confirmations. 
+        /// </summary>
+        private const int DestinationChainReorgWindow = 12;
+
+        /// <summary>
+        /// If the last polled block for a given destination chain is more than this amount of blocks from the chain's tip,
+        /// fast sync it up before the async loop poller takes over.
+        /// </summary>
+        private const int DestinationChainSyncToBuffer = 25;
+
         /// <summary>1x10^24 wei = 1 000 000 tokens</summary>
         public BigInteger ReserveBalanceTarget = BigInteger.Parse("1000000000000000000000000");
 
@@ -125,9 +136,6 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Load the last polled block for each chain.
-            await LoadLastPolledBlockAsync();
-
             this.logger.Info($"Interoperability enabled, initializing periodic loop.");
 
             // Initialize the interop polling loop, to check for interop contract requests.
@@ -176,6 +184,11 @@ namespace Stratis.Bitcoin.Features.Interop
             repeatEvery: TimeSpans.TenSeconds,
             startAfter: TimeSpans.Second);
 
+            // Load the last polled block for each chain.
+            await LoadLastPolledBlockAsync();
+
+            await EnsureLastPolledBlockIsSyncedWithChainAsync();
+
             this.conversionBurnLoop = this.asyncProvider.CreateAndRunAsyncLoop("PeriodicPollConversionBurns", async (cancellation) =>
             {
                 if (this.initialBlockDownloadState.IsInitialBlockDownload())
@@ -189,23 +202,8 @@ namespace Stratis.Bitcoin.Features.Interop
                     {
                         BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
 
-                        // We are giving a reorg window of 12 blocks here, so burns right at the tip won't be processed until they have 12 confirmations.
-                        if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - 12))
-                        {
-                            this.logger.Info("Polling {0} block at height {1} for burn transactions.", supportedChain.Key, blockHeight);
-
-                            BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
-                            List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetBurnsFromBlock(block).ConfigureAwait(false);
-
-                            foreach ((string TransactionHash, BurnFunction Burn) in burns)
-                            {
-                                this.ProcessBurn(block.BlockHash, TransactionHash, Burn);
-                            }
-
-                            this.lastPolledBlock[supportedChain.Key] += 1;
-
-                            SaveLastPolledBlock(supportedChain.Key);
-                        }
+                        if (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow))
+                            await PollBlockForBurnRequestsAsync(supportedChain, blockHeight);
                     }
                 }
                 catch (Exception e)
@@ -243,6 +241,41 @@ namespace Stratis.Bitcoin.Features.Interop
         {
             this.keyValueRepository.SaveValueJson(string.Format(LastPolledBlockKey, destinationChain), this.lastPolledBlock[destinationChain]);
             this.logger.Info($"Last polled block for {destinationChain} saved as {this.lastPolledBlock[destinationChain]}.");
+        }
+
+        /// <summary>
+        /// If the last polled block is more than 50 blocks from the chain's tip, 
+        /// then sync it up so that the async loop task can take over from a point closer
+        /// to the tip.
+        /// </summary>
+        private async Task EnsureLastPolledBlockIsSyncedWithChainAsync()
+        {
+            foreach (KeyValuePair<DestinationChain, IETHClient> supportedChain in this.ethClientProvider.GetAllSupportedChains())
+            {
+                BigInteger blockHeight = await supportedChain.Value.GetBlockHeightAsync().ConfigureAwait(false);
+
+                while (this.lastPolledBlock[supportedChain.Key] < (blockHeight - DestinationChainReorgWindow - DestinationChainSyncToBuffer))
+                {
+                    await PollBlockForBurnRequestsAsync(supportedChain, blockHeight);
+                }
+            }
+        }
+
+        private async Task PollBlockForBurnRequestsAsync(KeyValuePair<DestinationChain, IETHClient> supportedChain, BigInteger blockHeight)
+        {
+            this.logger.Info("Polling {0} block at height {1} for burn transactions.", supportedChain.Key, blockHeight);
+
+            BlockWithTransactions block = await supportedChain.Value.GetBlockAsync(this.lastPolledBlock[supportedChain.Key]).ConfigureAwait(false);
+            List<(string TransactionHash, BurnFunction Burn)> burns = await supportedChain.Value.GetBurnsFromBlock(block).ConfigureAwait(false);
+
+            foreach ((string TransactionHash, BurnFunction Burn) in burns)
+            {
+                this.ProcessBurn(block.BlockHash, TransactionHash, Burn);
+            }
+
+            this.lastPolledBlock[supportedChain.Key] += 1;
+
+            SaveLastPolledBlock(supportedChain.Key);
         }
 
         /// <summary>Retrieves the current chain heights of interop enabled chains via the RPC interface.</summary>
