@@ -254,7 +254,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public IActionResult VoteKickFederationMember(KickFederationMemberModel model)
+        public IActionResult VoteKickFederationMember([FromBody] KickFederationMemberModel model)
         {
             Guard.NotNull(model, nameof(model));
 
