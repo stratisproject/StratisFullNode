@@ -125,7 +125,7 @@ namespace Stratis.Bitcoin.Features.Interop
                 return;
             }
 
-            // Load the last polled block (we are only focussing on ETH at present).
+            // Load the last polled block for each chain.
             await LoadLastPolledBlockAsync();
 
             this.logger.Info($"Interoperability enabled, initializing periodic loop.");
