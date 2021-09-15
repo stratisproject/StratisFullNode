@@ -19,6 +19,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public sealed class VotingManager : IDisposable
     {
+        public const int TooOldToVoteOnBlocks = 10_000;
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly IBlockRepository blockRepository;
         private readonly ChainIndexer chainIndexer;
@@ -171,12 +172,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private void CleanFinishedPollsLocked()
         {
+            bool TooOldToVoteOn(Poll poll)
+            {
+                return poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= TooOldToVoteOnBlocks;
+            }
+
             // We take polls that are not pending (collected enough votes in favor) but not executed yet (maxReorg blocks
             // didn't pass since the vote that made the poll pass). We can't just take not pending polls because of the
             // following scenario: federation adds a hash or fed member or does any other revertable action, then reverts
             // the action (removes the hash) and then reapplies it again. To allow for this scenario we have to exclude
             // executed polls here.
-            List<Poll> finishedPolls = this.polls.Where(x => !x.IsPending && !x.IsExecuted).ToList();
+            List<Poll> finishedPolls = this.polls.Where(x => TooOldToVoteOn(x) || (!x.IsPending && !x.IsExecuted)).ToList();
 
             for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
             {
