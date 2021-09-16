@@ -168,29 +168,28 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Checks pending polls against finished polls and removes pending polls that will make no difference and basically are redundant.</summary>
+        /// <summary>Checks pending polls against approved or too-old polls and removes data that may lead to duplicate polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private void CleanFinishedPollsLocked()
         {
-            bool TooOldToVoteOn(Poll poll)
-            {
-                return poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= TooOldToVoteOnBlocks;
-            }
+            // Voting data that is already approved should not have more votes added for them as that would lead to another poll being created.
+            // Also, polls that are too old will be expired so we don't allow nodes to add votes for them to prevent another poll being created.           
 
-            // We take polls that are not pending (collected enough votes in favor) but not executed yet (maxReorg blocks
-            // didn't pass since the vote that made the poll pass). We can't just take not pending polls because of the
-            // following scenario: federation adds a hash or fed member or does any other revertable action, then reverts
-            // the action (removes the hash) and then reapplies it again. To allow for this scenario we have to exclude
-            // executed polls here.
-            List<Poll> finishedPolls = this.polls.Where(x => TooOldToVoteOn(x) || (!x.IsPending && !x.IsExecuted)).ToList();
+            bool IsApproved(Poll poll) => !poll.IsPending && !poll.IsExecuted;
+            bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= TooOldToVoteOnBlocks;
+            List<Poll> approvedOrOldPolls = this.polls.Where(x => IsApproved(x) || IsTooOldToVoteOn(x)).ToList();
 
             for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
             {
                 VotingData currentScheduledData = this.scheduledVotingData[i];
 
-                // Remove scheduled voting data that can be found in finished polls that were not yet executed.
-                if (finishedPolls.Any(x => x.VotingData == currentScheduledData))
+                // Remove scheduled voting data that can be found in the approved or expired polls.
+                Poll existing = approvedOrOldPolls.FirstOrDefault(x => x.VotingData == currentScheduledData);
+                if (existing != null)
+                {
+                    this.logger.LogDebug($"Suppressing vote due to the poll {(existing.IsPending ? "being too old" : "already existing")}. Poll details: { existing }.");
                     this.scheduledVotingData.RemoveAt(i);
+                }
             }
         }
 
