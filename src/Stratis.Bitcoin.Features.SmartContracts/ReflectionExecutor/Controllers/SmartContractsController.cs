@@ -259,7 +259,24 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
 
             return this.Json(receiptResponse);
         }
-        
+
+        /// <summary>
+        /// Searches for receipts that match the given filter criteria. Filter criteria are ANDed together.
+        /// </summary>
+        /// <param name="contractAddress">The contract address from which events were raised.</param>
+        /// <param name="eventName">The name of the event raised.</param>
+        /// <param name="topics">The topics to search. All specified topics must be present.</param>
+        /// <param name="fromBlock">The block number from which to start searching.</param>
+        /// <param name="toBlock">The block number where searching finishes.</param>
+        /// <returns>A list of all matching receipts.</returns>
+        [ActionName("searchreceipts")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [ActionDescription("Searches for receipts matching the filter criteria.")]
+        public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
+        {
+            return this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+        }
+
         // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
         // a web3-like library. For now the following method serves as a very basic example of how we can query the block
         // bloom filters to retrieve events.
