@@ -183,7 +183,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 VotingData currentScheduledData = this.scheduledVotingData[i];
 
-                // Remove scheduled voting data that can be found in the approved or expired polls.
+                // Remove scheduled voting data that can be found in the approved or "too old" polls.
                 Poll existing = approvedOrOldPolls.FirstOrDefault(x => x.VotingData == currentScheduledData);
                 if (existing != null)
                 {
