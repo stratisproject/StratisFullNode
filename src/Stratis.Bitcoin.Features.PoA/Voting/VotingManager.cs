@@ -179,6 +179,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= TooOldToVoteOnBlocks;
             List<Poll> approvedOrOldPolls = this.polls.Where(x => IsApproved(x) || IsTooOldToVoteOn(x)).ToList();
 
+            // Since we will be removing entries we need to iterate the array backwards.
             for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
             {
                 VotingData currentScheduledData = this.scheduledVotingData[i];
