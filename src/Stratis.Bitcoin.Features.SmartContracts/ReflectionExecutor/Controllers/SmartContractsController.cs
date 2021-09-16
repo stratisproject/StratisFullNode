@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -44,7 +43,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         private const int MinConfirmationsAllChecks = 1;
 
         private readonly IBroadcasterManager broadcasterManager;
-        private readonly IBlockStore blockStore;
         private readonly ChainIndexer chainIndexer;
         private readonly CSharpContractDecompiler contractDecompiler;
         private readonly ILogger logger;
@@ -82,7 +80,6 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.chainIndexer = chainIndexer;
-            this.blockStore = blockStore;
             this.walletManager = walletManager;
             this.broadcasterManager = broadcasterManager;
             this.serializer = serializer;
@@ -277,36 +274,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [ActionDescription("Searches for receipts matching the filter criteria.")]
         public List<ReceiptResponse> ReceiptSearch(string contractAddress, string eventName, List<string> topics = null, int fromBlock = 0, int? toBlock = null)
         {
-            uint160 address = contractAddress.ToUint160(this.network);
-
-            byte[] contractCode = this.stateRoot.GetCode(address);
-
-            if (contractCode == null || !contractCode.Any())
-            {
-                return null;
-            }
-
-            IEnumerable<byte[]> topicsBytes = topics != null ? topics.Where(topic => topic != null).Select(t => t.HexToByteArray()) : new List<byte[]>();
-
-
-            var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
-
-            var receiptSearcher = new ReceiptSearcher(this.chainIndexer, this.blockStore, this.receiptRepository, this.network);
-
-            List<Receipt> receipts = receiptSearcher.SearchReceipts(contractAddress, eventName, fromBlock, toBlock, topicsBytes);
-
-            var result = new List<ReceiptResponse>();
-
-            foreach (Receipt receipt in receipts)
-            {
-                List<LogResponse> logResponses = deserializer.MapLogResponses(receipt.Logs);
-
-                var receiptResponse = new ReceiptResponse(receipt, logResponses, this.network);
-
-                result.Add(receiptResponse);
-            }
-
-            return result;
+            return this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
         }
 
         // Note: We may not know exactly how to best structure "receipt search" queries until we start building 
@@ -334,7 +302,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
         [HttpGet]
         public async Task<IActionResult> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
-            List<ReceiptResponse> result = this.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
+            List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
 
             if (result == null)
             {
