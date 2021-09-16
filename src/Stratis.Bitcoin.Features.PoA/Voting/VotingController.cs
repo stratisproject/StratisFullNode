@@ -5,6 +5,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using NBitcoin;
 using NLog;
+using Stratis.Bitcoin.Features.PoA.Models;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
@@ -18,17 +19,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         private readonly IFederationManager federationManager;
         private readonly ILogger logger;
+        private readonly Network network;
         private readonly IPollResultExecutor pollExecutor;
         private readonly VotingManager votingManager;
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
         public VotingController(
             IFederationManager federationManager,
+            Network network,
             VotingManager votingManager,
             IWhitelistedHashesRepository whitelistedHashesRepository,
             IPollResultExecutor pollExecutor)
         {
             this.federationManager = federationManager;
+            this.network = network;
             this.pollExecutor = pollExecutor;
             this.votingManager = votingManager;
             this.whitelistedHashesRepository = whitelistedHashesRepository;
@@ -235,6 +239,56 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 this.logger.Error("Exception occurred: {0}", e.ToString());
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Votes to kick/remove a member from the federation.
+        /// </summary>
+        /// <returns>The HTTP response</returns>
+        /// <response code="200">Voted to remove a member from the federation.</response>
+        /// <response code="400">Invalid request, node is not a federation member, or an unexpected exception occurred</response>
+        /// <response code="500">The request is null</response>
+        [Route("schedulevote-kickmember")]
+        [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public IActionResult VoteKickFederationMember([FromBody] KickFederationMemberModel model)
+        {
+            Guard.NotNull(model, nameof(model));
+
+            if (!this.ModelState.IsValid)
+                return ModelStateErrors.BuildErrorResponse(this.ModelState);
+
+            if (!this.federationManager.IsFederationMember)
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "Only federation members can vote.", string.Empty);
+
+            try
+            {
+                IFederationMember federationMember = this.federationManager.GetFederationMembers().SingleOrDefault(m => m.PubKey.ToHex() == model.PubKey);
+                if (federationMember == null)
+                    return this.Json($"'{model.PubKey}' is not currently a federation member.");
+
+                var consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
+                byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(federationMember);
+
+                bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
+                if (alreadyKicking)
+                    return this.Json($"Skipping because kicking {model.PubKey} is already being voted on.");
+
+                this.votingManager.ScheduleVote(new VotingData()
+                {
+                    Key = VoteKey.KickFederationMember,
+                    Data = federationMemberBytes
+                });
+
+                return this.Json($"A vote to kick '{model.PubKey}' has now been scheduled.");
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, "There was a problem executing a vote to be scheduled.", e.ToString());
             }
         }
     }
