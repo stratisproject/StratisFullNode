@@ -168,7 +168,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Checks pending polls against approved or too-old polls and removes data that may lead to duplicate polls.</summary>
+        /// <summary>Checks scheduled votes against approved or too-old polls and removes votes that may lead to duplicate polls.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
         private void CleanFinishedPollsLocked()
         {
