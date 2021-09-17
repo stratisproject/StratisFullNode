@@ -38,8 +38,8 @@ namespace Stratis.Bitcoin.Base.Deployments
                 {
                     if (this.lastPollExpiryHeightChecked != null)
                         this.lastPollExpiryHeightChecked = this.chainIndexer.Tip.FindFork(this.lastPollExpiryHeightChecked);
-                    int lastHeightChecked = this.lastPollExpiryHeightChecked?.Height ?? 0;
-                    int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsActiveAtHeight(h), lastHeightChecked + this.network.Consensus.MinerConfirmationWindow + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
+                    int lastHeightChecked = (this.lastPollExpiryHeightChecked == null) ? 0 : this.lastPollExpiryHeightChecked.Height + this.network.Consensus.MinerConfirmationWindow;
+                    int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsActiveAtHeight(h), lastHeightChecked + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
                     this.lastPollExpiryHeightChecked = this.chainIndexer.Tip;
 
                     if (activeHeight >= 0)
@@ -57,8 +57,11 @@ namespace Stratis.Bitcoin.Base.Deployments
         public bool IsActiveAtHeight(int height)
         {
             int expectedLockedInHeight = height - this.network.Consensus.MinerConfirmationWindow;
-            if (height <= 0)
-                return false;
+            if (expectedLockedInHeight <= 0)
+            {
+                ThresholdState state2 = this.cache.GetState(this.chainIndexer.GetHeader(height).Previous, this.deployment);
+                return state2 == ThresholdState.Active;
+            }
 
             ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(expectedLockedInHeight).Previous, this.deployment);
             return state == ThresholdState.LockedIn || state == ThresholdState.Active;
