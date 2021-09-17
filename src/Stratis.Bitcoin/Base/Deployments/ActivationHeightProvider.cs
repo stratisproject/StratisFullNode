@@ -14,7 +14,7 @@ namespace Stratis.Bitcoin.Base.Deployments
         private ThresholdConditionCache cache;
         private int deployment;
         private ChainedHeader lastPollExpiryHeightChecked;
-        private int pollExpiryActivationHeight = int.MaxValue;
+        private int pollExpiryActivationHeight;
 
         public ActivationHeightProvider(Network network, ThresholdConditionCache cache, ChainIndexer chainIndexer, int deployment)
         {
@@ -22,12 +22,14 @@ namespace Stratis.Bitcoin.Base.Deployments
             this.cache = cache;
             this.chainIndexer = chainIndexer;
             this.deployment = deployment;
+            this.lastPollExpiryHeightChecked = null;
+            this.pollExpiryActivationHeight = int.MaxValue;
         }
 
         /// <summary>
         /// Looks up to "MinerConfirmationWindow" blocks beyond the current chain tip whether a given deployment is active or will become active.
         /// </summary>
-        /// <returns>-1 if the deployment is not active and the activation height can't be determined otherwise returns the activation height.</returns>
+        /// <returns><c>int.MaxValue</c> if the deployment is not active and the activation height can't be determined otherwise returns the activation height.</returns>
         public int ActivationHeight
         {
             get
