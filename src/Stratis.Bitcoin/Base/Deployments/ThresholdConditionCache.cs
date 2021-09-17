@@ -36,7 +36,9 @@ namespace Stratis.Bitcoin.Base.Deployments
 
         // Cache of BIP9 deployment states keyed by block hash.
         private Dictionary<uint256, ThresholdState?[]> cache = new Dictionary<uint256, ThresholdState?[]>();
-        public ActivationHeightProvider[] ActivationHeightProviders;
+        private ActivationHeightProvider[] activationHeightProviders;
+
+        public ActivationHeightProvider[] ActivationHeightProviders => this.activationHeightProviders;
 
         /// <summary>
         /// Constructs this object containing the BIP9 deployment states cache.
@@ -48,9 +50,9 @@ namespace Stratis.Bitcoin.Base.Deployments
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
 
             this.consensus = network.Consensus;
-            this.ActivationHeightProviders = new ActivationHeightProvider[this.consensus.BIP9Deployments.Length];
+            this.activationHeightProviders = new ActivationHeightProvider[this.consensus.BIP9Deployments.Length];
             for (int i = 0; i < this.consensus.BIP9Deployments.Length; i++)
-                this.ActivationHeightProviders[i] = new ActivationHeightProvider(network, this, chainIndexer, i);
+                this.activationHeightProviders[i] = new ActivationHeightProvider(network, this, chainIndexer, i);
         }
 
         /// <summary>
@@ -156,6 +158,54 @@ namespace Stratis.Bitcoin.Base.Deployments
             }
 
             return thresholdStateModels;
+        }
+
+        public class ActivationHeightProvider
+        {
+            private Network network;
+            private ChainIndexer chainIndexer;
+            private ThresholdConditionCache cache;
+            private int deployment;
+            private ChainedHeader lastPollExpiryHeightChecked;
+            private int pollExpiryActivationHeight = int.MaxValue;
+
+            public ActivationHeightProvider(Network network, ThresholdConditionCache cache, ChainIndexer chainIndexer, int deployment)
+            {
+                this.network = network;
+                this.cache = cache;
+                this.chainIndexer = chainIndexer;
+                this.deployment = deployment;
+            }
+
+            public int PollExpiryActivationHeight
+            {
+                get
+                {
+                    if (this.pollExpiryActivationHeight == int.MaxValue && this.chainIndexer.Tip != this.lastPollExpiryHeightChecked)
+                    {
+                        if (this.lastPollExpiryHeightChecked != null)
+                            this.lastPollExpiryHeightChecked = this.chainIndexer.Tip.FindFork(this.lastPollExpiryHeightChecked);
+                        int lastHeightChecked = this.lastPollExpiryHeightChecked?.Height ?? 0;
+                        int activeHeight = BinarySearch.BinaryFindFirst((h) => this.PollExpiryIsActiveAtHeight(h), lastHeightChecked + this.network.Consensus.MinerConfirmationWindow + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
+                        this.lastPollExpiryHeightChecked = this.chainIndexer.Tip;
+
+                        if (activeHeight >= 0)
+                            this.pollExpiryActivationHeight = activeHeight;
+                    }
+
+                    return this.pollExpiryActivationHeight;
+                }
+            }
+
+            public bool PollExpiryIsActiveAtHeight(int height)
+            {
+                int expectedLockedInHeight = height - this.network.Consensus.MinerConfirmationWindow;
+                if (height <= 0)
+                    return false;
+
+                ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(expectedLockedInHeight).Previous, 0);
+                return state == ThresholdState.LockedIn || state == ThresholdState.Active;
+            }
         }
 
         /// <summary>
