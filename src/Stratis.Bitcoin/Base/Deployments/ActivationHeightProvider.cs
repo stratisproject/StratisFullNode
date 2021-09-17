@@ -40,6 +40,7 @@ namespace Stratis.Bitcoin.Base.Deployments
                         this.lastPollExpiryHeightChecked = this.chainIndexer.Tip.FindFork(this.lastPollExpiryHeightChecked);
 
                     int lastHeightChecked = this.lastPollExpiryHeightChecked?.Height ?? 0;
+                    // TODO: This can be improved (if required) by iterating windows instead of blocks.
                     int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsLockedInAtHeight(h), lastHeightChecked + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
                     this.lastPollExpiryHeightChecked = this.chainIndexer.Tip;
 
