@@ -38,12 +38,13 @@ namespace Stratis.Bitcoin.Base.Deployments
                 {
                     if (this.lastPollExpiryHeightChecked != null)
                         this.lastPollExpiryHeightChecked = this.chainIndexer.Tip.FindFork(this.lastPollExpiryHeightChecked);
-                    int lastHeightChecked = (this.lastPollExpiryHeightChecked == null) ? 0 : this.lastPollExpiryHeightChecked.Height + this.network.Consensus.MinerConfirmationWindow;
-                    int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsActiveAtHeight(h), lastHeightChecked + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
+
+                    int lastHeightChecked = (this.lastPollExpiryHeightChecked == null) ? 0 : this.lastPollExpiryHeightChecked.Height;
+                    int activeHeight = BinarySearch.BinaryFindFirst((h) => this.IsLockedInAtHeight(h), lastHeightChecked + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
                     this.lastPollExpiryHeightChecked = this.chainIndexer.Tip;
 
                     if (activeHeight >= 0)
-                        this.pollExpiryActivationHeight = activeHeight;
+                        this.pollExpiryActivationHeight = this.IsActiveAtHeight(activeHeight) ? activeHeight : (activeHeight + this.network.Consensus.MinerConfirmationWindow);
                 }
 
                 return this.pollExpiryActivationHeight;
@@ -57,13 +58,20 @@ namespace Stratis.Bitcoin.Base.Deployments
         public bool IsActiveAtHeight(int height)
         {
             int expectedLockedInHeight = height - this.network.Consensus.MinerConfirmationWindow;
-            if (expectedLockedInHeight <= 0)
-            {
-                ThresholdState state2 = this.cache.GetState(this.chainIndexer.GetHeader(height).Previous, this.deployment);
-                return state2 == ThresholdState.Active;
-            }
+            if (expectedLockedInHeight > 0)
+                return this.IsLockedInAtHeight(expectedLockedInHeight);
 
-            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(expectedLockedInHeight).Previous, this.deployment);
+            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(height).Previous, this.deployment);
+            return state == ThresholdState.Active;
+        }
+
+        /// <summary>
+        /// For a given height determines if a deployment is either locked in or active.
+        /// </summary>
+        /// <returns><c>true</c> if the deployment is locked in (or active) and <c>false</c> otherwise.</returns>
+        public bool IsLockedInAtHeight(int height)
+        {
+            ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(height).Previous, this.deployment);
             return state == ThresholdState.LockedIn || state == ThresholdState.Active;
         }
     }
