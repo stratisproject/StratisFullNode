@@ -160,54 +160,6 @@ namespace Stratis.Bitcoin.Base.Deployments
             return thresholdStateModels;
         }
 
-        public class ActivationHeightProvider
-        {
-            private Network network;
-            private ChainIndexer chainIndexer;
-            private ThresholdConditionCache cache;
-            private int deployment;
-            private ChainedHeader lastPollExpiryHeightChecked;
-            private int pollExpiryActivationHeight = int.MaxValue;
-
-            public ActivationHeightProvider(Network network, ThresholdConditionCache cache, ChainIndexer chainIndexer, int deployment)
-            {
-                this.network = network;
-                this.cache = cache;
-                this.chainIndexer = chainIndexer;
-                this.deployment = deployment;
-            }
-
-            public int PollExpiryActivationHeight
-            {
-                get
-                {
-                    if (this.pollExpiryActivationHeight == int.MaxValue && this.chainIndexer.Tip != this.lastPollExpiryHeightChecked)
-                    {
-                        if (this.lastPollExpiryHeightChecked != null)
-                            this.lastPollExpiryHeightChecked = this.chainIndexer.Tip.FindFork(this.lastPollExpiryHeightChecked);
-                        int lastHeightChecked = this.lastPollExpiryHeightChecked?.Height ?? 0;
-                        int activeHeight = BinarySearch.BinaryFindFirst((h) => this.PollExpiryIsActiveAtHeight(h), lastHeightChecked + this.network.Consensus.MinerConfirmationWindow + 1, this.chainIndexer.Tip.Height - lastHeightChecked);
-                        this.lastPollExpiryHeightChecked = this.chainIndexer.Tip;
-
-                        if (activeHeight >= 0)
-                            this.pollExpiryActivationHeight = activeHeight;
-                    }
-
-                    return this.pollExpiryActivationHeight;
-                }
-            }
-
-            public bool PollExpiryIsActiveAtHeight(int height)
-            {
-                int expectedLockedInHeight = height - this.network.Consensus.MinerConfirmationWindow;
-                if (height <= 0)
-                    return false;
-
-                ThresholdState state = this.cache.GetState(this.chainIndexer.GetHeader(expectedLockedInHeight).Previous, 0);
-                return state == ThresholdState.LockedIn || state == ThresholdState.Active;
-            }
-        }
-
         /// <summary>
         /// Determines the state of a BIP from the cache and/or the chain header history and the corresponding version bits.
         /// </summary>
