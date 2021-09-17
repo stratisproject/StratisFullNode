@@ -36,7 +36,7 @@ namespace Stratis.Bitcoin.Base.Deployments
 
         // Cache of BIP9 deployment states keyed by block hash.
         private Dictionary<uint256, ThresholdState?[]> cache = new Dictionary<uint256, ThresholdState?[]>();
-        private ActivationHeightProvider[] activationHeightProviders;
+        public ActivationHeightProvider[] ActivationHeightProviders;
 
         /// <summary>
         /// Constructs this object containing the BIP9 deployment states cache.
@@ -48,9 +48,9 @@ namespace Stratis.Bitcoin.Base.Deployments
             Guard.NotNull(chainIndexer, nameof(chainIndexer));
 
             this.consensus = network.Consensus;
-            this.activationHeightProviders = new ActivationHeightProvider[this.consensus.BIP9Deployments.Length];
+            this.ActivationHeightProviders = new ActivationHeightProvider[this.consensus.BIP9Deployments.Length];
             for (int i = 0; i < this.consensus.BIP9Deployments.Length; i++)
-                this.activationHeightProviders[i] = new ActivationHeightProvider(network, this, chainIndexer, i);
+                this.ActivationHeightProviders[i] = new ActivationHeightProvider(network, this, chainIndexer, i);
         }
 
         /// <summary>
