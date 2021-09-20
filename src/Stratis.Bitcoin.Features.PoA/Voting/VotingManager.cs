@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     {
         // Polls are expired once the tip reaches a block this far beyond the poll start block.
         // I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
-        private const int PollExpiryBlocks = 10000;
+        private const int PollExpiryBlocks = 50_000;
 
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly IBlockRepository blockRepository;
