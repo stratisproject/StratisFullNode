@@ -15,7 +15,6 @@ using Stratis.Bitcoin.Features.Consensus.CoinViews;
 using Stratis.Bitcoin.Features.PoA.Voting;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Networks;
-using Stratis.Bitcoin.Persistence.KeyValueStores;
 using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Tests.Common;
 using Stratis.Bitcoin.Utilities;
@@ -190,7 +189,10 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 votingEnabled: baseOptions.VotingEnabled,
                 autoKickIdleMembers: baseOptions.AutoKickIdleMembers,
                 federationMemberMaxIdleTimeSeconds: baseOptions.FederationMemberMaxIdleTimeSeconds
-            );
+            )
+            {
+                PollExpiryBlocks = 450
+            };
 
             this.Consensus.SetPrivatePropertyValue(nameof(this.Consensus.MaxReorgLength), (uint)5);
         }
