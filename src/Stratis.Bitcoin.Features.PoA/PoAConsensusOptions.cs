@@ -55,6 +55,12 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int Release1100ActivationHeight { get; set; }
 
+        /// <summary>
+        /// Polls are expired once the tip reaches a block this far beyond the poll start block.
+        /// I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
+        /// </summary>
+        public int PollExpiryBlocks { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,

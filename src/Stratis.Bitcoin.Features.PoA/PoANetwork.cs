@@ -107,7 +107,10 @@ namespace Stratis.Bitcoin.Features.PoA
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true
-            );
+            )
+            {
+                PollExpiryBlocks = 450
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
