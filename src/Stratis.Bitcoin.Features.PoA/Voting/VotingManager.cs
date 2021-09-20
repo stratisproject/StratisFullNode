@@ -19,10 +19,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public sealed class VotingManager : IDisposable
     {
-        // Polls are expired once the tip reaches a block this far beyond the poll start block.
-        // I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
-        private const int PollExpiryBlocks = 50_000;
-
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly IBlockRepository blockRepository;
         private readonly ChainIndexer chainIndexer;
@@ -87,6 +83,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.poaConsensusOptions = (PoAConsensusOptions)this.network.Consensus.Options;
+
+            Guard.Assert(this.poaConsensusOptions.PollExpiryBlocks != 0);
 
             this.blockRepository = blockRepository;
             this.chainIndexer = chainIndexer;
@@ -182,7 +180,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 List<Poll> pendingPolls = this.GetPendingPolls().ToList();
                 List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
 
-                bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= PollExpiryBlocks;
+                bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= this.poaConsensusOptions.PollExpiryBlocks;
 
                 bool IsValid(VotingData currentScheduledData)
                 {
@@ -456,7 +454,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (chainedHeader == null)
                 return false;
 
-            return Math.Max(poll.PollStartBlockData.Height + PollExpiryBlocks, this.poaConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
+            return Math.Max(poll.PollStartBlockData.Height + this.poaConsensusOptions.PollExpiryBlocks, this.poaConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
         }
 
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
