@@ -53,7 +53,7 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <summary>
         /// Poll expiry activation height.
         /// </summary>
-        public int PollExpiryActivationHeight { get; set; }
+        public int Release1100ActivationHeight { get; set; }
 
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(

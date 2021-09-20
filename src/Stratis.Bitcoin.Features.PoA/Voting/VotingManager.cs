@@ -456,7 +456,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             if (chainedHeader == null)
                 return false;
 
-            return Math.Max(poll.PollStartBlockData.Height + PollExpiryBlocks, this.poaConsensusOptions.PollExpiryActivationHeight) <= chainedHeader.Height;
+            return Math.Max(poll.PollStartBlockData.Height + PollExpiryBlocks, this.poaConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
         }
 
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
@@ -919,7 +919,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         foreach (Poll poll in pendingPolls.Where(p => !p.IsExecuted && (p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember)))
                         {
                             IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
-                            string expiresIn = $", Expires In = {(Math.Max(this.poaConsensusOptions.PollExpiryActivationHeight, poll.PollStartBlockData.Height + PollExpiryBlocks) - tipHeight)}";
+                            string expiresIn = $", Expires In = {(Math.Max(this.poaConsensusOptions.Release1100ActivationHeight, poll.PollStartBlockData.Height + PollExpiryBlocks) - tipHeight)}";
                             log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}{expiresIn}");
                             bool exists = this.federationManager.GetFederationMembers().Any(m => m.PubKey == federationMember.PubKey);
                             if (poll.VotingData.Key == VoteKey.AddFederationMember && exists)
