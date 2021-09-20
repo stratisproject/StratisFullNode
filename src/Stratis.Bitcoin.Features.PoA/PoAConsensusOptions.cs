@@ -50,6 +50,11 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int InterFluxV2MainChainActivationHeight { get; set; }
 
+        /// <summary>
+        /// Poll expiry activation height.
+        /// </summary>
+        public int PollExpiryActivationHeight { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,
