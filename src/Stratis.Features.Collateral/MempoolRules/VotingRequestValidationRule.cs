@@ -30,7 +30,7 @@ namespace Stratis.Bitcoin.Features.Collateral.MempoolRules
         {
             try
             {
-                this.votingRequestFullValidationRule.CheckTransaction(context.Transaction);
+                this.votingRequestFullValidationRule.CheckTransaction(context.Transaction, this.chainIndexer.Height);
             }
             catch (ConsensusErrorException err) when (err.ConsensusError == PoAConsensusErrors.InvalidVotingOnMultiSig)
             {

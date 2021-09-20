@@ -128,7 +128,8 @@ namespace Stratis.Sidechains.Networks
                 InterFluxV2MainChainActivationHeight = 500_000,
                 EnforceMinProtocolVersionAtBlockHeight = 505900, // setting the value to zero makes the functionality inactive
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
-                VotingManagerV2ActivationHeight = 1_999_500
+                VotingManagerV2ActivationHeight = 1_999_500,
+                Release1100ActivationHeight = 2_600_000
             };
 
             var buriedDeployments = new BuriedDeploymentsArray

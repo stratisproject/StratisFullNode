@@ -32,6 +32,35 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// </summary>
         public bool IsPending => this.PollVotedInFavorBlockData == null;
 
+        /// <summary><c>true</c> if poll has expired; <c>false</c> otherwise.</summary>
+        /// <remarks><para>A poll is flagged as "Expired" by setting <see cref="Poll.PollVotedInFavorBlockData.Height"/> to zero.</para>
+        /// <para>The hash field is set to non-zero to avoid the whole field being deserialized as null. See <see cref="Poll.ReadWrite"/>.</para></remarks>
+        public bool IsExpired
+        {
+            get
+            {
+                return this.PollVotedInFavorBlockData != null && this.PollVotedInFavorBlockData.Height == 0;
+            }
+
+            set
+            {
+                if (!value)
+                {
+                    if (this.PollVotedInFavorBlockData != null)
+                    {
+                        Guard.Assert(this.IsExpired);
+                        this.PollVotedInFavorBlockData = null;
+                    }
+                    return;
+                }
+
+                this.PollVotedInFavorBlockData = new HashHeightPair(1 /* A non-zero value */, 0);
+            }
+        }
+
+        /// <summary><c>true</c> if poll has been approved; <c>false</c> otherwise.</summary>
+        public bool IsApproved => this.PollVotedInFavorBlockData != null && this.PollVotedInFavorBlockData.Height != 0;
+
         /// <summary><c>true</c> if poll wasn't executed yet; <c>false</c> otherwise.</summary>
         public bool IsExecuted => this.PollExecutedBlockData != null;
 

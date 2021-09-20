@@ -19,6 +19,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 {
     public sealed class VotingManager : IDisposable
     {
+        // Polls are expired once the tip reaches a block this far beyond the poll start block.
+        // I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
+        private const int PollExpiryBlocks = 50_000;
+
         private readonly PoAConsensusOptions poaConsensusOptions;
         private readonly IBlockRepository blockRepository;
         private readonly ChainIndexer chainIndexer;
@@ -127,7 +131,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 if (!this.scheduledVotingData.Any(v => v == votingData))
                     this.scheduledVotingData.Add(votingData);
 
-                this.CleanFinishedPollsLocked();
+                this.SanitizeScheduledPollsLocked();
             }
 
             this.logger.LogDebug("Vote was scheduled with key: {0}.", votingData.Key);
@@ -140,7 +144,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                this.CleanFinishedPollsLocked();
+                this.SanitizeScheduledPollsLocked();
 
                 return new List<VotingData>(this.scheduledVotingData);
             }
@@ -154,7 +158,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                this.CleanFinishedPollsLocked();
+                this.SanitizeScheduledPollsLocked();
 
                 List<VotingData> votingData = this.scheduledVotingData;
 
@@ -167,24 +171,33 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             }
         }
 
-        /// <summary>Checks pending polls against finished polls and removes pending polls that will make no difference and basically are redundant.</summary>
+        /// <summary>Performs sanity checks against scheduled votes and removes any conflicts.</summary>
         /// <remarks>All access should be protected by <see cref="locker"/>.</remarks>
-        private void CleanFinishedPollsLocked()
+        private void SanitizeScheduledPollsLocked()
         {
-            // We take polls that are not pending (collected enough votes in favor) but not executed yet (maxReorg blocks
-            // didn't pass since the vote that made the poll pass). We can't just take not pending polls because of the
-            // following scenario: federation adds a hash or fed member or does any other revertable action, then reverts
-            // the action (removes the hash) and then reapplies it again. To allow for this scenario we have to exclude
-            // executed polls here.
-            List<Poll> finishedPolls = this.polls.Where(x => !x.IsPending && !x.IsExecuted).ToList();
-
-            for (int i = this.scheduledVotingData.Count - 1; i >= 0; i--)
+            // Sanitize the scheduled votes.
+            // Remove scheduled votes that are in pending polls or non-executed approved polls.
+            lock (this.locker)
             {
-                VotingData currentScheduledData = this.scheduledVotingData[i];
+                List<Poll> pendingPolls = this.GetPendingPolls().ToList();
+                List<Poll> approvedPolls = this.GetApprovedPolls().Where(x => !x.IsExecuted).ToList();
 
-                // Remove scheduled voting data that can be found in finished polls that were not yet executed.
-                if (finishedPolls.Any(x => x.VotingData == currentScheduledData))
-                    this.scheduledVotingData.RemoveAt(i);
+                bool IsTooOldToVoteOn(Poll poll) => poll.IsPending && (this.chainIndexer.Tip.Height - poll.PollStartBlockData.Height) >= PollExpiryBlocks;
+
+                bool IsValid(VotingData currentScheduledData)
+                {
+                    // Remove scheduled voting data that can be found in pending polls.
+                    if (pendingPolls.Any(x => x.VotingData == currentScheduledData && IsTooOldToVoteOn(x)))
+                        return false;
+
+                    // Remove scheduled voting data that can be found in finished polls that were not yet executed.
+                    if (approvedPolls.Any(x => x.VotingData == currentScheduledData))
+                        return false;
+
+                    return true;
+                }
+
+                this.scheduledVotingData = this.scheduledVotingData.Where(d => IsValid(d)).ToList();
             }
         }
 
@@ -207,7 +220,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
             lock (this.locker)
             {
-                return new List<Poll>(this.polls.Where(x => !x.IsPending));
+                return new List<Poll>(this.polls.Where(x => x.IsApproved));
             }
         }
 
@@ -219,6 +232,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             lock (this.locker)
             {
                 return new List<Poll>(this.polls.Where(x => x.IsExecuted));
+            }
+        }
+
+        /// <summary>Provides a collection of polls that are expired.</summary>
+        public List<Poll> GetExpiredPolls()
+        {
+            this.EnsureInitialized();
+
+            lock (this.locker)
+            {
+                return new List<Poll>(this.polls.Where(x => x.IsExpired));
             }
         }
 
@@ -427,6 +451,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             return this.federationManager.IsMultisigMember(member.PubKey);
         }
 
+        private bool IsPollExpiredAt(Poll poll, ChainedHeader chainedHeader)
+        {
+            if (chainedHeader == null)
+                return false;
+
+            return Math.Max(poll.PollStartBlockData.Height + PollExpiryBlocks, this.poaConsensusOptions.Release1100ActivationHeight) <= chainedHeader.Height;
+        }
+
         private void ProcessBlock(DBreeze.Transactions.Transaction transaction, ChainedHeaderBlock chBlock)
         {
             long flagFall = DateTime.Now.Ticks;
@@ -437,9 +469,21 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     bool pollsRepositoryModified = false;
 
+                    foreach (Poll poll in this.GetPendingPolls().Where(x => this.IsPollExpiredAt(x, chBlock.ChainedHeader)).ToList())
+                    {
+                        this.logger.LogDebug("Expiring poll '{0}'.", poll);
+
+                        // Flag the poll as expired. The "PollVotedInFavorBlockData" will always be null at this point due to the "GetPendingPolls" filter above.
+                        // The value of the hash is not significant but we set it to a non-zero value to prevent the field from being de-serialized as null.
+                        poll.IsExpired = true;
+                        this.polls.OnPendingStatusChanged(poll);
+                        this.PollsRepository.UpdatePoll(transaction, poll);
+                        pollsRepositoryModified = true;
+                    }
+
                     foreach (Poll poll in this.GetApprovedPolls())
                     {
-                        if (chBlock.ChainedHeader.Height != (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength))
+                        if (poll.IsExpired || chBlock.ChainedHeader.Height != (poll.PollVotedInFavorBlockData.Height + this.network.Consensus.MaxReorgLength))
                             continue;
 
                         this.logger.LogDebug("Applying poll '{0}'.", poll);
@@ -611,6 +655,17 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     this.pollResultExecutor.RevertChange(poll.VotingData);
 
                     poll.PollExecutedBlockData = null;
+                    this.PollsRepository.UpdatePoll(transaction, poll);
+                    pollsRepositoryModified = true;
+                }
+
+                foreach (Poll poll in this.polls.Where(x => x.IsExpired && !IsPollExpiredAt(x, chBlock.ChainedHeader.Previous)).ToList())
+                {
+                    this.logger.LogDebug("Reverting poll expiry '{0}'.", poll);
+
+                    // Revert back to null as this field would have been when the poll was expired.
+                    poll.IsExpired = false;
+                    this.polls.OnPendingStatusChanged(poll);
                     this.PollsRepository.UpdatePoll(transaction, poll);
                     pollsRepositoryModified = true;
                 }
@@ -819,27 +874,75 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         [NoTrace]
         private void AddComponentStats(StringBuilder log)
         {
+            log.AppendLine();
             log.AppendLine(">> Voting & Poll Data");
 
-            // Use the polls list directly as opposed to the locked versions of them for console reporting.
-            List<Poll> pendingPolls = this.polls.Where(x => x.IsPending).ToList();
-            List<Poll> approvedPolls = this.polls.Where(x => !x.IsPending).ToList();
-            List<Poll> executedPolls = this.polls.Where(x => x.IsExecuted).ToList();
+            lock (this.locker)
+            {
+                double avgBlockProcessingTime;
+                if (this.blocksProcessed == 0)
+                    avgBlockProcessingTime = double.NaN;
+                else
+                    avgBlockProcessingTime = Math.Round((double)(new TimeSpan(this.blocksProcessingTime).Milliseconds) / this.blocksProcessed, 2);
 
-            double avgBlockProcessingTime;
-            if (this.blocksProcessed == 0)
-                avgBlockProcessingTime = double.NaN;
-            else
-                avgBlockProcessingTime = Math.Round((double)(new TimeSpan(this.blocksProcessingTime).Milliseconds) / this.blocksProcessed, 2);
+                double avgBlockProcessingThroughput = Math.Round(this.blocksProcessed / (new TimeSpan(this.blocksProcessingTime).TotalSeconds), 2);
 
-            double avgBlockProcessingThroughput = Math.Round(this.blocksProcessed / (new TimeSpan(this.blocksProcessingTime).TotalSeconds), 2);
+                log.AppendLine("Polls Repository Height".PadRight(LoggingConfiguration.ColumnLength) + $": {(this.PollsRepository.CurrentTip?.Height ?? 0)}".PadRight(10) + $"(Hash: {(this.PollsRepository.CurrentTip?.Hash.ToString())})");
+                log.AppendLine("Blocks Processed".PadRight(LoggingConfiguration.ColumnLength) + $": {this.blocksProcessed}".PadRight(18) + $"Avg Time: { avgBlockProcessingTime } ms".PadRight(20) + $"Throughput: { avgBlockProcessingThroughput } per second");
+                log.AppendLine();
 
-            log.AppendLine("Polls Repository Height".PadRight(LoggingConfiguration.ColumnLength) + $": {(this.PollsRepository.CurrentTip?.Height ?? 0)}".PadRight(10) + $"(Hash: {(this.PollsRepository.CurrentTip?.Hash.ToString())})");
-            log.AppendLine("Blocks Processed".PadRight(LoggingConfiguration.ColumnLength) + $": Count  : {this.blocksProcessed}".PadRight(20) + $"Avg Time: { avgBlockProcessingTime } ms".PadRight(20) + $"Throughput: { avgBlockProcessingThroughput } per second");
-            log.AppendLine("Member Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.MemberPolls().Count}".PadRight(20) + $"Approved: {approvedPolls.MemberPolls().Count}".PadRight(20) + $"Executed  : {executedPolls.MemberPolls().Count}");
-            log.AppendLine("Whitelist Polls".PadRight(LoggingConfiguration.ColumnLength) + $": Pending: {pendingPolls.WhitelistPolls().Count}".PadRight(20) + $"Approved: {approvedPolls.WhitelistPolls().Count}".PadRight(20) + $"Executed  : {executedPolls.WhitelistPolls().Count}");
-            log.AppendLine("Scheduled Votes".PadRight(LoggingConfiguration.ColumnLength) + ": " + this.scheduledVotingData.Count);
-            log.AppendLine("Scheduled votes will be added to the next block this node mines.");
+                log.AppendLine(
+                    "Expired Member Polls".PadRight(24) + ": " + GetExpiredPolls().MemberPolls().Count.ToString().PadRight(16) +
+                    "Expired Whitelist Polls".PadRight(30) + ": " + GetExpiredPolls().WhitelistPolls().Count);
+                log.AppendLine(
+                    "Pending Member Polls".PadRight(24) + ": " + GetPendingPolls().MemberPolls().Count.ToString().PadRight(16) +
+                    "Pending Whitelist Polls".PadRight(30) + ": " + GetPendingPolls().WhitelistPolls().Count);
+                log.AppendLine(
+                    "Approved Member Polls".PadRight(24) + ": " + GetApprovedPolls().MemberPolls().Where(x => !x.IsExecuted).Count().ToString().PadRight(16) +
+                    "Approved Whitelist Polls".PadRight(30) + ": " + GetApprovedPolls().WhitelistPolls().Where(x => !x.IsExecuted).Count());
+                log.AppendLine(
+                    "Executed Member Polls".PadRight(24) + ": " + GetExecutedPolls().MemberPolls().Count.ToString().PadRight(16) +
+                    "Executed Whitelist Polls".PadRight(30) + ": " + GetExecutedPolls().WhitelistPolls().Count);
+                log.AppendLine(
+                    "Scheduled Votes".PadRight(24) + ": " + this.scheduledVotingData.Count.ToString().PadRight(16) +
+                    "Scheduled votes will be added to the next block this node mines.");
+
+                if (this.nodeStats.DisplayBenchStats)
+                {
+                    long tipHeight = this.chainIndexer.Tip.Height;
+
+                    List<Poll> pendingPolls = GetPendingPolls().OrderByDescending(p => p.PollStartBlockData.Height).ToList();
+                    if (pendingPolls.Count != 0)
+                    {
+                        log.AppendLine();
+                        log.AppendLine("--- Pending Add/Kick Member Polls ---");
+                        foreach (Poll poll in pendingPolls.Where(p => !p.IsExecuted && (p.VotingData.Key == VoteKey.AddFederationMember || p.VotingData.Key == VoteKey.KickFederationMember)))
+                        {
+                            IFederationMember federationMember = ((PoAConsensusFactory)(this.network.Consensus.ConsensusFactory)).DeserializeFederationMember(poll.VotingData.Data);
+                            string expiresIn = $", Expires In = {(Math.Max(this.poaConsensusOptions.Release1100ActivationHeight, poll.PollStartBlockData.Height + PollExpiryBlocks) - tipHeight)}";
+                            log.Append($"{poll.VotingData.Key.ToString().PadLeft(22)}, PubKey = { federationMember.PubKey.ToHex() }, In Favor = {poll.PubKeysHexVotedInFavor.Count}{expiresIn}");
+                            bool exists = this.federationManager.GetFederationMembers().Any(m => m.PubKey == federationMember.PubKey);
+                            if (poll.VotingData.Key == VoteKey.AddFederationMember && exists)
+                                log.Append(" (Already exists)");
+                            if (poll.VotingData.Key == VoteKey.KickFederationMember && !exists)
+                                log.Append(" (Does not exist)");
+                            log.AppendLine();
+                        }
+                    }
+
+                    List<Poll> approvedPolls = GetApprovedPolls().Where(p => !p.IsExecuted).OrderByDescending(p => p.PollVotedInFavorBlockData.Height).ToList();
+                    if (approvedPolls.Count != 0)
+                    {
+                        log.AppendLine();
+                        log.AppendLine("--- Approved Polls ---");
+                        foreach (Poll poll in approvedPolls)
+                        {
+                            log.AppendLine($"{poll.VotingData.Key.ToString().PadLeft(22)}, Applied In = ({(poll.PollStartBlockData.Height - (tipHeight - this.network.Consensus.MaxReorgLength))})");
+                        }
+                    }
+                }
+            }
+
             log.AppendLine();
         }
 

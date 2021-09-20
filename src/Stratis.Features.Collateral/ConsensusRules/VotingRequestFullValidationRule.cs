@@ -40,13 +40,13 @@ namespace Stratis.Features.Collateral.ConsensusRules
 
             foreach (Transaction transaction in context.ValidationContext.BlockToValidate.Transactions)
             {
-                CheckTransaction(transaction);
+                CheckTransaction(transaction, context.ValidationContext.ChainedHeaderToValidate.Height);
             }
 
             return Task.CompletedTask;
         }
 
-        public void CheckTransaction(Transaction transaction)
+        public void CheckTransaction(Transaction transaction, int height)
         {
             if (transaction.IsCoinBase || transaction.IsCoinStake)
                 return;
@@ -73,13 +73,16 @@ namespace Stratis.Features.Collateral.ConsensusRules
             }
 
             // Prohibit re-use of collateral addresses.
-            Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
-            string collateralAddress = script.GetDestinationAddress(this.counterChainNetwork).ToString();
-            CollateralFederationMember owner = this.federationManager.CollateralAddressOwner(this.votingManager, VoteKey.AddFederationMember, collateralAddress);
-            if (owner != null)
+            if (height >= ((PoAConsensusOptions)(this.network.Consensus.Options)).Release1100ActivationHeight)
             {
-                this.Logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");
-                PoAConsensusErrors.VotingRequestInvalidCollateralReuse.Throw();
+                Script script = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(request.CollateralMainchainAddress);
+                string collateralAddress = script.GetDestinationAddress(this.counterChainNetwork).ToString();
+                CollateralFederationMember owner = this.federationManager.CollateralAddressOwner(this.votingManager, VoteKey.AddFederationMember, collateralAddress);
+                if (owner != null)
+                {
+                    this.Logger.LogTrace("(-)[INVALID_COLLATERAL_REUSE]");
+                    PoAConsensusErrors.VotingRequestInvalidCollateralReuse.Throw();
+                }
             }
         }
     }
