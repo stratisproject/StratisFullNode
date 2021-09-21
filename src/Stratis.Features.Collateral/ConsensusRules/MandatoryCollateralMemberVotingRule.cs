@@ -21,7 +21,7 @@ namespace Stratis.Bitcoin.Features.Collateral.ConsensusRules
         [NoTrace]
         public override void Initialize()
         {
-            this.votingDataEncoder = new VotingDataEncoder(this.Parent.LoggerFactory);
+            this.votingDataEncoder = new VotingDataEncoder();
             this.ruleEngine = (PoAConsensusRuleEngine)this.Parent;
             this.federationManager = this.ruleEngine.FederationManager;
             this.federationHistory = this.ruleEngine.FederationHistory;

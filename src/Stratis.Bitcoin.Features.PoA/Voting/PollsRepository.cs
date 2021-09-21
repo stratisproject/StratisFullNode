@@ -5,8 +5,8 @@ using System.Linq;
 using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -32,20 +32,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
+        public PollsRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, dBreezeSerializer, chainIndexer)
         {
         }
 
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+        public PollsRepository(string folder, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
             Directory.CreateDirectory(folder);
             this.dbreeze = new DBreezeEngine(folder);
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.dBreezeSerializer = dBreezeSerializer;
 
             this.chainIndexer = chainIndexer;
@@ -60,7 +60,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     try
                     {
-                        var polls = GetAllPolls(transaction);
+                        List<Poll> polls = GetAllPolls(transaction);
 
                         // If the polls repository contains duplicate polls then reset the highest poll id and 
                         // set the tip to null.
@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         var uniquePolls = new HashSet<Poll>(polls);
                         if (uniquePolls.Count != polls.Count)
                         {
-                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Count - uniquePolls.Count);
+                            this.logger.Warn("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Count - uniquePolls.Count);
 
                             this.ResetLocked(transaction);
                             transaction.Commit();
@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
                         if (!rowTip.Exists)
                         {
-                            this.logger.LogInformation("The polls repository tip is unknown. Will re-build the repo.");
+                            this.logger.Info("The polls repository tip is unknown. Will re-build the repo.");
                             this.ResetLocked(transaction);
                             transaction.Commit();
                             return;
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             return;
                         }
 
-                        this.logger.LogInformation("The polls repository tip {0} was not found in the consensus chain. Determining fork.", this.CurrentTip);
+                        this.logger.Info("The polls repository tip {0} was not found in the consensus chain. Determining fork.", this.CurrentTip);
 
                         // == Find fork.
                         // The polls repository tip could not be found in the consenus chain.
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         if (maxGoodHeight == -1)
                         {
-                            this.logger.LogInformation("No common blocks found. Will rebuild the repo from scratch.");
+                            this.logger.Info("No common blocks found. Will rebuild the repo from scratch.");
                             this.ResetLocked(transaction);
                             transaction.Commit();
                             return;
@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         this.CurrentTip = new HashHeightPair(this.chainIndexer.GetHeader(maxGoodHeight));
 
-                        this.logger.LogInformation("Common block found at height {0}. Will re-build the repo from there.", this.CurrentTip.Height);
+                        this.logger.Info("Common block found at height {0}. Will re-build the repo from there.", this.CurrentTip.Height);
 
                         // Trim polls to tip.
                         HashSet<Poll> pollsToDelete = new HashSet<Poll>();
@@ -161,11 +161,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         SaveCurrentTip(transaction, this.CurrentTip);
                         transaction.Commit();
 
-                        this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
+                        this.logger.Debug("Polls repo initialized with highest id: {0}.", this.highestPollId);
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
                     {
-                        this.logger.LogWarning("There was an error reading the polls repository. Will rebuild it.");
+                        this.logger.Warn("There was an error reading the polls repository. Will rebuild it.");
                         this.ResetLocked(transaction);
                         transaction.Commit();
                     }
