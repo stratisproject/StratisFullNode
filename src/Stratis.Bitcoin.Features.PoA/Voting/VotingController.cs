@@ -268,14 +268,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 IFederationMember federationMember = this.federationManager.GetFederationMembers().SingleOrDefault(m => m.PubKey.ToHex() == model.PubKey);
                 if (federationMember == null)
-                    return this.Json($"'{model.PubKey}' is not currently a federation member.");
+                    return BadRequest($"'{model.PubKey}' is not currently a federation member.");
 
                 var consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
                 byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(federationMember);
 
                 bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
                 if (alreadyKicking)
-                    return this.Json($"Skipping because kicking {model.PubKey} is already being voted on.");
+                    return BadRequest($"Skipping because kicking {model.PubKey} is already being voted on.");
 
                 this.votingManager.ScheduleVote(new VotingData()
                 {
@@ -283,7 +283,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     Data = federationMemberBytes
                 });
 
-                return this.Json($"A vote to kick '{model.PubKey}' has now been scheduled.");
+                return Ok($"A vote to kick '{model.PubKey}' has now been scheduled.");
             }
             catch (Exception e)
             {
