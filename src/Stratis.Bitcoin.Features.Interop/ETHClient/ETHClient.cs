@@ -22,6 +22,20 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         Task CreateTransferEventFilterAsync();
 
+        Task<Transaction> GetTransactionAsync(string transactionHash);
+
+        Task<SubmitTransactionFunction> GetSubmitTransactionAsync(string transactionHash);
+
+        Task<ConfirmTransactionFunction> GetConfirmTransactionAsync(string transactionHash);
+
+        Task<MintFunction> GetMintTransactionAsync(string transactionHash);
+
+        Task<BurnFunction> GetBurnTransactionAsync(string transactionHash);
+
+        Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber);
+
+        Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block);
+
         /// <summary>
         /// Queries the previously created event filter for any new events matching the filter criteria.
         /// </summary>
@@ -82,6 +96,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         /// </summary>
         /// <returns>The list of owner accounts.</returns>
         Task<List<string>> GetOwnersAsync();
+
+        /// <summary>
+        /// Checks if the given address confirmed the given multisig transaction.
+        /// </summary>
+        /// <param name="transactionId">The identifier of the transaction.</param>
+        /// <param name="address">The address to check the confirmation status of.</param>
+        /// <returns>True if the address has confirmed the transaction in question.</returns>
+        Task<bool> AddressConfirmedTransactionAsync(BigInteger transactionId, string address);
 
         /// <summary>
         /// Gets a transaction out of the transactions mapping on the contract and decodes it.
@@ -190,6 +212,82 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             this.filterId = await this.transferEventHandler.CreateFilterAsync(this.filterAllTransferEventsForContract).ConfigureAwait(false);
         }
 
+        public async Task<Transaction> GetTransactionAsync(string transactionHash)
+        {
+            return await this.web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash).ConfigureAwait(false);
+        }
+
+        public async Task<SubmitTransactionFunction> GetSubmitTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<SubmitTransactionFunction>();
+        }
+
+        public async Task<ConfirmTransactionFunction> GetConfirmTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<ConfirmTransactionFunction>();
+        }
+
+        public async Task<MintFunction> GetMintTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<MintFunction>();
+        }
+
+        public async Task<BurnFunction> GetBurnTransactionAsync(string transactionHash)
+        {
+            Transaction tx = await GetTransactionAsync(transactionHash).ConfigureAwait(false);
+
+            return tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+        }
+
+        public async Task<BlockWithTransactions> GetBlockAsync(BigInteger blockNumber)
+        {
+            return await this.web3.Eth.Blocks.GetBlockWithTransactionsByNumber.SendRequestAsync(new HexBigInteger(blockNumber)).ConfigureAwait(false);
+        }
+
+        public async Task<List<(string TransactionHash, BurnFunction Burn)>> GetBurnsFromBlock(BlockWithTransactions block)
+        {
+            var burns = new List<(string TransactionHash, BurnFunction Burn)>();
+
+            foreach (Transaction tx in block.Transactions)
+            {
+                if (!tx.IsTo(this.settings.WrappedStraxContractAddress))
+                    continue;
+
+                BurnFunction burn;
+
+                try
+                {
+                    burn = tx.DecodeTransactionToFunctionMessage<BurnFunction>();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (burn.Amount == BigInteger.Zero)
+                {
+                    // Ignoring zero-valued burn transaction.
+                    continue;
+                }
+
+                if (burn.Amount < BigInteger.Zero)
+                {
+                    // Ignoring negative-valued burn transaction.
+                    continue;
+                }
+
+                burns.Add((tx.TransactionHash, burn));
+            }
+
+            return burns;
+        }
+
         /// <inheritdoc />
         public async Task<List<EventLog<TransferEventDTO>>> GetTransferEventsForWrappedStraxAsync()
         {
@@ -259,6 +357,14 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
         public async Task<TransactionDTO> GetMultisigTransactionAsync(BigInteger transactionId)
         {
             return await MultisigWallet.GetTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> AddressConfirmedTransactionAsync(BigInteger transactionId, string address)
+        {
+            ConfirmationsDTO result = await MultisigWallet.AddressConfirmedTransactionAsync(this.web3, this.settings.MultisigWalletAddress, transactionId, address).ConfigureAwait(false);
+
+            return result.Confirmed;
         }
 
         /// <inheritdoc />

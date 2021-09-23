@@ -70,7 +70,7 @@ namespace Stratis.Features.FederatedPeg.Tests
             var fullNode = new Mock<IFullNode>();
 
             IFederationManager federationManager = new FederationManager(fullNode.Object, network, nodeSettings, signals, counterChainSettings);
-            var votingManager = new VotingManager(federationManager, loggerFactory, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network);
+            var votingManager = new VotingManager(federationManager, new Mock<IPollResultExecutor>().Object, new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network);
             var federationHistory = new FederationHistory(federationManager, network, votingManager);
             votingManager.Initialize(federationHistory);
 

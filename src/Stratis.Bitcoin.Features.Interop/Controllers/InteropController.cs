@@ -287,6 +287,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
 
                 IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
 
+                // TODO: Maybe for convenience the gas price could come from the external API poller
                 return this.Json(await client.ConfirmTransactionAsync(transactionId, gasPrice).ConfigureAwait(false));
             }
             catch (Exception e)
@@ -305,7 +306,7 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
         /// <param name="destinationChain">The chain the multisig wallet contract is deployed to.</param>
         /// <param name="requirement">The new threshold for confirmations on the multisig wallet contract. Can usually be numOwners / 2 rounded up.</param>
         /// <param name="gasPrice">The gas price to use for submitting the contract call transaction.</param>
-        /// <returns>The on-chain transaction hash of the contract call transaction.</returns>
+        /// <returns>The multisig wallet transactionId of the changerequirement call.</returns>
         [Route("changerequirement")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -370,6 +371,48 @@ namespace Stratis.Bitcoin.Features.Interop.Controllers
                 };
 
                 return this.Json(response);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Returns the list of contract owners that confirmed a particular multisig transaction.
+        /// </summary>
+        /// <param name="destinationChain">The chain the multisig wallet contract is deployed to.</param>
+        /// <param name="transactionId">The multisig wallet transactionId (this is an integer, not an on-chain transaction hash).</param>
+        /// <returns>A list of owner addresses that confirmed the transaction.</returns>
+        [Route("multisigconfirmations")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> MultisigConfirmationsAsync(DestinationChain destinationChain, int transactionId)
+        {
+            try
+            {
+                if (!this.ethCompatibleClientProvider.IsChainSupportedAndEnabled(destinationChain))
+                    return this.Json($"{destinationChain} not enabled or supported!");
+
+                IETHClient client = this.ethCompatibleClientProvider.GetClientForChain(destinationChain);
+
+                List<string> owners = await client.GetOwnersAsync().ConfigureAwait(false);
+
+                var ownersConfirmed = new List<string>();
+
+                foreach (string multisig in owners)
+                {
+                    bool confirmed = await client.AddressConfirmedTransactionAsync(transactionId, multisig).ConfigureAwait(false);
+
+                    if (confirmed)
+                        ownersConfirmed.Add(multisig);
+                }
+
+                return this.Json(ownersConfirmed);
             }
             catch (Exception e)
             {

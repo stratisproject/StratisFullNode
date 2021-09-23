@@ -5,8 +5,8 @@ using System.Linq;
 using DBreeze;
 using DBreeze.DataTypes;
 using DBreeze.Utils;
-using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NLog;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Utilities;
 
@@ -32,20 +32,20 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         public HashHeightPair CurrentTip { get; private set; }
 
-        public PollsRepository(DataFolder dataFolder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
-            : this(dataFolder.PollsPath, loggerFactory, dBreezeSerializer, chainIndexer)
+        public PollsRepository(DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+            : this(dataFolder.PollsPath, dBreezeSerializer, chainIndexer)
         {
         }
 
 
-        public PollsRepository(string folder, ILoggerFactory loggerFactory, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
+        public PollsRepository(string folder, DBreezeSerializer dBreezeSerializer, ChainIndexer chainIndexer)
         {
             Guard.NotEmpty(folder, nameof(folder));
 
             Directory.CreateDirectory(folder);
             this.dbreeze = new DBreezeEngine(folder);
 
-            this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.logger = LogManager.GetCurrentClassLogger();
             this.dBreezeSerializer = dBreezeSerializer;
 
             this.chainIndexer = chainIndexer;
@@ -58,59 +58,119 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 using (DBreeze.Transactions.Transaction transaction = this.dbreeze.GetTransaction())
                 {
-                    Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
-
                     try
                     {
-                        Poll[] polls = data
-                            .Where(d => d.Key.Length == 4)
-                            .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
-                            .ToArray();
+                        List<Poll> polls = GetAllPolls(transaction);
 
                         // If the polls repository contains duplicate polls then reset the highest poll id and 
                         // set the tip to null.
                         // This will trigger the VotingManager to rebuild the voting and polls repository as the
                         // polls repository tip is null. This happens later during startup, see VotingManager.Synchronize()
                         var uniquePolls = new HashSet<Poll>(polls);
-                        if (uniquePolls.Count != polls.Length)
+                        if (uniquePolls.Count != polls.Count)
                         {
-                            this.logger.LogWarning("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Length - uniquePolls.Count);
+                            this.logger.Warn("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Count - uniquePolls.Count);
 
                             this.ResetLocked(transaction);
                             transaction.Commit();
                             return;
                         }
 
-                        this.highestPollId = (polls.Length > 0) ? polls.Max(p => p.Id) : -1;
-
                         Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
-
-                        if (rowTip.Exists)
+                        if (!rowTip.Exists)
                         {
-                            this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
-                            if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                            this.logger.Info("The polls repository tip is unknown. Will re-build the repo.");
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
+
+                        this.CurrentTip = this.dBreezeSerializer.Deserialize<HashHeightPair>(rowTip.Value);
+                        if (this.chainIndexer == null || this.chainIndexer.GetHeader(this.CurrentTip.Hash) != null)
+                        {
+                            this.highestPollId = (polls.Count > 0) ? polls.Max(p => p.Id) : -1;
+                            return;
+                        }
+
+                        this.logger.Info("The polls repository tip {0} was not found in the consensus chain. Determining fork.", this.CurrentTip);
+
+                        // == Find fork.
+                        // The polls repository tip could not be found in the consenus chain.
+                        // Look at all other known hash/height pairs to find something in common with the consensus chain.
+                        // We will take that as the last known valid height.
+
+                        int maxGoodHeight = -1;
+
+                        foreach (Poll poll in polls)
+                        {
+                            if (poll.PollStartBlockData.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollStartBlockData.Hash) != null)
+                                maxGoodHeight = poll.PollStartBlockData.Height;
+                            if (poll.PollExecutedBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
+                                maxGoodHeight = poll.PollExecutedBlockData.Height;
+                            if (poll.PollVotedInFavorBlockData?.Height > maxGoodHeight && this.chainIndexer.GetHeader(poll.PollExecutedBlockData.Hash) != null)
+                                maxGoodHeight = poll.PollVotedInFavorBlockData.Height;
+                        }
+
+                        if (maxGoodHeight == -1)
+                        {
+                            this.logger.Info("No common blocks found. Will rebuild the repo from scratch.");
+                            this.ResetLocked(transaction);
+                            transaction.Commit();
+                            return;
+                        }
+
+                        this.CurrentTip = new HashHeightPair(this.chainIndexer.GetHeader(maxGoodHeight));
+
+                        this.logger.Info("Common block found at height {0}. Will re-build the repo from there.", this.CurrentTip.Height);
+
+                        // Trim polls to tip.
+                        HashSet<Poll> pollsToDelete = new HashSet<Poll>();
+                        foreach (Poll poll in polls)
+                        {
+                            if (poll.PollStartBlockData.Height > this.CurrentTip.Height)
                             {
-                                return;
+                                pollsToDelete.Add(poll);
+                                continue;
                             }
 
-                            this.logger.LogWarning("The polls repository tip was not found in the consensus chain.");
+                            bool modified = false;
+
+                            if (poll.PubKeysHexVotedInFavor.Any(v => v.Height > this.CurrentTip.Height))
+                            {
+                                poll.PubKeysHexVotedInFavor = poll.PubKeysHexVotedInFavor.Where(v => v.Height <= this.CurrentTip.Height).ToList();
+                                modified = true;
+                            }
+
+                            if (poll.PollExecutedBlockData?.Height > this.CurrentTip.Height)
+                            {
+                                poll.PollExecutedBlockData = null;
+                                modified = true;
+                            }
+
+                            if (poll.PollVotedInFavorBlockData?.Height > this.CurrentTip.Height)
+                            {
+                                poll.PollVotedInFavorBlockData = null;
+                                modified = true;
+                            }
+
+                            if (modified)
+                                UpdatePoll(transaction, poll);
                         }
+
+                        DeletePollsAndSetHighestPollId(transaction, pollsToDelete.Select(p => p.Id).ToArray());
+                        SaveCurrentTip(transaction, this.CurrentTip);
+                        transaction.Commit();
+
+                        this.logger.Debug("Polls repo initialized with highest id: {0}.", this.highestPollId);
                     }
                     catch (Exception err) when (err.Message == "No more byte to read")
                     {
-                        // Suppress this error. The polls repository will be rebuilt.
-                        this.logger.LogWarning("There was an error reading the polls repository.");
+                        this.logger.Warn("There was an error reading the polls repository. Will rebuild it.");
+                        this.ResetLocked(transaction);
+                        transaction.Commit();
                     }
-
-                    this.logger.LogInformation("Clearing polls repository in preparation to re-build.");
-                    this.CurrentTip = null;
-                    // The polls repository requires an upgrade.
-                    this.ResetLocked(transaction);
-                    transaction.Commit();
                 }
             }
-
-            this.logger.LogDebug("Polls repo initialized with highest id: {0}.", this.highestPollId);
         }
 
         private void ResetLocked(DBreeze.Transactions.Transaction transaction)
@@ -131,6 +191,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 }
             }
         }
+
         public void SaveCurrentTip(DBreeze.Transactions.Transaction transaction, ChainedHeader tip)
         {
             SaveCurrentTip(transaction, (tip == null) ? null : new HashHeightPair(tip));
@@ -274,20 +335,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             lock (this.lockObject)
             {
-                var polls = new List<Poll>(this.highestPollId + 1);
+                Dictionary<byte[], byte[]> data = transaction.SelectDictionary<byte[], byte[]>(DataTable);
 
-                for (int i = 0; i < this.highestPollId + 1; i++)
-                {
-                    Row<byte[], byte[]> row = transaction.Select<byte[], byte[]>(DataTable, i.ToBytes());
-
-                    if (row.Exists)
-                    {
-                        Poll poll = this.dBreezeSerializer.Deserialize<Poll>(row.Value);
-                        polls.Add(poll);
-                    }
-                }
-
-                return polls;
+                return data
+                    .Where(d => d.Key.Length == 4)
+                    .Select(d => this.dBreezeSerializer.Deserialize<Poll>(d.Value))
+                    .ToList();
             }
         }
 

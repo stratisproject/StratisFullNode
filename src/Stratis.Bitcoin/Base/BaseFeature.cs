@@ -56,6 +56,8 @@ namespace Stratis.Bitcoin.Base
     /// </summary>
     public sealed class BaseFeature : FullNodeFeature
     {
+        public const string RewindFlag = "rewind";
+
         /// <summary>Global application life cycle control - triggers when application shuts down.</summary>
         private readonly INodeLifetime nodeLifetime;
 
@@ -182,6 +184,29 @@ namespace Stratis.Bitcoin.Base
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
         }
 
+        public static void SetRewindFlag(NodeSettings nodeSettings, int height)
+        {
+            string[] configLines = File.ReadAllLines(nodeSettings.ConfigurationFile);
+
+            if (configLines.Any(c => c.StartsWith($"{BaseFeature.RewindFlag}=")))
+            {
+                for (int i = 0; i < configLines.Length; i++)
+                {
+                    if (configLines[i].StartsWith($"{BaseFeature.RewindFlag}="))
+                        configLines[i] = $"{BaseFeature.RewindFlag}={height}";
+                }
+
+                File.WriteAllLines(nodeSettings.ConfigurationFile, configLines);
+            }
+            else
+            {
+                using (StreamWriter sw = File.AppendText(nodeSettings.ConfigurationFile))
+                {
+                    sw.WriteLine($"{BaseFeature.RewindFlag}={height}");
+                };
+            }
+        }
+
         /// <inheritdoc />
         public override async Task InitializeAsync()
         {
@@ -189,14 +214,48 @@ namespace Stratis.Bitcoin.Base
 
             await this.StartChainAsync().ConfigureAwait(false);
 
+            ChainedHeader initializedAt = this.chainIndexer.Tip;
+
             if (this.provenBlockHeaderStore != null)
             {
                 // If we find at this point that proven header store is behind chain we can rewind chain (this will cause a ripple effect and rewind block store and consensus)
                 // This problem should go away once we implement a component to keep all tips up to date
                 // https://github.com/stratisproject/StratisBitcoinFullNode/issues/2503
-                ChainedHeader initializedAt = await this.provenBlockHeaderStore.InitializeAsync(this.chainIndexer.Tip);
-                this.chainIndexer.Initialize(initializedAt);
+                initializedAt = await this.provenBlockHeaderStore.InitializeAsync(this.chainIndexer.Tip);
             }
+
+            var rewindHeight = this.nodeSettings.ConfigReader.GetOrDefault<int>(BaseFeature.RewindFlag, -1);
+            if (rewindHeight >= 0)
+            {
+                if (rewindHeight < initializedAt.Height)
+                {
+                    // Ensure that we don't try to rewind further than the coin view is capable of doing.
+                    var utxoSet = ((dynamic)this.consensusRules).UtxoSet;
+                    var coinDatabase = ((dynamic)utxoSet).ICoindb;
+                    ((dynamic)coinDatabase).Initialize();
+                    int minRewindHeight = ((dynamic)coinDatabase).GetMinRewindHeight();
+                    ((dynamic)coinDatabase).Dispose();
+
+                    if (minRewindHeight == -1 || rewindHeight < minRewindHeight)
+                    {
+                        this.logger.LogWarning($"Can't rewind below block at height {minRewindHeight}. Rewind ignored.");
+                    }
+                    else
+                    {
+                        initializedAt = initializedAt.GetAncestor(rewindHeight);
+                        this.logger.LogInformation($"Rewinding to block at height {rewindHeight}.");
+                    }
+                }
+                else
+                {
+                    this.logger.LogWarning($"Can't rewind to block at height {rewindHeight}. Rewind ignored.");
+                }
+
+                SetRewindFlag(this.nodeSettings, -1);
+            }
+
+            if (this.chainIndexer.Tip.Height != initializedAt.Height)
+                this.chainIndexer.Initialize(initializedAt);
 
             NetworkPeerConnectionParameters connectionParameters = this.connectionManager.Parameters;
             connectionParameters.IsRelay = this.connectionManager.ConnectionSettings.RelayTxes;

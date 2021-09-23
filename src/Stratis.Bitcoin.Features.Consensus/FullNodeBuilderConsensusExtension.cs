@@ -80,17 +80,24 @@ namespace Stratis.Bitcoin.Features.Consensus
 
         public static void ConfigureCoinDatabaseImplementation(this IServiceCollection services, DbType coindbType)
         {
-            if (coindbType == DbType.Dbreeze)
-                services.AddSingleton<ICoindb, DBreezeCoindb>();
+            switch (coindbType)
+            {
+                case DbType.Dbreeze:
+                    services.AddSingleton<ICoindb, DBreezeCoindb>();
+                    break;
 
-            if (coindbType == DbType.Leveldb)
-                services.AddSingleton<ICoindb, LevelDbCoindb>();
+                case DbType.Leveldb:
+                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    break;
 
-            if (coindbType == DbType.Faster)
-                services.AddSingleton<ICoindb, FasterCoindb>();
+                case DbType.RocksDb:
+                    services.AddSingleton<ICoindb, RocksDbCoindb>();
+                    break;
 
-            if (coindbType == DbType.RocksDb)
-                services.AddSingleton<ICoindb, RocksDbCoindb>();
+                default:
+                    services.AddSingleton<ICoindb, LevelDbCoindb>();
+                    break;
+            }
         }
     }
 }

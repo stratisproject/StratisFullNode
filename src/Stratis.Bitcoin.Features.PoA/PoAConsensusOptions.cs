@@ -57,6 +57,17 @@ namespace Stratis.Bitcoin.Features.PoA
         /// </summary>
         public int GetMiningTimestampV2ActivationHeight { get; set; }
 
+        /// <summary>
+        /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
+        /// </summary>
+        public int Release1100ActivationHeight { get; set; }
+
+        /// <summary>
+        /// Polls are expired once the tip reaches a block this far beyond the poll start block.
+        /// I.e. if (Math.Max(startblock + PollExpiryBlocks, PollExpiryActivationHeight) <= tip) (See IsPollExpiredAt)
+        /// </summary>
+        public int PollExpiryBlocks { get; set; }
+
         /// <summary>Initializes values for networks that use block size rules.</summary>
         public PoAConsensusOptions(
             uint maxBlockBaseSize,

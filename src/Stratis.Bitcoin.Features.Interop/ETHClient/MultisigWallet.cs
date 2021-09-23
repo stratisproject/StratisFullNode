@@ -77,6 +77,23 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
     }
 
     [FunctionOutput]
+    public class ConfirmationsDTO : IFunctionOutputDTO
+    {
+        [Parameter("bool", "confirmed", 1)]
+        public bool Confirmed { get; set; }
+    }
+
+    [Function("confirmations", typeof(ConfirmationsDTO))]
+    public class ConfirmationsFunction : FunctionMessage
+    {
+        [Parameter("uint256", "transactionId", 1)]
+        public BigInteger TransactionId { get; set; }
+
+        [Parameter("address", "address", 1)]
+        public string Address { get; set; }
+    }
+
+    [FunctionOutput]
     public class TransactionDTO : IFunctionOutputDTO
     {
         /// <summary>
@@ -171,6 +188,21 @@ namespace Stratis.Bitcoin.Features.Interop.ETHClient
             List<string> owners = await ownerHandler.QueryAsync<List<string>>(contractAddress, getOwnersFunctionMessage).ConfigureAwait(false);
 
             return owners;
+        }
+
+        /// <summary>
+        /// Checks whether the given transaction identified by the transactionId has been confirmed by the given address.
+        /// </summary>
+        /// <param name="web3">The web3 interface instance to use.</param>
+        /// <param name="contractAddress">The address of the deployed multisig wallet contract.</param>
+        /// <param name="transactionId">The multisig wallet transaction identifier.</param>
+        /// <param name="address">The address to check the transaction's confirmation status with.</param>
+        /// <returns>An object containing the boolean confirmation state.</returns>
+        public static async Task<ConfirmationsDTO> AddressConfirmedTransactionAsync(Web3 web3, string contractAddress, BigInteger transactionId, string address)
+        {
+            ContractHandler handler = web3.Eth.GetContractHandler(contractAddress);
+
+            return await handler.QueryDeserializingToObjectAsync<ConfirmationsFunction, ConfirmationsDTO>(new ConfirmationsFunction() { TransactionId = transactionId, Address = address }).ConfigureAwait(false);
         }
 
         /// <summary>
