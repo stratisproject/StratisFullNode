@@ -68,7 +68,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
             base.Initialize(chainTip);
 
             var coinDatabase = ((CachedCoinView)this.UtxoSet).ICoindb;
-            coinDatabase.Initialize();
+            coinDatabase.Initialize(chainTip);
 
             HashHeightPair coinViewTip = coinDatabase.GetTipHash();
 
@@ -87,7 +87,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules
                 coinViewTip = coinDatabase.Rewind();
             }
 
-            this.logger.LogInformation("Coin view rewound to '{0}'.", coinDatabase.GetTipHash());
+            this.logger.LogInformation("Coin view initialized at '{0}'.", coinDatabase.GetTipHash());
         }
 
         public override async Task<ValidationContext> FullValidationAsync(ChainedHeader header, Block block)
