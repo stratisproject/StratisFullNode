@@ -13,6 +13,7 @@ using Stratis.Bitcoin.Features.Wallet.Controllers;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.PoA.Features.Voting;
 using Stratis.Features.PoA.Collateral.CounterChain;
 
@@ -26,17 +27,21 @@ namespace Stratis.Features.PoA.Voting
     public sealed class JoinFederationRequestService : IJoinFederationRequestService
     {
         private readonly ICounterChainSettings counterChainSettings;
+        private readonly IFederationManager federationManager;
         private readonly IFullNode fullNode;
         private readonly IHttpClientFactory httpClientFactory;
+        private readonly IInitialBlockDownloadState initialBlockDownloadState;
         private readonly ILoggerFactory loggerFactory;
         private readonly PoANetwork network;
         private readonly NodeSettings nodeSettings;
         private readonly VotingManager votingManager;
 
-        public JoinFederationRequestService(ICounterChainSettings counterChainSettings, IFullNode fullNode, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, Network network, NodeSettings nodeSettings, VotingManager votingManager)
+        public JoinFederationRequestService(ICounterChainSettings counterChainSettings, IFederationManager federationManager, IFullNode fullNode, IInitialBlockDownloadState initialBlockDownloadState, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, Network network, NodeSettings nodeSettings, VotingManager votingManager)
         {
             this.counterChainSettings = counterChainSettings;
+            this.federationManager = federationManager;
             this.fullNode = fullNode;
+            this.initialBlockDownloadState = initialBlockDownloadState;
             this.httpClientFactory = httpClientFactory;
             this.loggerFactory = loggerFactory;
             this.network = network as PoANetwork;
@@ -46,6 +51,14 @@ namespace Stratis.Features.PoA.Voting
 
         public async Task<PubKey> JoinFederationAsync(JoinFederationRequestModel request, CancellationToken cancellationToken)
         {
+            // Wait until the node is synced before joining.
+            if (this.initialBlockDownloadState.IsInitialBlockDownload())
+                throw new Exception($"Please wait until the node is synced with the network before attempting to join the federation.");
+
+            // First ensure that this collateral address isnt already present in the federation.
+            if (this.federationManager.GetFederationMembers().IsCollateralAddressRegistered(request.CollateralAddress))
+                throw new Exception($"The provided collateral address '{request.CollateralAddress}' is already present in the federation.");
+
             // Get the address pub key hash.
             BitcoinAddress address = BitcoinAddress.Create(request.CollateralAddress, this.counterChainSettings.CounterChainNetwork);
             KeyId addressKey = PayToPubkeyHashTemplate.Instance.ExtractScriptPubKeyParameters(address.ScriptPubKey);
@@ -58,9 +71,7 @@ namespace Stratis.Features.PoA.Voting
 
             var expectedCollateralAmount = CollateralFederationMember.GetCollateralAmountForPubKey(this.network, minerKey.PubKey);
 
-            var collateralAmount = new Money(expectedCollateralAmount, MoneyUnit.BTC);
-
-            var joinRequest = new JoinFederationRequest(minerKey.PubKey, collateralAmount, addressKey);
+            var joinRequest = new JoinFederationRequest(minerKey.PubKey, new Money(expectedCollateralAmount, MoneyUnit.BTC), addressKey);
 
             // Populate the RemovalEventId.
             var collateralFederationMember = new CollateralFederationMember(minerKey.PubKey, false, joinRequest.CollateralAmount, request.CollateralAddress);
