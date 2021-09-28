@@ -224,7 +224,7 @@ namespace Stratis.Bitcoin.Base
                 initializedAt = await this.provenBlockHeaderStore.InitializeAsync(this.chainIndexer.Tip);
             }
 
-            var rewindHeight = this.nodeSettings.ConfigReader.GetOrDefault<int>(BaseFeature.RewindFlag, -1);
+            var rewindHeight = this.nodeSettings.ConfigReader.GetOrDefault(RewindFlag, -1);
             if (rewindHeight >= 0)
             {
                 if (rewindHeight < initializedAt.Height)
@@ -232,7 +232,7 @@ namespace Stratis.Bitcoin.Base
                     // Ensure that we don't try to rewind further than the coin view is capable of doing.
                     var utxoSet = ((dynamic)this.consensusRules).UtxoSet;
                     var coinDatabase = ((dynamic)utxoSet).ICoindb;
-                    ((dynamic)coinDatabase).Initialize();
+                    ((dynamic)coinDatabase).Initialize(initializedAt);
                     int minRewindHeight = ((dynamic)coinDatabase).GetMinRewindHeight();
                     ((dynamic)coinDatabase).Dispose();
 
