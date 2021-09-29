@@ -25,6 +25,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public override int Compare(ChainedHeader headerA, ChainedHeader headerB)
         {
+            // TODO: This could be derived from maximum block age.
             const int maximumRewindBlocks = 3;
 
             if (headerA.HashBlock == headerB.HashBlock)
