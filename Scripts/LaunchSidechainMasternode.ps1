@@ -352,7 +352,7 @@ if ( $NodeType -eq "50K" )
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
-    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --rpc --rpccorsdomain=* --rpcapi web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
 
     While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
     {
