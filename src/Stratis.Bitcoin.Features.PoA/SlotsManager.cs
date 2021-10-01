@@ -100,13 +100,10 @@ namespace Stratis.Bitcoin.Features.PoA
             if (!IsValidTimestamp(tipTime))
                 tipTime += (this.consensusOptions.TargetSpacingSeconds - tipTime % this.consensusOptions.TargetSpacingSeconds);
 
-            // Check if we have missed our turn for this round.
-            // We still consider ourselves "in a turn" if we are in the first half of the turn and we haven't mined there yet.
-            // This might happen when starting the node for the first time or if there was a problem when mining.
-
             uint nextTimestampForMining = (uint)(tipTime + blocksFromTipToMiningSlot * this.consensusOptions.TargetSpacingSeconds);
-            while (currentTime > nextTimestampForMining + (this.consensusOptions.TargetSpacingSeconds / 2) // We are closer to the next turn than our own
-                  || tipTime == nextTimestampForMining)
+            // If more than PoAChainWorkComparer.MaximumRewindBlocks in the past then advance the time slot.
+            uint minimumTimestampForMining = currentTime - PoAChainWorkComparer.MaximumRewindBlocks * this.consensusOptions.TargetSpacingSeconds;
+            while (nextTimestampForMining < minimumTimestampForMining || nextTimestampForMining == tipTime)
                 nextTimestampForMining += roundTime;
 
             return nextTimestampForMining;

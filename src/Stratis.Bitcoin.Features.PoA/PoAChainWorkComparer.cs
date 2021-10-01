@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NBitcoin;
 using Stratis.Bitcoin.Consensus;
+using Stratis.Bitcoin.Utilities;
 
 namespace Stratis.Bitcoin.Features.PoA
 {
@@ -11,11 +12,17 @@ namespace Stratis.Bitcoin.Features.PoA
     /// </summary>
     public class PoAChainWorkComparer : Comparer<ChainedHeader>, IChainWorkComparer
     {
-        private readonly Network network;
+        public const int MaximumRewindBlocks = 3;
 
-        public PoAChainWorkComparer(Network network)
+        private readonly Network network;
+        private readonly ISlotsManager slotsManager;
+        private readonly IDateTimeProvider dateTimeProvider;
+
+        public PoAChainWorkComparer(Network network, ISlotsManager slotsManager, IDateTimeProvider dateTimeProvider)
         {
             this.network = network;
+            this.slotsManager = slotsManager;
+            this.dateTimeProvider = dateTimeProvider;
         }
 
         public TimeSpan BlockProductionTime()
@@ -23,11 +30,15 @@ namespace Stratis.Bitcoin.Features.PoA
             return TimeSpan.FromSeconds(((PoAConsensusOptions)this.network.Consensus.Options).TargetSpacingSeconds);
         }
 
+        public uint GetNextMineableSlot()
+        {
+            uint timeNow = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
+            
+            return this.slotsManager.GetMiningTimestamp(timeNow);
+        }
+
         public override int Compare(ChainedHeader headerA, ChainedHeader headerB)
         {
-            // TODO: This could be derived from maximum block age.
-            const int maximumRewindBlocks = 3;
-
             if (headerA.HashBlock == headerB.HashBlock)
                 return 0;
 
@@ -41,7 +52,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // Chain A: A B C | - E F
             // Chain B: A B C | D <= WINNER
 
-            TimeSpan maximumRewindSeconds = BlockProductionTime() * maximumRewindBlocks;
+            TimeSpan maximumRewindSeconds = BlockProductionTime() * MaximumRewindBlocks;
             DateTimeOffset lastPermBlockA = headerA.Header.BlockTime - maximumRewindSeconds;
             DateTimeOffset lastPermBlockB = headerB.Header.BlockTime - maximumRewindSeconds;
             ChainedHeader[] lastOfA = headerA.EnumerateToGenesis().TakeWhile(h => h.Height > 0 && h.Header.BlockTime >= lastPermBlockA).Reverse().ToArray();
