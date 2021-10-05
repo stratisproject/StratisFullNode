@@ -54,7 +54,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                return this.Json(this.votingManager.GetPollsRepositoryTip());
+                return this.Json(this.votingManager.GetPollsRepositoryTip().Height);
             }
             catch (Exception e)
             {
