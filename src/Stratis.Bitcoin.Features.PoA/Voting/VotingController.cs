@@ -41,6 +41,29 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
+        /// Retrieves the tip of the polls repository.
+        /// </summary>
+        /// <returns>The poll repository tip.</returns>
+        /// <response code="200">The request succeeded.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/tip")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetPollsRepositoryTip()
+        {
+            try
+            {
+                return this.Json(this.votingManager.GetPollsRepositoryTip());
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Retrieves a list of pending or "active" polls.
         /// </summary>
         /// <returns>Active polls</returns>
