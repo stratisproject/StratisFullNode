@@ -64,8 +64,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         internal bool isInitialized;
 
-        public VotingManager(IFederationManager federationManager, IPollResultExecutor pollResultExecutor, INodeStats nodeStats,
-            DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, Network network,
+        public VotingManager(
+            IFederationManager federationManager,
+            IPollResultExecutor pollResultExecutor,
+            INodeStats nodeStats,
+            DataFolder dataFolder,
+            DBreezeSerializer dBreezeSerializer,
+            ISignals signals,
+            Network network,
             IBlockRepository blockRepository = null,
             ChainIndexer chainIndexer = null,
             INodeLifetime nodeLifetime = null)
@@ -826,6 +832,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (header.Height % 10000 == 0)
                             {
                                 this.logger.Info($"Synchronizing voting data at height {header.Height}.");
+                                this.signals.Publish(new FullNodeEvent() { Message = $"Synchronizing voting data at height {header.Height}.", State = FullNodeState.Initializing.ToString() });
                             }
                         }
 
