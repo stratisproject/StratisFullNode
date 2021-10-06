@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Features.PoA
             int min = Math.Min(lastOfA.Length, lastOfB.Length);
             for (int i = 0; i < min; i++)
             {
-                int cmp2 = lastOfA[0].Header.BlockTime.CompareTo(lastOfB[0].Header.BlockTime);
+                int cmp2 = lastOfA[i].Header.BlockTime.CompareTo(lastOfB[i].Header.BlockTime);
                 if (cmp2 != 0)
                     return -cmp2;
             }
