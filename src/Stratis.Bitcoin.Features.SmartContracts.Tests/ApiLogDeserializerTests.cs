@@ -11,6 +11,7 @@ using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.Core.State.AccountAbstractionLayer;
 using Stratis.SmartContracts.Networks;
 using Xunit;
 
@@ -112,6 +113,36 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             // Verify that we got the code for both log assemblies.
             stateRoot.Verify(s => s.GetCodeHash(logs[0].Address), Times.Once);
             stateRoot.Verify(s => s.GetCodeHash(logs[1].Address), Times.Once);
+        }
+
+        [Fact]
+        public void MapTransferInfo_Success()
+        {
+            var network = new SmartContractsRegTest();
+            var primitiveSerializer = new ContractPrimitiveSerializer(network);
+
+            var stateRoot = new Mock<IStateRepositoryRoot>();
+            stateRoot.Setup(r => r.GetCodeHash(It.IsAny<uint160>())).Returns(uint256.Zero.ToBytes());
+
+            var assemblyCache = new Mock<IContractAssemblyCache>();
+            var contractAssembly = new Mock<IContractAssembly>();
+
+            var serializer = new ApiLogDeserializer(primitiveSerializer, network, stateRoot.Object, assemblyCache.Object);
+
+            var transferInfos = new List<TransferInfo>
+            {
+                new TransferInfo(uint160.Zero, uint160.One, 12345),
+                new TransferInfo(uint160.One, uint160.Zero, 12345),
+            };
+
+            List<SmartContracts.Models.TransferResponse> result = serializer.MapTransferInfo(transferInfos.ToArray());
+
+            for (var i = 0; i < transferInfos.Count; i++)
+            {
+                Assert.Equal(transferInfos[i].From.ToBase58Address(network), result[i].From);
+                Assert.Equal(transferInfos[i].To.ToBase58Address(network), result[i].To);
+                Assert.Equal(transferInfos[i].Value, result[i].Value);
+            }
         }
     }
 }
