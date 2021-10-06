@@ -429,12 +429,12 @@ namespace Stratis.Bitcoin.Features.PoA
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader, 1);
+            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
 
             int maxDepth = modifiedFederation.Count;
 
             log.AppendLine($"Mining information for the last { maxDepth } blocks.");
-            log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
+            log.AppendLine("Note 'MISS' indicates a slot where a miner didn't produce a block.");
 
             uint currentSlotTime = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
             currentSlotTime -= currentSlotTime % this.network.ConsensusOptions.TargetSpacingSeconds;
@@ -446,7 +446,9 @@ namespace Stratis.Bitcoin.Features.PoA
 
             // Determine the current slot from that.
             int mySlotIndex = modifiedFederation.FindIndex(m => m.PubKey == this.federationManager.CurrentFederationKey?.PubKey);
-            int currentSlot = (int)(mySlotIndex - slotOffset + modifiedFederation.Count) % modifiedFederation.Count;
+            int currentSlot = (int)(mySlotIndex - slotOffset) % modifiedFederation.Count;
+            while (currentSlot < 0)
+                currentSlot += modifiedFederation.Count;
 
             // Determine the public key of the current slot.
             PubKey pubKey = modifiedFederation[currentSlot].PubKey;
@@ -454,12 +456,16 @@ namespace Stratis.Bitcoin.Features.PoA
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
             {
-                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+
+                // There is a logging filter that bolds hex numbers preseded by NUL character.
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
+                    pubKeyRepresentation = "\u0000" + pubKeyRepresentation;
 
                 // Mined in this slot?
                 if (currentHeader.Header.Time == currentSlotTime)
                 {
-                    log.Append($"[{ pubKeyRepresentation }] ");
+                    log.Append($"{currentHeader.Height.ToString().PadLeft(7)}:{ pubKeyRepresentation } ");
 
                     currentHeader = currentHeader.Previous;
                     modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
@@ -467,7 +473,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 }
                 else
                 {
-                    log.Append($"<{ pubKeyRepresentation }> ");
+                    log.Append($"---MISS:{ pubKeyRepresentation } ");
                 }
 
                 // Determine previous miner.
@@ -484,7 +490,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 currentSlotTime -= this.network.ConsensusOptions.TargetSpacingSeconds;
 
-                if ((i % 20) == 19)
+                if ((i % 10) == 9)
                     log.AppendLine();
             }
 
