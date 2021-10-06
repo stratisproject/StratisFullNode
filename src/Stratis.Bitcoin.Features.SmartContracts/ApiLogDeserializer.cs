@@ -14,6 +14,7 @@ using Stratis.SmartContracts.CLR.Loader;
 using Stratis.SmartContracts.CLR.Serialization;
 using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
+using Stratis.SmartContracts.Core.State.AccountAbstractionLayer;
 
 namespace Stratis.Bitcoin.Features.SmartContracts
 {
@@ -33,6 +34,17 @@ namespace Stratis.Bitcoin.Features.SmartContracts
             this.network = network;
             this.stateRepositoryRoot = stateRepositoryRoot;
             this.contractAssemblyCache = contractAssemblyCache;
+        }
+
+        public List<TransferResponse> MapTransferInfo(TransferInfo[] transferInfos)
+        {
+            return transferInfos.Select(t => new TransferResponse
+            {
+                From = t.From.ToBase58Address(this.network),
+                To = t.To.ToBase58Address(this.network),
+                Value = t.Value
+            })
+            .ToList();
         }
 
         public List<LogResponse> MapLogResponses(Log[] logs)
