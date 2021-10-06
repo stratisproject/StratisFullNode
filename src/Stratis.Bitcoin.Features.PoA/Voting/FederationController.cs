@@ -174,5 +174,33 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
+        
+        /// <summary>
+        /// Retrieves the pubkey of federation member that produced a block at the specified height.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to retrieve pubkey from.</param>
+        /// <returns>Pubkey of federation member at specified height</returns>
+        /// <response code="200">Returns pubkey of miner at block height</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("get-mining-pubkey-at-height")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetPubkeyAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
+        {
+            try
+            {
+                var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+
+                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
+
+                return Json(pubKey);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
     }
 }
