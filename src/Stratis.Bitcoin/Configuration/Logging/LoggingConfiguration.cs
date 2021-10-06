@@ -200,13 +200,14 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 Layout = "[${level:lowercase=true}]\t${logger}\n\t${message}",
                 AutoFlush = true,
             };
-            
+
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Info", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Warn", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Error", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("[info]", ConsoleOutputColor.DarkGreen, ConsoleOutputColor.Black));
             consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("[warn]", ConsoleOutputColor.Black, ConsoleOutputColor.Yellow));
             consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("[error]", ConsoleOutputColor.Black, ConsoleOutputColor.Red));
+            consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule(null, ConsoleOutputColor.White, ConsoleOutputColor.Black) { Regex = "\u0000[0-9a-f]+" });
 
             LogManager.Configuration.AddTarget(consoleTarget);
 
