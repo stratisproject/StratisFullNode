@@ -21,6 +21,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IFederationHistory federationHistory;
         private readonly ILogger logger;
         private readonly Network network;
+        private readonly IPoAMiner poaMiner;
         private readonly ReconstructFederationService reconstructFederationService;
         private readonly VotingManager votingManager;
 
@@ -31,6 +32,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             Network network,
             IIdleFederationMembersKicker idleFederationMembersKicker,
             IFederationHistory federationHistory,
+            IPoAMiner poAMiner,
             ReconstructFederationService reconstructFederationService)
         {
             this.chainIndexer = chainIndexer;
@@ -38,6 +40,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.federationHistory = federationHistory;
             this.network = network;
+            this.poaMiner = poAMiner;
             this.reconstructFederationService = reconstructFederationService;
             this.votingManager = votingManager;
 
@@ -128,6 +131,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
 
                 federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
+
+                federationMemberModel.MiningStatistics = this.poaMiner.MiningStatistics;
 
                 return Json(federationMemberModel);
             }

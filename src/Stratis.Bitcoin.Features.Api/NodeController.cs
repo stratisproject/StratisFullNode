@@ -152,6 +152,7 @@ namespace Stratis.Bitcoin.Features.Api
                 ProcessId = Process.GetCurrentProcess().Id,
                 Network = this.fullNode.Network.Name,
                 ConsensusHeight = this.chainState.ConsensusTip?.Height,
+                HeaderHeight = this.consensusManager.HeaderTip,
                 DataDirectoryPath = this.nodeSettings.DataDir,
                 Testnet = this.network.IsTest(),
                 RelayFee = this.nodeSettings.MinRelayTxFeeRate?.FeePerK?.ToUnit(MoneyUnit.BTC) ?? 0,
