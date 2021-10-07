@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
             this.votingManager = new VotingManager(this.federationManager, this.resultExecutorMock.Object, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), dataFolder,
-                this.dBreezeSerializer, this.signals, this.network, null, this.chainIndexerMock.Object);
+                this.dBreezeSerializer, this.signals, this.network, this.chainIndexerMock.Object, null);
 
             this.votingManager.Initialize(this.federationHistory);
 
@@ -114,7 +114,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             var header = new BlockHeader();
             chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
             var votingManager = new VotingManager(federationManager, new Mock<IPollResultExecutor>().Object,
-                new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network, null, chainIndexerMock.Object, null);
+                new Mock<INodeStats>().Object, nodeSettings.DataFolder, dbreezeSerializer, signals, network, chainIndexerMock.Object, null, null);
 
             var federationHistory = new Mock<IFederationHistory>();
             federationHistory.Setup(x => x.GetFederationMemberForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) =>
