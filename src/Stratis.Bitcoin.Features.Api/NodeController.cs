@@ -18,10 +18,12 @@ using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Connection;
 using Stratis.Bitcoin.Consensus;
 using Stratis.Bitcoin.Controllers.Models;
+using Stratis.Bitcoin.EventBus;
 using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.P2P;
 using Stratis.Bitcoin.P2P.Peer;
 using Stratis.Bitcoin.Primitives;
+using Stratis.Bitcoin.Signals;
 using Stratis.Bitcoin.Utilities;
 using Stratis.Bitcoin.Utilities.JsonErrors;
 using Stratis.Bitcoin.Utilities.ModelStateErrors;
@@ -84,6 +86,8 @@ namespace Stratis.Bitcoin.Features.Api
 
         private readonly ISelfEndpointTracker selfEndpointTracker;
 
+        private readonly ISignals signals;
+
         private readonly IConsensusManager consensusManager;
 
         public NodeController(
@@ -100,22 +104,13 @@ namespace Stratis.Bitcoin.Features.Api
             IConsensusManager consensusManager,
             IBlockStore blockStore,
             IInitialBlockDownloadState initialBlockDownloadState,
+            ISignals signals,
             IGetUnspentTransaction getUnspentTransaction = null,
             INetworkDifficulty networkDifficulty = null,
             IPooledGetUnspentTransaction pooledGetUnspentTransaction = null,
             IPooledTransaction pooledTransaction = null)
         {
-            Guard.NotNull(fullNode, nameof(fullNode));
-            Guard.NotNull(network, nameof(network));
-            Guard.NotNull(chainIndexer, nameof(chainIndexer));
-            Guard.NotNull(loggerFactory, nameof(loggerFactory));
-            Guard.NotNull(nodeSettings, nameof(nodeSettings));
-            Guard.NotNull(chainState, nameof(chainState));
-            Guard.NotNull(connectionManager, nameof(connectionManager));
-            Guard.NotNull(dateTimeProvider, nameof(dateTimeProvider));
-            Guard.NotNull(asyncProvider, nameof(asyncProvider));
-            Guard.NotNull(selfEndpointTracker, nameof(selfEndpointTracker));
-
+            this.asyncProvider = asyncProvider;
             this.chainIndexer = chainIndexer;
             this.chainState = chainState;
             this.connectionManager = connectionManager;
@@ -124,8 +119,8 @@ namespace Stratis.Bitcoin.Features.Api
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.network = network;
             this.nodeSettings = nodeSettings;
-            this.asyncProvider = asyncProvider;
             this.selfEndpointTracker = selfEndpointTracker;
+            this.signals = signals;
 
             this.consensusManager = consensusManager;
             this.blockStore = blockStore;
@@ -140,10 +135,11 @@ namespace Stratis.Bitcoin.Features.Api
         /// Gets general information about this full node including the version,
         /// protocol version, network name, coin ticker, and consensus height.
         /// </summary>
+        /// <param name="publish">If true, publish a full node event with the status.</param>
         /// <returns>A <see cref="StatusModel"/> with information about the node.</returns>
         [HttpGet]
         [Route("status")]
-        public IActionResult Status()
+        public IActionResult Status([FromQuery] bool publish)
         {
             // Output has been merged with RPC's GetInfo() since they provided similar functionality.
             var model = new StatusModel
@@ -166,6 +162,9 @@ namespace Stratis.Bitcoin.Features.Api
                 InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
             };
 
+            if (publish)
+                this.signals.Publish(new FullNodeEvent() { Message = "Full State Requested", State = this.fullNode.State.ToString() });
+
             // Add the list of features that are enabled.
             foreach (IFullNodeFeature feature in this.fullNode.Services.Features)
             {
@@ -183,8 +182,7 @@ namespace Stratis.Bitcoin.Features.Api
             // Add the details of connected nodes.
             foreach (INetworkPeer peer in this.connectionManager.ConnectedPeers)
             {
-                var connectionManagerBehavior = peer.Behavior<IConnectionManagerBehavior>();
-                var chainHeadersBehavior = peer.Behavior<ConsensusManagerBehavior>();
+                ConsensusManagerBehavior chainHeadersBehavior = peer.Behavior<ConsensusManagerBehavior>();
 
                 var connectedPeer = new ConnectedPeerModel
                 {
