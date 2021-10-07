@@ -72,8 +72,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             DBreezeSerializer dBreezeSerializer,
             ISignals signals,
             Network network,
+            ChainIndexer chainIndexer,
             IBlockRepository blockRepository = null,
-            ChainIndexer chainIndexer = null,
             INodeLifetime nodeLifetime = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
@@ -831,8 +831,9 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 10000 == 0)
                             {
-                                this.logger.Info($"Synchronizing voting data at height {header.Height}.");
-                                this.signals.Publish(new FullNodeEvent() { Message = $"Synchronizing voting data at height {header.Height}.", State = FullNodeState.Initializing.ToString() });
+                                var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
+                                this.logger.Info($"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress}%).");
+                                this.signals.Publish(new FullNodeEvent() { Message = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress})%.", State = FullNodeState.Initializing.ToString() });
                             }
                         }
 
