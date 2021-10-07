@@ -832,8 +832,10 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             if (header.Height % 10000 == 0)
                             {
                                 var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
-                                this.logger.Info($"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress}%).");
-                                this.signals.Publish(new FullNodeEvent() { Message = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress})%.", State = FullNodeState.Initializing.ToString() });
+                                var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
+
+                                this.logger.Info(progressString);
+                                this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
                             }
                         }
 

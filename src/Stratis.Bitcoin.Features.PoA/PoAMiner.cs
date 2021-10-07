@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -37,6 +38,12 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         /// <summary>Starts mining loop.</summary>
         void InitializeMining();
+
+        /// <summary>
+        /// Returns mining statistics in the last amount of blocks equal to the federation size.
+        /// </summary>
+        /// <returns>Returns <c>true</c> if the miner produced a block in the last round and block producer hits.</returns>
+        MiningStatisticsModel MiningStatistics { get; }
     }
 
     /// <inheritdoc cref="IPoAMiner"/>
@@ -74,6 +81,8 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
         private readonly NodeSettings nodeSettings;
+
+        private MiningStatisticsModel miningStatistics;
 
         private readonly IWalletManager walletManager;
 
@@ -422,7 +431,6 @@ namespace Stratis.Bitcoin.Features.PoA
                 log.AppendLine();
                 return;
             }
-
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
 
@@ -441,6 +449,8 @@ namespace Stratis.Bitcoin.Features.PoA
             if (timeHeader < currentHeader.Header.Time)
                 timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
 
+            var statistics = new MiningStatisticsModel();
+
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
             {
@@ -448,7 +458,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 PubKey pubKey = modifiedFederation[headerSlot].PubKey;
 
-                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
+                {
+                    pubKeyRepresentation = "█████";
+                    statistics.ProducedBlockInLastRound = true;
+                }
 
                 // Mined in this slot?
                 if (timeHeader == currentHeader.Header.Time)
@@ -471,11 +486,20 @@ namespace Stratis.Bitcoin.Features.PoA
                     log.AppendLine();
             }
 
+            statistics.FederationSize = maxDepth;
+            statistics.MinerHits = hitCount;
+
             log.Append("...");
             log.AppendLine();
             log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
             log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": { TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
             log.AppendLine();
+        }
+
+        /// <inheritdoc/>
+        public MiningStatisticsModel MiningStatistics
+        {
+            get { return this.miningStatistics; }
         }
 
         /// <inheritdoc/>
@@ -486,5 +510,17 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.cancellation.Dispose();
         }
+    }
+
+    public sealed class MiningStatisticsModel
+    {
+        [JsonProperty(PropertyName = "federationSize")]
+        public int FederationSize { get; set; }
+
+        [JsonProperty(PropertyName = "minerHits")]
+        public int MinerHits { get; set; }
+
+        [JsonProperty(PropertyName = "producedBlockInLastRound")]
+        public bool ProducedBlockInLastRound { get; set; }
     }
 }
