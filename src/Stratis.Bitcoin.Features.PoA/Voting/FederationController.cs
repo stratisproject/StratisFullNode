@@ -194,7 +194,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             try
             {
                 var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
-
                 PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
 
                 return Json(pubKey);
