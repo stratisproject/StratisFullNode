@@ -222,15 +222,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             try
             {
                 var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
-
-		var federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
-		List<PubKey> federationPubKeys = new List<PubKey>();
-
-		foreach (IFederationMember federationMember in federationMembers)
-		{
-		    federationPubKeys.Add(federationMember.PubKey);
-		}
-	
+                var federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
+                List<PubKey> federationPubKeys = new List<PubKey>();
+                
+                foreach (IFederationMember federationMember in federationMembers)
+                {
+                    federationPubKeys.Add(federationMember.PubKey);
+                }
+                
                 return Json(federationPubKeys);
             }
             catch (Exception e)
