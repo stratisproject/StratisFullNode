@@ -185,7 +185,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Pubkey of federation member at specified height</returns>
         /// <response code="200">Returns pubkey of miner at block height</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("get-mining-pubkey-at-height")]
+        [Route("mineratheight")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -213,7 +213,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         /// <returns>Federation membership at the given height</returns>
         /// <response code="200">Returns a list of pubkeys representing the federation membership at the given block height.</response>
         /// <response code="400">Unexpected exception occurred</response>
-        [Route("get-federation-members-at-height")]
+        [Route("federationatheight")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -222,15 +222,15 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             try
             {
                 var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
-				
-				var federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
-				List<PubKey> federationPubKeys = new List<PubKey>();
-				
-				foreach (IFederationMember federationMember in federationMembers)
-				{
-					federationPubKeys.Add(federationMember.PubKey);
-				}
-				
+
+		var federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
+		List<PubKey> federationPubKeys = new List<PubKey>();
+
+		foreach (IFederationMember federationMember in federationMembers)
+		{
+		    federationPubKeys.Add(federationMember.PubKey);
+		}
+	
                 return Json(federationPubKeys);
             }
             catch (Exception e)
