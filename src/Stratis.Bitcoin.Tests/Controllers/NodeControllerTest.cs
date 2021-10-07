@@ -36,7 +36,6 @@ namespace Stratis.Bitcoin.Tests.Controllers
         private readonly Mock<IDateTimeProvider> dateTimeProvider;
         private readonly Mock<IFullNode> fullNode;
         private readonly Mock<InitialBlockDownloadState> initialBlockDownloadState;
-        private readonly Mock<IPeerBanning> peerBanning;
         private readonly Network network;
         private readonly NodeSettings nodeSettings;
 
@@ -63,7 +62,6 @@ namespace Stratis.Bitcoin.Tests.Controllers
             this.fullNode = new Mock<IFullNode>();
             this.initialBlockDownloadState = new Mock<InitialBlockDownloadState>(this.chainState.Object, this.network, null, new Checkpoints(), DateTimeProvider.Default);
             this.nodeSettings = new NodeSettings(networksSelector: Networks.Networks.Bitcoin);
-            this.peerBanning = new Mock<IPeerBanning>();
 
             this.consensusManager = new Mock<IConsensusManager>();
             this.blockStore = new Mock<IBlockStore>();
