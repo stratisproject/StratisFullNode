@@ -450,7 +450,7 @@ namespace Stratis.Bitcoin.Features.PoA
             if (timeHeader < currentHeader.Header.Time)
                 timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
 
-            var statistics = new MiningStatisticsModel();
+            this.miningStatistics = new MiningStatisticsModel();
 
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
@@ -463,7 +463,7 @@ namespace Stratis.Bitcoin.Features.PoA
                 if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
                 {
                     pubKeyRepresentation = "█████";
-                    statistics.ProducedBlockInLastRound = true;
+                    this.miningStatistics.ProducedBlockInLastRound = true;
                 }
 
                 // Mined in this slot?
@@ -490,8 +490,8 @@ namespace Stratis.Bitcoin.Features.PoA
                     log.AppendLine();
             }
 
-            statistics.FederationSize = maxDepth;
-            statistics.MinerHits = hitCount;
+            this.miningStatistics.FederationSize = maxDepth;
+            this.miningStatistics.MinerHits = hitCount;
 
             log.Append("...");
             log.AppendLine();
