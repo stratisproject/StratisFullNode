@@ -97,6 +97,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
                     federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
+
+                    ChainedHeader chainTip = this.chainIndexer.Tip;
+                    var federationSize = this.federationHistory.GetFederationForBlock(chainTip).Count;
+                    var roundDepth = chainTip.Height - federationSize;
+                    federationMemberModel.ProducedBlockInLastRound = this.poaMiner.MiningStatistics.LastBlockProducedHeight >= roundDepth;
                 }
 
                 // Is this member part of a pending poll
@@ -182,7 +187,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
-        
+
         /// <summary>
         /// Retrieves the pubkey of the federation member that produced a block at the specified height.
         /// </summary>
@@ -209,7 +214,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
-        
+
         /// <summary>
         /// Retrieves federation members at the given height.
         /// </summary>
@@ -228,12 +233,12 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
                 var federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
                 List<PubKey> federationPubKeys = new List<PubKey>();
-                
+
                 foreach (IFederationMember federationMember in federationMembers)
                 {
                     federationPubKeys.Add(federationMember.PubKey);
                 }
-                
+
                 return Json(federationPubKeys);
             }
             catch (Exception e)

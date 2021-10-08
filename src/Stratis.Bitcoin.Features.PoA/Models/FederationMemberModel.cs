@@ -47,6 +47,9 @@ namespace Stratis.Bitcoin.Features.PoA.Models
         [JsonProperty("rewardEstimatePerBlock")]
         public double RewardEstimatePerBlock { get; set; }
 
+        [JsonProperty("producedBlockInLastRound")]
+        public bool ProducedBlockInLastRound { get; internal set; }
+
         [JsonProperty("miningStats")]
         public MiningStatisticsModel MiningStatistics { get; set; }
     }
