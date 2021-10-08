@@ -142,6 +142,8 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingDataEncoder = new VotingDataEncoder();
             this.nodeSettings = nodeSettings;
 
+            this.miningStatistics = new MiningStatisticsModel();
+
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
 
@@ -199,6 +201,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
                         continue;
                     }
+
+                    this.miningStatistics.LastBlockProducedHeight = chainedHeader.Height;
 
                     var builder = new StringBuilder();
                     builder.AppendLine("<<==============================================================>>");
@@ -460,10 +464,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
                 if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
-                {
                     pubKeyRepresentation = "█████";
-                    this.miningStatistics.ProducedBlockInLastRound = true;
-                }
 
                 // Mined in this slot?
                 if (timeHeader == currentHeader.Header.Time)
@@ -486,7 +487,6 @@ namespace Stratis.Bitcoin.Features.PoA
                     log.AppendLine();
             }
 
-            this.miningStatistics.FederationSize = maxDepth;
             this.miningStatistics.MinerHits = hitCount;
 
             log.Append("...");
@@ -514,13 +514,10 @@ namespace Stratis.Bitcoin.Features.PoA
 
     public sealed class MiningStatisticsModel
     {
-        [JsonProperty(PropertyName = "federationSize")]
-        public int FederationSize { get; set; }
-
         [JsonProperty(PropertyName = "minerHits")]
         public int MinerHits { get; set; }
 
-        [JsonProperty(PropertyName = "producedBlockInLastRound")]
-        public bool ProducedBlockInLastRound { get; set; }
+        [JsonProperty(PropertyName = "lastBlockProducedHeight")]
+        public int LastBlockProducedHeight { get; set; }
     }
 }
