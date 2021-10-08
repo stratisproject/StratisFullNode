@@ -182,5 +182,65 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
             }
         }
+        
+        /// <summary>
+        /// Retrieves the pubkey of the federation member that produced a block at the specified height.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to retrieve pubkey from.</param>
+        /// <returns>Pubkey of federation member at specified height</returns>
+        /// <response code="200">Returns pubkey of miner at block height</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("mineratheight")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetPubkeyAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
+        {
+            try
+            {
+                var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                PubKey pubKey = this.federationHistory.GetFederationMemberForBlock(chainedHeader)?.PubKey;
+
+                return Json(pubKey);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+        
+        /// <summary>
+        /// Retrieves federation members at the given height.
+        /// </summary>
+        /// <param name="blockHeight">Block height at which to retrieve federation membership.</param>
+        /// <returns>Federation membership at the given height</returns>
+        /// <response code="200">Returns a list of pubkeys representing the federation membership at the given block height.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("federationatheight")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetFederationAtHeight([FromQuery(Name = "blockHeight")] int blockHeight)
+        {
+            try
+            {
+                var chainedHeader = this.chainIndexer.GetHeader(blockHeight);
+                var federationMembers = this.federationHistory.GetFederationForBlock(chainedHeader);
+                List<PubKey> federationPubKeys = new List<PubKey>();
+                
+                foreach (IFederationMember federationMember in federationMembers)
+                {
+                    federationPubKeys.Add(federationMember.PubKey);
+                }
+                
+                return Json(federationPubKeys);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
     }
 }
