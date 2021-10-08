@@ -92,15 +92,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
+                ChainedHeader chainTip = this.chainIndexer.Tip;
+                federationMemberModel.FederationSize = this.federationHistory.GetFederationForBlock(chainTip).Count;
+
                 KeyValuePair<IFederationMember, uint> lastActive = this.federationHistory.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key.PubKey == this.federationManager.CurrentFederationKey.PubKey);
                 if (lastActive.Key != null)
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
                     federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
 
-                    ChainedHeader chainTip = this.chainIndexer.Tip;
-                    var federationSize = this.federationHistory.GetFederationForBlock(chainTip).Count;
-                    var roundDepth = chainTip.Height - federationSize;
+                    var roundDepth = chainTip.Height - federationMemberModel.FederationSize;
                     federationMemberModel.ProducedBlockInLastRound = this.poaMiner.MiningStatistics.LastBlockProducedHeight >= roundDepth;
                 }
 
