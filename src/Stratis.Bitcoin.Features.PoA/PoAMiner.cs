@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -37,6 +38,12 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         /// <summary>Starts mining loop.</summary>
         void InitializeMining();
+
+        /// <summary>
+        /// Returns mining statistics in the last amount of blocks equal to the federation size.
+        /// </summary>
+        /// <returns>Returns <c>true</c> if the miner produced a block in the last round and block producer hits.</returns>
+        MiningStatisticsModel MiningStatistics { get; }
     }
 
     /// <inheritdoc cref="IPoAMiner"/>
@@ -67,11 +74,15 @@ namespace Stratis.Bitcoin.Features.PoA
 
         protected readonly IFederationManager federationManager;
 
+        protected readonly IFederationHistory federationHistory;
+
         private readonly IIntegrityValidator integrityValidator;
 
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
         private readonly NodeSettings nodeSettings;
+
+        private MiningStatisticsModel miningStatistics;
 
         private readonly IWalletManager walletManager;
 
@@ -99,6 +110,7 @@ namespace Stratis.Bitcoin.Features.PoA
             IConnectionManager connectionManager,
             PoABlockHeaderValidator poaHeaderValidator,
             IFederationManager federationManager,
+            IFederationHistory federationHistory,
             IIntegrityValidator integrityValidator,
             IWalletManager walletManager,
             INodeStats nodeStats,
@@ -117,6 +129,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.connectionManager = connectionManager;
             this.poaHeaderValidator = poaHeaderValidator;
             this.federationManager = federationManager;
+            this.federationHistory = federationHistory;
             this.integrityValidator = integrityValidator;
             this.walletManager = walletManager;
             this.votingManager = votingManager;
@@ -418,19 +431,13 @@ namespace Stratis.Bitcoin.Features.PoA
                 log.AppendLine();
                 return;
             }
-
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
 
             int pubKeyTakeCharacters = 5;
             int hitCount = 0;
 
-            // If the node is in DevMode just use the genesis members via the federation manager.
-            List<IFederationMember> modifiedFederation;
-            if (this.nodeSettings.DevMode != null)
-                modifiedFederation = this.federationManager.GetFederationMembers();
-            else
-                modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+            List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
 
             int maxDepth = modifiedFederation.Count;
 
@@ -442,6 +449,8 @@ namespace Stratis.Bitcoin.Features.PoA
             if (timeHeader < currentHeader.Header.Time)
                 timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
 
+            this.miningStatistics = new MiningStatisticsModel();
+
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
             {
@@ -449,7 +458,12 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 PubKey pubKey = modifiedFederation[headerSlot].PubKey;
 
-                string pubKeyRepresentation = (pubKey == this.federationManager.CurrentFederationKey?.PubKey) ? "█████" : pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
+                if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
+                {
+                    pubKeyRepresentation = "█████";
+                    this.miningStatistics.ProducedBlockInLastRound = true;
+                }
 
                 // Mined in this slot?
                 if (timeHeader == currentHeader.Header.Time)
@@ -459,10 +473,7 @@ namespace Stratis.Bitcoin.Features.PoA
                     currentHeader = currentHeader.Previous;
                     hitCount++;
 
-                    if (this.nodeSettings.DevMode != null)
-                        modifiedFederation = this.federationManager.GetFederationMembers();
-                    else
-                        modifiedFederation = this.votingManager?.GetModifiedFederation(currentHeader) ?? this.federationManager.GetFederationMembers();
+                    modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader);
                 }
                 else
                 {
@@ -475,11 +486,20 @@ namespace Stratis.Bitcoin.Features.PoA
                     log.AppendLine();
             }
 
+            this.miningStatistics.FederationSize = maxDepth;
+            this.miningStatistics.MinerHits = hitCount;
+
             log.Append("...");
             log.AppendLine();
             log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
             log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": { TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
             log.AppendLine();
+        }
+
+        /// <inheritdoc/>
+        public MiningStatisticsModel MiningStatistics
+        {
+            get { return this.miningStatistics; }
         }
 
         /// <inheritdoc/>
@@ -490,5 +510,17 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.cancellation.Dispose();
         }
+    }
+
+    public sealed class MiningStatisticsModel
+    {
+        [JsonProperty(PropertyName = "federationSize")]
+        public int FederationSize { get; set; }
+
+        [JsonProperty(PropertyName = "minerHits")]
+        public int MinerHits { get; set; }
+
+        [JsonProperty(PropertyName = "producedBlockInLastRound")]
+        public bool ProducedBlockInLastRound { get; set; }
     }
 }

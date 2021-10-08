@@ -71,6 +71,8 @@ namespace Stratis.SmartContracts.CLR.Tests
             var snapshot = new Mock<IState>();
             snapshot.SetupGet(p => p.InternalTransfers).Returns(new List<TransferInfo>().AsReadOnly());
             snapshot.Setup(s => s.ContractState).Returns(Mock.Of<IStateRepository>());
+            snapshot.Setup(s => s.GetLogs(this.ContractPrimitiveSerializer.Object))
+                .Returns(new List<Log>());
             state.Setup(s => s.Snapshot()).Returns(snapshot.Object);
             state.Setup(s => s.GetLogs(this.ContractPrimitiveSerializer.Object))
                 .Returns(new List<Log>());

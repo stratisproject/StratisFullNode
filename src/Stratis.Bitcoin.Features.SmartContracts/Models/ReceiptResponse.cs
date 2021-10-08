@@ -11,6 +11,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
     {
         public string TransactionHash { get; }
         public string BlockHash { get; }
+        public ulong? BlockNumber { get; }
         public string PostState { get; }
         public ulong GasUsed { get; }
         public string From { get; }
@@ -25,6 +26,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Models
         {
             this.TransactionHash = receipt.TransactionHash.ToString();
             this.BlockHash = receipt.BlockHash.ToString();
+            this.BlockNumber = receipt.BlockNumber;
             this.PostState = receipt.PostState.ToString();
             this.GasUsed = receipt.GasUsed;
             this.From = receipt.From.ToBase58Address(network);

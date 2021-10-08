@@ -12,9 +12,12 @@ using Stratis.Bitcoin.Features.Wallet;
 using Stratis.Bitcoin.Features.Wallet.Interfaces;
 using Stratis.Bitcoin.Features.Wallet.Models;
 using Stratis.Bitcoin.Features.Wallet.Services;
+using Stratis.Bitcoin.Interfaces;
 using Stratis.Bitcoin.Signals;
 using Stratis.SmartContracts.CLR;
+using Stratis.SmartContracts.CLR.Caching;
 using Stratis.SmartContracts.CLR.Serialization;
+using Stratis.SmartContracts.Core.Receipts;
 using Stratis.SmartContracts.Core.State;
 using Stratis.SmartContracts.Networks;
 using Stratis.SmartContracts.RuntimeObserver;
@@ -33,6 +36,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
         private readonly Mock<IAddressGenerator> addressGenerator;
         private readonly Mock<IStateRepositoryRoot> stateRepository;
 
+        private readonly Mock<IBlockStore> blockStore;
+        private readonly ChainIndexer chainIndexer;
+        private readonly Mock<IContractPrimitiveSerializer> primitiveSerializer;
+        private readonly Mock<IContractAssemblyCache> contractAssemblyCache;
+        private readonly Mock<IReceiptRepository> receiptRepository;
+
         public SmartContractTransactionServiceTests()
         {
             this.network = new SmartContractsRegTest();
@@ -42,6 +51,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             this.callDataSerializer = new Mock<ICallDataSerializer>();
             this.addressGenerator = new Mock<IAddressGenerator>();
             this.stateRepository = new Mock<IStateRepositoryRoot>();
+
+            this.blockStore = new Mock<IBlockStore>();
+            this.chainIndexer = new ChainIndexer(this.network);
+            this.primitiveSerializer = new Mock<IContractPrimitiveSerializer>();
+            this.contractAssemblyCache = new Mock<IContractAssemblyCache>();
+            this.receiptRepository = new Mock<IReceiptRepository>();
         }
 
         [Fact]
@@ -128,7 +143,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
 
@@ -211,7 +231,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             BuildCallContractTransactionResponse result = service.BuildCallTx(request);
             Assert.False(result.Success);
@@ -304,7 +329,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             BuildCreateContractTransactionResponse result = service.BuildCreateTx(request);
 
@@ -326,7 +356,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             var request = new BuildContractTransactionRequest
             {
@@ -366,7 +401,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             var request = new BuildContractTransactionRequest
             {
@@ -406,7 +446,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             var request = new BuildContractTransactionRequest
             {
@@ -453,7 +498,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             var request = new BuildContractTransactionRequest
             {
@@ -672,7 +722,12 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
                 this.callDataSerializer.Object,
                 this.addressGenerator.Object,
                 this.stateRepository.Object,
-                reserveUtxoService);
+                reserveUtxoService,
+                this.blockStore.Object,
+                this.chainIndexer,
+                this.primitiveSerializer.Object,
+                this.contractAssemblyCache.Object,
+                this.receiptRepository.Object);
 
             var senderHdAddress = new HdAddress { Address = senderAddress };
 

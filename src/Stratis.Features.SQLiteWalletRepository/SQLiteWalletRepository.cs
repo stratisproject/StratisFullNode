@@ -287,6 +287,8 @@ namespace Stratis.Features.SQLiteWalletRepository
             // Ok seems safe. Adjust the tip and rewind relevant transactions.
             walletContainer.WriteLockWait();
 
+            bool notifyWalletUI = false;
+
             DBConnection conn = walletContainer.Conn;
             try
             {
@@ -303,6 +305,8 @@ namespace Stratis.Features.SQLiteWalletRepository
                     this.logger.LogDebug("Wallet '{0}' rewound to start.", walletName);
                 else
                     this.logger.LogDebug("Wallet '{0}' rewound to height '{1}'.", walletName, lastBlockSynced);
+
+                notifyWalletUI = true;
 
                 return (true, res.Select(i => (uint256.Parse(i.txId), DateTimeOffset.FromUnixTimeSeconds(i.creationTime))).ToList());
             }
@@ -322,6 +326,14 @@ namespace Stratis.Features.SQLiteWalletRepository
             finally
             {
                 walletContainer.WriteLockRelease();
+
+                if (notifyWalletUI)
+                {
+                    // It is possible that a re-org occurred of a block that the wallet just had an interest in
+                    // (e.g. it staked a block and subsequently re-org).
+                    // We therefore also need to notify the UI that it needs to get the balance and history again.
+                    this.signals?.Publish(new WalletProcessedTransactionOfInterestEvent());
+                }
             }
         }
 
@@ -721,7 +733,9 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             DBConnection conn = walletContainer.Conn;
 
-            walletContainer.WriteLockWait();
+            const int minAddressesPerSecond = 20;
+
+            walletContainer.WriteLockWait(true, 120 + count / minAddressesPerSecond);
 
             try
             {
@@ -1081,7 +1095,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                     {
                         WalletContainer walletContainer = this.Wallets[walletName];
 
-                        if (walletContainer.WriteLockWait(true))
+                        if (walletContainer.WriteLockWait(false))
                             return;
 
                         this.logger.LogDebug("Could not obtain lock for wallet '{0}'.", walletName);
@@ -1447,7 +1461,7 @@ namespace Stratis.Features.SQLiteWalletRepository
 
             HDAccount account = (accountName == null) ? null : conn.GetAccountByName(walletName, accountName);
 
-            return HDTransactionData.GetTransactionCount(conn, walletId, account.AccountIndex);
+            return HDTransactionData.GetTransactionCount(conn, walletId, account?.AccountIndex);
         }
 
         /// <inheritdoc />

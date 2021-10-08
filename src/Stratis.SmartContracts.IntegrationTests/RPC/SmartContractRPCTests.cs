@@ -32,7 +32,7 @@ namespace Stratis.SmartContracts.IntegrationTests.RPC
         }
 
         [Fact]
-        public async Task RPC_GetReceipt_Returns_Value()
+        public async Task RPC_GetReceipt_Returns_ValueAsync()
         {
             using (var chain = new PoAMockChain(2, this.nodeFactory).Build())
             {

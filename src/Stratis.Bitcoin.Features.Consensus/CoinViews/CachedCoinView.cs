@@ -316,7 +316,7 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         {
             if (!force)
             {
-                // Check if periodic flush is reuired.
+                // Check if periodic flush is required.
                 // Ideally this will flush less frequent and always be behind 
                 // blockstore which is currently set to 17 sec.
 
@@ -370,6 +370,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 this.logger.LogDebug("Flushing {0} items.", modify.Count);
 
                 this.coindb.SaveChanges(modify, this.innerBlockHash, this.blockHash, this.cachedRewindData.Select(c => c.Value).ToList());
+
+                // All the cached utxos are now on disk so we can clear the cached entry list.
+                this.cachedUtxoItems.Clear();
+                this.cacheSizeBytes = 0;
 
                 this.cachedRewindData.Clear();
                 this.rewindDataSizeBytes = 0;
@@ -561,49 +565,6 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
                 // Add the most recent rewind data to the cache.
                 this.cachedRewindData.Add(this.blockHash.Height, rewindData);
                 this.rewindDataSizeBytes += rewindData.TotalSize;
-
-                // Remove rewind data form the back of a moving window.
-                // The closer we get to the tip we keep a longer rewind data window.
-                // Anything bellow last checkpoint we keep the minimal of 10 
-                // (random low number) rewind data items.
-                // Beyond last checkpoint:
-                // - For POS we keep a window of MaxReorg.
-                // - For POW we keep 100 items (possibly better is an algo that grows closer to tip)
-
-                // A moving window of information needed to rewind the node to a previous block.
-                // When cache is flushed the rewind data will allow to rewind the node up to the 
-                // number of rewind blocks.
-                // TODO: move rewind data to use block store.
-                // Rewind data can go away all togetehr if the node uses the blocks in block store
-                // to get the rewind information, blockstore persists much more frequent then coin cache
-                // So using block store for rewinds is not entirely impossible.
-
-                uint rewindDataWindow = 10;
-
-                if (this.blockHash.Height >= this.lastCheckpointHeight)
-                {
-                    if (this.network.Consensus.MaxReorgLength != 0)
-                    {
-                        rewindDataWindow = this.network.Consensus.MaxReorgLength + 1;
-                    }
-                    else
-                    {
-                        // TODO: make the rewind data window a configuration
-                        // parameter of evern a network parameter.
-
-                        // For POW assume BTC where a rewind data of 100 is more then enough.
-                        rewindDataWindow = 100;
-                    }
-                }
-
-                int rewindToRemove = this.blockHash.Height - (int)rewindDataWindow;
-
-                if (this.cachedRewindData.TryGetValue(rewindToRemove, out RewindData delete))
-                {
-                    this.logger.LogDebug("Remove rewind data height '{0}' from cache.", rewindToRemove);
-                    this.cachedRewindData.Remove(rewindToRemove);
-                    this.rewindDataSizeBytes -= delete.TotalSize;
-                }
             }
         }
 

@@ -187,6 +187,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.External.Masternode
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Features.Unity3dApi", "Stratis.Features.Unity3dApi\Stratis.Features.Unity3dApi.csproj", "{B08D2057-F48D-4E72-99F4-95A35E6E0DFD}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Stratis.Bitcoin.Features.ExternalApi", "Stratis.Bitcoin.Features.ExternalAPI\Stratis.Bitcoin.Features.ExternalApi.csproj", "{21D41C53-62D8-4F68-A3D1-88BB2AB195E3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -493,6 +495,10 @@ Global
 		{B08D2057-F48D-4E72-99F4-95A35E6E0DFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B08D2057-F48D-4E72-99F4-95A35E6E0DFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B08D2057-F48D-4E72-99F4-95A35E6E0DFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21D41C53-62D8-4F68-A3D1-88BB2AB195E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21D41C53-62D8-4F68-A3D1-88BB2AB195E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21D41C53-62D8-4F68-A3D1-88BB2AB195E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21D41C53-62D8-4F68-A3D1-88BB2AB195E3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -563,6 +569,7 @@ Global
 		{3DCC6195-1271-4A12-8B94-E821925D98DC} = {15D29FFD-6142-4DC5-AFFD-10BA0CA55C45}
 		{F04464B5-9D56-4C9A-9778-27B9D314A296} = {1B9A916F-DDAC-4675-B424-EDEDC1A58231}
 		{B08D2057-F48D-4E72-99F4-95A35E6E0DFD} = {15D29FFD-6142-4DC5-AFFD-10BA0CA55C45}
+		{21D41C53-62D8-4F68-A3D1-88BB2AB195E3} = {15D29FFD-6142-4DC5-AFFD-10BA0CA55C45}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6C780ABA-5872-4B83-AD3F-A5BD423AD907}
