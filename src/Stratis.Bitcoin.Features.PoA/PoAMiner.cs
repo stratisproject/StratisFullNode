@@ -454,8 +454,6 @@ namespace Stratis.Bitcoin.Features.PoA
             if (timeHeader < currentHeader.Header.Time)
                 timeHeader += this.network.ConsensusOptions.TargetSpacingSeconds;
 
-            this.miningStatistics = new MiningStatisticsModel();
-
             // Iterate mining slots.
             for (int i = 0; i < maxDepth; i++)
             {

@@ -156,7 +156,6 @@ namespace Stratis.Bitcoin.Features.Api
                 ProcessId = Process.GetCurrentProcess().Id,
                 Network = this.fullNode.Network.Name,
                 ConsensusHeight = this.chainState.ConsensusTip?.Height,
-                HeaderHeight = this.consensusManager.HeaderTip,
                 DataDirectoryPath = this.nodeSettings.DataDir,
                 Testnet = this.network.IsTest(),
                 RelayFee = this.nodeSettings.MinRelayTxFeeRate?.FeePerK?.ToUnit(MoneyUnit.BTC) ?? 0,
@@ -166,6 +165,16 @@ namespace Stratis.Bitcoin.Features.Api
                 BestPeerHeight = this.chainState.BestPeerTip?.Height,
                 InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
             };
+
+            try
+            {
+                model.HeaderHeight = this.consensusManager.HeaderTip;
+            }
+            catch (Exception)
+            {
+                // It is possible that consensus manager has not yet initialized when calling this.
+                model.HeaderHeight = 0;
+            }
 
             // Add the list of features that are enabled.
             foreach (IFullNodeFeature feature in this.fullNode.Services.Features)
