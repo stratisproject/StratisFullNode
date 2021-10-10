@@ -163,9 +163,6 @@ namespace Stratis.Bitcoin.Features.PoA
             // Initialize the interop polling loop, to check for interop contract requests.
             this.miningStatisticsLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(this.miningStatisticsLoop), async (cancellation) =>
             {
-                if (this.ibdState.IsInitialBlockDownload())
-                    return;
-
                 try
                 {
                     this.GatherMiningStatistics();
@@ -188,6 +185,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (this.ibdState.IsInitialBlockDownload())
             {
+                log.AppendLine();
                 log.AppendLine("Mining information is not available whilst the node is syncing.");
                 log.AppendLine("The node will mine once it reaches the network's height.");
                 log.AppendLine();
