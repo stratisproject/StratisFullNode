@@ -146,7 +146,6 @@ namespace Stratis.Bitcoin.Features.PoA
             this.nodeSettings = nodeSettings;
 
             this.miningStatistics = new MiningStatisticsModel();
-            this.miningStatisticsLog = ">> Miner";
 
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
@@ -174,7 +173,7 @@ namespace Stratis.Bitcoin.Features.PoA
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.Minute,
-            startAfter: TimeSpans.Minute);
+            startAfter: TimeSpans.TenSeconds);
         }
 
         private void GatherMiningStatistics()
@@ -189,6 +188,9 @@ namespace Stratis.Bitcoin.Features.PoA
                 log.AppendLine("Mining information is not available whilst the node is syncing.");
                 log.AppendLine("The node will mine once it reaches the network's height.");
                 log.AppendLine();
+
+                this.miningStatisticsLog = log.ToString();
+
                 return;
             }
 
