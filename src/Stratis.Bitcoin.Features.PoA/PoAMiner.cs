@@ -181,13 +181,12 @@ namespace Stratis.Bitcoin.Features.PoA
             var log = new StringBuilder();
 
             log.AppendLine(">> Miner");
+            log.AppendLine();
 
             if (this.ibdState.IsInitialBlockDownload())
             {
-                log.AppendLine();
                 log.AppendLine("Mining information is not available whilst the node is syncing.");
                 log.AppendLine("The node will mine once it reaches the network's height.");
-                log.AppendLine();
 
                 this.miningStatisticsLog = log.ToString();
 
@@ -264,7 +263,6 @@ namespace Stratis.Bitcoin.Features.PoA
             log.AppendLine();
             log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
             log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": { TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
-            log.AppendLine();
 
             this.miningStatisticsLog = log.ToString();
         }
