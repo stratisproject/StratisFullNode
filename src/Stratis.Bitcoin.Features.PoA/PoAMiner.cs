@@ -421,19 +421,25 @@ namespace Stratis.Bitcoin.Features.PoA
             if (!string.IsNullOrWhiteSpace(this.poaSettings.MineAddress))
             {
                 this.walletScriptPubKey = BitcoinAddress.Create(this.poaSettings.MineAddress, this.network).ScriptPubKey;
+                this.miningStatistics.MiningAddress = this.poaSettings.MineAddress;
             }
             else
             {
                 // Get the first address from the wallet. In a network with an account-based model the mined UTXOs should all be sent to a predictable address.
                 if (this.walletScriptPubKey == null || this.walletScriptPubKey == Script.Empty)
                 {
-                    this.walletScriptPubKey = this.GetScriptPubKeyFromWallet();
+                    HdAddress miningAddress = this.GetMiningAddressFromWallet();
 
-                    // The node could not have a wallet, or the first account/address could have been incorrectly created.
-                    if (this.walletScriptPubKey == null)
+                    if (miningAddress == null)
                     {
+                        // The node could not have a wallet, or the first account/address could have been incorrectly created.
                         this.logger.LogWarning("The miner wasn't able to get an address from the wallet, you will not receive any rewards (if no wallet exists, please create one).");
                         this.walletScriptPubKey = new Script();
+                    }
+                    else
+                    {
+                        this.walletScriptPubKey = miningAddress.Pubkey;
+                        this.miningStatistics.MiningAddress = miningAddress.Address;
                     }
                 }
             }
@@ -496,7 +502,7 @@ namespace Stratis.Bitcoin.Features.PoA
         }
 
         /// <summary>Gets scriptPubKey from the wallet.</summary>
-        private Script GetScriptPubKeyFromWallet()
+        private HdAddress GetMiningAddressFromWallet()
         {
             string walletName = this.walletManager.GetWalletsNames().FirstOrDefault();
 
@@ -510,7 +516,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             HdAddress address = account.ExternalAddresses.FirstOrDefault();
 
-            return address?.Pubkey;
+            return address;
         }
 
         /// <summary>Adds OP_RETURN output to a coinbase transaction which contains encoded voting data.</summary>
@@ -562,7 +568,10 @@ namespace Stratis.Bitcoin.Features.PoA
         [JsonProperty(PropertyName = "minerHits")]
         public int MinerHits { get; set; }
 
-        [JsonProperty(PropertyName = "producedBlockInLastRound")]
+        [JsonProperty(PropertyName = "miningAddress")]
+        public string MiningAddress { get; set; }
+
+        [JsonProperty("producedBlockInLastRound")]
         public bool ProducedBlockInLastRound { get; set; }
     }
 }
