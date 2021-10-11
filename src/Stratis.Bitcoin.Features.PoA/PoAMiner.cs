@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Configuration.Logging;
@@ -37,6 +38,12 @@ namespace Stratis.Bitcoin.Features.PoA
     {
         /// <summary>Starts mining loop.</summary>
         void InitializeMining();
+
+        /// <summary>
+        /// Returns mining statistics in the last amount of blocks equal to the federation size.
+        /// </summary>
+        /// <returns>Returns <c>true</c> if the miner produced a block in the last round and block producer hits.</returns>
+        MiningStatisticsModel MiningStatistics { get; }
     }
 
     /// <inheritdoc cref="IPoAMiner"/>
@@ -74,6 +81,8 @@ namespace Stratis.Bitcoin.Features.PoA
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
 
         private readonly NodeSettings nodeSettings;
+
+        private MiningStatisticsModel miningStatistics;
 
         private readonly IWalletManager walletManager;
 
@@ -133,6 +142,8 @@ namespace Stratis.Bitcoin.Features.PoA
             this.votingDataEncoder = new VotingDataEncoder();
             this.nodeSettings = nodeSettings;
 
+            this.miningStatistics = new MiningStatisticsModel();
+
             nodeStats.RegisterStats(this.AddComponentStats, StatsType.Component, this.GetType().Name);
         }
 
@@ -190,6 +201,8 @@ namespace Stratis.Bitcoin.Features.PoA
 
                         continue;
                     }
+
+                    this.miningStatistics.LastBlockProducedHeight = chainedHeader.Height;
 
                     var builder = new StringBuilder();
                     builder.AppendLine("<<==============================================================>>");
@@ -420,7 +433,6 @@ namespace Stratis.Bitcoin.Features.PoA
                 log.AppendLine();
                 return;
             }
-
             ChainedHeader tip = this.consensusManager.Tip;
             ChainedHeader currentHeader = tip;
 
@@ -486,11 +498,19 @@ namespace Stratis.Bitcoin.Features.PoA
                     log.AppendLine();
             }
 
+            this.miningStatistics.MinerHits = hitCount;
+
             log.Append("...");
             log.AppendLine();
             log.AppendLine($"Miner hits".PadRight(LoggingConfiguration.ColumnLength) + $": {hitCount} of {maxDepth}({(((float)hitCount / (float)maxDepth)).ToString("P2")})");
             log.AppendLine($"Miner idle time".PadRight(LoggingConfiguration.ColumnLength) + $": { TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds * (maxDepth - hitCount)).ToString(@"hh\:mm\:ss")}");
             log.AppendLine();
+        }
+
+        /// <inheritdoc/>
+        public MiningStatisticsModel MiningStatistics
+        {
+            get { return this.miningStatistics; }
         }
 
         /// <inheritdoc/>
@@ -501,5 +521,14 @@ namespace Stratis.Bitcoin.Features.PoA
 
             this.cancellation.Dispose();
         }
+    }
+
+    public sealed class MiningStatisticsModel
+    {
+        [JsonProperty(PropertyName = "minerHits")]
+        public int MinerHits { get; set; }
+
+        [JsonProperty(PropertyName = "lastBlockProducedHeight")]
+        public int LastBlockProducedHeight { get; set; }
     }
 }

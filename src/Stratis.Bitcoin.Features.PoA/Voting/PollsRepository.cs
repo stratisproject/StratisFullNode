@@ -69,7 +69,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         var uniquePolls = new HashSet<Poll>(polls);
                         if (uniquePolls.Count != polls.Count)
                         {
-                            this.logger.Warn("The polls repo contains {0} duplicate polls. Will rebuild it.", polls.Count - uniquePolls.Count);
+                            this.logger.Warn("The polls repository contains {0} duplicate polls, it will be rebuilt.", polls.Count - uniquePolls.Count);
 
                             this.ResetLocked(transaction);
                             transaction.Commit();
@@ -79,7 +79,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                         Row<byte[], byte[]> rowTip = transaction.Select<byte[], byte[]>(DataTable, RepositoryTipKey);
                         if (!rowTip.Exists)
                         {
-                            this.logger.Info("The polls repository tip is unknown. Will re-build the repo.");
+                            this.logger.Info("The polls repository tip is unknown, it will be rebuilt.");
                             this.ResetLocked(transaction);
                             transaction.Commit();
                             return;
@@ -92,7 +92,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             return;
                         }
 
-                        this.logger.Info("The polls repository tip {0} was not found in the consensus chain. Determining fork.", this.CurrentTip);
+                        this.logger.Info("The polls repository tip {0} was not found in the consensus chain, determining fork.", this.CurrentTip);
 
                         // == Find fork.
                         // The polls repository tip could not be found in the consenus chain.
@@ -113,7 +113,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         if (maxGoodHeight == -1)
                         {
-                            this.logger.Info("No common blocks found. Will rebuild the repo from scratch.");
+                            this.logger.Info("No common blocks found; the repo will be rebuil from scratch.");
                             this.ResetLocked(transaction);
                             transaction.Commit();
                             return;
@@ -121,7 +121,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                         this.CurrentTip = new HashHeightPair(this.chainIndexer.GetHeader(maxGoodHeight));
 
-                        this.logger.Info("Common block found at height {0}. Will re-build the repo from there.", this.CurrentTip.Height);
+                        this.logger.Info("Common block found at height {0}; the repo will be rebuilt from there.", this.CurrentTip.Height);
 
                         // Trim polls to tip.
                         HashSet<Poll> pollsToDelete = new HashSet<Poll>();

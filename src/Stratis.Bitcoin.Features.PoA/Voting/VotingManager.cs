@@ -64,10 +64,16 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
         internal bool isInitialized;
 
-        public VotingManager(IFederationManager federationManager, IPollResultExecutor pollResultExecutor, INodeStats nodeStats,
-            DataFolder dataFolder, DBreezeSerializer dBreezeSerializer, ISignals signals, Network network,
+        public VotingManager(
+            IFederationManager federationManager,
+            IPollResultExecutor pollResultExecutor,
+            INodeStats nodeStats,
+            DataFolder dataFolder,
+            DBreezeSerializer dBreezeSerializer,
+            ISignals signals,
+            Network network,
+            ChainIndexer chainIndexer,
             IBlockRepository blockRepository = null,
-            ChainIndexer chainIndexer = null,
             INodeLifetime nodeLifetime = null)
         {
             this.federationManager = Guard.NotNull(federationManager, nameof(federationManager));
@@ -299,7 +305,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                     if (poll.VotingData.Key == VoteKey.AddFederationMember)
                     {
-                        if (federationMember is CollateralFederationMember colMember2 && federation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == colMember2.CollateralMainchainAddress))
+                        if (federationMember is CollateralFederationMember colMember2 && federation.IsCollateralAddressRegistered(colMember2.CollateralMainchainAddress))
                         {
                             this.logger.Debug("Not adding member '{0}' with duplicate collateral address '{1}'.", federationMember.PubKey.ToHex(), colMember2.CollateralMainchainAddress);
                             continue;
@@ -397,7 +403,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                             {
                                 if (straxEra && federationMember is CollateralFederationMember collateralFederationMember)
                                 {
-                                    if (modifiedFederation.Any(m => m is CollateralFederationMember colMember && colMember.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
+                                    if (modifiedFederation.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
                                     {
                                         this.logger.Debug("Not adding member '{0}' with duplicate collateral address '{1}'.", collateralFederationMember.PubKey.ToHex(), collateralFederationMember.CollateralMainchainAddress);
                                         continue;
@@ -825,7 +831,11 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
 
                             if (header.Height % 10000 == 0)
                             {
-                                this.logger.Info($"Synchronizing voting data at height {header.Height}.");
+                                var progress = (int)((decimal)header.Height / this.chainIndexer.Tip.Height * 100);
+                                var progressString = $"Synchronizing voting data at height {header.Height} / {this.chainIndexer.Tip.Height} ({progress} %).";
+
+                                this.logger.Info(progressString);
+                                this.signals.Publish(new FullNodeEvent() { Message = progressString, State = FullNodeState.Initializing.ToString() });
                             }
                         }
 

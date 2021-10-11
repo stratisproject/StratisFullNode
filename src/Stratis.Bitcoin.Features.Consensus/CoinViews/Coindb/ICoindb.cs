@@ -9,10 +9,9 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
     /// </summary>
     public interface ICoindb
     {
-        /// <summary>
-        /// Initialize the coindb.
-        /// </summary>
-        void Initialize();
+        /// <summary> Initialize the coin database.</summary>
+        /// <param name="chainTip">The current chain's tip.</param>
+        void Initialize(ChainedHeader chainTip);
 
         /// <summary>
         /// Retrieves the block hash of the current tip of the coinview.

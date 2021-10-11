@@ -352,7 +352,7 @@ if ( $NodeType -eq "50K" )
     #Launching GETH
     $API = $gethAPIPort
     Write-Host (Get-TimeStamp) "Starting GETH Masternode" -ForegroundColor Cyan
-    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --rpc --rpccorsdomain=* --rpcapi web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
+    $StartNode = Start-Process 'geth.exe' -ArgumentList "--syncmode fast --http --http.corsdomain=* --http.api web3,eth,debug,personal,net --datadir=$ethDataDir" -PassThru
 
     While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort $API ) ) 
     {
@@ -699,8 +699,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUC8xDiA6yoOjBAg3qXGurZz7P
-# Q4+gggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUMneAuY71wUQ1JxjJKwldpbjd
+# yJagggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -770,11 +770,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUF1zPCPT0rdJl
-# PV5+s7QjwoaN0kMwDQYJKoZIhvcNAQEBBQAEggEATpxAiDBy6diLO7w04R3nC2IJ
-# OFoScSFa5WX+RV8caNixMmNNrSR4CVL4Nms+FDvHgkQCx6DeT2j+s6eSu7HrN52x
-# EnxAh3B3nbIzhpLNkMmUyD6Y9/GWUgxwaseAI02kwH2flE66FFCH67cIFinODPzE
-# G8AWIapxeyl6uMSY6vgPbfzI97KKlQpAGKf0Owm+zXuIDC+8nmJsC1dujFgjBYhw
-# yq2Isiv3rkFrQdTu9ewr1QgrjNlUiSqzTGFgvupyVjDe6c8QcF1yNgrZMXdghurC
-# Hidj7vx+2kMaqPeytzoaPwvJTC2dF2CcGW8EkYG5c8Itj805N/vEiEGJQpE0yw==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUe67v0mzognnl
+# bBzQ1yHZ5qvgnygwDQYJKoZIhvcNAQEBBQAEggEATvrz/GW8mdDKzKtn+ZpIptlG
+# n7WrTVFcLwRyEZVvIuOIt5sAvZNMm/sy1gWNqyZFdjFxKj7vixKiz0BdWEnoP5Oa
+# 1YYKpF7I7HE771kcabNGWtrPDX/6v1hKsdHy50DW/FH3UZgqbBOUKj4DURnCOcTC
+# Ew7+9Uz0DO5lwj15So33Sb8bfi7nZQBaPmve/MoxxyKaW865lUVTnoT4jXbpHbjQ
+# oCt2TX87IHFF5rJxnNq7tPcBCI6wHam/gayAXF40ikQvHExVvk/YwgyC1673qvf5
+# bdtCtCKcueSC7vOFn3m9lfApD5FSK0111Rrp5dIXNB4LdmjsyHHy6BWPmunwug==
 # SIG # End signature block

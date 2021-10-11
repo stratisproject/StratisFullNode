@@ -290,7 +290,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             if (federationMember is CollateralFederationMember collateralFederationMember)
             {
-                if (this.federationMembers.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralFederationMember.CollateralMainchainAddress))
+                if (this.federationMembers.IsCollateralAddressRegistered(collateralFederationMember.CollateralMainchainAddress))
                 {
                     this.logger.Trace("(-)[DUPLICATED_COLLATERAL_ADDR]");
                     return;
@@ -343,7 +343,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             if (this.network.MultisigMinersApplicabilityHeight == null)
                 return null;
-            
+
             if (consensusManager.Tip.Height < this.network.MultisigMinersApplicabilityHeight)
                 return null;
 
@@ -353,6 +353,24 @@ namespace Stratis.Bitcoin.Features.PoA
         public bool IsMultisigMember(PubKey pubKey)
         {
             return this.GetFederationMembers().Any(m => m.PubKey == pubKey && m is CollateralFederationMember member && member.IsMultisigMember);
+        }
+    }
+
+    public static class FederationExtensions
+    {
+        /// <summary>
+        /// Checks to see if a particular collateral address is already present in the current set of 
+        /// federation members.
+        /// </summary>
+        /// <param name="federationMembers">The list of federation members to check against.</param>
+        /// <param name="collateralAddress">The collateral address to verify.</param>
+        /// <returns><c>true</c> if present, <c>false</c> otherwise.</returns>
+        public static bool IsCollateralAddressRegistered(this List<IFederationMember> federationMembers, string collateralAddress)
+        {
+            if (federationMembers.Cast<CollateralFederationMember>().Any(x => x.CollateralMainchainAddress == collateralAddress))
+                return true;
+
+            return false;
         }
     }
 }

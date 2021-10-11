@@ -41,6 +41,29 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         }
 
         /// <summary>
+        /// Retrieves the tip of the polls repository.
+        /// </summary>
+        /// <returns>The poll repository tip.</returns>
+        /// <response code="200">The request succeeded.</response>
+        /// <response code="400">Unexpected exception occurred</response>
+        [Route("polls/tip")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public IActionResult GetPollsRepositoryTip()
+        {
+            try
+            {
+                return this.Json(this.votingManager.GetPollsRepositoryTip().Height);
+            }
+            catch (Exception e)
+            {
+                this.logger.Error("Exception occurred: {0}", e.ToString());
+                return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, e.Message, e.ToString());
+            }
+        }
+
+        /// <summary>
         /// Retrieves a list of pending or "active" polls.
         /// </summary>
         /// <returns>Active polls</returns>
@@ -268,14 +291,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             {
                 IFederationMember federationMember = this.federationManager.GetFederationMembers().SingleOrDefault(m => m.PubKey.ToHex() == model.PubKey);
                 if (federationMember == null)
-                    return BadRequest($"'{model.PubKey}' is not currently a federation member.");
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"'{model.PubKey}' is not currently a federation member.", string.Empty);
 
                 var consensusFactory = this.network.Consensus.ConsensusFactory as PoAConsensusFactory;
                 byte[] federationMemberBytes = consensusFactory.SerializeFederationMember(federationMember);
 
                 bool alreadyKicking = this.votingManager.AlreadyVotingFor(VoteKey.KickFederationMember, federationMemberBytes);
                 if (alreadyKicking)
-                    return BadRequest($"Skipping because kicking {model.PubKey} is already being voted on.");
+                    return ErrorHelpers.BuildErrorResponse(HttpStatusCode.BadRequest, $"Skipping because kicking {model.PubKey} is already being voted on.", string.Empty);
 
                 this.votingManager.ScheduleVote(new VotingData()
                 {
