@@ -441,7 +441,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader, 1);
 
-            int maxDepth = 20;// modifiedFederation.Count;
+            int maxDepth = modifiedFederation.Count;
 
             log.AppendLine($"Mining information for the last { maxDepth } blocks.");
             log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
