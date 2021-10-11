@@ -550,7 +550,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             this.cancellation.Cancel();
             this.miningTask?.GetAwaiter().GetResult();
-
+            this.miningStatisticsLoop?.Dispose();
             this.cancellation.Dispose();
         }
     }
