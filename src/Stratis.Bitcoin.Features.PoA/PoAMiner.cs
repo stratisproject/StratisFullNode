@@ -160,7 +160,7 @@ namespace Stratis.Bitcoin.Features.PoA
             }
 
             // Initialize the interop polling loop, to check for interop contract requests.
-            this.miningStatisticsLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(this.miningStatisticsLoop), async (cancellation) =>
+            this.miningStatisticsLoop = this.asyncProvider.CreateAndRunAsyncLoop(nameof(this.miningStatisticsLoop), (cancellation) =>
             {
                 try
                 {
@@ -170,6 +170,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 {
                     this.logger.LogWarning("Exception raised when gathering mining statistics; {0}", e);
                 }
+
+                return Task.CompletedTask;
             },
             this.nodeLifetime.ApplicationStopping,
             repeatEvery: TimeSpans.Minute,
