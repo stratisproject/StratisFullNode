@@ -89,7 +89,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
-                ChainedHeader chainTip = this.chainIndexer.Tip;
                 federationMemberModel.FederationSize = this.federationManager.GetFederationMembers().Count;
 
                 KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == this.federationManager.CurrentFederationKey.PubKey);
@@ -97,9 +96,6 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                 {
                     federationMemberModel.LastActiveTime = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
                     federationMemberModel.PeriodOfInActivity = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(lastActive.Value);
-
-                    var roundDepth = chainTip.Height - federationMemberModel.FederationSize;
-                    federationMemberModel.ProducedBlockInLastRound = this.poaMiner.MiningStatistics.LastBlockProducedHeight >= roundDepth;
                 }
 
                 // Is this member part of a pending poll
