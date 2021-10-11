@@ -248,7 +248,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
                 if (timeNow <= this.consensusManager.Tip.Header.Time)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
                     continue;
                 }
 
@@ -266,12 +266,10 @@ namespace Stratis.Bitcoin.Features.PoA
                     }
                 }
 
-                int estimatedWaitingTime = (int)(myTimestamp - timeNow) - 1;
-
-                if (estimatedWaitingTime <= 0)
+                if (myTimestamp <= (timeNow + 1))
                     return myTimestamp.Value;
 
-                await Task.Delay(TimeSpan.FromMilliseconds(500), this.cancellation.Token).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), this.cancellation.Token).ConfigureAwait(false);
             }
 
             throw new OperationCanceledException();
@@ -281,7 +279,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             ChainedHeader tip = this.consensusManager.Tip;
 
-            // Timestamp should always be greater than prev one.
+            // Timestamp should always be greater than prev one.            
             if (timestamp <= tip.Header.Time)
             {
                 // Can happen only when target spacing had crazy low value or key was compromised and someone is mining with our key.
@@ -431,7 +429,7 @@ namespace Stratis.Bitcoin.Features.PoA
 
             List<IFederationMember> modifiedFederation = this.federationHistory.GetFederationForBlock(currentHeader, 1);
 
-            int maxDepth = modifiedFederation.Count;
+            int maxDepth = 20;// modifiedFederation.Count;
 
             log.AppendLine($"Mining information for the last { maxDepth } blocks.");
             log.AppendLine("Note that '<' and '>' surrounds a slot where a miner didn't produce a block.");
