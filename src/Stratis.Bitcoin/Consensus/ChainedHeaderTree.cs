@@ -673,6 +673,10 @@ namespace Stratis.Bitcoin.Consensus
                 return new ConnectNewHeadersResult() { Consumed = this.chainedHeadersByHash[lastHash] };
             }
 
+            // Discard any headers beyond my next mineable block as they won't be usable anyway. We'll be "living in the past" until that block is mined.
+            uint nextMineableSlot = this.chainWorkComparer.GetNextMineableSlot();
+            headers = headers.TakeWhile(h => h.Time < nextMineableSlot).ToList();
+
             List<ChainedHeader> newChainedHeaders = this.CreateNewHeaders(headers, out bool insufficientInfo);
 
             if (insufficientInfo)
