@@ -246,32 +246,21 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 uint timeNow = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
 
-                if (timeNow <= this.consensusManager.Tip.Header.Time)
+                try
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
-                    continue;
+                    myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
+                }
+                catch (NotAFederationMemberException)
+                {
+                    this.logger.LogWarning("This node is no longer a federation member!");
+
+                    throw new OperationCanceledException();
                 }
 
-                if (myTimestamp == null)
-                {
-                    try
-                    {
-                        myTimestamp = this.slotsManager.GetMiningTimestamp(timeNow);
-                    }
-                    catch (NotAFederationMemberException)
-                    {
-                        this.logger.LogWarning("This node is no longer a federation member!");
-
-                        throw new OperationCanceledException();
-                    }
-                }
-
-                int estimatedWaitingTime = (int)(myTimestamp - timeNow) - 1;
-
-                if (estimatedWaitingTime <= 0)
+                if (myTimestamp <= timeNow)
                     return myTimestamp.Value;
 
-                await Task.Delay(TimeSpan.FromMilliseconds(500), this.cancellation.Token).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), this.cancellation.Token).ConfigureAwait(false);
             }
 
             throw new OperationCanceledException();
@@ -281,7 +270,7 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             ChainedHeader tip = this.consensusManager.Tip;
 
-            // Timestamp should always be greater than prev one.
+            // Timestamp should always be greater than prev one.            
             if (timestamp <= tip.Header.Time)
             {
                 // Can happen only when target spacing had crazy low value or key was compromised and someone is mining with our key.
