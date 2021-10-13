@@ -33,7 +33,7 @@ namespace Stratis.Bitcoin.Features.PoA
         public uint GetNextMineableSlot()
         {
             uint timeNow = (uint)this.dateTimeProvider.GetAdjustedTimeAsUnixTimestamp();
-            
+
             return this.slotsManager.GetMiningTimestamp(timeNow);
         }
 
@@ -41,12 +41,6 @@ namespace Stratis.Bitcoin.Features.PoA
         {
             if (headerA.HashBlock == headerB.HashBlock)
                 return 0;
-
-            if (headerA.Previous?.HashBlock == headerB.HashBlock)
-                return 1;
-
-            if (headerA.HashBlock == headerB.Previous?.HashBlock)
-                return -1;
 
             // A strategy that favors filling ALL mining slots takes priority for the last few blocks.
             // Chain A: A B C | - E F
@@ -64,10 +58,6 @@ namespace Stratis.Bitcoin.Features.PoA
                 return cmp;
 
             // Non-rewindable blocks are the same length.
-            // If only one chain has rewindable blocks then that chain is the winner.
-            if ((lastOfA.Length == 0) != (lastOfB.Length == 0))
-                return (lastOfA.Length == 0) ? -1 : 1;
-
             // Otherwise the chain containing the first earlier block is the winner.
             int min = Math.Min(lastOfA.Length, lastOfB.Length);
             for (int i = 0; i < min; i++)
