@@ -105,10 +105,11 @@ namespace Stratis.Sidechains.Networks
                 maxBlockSigopsCost: 20_000,
                 maxStandardTxSigopsCost: 20_000 / 5,
                 genesisFederationMembers: genesisFederationMembers,
-                targetSpacingSeconds: 16,
+                targetSpacingSeconds: 5,
                 votingEnabled: true,
                 autoKickIdleMembers: true)
             {
+                GetMiningTimestampV2ActivationHeight = 100,
                 PollExpiryBlocks = 450 // 2 hours
             };
 
