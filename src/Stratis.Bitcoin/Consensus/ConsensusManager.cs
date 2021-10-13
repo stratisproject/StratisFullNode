@@ -72,6 +72,8 @@ namespace Stratis.Bitcoin.Consensus
 
         private readonly IFinalizedBlockInfoRepository finalizedBlockInfo;
 
+        private readonly IChainWorkComparer chainWorkComparer;
+
         /// <remarks>All access should be protected by <see cref="peerLock"/>.</remarks>
         private readonly IBlockPuller blockPuller;
 
@@ -156,7 +158,8 @@ namespace Stratis.Bitcoin.Consensus
             INodeStats nodeStats,
             INodeLifetime nodeLifetime,
             ConsensusSettings consensusSettings,
-            IDateTimeProvider dateTimeProvider)
+            IDateTimeProvider dateTimeProvider,
+            IChainWorkComparer chainWorkComparer)
         {
             Guard.NotNull(chainedHeaderTree, nameof(chainedHeaderTree));
             Guard.NotNull(network, nameof(network));
@@ -178,6 +181,7 @@ namespace Stratis.Bitcoin.Consensus
             Guard.NotNull(nodeLifetime, nameof(nodeLifetime));
             Guard.NotNull(consensusSettings, nameof(consensusSettings));
             Guard.NotNull(dateTimeProvider, nameof(dateTimeProvider));
+            Guard.NotNull(chainWorkComparer, nameof(chainWorkComparer));
 
             this.network = network;
             this.chainState = chainState;
@@ -194,6 +198,7 @@ namespace Stratis.Bitcoin.Consensus
             this.nodeLifetime = nodeLifetime;
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.dateTimeProvider = dateTimeProvider;
+            this.chainWorkComparer = chainWorkComparer;
 
             this.chainedHeaderTree = chainedHeaderTree;
 
@@ -641,6 +646,21 @@ namespace Stratis.Bitcoin.Consensus
             if (!isExtension)
                 disconnectedBlocks = await this.RewindToForkPointAsync(fork, oldTip).ConfigureAwait(false);
 
+            // Don't attach externally provided blocks that are beyond our next mineable slot.
+            if (!this.isIbd && !blockMined)
+            {
+                uint nextMiningSlot = this.chainWorkComparer.GetNextMineableSlot();
+                while (newTip.Header.Time >= nextMiningSlot)
+                    newTip = newTip.Previous;
+
+                if (newTip.Height <= fork.Height)
+                {
+                    if (disconnectedBlocks != null)
+                        await this.ReconnectOldChainAsync(disconnectedBlocks).ConfigureAwait(false);
+                    return null;
+                }
+            }
+
             List<ChainedHeaderBlock> blocksToConnect = this.TryGetBlocksToConnect(newTip, fork.Height + 1);
 
             // Sanity check. This should never happen.
@@ -1018,6 +1038,12 @@ namespace Stratis.Bitcoin.Consensus
         /// <param name="onBlockDownloadedCallback">A callback to call when the block was downloaded.</param>
         private void DownloadBlocks(ChainedHeader[] chainedHeaders, OnBlockDownloadedCallback onBlockDownloadedCallback = null)
         {
+            // If we're out of IBD then don't bother downloading blocks beyond our next mineable slot.
+            if (!this.isIbd)
+            {
+                chainedHeaders = chainedHeaders.Where(h => h.Header.Time < this.chainWorkComparer.GetNextMineableSlot()).ToArray();
+            }
+
             var downloadRequests = new List<BlockDownloadRequest>();
 
             BlockDownloadRequest request = null;
