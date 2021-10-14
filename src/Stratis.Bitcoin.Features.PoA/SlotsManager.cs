@@ -102,13 +102,13 @@ namespace Stratis.Bitcoin.Features.PoA
 
             uint nextTimestampForMining = (uint)(tipTime + blocksFromTipToMiningSlot * this.consensusOptions.TargetSpacingSeconds);
             // If more than PoAChainWorkComparer.MaximumRewindBlocks in the past then advance the time slot.
-            uint minimumTimestampForMining = currentTime - PoAChainWorkComparer.MaximumRewindBlocks * this.consensusOptions.TargetSpacingSeconds;
-            while (nextTimestampForMining < minimumTimestampForMining || nextTimestampForMining == tipTime)
+            uint minimumTimestampForMining = currentTime - (uint)(this.consensusOptions.MaxRewindBlocks * this.consensusOptions.TargetSpacingSeconds);
+            while (nextTimestampForMining + (this.consensusOptions.TargetSpacingSeconds / 2) < minimumTimestampForMining || nextTimestampForMining == tipTime)
                 nextTimestampForMining += roundTime;
 
             return nextTimestampForMining;
         }
-
+        
         /// <inheritdoc />
         public uint GetMiningTimestampLegacy(uint currentTime)
         {

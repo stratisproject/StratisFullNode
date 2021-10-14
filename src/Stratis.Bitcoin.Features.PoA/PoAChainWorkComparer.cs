@@ -12,22 +12,20 @@ namespace Stratis.Bitcoin.Features.PoA
     /// </summary>
     public class PoAChainWorkComparer : Comparer<ChainedHeader>, IChainWorkComparer
     {
-        public const int MaximumRewindBlocks = 3;
-
-        private readonly Network network;
+        private readonly PoANetwork network;
         private readonly ISlotsManager slotsManager;
         private readonly IDateTimeProvider dateTimeProvider;
 
         public PoAChainWorkComparer(Network network, ISlotsManager slotsManager, IDateTimeProvider dateTimeProvider)
         {
-            this.network = network;
+            this.network = (PoANetwork)network;
             this.slotsManager = slotsManager;
             this.dateTimeProvider = dateTimeProvider;
         }
 
         public TimeSpan BlockProductionTime()
         {
-            return TimeSpan.FromSeconds(((PoAConsensusOptions)this.network.Consensus.Options).TargetSpacingSeconds);
+            return TimeSpan.FromSeconds(this.network.ConsensusOptions.TargetSpacingSeconds);
         }
 
         public uint GetNextMineableSlot()
@@ -46,7 +44,7 @@ namespace Stratis.Bitcoin.Features.PoA
             // Chain A: A B C | - E F
             // Chain B: A B C | D <= WINNER
 
-            TimeSpan maximumRewindSeconds = BlockProductionTime() * MaximumRewindBlocks;
+            TimeSpan maximumRewindSeconds = BlockProductionTime() * this.network.ConsensusOptions.MaxRewindBlocks;
             DateTimeOffset lastPermBlockA = headerA.Header.BlockTime - maximumRewindSeconds;
             DateTimeOffset lastPermBlockB = headerB.Header.BlockTime - maximumRewindSeconds;
             ChainedHeader[] lastOfA = headerA.EnumerateToGenesis().TakeWhile(h => h.Height > 0 && h.Header.BlockTime >= lastPermBlockA).Reverse().ToArray();

@@ -106,7 +106,8 @@ namespace Stratis.Bitcoin.Features.PoA
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
+                autoKickIdleMembers: true,
+                maxRewindBlocks: 3
             )
             {
                 PollExpiryBlocks = 450

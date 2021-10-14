@@ -122,6 +122,7 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
+                maxRewindBlocks: 3,
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 3 // 3 Hours
             )
             {
