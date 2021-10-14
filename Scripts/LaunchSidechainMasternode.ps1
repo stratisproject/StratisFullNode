@@ -658,30 +658,16 @@ if ( ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort ) -and (
 
 ""
 #Launching Masternode Dashboard
-<#
-Set-Location $stratisMasternodeDashboardCloneDir
-if ( $NodeType -eq "50K" )
+
+Set-Location $stratisMasternodeDashboardCloneDir\src\StratisMasternodeDashboard
+Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard" -ForegroundColor Cyan
+$Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
+While ( $Clean.HasExited -ne $true ) 
 {
-    Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (50K Mode)" -ForegroundColor Cyan
-    $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-    While ( $Clean.HasExited -ne $true )  
-    {
-        Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-        Start-Sleep 3
-    }
-    Start-Process dotnet.exe -ArgumentList "run -c Release -- --nodetype 50K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
+    Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
+    Start-Sleep 3
 }
-    Else
-    {
-        Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (10K Mode)" -ForegroundColor Cyan
-        $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-        While ( $Clean.HasExited -ne $true ) 
-        {
-            Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-            Start-Sleep 3
-        }
-        Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
-    }
+Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet --sdadaocontractaddress CbtYboKjnk7rhNbEFzn94UZikde36h6TCb" -WindowStyle Hidden
 
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue ) )
 {
@@ -691,7 +677,7 @@ While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction
 
 Start-Process http://localhost:37000
 Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -ForegroundColor Green
-#>
+
 
 Exit
 
