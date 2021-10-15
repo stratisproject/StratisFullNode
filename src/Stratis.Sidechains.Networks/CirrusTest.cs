@@ -122,6 +122,7 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
+                maxRewindBlocks: 3,
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 3 // 3 Hours
             )
             {
@@ -130,7 +131,8 @@ namespace Stratis.Sidechains.Networks
                 EnforcedMinProtocolVersion = ProtocolVersion.CIRRUS_VERSION, // minimum protocol version which will be enforced at block height defined in EnforceMinProtocolVersionAtBlockHeight
                 VotingManagerV2ActivationHeight = 1_999_500,
                 Release1100ActivationHeight = 2_575_000,
-                PollExpiryBlocks = 450 // 2 hours
+                PollExpiryBlocks = 450, // 2 hours
+                GetMiningTimestampV2ActivationHeight = 2_600_000
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -163,7 +165,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(20_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                targetSpacing: TimeSpan.FromSeconds(16),
+                targetSpacing: TimeSpan.FromSeconds(consensusOptions.TargetSpacingSeconds),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: true,

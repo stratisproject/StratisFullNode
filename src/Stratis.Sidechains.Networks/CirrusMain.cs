@@ -170,6 +170,7 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true,
+                maxRewindBlocks: 3,
                 federationMemberMaxIdleTimeSeconds: 60 * 60 * 24 * 2 // 2 days
             )
             {
@@ -179,7 +180,8 @@ namespace Stratis.Sidechains.Networks
                 InterFluxV2MainChainActivationHeight = 460_000,
                 VotingManagerV2ActivationHeight = 1_683_000, // Tuesday, 12 January 2021 9:00:00 AM (Estimated)
                 Release1100ActivationHeight = 3_200_000,
-                PollExpiryBlocks = 50_000 // Roughly 9 days
+                PollExpiryBlocks = 50_000, // Roughly 9 days
+                GetMiningTimestampV2ActivationHeight = 3_000_000 // Saturday, 25th September 2021 (Estimated)
             };
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -212,7 +214,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(100_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                targetSpacing: TimeSpan.FromSeconds(16),
+                targetSpacing: TimeSpan.FromSeconds(consensusOptions.TargetSpacingSeconds),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: false,
                 powNoRetargeting: true,

@@ -24,6 +24,9 @@ namespace Stratis.Bitcoin.Features.PoA
         /// <remarks>Requires voting to be enabled to be set <c>true</c>.</remarks>
         public bool AutoKickIdleMembers { get; set; }
 
+        /// <summary>The maximum number of blocks to rewind to accomodate blocks that arrive late.</summary>
+        public int MaxRewindBlocks;
+
         /// <summary>Time that federation member has to be idle to be kicked by others in case <see cref="AutoKickIdleMembers"/> is enabled.</summary>
         public uint FederationMemberMaxIdleTimeSeconds { get; protected set; }
 
@@ -51,6 +54,13 @@ namespace Stratis.Bitcoin.Features.PoA
         public int InterFluxV2MainChainActivationHeight { get; set; }
 
         /// <summary>
+        /// The height at which inituitive mining slots become active.
+        /// Legacy mining slots are determined by mining_slot = block_height % number_of_federation_members.
+        /// Once the specified height is reached there should no longer be a shift in mining slots when new federation members are added/removed.
+        /// </summary>
+        public int GetMiningTimestampV2ActivationHeight { get; set; }
+
+        /// <summary>
         /// Logic related to release 1.1.0.0 will activate at this height, this includes Poll Expiry and the Join Federation Voting Request consensus rule.
         /// </summary>
         public int Release1100ActivationHeight { get; set; }
@@ -72,6 +82,7 @@ namespace Stratis.Bitcoin.Features.PoA
             uint targetSpacingSeconds,
             bool votingEnabled,
             bool autoKickIdleMembers,
+            int maxRewindBlocks = 0,
             uint federationMemberMaxIdleTimeSeconds = 60 * 60 * 24 * 7)
                 : base(maxBlockBaseSize, maxStandardVersion, maxStandardTxWeight, maxBlockSigopsCost, maxStandardTxSigopsCost, witnessScaleFactor: 1)
         {
@@ -79,6 +90,7 @@ namespace Stratis.Bitcoin.Features.PoA
             this.TargetSpacingSeconds = targetSpacingSeconds;
             this.VotingEnabled = votingEnabled;
             this.AutoKickIdleMembers = autoKickIdleMembers;
+            this.MaxRewindBlocks = maxRewindBlocks;
             this.FederationMemberMaxIdleTimeSeconds = federationMemberMaxIdleTimeSeconds;
             this.InterFluxV2MainChainActivationHeight = 0;
 

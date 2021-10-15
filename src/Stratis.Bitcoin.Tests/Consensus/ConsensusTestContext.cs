@@ -113,6 +113,8 @@ namespace Stratis.Bitcoin.Tests.Consensus
             // Dont check PoW of a header in this test.
             this.Network.Consensus.ConsensusRules.HeaderValidationRules.RemoveAll(x => x.GetType() == typeof(CheckDifficultyPowRule));
 
+            var chainWorkComparer = new ChainWorkComparer();
+
             this.ChainedHeaderTree = new ChainedHeaderTree(
                   this.Network,
                   this.loggerFactory,
@@ -122,7 +124,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
                   this.FinalizedBlockMock.Object,
                   this.ConsensusSettings,
                   this.hashStore,
-                  new ChainWorkComparer());
+                  chainWorkComparer);
 
             this.peerAddressManager = new PeerAddressManager(DateTimeProvider.Default, this.nodeSettings.DataFolder, this.loggerFactory, this.selfEndpointTracker);
 
@@ -162,7 +164,7 @@ namespace Stratis.Bitcoin.Tests.Consensus
             ConsensusManager consensusManager = new ConsensusManager(tree, this.Network, this.loggerFactory, this.ChainState.Object, this.IntegrityValidator.Object,
                 this.PartialValidator.Object, this.FullValidator.Object, this.consensusRules,
                 this.FinalizedBlockMock.Object, this.signals, this.peerBanning, this.ibd.Object, this.chainIndexer,
-                this.BlockPuller.Object, this.BlockStore.Object, this.connectionManager, this.nodeStats, this.nodeLifetime, this.ConsensusSettings, this.dateTimeProvider);
+                this.BlockPuller.Object, this.BlockStore.Object, this.connectionManager, this.nodeStats, this.nodeLifetime, this.ConsensusSettings, this.dateTimeProvider, chainWorkComparer);
 
             this.TestConsensusManager = new TestConsensusManager(consensusManager);
         }

@@ -89,7 +89,8 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true
+                autoKickIdleMembers: true,
+                maxRewindBlocks: 3
             );
 
             var buriedDeployments = new BuriedDeploymentsArray
@@ -122,7 +123,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(1_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                targetSpacing: TimeSpan.FromSeconds(16),
+                targetSpacing: TimeSpan.FromSeconds(consensusOptions.TargetSpacingSeconds),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,

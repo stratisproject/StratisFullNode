@@ -107,8 +107,10 @@ namespace Stratis.Sidechains.Networks
                 genesisFederationMembers: genesisFederationMembers,
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
-                autoKickIdleMembers: true)
+                autoKickIdleMembers: true,
+                maxRewindBlocks: 3)
             {
+                GetMiningTimestampV2ActivationHeight = 100,
                 PollExpiryBlocks = 450 // 2 hours
             };
 
@@ -142,7 +144,7 @@ namespace Stratis.Sidechains.Networks
                 premineReward: Money.Coins(20_000_000),
                 proofOfWorkReward: Money.Coins(0),
                 powTargetTimespan: TimeSpan.FromDays(14), // two weeks
-                targetSpacing: TimeSpan.FromSeconds(16),
+                targetSpacing: TimeSpan.FromSeconds(consensusOptions.TargetSpacingSeconds),
                 powAllowMinDifficultyBlocks: false,
                 posNoRetargeting: true,
                 powNoRetargeting: true,
@@ -183,7 +185,7 @@ namespace Stratis.Sidechains.Networks
             this.StandardScriptsRegistry = new PoAStandardScriptsRegistry();
 
             // 16 below should be changed to TargetSpacingSeconds when we move that field.
-            Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
+            // Assert(this.DefaultBanTimeSeconds <= this.Consensus.MaxReorgLength * this.Consensus.TargetSpacing.TotalSeconds / 2);
 
             // TODO: Do we need Asserts for block hash
 

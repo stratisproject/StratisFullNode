@@ -540,7 +540,8 @@ namespace Stratis.Bitcoin.Base
                         nodeStats: provider.GetService<INodeStats>(),
                         nodeLifetime: provider.GetService<INodeLifetime>(),
                         consensusSettings: provider.GetService<ConsensusSettings>(),
-                        dateTimeProvider: provider.GetService<IDateTimeProvider>()));
+                        dateTimeProvider: provider.GetService<IDateTimeProvider>(),
+                        chainWorkComparer: provider.GetService<IChainWorkComparer>()));
 
                     services.AddSingleton<IChainWorkComparer, ChainWorkComparer>();
                     services.AddSingleton<IChainedHeaderTree, ChainedHeaderTree>();

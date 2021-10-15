@@ -62,7 +62,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.chainIndexerMock = new Mock<ChainIndexer>();
             var header = new BlockHeader();
             this.chainIndexerMock.Setup(x => x.Tip).Returns(new ChainedHeader(header, header.GetHash(), 0));
-            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.chainIndexerMock.Object, this.loggerFactory);
+            this.slotsManager = new SlotsManager(this.network, this.federationManager, this.federationHistory, this.chainIndexerMock.Object, this.loggerFactory);
 
             this.poaHeaderValidator = new PoABlockHeaderValidator(this.loggerFactory);
             this.asyncProvider = new AsyncProvider(this.loggerFactory, this.signals);
@@ -72,7 +72,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
             this.resultExecutorMock = new Mock<IPollResultExecutor>();
 
             this.votingManager = new VotingManager(this.federationManager, this.resultExecutorMock.Object, new NodeStats(dateTimeProvider, NodeSettings.Default(this.network), new Mock<IVersionProvider>().Object), dataFolder,
-                this.dBreezeSerializer, this.signals, this.network, null, this.chainIndexerMock.Object);
+                this.dBreezeSerializer, this.signals, this.network, null, this.chainIndexerMock.Object, null);
 
             this.votingManager.Initialize(this.federationHistory);
 
@@ -123,7 +123,7 @@ namespace Stratis.Bitcoin.Features.PoA.Tests
                 return members[chainedHeader.Height % members.Count];
             });
 
-            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>())).Returns<ChainedHeader>((chainedHeader) =>
+            federationHistory.Setup(x => x.GetFederationForBlock(It.IsAny<ChainedHeader>(), It.IsAny<int>())).Returns<ChainedHeader, int>((chainedHeader, offset) =>
             {
                 return ((PoAConsensusOptions)network.Consensus.Options).GenesisFederationMembers;
             });

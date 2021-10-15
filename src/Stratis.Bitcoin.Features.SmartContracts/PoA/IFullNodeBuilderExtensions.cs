@@ -63,6 +63,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.PoA
                     {
                         services.ConfigureCoinDatabaseImplementation(dbType);
                         services.AddSingleton(typeof(IContractTransactionPartialValidationRule), typeof(SmartContractFormatLogic));
+                        services.AddSingleton<IChainWorkComparer, PoAChainWorkComparer>();
                         services.AddSingleton<IConsensusRuleEngine, PoAConsensusRuleEngine>();
                         services.AddSingleton<ICoinView, CachedCoinView>();
                     });
