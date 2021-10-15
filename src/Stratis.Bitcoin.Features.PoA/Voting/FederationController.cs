@@ -20,6 +20,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IIdleFederationMembersKicker idleFederationMembersKicker;
         private readonly ILogger logger;
         private readonly Network network;
+        private readonly IPoAMiner poaMiner;
         private readonly ReconstructFederationService reconstructFederationService;
         private readonly VotingManager votingManager;
 
@@ -29,12 +30,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
             VotingManager votingManager,
             Network network,
             IIdleFederationMembersKicker idleFederationMembersKicker,
+            IPoAMiner poAMiner,
             ReconstructFederationService reconstructFederationService)
         {
             this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
             this.idleFederationMembersKicker = idleFederationMembersKicker;
             this.network = network;
+            this.poaMiner = poAMiner;
             this.reconstructFederationService = reconstructFederationService;
             this.votingManager = votingManager;
 
@@ -86,6 +89,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     PubKey = this.federationManager.CurrentFederationKey.PubKey.ToHex()
                 };
 
+                federationMemberModel.FederationSize = this.federationManager.GetFederationMembers().Count;
+
                 KeyValuePair<PubKey, uint> lastActive = this.idleFederationMembersKicker.GetFederationMembersByLastActiveTime().FirstOrDefault(x => x.Key == this.federationManager.CurrentFederationKey.PubKey);
                 if (lastActive.Key != null)
                 {
@@ -125,6 +130,8 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
                     federationMemberModel.PollExecutedBlockHeight = poll.PollExecutedBlockData.Height;
 
                 federationMemberModel.RewardEstimatePerBlock = 9d / this.federationManager.GetFederationMembers().Count;
+
+                federationMemberModel.MiningStatistics = this.poaMiner.MiningStatistics;
 
                 return Json(federationMemberModel);
             }

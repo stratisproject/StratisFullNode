@@ -166,6 +166,16 @@ namespace Stratis.Bitcoin.Features.Api
                 InIbd = this.initialBlockDownloadState.IsInitialBlockDownload()
             };
 
+            try
+            {
+                model.HeaderHeight = this.consensusManager.HeaderTip;
+            }
+            catch (Exception)
+            {
+                // It is possible that consensus manager has not yet initialized when calling this.
+                model.HeaderHeight = 0;
+            }
+
             // Add the list of features that are enabled.
             foreach (IFullNodeFeature feature in this.fullNode.Services.Features)
             {
