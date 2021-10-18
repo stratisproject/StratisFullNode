@@ -541,13 +541,13 @@ Do
 {
     $tip = Get-PollsRepositoryTip
     
-    Write-Host (Get-TimeStamp) "Upgrading the voting polls repository: $tip %" -ForegroundColor Yellow
-    
     if ( $tip -gt 98 )
     {
-        Write-Host (Get-TimeStamp) "Voting polls repository rebuilt! " -ForegroundColor Yellow
+        Write-Host (Get-TimeStamp) "Polls repository initialized..." -ForegroundColor Yellow
         break;
     }
+
+    Write-Host (Get-TimeStamp) "Building the polls repository: $tip %" -ForegroundColor Yellow
 
     Start-Sleep -Seconds 5
 
