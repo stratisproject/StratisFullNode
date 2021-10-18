@@ -536,25 +536,6 @@ While ( ( Get-BlockStoreStatus ) -ne "Initialized" )
     }
 }
 
-#Wait for IBD
-While ( ( Get-MaxHeight ) -eq $null ) 
-{
-Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
-Start-Sleep 10
-}
-
-While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) ) 
-{
-    $a = Get-MaxHeight
-    $b = Get-LocalHeight 
-    $c = $a - $b
-    ""
-    Write-Host (Get-TimeStamp) "The Local Synced Height is $b" -ForegroundColor Yellow
-    Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
-    Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
-    Start-Sleep 10
-}
-
 #Wait for Polls Repo Rebuild
 Do
 {
@@ -567,7 +548,30 @@ Do
         Write-Host (Get-TimeStamp) "Voting polls repository rebuilt! " -ForegroundColor Yellow
         break;
     }
+
+    Start-Sleep -Seconds 5
+
 }While($true)
+
+#Wait for Peers
+While ( ( Get-MaxHeight ) -eq $null ) 
+{
+Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
+Start-Sleep 10
+}
+
+#Wait for IBD
+While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) ) 
+{
+    $a = Get-MaxHeight
+    $b = Get-LocalHeight 
+    $c = $a - $b
+    ""
+    Write-Host (Get-TimeStamp) "The Local Synced Height is $b" -ForegroundColor Yellow
+    Write-Host (Get-TimeStamp) "The Current Tip is $a" -ForegroundColor Yellow
+    Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
+    Start-Sleep 10
+}
 
 #Mining Wallet Creation
 
