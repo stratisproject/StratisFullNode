@@ -537,24 +537,13 @@ While ( ( Get-BlockStoreStatus ) -ne "Initialized" )
 }
 
 #Wait for Polls Repo Rebuild
-Do
+$pollsTip = Get-PollsRepositoryTip
+While ( $pollsTip -ne 100 )
 {
-    $tip = Get-PollsRepositoryTip
-    
-    if ( $tip -gt 98 )
-    {
-        Write-Host (Get-TimeStamp) "Polls repository initialized..." -ForegroundColor Yellow
-        break;
-    }
-
-    if ( $tip -ne 0 )
-    {
-        Write-Host (Get-TimeStamp) "Building the polls repository: $tip %" -ForegroundColor Yellow
-    }
-
-    Start-Sleep -Seconds 5
-
-}While($true)
+    Write-Host (Get-TimeStamp) "Upgrading the Poll Store: $pollsTip %" -ForegroundColor Yellow
+    Start-Sleep 10
+    $pollsTip = Get-PollsRepositoryTip
+}
 
 #Wait for Peers
 While ( ( Get-MaxHeight ) -eq $null ) 
