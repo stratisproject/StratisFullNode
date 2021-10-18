@@ -123,6 +123,15 @@ function Get-BlockStoreStatus
     $BlockStoreStatus.state
 }
 
+
+function Get-PollsRepositoryTip
+{
+    $PollsRepoHeightRequest = Invoke-WebRequest -Uri http://localhost:$API/api/polls/tip
+    $PollsRepoHeight = ConvertFrom-Json $PollsRepoHeightRequest
+    $LocalPollsRepoHeight = $PollsRepoHeight.tipHeightPercentage
+    $LocalPollsRepoHeight
+}
+
 function Shutdown-Dashboard
 {
     Write-Host "Shutting down Stratis Masternode Dashboard..." -ForegroundColor Yellow
@@ -545,6 +554,20 @@ While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) )
     Write-Host (Get-TimeStamp) "$c Blocks are Required..." -ForegroundColor Yellow
     Start-Sleep 10
 }
+
+#Wait for Polls Repo Rebuild
+Do
+{
+    $tip = Get-PollsRepositoryTip
+    
+    Write-Host (Get-TimeStamp) "Upgrading the voting polls repository: $tip %" -ForegroundColor Yellow
+    
+    if ( $tip -gt 98 )
+    {
+        Write-Host (Get-TimeStamp) "Voting polls repository rebuilt! " -ForegroundColor Yellow
+        break;
+    }
+}While($true)
 
 #Mining Wallet Creation
 
