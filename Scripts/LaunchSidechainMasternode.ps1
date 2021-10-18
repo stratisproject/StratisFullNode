@@ -126,7 +126,7 @@ function Get-BlockStoreStatus
 
 function Get-PollsRepositoryTip
 {
-    $PollsRepoHeightRequest = Invoke-WebRequest -Uri http://localhost:$API/api/polls/tip
+    $PollsRepoHeightRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Voting/polls/tip
     $PollsRepoHeight = ConvertFrom-Json $PollsRepoHeightRequest
     $LocalPollsRepoHeight = $PollsRepoHeight.tipHeightPercentage
     $LocalPollsRepoHeight
