@@ -547,7 +547,10 @@ Do
         break;
     }
 
-    Write-Host (Get-TimeStamp) "Building the polls repository: $tip %" -ForegroundColor Yellow
+    if ( $tip -ne 0 )
+    {
+        Write-Host (Get-TimeStamp) "Building the polls repository: $tip %" -ForegroundColor Yellow
+    }
 
     Start-Sleep -Seconds 5
 
