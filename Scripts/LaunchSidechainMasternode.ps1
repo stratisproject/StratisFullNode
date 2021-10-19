@@ -123,6 +123,15 @@ function Get-BlockStoreStatus
     $BlockStoreStatus.state
 }
 
+
+function Get-PollsRepositoryTip
+{
+    $PollsRepoHeightRequest = Invoke-WebRequest -Uri http://localhost:$API/api/Voting/polls/tip
+    $PollsRepoHeight = ConvertFrom-Json $PollsRepoHeightRequest
+    $LocalPollsRepoHeight = $PollsRepoHeight.tipHeightPercentage
+    $LocalPollsRepoHeight
+}
+
 function Shutdown-Dashboard
 {
     Write-Host "Shutting down Stratis Masternode Dashboard..." -ForegroundColor Yellow
@@ -527,13 +536,23 @@ While ( ( Get-BlockStoreStatus ) -ne "Initialized" )
     }
 }
 
-#Wait for IBD
+#Wait for Polls Repo Rebuild
+$pollsTip = Get-PollsRepositoryTip
+While ( $pollsTip -ne 100 )
+{
+    Write-Host (Get-TimeStamp) "Upgrading the Poll Store: $pollsTip %" -ForegroundColor Yellow
+    Start-Sleep 10
+    $pollsTip = Get-PollsRepositoryTip
+}
+
+#Wait for Peers
 While ( ( Get-MaxHeight ) -eq $null ) 
 {
 Write-Host (Get-TimeStamp) "Waiting for Peers..." -ForegroundColor Yellow
 Start-Sleep 10
 }
 
+#Wait for IBD
 While ( ( Get-MaxHeight ) -gt ( Get-LocalHeight ) ) 
 {
     $a = Get-MaxHeight
@@ -658,30 +677,16 @@ if ( ( Test-Connection -TargetName 127.0.0.1 -TCPPort $mainChainAPIPort ) -and (
 
 ""
 #Launching Masternode Dashboard
-<#
-Set-Location $stratisMasternodeDashboardCloneDir
-if ( $NodeType -eq "50K" )
+
+Set-Location $stratisMasternodeDashboardCloneDir\src\StratisMasternodeDashboard
+Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard" -ForegroundColor Cyan
+$Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
+While ( $Clean.HasExited -ne $true ) 
 {
-    Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (50K Mode)" -ForegroundColor Cyan
-    $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-    While ( $Clean.HasExited -ne $true )  
-    {
-        Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-        Start-Sleep 3
-    }
-    Start-Process dotnet.exe -ArgumentList "run -c Release -- --nodetype 50K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
+    Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
+    Start-Sleep 3
 }
-    Else
-    {
-        Write-Host (Get-TimeStamp) "Starting Stratis Masternode Dashboard (10K Mode)" -ForegroundColor Cyan
-        $Clean = Start-Process dotnet.exe -ArgumentList "clean" -PassThru
-        While ( $Clean.HasExited -ne $true ) 
-        {
-            Write-Host (Get-TimeStamp) "Cleaning Stratis Masternode Dashboard..." -ForegroundColor Yellow
-            Start-Sleep 3
-        }
-        Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet" -WindowStyle Hidden
-    }
+Start-Process dotnet.exe -ArgumentList "run -c Release --nodetype 10K --mainchainport $mainChainAPIPort --sidechainport $sideChainAPIPort --env mainnet --sdadaocontractaddress CbtYboKjnk7rhNbEFzn94UZikde36h6TCb" -WindowStyle Hidden
 
 While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction SilentlyContinue ) )
 {
@@ -691,7 +696,7 @@ While ( -not ( Test-Connection -TargetName 127.0.0.1 -TCPPort 37000 -ErrorAction
 
 Start-Process http://localhost:37000
 Write-Host (Get-TimeStamp) "SUCCESS: Stratis Masternode Dashboard launched" -ForegroundColor Green
-#>
+
 
 Exit
 
@@ -699,8 +704,8 @@ Exit
 # SIG # Begin signature block
 # MIIO+gYJKoZIhvcNAQcCoIIO6zCCDucCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUMneAuY71wUQ1JxjJKwldpbjd
-# yJagggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6SkKvZm9lMqG1hK5IeK0CnGd
+# rJOgggxCMIIFfjCCBGagAwIBAgIQCrk836uc/wPyOiuycqPb5zANBgkqhkiG9w0B
 # AQsFADBsMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBFViBDb2Rl
 # IFNpZ25pbmcgQ0EgKFNIQTIpMB4XDTIxMDQyMjAwMDAwMFoXDTI0MDcxOTIzNTk1
@@ -770,11 +775,11 @@ Exit
 # ZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgRVYgQ29kZSBTaWduaW5nIENBIChT
 # SEEyKQIQCrk836uc/wPyOiuycqPb5zAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIB
 # DDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEE
-# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUe67v0mzognnl
-# bBzQ1yHZ5qvgnygwDQYJKoZIhvcNAQEBBQAEggEATvrz/GW8mdDKzKtn+ZpIptlG
-# n7WrTVFcLwRyEZVvIuOIt5sAvZNMm/sy1gWNqyZFdjFxKj7vixKiz0BdWEnoP5Oa
-# 1YYKpF7I7HE771kcabNGWtrPDX/6v1hKsdHy50DW/FH3UZgqbBOUKj4DURnCOcTC
-# Ew7+9Uz0DO5lwj15So33Sb8bfi7nZQBaPmve/MoxxyKaW865lUVTnoT4jXbpHbjQ
-# oCt2TX87IHFF5rJxnNq7tPcBCI6wHam/gayAXF40ikQvHExVvk/YwgyC1673qvf5
-# bdtCtCKcueSC7vOFn3m9lfApD5FSK0111Rrp5dIXNB4LdmjsyHHy6BWPmunwug==
+# AYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUK3D6We+cF1CI
+# mVNcrocg5rY6WMQwDQYJKoZIhvcNAQEBBQAEggEAIL5pQjErOqJs4uEObjXQAd8j
+# SoVlUDGvL50BcAkRkjCoHzJvIn1uKHWgX+DqLBDfS8MifM8xyEIKIr4Bi4IcTj01
+# zWNgp6atroXxDKyC9mx1hYB+fjTq8ozYd7sV6JoEJRV8ZOobGv4gr30tNskpvPuY
+# jV+kZT4ZsLk+YDrE+zKo0nV/+aH1Z82MBRQ6YsTo9GYANBW5ZOW0K2cRkptiOCFl
+# uznDsuY8dF4TxE0REDsmsSyBIp1uH7l4qpfUdKsd3LF8fT1FmyQiVZdSSlCGOYQn
+# 6u9Lnvjwuwfa5sH+3e8QBaPMEPvBThSsxkQDVawoHpGiXEM+xbSgtP9KAxDl2w==
 # SIG # End signature block

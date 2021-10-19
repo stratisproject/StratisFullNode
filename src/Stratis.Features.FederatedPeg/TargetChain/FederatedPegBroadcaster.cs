@@ -30,13 +30,13 @@ namespace Stratis.Features.FederatedPeg.TargetChain
         {
             IEnumerable<INetworkPeer> connectedPeers = this.connectionManager.ConnectedPeers.Where(peer => (peer?.IsConnected ?? false) && this.federatedPegSettings.FederationNodeIpAddresses.Contains(peer.PeerEndPoint.Address));
 
-            this.logger.Trace($"Requesting {payload.GetType()} from {connectedPeers.Count()} peers.");
+            this.logger.Trace($"Sending {payload.GetType()} to {connectedPeers.Count()} peers.");
 
             Parallel.ForEach(connectedPeers, async (INetworkPeer peer) =>
             {
                 try
                 {
-                    this.logger.Trace($"Requesting {payload.GetType()} from {peer.RemoteSocketAddress}");
+                    this.logger.Trace($"Sending {payload.GetType()} to {peer.RemoteSocketAddress}");
                     await peer.SendMessageAsync(payload).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)

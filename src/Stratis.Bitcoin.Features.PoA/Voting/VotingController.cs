@@ -17,6 +17,7 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
     [Route("api/[controller]")]
     public sealed class VotingController : Controller
     {
+        private readonly ChainIndexer chainIndexer;
         private readonly IFederationManager federationManager;
         private readonly ILogger logger;
         private readonly Network network;
@@ -25,12 +26,14 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         private readonly IWhitelistedHashesRepository whitelistedHashesRepository;
 
         public VotingController(
+            ChainIndexer chainIndexer,
             IFederationManager federationManager,
             Network network,
             VotingManager votingManager,
             IWhitelistedHashesRepository whitelistedHashesRepository,
             IPollResultExecutor pollExecutor)
         {
+            this.chainIndexer = chainIndexer;
             this.federationManager = federationManager;
             this.network = network;
             this.pollExecutor = pollExecutor;
@@ -54,7 +57,18 @@ namespace Stratis.Bitcoin.Features.PoA.Voting
         {
             try
             {
-                return this.Json(this.votingManager.GetPollsRepositoryTip().Height);
+                var model = new PollsRepositoryHeightModel() { TipHeight = 0, TipHeightPercentage = 0 };
+                ChainedHeader pollsRepoTip = this.votingManager.GetPollsRepositoryTip();
+                if (this.chainIndexer.Tip != null && pollsRepoTip != null)
+                {
+                    model = new PollsRepositoryHeightModel()
+                    {
+                        TipHeight = pollsRepoTip.Height,
+                        TipHeightPercentage = (int)((decimal)pollsRepoTip.Height / this.chainIndexer.Tip.Height * 100)
+                    };
+                }
+
+                return this.Json(model);
             }
             catch (Exception e)
             {
