@@ -90,7 +90,10 @@ namespace Stratis.Sidechains.Networks
                 targetSpacingSeconds: 16,
                 votingEnabled: true,
                 autoKickIdleMembers: true
-            );
+            )
+            {
+                PollExpiryBlocks = 10
+            };
 
             var buriedDeployments = new BuriedDeploymentsArray
             {
