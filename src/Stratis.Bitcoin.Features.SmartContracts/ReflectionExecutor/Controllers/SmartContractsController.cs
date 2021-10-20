@@ -576,7 +576,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                 ILocalExecutionResult result = this.localExecutor.Execute(
                     height,
                     request.Sender?.ToUint160(this.network) ?? new uint160(),
-                    string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
+                    !string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
                     txData);
 
                 return this.Json(result, new JsonSerializerSettings
