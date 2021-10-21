@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using Moq;
 using NBitcoin;
+using Stratis.Bitcoin.Features.SmartContracts.Models;
 using Stratis.SmartContracts;
 using Stratis.SmartContracts.CLR;
 using Stratis.SmartContracts.CLR.Caching;
@@ -52,16 +53,16 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             var testBytes = primitiveSerializer.Serialize(testStruct);
 
             var serializer = new ApiLogDeserializer(primitiveSerializer, network, Mock.Of<IStateRepositoryRoot>(), Mock.Of<IContractAssemblyCache>());
-            dynamic deserializedLog = serializer.DeserializeLogData(testBytes, typeof(TestLog));
+            LogData deserializedLog = serializer.DeserializeLogData(testBytes, typeof(TestLog));
 
-            Assert.Equal(testStruct.Id, deserializedLog.Id);
-            Assert.Equal(testStruct.Name, deserializedLog.Name);
-            Assert.Equal(testStruct.Data, deserializedLog.Data);
-            Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Datas));
-            Assert.Equal(testStruct.Truth, deserializedLog.Truth);
-            Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Address);
-            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Value128.ToString());
-            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Value256.ToString());
+            Assert.Equal(testStruct.Id, deserializedLog.Data[nameof(testStruct.Id)]);
+            Assert.Equal(testStruct.Name, deserializedLog.Data[nameof(testStruct.Name)]);
+            Assert.Equal(testStruct.Data, deserializedLog.Data[nameof(testStruct.Data)]);
+            Assert.True(testStruct.Datas.SequenceEqual((byte[])deserializedLog.Data[nameof(testStruct.Datas)]));
+            Assert.Equal(testStruct.Truth, deserializedLog.Data[nameof(testStruct.Truth)]);
+            Assert.Equal(testStruct.Address.ToUint160().ToBase58Address(network), deserializedLog.Data[nameof(testStruct.Address)]);
+            Assert.Equal(testStruct.Value128.ToString(), deserializedLog.Data[nameof(testStruct.Value128)].ToString());
+            Assert.Equal(testStruct.Value256.ToString(), deserializedLog.Data[nameof(testStruct.Value256)].ToString());
         }
 
         [Fact]
@@ -107,8 +108,8 @@ namespace Stratis.Bitcoin.Features.SmartContracts.Tests
             var responses = serializer.MapLogResponses(logs);
 
             // Verify that we deserialized the logs correctly.
-            Assert.Equal(testStruct0.Name, ((dynamic)responses[0].Log).Name);
-            Assert.Equal(testStruct1.Name, ((dynamic)responses[1].Log).Name);
+            Assert.Equal(testStruct0.Name, ((dynamic)responses[0].Log.Data).Name);
+            Assert.Equal(testStruct1.Name, ((dynamic)responses[1].Log.Data).Name);
 
             // Verify that we got the code for both log assemblies.
             stateRoot.Verify(s => s.GetCodeHash(logs[0].Address), Times.Once);
