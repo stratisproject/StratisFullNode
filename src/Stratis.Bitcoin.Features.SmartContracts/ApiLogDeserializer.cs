@@ -83,7 +83,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 }
 
                 // Deserialize it
-                dynamic deserialized = DeserializeLogData(log.Data, eventType);
+                LogData deserialized = DeserializeLogData(log.Data, eventType);
 
                 logResponse.Log = deserialized;
             }
@@ -126,13 +126,11 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         /// <param name="bytes">The raw event log data.</param>
         /// <param name="type">The type to attempt to deserialize.</param>
         /// <returns>An <see cref="ExpandoObject"/> containing the fields of the Type and its deserialized values.</returns>
-        public dynamic DeserializeLogData(byte[] bytes, Type type)
+        public LogData DeserializeLogData(byte[] bytes, Type type)
         {
             RLPCollection collection = (RLPCollection)RLP.Decode(bytes);
 
             var instance = new ExpandoObject() as IDictionary<string, object>;
-
-            instance["Event"] = type.Name;
 
             FieldInfo[] fields = type.GetFields();
 
@@ -159,7 +157,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
                 }
             }
 
-            return instance;
+            return new LogData(type.Name, instance);
         }
     }
 }
