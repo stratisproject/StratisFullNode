@@ -579,7 +579,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts.ReflectionExecutor.Controllers
                     !string.IsNullOrWhiteSpace(request.Amount) ? (Money)request.Amount : 0,
                     txData);
 
-                var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, this.stateRoot, this.contractAssemblyCache);
+                var deserializer = new ApiLogDeserializer(this.primitiveSerializer, this.network, result.StateRoot, this.contractAssemblyCache);
 
                 var response = new LocalExecutionResponse
                 {

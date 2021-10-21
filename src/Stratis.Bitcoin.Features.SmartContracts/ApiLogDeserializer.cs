@@ -25,10 +25,10 @@ namespace Stratis.Bitcoin.Features.SmartContracts
     {
         private readonly IContractPrimitiveSerializer primitiveSerializer;
         private readonly Network network;
-        private readonly IStateRepositoryRoot stateRepositoryRoot;
+        private readonly IStateRepository stateRepositoryRoot;
         private readonly IContractAssemblyCache contractAssemblyCache;
 
-        public ApiLogDeserializer(IContractPrimitiveSerializer primitiveSerializer, Network network, IStateRepositoryRoot stateRepositoryRoot, IContractAssemblyCache contractAssemblyCache)
+        public ApiLogDeserializer(IContractPrimitiveSerializer primitiveSerializer, Network network, IStateRepository stateRepositoryRoot, IContractAssemblyCache contractAssemblyCache)
         {
             this.primitiveSerializer = primitiveSerializer;
             this.network = network;
@@ -95,7 +95,7 @@ namespace Stratis.Bitcoin.Features.SmartContracts
         {
             var codeHashBytes = this.stateRepositoryRoot.GetCodeHash(address);
 
-            if (codeHashBytes == null)
+            if (codeHashBytes == null || codeHashBytes.Length != 32)
                 return null;
 
             var codeHash = new uint256(codeHashBytes);
