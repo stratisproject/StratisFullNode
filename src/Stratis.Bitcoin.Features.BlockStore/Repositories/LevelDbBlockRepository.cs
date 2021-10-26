@@ -58,7 +58,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.Repositories
         {
             Directory.CreateDirectory(this.dataFolder);
 
-            this.dbOptions = new Options { CreateIfMissing = true };
+            this.dbOptions = new Options { CreateIfMissing = true, IsInternalDebugLoggerEnabled = true };
             this.leveldb = new DB(this.dbOptions, this.dataFolder);
 
             Block genesis = this.network.GetGenesis();
