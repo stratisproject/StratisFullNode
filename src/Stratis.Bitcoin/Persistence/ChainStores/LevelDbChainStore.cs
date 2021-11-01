@@ -31,7 +31,7 @@ namespace Stratis.Bitcoin.Persistence.ChainStores
             this.locker = new object();
 
             // Open a connection to a new DB and create if not found
-            var options = new Options { CreateIfMissing = true };
+            var options = new Options { CreateIfMissing = true, IsInternalDebugLoggerEnabled = true };
             this.leveldb = new DB(options, dataFolder.ChainPath);
         }
 
