@@ -589,6 +589,15 @@ namespace Stratis.Features.Unity3dApi.Controllers
             return this.NFTTransferIndexer.GetOwnedNFTs(ownerAddress);
         }
 
+        [Route("api/[controller]/get_all_nft_owners_by_contract_address")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public NFTContractModel GetAllNFTOwnersByContractAddress([FromQuery] string contractAddress)
+        {
+            return this.NFTTransferIndexer.GetAllNFTOwnersByContractAddress(contractAddress);
+        }
+
         /// <summary>
         /// If the call is to a property, rewrites the method name to the getter method's name.
         /// </summary>

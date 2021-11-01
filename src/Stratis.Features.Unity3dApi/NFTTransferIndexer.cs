@@ -31,6 +31,9 @@ namespace Stratis.Features.Unity3dApi
 
         /// <summary>Provides collection of NFT ids that belong to provided user's address for watched contracts.</summary>
         OwnedNFTsModel GetOwnedNFTs(string address);
+
+        /// <summary>Returns collection of all users that own nft.</summary>
+        NFTContractModel GetAllNFTOwnersByContractAddress(string contractAddress);
     }
 
     /// <summary>This component maps addresses to NFT Ids they own.</summary>
@@ -114,7 +117,13 @@ namespace Stratis.Features.Unity3dApi
 
             return output;
         }
-        
+
+        public NFTContractModel GetAllNFTOwnersByContractAddress(string contractAddress)
+        {
+            NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddress);
+            return currentContract;
+        }
+
         private async Task IndexNFTsContinuouslyAsync()
         {
             await Task.Delay(1);
@@ -150,9 +159,9 @@ namespace Stratis.Features.Unity3dApi
 
                         foreach (ReceiptResponse receiptRes in receipts)
                         {
-                            var log = receiptRes.Logs.First().Log.ToString();
-
-                            TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(log);
+                            string jsonLog = Newtonsoft.Json.JsonConvert.SerializeObject(receiptRes.Logs.First().Log);
+                            
+                            TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(jsonLog);
                             transferLogs.Add(infoObj);
                         }
                     
@@ -175,7 +184,13 @@ namespace Stratis.Features.Unity3dApi
                         this.NFTContractCollection.Upsert(currentContract);
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(6), this.cancellation.Token);
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(6), this.cancellation.Token);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                    }
                 }
             }
             catch (Exception e)
