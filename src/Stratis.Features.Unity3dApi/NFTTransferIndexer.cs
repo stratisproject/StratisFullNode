@@ -8,9 +8,12 @@ using System.Threading.Tasks;
 using LiteDB;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using Newtonsoft.Json;
 using Stratis.Bitcoin.AsyncWork;
 using Stratis.Bitcoin.Configuration;
 using Stratis.Bitcoin.Features.BlockStore.AddressIndexing;
+using Stratis.Bitcoin.Features.SmartContracts.Models;
+using Stratis.Bitcoin.Features.SmartContracts.Wallet;
 using FileMode = LiteDB.FileMode;
 
 namespace Stratis.Features.Unity3dApi
@@ -37,28 +40,28 @@ namespace Stratis.Features.Unity3dApi
 
         private const string DatabaseFilename = "NFTTransferIndexer.litedb";
         private const string DbOwnedNFTsKey = "OwnedNfts";
-
-        /// <summary>Protects write access to <see cref="NFTContractCollection"/>.</summary>
-        private readonly object lockObject;
+        private const int SyncBufferBlocks = 50;
+        
         private readonly DataFolder dataFolder;
         private readonly ILogger logger;
         private readonly ChainIndexer chainIndexer;
         private readonly IAsyncProvider asyncProvider;
+        private readonly ISmartContractTransactionService smartContractTransactionService;
 
         private LiteDatabase db;
         private LiteCollection<NFTContractModel> NFTContractCollection;
         private CancellationTokenSource cancellation;
         private Task indexingTask;
         
-        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, ChainIndexer chainIndexer, IAsyncProvider asyncProvider)
+        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, ISmartContractTransactionService smartContractTransactionService)
         {
             this.dataFolder = dataFolder;
-            this.chainIndexer = chainIndexer;
             this.cancellation = new CancellationTokenSource();
             this.asyncProvider = asyncProvider;
+            this.chainIndexer = chainIndexer;
+            this.smartContractTransactionService = smartContractTransactionService;
 
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
-            this.lockObject = new object();
         }
 
         /// <inheritdoc />
@@ -77,19 +80,16 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void WatchNFTContract(string contractAddress)
         {
-            lock (this.lockObject)
+            if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
             {
-                if (!this.NFTContractCollection.Exists(x => x.ContractAddress == contractAddress))
+                NFTContractModel model = new NFTContractModel()
                 {
-                    NFTContractModel model = new NFTContractModel()
-                    {
-                        ContractAddress = contractAddress,
-                        LastUpdatedBlock = 0,
-                        OwnedIDsByAddress = new Dictionary<string, List<ulong>>()
-                    };
+                    ContractAddress = contractAddress,
+                    LastUpdatedBlock = 0,
+                    OwnedIDsByAddress = new Dictionary<string, List<long>>()
+                };
 
-                    this.NFTContractCollection.Upsert(model);
-                }
+                this.NFTContractCollection.Upsert(model);
             }
         }
 
@@ -104,11 +104,11 @@ namespace Stratis.Features.Unity3dApi
         {
             List<NFTContractModel> NFTContractModels = this.NFTContractCollection.FindAll().Where(x => x.OwnedIDsByAddress.ContainsKey(address)).ToList();
 
-            OwnedNFTsModel output = new OwnedNFTsModel() { OwnedIDsByContractAddress = new Dictionary<string, List<ulong>>() };
+            OwnedNFTsModel output = new OwnedNFTsModel() { OwnedIDsByContractAddress = new Dictionary<string, List<long>>() };
 
             foreach (NFTContractModel contractModel in NFTContractModels)
             {
-                List<ulong> ids = contractModel.OwnedIDsByAddress[address];
+                List<long> ids = contractModel.OwnedIDsByAddress[address];
                 output.OwnedIDsByContractAddress.Add(contractModel.ContractAddress, ids);
             }
 
@@ -117,6 +117,8 @@ namespace Stratis.Features.Unity3dApi
         
         private async Task IndexNFTsContinuouslyAsync()
         {
+            await Task.Delay(1);
+
             while (!this.cancellation.Token.IsCancellationRequested)
             {
                 List<string> contracts = this.NFTContractCollection.FindAll().Select(x => x.ContractAddress).ToList();
@@ -126,15 +128,43 @@ namespace Stratis.Features.Unity3dApi
                     if (this.cancellation.Token.IsCancellationRequested)
                         break;
 
-                    // TODO get receipt
+                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddr);
+
+                    ChainedHeader chainTip = this.chainIndexer.Tip;
+
+                    List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
+                        contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock, null);
+
+                    currentContract.LastUpdatedBlock = new List<int>() { chainTip.Height, (int)receipts.Last().BlockNumber.Value }.Max();
+
+                    List<TransferLog> transferLogs = new List<TransferLog>(receipts.Count);
+
+                    foreach (ReceiptResponse receiptRes in receipts)
+                    {
+                        var log = receiptRes.Logs.First().Log.ToString();
+
+                        TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(log);
+                        transferLogs.Add(infoObj);
+                    }
+                    
+                    foreach (TransferLog transferInfo in transferLogs)
+                    {
+                        if (currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
+                        {
+                            currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
+
+                            if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
+                                currentContract.OwnedIDsByAddress.Remove(transferInfo.From);
+                        }
+
+                        if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
+                            currentContract.OwnedIDsByAddress.Add(transferInfo.To, new List<long>());
+
+                        currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
+                    }
+
+                    this.NFTContractCollection.Upsert(currentContract);
                 }
-
-
-
-                // TODO
-                // go throught all watched contracts and get logs from last updated block till now, get logs and update model based on them
-
-                // if address has no ids then remove it from list
             }
         }
 
@@ -148,16 +178,31 @@ namespace Stratis.Features.Unity3dApi
 
     public class NFTContractModel
     {
+        public int Id { get; set; }
+
         public string ContractAddress { get; set; }
 
         // Key is nft owner address, value is list of NFT IDs
-        public Dictionary<string, List<ulong>> OwnedIDsByAddress { get; set; }
+        public Dictionary<string, List<long>> OwnedIDsByAddress { get; set; }
 
-        public ulong LastUpdatedBlock { get; set; }
+        public int LastUpdatedBlock { get; set; }
     }
 
     public class OwnedNFTsModel
     {
-        public Dictionary<string, List<ulong>> OwnedIDsByContractAddress { get; set; }
+        public Dictionary<string, List<long>> OwnedIDsByContractAddress { get; set; }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.4.3.0 (Newtonsoft.Json v11.0.0.0)")]
+    public partial class TransferLog
+    {
+        [JsonProperty("from", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
+        public string From { get; set; }
+
+        [JsonProperty("to", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
+        public string To { get; set; }
+
+        [JsonProperty("tokenId", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
+        public long TokenId { get; set; }
     }
 }
