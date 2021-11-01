@@ -575,7 +575,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public List<string> GetWatchedNFTContracts([FromQuery] string contractAddress)
+        public List<string> GetWatchedNFTContracts()
         {
             return this.NFTTransferIndexer.GetWatchedNFTContracts();
         }

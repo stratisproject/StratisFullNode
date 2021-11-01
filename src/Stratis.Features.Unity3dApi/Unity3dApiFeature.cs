@@ -65,6 +65,8 @@ namespace Stratis.Features.Unity3dApi
             this.logger.LogInformation("Unity API starting on URL '{0}'.", this.apiSettings.ApiUri);
             this.webHost = Program.Initialize(this.fullNodeBuilder.Services, this.fullNode, this.apiSettings, this.certificateStore, new WebHostBuilder());
 
+            this.NFTTransferIndexer.Initialize();
+
             if (this.apiSettings.KeepaliveTimer == null)
             {
                 this.logger.LogTrace("(-)[KEEPALIVE_DISABLED]");
@@ -83,9 +85,7 @@ namespace Stratis.Features.Unity3dApi
             };
 
             this.apiSettings.KeepaliveTimer.Start();
-
-            this.NFTTransferIndexer.Initialize();
-
+            
             return Task.CompletedTask;
         }
 
@@ -127,7 +127,8 @@ namespace Stratis.Features.Unity3dApi
                 this.webHost = null;
             }
 
-            this.NFTTransferIndexer.Dispose();
+            if (this.apiSettings.EnableUnityAPI)
+                this.NFTTransferIndexer.Dispose();
         }
     }
 

@@ -119,52 +119,68 @@ namespace Stratis.Features.Unity3dApi
         {
             await Task.Delay(1);
 
-            while (!this.cancellation.Token.IsCancellationRequested)
+            try
             {
-                List<string> contracts = this.NFTContractCollection.FindAll().Select(x => x.ContractAddress).ToList();
-
-                foreach (string contractAddr in contracts)
+                while (!this.cancellation.Token.IsCancellationRequested)
                 {
-                    if (this.cancellation.Token.IsCancellationRequested)
-                        break;
+                    List<string> contracts = this.NFTContractCollection.FindAll().Select(x => x.ContractAddress).ToList();
 
-                    NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddr);
-
-                    ChainedHeader chainTip = this.chainIndexer.Tip;
-
-                    List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
-                        contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock, null);
-
-                    currentContract.LastUpdatedBlock = new List<int>() { chainTip.Height, (int)receipts.Last().BlockNumber.Value }.Max();
-
-                    List<TransferLog> transferLogs = new List<TransferLog>(receipts.Count);
-
-                    foreach (ReceiptResponse receiptRes in receipts)
+                    foreach (string contractAddr in contracts)
                     {
-                        var log = receiptRes.Logs.First().Log.ToString();
+                        if (this.cancellation.Token.IsCancellationRequested)
+                            break;
 
-                        TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(log);
-                        transferLogs.Add(infoObj);
-                    }
-                    
-                    foreach (TransferLog transferInfo in transferLogs)
-                    {
-                        if (currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
+                        NFTContractModel currentContract = this.NFTContractCollection.FindOne(x => x.ContractAddress == contractAddr);
+
+                        ChainedHeader chainTip = this.chainIndexer.Tip;
+
+                        List<ReceiptResponse> receipts = this.smartContractTransactionService.ReceiptSearch(
+                            contractAddr, "TransferLog", null, currentContract.LastUpdatedBlock, null);
+
+                        if (receipts == null)
+                            continue;
+
+                        int lastReceiptHeight = 0;
+                        if (receipts.Any())
+                            lastReceiptHeight = (int)receipts.Last().BlockNumber.Value;
+
+                        currentContract.LastUpdatedBlock = new List<int>() { chainTip.Height, lastReceiptHeight }.Max();
+
+                        List<TransferLog> transferLogs = new List<TransferLog>(receipts.Count);
+
+                        foreach (ReceiptResponse receiptRes in receipts)
                         {
-                            currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
+                            var log = receiptRes.Logs.First().Log.ToString();
 
-                            if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
-                                currentContract.OwnedIDsByAddress.Remove(transferInfo.From);
+                            TransferLog infoObj = JsonConvert.DeserializeObject<TransferLog>(log);
+                            transferLogs.Add(infoObj);
+                        }
+                    
+                        foreach (TransferLog transferInfo in transferLogs)
+                        {
+                            if (currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.From))
+                            {
+                                currentContract.OwnedIDsByAddress[transferInfo.From].Remove(transferInfo.TokenId);
+
+                                if (currentContract.OwnedIDsByAddress[transferInfo.From].Count == 0)
+                                    currentContract.OwnedIDsByAddress.Remove(transferInfo.From);
+                            }
+
+                            if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
+                                currentContract.OwnedIDsByAddress.Add(transferInfo.To, new List<long>());
+
+                            currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
                         }
 
-                        if (!currentContract.OwnedIDsByAddress.ContainsKey(transferInfo.To))
-                            currentContract.OwnedIDsByAddress.Add(transferInfo.To, new List<long>());
-
-                        currentContract.OwnedIDsByAddress[transferInfo.To].Add(transferInfo.TokenId);
+                        this.NFTContractCollection.Upsert(currentContract);
                     }
 
-                    this.NFTContractCollection.Upsert(currentContract);
+                    await Task.Delay(TimeSpan.FromSeconds(6), this.cancellation.Token);
                 }
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError(e.ToString());
             }
         }
 
