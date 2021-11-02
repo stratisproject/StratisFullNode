@@ -70,6 +70,9 @@ namespace Stratis.Features.Unity3dApi
         /// <inheritdoc />
         public void Initialize()
         {
+            if (this.db != null)
+                throw new Exception("NFTTransferIndexer already initialized!");
+
             string dbPath = Path.Combine(this.dataFolder.RootPath, DatabaseFilename);
 
             FileMode fileMode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? FileMode.Exclusive : FileMode.Shared;
@@ -203,7 +206,7 @@ namespace Stratis.Features.Unity3dApi
         {
             this.cancellation.Cancel();
             this.indexingTask?.GetAwaiter().GetResult();
-            this.db.Dispose();
+            this.db?.Dispose();
         }
     }
 

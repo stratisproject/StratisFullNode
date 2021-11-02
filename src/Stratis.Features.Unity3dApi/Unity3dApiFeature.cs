@@ -85,7 +85,7 @@ namespace Stratis.Features.Unity3dApi
             };
 
             this.apiSettings.KeepaliveTimer.Start();
-            
+
             return Task.CompletedTask;
         }
 
@@ -127,8 +127,7 @@ namespace Stratis.Features.Unity3dApi
                 this.webHost = null;
             }
 
-            if (this.apiSettings.EnableUnityAPI)
-                this.NFTTransferIndexer.Dispose();
+            this.NFTTransferIndexer.Dispose();
         }
     }
 
