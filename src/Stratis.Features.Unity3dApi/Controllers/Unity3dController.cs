@@ -71,9 +71,12 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
         private readonly ILocalExecutor localExecutor;
 
+        private readonly INFTTransferIndexer NFTTransferIndexer;
+
         public Unity3dController(ILoggerFactory loggerFactory, IAddressIndexer addressIndexer,
-            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, IStakeChain stakeChain = null,
-            IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null, 
+            IBlockStore blockStore, IChainState chainState, Network network, ICoinView coinView, WalletController walletController, ChainIndexer chainIndexer, INFTTransferIndexer NFTTransferIndexer,
+            IStakeChain stakeChain = null,
+            IContractPrimitiveSerializer primitiveSerializer = null, IStateRepositoryRoot stateRoot = null, IContractAssemblyCache contractAssemblyCache = null,
             IReceiptRepository receiptRepository = null, ISmartContractTransactionService smartContractTransactionService = null, ILocalExecutor localExecutor = null)
         {
             Guard.NotNull(loggerFactory, nameof(loggerFactory));
@@ -86,6 +89,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
             this.walletController = Guard.NotNull(walletController, nameof(walletController));
             this.chainIndexer = Guard.NotNull(chainIndexer, nameof(chainIndexer));
             this.stakeChain = stakeChain;
+            this.NFTTransferIndexer = NFTTransferIndexer;
 
             this.primitiveSerializer = primitiveSerializer;
             this.stateRoot = stateRoot;
@@ -556,6 +560,42 @@ namespace Stratis.Features.Unity3dApi.Controllers
             List<ReceiptResponse> result = this.smartContractTransactionService.ReceiptSearch(contractAddress, eventName, topics, fromBlock, toBlock);
 
             return result;
+        }
+
+        [Route("api/[controller]/watch_nft_contract")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public void WatchNFTContract([FromQuery] string contractAddress)
+        {
+            this.NFTTransferIndexer.WatchNFTContract(contractAddress);
+        }
+
+        [Route("api/[controller]/get_watched_nft_contracts")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public List<string> GetWatchedNFTContracts()
+        {
+            return this.NFTTransferIndexer.GetWatchedNFTContracts();
+        }
+
+        [Route("api/[controller]/get_owned_nfts")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public OwnedNFTsModel GetOwnedNFTs([FromQuery] string ownerAddress)
+        {
+            return this.NFTTransferIndexer.GetOwnedNFTs(ownerAddress);
+        }
+
+        [Route("api/[controller]/get_all_nft_owners_by_contract_address")]
+        [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public NFTContractModel GetAllNFTOwnersByContractAddress([FromQuery] string contractAddress)
+        {
+            return this.NFTTransferIndexer.GetAllNFTOwnersByContractAddress(contractAddress);
         }
 
         /// <summary>
