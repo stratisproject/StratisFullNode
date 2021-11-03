@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -182,18 +182,30 @@ namespace Stratis.Features.Unity3dApi.Controllers
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-        public long GetAddressBalance(string address)
+        public IActionResult GetAddressBalance(string address)
         {
+            long money = -1;
             try
             {
-                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(new []{address}, 1);
-
-                return result.Balances.First().Balance.Satoshi;
+                AddressBalancesResult result = this.addressIndexer.GetAddressBalances(new[] { address }, 1);
+                money = result.Balances.First().Balance.Satoshi;
             }
             catch (Exception e)
             {
                 this.logger.LogError("Exception occurred: {0}", e.ToString());
-                return -1;
+            }
+
+            if (Request.Headers["Accept"] == "application/json")
+            {
+                GetBalanceResponseModel response = new GetBalanceResponseModel()
+                {
+                    Balance = money
+                };
+                return Ok(response);
+            }
+            else
+            {
+                return Ok(money);
             }
         }
 
