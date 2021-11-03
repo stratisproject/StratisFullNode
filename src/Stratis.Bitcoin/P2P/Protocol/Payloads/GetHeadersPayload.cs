@@ -18,7 +18,9 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
             set => this.version = (uint)value;
         }
 
+#pragma warning disable SA1401 // Fields must be private
         protected BlockLocator blockLocator;
+#pragma warning restore SA1401 // Fields must be private
 
         /// <summary>
         /// Gets a block locator which represents a compact structure of one's chain position which can be used to find
@@ -31,7 +33,9 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
             set => this.blockLocator = value;
         }
 
+#pragma warning disable SA1401 // Fields must be private
         protected uint256 hashStop = uint256.Zero;
+#pragma warning restore SA1401 // Fields must be private
 
         /// <summary>
         /// Gets a hash after which no new headers should be sent withing the same message.

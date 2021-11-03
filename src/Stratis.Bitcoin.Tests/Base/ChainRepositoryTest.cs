@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Tests.Base
                 {
                     if (itr.Current.Key[0] == 1)
                     {
-                        var data = new ChainRepository.ChainRepositoryData();
+                        var data = new ChainRepository.ChainRepositoryData(new uint256(), null);
                         data.FromBytes(itr.Current.Value.ToArray(), this.Network.Consensus.ConsensusFactory);
 
                         tip = new ChainedHeader(data.Hash, data.Work, tip);
@@ -74,8 +74,7 @@ namespace Stratis.Bitcoin.Tests.Base
                     foreach (ChainedHeader block in blocks)
                     {
                         batch.Put(1, BitConverter.GetBytes(block.Height),
-                            new ChainRepository.ChainRepositoryData()
-                            { Hash = block.HashBlock, Work = block.ChainWorkBytes }
+                            new ChainRepository.ChainRepositoryData(block.HashBlock, block.ChainWorkBytes)
                                 .ToBytes(this.Network.Consensus.ConsensusFactory));
 
                         ConsensusFactory consensusFactory = KnownNetworks.StraxRegTest.Consensus.ConsensusFactory;
