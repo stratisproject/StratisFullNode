@@ -38,7 +38,7 @@ namespace Stratis.Bitcoin.Tests.Base
                 {
                     if (itr.Current.Key[0] == 1)
                     {
-                        var data = new ChainRepository.ChainRepositoryData(new uint256(), null);
+                        var data = new ChainRepository.ChainRepositoryData();
                         data.FromBytes(itr.Current.Value.ToArray(), this.Network.Consensus.ConsensusFactory);
 
                         tip = new ChainedHeader(data.Hash, data.Work, tip);

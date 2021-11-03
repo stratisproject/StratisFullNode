@@ -142,7 +142,11 @@ namespace Stratis.Bitcoin.Base
 
             public byte[] Work => this.work;
 
-            public ChainRepositoryData(uint256 hash, byte[] work)
+            public ChainRepositoryData()
+            {
+            }
+
+            public ChainRepositoryData(uint256 hash, byte[] work) : this()
             {
                 this.hash = hash;
                 this.work = work;
