@@ -56,7 +56,7 @@ namespace Stratis.Features.Unity3dApi
         private CancellationTokenSource cancellation;
         private Task indexingTask;
         
-        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, ISmartContractTransactionService smartContractTransactionService)
+        public NFTTransferIndexer(DataFolder dataFolder, ILoggerFactory loggerFactory, IAsyncProvider asyncProvider, ChainIndexer chainIndexer, ISmartContractTransactionService smartContractTransactionService = null)
         {
             this.dataFolder = dataFolder;
             this.cancellation = new CancellationTokenSource();
