@@ -47,8 +47,6 @@ namespace Stratis.Bitcoin.Features.PoA
 
         public uint GetMiningTimestamp(uint currentTime)
         {
-            // TODO: Based on BIP9 activation call the old logic until we go active otherwise we will have miners competing for the same slot.
-
             /*
             A miner can calculate when its expected to mine by looking at the ordered list of federation members
             and the last block that was mined and by whom. It can count the number of mining slots from that member

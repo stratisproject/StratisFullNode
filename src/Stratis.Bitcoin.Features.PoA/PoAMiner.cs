@@ -240,7 +240,6 @@ namespace Stratis.Bitcoin.Features.PoA
             {
                 string pubKeyRepresentation = pubKey.ToString().Substring(0, pubKeyTakeCharacters);
 
-                // There is a logging filter that bolds hex numbers preseded by NUL character.
                 if (pubKey == this.federationManager.CurrentFederationKey?.PubKey)
                     pubKeyRepresentation = "█████";
 
