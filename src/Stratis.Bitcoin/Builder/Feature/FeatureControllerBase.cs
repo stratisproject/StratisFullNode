@@ -49,7 +49,7 @@ namespace Stratis.Bitcoin.Builder.Feature
             }
         }
 
-        protected async Task<IActionResult> Execute<TRequest>(TRequest request, CancellationToken token, Func<TRequest, CancellationToken, Task<IActionResult>> action, bool checkModelState = true)
+        protected async Task<IActionResult> ExecuteAsync<TRequest>(TRequest request, CancellationToken token, Func<TRequest, CancellationToken, Task<IActionResult>> action, bool checkModelState = true)
         {
             if (checkModelState && !this.ModelState.IsValid)
             {
@@ -78,7 +78,7 @@ namespace Stratis.Bitcoin.Builder.Feature
             CancellationToken cancellationToken,
             Func<TRequest, CancellationToken, IActionResult> action, bool checkModelState = true)
         {
-            return this.Execute(request, cancellationToken, (req, token)
+            return this.ExecuteAsync(request, cancellationToken, (req, token)
                 => Task.Run(() => action(req, token), token), checkModelState);
         }
     }

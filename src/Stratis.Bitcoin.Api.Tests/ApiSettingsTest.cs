@@ -231,7 +231,7 @@ namespace Stratis.Bitcoin.Api.Tests
             var nodeSettings = new NodeSettings(KnownNetworks.TestNet, args: new[] { $"-usehttps={useHttps}", "-certificatefilepath=nonNullValue" });
 
             // Act.
-            var settings = FullNodeSetup(nodeSettings);
+            ApiSettings settings = FullNodeSetup(nodeSettings);
 
             // Assert.
             settings.UseHttps.Should().Be(useHttps);
