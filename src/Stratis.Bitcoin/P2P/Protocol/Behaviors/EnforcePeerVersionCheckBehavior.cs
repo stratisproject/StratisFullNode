@@ -16,25 +16,25 @@ namespace Stratis.Bitcoin.P2P.Protocol.Behaviors
     public class EnforcePeerVersionCheckBehavior : NetworkPeerBehavior
     {
         /// <summary>An indexer that provides methods to query the best chain (the chain that is validated by the full consensus rules)</summary>
-        protected readonly ChainIndexer ChainIndexer;
+        protected ChainIndexer ChainIndexer { get; private set; }
 
         /// <summary>User defined node settings.</summary>
-        protected readonly NodeSettings NodeSettings;
+        protected NodeSettings NodeSettings { get; private set; }
 
         /// <summary>Specification of the network the node runs on - regtest/testnet/mainnet.</summary>
-        protected readonly Network Network;
+        protected Network Network { get; private set; }
 
         /// <summary>Logger factory used while cloning the object.</summary>
-        protected readonly ILoggerFactory LoggerFactory;
+        protected ILoggerFactory LoggerFactory { get; private set; }
 
         /// <summary>Instance logger.</summary>
-        protected readonly ILogger Logger;
+        protected ILogger Logger { get; private set; }
 
         /// <summary>
         /// Set to <c>true</c> if the attached peer callbacks have been registered and they should be unregistered,
         /// <c>false</c> if the callbacks are not registered.
         /// </summary>
-        protected bool CallbacksRegistered;
+        protected bool CallbacksRegistered { get; private set; }
 
         /// <summary>
         /// Initializes an instance of the object for outbound network peers.

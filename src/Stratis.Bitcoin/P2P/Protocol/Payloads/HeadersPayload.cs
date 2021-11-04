@@ -14,7 +14,9 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
     {
         private class BlockHeaderWithTxCount : IBitcoinSerializable
         {
-            internal BlockHeader Header;
+            private BlockHeader header;
+
+            public BlockHeader Header => this.header;
 
             public BlockHeaderWithTxCount()
             {
@@ -22,13 +24,13 @@ namespace Stratis.Bitcoin.P2P.Protocol.Payloads
 
             public BlockHeaderWithTxCount(BlockHeader header)
             {
-                this.Header = header;
+                this.header = header;
             }
 
             [NoTrace]
             public void ReadWrite(BitcoinStream stream)
             {
-                stream.ReadWrite(ref this.Header);
+                stream.ReadWrite(ref this.header);
                 var txCount = new VarInt(0);
                 stream.ReadWrite(ref txCount);
 
