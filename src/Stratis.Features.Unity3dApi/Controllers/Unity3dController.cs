@@ -468,7 +468,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <returns>The receipt for the smart contract.</returns> 
         /// <response code="200">Returns transaction receipt</response>
         /// <response code="400">Transaction not found</response>
-        [Route("api/[controller]/receipt")]
+        [Route("receipt")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -511,7 +511,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <response code="200">Returns call response</response>
         /// <response code="400">Invalid request</response>
         /// <response code="500">Unable to deserialize method parameters</response>
-        [Route("api/[controller]/local-call")]
+        [Route("local-call")]
         [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -565,7 +565,7 @@ namespace Stratis.Features.Unity3dApi.Controllers
         /// <param name="toBlock">The block number where searching finishes.</param>
         /// 
         /// <returns>A list of receipts for transactions relating to a specific smart contract and a specific event in that smart contract.</returns>
-        [Route("api/[controller]/receipt-search")]
+        [Route("receipt-search")]
         [HttpGet]
         public async Task<List<ReceiptResponse>> ReceiptSearchAPI([FromQuery] string contractAddress, [FromQuery] string eventName, [FromQuery] List<string> topics = null, [FromQuery] int fromBlock = 0, [FromQuery] int? toBlock = null)
         {
@@ -573,8 +573,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
 
             return result;
         }
-
-        [Route("api/[controller]/watch_nft_contract")]
+        
+        [Route("watch-nft-contract")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -582,8 +582,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
         {
             this.NFTTransferIndexer.WatchNFTContract(contractAddress);
         }
-
-        [Route("api/[controller]/get_watched_nft_contracts")]
+        
+        [Route("get-watched-nft-contracts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -591,8 +591,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
         {
             return this.NFTTransferIndexer.GetWatchedNFTContracts();
         }
-
-        [Route("api/[controller]/get_owned_nfts")]
+        
+        [Route("get-owned-nfts")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -600,8 +600,8 @@ namespace Stratis.Features.Unity3dApi.Controllers
         {
             return this.NFTTransferIndexer.GetOwnedNFTs(ownerAddress);
         }
-
-        [Route("api/[controller]/get_all_nft_owners_by_contract_address")]
+        
+        [Route("get-all-nft-owners-by-contract-address")]
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
