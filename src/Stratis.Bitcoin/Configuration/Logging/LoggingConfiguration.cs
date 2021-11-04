@@ -200,7 +200,7 @@ namespace Stratis.Bitcoin.Configuration.Logging
                 Layout = "[${level:lowercase=true}]\t${logger}\n\t${message}",
                 AutoFlush = true,
             };
-            
+
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Info", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Warn", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));
             consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule("level == LogLevel.Error", ConsoleOutputColor.Gray, ConsoleOutputColor.Black));

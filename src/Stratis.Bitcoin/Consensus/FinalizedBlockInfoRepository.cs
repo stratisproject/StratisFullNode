@@ -52,7 +52,6 @@ namespace Stratis.Bitcoin.Consensus
 
         /// <summary>Height and hash of a block that can't be reorged away from.</summary>
         private HashHeightPair finalizedBlockInfo;
-        private readonly INodeStats nodeStats;
 
         /// <summary>Queue of finalized infos to save.</summary>
         /// <remarks>All access should be protected by <see cref="queueLock"/>.</remarks>
@@ -91,7 +90,7 @@ namespace Stratis.Bitcoin.Consensus
         /// <inheritdoc />
         public void Initialize(ChainedHeader chainTip)
         {
-            // If the node shut down unexpectedly, it is possible that the finalized height could be 
+            // If the node shut down unexpectedly, it is possible that the finalized height could be
             // higher than the chain tip. In this case we have to set the finalized height back to the chain's tip.
             if (this.GetFinalizedBlockInfo()?.Height > chainTip.Height)
             {

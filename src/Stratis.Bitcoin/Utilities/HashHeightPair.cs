@@ -89,5 +89,10 @@ namespace Stratis.Bitcoin.Utilities
             hashHeight.ReadWrite(bytes, consensusFactory);
             return hashHeight;
         }
+
+        public override int GetHashCode()
+        {
+            return this.hash.GetHashCode() ^ this.height;
+        }
     }
 }
