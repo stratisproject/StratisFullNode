@@ -17,7 +17,7 @@ namespace Stratis.Bitcoin.Builder.Feature
     /// </summary>
     public abstract class FeatureControllerBase : Controller
     {
-        public readonly ILogger Logger;
+        protected ILogger Logger { get; private set; }
 
         protected FeatureControllerBase(ILogger logger)
         {

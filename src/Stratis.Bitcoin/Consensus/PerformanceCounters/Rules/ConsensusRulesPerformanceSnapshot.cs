@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using NBitcoin.Rules;
 using TracerAttributes;
 
@@ -89,9 +90,12 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.Rules
     /// <seealso cref="RuleItem" />
     internal class RulePerformance : RuleItem
     {
-        public int CalledTimes;
+        private int calledTimes;
+        private long executionTimesTicks;
 
-        public long ExecutionTimesTicks;
+        public int CalledTimes => this.calledTimes;
+
+        public long ExecutionTimesTicks => this.executionTimesTicks;
 
         public RulePerformance(RuleItem rule)
         {
@@ -99,8 +103,14 @@ namespace Stratis.Bitcoin.Consensus.PerformanceCounters.Rules
             this.RuleType = rule.RuleType;
             this.RuleReferenceInstance = rule.RuleReferenceInstance;
 
-            this.CalledTimes = 0;
-            this.ExecutionTimesTicks = 0;
+            this.calledTimes = 0;
+            this.executionTimesTicks = 0;
+        }
+
+        public void AddTicks(long elapsedTicks)
+        {
+            Interlocked.Increment(ref this.calledTimes);
+            Interlocked.Add(ref this.executionTimesTicks, elapsedTicks);
         }
     }
 
