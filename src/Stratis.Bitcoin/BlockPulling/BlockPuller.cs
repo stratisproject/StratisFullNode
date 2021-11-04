@@ -184,6 +184,8 @@ namespace Stratis.Bitcoin.BlockPulling
         /// <remarks>This object has to be protected by <see cref="peerLock"/>.</remarks>
         private bool isIbd;
 
+#pragma warning disable SA1648
+
         /// <inheritdoc cref="ILogger"/>
         private readonly ILogger logger;
 
@@ -199,6 +201,8 @@ namespace Stratis.Bitcoin.BlockPulling
 
         /// <inheritdoc cref="Random"/>
         private readonly Random random;
+
+#pragma warning restore SA1648
 
         /// <summary>Loop that assigns download jobs to the peers.</summary>
         private Task assignerLoop;
@@ -606,7 +610,7 @@ namespace Stratis.Bitcoin.BlockPulling
 
         /// <summary>Distributes download job's headers to peers that can provide blocks represented by those headers.</summary>
         /// <remarks>
-        /// If some of the blocks from the job can't be provided by any peer those headers will be added to a <param name="failedHashes"></param>.
+        /// If some of the blocks from the job can't be provided by any peer those headers will be added to a <paramref name="failedHashes" />.
         /// <para>
         /// Have to be locked by <see cref="queueLock"/>.
         /// </para>

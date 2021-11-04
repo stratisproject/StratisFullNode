@@ -14,7 +14,6 @@ namespace Stratis.Bitcoin.Utilities
 {
     public interface INodeStats
     {
-
         /// <summary>
         /// A flag indicating whether or not to display bench stats on the console output.
         /// </summary>
