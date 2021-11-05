@@ -40,6 +40,7 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
 
         /// <summary>Returns verbose balances data.</summary>
         /// <param name="addresses">The set of addresses that will be queried.</param>
+        /// <returns>See <see cref="VerboseAddressBalancesResult"/>.</returns>
         VerboseAddressBalancesResult GetAddressIndexerState(string[] addresses);
 
         IFullNodeFeature InitializingFeature { set; }
@@ -168,7 +169,9 @@ namespace Stratis.Bitcoin.Features.BlockStore.AddressIndexing
             this.compactionTriggerDistance = maxReorgLength * 2 + SyncBuffer + 1000;
         }
 
-        /// <summary>Returns maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
+        /// <summary>Gets the maxReorg of <see cref="FallBackMaxReorg"/> in case maxReorg is <c>0</c>.</summary>
+        /// <param name="network">The network to get the value for.</param>
+        /// <returns>Returns the maxReorg or <see cref="FallBackMaxReorg"/> value.</returns>
         public static int GetMaxReorgOrFallbackMaxReorg(Network network)
         {
             int maxReorgLength = network.Consensus.MaxReorgLength == 0 ? FallBackMaxReorg : (int)network.Consensus.MaxReorgLength;
