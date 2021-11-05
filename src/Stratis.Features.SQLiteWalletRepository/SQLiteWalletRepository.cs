@@ -1307,26 +1307,67 @@ namespace Stratis.Features.SQLiteWalletRepository
             Wallet hdWallet = this.GetWallet(walletAccountReference.WalletName);
             HdAccount hdAccount = this.GetAccounts(hdWallet, walletAccountReference.AccountName).FirstOrDefault();
 
-            var extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
-
             var spendable = conn.GetSpendableOutputs(walletContainer.Wallet.WalletId, hdAccount.Index, currentChainHeight, coinBaseMaturity ?? this.Network.Consensus.CoinbaseMaturity, confirmations);
+
+            ExtPubKey extPubKey = null;
+
+            // The extPubKey will be null if this is a watch only account.
+            if (hdAccount.ExtendedPubKey != null)
+            {
+                extPubKey = ExtPubKey.Parse(hdAccount.ExtendedPubKey, this.Network);
+            }
 
             var cachedPubKeys = new Dictionary<KeyPath, PubKey>();
 
             foreach (HDTransactionData transactionData in spendable)
             {
-                var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
+                int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
+
+                if (extPubKey == null)
+                {
+                    // We cannot derive a pubKey from the scriptPubKey as it has been hashed already.
+                    // Therefore we have to construct an UnspentOutputReference
+                    Script watchOnlyScriptPubKey = Script.FromHex(transactionData.ScriptPubKey);
+
+                    HdAddress watchOnlyAddress = this.ToHdAddress(new HDAddress()
+                    {
+                        AccountIndex = transactionData.AccountIndex,
+                        AddressIndex = transactionData.AddressIndex,
+                        AddressType = (int)transactionData.AddressType,
+                        PubKey = watchOnlyScriptPubKey.ToHex(),
+                        ScriptPubKey = watchOnlyScriptPubKey.ToHex(),
+                        Address = transactionData.Address,
+                        // No way of determining this without the actual pubkey available.
+                        //Bech32Address = ""
+                    }, this.Network);
+
+                    watchOnlyAddress.AddressCollection = (watchOnlyAddress.AddressType == 0) ? hdAccount.ExternalAddresses : hdAccount.InternalAddresses;
+
+                    TransactionData watchOnlyTxData = this.ToTransactionData(transactionData, watchOnlyAddress.Transactions);
+
+                    yield return new UnspentOutputReference()
+                    {
+                        Account = hdAccount,
+                        Transaction = watchOnlyTxData,
+                        Confirmations = tdConfirmations,
+                        Address = watchOnlyAddress
+                    };
+
+                    continue;
+                }
+
                 PubKey pubKey = null;
+
+                var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
+
                 if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
                 {
                     pubKey = extPubKey.Derive(keyPath).PubKey;
                     cachedPubKeys.Add(keyPath, pubKey);
                 }
-
+                    
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
-
-                int tdConfirmations = (transactionData.OutputBlockHeight == null) ? 0 : (currentChainHeight + 1) - (int)transactionData.OutputBlockHeight;
 
                 // We do not use the address from the transaction (i.e. UTXO) data here in case it is a segwit (P2WPKH) UTXO.
                 // That is because the bech32 functionality is somewhat bolted onto the HdAddress, so we need to return an HdAddress augmented with bech32 data rather than only bech32 data.
@@ -1350,7 +1391,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                 {
                     bool isColdCoinStake = txData.IsColdCoinStake ?? false;
 
-                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as an cold coin stake.
+                    // Skip listing the UTXO if this is a normal wallet, and the UTXO is marked as a cold coin stake.
                     if (isColdCoinStake)
                     {
                         continue;

@@ -274,6 +274,14 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<HdAccount> GetAccounts(string walletName);
 
         /// <summary>
+        /// Gets a list of accounts.
+        /// </summary>
+        /// <param name="walletName">The name of the wallet to look into.</param>
+        /// <param name="accountFilter">Optional filter for the accounts to return. Defaults to returning normal accounts only.</param>
+        /// <returns>The list of accounts in the specified wallet.</returns>
+        IEnumerable<HdAccount> GetAccounts(string walletName, Func<HdAccount, bool> accountFilter);
+
+        /// <summary>
         /// Gets a list of all the accounts in all wallets.
         /// </summary>
         /// <returns>The list of all accounts.</returns>

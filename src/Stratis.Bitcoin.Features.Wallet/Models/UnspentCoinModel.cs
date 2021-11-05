@@ -47,6 +47,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         public string RedeemScriptHex { get; set; }
 
         /// <summary>
+        /// If the output is a P2WSH or P2SH-P2WSH whose script belongs to this wallet, this is the redeem script.
+        /// </summary>
+        [JsonProperty(PropertyName = "witnessScript")]
+        public string WitnessScriptHex { get; set; }
+
+        /// <summary>
         /// The transaction amount.
         /// Serialized in coins (BTC).
         /// </summary>
@@ -71,5 +77,22 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [JsonProperty(PropertyName = "solvable")]
         public bool IsSolvable { get; set; }
+
+        /*
+        /// <summary>
+        /// A descriptor for spending this output (only when solvable).
+        /// </summary>
+        /// <remarks>Not implemented yet.</remarks>
+        [JsonProperty(PropertyName = "desc")]
+        public string Desc { get; set; }
+
+        /// <summary>
+        /// Whether this output is considered safe to spend. Unconfirmed transactions
+        /// from outside keys and unconfirmed replacement transactions are considered unsafe
+        /// and are not eligible for spending by fundrawtransaction and sendtoaddress.
+        /// </summary>
+        [JsonProperty(PropertyName = "safe")]
+        public bool Safe { get; set; }
+        */
     }
 }

@@ -105,6 +105,62 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         }
 
         [Fact]
+        public void TestRpcListUnspentForWatchOnlyIsSuccessful()
+        {
+            using (NodeBuilder builder = NodeBuilder.Create(this))
+            {
+                CoreNode node = builder.CreateStratisPowNode(new BitcoinRegTest()).AlwaysFlushBlocks().WithWallet().Start();
+                CoreNode node2 = builder.CreateStratisPowNode(new BitcoinRegTest()).WithReadyBlockchainData(ReadyBlockchain.BitcoinRegTest10Miner).Start();
+
+                TestHelper.ConnectAndSync(node, node2);
+
+                UnspentOutputReference tx = node2.FullNode.WalletManager().GetUnspentTransactionsInWallet("mywallet", 0, Features.Wallet.Wallet.NormalAccounts).First();
+
+                RPCClient rpc = node.CreateRPCClient();
+
+                PubKey pubKey = PayToPubkeyTemplate.Instance.ExtractScriptPubKeyParameters(tx.Address.Pubkey);
+
+                Assert.Throws<RPCException>(() => rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true));
+
+                rpc.ImportPubKey(pubKey.ToHex());
+
+                // ListUnspent will not regard the outputs as spendable if they are not sufficiently mature.
+                rpc.Generate((int)node.FullNode.Network.Consensus.CoinbaseMaturity);
+
+                TestBase.WaitLoop(() => node.FullNode.WalletManager().WalletTipHeight == node2.FullNode.WalletManager().WalletTipHeight);
+
+                TestBase.WaitLoop(() =>
+                {
+                    try
+                    {
+                        // Wait until gettransaction can find the transaction in the watch only account.
+                        RPCResponse walletTx = rpc.SendCommand(RPCOperations.gettransaction, tx.Transaction.Id.ToString(), true);
+
+                        return walletTx != null;
+                    }
+                    catch (RPCException e)
+                    {
+                        return false;
+                    }
+                });
+
+                UnspentCoin[] unspent = rpc.ListUnspent(1, 9999999);
+
+                bool found = false;
+
+                foreach (UnspentCoin coin in unspent)
+                {
+                    if (coin.OutPoint == tx.ToOutPoint())
+                        found = true;
+
+                    Assert.Equal(coin.Account, Features.Wallet.Wallet.WatchOnlyAccountName);
+                }
+
+                Assert.True(found);
+            }
+        }
+
+        [Fact]
         public void TestRpcGetBlockWithValidHashIsSuccessful()
         {
             using (NodeBuilder builder = NodeBuilder.Create(this))
