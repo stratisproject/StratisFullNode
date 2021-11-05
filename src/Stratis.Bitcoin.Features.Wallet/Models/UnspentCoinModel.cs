@@ -4,6 +4,7 @@ using Stratis.Bitcoin.Utilities.JsonConverters;
 
 namespace Stratis.Bitcoin.Features.Wallet.Models
 {
+    // TODO: This is similar to the UnspentCoin class in the RPC feature; perhaps one of the two should be removed?
     /// <summary>
     /// Model for Json response for listunspent RPC call.
     /// </summary>
@@ -77,22 +78,5 @@ namespace Stratis.Bitcoin.Features.Wallet.Models
         /// </summary>
         [JsonProperty(PropertyName = "solvable")]
         public bool IsSolvable { get; set; }
-
-        /*
-        /// <summary>
-        /// A descriptor for spending this output (only when solvable).
-        /// </summary>
-        /// <remarks>Not implemented yet.</remarks>
-        [JsonProperty(PropertyName = "desc")]
-        public string Desc { get; set; }
-
-        /// <summary>
-        /// Whether this output is considered safe to spend. Unconfirmed transactions
-        /// from outside keys and unconfirmed replacement transactions are considered unsafe
-        /// and are not eligible for spending by fundrawtransaction and sendtoaddress.
-        /// </summary>
-        [JsonProperty(PropertyName = "safe")]
-        public bool Safe { get; set; }
-        */
     }
 }

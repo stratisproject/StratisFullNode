@@ -1326,7 +1326,6 @@ namespace Stratis.Features.SQLiteWalletRepository
                 if (extPubKey == null)
                 {
                     // We cannot derive a pubKey from the scriptPubKey as it has been hashed already.
-                    // Therefore we have to construct an UnspentOutputReference
                     Script watchOnlyScriptPubKey = Script.FromHex(transactionData.ScriptPubKey);
 
                     HdAddress watchOnlyAddress = this.ToHdAddress(new HDAddress()
@@ -1337,7 +1336,7 @@ namespace Stratis.Features.SQLiteWalletRepository
                         PubKey = watchOnlyScriptPubKey.ToHex(),
                         ScriptPubKey = watchOnlyScriptPubKey.ToHex(),
                         Address = transactionData.Address,
-                        // No way of determining this without the actual pubkey available.
+                        // TODO: It may be possible to construct a P2WPKH address using the P2PKH scriptPubKey as a starting point
                         //Bech32Address = ""
                     }, this.Network);
 
@@ -1356,16 +1355,14 @@ namespace Stratis.Features.SQLiteWalletRepository
                     continue;
                 }
 
-                PubKey pubKey = null;
-
                 var keyPath = new KeyPath($"{transactionData.AddressType}/{transactionData.AddressIndex}");
 
-                if (!cachedPubKeys.TryGetValue(keyPath, out pubKey))
+                if (!cachedPubKeys.TryGetValue(keyPath, out PubKey pubKey))
                 {
                     pubKey = extPubKey.Derive(keyPath).PubKey;
                     cachedPubKeys.Add(keyPath, pubKey);
                 }
-                    
+
                 Script scriptPubKey = PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
                 Script witScriptPubKey = PayToWitPubKeyHashTemplate.Instance.GenerateScriptPubKey(pubKey);
 
