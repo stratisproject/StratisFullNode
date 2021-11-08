@@ -76,17 +76,17 @@ namespace Stratis.Bitcoin.Features.ColdStaking
                                 $"Could not resolve address from UTXO's scriptPubKey '{scriptPubKey.ToHex()}'.");
                     }
 
-                    var accounts = this.walletManager.GetAccounts(request.WalletName);
-                    var addresses = accounts.SelectMany(hdAccount => hdAccount.GetCombinedAddresses());
+                    IEnumerable<HdAccount> accounts = this.walletManager.GetAccounts(request.WalletName);
+                    IEnumerable<HdAddress> addresses = accounts.SelectMany(hdAccount => hdAccount.GetCombinedAddresses());
 
                     HdAddress hdAddress = addresses.FirstOrDefault(a => a.Address == address || a.Bech32Address == address);
 
                     if (coldStakingWithdrawal && hdAddress == null)
                     {
                         var coldStakingManager = this.walletManager as ColdStakingManager;
-                        var wallet = coldStakingManager.GetWallet(request.WalletName);
-                        var coldAccount = coldStakingManager.GetColdStakingAccount(wallet, true);
-                        var coldAccountAddresses = coldAccount.GetCombinedAddresses();
+                        Wallet.Wallet wallet = coldStakingManager.GetWallet(request.WalletName);
+                        HdAccount coldAccount = coldStakingManager.GetColdStakingAccount(wallet, true);
+                        IEnumerable<HdAddress> coldAccountAddresses = coldAccount.GetCombinedAddresses();
                         hdAddress = coldAccountAddresses.FirstOrDefault(a => a.Address == address || a.Bech32Address == address);
                     }
 
