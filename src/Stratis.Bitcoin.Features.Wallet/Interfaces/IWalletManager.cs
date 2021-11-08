@@ -71,6 +71,12 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         IEnumerable<UnspentOutputReference> GetSpendableTransactionsInAccount(WalletAccountReference walletAccountReference, int confirmations = 0);
 
         /// <summary>
+        /// Lists all transactions from the account specified in <see cref="WalletAccountReference"/>.
+        /// </summary>
+        /// <returns>A collection of transactions.</returns>
+        IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName);
+
+        /// <summary>
         /// Creates a wallet and persist it as a file on the local system.
         /// </summary>
         /// <param name="password">The password used to encrypt sensitive info.</param>

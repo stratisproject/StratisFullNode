@@ -1090,6 +1090,20 @@ namespace Stratis.Bitcoin.Features.Wallet
             return res;
         }
 
+        public IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName)
+        {
+            Guard.NotEmpty(walletName, nameof(walletName));
+
+            Wallet wallet = this.GetWallet(walletName);
+            IEnumerable<TransactionData> res = null;
+            lock (this.lockObject)
+            {
+                res = wallet.GetAllTransactions();
+            }
+
+            return res;
+        }
+
         /// <inheritdoc />
         public IEnumerable<UnspentOutputReference> GetSpendableTransactionsInAccount(WalletAccountReference walletAccountReference, int confirmations = 0)
         {
