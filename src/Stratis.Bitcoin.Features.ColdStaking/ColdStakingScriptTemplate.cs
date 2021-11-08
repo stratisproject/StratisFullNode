@@ -100,9 +100,11 @@ namespace Stratis.Bitcoin.Features.ColdStaking
             return new Script(
                 // Duplicates the last stack entry resulting in:
                 // <scriptSig> 0/1 <coldPubKey/hotPubKey> <coldPubKey/hotPubKey>.
+#pragma warning disable SA1114 // Parameter list must follow declaration
                 OP_DUP,
-                // Replaces the last stack entry with its hash resulting in:
-                // <scriptSig> 0/1 <coldPubKey/hotPubKey> <coldPubKeyHash/hotPubKeyHash>.
+#pragma warning restore SA1114 // Parameter list must follow declaration
+                              // Replaces the last stack entry with its hash resulting in:
+                              // <scriptSig> 0/1 <coldPubKey/hotPubKey> <coldPubKeyHash/hotPubKeyHash>.
                 OP_HASH160,
                 // Rotates the top 3 stack entries resulting in:
                 // <scriptSig> <coldPubKey/hotPubKey> <coldPubKeyHash/hotPubKeyHash> 0/1.
