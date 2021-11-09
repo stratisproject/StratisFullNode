@@ -608,6 +608,7 @@ namespace Stratis.Features.SQLiteWalletRepository
         /// </summary>
         /// <param name="wallet">The wallet.</param>
         /// <param name="lastBlockSynced">The last block synced to set.</param>
+        /// <returns>An enumeration of transactions that were removed as tuples of transaction id (string) and transaction creation time (long).</returns>
         internal IEnumerable<(string txId, long creationTime)> SetLastBlockSynced(HDWallet wallet, ChainedHeader lastBlockSynced)
         {
             if (this.IsInTransaction)
