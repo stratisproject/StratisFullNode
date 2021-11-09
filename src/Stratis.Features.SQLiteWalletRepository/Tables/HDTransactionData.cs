@@ -343,7 +343,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             SELECT  * 
             FROM    ({receives}{spends}
             ) as T
-            WHERE   T.Type IS NOT NULL {((strTransactionId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
+            WHERE   T.Type IS NOT NULL {((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
             ORDER   BY T.TimeStamp DESC
             LIMIT   {strLimit} 
             OFFSET  {strOffset}";
