@@ -15,6 +15,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Rules.CommonRules
         /// <remarks>This method is currently used during block creation only. Different nodes may not implement
         /// BIP9, or may disagree about what the current valid set of deployments are. It is therefore not strictly
         /// possible to validate a block version number in anything more than general terms.</remarks>
+        /// <returns>The block version.</returns>
         public int ComputeBlockVersion(ChainedHeader prevChainedHeader)
         {
             uint version = ThresholdConditionCache.VersionbitsTopBits;
