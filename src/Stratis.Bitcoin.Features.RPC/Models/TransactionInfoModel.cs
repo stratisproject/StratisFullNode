@@ -23,7 +23,7 @@ namespace Stratis.Bitcoin.Features.RPC.Models
             this.Amount = new Money((long)(amount * Money.COIN));
             this.Confirmations = (int)tx["confirmations"];
             this.TxId = (string)tx["txid"];
-            this.Index = (int)tx["blockindex"];
+            this.BlockIndex = (int)tx["blockindex"];
 
             if (tx["generated"] != null)
             {
@@ -42,10 +42,10 @@ namespace Stratis.Bitcoin.Features.RPC.Models
         public string TxId { get; set; }
 
         /// <summary>
-        /// The index of the output in the transaction.
+        /// The index of the transaction in the block that includes it.
         /// </summary>
         [JsonProperty(PropertyName = "blockindex")]
-        public int Index { get; set; }
+        public int BlockIndex { get; set; }
 
         /// <summary>
         /// Only present if transaction only input is a coinbase one.

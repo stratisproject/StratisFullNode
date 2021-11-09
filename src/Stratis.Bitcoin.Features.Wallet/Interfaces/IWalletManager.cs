@@ -74,7 +74,7 @@ namespace Stratis.Bitcoin.Features.Wallet.Interfaces
         /// Lists all transactions from the account specified in <see cref="WalletAccountReference"/>.
         /// </summary>
         /// <returns>A collection of transactions.</returns>
-        IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName);
+        IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName, Func<HdAccount, bool> accountFilter);
 
         /// <summary>
         /// Creates a wallet and persist it as a file on the local system.

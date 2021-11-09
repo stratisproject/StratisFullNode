@@ -793,11 +793,20 @@ namespace Stratis.Bitcoin.Features.Wallet
 
         [ActionName("listtransactions")]
         [ActionDescription("Returns an array of transactions belonging to this wallet.")]
-        public TransactionInfoModel[] ListTransactions(string label = "*", int count = 10, int skip = 0)
+        public TransactionInfoModel[] ListTransactions(string label = "*", int count = 10, int skip = 0, bool include_watchonly = true)
         {
             WalletAccountReference accountReference = this.GetWalletAccountReference();
 
-            var transactions = this.walletManager.GetAllTransactionsInWallet(accountReference.WalletName);
+            Func<HdAccount, bool> accountFilter = a =>
+            {
+                var labelMatch = label == "*" || a.Name == label;
+
+                return include_watchonly
+                    ? (a.Index == Wallet.WatchOnlyAccountIndex || a.Index < Wallet.SpecialPurposeAccountIndexesStart) && labelMatch
+                    : (a.Index < Wallet.SpecialPurposeAccountIndexesStart) && labelMatch;
+            };
+
+            var transactions = this.walletManager.GetAllTransactionsInWallet(accountReference.WalletName, accountFilter);
 
             var filteredTransactions = transactions
                     .Skip(skip)
@@ -810,7 +819,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                         BlockHeight = tx.BlockHeight ?? 0,
                         Generated = tx.IsCoinBase ?? false,
                         Confirmations = tx.BlockHeight.HasValue ? (this.walletManager.LastBlockHeight() + 1) - tx.BlockHeight.Value : 0,
-                        Index = tx.Index
+                        BlockIndex = tx.BlockIndex ?? 0
                     })
                     .ToArray();
 
@@ -822,10 +831,10 @@ namespace Stratis.Bitcoin.Features.Wallet
         public TransactionsSinceBlockModel ListSinceBlock(string blockhash = "", int targetConfirmations = 1)
         {
             WalletAccountReference accountReference = this.GetWalletAccountReference();
-            var transactions = this.walletManager.GetAllTransactionsInWallet(accountReference.WalletName);
+            var transactions = this.walletManager.GetAllTransactionsInWallet(accountReference.WalletName, Wallet.NormalAccounts);
 
             int? targetBlockHeight = null;
-            if (string.IsNullOrEmpty(blockhash))
+            if (!string.IsNullOrEmpty(blockhash))
             {
                 var transactionWithMatchingBlock = transactions.FirstOrDefault(b => b.BlockHash.ToString().Equals(blockhash, StringComparison.OrdinalIgnoreCase));
                 if (transactionWithMatchingBlock == null)
@@ -846,7 +855,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                     BlockHeight = tx.BlockHeight ?? 0,
                     Generated = tx.IsCoinBase ?? false,
                     Confirmations = tx.BlockHeight.HasValue ? (this.walletManager.LastBlockHeight() + 1) - tx.BlockHeight.Value : 0,
-                    Index = tx.Index
+                    BlockIndex = tx.BlockIndex ?? 0
                 })
                 .Where(tx => tx.Confirmations >= targetConfirmations)
                 .ToArray();

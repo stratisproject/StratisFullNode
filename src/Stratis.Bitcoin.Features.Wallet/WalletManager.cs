@@ -1090,7 +1090,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             return res;
         }
 
-        public IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName)
+        public IEnumerable<TransactionData> GetAllTransactionsInWallet(string walletName, Func<HdAccount, bool> accountFilter)
         {
             Guard.NotEmpty(walletName, nameof(walletName));
 
@@ -1098,7 +1098,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             IEnumerable<TransactionData> res = null;
             lock (this.lockObject)
             {
-                res = wallet.GetAllTransactions();
+                res = wallet.GetAllTransactions(accountFilter: accountFilter);
             }
 
             return res;
