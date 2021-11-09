@@ -230,6 +230,12 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
         /// <param name="conn">Connection to the database engine.</param>
         /// <param name="walletId">The wallet we are retrieving history for.</param>
         /// <param name="accountIndex">The account index in question.</param>
+        /// <param name="limit">The maximum number of history items to return.</param>
+        /// <param name="offset">The number of history items to skip.</param>
+        /// <param name="txId">A transaction id filter or a null/empty string.</param>
+        /// <param name="address">An address filter or a null/empty string.</param>
+        /// <param name="forSmartContracts">Set to <c>true</c> if its a smart contract history.</param>
+        /// <param name="forCirrus">Set to <c>true</c> if its for Cirrus.</param>
         /// <returns>An unpaged set of wallet transaction history items</returns>
         internal static IEnumerable<FlattenedHistoryItem> GetHistory(DBConnection conn, int walletId, int accountIndex, int limit, int offset, string txId, string address, bool forSmartContracts = false, bool forCirrus = false)
         {
@@ -271,7 +277,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                             WHERE   t2.WalletId = {strWalletId} AND t2.SpendTxId is not null and t2.AccountIndex = {strAccountIndex}) t2					
                     ON      t2.SpendTxId = t.OutputTxId
                     AND     t2.Address = t.Address
-                    WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{((address == null) ? "" : $@" AND t.Address = {strAddress}")}
+                    WHERE   t.WalletId = {strWalletId} AND t.AccountIndex = {strAccountIndex}{(string.IsNullOrEmpty(address) ? "" : $@" AND t.Address = {strAddress}")}
                     AND     (t.OutputTxIsCoinbase != 0 OR t2.SpendTxId IS NULL){(!forCirrus ? "" : $@"
                     AND     t.OutputTxIsCoinbase = 0")}
                     GROUP   BY t.OutputTxId
@@ -323,7 +329,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
                     	    ,		SpendBlockHeight
                     	    FROM	HDTransactionData
                     	    WHERE   WalletId = {strWalletId}
-                    	    AND     AccountIndex = {strAccountIndex}{((address == null) ? "" : $@"
+                    	    AND     AccountIndex = {strAccountIndex}{(string.IsNullOrEmpty(address) ? "" : $@"
                             AND     Address = {strAddress}")}
                     	    AND     SpendTxId IS NOT NULL
                             AND     SpendTxIsCoinbase = 0
@@ -337,7 +343,7 @@ namespace Stratis.Features.SQLiteWalletRepository.Tables
             SELECT  * 
             FROM    ({receives}{spends}
             ) as T
-            WHERE   T.Type IS NOT NULL {((txId == null) ? "" : $@" AND T.Id = {strTransactionId}")}
+            WHERE   T.Type IS NOT NULL {(string.IsNullOrEmpty(strTransactionId) ? "" : $@" AND T.Id = {strTransactionId}")}
             ORDER   BY T.TimeStamp DESC
             LIMIT   {strLimit} 
             OFFSET  {strOffset}";
