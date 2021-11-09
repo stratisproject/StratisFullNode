@@ -80,7 +80,7 @@ namespace Stratis.Bitcoin.IntegrationTests.RPC
         }
 
         [Fact]
-        public async Task GetTop10TxThenReturnsCorrectTxsAsync()
+        public async Task GetAllTxsWithoutFiltersThenReturnsTop10TxsAsync()
         {
             RPCClient rpc = this.rpcTestFixture.RpcClient;
             TransactionInfoModel[] transactions = rpc.ListTransactions();
