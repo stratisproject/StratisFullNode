@@ -121,6 +121,7 @@ namespace Stratis.Bitcoin.Features.Consensus.Tests.Rules.CommonRules
         /// <summary>
         /// Tests whether an error is raised when a miner attempts to stake an output which he can't spend with his private key.
         /// </summary>
+        /// <returns>The asynchronous task.</returns>
         /// <remarks>
         /// <para>Create a "previous transaction" with 2 outputs. The first output is sent to miner 2 and the second output is sent to miner 1.
         /// Now miner 2 creates a proof of stake block with coinstake transaction which will have two inputs corresponding to both the

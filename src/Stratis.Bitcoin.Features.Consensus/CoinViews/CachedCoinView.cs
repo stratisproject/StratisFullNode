@@ -94,8 +94,10 @@ namespace Stratis.Bitcoin.Features.Consensus.CoinViews
         /// <remarks>All access to this list has to be protected by <see cref="lockobj"/>.</remarks>
         private readonly Dictionary<int, RewindData> cachedRewindData;
 
+#pragma warning disable SA1648 // inheritdoc must be used with inheriting class
         /// <inheritdoc />
         public ICoindb ICoindb => this.coindb;
+#pragma warning restore SA1648 // inheritdoc must be used with inheriting class
 
         /// <summary>Storage of POS block information.</summary>
         private readonly StakeChainStore stakeChainStore;
