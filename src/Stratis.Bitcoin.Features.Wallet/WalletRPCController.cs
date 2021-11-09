@@ -839,7 +839,7 @@ namespace Stratis.Bitcoin.Features.Wallet
                 var transactionWithMatchingBlock = transactions.FirstOrDefault(b => b.BlockHash.ToString().Equals(blockhash, StringComparison.OrdinalIgnoreCase));
                 if (transactionWithMatchingBlock == null)
                 {
-                    return new TransactionsSinceBlockModel { Transactions = Array.Empty<TransactionInfoModel>(), Lastblock = blockhash };
+                    return new TransactionsSinceBlockModel { Transactions = Array.Empty<TransactionInfoModel>(), LastBlock = blockhash };
                 }
 
                 targetBlockHeight = transactionWithMatchingBlock.BlockHeight ?? 0;
@@ -863,7 +863,7 @@ namespace Stratis.Bitcoin.Features.Wallet
             return new TransactionsSinceBlockModel
             {
                 Transactions = filteredTransactions,
-                Lastblock = string.IsNullOrEmpty(blockhash)
+                LastBlock = string.IsNullOrEmpty(blockhash)
                     ? filteredTransactions.LastOrDefault()?.BlockHash
                     : blockhash
             };

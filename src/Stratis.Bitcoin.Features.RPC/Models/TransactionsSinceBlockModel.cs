@@ -12,6 +12,6 @@ namespace Stratis.Bitcoin.Features.RPC.Models
         /// <summary>
         /// The hash of the block since which we got transactions.</summary>
         [JsonProperty(PropertyName = "lastblock")]
-        public string Lastblock { get; set; }
+        public string LastBlock { get; set; }
     }
 }
